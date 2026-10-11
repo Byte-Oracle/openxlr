@@ -1,5 +1,5 @@
 {
-  description = "Control suite and PipeWire submixer for Elgato XLR interfaces";
+  description = "Linux Wave Link replacement for Elgato XLR interfaces and the Wave:3";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
