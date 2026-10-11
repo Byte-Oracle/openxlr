@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.1.49
+Version: 0.1.50
 Release:        1%{?dist}
 Summary:        Control suite and PipeWire submixer for Elgato XLR interfaces
 License:        GPL-3.0-only
@@ -162,6 +162,11 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Sun Oct 11 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.1.50-1
+- Window: Arrange moved into the header between Profiles and Flow; Reset sections shows under the header while arranging.
+- Window: Desktop keys moved from the header into a DESKTOP card in Options, which opens the same dialog.
+- Window: Avalonia 12.1.4.
+
 * Fri Oct 09 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.1.49-1
 - Devices: the Wave:3 (0fd9:0070) is supported in beta. One user's quick test on their own unit found the microphone and saw gain, mute, headphone volume and the monitor balance answer; ClipGuard and the monitor balance direction are unchecked.
 - Devices: the Wave:3's mute and headphone level are kept in step with the desktop's sound settings in both directions, and its gain is passed to them; Options shows its firmware version. Neither has run on a Wave:3 yet.

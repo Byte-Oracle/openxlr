@@ -1,3 +1,11 @@
+openxlr (0.1.50) resolute; urgency=medium
+
+  * Window: Arrange moved into the header between Profiles and Flow; Reset sections shows under the header while arranging.
+  * Window: Desktop keys moved from the header into a DESKTOP card in Options, which opens the same dialog.
+  * Window: Avalonia 12.1.4.
+
+ -- Emanuele Sparvoli <sparvoli@gmail.com>  Sun, 11 Oct 2026 08:30:00 +0100
+
 openxlr (0.1.49) resolute; urgency=medium
 
   * Devices: the Wave:3 (0fd9:0070) is supported in beta. One user's quick test on their own unit found the microphone and saw gain, mute, headphone volume and the monitor balance answer; ClipGuard and the monitor balance direction are unchecked.
