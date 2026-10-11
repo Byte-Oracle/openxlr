@@ -99,7 +99,7 @@ buildDotnetModule {
   '';
 
   meta = {
-    description = "Control suite and PipeWire submixer for Elgato XLR interfaces";
+    description = "Linux Wave Link replacement for Elgato XLR interfaces and the Wave:3";
     homepage = "https://github.com/emaspa/openxlr";
     license = lib.licenses.gpl3Only;
     platforms = lib.platforms.linux;

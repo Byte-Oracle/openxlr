@@ -7,7 +7,7 @@
 Name:           openxlr
 Version: 0.1.50
 Release:        1%{?dist}
-Summary:        Control suite and PipeWire submixer for Elgato XLR interfaces
+Summary:        Linux Wave Link replacement for Elgato XLR interfaces and the Wave:3
 License:        GPL-3.0-only
 URL:            https://github.com/emaspa/openxlr
 Source0:        %{name}-%{version}.tar.gz
@@ -49,15 +49,15 @@ Suggests:       lsp-plugins-lv2
 Suggests:       openxlr-yabridge
 
 %description
-Native Linux control for Elgato XLR interfaces over reverse-engineered
-USB protocols: gain, DSP, phantom power, output routing and the
-hardware mixer. Includes a Wave Link style PipeWire submixer with
-per-application channels, virtual microphones, multi-output monitoring
-and a dedicated mix for a second computer on the USB Aux port, plus an
-OpenDeck plugin for Stream Deck control.
+A Wave Link replacement for Linux. It controls Elgato XLR interfaces
+and the Wave:3 over reverse-engineered USB protocols: gain, DSP,
+phantom power, output routing and the hardware mixer. It includes a
+PipeWire submixer with per-application channels, virtual microphones,
+multi-output monitoring and a dedicated mix for a second computer on
+the USB Aux port, plus an OpenDeck plugin for Stream Deck control.
 
 Supported devices: Wave XLR Pro, XLR Dock and XLR Dock MK.2
-(Stream Deck+ modules), Wave XLR and Wave XLR MK.2.
+(Stream Deck+ modules), Wave XLR, Wave XLR MK.2 and Wave:3.
 
 After installing, enable the per-user daemon with
 "systemctl --user enable --now openxlr-daemon" and replug the
