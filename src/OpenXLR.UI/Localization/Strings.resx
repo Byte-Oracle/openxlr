@@ -513,6 +513,9 @@
   <data name="DeletingPlugin" xml:space="preserve">
     <value>Deleting plugin…</value>
   </data>
+  <data name="DESKTOP" xml:space="preserve">
+    <value>DESKTOP</value>
+  </data>
   <data name="DesktopConnectionLost" xml:space="preserve">
     <value>Desktop connection lost. Open Desktop keys and apply to reconnect.</value>
   </data>
@@ -545,6 +548,9 @@
   </data>
   <data name="DesktopKeysIntro" xml:space="preserve">
     <value>Focused application routing uses KDE Plasma. Enable it for OpenDeck keys, then select channels below to assign PC shortcuts through the desktop's permission dialog. Keep OpenXLR running, including in the tray.</value>
+  </data>
+  <data name="DesktopKeysNote" xml:space="preserve">
+    <value>Keyboard shortcuts for application channels, volume and the system output, and OpenDeck's focused application routing, which needs KDE Plasma.</value>
   </data>
   <data name="DesktopKeysTitle" xml:space="preserve">
     <value>OpenXLR Desktop keys</value>

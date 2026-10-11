@@ -208,6 +208,11 @@
         <Style Selector="DropDownButton.ghost">
             <Setter Property="Background" Value="{DynamicResource Ox.Ghost.Background}"/>
         </Style>
+        <!-- A ghost toggle keeps the theme's checked face, so a mode that is on
+             still shows it. -->
+        <Style Selector="ToggleButton.ghost:unchecked">
+            <Setter Property="Background" Value="{DynamicResource Ox.Ghost.Background}"/>
+        </Style>
 
         <!-- The plugin bypass key. Its checked state is the one that takes the
              plugin out of the path, so its lettering runs the other way round

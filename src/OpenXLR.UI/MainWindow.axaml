@@ -243,13 +243,15 @@
               </Flyout>
             </DropDownButton.Flyout>
           </DropDownButton>
+          <ToggleButton Name="ArrangeButton" Content="{loc:Text Key=Arrange}" Padding="10,3" FontSize="12" Classes="ghost"
+                        Click="OnArrange" IsVisible="{Binding !IsMiniView}"
+                        ToolTip.Tip="{loc:Text Key=ShowHandlesToMoveSectionsChannelsAnd}"/>
           <Button Content="{loc:Text Key=Flow}" Padding="10,3" FontSize="12" Classes="ghost"
                   Click="OnFlow" ToolTip.Tip="{loc:Text Key=ShowTheLiveAudioRoutingGraph}"/>
           <Button Content="{loc:Text Key=RestartDaemon}" Padding="10,3" FontSize="12" Classes="ghost"
                   IsEnabled="{Binding DaemonRestart.CanRestart}" Click="OnRestartDaemon"
                   ToolTip.Tip="{loc:Text Key=RestartTheOpenXLRUserServiceAudioWillBe}"/>
           <TextBlock Name="HeaderVersion" Text="v0.0.0" Classes="h" VerticalAlignment="Center"/>
-          <Button Content="{loc:Text Key=DesktopKeys}" Padding="10,3" FontSize="{DynamicResource Ox.Label.FontSize}" Classes="ghost" Click="OnDesktopKeys"/>
           <Button Content="{loc:Text Key=About}" Padding="10,3" FontSize="12" Classes="ghost"
                   Click="OnAbout"/>
         </WrapPanel>
@@ -282,15 +284,10 @@
       </DockPanel>
     </Border>
 
-    <WrapPanel Margin="0,0,0,8">
-      <ToggleButton Name="ArrangeButton" Content="{loc:Text Key=Arrange}" Click="OnArrange" Padding="8,1" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                    IsVisible="{Binding !IsMiniView}"
-                    FontSize="{DynamicResource Ox.Label.FontSize}"
-                    ToolTip.Tip="{loc:Text Key=ShowHandlesToMoveSectionsChannelsAnd}"/>
-      <Button Name="ResetSectionsButton" Content="{loc:Text Key=ResetSections}" Click="OnResetSections" Padding="8,1" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-              IsVisible="False" Margin="8,0,0,0" FontSize="{DynamicResource Ox.Label.FontSize}"
-              ToolTip.Tip="{loc:Text Key=PutTheFiveSectionsBackInTheir}"/>
-    </WrapPanel>
+    <!-- shown while Arrange in the header is on -->
+    <Button Name="ResetSectionsButton" Content="{loc:Text Key=ResetSections}" Click="OnResetSections" Padding="8,1" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+            IsVisible="False" Margin="0,0,0,8" HorizontalAlignment="Left" FontSize="{DynamicResource Ox.Label.FontSize}"
+            ToolTip.Tip="{loc:Text Key=PutTheFiveSectionsBackInTheir}"/>
     <TextBlock Name="ArrangementNote" Classes="note" TextWrapping="Wrap" IsVisible="False" Margin="0,0,0,8"
                Text="{loc:Text Key=DragAHandleOntoAnotherSectionOr}"/>
 
