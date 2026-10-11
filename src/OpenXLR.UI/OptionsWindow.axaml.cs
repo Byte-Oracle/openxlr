@@ -35,10 +35,19 @@ public partial class OptionsWindow : Window
         };
     }
 
+    private readonly DesktopKeys? _desktopKeys;
+
     public OptionsWindow(OptionsViewModel vm) : this()
     {
         DataContext = vm;
         Opened += async (_, _) => await vm.LoadPluginSetupAsync();
+    }
+
+    // The desktop keys belong to the main window, which keeps them running
+    // while this window is closed.
+    internal OptionsWindow(OptionsViewModel vm, DesktopKeys desktopKeys) : this(vm)
+    {
+        _desktopKeys = desktopKeys;
     }
 
     // Plugins: the same install flow as the picker, plus yabridge's sync and a rescan.
@@ -145,6 +154,12 @@ public partial class OptionsWindow : Window
         {
             if (button is not null) button.IsEnabled = true;
         }
+    }
+
+    private async void OnDesktopKeys(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is OptionsViewModel vm && _desktopKeys is not null)
+            await new DesktopKeysWindow(_desktopKeys, vm.Main).ShowDialog(this);
     }
 
     private void OnWaveInterfaces(object? sender, RoutedEventArgs e)

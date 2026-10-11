@@ -1263,8 +1263,9 @@ MONITOR, APPLICATIONS, SUBMIXER) you collapsed with the chevron in
 their header, across restarts.
 
 <a name="arrange"></a>
-**Arrange**, above the sections, shows a drag handle in each section's
-header and on each channel and mix tile you can move. Drag a section's
+**Arrange**, in the window's header between Profiles and Flow, shows a
+drag handle in each section's header and on each channel and mix tile you
+can move. Drag a section's
 handle onto another section: the arrow on the other handle shows whether
 it lands above or below. Drag a channel's or mix's handle onto another
 tile in its row, left or right of it. Only the handles start a move;
@@ -1276,7 +1277,7 @@ letting go anywhere but on a tile of the same kind changes nothing.
 The section order is a window preference, saved in `ui.json` like the
 collapsed sections, and **Reset sections** puts the five back in their
 usual order. If `ui.json` cannot be written, the new order stays until the
-window closes and the note under Arrange says why.
+window closes and the note above the sections says why.
 
 Channel and mix tiles follow the mixer layout's one order, the same one
 the layout editor's arrows and the terminal mixer change. A drop sends
@@ -2019,7 +2020,7 @@ use the effects on the mixes they feed.
 <a name="desktop-keys"></a>
 ## Desktop keys and focused application routing
 
-Open **Desktop keys** from the window's header and enable desktop
+Open Options, DESKTOP, then **Desktop keys**, and enable desktop
 integration. For PC shortcuts, select
 the application channels you want, then choose **Apply and configure keys**.
 The desktop portal asks for the shortcuts and permission to use them. For an

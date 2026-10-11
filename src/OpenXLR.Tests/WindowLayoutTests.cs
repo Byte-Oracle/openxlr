@@ -393,6 +393,7 @@ public sealed class WindowLayoutTests
                 Assert.True(cards.VerticalScrollBarVisibility == Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
                     "the capped page must be able to show a scrollbar");
                 Layout(options, 980, 800);
+                Assert.Equal("Desktop keys", options.FindControl<Button>("DesktopKeysButton")!.Content);
                 var launch = options.FindControl<ComboBox>("LaunchBehavior")!;
                 var close = options.FindControl<ComboBox>("CloseBehavior")!;
                 Assert.Equal(1, launch.SelectedIndex);

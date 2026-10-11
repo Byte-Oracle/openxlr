@@ -183,11 +183,8 @@ public partial class MainWindow : Window
         _tray = null;
     }
 
-    private async void OnDesktopKeys(object? sender, RoutedEventArgs e)
-        => await new DesktopKeysWindow(_desktopKeys, _vm).ShowDialog(this);
-
     private void OnOptions(object? sender, RoutedEventArgs e)
-        => new OptionsWindow(new OptionsViewModel(_client, _vm)).ShowDialog(this);
+        => new OptionsWindow(new OptionsViewModel(_client, _vm), _desktopKeys).ShowDialog(this);
 
     private void OnManageApps(object? sender, RoutedEventArgs e)
         => new AppsWindow { DataContext = _vm }.ShowDialog(this);

@@ -1290,7 +1290,7 @@ public sealed class SkinWindowTests
 
             // The appearance card sits with the plugin card, not on the long
             // side with the startup and device cards.
-            Assert.Equal(["AT LOGIN", "WINDOW", "AUDIO", "SYSTEM DEFAULT DEVICES", "INTERFACE"],
+            Assert.Equal(["AT LOGIN", "WINDOW", "AUDIO", "SYSTEM DEFAULT DEVICES", "DESKTOP", "INTERFACE"],
                 Headings(columns[0]));
             Assert.Equal(["PLUGINS", "APPEARANCE", "UPDATES", "SUPPORT"], Headings(columns[1]));
 
