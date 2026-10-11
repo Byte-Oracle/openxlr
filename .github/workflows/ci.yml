@@ -11,7 +11,42 @@ permissions:
   contents: read
 
 jobs:
+  # A change that touches README.md alone builds and tests nothing. The other
+  # jobs still run and report as skipped, which satisfies the required
+  # build-and-test check; a workflow-level paths-ignore would never report it
+  # and leave the pull request waiting.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # A pull request checks out its merge commit, whose first parent is
+          # the base. A push compares with the previous tip; a new branch has
+          # none, so it runs everything.
+          files=""
+          if [ "$EVENT" = pull_request ]; then
+            files=$(git diff --name-only HEAD^1 HEAD)
+          elif [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            files=$(git diff --name-only "$BEFORE" HEAD)
+          fi
+          if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvx 'README.md'; then
+            echo "Only README.md changed; skipping the build and tests."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          fi
+
   omarchy-qml:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     container: archlinux:base
     steps:
@@ -26,6 +61,8 @@ jobs:
         run: QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input packaging/omarchy/tests
 
   build-and-test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

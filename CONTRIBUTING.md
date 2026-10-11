@@ -150,7 +150,9 @@ locked restore and tests. Do not disable locked mode to make an update pass.
 ## Pull requests
 
 CI and CodeQL run for pull requests and for every pushed branch, so a
-branch gets the same checks before its pull request exists.
+branch gets the same checks before its pull request exists. A change to
+`README.md` alone skips both: CI reports its jobs as skipped, which
+counts as passing.
 
 - **Branch from `main`** and keep one topic per pull request. Split an
   independent part out into its own request when you can; small ones
