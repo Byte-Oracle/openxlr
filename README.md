@@ -12,10 +12,10 @@
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-emaspa-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/emaspa)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/emaspa)
 
-Native Linux control suite for Elgato XLR interfaces: hardware
-control over reverse-engineered USB protocols, a Wave Link style
-PipeWire submixer with per-application channels, virtual microphones,
-LV2, CLAP and VST3 plugin inserts, multi-output monitoring, a dedicated mix for a
+OpenXLR is a Wave Link replacement for Linux. It controls Elgato XLR
+interfaces over reverse-engineered USB protocols and adds a PipeWire
+submixer with per-application channels, virtual microphones, LV2, CLAP
+and VST3 plugin inserts, multi-output monitoring, a dedicated mix for a
 second computer on the USB Aux port, and an OpenDeck plugin for Stream
 Deck control.
 
