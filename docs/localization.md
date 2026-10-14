@@ -121,7 +121,9 @@ The window chooses its language once, when it starts:
    `zh_HK` and `zh_MO` mean Traditional (`zh-Hant`), other regions mean
    Simplified (`zh-Hans`), and the old .NET names `zh-CHT` and `zh-CHS`
    map to the same two.
-4. Anything else is English.
+4. Anything else is English. Malformed tags, including empty subtags, are
+   ignored; an invalid entry in `LANGUAGE` does not stop later entries
+   from being tried.
 
 A change in Options applies the next time the window starts. Only the
 catalogue changes: numbers, dates and the values the window sends to the

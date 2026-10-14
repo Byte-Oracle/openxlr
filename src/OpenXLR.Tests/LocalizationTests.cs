@@ -204,6 +204,21 @@ public sealed class LocalizationTests
     }
 
     [Theory]
+    [InlineData("-")]
+    [InlineData("---")]
+    [InlineData("-de")]
+    [InlineData("de-")]
+    [InlineData("de--DE")]
+    public void MalformedTagsFallBackWithoutPreventingStartup(string tag)
+    {
+        Assert.Equal("", Localizer.Canonical(tag));
+        Assert.Equal("en", Localizer.Resolve(tag, _ => null, ["en", "de"]));
+        Assert.Equal("en", Localizer.Resolve(null, n => n == "LANG" ? tag : null, ["en", "de"]));
+        Assert.Equal("de", Localizer.Resolve(null, n => n switch
+        { "LANG" => "en_US.UTF-8", "LANGUAGE" => tag + ":de", _ => null }, ["en", "de"]));
+    }
+
+    [Theory]
     [InlineData("zh_TW.UTF-8", "zh-Hant-TW")]
     [InlineData("zh-CN", "zh-Hans-CN")]
     [InlineData("zh-CHT", "zh-Hant")]
