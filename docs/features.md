@@ -532,7 +532,7 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   wider channel strips and mix tiles, chosen in Options and kept in
   `ui.json` beside the skin, over whichever skin is worn
 - A translatable window: every string it shows comes from one catalogue,
-  and it ships in English. Languages come from contributors
+  and it ships in English and German. Languages come from contributors
   ([localization.md](localization.md)); a language chosen in Options
   applies the next time the window starts
 - One window per user: a second launch brings the running window to the

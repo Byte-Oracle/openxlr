@@ -31,6 +31,7 @@ public static class Localizer
     internal static IReadOnlyList<LanguageChoice> Languages { get; } = Array.AsReadOnly<LanguageChoice>(
     [
         new("en", "English"),
+        new("de", "Deutsch"),
     ]);
 
     internal static readonly ResourceManager Resources =

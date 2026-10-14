@@ -6,6 +6,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
+using OpenXLR.UI.Localization;
 
 namespace OpenXLR.Tests;
 
@@ -190,7 +191,7 @@ public sealed class WindowLayoutTests
                     double manageCenter = manageApps.TranslatePoint(default, main)!.Value.Y + manageApps.Bounds.Height / 2;
                     Assert.InRange(Math.Abs(headingCenter - manageCenter), 0, 1);
                     Assert.True(manageApps.TranslatePoint(default, main)!.Value.X > heading.TranslatePoint(default, main)!.Value.X + heading.Bounds.Width);
-                    var editLayout = main.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "Edit layout");
+                    var editLayout = main.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == Localizer.Text("EditLayout"));
                     Assert.Equal(editLayout.Padding, manageApps.Padding);
                     Assert.Equal(editLayout.FontSize, manageApps.FontSize);
                     Assert.Equal(editLayout.MinHeight, manageApps.MinHeight);
@@ -242,7 +243,7 @@ public sealed class WindowLayoutTests
                 var manageEditors = controls.FindControl<Button>("ManageNativeEditors")!;
                 Assert.True(manageEditors.IsVisible);
                 var actionRows = controls.FindControl<WrapPanel>("PluginActions")!;
-                Assert.Equal("Bypass", ((Avalonia.Controls.Primitives.ToggleButton)actionRows.Children[actionRows.Children.IndexOf(manageEditors) - 1]).Content);
+                Assert.Equal(Localizer.Text("Bypass"), ((Avalonia.Controls.Primitives.ToggleButton)actionRows.Children[actionRows.Children.IndexOf(manageEditors) - 1]).Content);
                 foreach (var button in actionRows.Children.Where(c => c.IsVisible)) AssertInside(button, controls);
                 Capture(controls, "plugin-compatibility-420");
 
@@ -271,7 +272,7 @@ public sealed class WindowLayoutTests
                 }
                 AssertInside(chain.FindControl<Button>("EffectWorkflow")!, chain);
                 var soundCheckButton = chain.GetVisualDescendants().OfType<Button>()
-                    .Single(b => b.Content as string == "Sound Check");
+                    .Single(b => b.Content as string == Localizer.Text("SoundCheck"));
                 Assert.True(soundCheckButton.IsVisible);
                 AssertInside(soundCheckButton, chain);
                 Capture(chain, "chain-440");
@@ -342,7 +343,7 @@ public sealed class WindowLayoutTests
                 var groupSave = groupControls.OfType<Button>().Single(b => b.Name == "SaveGroup");
                 groupSave.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
                 Assert.True(groupsDialog.IsVisible);   // a new group needs a name and two members
-                Assert.Contains("at least two", groupControls.OfType<TextBlock>().Single(b => b.Name == "GroupError").Text);
+                Assert.Equal(Localizer.Text("ExclusiveGroupsInvalid"), groupControls.OfType<TextBlock>().Single(b => b.Name == "GroupError").Text);
                 Assert.False(groupControls.OfType<Button>().Single(b => b.Name == "DeleteGroup").IsEnabled);
                 var groupPicker = groupControls.OfType<ComboBox>().Single(b => b.Name == "Groups");
                 groupPicker.SelectedIndex = 1;
@@ -368,7 +369,7 @@ public sealed class WindowLayoutTests
                 keyScroll.Offset = new Vector(0, keyScroll.Extent.Height);
                 Layout(keyWindow, 360, 340);
                 Assert.True(keyScroll.Extent.Width <= keyScroll.Viewport.Width + 1);
-                Assert.Contains(keyWindow.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Current system default output");
+                Assert.Contains(keyWindow.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == Localizer.Text("CurrentSystemDefaultOutput"));
                 Assert.DoesNotContain(keyWindow.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.StartsWith("AudioDeviceItem {") == true);
                 Capture(keyWindow, "desktop-output-keys-360");
                 keyWindow.Close();
@@ -393,23 +394,23 @@ public sealed class WindowLayoutTests
                 Assert.True(cards.VerticalScrollBarVisibility == Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
                     "the capped page must be able to show a scrollbar");
                 Layout(options, 980, 800);
-                Assert.Equal("Desktop keys", options.FindControl<Button>("DesktopKeysButton")!.Content);
+                Assert.Equal(Localizer.Text("DesktopKeys"), options.FindControl<Button>("DesktopKeysButton")!.Content);
                 var launch = options.FindControl<ComboBox>("LaunchBehavior")!;
                 var close = options.FindControl<ComboBox>("CloseBehavior")!;
                 Assert.Equal(1, launch.SelectedIndex);
                 Assert.Equal(0, close.SelectedIndex);
-                Assert.Equal("Tray only", ((ComboBoxItem)launch.SelectedItem!).Content);
-                Assert.Equal("Keep running in tray", ((ComboBoxItem)close.SelectedItem!).Content);
+                Assert.Equal(Localizer.Text("TrayOnly"), ((ComboBoxItem)launch.SelectedItem!).Content);
+                Assert.Equal(Localizer.Text("KeepRunningInTray"), ((ComboBoxItem)close.SelectedItem!).Content);
                 foreach (var picker in new[] { launch, close })
                 {
                     AssertInside(picker, options);
                     AssertNoOverlap(((Grid)picker.Parent!).Children.Where(c => c.IsVisible).ToArray());
                 }
-                foreach (string heading in new[] { "AT LOGIN", "WINDOW", "AUDIO" })
+                foreach (string heading in new[] { "ATLOGIN", "WINDOW", "AUDIO" }.Select(Localizer.Text))
                     Assert.Single(options.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == heading);
                 var notes = options.FindControl<StackPanel>("SoftwareMixerNotes")!;
                 var audioHeading = options.GetVisualDescendants().OfType<TextBlock>()
-                    .Single(t => t.Text == "AUDIO");
+                    .Single(t => t.Text == Localizer.Text("AUDIO"));
                 Assert.Equal(audioHeading.TranslatePoint(default, options)!.Value.X,
                     notes.TranslatePoint(default, options)!.Value.X);
                 var noteLines = notes.Children.OfType<TextBlock>().Where(t => t.IsVisible).ToArray();
@@ -443,7 +444,7 @@ public sealed class WindowLayoutTests
                 Layout(options, 980, 800);
                 var skippedPlugins = options.FindControl<StackPanel>("SkippedPlugins")!;
                 Assert.Contains(skippedPlugins.GetVisualDescendants().OfType<TextBlock>(),
-                    b => b.Text == "Skipped after a failed scan: 1");
+                    b => b.Text == Localizer.Format("SkippedBundlesAfterFailedScan", 1));
                 Assert.Contains(skippedPlugins.GetVisualDescendants().OfType<TextBlock>(),
                     b => b.Text?.Contains("/plugins/Skipped.vst3", StringComparison.Ordinal) == true);
                 var memoryWarning = options.FindControl<TextBlock>("MemoryLockWarning")!;
@@ -451,7 +452,7 @@ public sealed class WindowLayoutTests
                 Assert.True(memoryWarning.Bounds.Height > memoryWarning.FontSize * 2);
                 AssertInside(memoryWarning, (Control)memoryWarning.Parent!);
                 Assert.Single(options.GetVisualDescendants().OfType<Button>(),
-                    b => b.IsEffectivelyVisible && Equals(b.Content, "Memory-lock setup"));
+                    b => b.IsEffectivelyVisible && Equals(b.Content, Localizer.Text("MemoryLockSetup")));
                 memoryWarning.BringIntoView();
                 Layout(options, 980, 800);
                 Capture(options, "options-plugin-runtime");
@@ -549,7 +550,7 @@ public sealed class WindowLayoutTests
                     Assert.False(folders.FindControl<Button>("WineUninstaller")!.IsVisible);
                     files.SelectedIndex = 1;
                     Assert.False(folders.FindControl<Button>("DeletePlugin")!.IsEnabled);
-                    Assert.Equal("Enable in OpenXLR", folders.FindControl<Button>("TogglePlugin")!.Content);
+                    Assert.Equal(Localizer.Text("EnableInOpenXLR"), folders.FindControl<Button>("TogglePlugin")!.Content);
                     Assert.True(folders.FindControl<Button>("WineUninstaller")!.IsEnabled);
                     files.SelectedIndex = 2;
                     Assert.False(folders.FindControl<Button>("TogglePlugin")!.IsEnabled);

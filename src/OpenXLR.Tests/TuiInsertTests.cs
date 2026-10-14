@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Nodes;
 using OpenXLR.Tui;
 
@@ -98,8 +99,8 @@ public sealed class TuiInsertTests
         Assert.Contains("STUDIO EQ / XLR 1", frame, StringComparison.Ordinal);
         Assert.Contains("Editor input is unreliable", frame, StringComparison.Ordinal);
         Assert.Contains("Warm", frame, StringComparison.Ordinal);
-        Assert.Contains("6.125", frame, StringComparison.Ordinal);
-        Assert.Contains("1.500", frame, StringComparison.Ordinal);
+        Assert.Contains((6.125).ToString("0.000", CultureInfo.CurrentCulture), frame, StringComparison.Ordinal);
+        Assert.Contains((1.5).ToString("0.000", CultureInfo.CurrentCulture), frame, StringComparison.Ordinal);
         Assert.DoesNotContain("Not in a chain", frame, StringComparison.Ordinal);
         string[] names = ["Enabled", "Mode", "Voices", "Gain", "Frequency", "Unsaved"];
         int last = -1;
@@ -279,7 +280,7 @@ public sealed class TuiInsertTests
         session.Echo();
         string frame = session.Draw();
         Assert.Contains("setInsertParam: value refused", frame, StringComparison.Ordinal);
-        Assert.Contains("-2.250", frame, StringComparison.Ordinal);
+        Assert.Contains((-2.25).ToString("0.000", CultureInfo.CurrentCulture), frame, StringComparison.Ordinal);
         session.Sent.Clear();
         session.Key('+');
         Parameter(session, "gain", 0.15);

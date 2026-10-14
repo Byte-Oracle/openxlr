@@ -127,12 +127,45 @@ public sealed class LocalizationTests
     [Fact]
     public void AMissingEntryReadsEnglishAndAnUnknownKeyReadsItself()
     {
-        // No catalogue ships for German or Brazilian Portuguese: every entry falls back.
-        Assert.Equal("Close", Localizer.Get("Close", CultureInfo.GetCultureInfo("de")));
+        // An unshipped language uses the English catalogue.
+        Assert.Equal("Close", Localizer.Get("Close", CultureInfo.GetCultureInfo("fr")));
         Assert.Equal("Close", Localizer.Get("Close", CultureInfo.GetCultureInfo("pt-BR")));
         Assert.Equal("NoSuchKey", Localizer.Text("NoSuchKey"));
         Assert.Equal("Low Cut 80", Localizer.Format("LowCutFrequency", 80));
         Assert.Equal("Close", new TextExtension { Key = "Close" }.ProvideValue(null!));
+    }
+
+    [Fact]
+    public void GermanUsesItsCatalogueAndRetainsFormatsLineBreaksAndCommands()
+    {
+        Assert.Equal("Deutsch", Localizer.Languages.Single(c => c.Id == "de").Label);
+        Assert.Equal("Schließen", Localizer.Get("Close", CultureInfo.GetCultureInfo("de")));
+        Assert.Equal("Schließen", Localizer.Get("Close", CultureInfo.GetCultureInfo("de-AT")));
+        foreach ((string key, string text) in Read("Strings.de.resx"))
+        {
+            string english = English[key];
+            static string[] Formats(string value) => [.. Regex.Matches(value, @"\{[^{}]+\}").Select(m => m.Value).Order(StringComparer.Ordinal)];
+            Assert.Equal(Formats(english), Formats(text));
+            Assert.Equal(english.Count(c => c == '\n'), text.Count(c => c == '\n'));
+            Assert.DoesNotMatch("[\\u2018\\u2019\\u201C\\u201D\\u2013\\u2014]", text);
+            foreach (Match command in Regex.Matches(english, @"OPENXLR_[A-Z_]+=[a-z]+|systemctl --user (?:status|restart openxlr-daemon)|(?:LV2|CLAP|VST3)_PATH"))
+                Assert.Contains(command.Value, text);
+        }
+    }
+
+    [Theory]
+    [InlineData(null, "LANG=de_DE.UTF-8", "de")]
+    [InlineData(null, "LANG=en_US.UTF-8 LANGUAGE=fr:de", "de")]
+    [InlineData(null, "LANG=de_CH.UTF-8 LC_MESSAGES=C.UTF-8", "en")]
+    [InlineData("de-AT", "LANG=en_US.UTF-8", "de")]
+    [InlineData("en", "LANG=de_DE.UTF-8", "en")]
+    [InlineData("system", "LANG=de_CH.UTF-8", "de")]
+    public void GermanIsChosenFromTheSavedChoiceOrDesktop(string? saved, string environment, string expected)
+    {
+        Dictionary<string, string> variables = environment.Split(' ')
+            .Select(v => v.Split('=', 2)).ToDictionary(v => v[0], v => v[1]);
+        Assert.Equal(expected, Localizer.Resolve(saved, n => variables.GetValueOrDefault(n),
+            [.. Localizer.Languages.Select(c => c.Id!)]));
     }
 
     [Theory]
@@ -168,9 +201,6 @@ public sealed class LocalizationTests
         Dictionary<string, string> variables = environment.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(v => v.Split('=', 2)).ToDictionary(v => v[0], v => v[1]);
         Assert.Equal(expected, Localizer.Resolve(saved, n => variables.GetValueOrDefault(n), Shipped));
-        // The window ships English alone today, so every case reads English.
-        Assert.Equal("en", Localizer.Resolve(saved, n => variables.GetValueOrDefault(n),
-            [.. Localizer.Languages.Select(c => c.Id!)]));
     }
 
     [Theory]
@@ -217,7 +247,7 @@ public sealed class LanguageSettingsTests : IDisposable
         File.WriteAllText(UiJson, """{ "skin": "nord", "futureChoice": 3 }""");
         OptionsViewModel options = Options();
         Assert.Null(options.SelectedLanguage!.Id);
-        Assert.Equal(["System language", "English"], options.LanguageChoices.Select(c => c.Label));
+        Assert.Equal(["System language", "English", "Deutsch"], options.LanguageChoices.Select(c => c.Label));
 
         options.SelectedLanguage = options.LanguageChoices.Single(c => c.Id == "en");
 

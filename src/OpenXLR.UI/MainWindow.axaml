@@ -506,7 +506,7 @@
                      ToolTip.Tip="{loc:Text Key=DirectMonitorBlendLeftOnlyYourMicRight}"/>
           <Slider Grid.Column="1" Minimum="0" Maximum="200" TickFrequency="1" IsSnapToTickEnabled="True"
                   Value="{Binding Crossfade, Mode=TwoWay}"/>
-          <TextBlock Grid.Column="2" Text="{Binding CrossfadeText}" Classes="val"
+          <TextBlock x:Name="CrossfadeValue" Grid.Column="2" Text="{Binding CrossfadeText}" Classes="val"
                      VerticalAlignment="Center" HorizontalAlignment="Right"/>
         </Grid>
         <UniformGrid Columns="7">

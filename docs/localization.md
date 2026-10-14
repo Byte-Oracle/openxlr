@@ -2,8 +2,8 @@
 
 The mixer window can be translated. Every string it shows lives in one
 English catalogue, and a language is a second catalogue with the same keys.
-OpenXLR ships in English. Other languages come from contributors who read
-and write them, one pull request per language.
+OpenXLR ships in English and German (Deutsch). Other languages come from
+contributors who read and write them, one pull request per language.
 
 ## The catalogue
 
