@@ -105,3 +105,8 @@ override_dh_strip:
 override_dh_dwz:
 override_dh_shlibdeps:
 override_dh_makeshlibs:
+
+# Hash the final compressed payload, not an intermediate publish directory.
+override_dh_md5sums:
+	python3 packaging/install_receipt.py --root $(PKG) --manager debian --version $$(dpkg-parsechangelog -S Version)
+	dh_md5sums

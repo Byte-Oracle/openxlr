@@ -15,6 +15,7 @@ ExclusiveArch:  x86_64
 
 BuildRequires:  dotnet-sdk-10.0
 BuildRequires:  systemd-rpm-macros
+BuildRequires:  python3
 # The optional LV2 host is a small C program built beside the daemon. Its
 # libraries are already runtime dependencies below; only the headers are new.
 BuildRequires:  gcc
@@ -47,6 +48,11 @@ Recommends:     xdg-utils
 Suggests:       ladspa-swh-plugins
 Suggests:       lsp-plugins-lv2
 Suggests:       openxlr-yabridge
+
+# Keep the platform's final processing, then hash the finished payload.
+%global __os_install_post %{__os_install_post}\
+python3 packaging/install_receipt.py --root %{buildroot} --prefix %{_prefix} --manager rpm --version %{version}-%{release}\
+%{nil}
 
 %description
 A Wave Link replacement for Linux. It controls Elgato XLR interfaces
@@ -132,6 +138,9 @@ cp -r plugin/com.emaspa.openxlr.sdPlugin %{buildroot}%{_datadir}/openxlr/
 find %{buildroot}%{_datadir}/openxlr -type f -exec chmod 644 {} +
 find %{buildroot}%{_datadir}/openxlr -type d -exec chmod 755 {} +
 
+install -Dm644 LICENSE %{buildroot}%{_licensedir}/openxlr/LICENSE
+install -Dm644 README.md %{buildroot}%{_docdir}/openxlr/README.md
+
 %post
 /usr/bin/udevadm control --reload 2>/dev/null || :
 /usr/bin/udevadm trigger 2>/dev/null || :
@@ -145,8 +154,8 @@ Stream Deck via OpenDeck:
 MSG
 
 %files
-%license LICENSE
-%doc README.md
+%license %{_licensedir}/openxlr/LICENSE
+%doc %{_docdir}/openxlr/README.md
 %{_prefix}/lib/openxlr/
 %{_bindir}/openxlr
 %{_bindir}/openxlr-daemon

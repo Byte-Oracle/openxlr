@@ -327,6 +327,8 @@ historical protocol research.
 - [Installing from source](docs/install-from-source.md): prerequisites
   by distribution, device access, the user service, updating,
   uninstall, environment variables
+- [Installation receipts and doctor](docs/installation.md): owned files,
+  build identity and repair commands
 - [WebSocket API](docs/api.md): the daemon's command set and the files
   under `~/.config/openxlr`; [HTTP API](docs/http-api.md) for the same
   commands over plain HTTP

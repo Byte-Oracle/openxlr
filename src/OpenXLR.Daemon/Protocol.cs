@@ -195,6 +195,8 @@ public sealed record StateMessage
     /// restart prompt; a daemon older than 0.1.13 omits the field).
     /// </summary>
     [JsonPropertyName("daemonVersion")] public string? DaemonVersion { get; init; }
+    /// <summary>The running assembly's build identity, for installation diagnostics.</summary>
+    [JsonPropertyName("daemonBuildId")] public string DaemonBuildId { get; init; } = OpenXLR.Daemon.DaemonVersion.BuildId;
     /// <summary>
     /// A condition the user should know about, in one sentence, or null:
     /// today, mixer settings that cannot be written to disk. Clients show
@@ -308,6 +310,7 @@ public sealed record DiagnosticsMessage(IReadOnlyDictionary<string, string> Bloc
 /// <summary>The daemon's version as stamped by the build (Directory.Build.props).</summary>
 public static class DaemonVersion
 {
+    public static readonly string BuildId = typeof(DaemonVersion).Assembly.ManifestModule.ModuleVersionId.ToString("D");
     public static readonly string Current =
         typeof(DaemonVersion).Assembly
             .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?

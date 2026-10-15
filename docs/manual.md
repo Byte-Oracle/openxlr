@@ -1924,8 +1924,17 @@ Review plugin names, paths and scanner output before sharing the archive.
 <a name="files"></a>
 ## 6. Files and services
 
+`openxlr doctor` checks installation receipts, reports missing or changed
+files, and compares the installed daemon with the one running. It prints
+repair commands and does not change the installation. Package inventories
+and private copies retained across upgrades are separate from your mixer
+settings. See
+[Installation receipts and doctor](installation.md) for removal and repair.
+
 | Path | What it is |
 |---|---|
+| `~/.config/openxlr/installation-history/<sha256>.json` | retained package inventories for doctor |
+| `~/.config/openxlr/installation.lock` | serializes installation inventory writes |
 | `~/.config/openxlr/mixer.json` | every mixer decision, the layout included (`userChannels`, `userMixes`, see [mixer-layout.md](mixer-layout.md)), written by the daemon |
 | `~/.config/openxlr/profiles/<vid-pid>/<name>.json` | saved profiles, one file each |
 | `~/.config/openxlr/profiles/<vid-pid>/recall-on-connect` | the profile recalled when that interface connects, when one is chosen |

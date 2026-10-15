@@ -1,0 +1,232 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace OpenXLR.UI;
+
+internal sealed record DoctorFinding(string Path, string Problem, string Repair);
+internal sealed record DoctorReceipt(string Path, InstallationReceipt Installation, bool Archived = false);
+internal sealed record DoctorRuntime(string Status, string? InstalledBuild = null, string? RunningBuild = null);
+internal sealed record DoctorReport(IReadOnlyList<DoctorReceipt> Receipts, IReadOnlyList<DoctorFinding> Findings, DoctorRuntime? Daemon);
+
+/// <summary>Read-only installation checks. This path never initializes Avalonia or starts the daemon.</summary>
+internal static class InstallationDoctor
+{
+    internal static string Quote(string value) => "'" + value.Replace("'", "'\\''") + "'";
+
+    internal static string Repair(InstallationReceipt receipt) => receipt.Manager switch
+    {
+        "debian" => "sudo apt-get install --reinstall " + Quote(receipt.Package),
+        "rpm" => "sudo dnf reinstall " + Quote(receipt.Package),
+        "arch" => "paru -S --rebuild " + Quote(receipt.Package),
+        "nix" => "sudo nix-store --repair-path " + Quote(receipt.Prefix),
+        "user" => "Inspect the user-owned path and its receipt before replacing it.",
+        _ => throw new ArgumentException("Unsupported receipt package manager."),
+    };
+
+    internal static IEnumerable<string> DefaultReceipts(string baseDirectory)
+    {
+        foreach (string path in InstallationHistory.PackageReceipts(baseDirectory)) yield return path;
+        foreach (string path in InstallationHistory.ArchivedReceipts()) yield return path;
+    }
+
+    internal static async Task<DoctorReport> Inspect(IEnumerable<string> paths, string? root, bool runtime,
+        Func<CancellationToken, Task<string>>? readState = null, bool removed = false)
+    {
+        var receipts = new List<DoctorReceipt>();
+        var findings = new List<DoctorFinding>();
+        long totalBytes = 0;
+        bool currentInventoryComplete = true;
+        foreach (string path in paths.Distinct(StringComparer.Ordinal))
+        {
+            bool archived = removed || root is null && System.IO.Path.GetDirectoryName(path) == InstallationHistory.DirectoryPath;
+            try
+            {
+                if (root is not null && (!path.StartsWith(root.TrimEnd('/') + '/', StringComparison.Ordinal) ||
+                    InstallationReceipt.HasLinkedParent(path, root)))
+                    throw new IOException("The staged receipt is outside its root or has a symbolic link parent.");
+                if ((totalBytes += new FileInfo(path).Length) > 16 * 1024 * 1024)
+                {
+                    currentInventoryComplete = false;
+                    findings.Add(new(path, "combined receipt inventory exceeds 16 MiB", "Check older receipts separately with openxlr doctor --receipt PATH --no-runtime."));
+                    break;
+                }
+
+                // A receipt reached through a profile link can point at the same
+                // immutable Nix output as one reached through its store path.
+                InstallationReceipt receipt = InstallationReceipt.Read(path, root, archived);
+                if (!archived && receipts.Any(r => !r.Archived && r.Installation.Prefix == receipt.Prefix && r.Installation.Package == receipt.Package)) continue;
+                receipts.Add(new(path, receipt, archived));
+                if (archived) continue;
+                foreach (InstalledFile file in receipt.Files)
+                    if (InstallationReceipt.Problem(file, receipt.Prefix, root) is { } problem)
+                        findings.Add(new(file.Path, problem, Repair(receipt)));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                if (!archived) currentInventoryComplete = false;
+                findings.Add(new(path, ex.Message + (!archived ? " Historical leftover checks were skipped." : ""), archived ?
+                    "mv -T -i -- " + Quote(path) + " " + Quote(path + ".invalid-receipt") :
+                    "Restore this receipt by reinstalling its package. Do not remove files using an unreadable receipt."));
+            }
+        }
+        HashSet<string> current = [.. receipts.Where(r => !r.Archived).SelectMany(r => r.Installation.Files).Select(f => f.Path)];
+        foreach (DoctorReceipt history in receipts.Where(r => currentInventoryComplete && r.Archived && r.Installation.Manager != "nix"))
+        {
+            foreach (InstalledFile file in history.Installation.Files.Where(f => f.Kind != "receipt" && !current.Contains(f.Path)))
+            {
+                if (!File.Exists(file.Path) && new FileInfo(file.Path).LinkTarget is null && !Directory.Exists(file.Path)) continue;
+                if (findings.Any(f => f.Path == file.Path)) continue;
+                string? problem = InstallationReceipt.Problem(file, history.Installation.Prefix);
+                string repair = problem is null ? "sudo mv -T -i -- " + Quote(file.Path) + " " + Quote(file.Path + ".openxlr-leftover") : "namei -l -- " + Quote(file.Path);
+                findings.Add(new(file.Path, "previously owned path remains outside the current inventory" + (problem is null ? "" : ": " + problem + "; inspect before moving it"), repair));
+            }
+        }
+        if (!removed && !receipts.Any(r => !r.Archived && r.Installation.Manager != "user"))
+            findings.Add(new("installation", "no OpenXLR package receipt; this may be a source build or an older package", "Install an OpenXLR package that includes a receipt, then run openxlr doctor again."));
+
+        DoctorRuntime? daemon = null;
+        if (runtime)
+        {
+            var installed = receipts.FirstOrDefault(r => !r.Archived && r.Installation.Package == "openxlr");
+            string? assembly = installed?.Installation.Files.FirstOrDefault(f => f.Kind == "file" && System.IO.Path.GetFileName(f.Path) == "OpenXLR.Daemon.dll")?.Path;
+            if (assembly is null)
+            {
+                daemon = new("installed daemon build cannot be identified");
+                findings.Add(new("daemon", daemon.Status, installed is null ? "Install a package with a receipt, then run openxlr doctor." : Repair(installed.Installation)));
+            }
+            else
+            {
+                try
+                {
+                    string id = ModuleId(assembly);
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    string json = await (readState ?? ReadState)(timeout.Token);
+                    using var state = JsonDocument.Parse(json);
+                    string? running = state.RootElement.TryGetProperty("daemonBuildId", out var build) && build.ValueKind == JsonValueKind.String ? build.GetString() : null;
+                    bool matches = Guid.TryParse(running, out var parsed) && parsed.ToString("D") == id;
+                    daemon = new(matches ? "matches installed build" : running is null ? "running daemon predates build identification" : "running daemon differs from installed build", id, running);
+                    if (!matches) findings.Add(new("daemon", daemon.Status, "systemctl --user restart openxlr-daemon.service"));
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException or OperationCanceledException or JsonException or BadImageFormatException or InvalidOperationException or FormatException)
+                {
+                    daemon = new("not verified: " + ex.Message);
+                    findings.Add(new("daemon", daemon.Status, "systemctl --user restart openxlr-daemon.service"));
+                }
+            }
+        }
+        return new(receipts, findings, daemon);
+    }
+
+    internal static string ModuleId(string assembly)
+    {
+        RegularFile.Require(assembly);
+        using var stream = File.OpenRead(assembly);
+        if (stream.Length > 128 * 1024 * 1024) throw new IOException("Daemon assembly exceeds 128 MiB.");
+        using var pe = new PEReader(stream);
+        MetadataReader metadata = pe.GetMetadataReader();
+        return metadata.GetGuid(metadata.GetModuleDefinition().Mvid).ToString("D");
+    }
+
+    private static async Task<string> ReadState(CancellationToken cancel)
+    {
+        string token = OpenXlrPaths.ReadToken() ?? throw new IOException("daemon token is absent; the daemon may not be running");
+        using var handler = new HttpClientHandler { UseProxy = false, AllowAutoRedirect = false };
+        using var http = new HttpClient(handler);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "http://127.0.0.1:37890/api/v1/state");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancel);
+        response.EnsureSuccessStatusCode();
+        await using var body = await response.Content.ReadAsStreamAsync(cancel);
+        using var bytes = new MemoryStream();
+        byte[] buffer = new byte[8192];
+        int count;
+        while ((count = await body.ReadAsync(buffer, cancel)) != 0)
+        {
+            if (bytes.Length + count > 8 * 1024 * 1024) throw new IOException("daemon state exceeds 8 MiB");
+            bytes.Write(buffer, 0, count);
+        }
+        return System.Text.Encoding.UTF8.GetString(bytes.ToArray());
+    }
+}
+
+internal static class InstallationCommands
+{
+    internal static bool TryRun(string[] args)
+    {
+        if (args.Length == 0 || args[0] is not ("doctor" or "installation")) return false;
+        Environment.ExitCode = Run(args, Console.Out).GetAwaiter().GetResult();
+        return true;
+    }
+
+    internal static async Task<int> Run(string[] args, TextWriter output)
+    {
+        try
+        {
+            if (args.SequenceEqual(new[] { "installation", "remember" }))
+            {
+                string[] receipts = [.. InstallationHistory.PackageReceipts(AppContext.BaseDirectory)];
+                foreach (string receipt in receipts) InstallationHistory.Remember(receipt);
+                output.WriteLine(receipts.Length > 0 ? "Installed package receipts saved for upgrade and removal checks." : "No installed package receipts were found; ownership is unknown.");
+                return receipts.Length > 0 ? 0 : 1;
+            }
+            bool json = false, runtime = true, removed = false;
+            string? root = null;
+            var paths = new List<string>();
+            if (args.Length == 0 || args[0] != "doctor") return Usage(output);
+            for (int i = 1; i < args.Length; ++i)
+            {
+                if (args[i] == "--json") json = true;
+                else if (args[i] == "--no-runtime") runtime = false;
+                else if (args[i] == "--removed") removed = true;
+                else if (args[i] == "--receipt" && i + 1 < args.Length && paths.Count < 32) paths.Add(System.IO.Path.GetFullPath(args[++i]));
+                else if (args[i] == "--root" && i + 1 < args.Length) root = System.IO.Path.GetFullPath(args[++i]).TrimEnd('/');
+                else return Usage(output);
+            }
+            if (root is not null)
+            {
+                if (root.Length == 0 || paths.Count == 0 || !Directory.Exists(root) || paths.Any(p => !p.StartsWith(root + '/', StringComparison.Ordinal))) return Usage(output);
+                runtime = false;
+            }
+            if (removed)
+            {
+                if (paths.Count == 0 || root is not null) return Usage(output);
+                runtime = false;
+            }
+            bool defaults = paths.Count == 0;
+            if (defaults) paths.AddRange(InstallationDoctor.DefaultReceipts(AppContext.BaseDirectory));
+            DoctorReport report = await InstallationDoctor.Inspect(paths, root, runtime, removed: removed);
+            if (json) output.WriteLine(JsonSerializer.Serialize(report, InstallationReceipt.Json));
+            else
+            {
+                foreach (DoctorReceipt receipt in report.Receipts)
+                {
+                    output.WriteLine($"{receipt.Installation.Package} {receipt.Installation.Version}, commit {receipt.Installation.Commit ?? "unknown"}: {receipt.Installation.Files.Count} recorded paths ({receipt.Path})");
+                    if (receipt.Installation.Dirty) output.WriteLine("  Information: built from a modified source tree.");
+                    if (receipt.Installation.Commit is null) output.WriteLine("  Information: source commit is unknown.");
+                }
+                foreach (DoctorFinding finding in report.Findings)
+                    output.WriteLine($"{finding.Path}: {finding.Problem}\n  Repair: {finding.Repair}");
+                if (report.Daemon is { } daemon) output.WriteLine("Daemon: " + daemon.Status);
+                if (report.Findings.Count == 0) output.WriteLine(removed ? "Removal checked; no previously owned paths remain." : "All recorded paths match. Unrecorded files were not inspected.");
+            }
+            return report.Findings.Count == 0 ? 0 : 1;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        { output.WriteLine("OpenXLR: " + ex.Message); return 2; }
+    }
+
+    private static int Usage(TextWriter output)
+    {
+        output.WriteLine("Usage: openxlr doctor [--json] [--no-runtime] [--receipt PATH] [--root STAGING | --removed]\n       openxlr installation remember");
+        return 2;
+    }
+}

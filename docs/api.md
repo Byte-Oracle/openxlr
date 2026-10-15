@@ -86,7 +86,12 @@ Messages from the daemon, each a JSON object with a `type` field:
 | `error` | when a command without a `requestId` is rejected | `message`; for the mixer commands a `state` follows, so an optimistic edit can be reverted |
 | `commandResult` | in answer to a command that carried a `requestId` | `requestId`, `error` (null on success); preceded by the state the result refers to |
 
-The state message in full. At the top level: `daemonVersion`, `warning`,
+`daemonBuildId` is the running assembly's module identity (a GUID). Doctor
+compares it with the installed assembly to detect a daemon left running
+across an upgrade, including two builds with the same version. Older
+daemons omit it; clients that do not use it can ignore it.
+
+The state message in full. At the top level: `daemonVersion`, `daemonBuildId`, `warning`,
 `connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3), `capabilities` (`gain`,
 `mute`, `lowCut`, `expander`, `voiceTune`, `hpVolume`, `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`, `compressor`, `outputRouting`,
@@ -426,6 +431,8 @@ hardware strips are in [multiple Wave interfaces](wave-interfaces.md).
 
 All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
 
+- `installation-history/<sha256>.json`: retained package inventories across upgrades
+- `installation.lock`: serializes installation inventory writes
 - `mixer.json`: every mixer decision: the layout (`userChannels`,
   `userMixes`, `appearance`, see [mixer-layout.md](mixer-layout.md)), levels, mutes,
   device choices, the app registry, enforced defaults, the software low

@@ -10,7 +10,10 @@
         f nixpkgs.legacyPackages.${system});
     in {
       packages = forAllSystems (pkgs: rec {
-        openxlr = pkgs.callPackage ./packaging/nix/package.nix { };
+        openxlr = pkgs.callPackage ./packaging/nix/package.nix {
+          sourceCommit = self.rev or (if self ? dirtyRev then builtins.substring 0 40 self.dirtyRev else null);
+          dirtySource = !(self ? rev);
+        };
         default = openxlr;
       } // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isx86_64 {
         openxlr-yabridge = pkgs.callPackage ./packaging/nix/yabridge.nix { };

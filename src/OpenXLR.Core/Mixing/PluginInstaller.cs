@@ -1,5 +1,3 @@
-using System.ComponentModel;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace OpenXLR.Core.Mixing;
@@ -514,37 +512,7 @@ public sealed class PluginInstaller
     // ordinary file may wait forever for another process. This preflight
     // follows legitimate links, but is not protection against a source being
     // maliciously replaced between inspection and the later open/copy.
-    internal static void RequireRegularFile(string path)
-    {
-        if (!OperatingSystem.IsLinux()) return;
-        const uint type = 0x00000001; // STATX_TYPE
-        LinuxFileStatus status;
-        try
-        {
-            if (Statx(-100, path, 0, type, out status) != 0) // AT_FDCWD, follow links
-                throw new IOException($"Could not inspect the regular file {path}: {new Win32Exception(Marshal.GetLastPInvokeError()).Message}");
-        }
-        catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException)
-        {
-            throw new IOException($"Could not inspect the regular file {path}: statx is unavailable.", ex);
-        }
-        if ((status.Mask & type) == 0 || (status.Mode & 0xf000) != 0x8000) // S_IFMT, S_IFREG
-            throw new IOException($"{path} is not a regular file.");
-    }
-
-    // Linux UAPI uses the same 256-byte statx layout across architectures.
-    // Only the result mask and file type are read; the rest remains reserved.
-    // https://github.com/torvalds/linux/blob/master/include/uapi/linux/stat.h
-    [StructLayout(LayoutKind.Explicit, Size = 256)]
-    private struct LinuxFileStatus
-    {
-        [FieldOffset(0)] public uint Mask;
-        [FieldOffset(28)] public ushort Mode;
-    }
-
-    [DllImport("libc", EntryPoint = "statx", SetLastError = true)]
-    private static extern int Statx(int directory, [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
-        int flags, uint mask, out LinuxFileStatus status);
+    internal static void RequireRegularFile(string path) => RegularFile.Require(path);
 
     private static string Shorten(string path)
     {

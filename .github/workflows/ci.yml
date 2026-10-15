@@ -83,6 +83,9 @@ jobs:
       - name: Test
         run: dotnet test src/OpenXLR.slnx -c Release --no-build
 
+      - name: Installation receipts and headless doctor
+        run: python3 tools/test-installation-receipt.py
+
       - name: Validate Stream Deck/OpenDeck plugin
         run: |
           python3 tools/deck-skins.py --check

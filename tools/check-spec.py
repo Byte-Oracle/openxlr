@@ -26,7 +26,10 @@ errors = []
 installed = [t for line in install.splitlines() if not re.search(r"install\s+-d|mkdir", line)
              for t in re.findall(r"%\{buildroot\}(\S+)", line)]
 claims = [line.split()[-1] for line in files.splitlines()
-          if line.strip() and not line.startswith(("%license", "%doc", "%defattr", "#"))]
+          if line.strip() and not line.startswith(("%defattr", "#"))]
+# Relative %doc/%license inputs are copied by rpm; absolute ones were
+# already staged and are owned just like an ordinary %files entry.
+claims = [c for c in claims if c.startswith(("/", "%{"))]
 claims = [re.sub(r"^%(?:config(?:\(noreplace\))?|attr\([^)]*\))\s*", "", c) for c in claims]
 
 
@@ -43,6 +46,8 @@ for line in install.splitlines():
         errors.append(f"bare path in %install, rpm would execute it: {s}")
 for target in installed:
     target = target.rstrip("/")
+    if not target:  # The build root itself is a staging directory, not a payload file.
+        continue
     if not claimed(target):
         errors.append(f"installed but not in %files: {target}")
 for e in errors:
