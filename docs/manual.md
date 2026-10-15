@@ -1933,6 +1933,8 @@ settings. See
 
 | Path | What it is |
 |---|---|
+| `~/.config/openxlr/installation.json` | startup ownership and replaced-file metadata |
+| `~/.config/openxlr/installation-backups/<sha256>` | private originals for startup restoration |
 | `~/.config/openxlr/installation-history/<sha256>.json` | retained package inventories for doctor |
 | `~/.config/openxlr/installation.lock` | serializes installation inventory writes |
 | `~/.config/openxlr/mixer.json` | every mixer decision, the layout included (`userChannels`, `userMixes`, see [mixer-layout.md](mixer-layout.md)), written by the daemon |

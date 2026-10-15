@@ -266,6 +266,7 @@ public sealed class OptionsViewModel : ViewModelBase
                 StartupError = value
                     ? Localizer.Text("CouldNotEnableDaemonAtLogin")
                     : Localizer.Text("CouldNotDisableDaemonAtLogin");
+                StartupError += " " + Localizer.Text("StartupDoctorHint");
                 Reject(ref _startDaemonAtLogin, value, nameof(StartDaemonAtLogin));
                 return;
             }
@@ -286,7 +287,7 @@ public sealed class OptionsViewModel : ViewModelBase
             if (_openWindowAtLogin == value) return;
             if (!StartupIntegration.SetWindowAtLogin(value))
             {
-                StartupError = Localizer.Text("CouldNotUpdateAutostart");
+                StartupError = Localizer.Text("CouldNotUpdateAutostart") + " " + Localizer.Text("StartupDoctorHint");
                 Reject(ref _openWindowAtLogin, value, nameof(OpenWindowAtLogin));
                 return;
             }

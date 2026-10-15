@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="../../packaging/openxlr-daemon.service" LogicalName="OpenXLR.StartupUnit" />
     <!-- Shared with the daemon (see the file): XDG paths and private atomic writes. -->
     <Compile Include="../OpenXLR.Core/OpenXlrPaths.cs" Link="OpenXlrPaths.cs" />
     <Compile Include="../OpenXLR.Core/ProcessRunner.cs" Link="ProcessRunner.cs" />

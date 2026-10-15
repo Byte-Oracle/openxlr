@@ -554,7 +554,9 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
 `openxlr doctor` checks recorded package files and compares the
 running daemon with the installed build. It reports missing, changed and
 stale owned paths with repair commands, without changing audio or opening
-the window. See [installation.md](installation.md).
+the window. Options records exact startup files and original backups,
+migrating recognized files from older versions before removal. See
+[installation.md](installation.md).
 
 ### Desktop keys
 

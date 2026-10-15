@@ -92,6 +92,57 @@ one. In particular, adding the hook here does not change an external AUR
 recipe. Package receipts do not take ownership of `/etc` overrides or
 files supplied by another installer.
 
+## Startup ownership
+
+Options records the exact desktop entry, source-build user unit and
+`default.target.wants` link it manages in
+`~/.config/openxlr/installation.json`. Replaced user files are saved with
+their original hash and mode under `installation-backups`. Backups are
+written before their receipt entry is published. Disabling startup removes
+only unchanged owned files, restoring a recorded original where applicable.
+It does not delete directories or infer ownership from a filename. Existing
+directories at startup-file paths are rejected before recording a write.
+
+On upgrade, startup files identical to the window's generated templates or
+the source guide's reference unit are adopted before removal. The reference
+unit may differ only in its `ExecStart` line. Matching systemd enable links
+are adopted only when they point to the packaged unit or a recognized user
+unit. Modified and foreign files still require inspection. If restoration
+leaves an original user unit shadowing the packaged one, enabling is refused
+and its owned enable link is removed, so the original is not silently
+started at the next login. A restored foreign desktop entry may still start
+the window, so Options reports that startup could not be disabled.
+
+```sh
+openxlr doctor
+# Reapply only startup preferences that are already enabled.
+openxlr installation repair-startup
+# Migrate recognized old files, preflight all paths, remove owned files.
+openxlr installation remove-startup
+systemctl --user daemon-reload
+```
+
+Removal keeps receipts and originals for diagnosis and does not change the
+saved preferences or stop a running daemon. Turn the options off when
+removing startup integration permanently. If a startup receipt is malformed
+or uses a future format, doctor names a user-file recovery command:
+
+```sh
+openxlr installation reset-startup-receipt
+openxlr installation repair-startup
+```
+
+Reset preserves the invalid receipt as `installation.json.before-recovery-*`
+and leaves every startup file and original backup untouched. It refuses to
+reset a valid receipt. Reapplying can adopt recognized generated files;
+foreign files still require an explicit choice. Keep the saved receipt if
+returning to a newer application version.
+
+Symbolic links at the startup file itself or in `autostart`, `systemd` or
+`systemd/user` are refused. For Stow or dotfile-managed directories, manage
+these entries in the dotfile repository instead of through Options. This
+restriction prevents a redirected path from extending receipt ownership.
+
 Uninstall packaged files with the package manager that installed them.
 Doctor suggests `apt-get install --reinstall`, `dnf reinstall`, an AUR
 rebuild with `paru`, or `nix-store --repair-path` for package damage. Use

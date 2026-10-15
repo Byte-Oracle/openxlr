@@ -28,13 +28,14 @@ internal static class InstallationDoctor
         "rpm" => "sudo dnf reinstall " + Quote(receipt.Package),
         "arch" => "paru -S --rebuild " + Quote(receipt.Package),
         "nix" => "sudo nix-store --repair-path " + Quote(receipt.Prefix),
-        "user" => "Inspect the user-owned path and its receipt before replacing it.",
+        "user" => "openxlr installation repair-startup",
         _ => throw new ArgumentException("Unsupported receipt package manager."),
     };
 
     internal static IEnumerable<string> DefaultReceipts(string baseDirectory)
     {
         foreach (string path in InstallationHistory.PackageReceipts(baseDirectory)) yield return path;
+        if (File.Exists(StartupReceipt.Path) || new FileInfo(StartupReceipt.Path).LinkTarget is not null) yield return StartupReceipt.Path;
         foreach (string path in InstallationHistory.ArchivedReceipts()) yield return path;
     }
 
@@ -79,6 +80,7 @@ internal static class InstallationDoctor
                 if (!archived) currentInventoryComplete = false;
                 findings.Add(new(path, ex.Message + (!archived ? " Historical leftover checks were skipped." : ""), archived ?
                     "mv -T -i -- " + Quote(path) + " " + Quote(path + ".invalid-receipt") :
+                    path == StartupReceipt.Path ? "openxlr installation reset-startup-receipt" :
                     "Restore this receipt by reinstalling its package. Do not remove files using an unreadable receipt."));
             }
         }
@@ -177,6 +179,37 @@ internal static class InstallationCommands
     {
         try
         {
+            if (args.SequenceEqual(new[] { "installation", "remove-startup" }))
+            {
+                InstallationReceipt receipt = StartupReceipt.PrepareRemoval();
+                foreach (string path in StartupReceipt.StartupPaths)
+                    if (StartupReceipt.RemovalProblem(receipt, path) is { } problem) throw new IOException(problem);
+                // Removal is exact and idempotent, with the same ownership checks
+                // as Options. Keep the receipt and originals for later diagnosis.
+                foreach (InstalledFile file in receipt.Files.Where(f => !f.Removed && StartupReceipt.Allowed(f.Path))) StartupReceipt.Remove(file.Path);
+                output.WriteLine("Recorded startup files removed; original user files restored where recorded.");
+                output.WriteLine("Run: systemctl --user daemon-reload");
+                return 0;
+            }
+            if (args.SequenceEqual(new[] { "installation", "reset-startup-receipt" }))
+            {
+                output.WriteLine("Original receipt preserved at " + StartupReceipt.Recover());
+                output.WriteLine("Run openxlr installation repair-startup to reapply enabled preferences.");
+                return 0;
+            }
+            if (args.SequenceEqual(new[] { "installation", "repair-startup" }))
+            {
+                UiSettings settings = UiSettings.Load();
+                if (!settings.StartDaemonAtLogin && !settings.OpenWindowAtLogin)
+                {
+                    output.WriteLine("No startup preferences are enabled; no files were changed.");
+                    return 0;
+                }
+                bool daemon = !settings.StartDaemonAtLogin || StartupIntegration.SetDaemonAtLogin(true);
+                bool window = !settings.OpenWindowAtLogin || StartupIntegration.SetWindowAtLogin(true);
+                output.WriteLine(daemon && window ? "Enabled startup preferences reapplied; replaced files are backed up in the receipt." : "Startup repair failed. Run openxlr doctor and inspect foreign or linked startup paths.");
+                return daemon && window ? 0 : 1;
+            }
             if (args.SequenceEqual(new[] { "installation", "remember" }))
             {
                 string[] receipts = [.. InstallationHistory.PackageReceipts(AppContext.BaseDirectory)];
@@ -210,6 +243,16 @@ internal static class InstallationCommands
             bool defaults = paths.Count == 0;
             if (defaults) paths.AddRange(InstallationDoctor.DefaultReceipts(AppContext.BaseDirectory));
             DoctorReport report = await InstallationDoctor.Inspect(paths, root, runtime, removed: removed);
+            if (defaults)
+            {
+                HashSet<string> owned = [.. report.Receipts.Where(r => !r.Archived && r.Installation.Manager == "user")
+                    .SelectMany(r => r.Installation.Files).Where(f => !f.Removed).Select(f => f.Path)];
+                var unowned = StartupReceipt.StartupPaths.Where(p => !owned.Contains(p) &&
+                    (File.Exists(p) || Directory.Exists(p) || new FileInfo(p).LinkTarget is not null))
+                    .Select(p => new DoctorFinding(p, "startup path is not owned by a receipt; it will not be removed",
+                        "mv -T -i -- " + InstallationDoctor.Quote(p) + " " + InstallationDoctor.Quote(p + ".before-openxlr")));
+                report = report with { Findings = [.. report.Findings, .. unowned] };
+            }
             if (json) output.WriteLine(JsonSerializer.Serialize(report, InstallationReceipt.Json));
             else
             {
@@ -232,7 +275,7 @@ internal static class InstallationCommands
 
     private static int Usage(TextWriter output)
     {
-        output.WriteLine("Usage: openxlr doctor [--json] [--no-runtime] [--receipt PATH] [--root STAGING | --removed]\n       openxlr installation remember");
+        output.WriteLine("Usage: openxlr doctor [--json] [--no-runtime] [--receipt PATH] [--root STAGING | --removed]\n       openxlr installation {remember|repair-startup|remove-startup|reset-startup-receipt}");
         return 2;
     }
 }

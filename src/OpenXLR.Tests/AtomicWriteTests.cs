@@ -55,5 +55,17 @@ public sealed class AtomicWriteTests : IDisposable
         Assert.Equal(shared, File.GetUnixFileMode(path));   // the refused file keeps its mode as well as its bytes
     }
 
+    [Fact]
+    public void RestoringAnExplicitFileModeKeepsTheSharedDirectoryMode()
+    {
+        UnixFileMode directoryMode = File.GetUnixFileMode(_directory);
+        string path = Path.Combine(_directory, "restored.desktop");
+        const UnixFileMode original = UnixFileMode.UserRead;
+        OpenXlrPaths.WriteAtomic(path, "original"u8.ToArray(), privatePermissions: false, fileMode: original);
+        Assert.Equal(original, File.GetUnixFileMode(path));
+        Assert.Equal(directoryMode, File.GetUnixFileMode(_directory));
+        Assert.Equal("original", File.ReadAllText(path));
+    }
+
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 }
