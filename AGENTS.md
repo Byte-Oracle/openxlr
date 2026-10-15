@@ -39,6 +39,7 @@ dotnet restore src/OpenXLR.slnx --locked-mode
 dotnet build src/OpenXLR.slnx -c Release --no-restore -warnaserror
 dotnet test src/OpenXLR.slnx -c Release --no-build
 python3 tools/test-installation-receipt.py
+python3 packaging/yabridge/test-receipt.py
 node --check plugin/com.emaspa.openxlr.sdPlugin/plugin.mjs
 node --test plugin/tests/*.test.mjs
 python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null

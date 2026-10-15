@@ -3,7 +3,7 @@
 """Prepare pinned sources, build the optional bridge, and create binary packages.
 
 Fetches are confined to 'prepare'. 'build' runs Meson and Cargo offline using
-the prepared source tree. No command installs into the running system.
+the prepared source tree. Only an explicit stage --destdir / --prefix /usr/local --manager manual installs locally.
 """
 import argparse
 import configparser
@@ -15,6 +15,9 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
+import stat
+import tempfile
 
 HERE = Path(__file__).resolve().parent
 PIN = json.loads((HERE / "source.json").read_text())
@@ -66,6 +69,7 @@ def prepare(source):
     (crate / ".cargo/config.toml").write_text(vendor_config)
     # Keep the build recipe and patches with the corresponding source archive.
     shutil.copytree(HERE, source / "openxlr-packaging", dirs_exist_ok=True)
+    shutil.copy2(HERE.parent / "install_receipt.py", source / "openxlr-packaging/install_receipt.py")
     (source / "openxlr-packaging/prepared.json").write_text(json.dumps(PIN, sort_keys=True) + "\n")
 
 
@@ -106,7 +110,20 @@ def build(source, output, jobs):
          "--target-dir", output / "cargo"], cwd=source / "tools/yabridgectl", env=env)
 
 
-def stage(source, output, destination, prefix="/usr"):
+def stage(source, output, destination, prefix="/usr", *, manager):
+    if not prefix.startswith("/") or prefix.startswith("//") or prefix == "/" or str(Path(prefix)) != prefix or ".." in Path(prefix).parts:
+        raise RuntimeError("Prefix must be an absolute normalized installation prefix")
+    if destination.is_symlink():
+        raise RuntimeError("Staging root must not be a symbolic link")
+    if destination.resolve() == Path("/"):
+        if prefix != "/usr/local" or manager != "manual":
+            raise RuntimeError("Live installation requires --prefix /usr/local --manager manual")
+        with tempfile.TemporaryDirectory(prefix="openxlr-yabridge-stage-") as temporary:
+            staged = Path(temporary)
+            stage(source, output, staged, prefix, manager=manager)
+            return install_staged(staged, prefix)
+    if destination.is_symlink() or destination.exists() and any(destination.iterdir()):
+        raise RuntimeError("Stage into an empty package root, then install the generated package; existing paths must not be overwritten")
     root = destination / prefix.lstrip("/")
     bridge = root / "lib/openxlr/yabridge"
     bridge.mkdir(parents=True, exist_ok=True)
@@ -139,7 +156,80 @@ def stage(source, output, destination, prefix="/usr"):
             if path.is_file() and ".git" not in path.parts and path.name.lower().startswith(("license", "copying")):
                 licenses.append(f"\n--- {path.relative_to(source)} ---\n" + path.read_text(errors="replace"))
     (notices / "THIRD-PARTY-NOTICES").write_text("".join(licenses))
+    inventory(destination, prefix, manager=manager)
     return root
+
+
+def inventory(destination, prefix="/usr", *, manager):
+    tool = HERE / "install_receipt.py" if (HERE / "install_receipt.py").exists() else HERE.parent / "install_receipt.py"
+    run([sys.executable, tool, "--root", destination, "--prefix", prefix, "--package", "openxlr-yabridge",
+         "--manager", manager, "--version", f"{PIN['version']}-{PIN['revision']}", "--commit", PIN["commit"]])
+
+
+def install_staged(staging, prefix, destination=Path("/")):
+    """Publish only the staged inventory, refusing redirected or foreign files."""
+    receipt_path = Path(prefix.lstrip("/")) / "share/openxlr/installations/openxlr-yabridge.json"
+    staged_receipt = staging / receipt_path
+    inventory = json.loads(staged_receipt.read_text())
+    target_receipt = destination / receipt_path
+
+    def safe_parent(path):
+        for parent in path.parents:
+            if parent == destination:
+                break
+            if parent.is_symlink():
+                raise RuntimeError("Refusing linked installation directory: " + str(parent))
+            if parent.exists() and not parent.is_dir():
+                raise RuntimeError("Installation parent is not a directory: " + str(parent))
+
+    safe_parent(target_receipt)
+    old = {}
+    if os.path.lexists(target_receipt):
+        mode = target_receipt.lstat().st_mode
+        if not stat.S_ISREG(mode) or target_receipt.stat().st_size > 4 * 1024 * 1024:
+            raise RuntimeError("Refusing an unreadable or linked installed receipt")
+        previous = json.loads(target_receipt.read_text())
+        if (previous.get("formatVersion"), previous.get("package"), previous.get("manager"), previous.get("prefix")) != (1, "openxlr-yabridge", "manual", prefix):
+            raise RuntimeError("Installed receipt belongs to another installer")
+        old = {entry["path"]: entry for entry in previous["files"]}
+
+    def matches(path, entry):
+        mode = path.lstat().st_mode
+        if entry.get("kind") == "link":
+            return stat.S_ISLNK(mode) and os.readlink(path) == entry.get("linkTarget")
+        if not stat.S_ISREG(mode) or stat.S_IMODE(mode) != entry.get("mode") or path.stat().st_size > 512 * 1024 * 1024:
+            return False
+        with path.open("rb") as stream:
+            return hashlib.file_digest(stream, "sha256").hexdigest() == entry.get("sha256")
+
+    entries = sorted(inventory["files"], key=lambda entry: entry["kind"] == "receipt")
+    for entry in entries:
+        target = destination / entry["path"].lstrip("/")
+        safe_parent(target)
+        if os.path.lexists(target) and target != target_receipt:
+            if not matches(target, entry) and not matches(target, old.get(entry["path"], {})):
+                raise RuntimeError("Refusing to overwrite an unowned or modified path: " + str(target))
+    # No live file changes until the entire inventory has passed preflight.
+    # Publish the receipt last so an interrupted update remains diagnosable.
+    for entry in entries:
+        relative = entry["path"].lstrip("/")
+        target = destination / relative
+        missing = []
+        parent = target.parent
+        while not parent.exists():
+            missing.append(parent)
+            parent = parent.parent
+        for directory in reversed(missing):
+            directory.mkdir(mode=0o755)
+            directory.chmod(0o755)
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".openxlr-", delete=False) as temporary:
+            temporary_path = Path(temporary.name)
+        try:
+            shutil.copy2(staging / relative, temporary_path)
+            os.replace(temporary_path, target)
+        finally:
+            temporary_path.unlink(missing_ok=True)
+    return destination / prefix.lstrip("/")
 
 
 def source_archive(source, output):
@@ -184,7 +274,7 @@ def package(source, output, kind):
     destination = output / ("stage-" + kind)
     if destination.exists():
         raise RuntimeError(f"Staging directory already exists: {destination}")
-    stage(source, output, destination)
+    stage(source, output, destination, manager={"deb": "debian", "rpm": "rpm", "arch": "arch"}[kind])
     dist = output / "dist"
     dist.mkdir(exist_ok=True)
     version = PIN["version"]
@@ -208,8 +298,12 @@ def package(source, output, kind):
         top = output / "rpm"
         for subdir in ("BUILD", "BUILDROOT", "RPMS", "SOURCES", "SPECS", "SRPMS"):
             (top / subdir).mkdir(parents=True, exist_ok=True)
-        run(["tar", "-czf", top / "SOURCES/payload.tar.gz", "-C", destination, "usr"])
-        spec = (HERE / "openxlr-yabridge.spec.in").read_text().replace("@VERSION@", version).replace("@REVISION@", str(revision))
+        tools = top / "receipt-tools"
+        tools.mkdir()
+        tool = HERE / "install_receipt.py" if (HERE / "install_receipt.py").exists() else HERE.parent / "install_receipt.py"
+        shutil.copy2(tool, tools / "install_receipt.py")
+        run(["tar", "-czf", top / "SOURCES/payload.tar.gz", "-C", destination, "usr", "-C", tools, "install_receipt.py"])
+        spec = (HERE / "openxlr-yabridge.spec.in").read_text().replace("@VERSION@", version).replace("@REVISION@", str(revision)).replace("@COMMIT@", PIN["commit"])
         (top / "SPECS/openxlr-yabridge.spec").write_text(spec)
         run(["rpmbuild", "-bb", "--define", "_topdir " + str(top), "--define", "_dbpath " + str(top / "rpmdb"),
              top / "SPECS/openxlr-yabridge.spec"])
@@ -230,20 +324,23 @@ def package(source, output, kind):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("prepare", "build", "stage", "source-archive", "package"))
+    parser.add_argument("command", choices=("prepare", "build", "stage", "receipt", "source-archive", "package"))
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("build-yabridge"))
     parser.add_argument("--destdir", type=Path)
     parser.add_argument("--prefix", default="/usr")
+    parser.add_argument("--manager", choices=("debian", "rpm", "arch", "nix", "manual"))
     parser.add_argument("--format", choices=("deb", "rpm", "arch", "srpm", "debian-source"))
     parser.add_argument("--jobs", type=int, default=2)
     args = parser.parse_args()
     source, output = args.source.resolve(), args.output.resolve()
     if args.command == "prepare": prepare(source)
     elif args.command == "build": build(source, output, args.jobs)
-    elif args.command == "stage":
-        if args.destdir is None: parser.error("stage requires --destdir")
-        stage(source, output, args.destdir.resolve(), args.prefix)
+    elif args.command in ("stage", "receipt"):
+        if args.destdir is None: parser.error(args.command + " requires --destdir")
+        if args.manager is None: parser.error(args.command + " requires --manager")
+        if args.command == "receipt": inventory(args.destdir.absolute(), args.prefix, manager=args.manager)
+        else: stage(source, output, args.destdir.absolute(), args.prefix, manager=args.manager)
     elif args.command == "source-archive": source_archive(source, output / "dist")
     else:
         if args.format is None: parser.error("package requires --format")

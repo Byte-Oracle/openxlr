@@ -24,6 +24,7 @@ internal static class InstallationDoctor
 
     internal static string Repair(InstallationReceipt receipt) => receipt.Manager switch
     {
+        "manual" => "Rebuild the companion and run sudo python3 packaging/yabridge/build.py stage --source /path/to/yabridge-source --output /path/to/yabridge-build --destdir / --prefix /usr/local --manager manual from its source checkout.",
         "debian" => "sudo apt-get install --reinstall " + Quote(receipt.Package),
         "rpm" => "sudo dnf reinstall " + Quote(receipt.Package),
         "arch" => "paru -S --rebuild " + Quote(receipt.Package),

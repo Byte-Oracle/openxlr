@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'packaging/yabridge/**'
+      - 'packaging/install_receipt.py'
       - 'packaging/nix/yabridge.nix'
       - '.github/workflows/yabridge.yml'
 

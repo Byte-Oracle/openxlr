@@ -100,7 +100,8 @@ internal sealed record InstallationReceipt
     {
         if (FormatVersion != 1 || Package is null || Package.Length is 0 or > 80 ||
             !char.IsAsciiLetterOrDigit(Package[0]) || !Package.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '+' or '.') ||
-            Manager is not ("user" or "debian" or "rpm" or "arch" or "nix") ||
+            Manager is not ("user" or "debian" or "rpm" or "arch" or "nix" or "manual") ||
+            Manager == "manual" && (Package != "openxlr-yabridge" || Prefix != "/usr/local") ||
             Version is null || Version.Length is 0 or > 128 || Version.Any(char.IsControl) ||
             Commit is not null && (Commit.Length != 40 || !Commit.All(char.IsAsciiHexDigit)) ||
             !Absolute(Prefix) || Prefix == System.IO.Path.GetPathRoot(Prefix) ||

@@ -109,21 +109,49 @@ python3 packaging/yabridge/build.py prepare --source /tmp/yabridge-source --outp
 python3 packaging/yabridge/build.py build   --source /tmp/yabridge-source --output /tmp/yabridge-build --jobs "$(nproc)"
 ```
 
-To use the result without making a package, install it under
-`/usr/local`, which OpenXLR looks in without being told:
+Install through a package, or use the package-free local install:
 
 ```sh
-sudo python3 packaging/yabridge/build.py stage --source /tmp/yabridge-source \
-    --output /tmp/yabridge-build --destdir / --prefix /usr/local
+python3 packaging/yabridge/build.py package --source /tmp/yabridge-source \
+    --output /tmp/yabridge-build --format deb
+# Install the matching .deb from /tmp/yabridge-build/dist with apt.
 systemctl --user restart openxlr-daemon
 ```
 
-That writes `/usr/local/lib/openxlr/yabridge` and the
-`openxlr-yabridgectl` command beside it. Options then shows it as the
-selected bridge, with its version and path. For any other location, stage it with
-`--prefix` set to that root and set `OPENXLR_YABRIDGE` to the bridge
-directory: both the daemon and the `openxlr-yabridgectl` wrapper read it,
-and the wrapper falls back to the prefix it was staged with.
+For a package-free install, the explicit local prefix is still supported:
+
+```sh
+sudo python3 packaging/yabridge/build.py stage --source /tmp/yabridge-source \
+    --output /tmp/yabridge-build --destdir / --prefix /usr/local --manager manual
+systemctl --user restart openxlr-daemon
+```
+
+It builds a private staged inventory first, then publishes only those paths.
+Existing files must match the new payload or an unchanged entry in the
+previous local receipt. Foreign files, modified owned files, linked parents
+and regular files blocking a parent directory are refused before publication.
+No shared directory is inventoried or removed. Package-manager removal remains
+preferred; a local install has no package-manager uninstall command. Inspect its exact receipt
+with `openxlr doctor`, and move only verified owned paths when removing it.
+
+`stage` and `receipt` require `--manager`: `debian`, `rpm`, `arch`, `nix`,
+or `manual` for the explicit local install. For an external AUR recipe:
+
+```sh
+# makedepends includes python; stage strips the companion before inventory.
+options=('!strip')
+# In package():
+python3 openxlr-packaging/build.py stage --source . --output out \
+    --destdir "$pkgdir" --manager arch
+```
+
+RPM retains the distribution's stripping and writes the receipt afterwards.
+Debian source builds select the Debian manager when staging and regenerate
+the receipt before collecting the final package checksums.
+The source pin and companion revision are unchanged. Options shows the
+selected bridge with its version and path. `OPENXLR_YABRIDGE` selects an
+installed bridge outside the standard locations in both the daemon and the
+wrapper. See [installation receipts](../../docs/installation.md).
 
 Three things bite when building inside a package builder rather than by
 hand, and the recipes in this directory already handle them. Ubuntu names

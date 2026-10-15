@@ -39,8 +39,10 @@ def provenance(source):
 def write_receipt(root, prefix, package, manager, version, commit=None, dirty=False):
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.+-]{0,79}", package):
         raise ValueError("Invalid package name")
-    if manager not in ("debian", "rpm", "arch", "nix"):
+    if manager not in ("debian", "rpm", "arch", "nix", "manual"):
         raise ValueError("Unsupported package manager")
+    if manager == "manual" and (package != "openxlr-yabridge" or prefix != "/usr/local"):
+        raise ValueError("Manual receipts are reserved for the local companion install")
     if not valid_text(version, 128):
         raise ValueError("Invalid version")
     if commit is not None and not re.fullmatch(r"[0-9a-fA-F]{40}", commit):
@@ -126,7 +128,7 @@ def main():
     parser.add_argument("--root", required=True, type=Path, help="Finished package staging root")
     parser.add_argument("--prefix", default="/usr")
     parser.add_argument("--package", default="openxlr")
-    parser.add_argument("--manager", required=True, choices=("debian", "rpm", "arch", "nix"))
+    parser.add_argument("--manager", required=True, choices=("debian", "rpm", "arch", "nix", "manual"))
     parser.add_argument("--version", required=True)
     parser.add_argument("--commit")
     parser.add_argument("--dirty", action="store_true")
