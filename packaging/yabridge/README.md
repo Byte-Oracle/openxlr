@@ -74,7 +74,11 @@ The module passes the store path to the daemon. Build it separately with
 absolute path selects a companion installed elsewhere. Restart the daemon
 after changing this setting. The selected directory must contain the complete
 payload and its `openxlr-yabridge.json` receipt; an incomplete directory is
-not selected. Options shows the effective provider, version and path.
+not selected. `stage` installs live only under `/usr/local`, so to put a
+companion elsewhere, stage it with `--manager manual` into an empty
+`--destdir`, copy its `usr/local/lib/openxlr/yabridge` directory to the
+place you want and point the variable at the copy. Options shows the
+effective provider, version and path.
 The system bridge needs its own synced
 wrappers when opting out; OpenXLR's private files remain for switching back.
 
@@ -127,12 +131,22 @@ systemctl --user restart openxlr-daemon
 ```
 
 It builds a private staged inventory first, then publishes only those paths.
-Existing files must match the new payload or an unchanged entry in the
-previous local receipt. Foreign files, modified owned files, linked parents
-and regular files blocking a parent directory are refused before publication.
+A path the previous local receipt owns is replaced whatever it holds now, so
+the same command repairs a modified file that `openxlr doctor` reports. A
+path the receipt does not own is left alone when it already equals the new
+payload and refused otherwise, as are linked parents and regular files
+blocking a parent directory; every refusal happens before the first file is
+written and names all the conflicting paths at once. An install made by a
+`stage` from before receipts has no receipt: its files are adopted when they
+sit at the companion's own paths under `/usr/local` and its
+`lib/openxlr/yabridge/openxlr-yabridge.json` is one that stage wrote, so the
+upgrade replaces them and writes the receipt. With `--manager manual`, a
+`--destdir` other than `/` runs this same install under that root, which lets
+a packager or a check rehearse an upgrade against a copy of a tree.
 No shared directory is inventoried or removed. Package-manager removal remains
-preferred; a local install has no package-manager uninstall command. Inspect its exact receipt
-with `openxlr doctor`, and move only verified owned paths when removing it.
+preferred; a local install has no package-manager uninstall command. Inspect
+its exact receipt with `openxlr doctor`, and move only verified owned paths
+when removing it.
 
 `stage` and `receipt` require `--manager`: `debian`, `rpm`, `arch`, `nix`,
 or `manual` for the explicit local install. For an external AUR recipe:

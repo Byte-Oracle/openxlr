@@ -115,15 +115,26 @@ def stage(source, output, destination, prefix="/usr", *, manager):
         raise RuntimeError("Prefix must be an absolute normalized installation prefix")
     if destination.is_symlink():
         raise RuntimeError("Staging root must not be a symbolic link")
-    if destination.resolve() == Path("/"):
-        if prefix != "/usr/local" or manager != "manual":
-            raise RuntimeError("Live installation requires --prefix /usr/local --manager manual")
+    if destination.exists() and not destination.is_dir():
+        raise RuntimeError("Staging root must be a directory")
+    if manager == "manual":
+        # The local install publishes from a private staging tree. Under / it is
+        # the live install; under any other root it is the same install rehearsed
+        # there, so a packager or a check can run the documented upgrade.
+        if prefix != "/usr/local":
+            raise RuntimeError("Local installation requires --prefix /usr/local --manager manual")
         with tempfile.TemporaryDirectory(prefix="openxlr-yabridge-stage-") as temporary:
             staged = Path(temporary)
-            stage(source, output, staged, prefix, manager=manager)
-            return install_staged(staged, prefix)
-    if destination.is_symlink() or destination.exists() and any(destination.iterdir()):
+            stage_payload(source, output, staged, prefix, manager=manager)
+            return install_staged(staged, prefix, destination)
+    if destination.resolve() == Path("/"):
+        raise RuntimeError("Live installation requires --prefix /usr/local --manager manual")
+    if destination.exists() and any(destination.iterdir()):
         raise RuntimeError("Stage into an empty package root, then install the generated package; existing paths must not be overwritten")
+    return stage_payload(source, output, destination, prefix, manager=manager)
+
+
+def stage_payload(source, output, destination, prefix, *, manager):
     root = destination / prefix.lstrip("/")
     bridge = root / "lib/openxlr/yabridge"
     bridge.mkdir(parents=True, exist_ok=True)
@@ -166,6 +177,23 @@ def inventory(destination, prefix="/usr", *, manager):
          "--manager", manager, "--version", f"{PIN['version']}-{PIN['revision']}", "--commit", PIN["commit"]])
 
 
+def written_before_receipts(bridge_receipt):
+    """Whether a tree with no installation receipt is one the stage before receipts wrote.
+
+    That stage put the same payload at the same paths and recorded only the
+    bridge receipt beside the libraries, in the format stage_payload still writes.
+    """
+    if bridge_receipt.is_symlink() or not bridge_receipt.is_file() or bridge_receipt.stat().st_size > 64 * 1024:
+        return False
+    try:
+        bridge = json.loads(bridge_receipt.read_text())
+    except (UnicodeDecodeError, ValueError):
+        return False
+    return (isinstance(bridge, dict) and bridge.get("formatVersion") == 1 and isinstance(bridge.get("version"), str)
+            and re.fullmatch(r"[0-9a-f]{40}", str(bridge.get("sourceCommit"))) is not None
+            and isinstance(bridge.get("windowsArchitectures"), list))
+
+
 def install_staged(staging, prefix, destination=Path("/")):
     """Publish only the staged inventory, refusing redirected or foreign files."""
     receipt_path = Path(prefix.lstrip("/")) / "share/openxlr/installations/openxlr-yabridge.json"
@@ -183,7 +211,9 @@ def install_staged(staging, prefix, destination=Path("/")):
                 raise RuntimeError("Installation parent is not a directory: " + str(parent))
 
     safe_parent(target_receipt)
-    old = {}
+    # The previous receipt is the proof of ownership: every path it lists may be
+    # replaced, whatever it holds now, which is how a modified file is repaired.
+    owned = set()
     if os.path.lexists(target_receipt):
         mode = target_receipt.lstat().st_mode
         if not stat.S_ISREG(mode) or target_receipt.stat().st_size > 4 * 1024 * 1024:
@@ -191,7 +221,10 @@ def install_staged(staging, prefix, destination=Path("/")):
         previous = json.loads(target_receipt.read_text())
         if (previous.get("formatVersion"), previous.get("package"), previous.get("manager"), previous.get("prefix")) != (1, "openxlr-yabridge", "manual", prefix):
             raise RuntimeError("Installed receipt belongs to another installer")
-        old = {entry["path"]: entry for entry in previous["files"]}
+        owned = {entry["path"] for entry in previous["files"]}
+    elif written_before_receipts(destination / prefix.lstrip("/") / "lib/openxlr/yabridge/openxlr-yabridge.json"):
+        # An install made before receipts is adopted at the companion's own paths.
+        owned = {entry["path"] for entry in inventory["files"] if entry["kind"] != "receipt"}
 
     def matches(path, entry):
         mode = path.lstat().st_mode
@@ -203,12 +236,16 @@ def install_staged(staging, prefix, destination=Path("/")):
             return hashlib.file_digest(stream, "sha256").hexdigest() == entry.get("sha256")
 
     entries = sorted(inventory["files"], key=lambda entry: entry["kind"] == "receipt")
+    conflicts = []
     for entry in entries:
         target = destination / entry["path"].lstrip("/")
         safe_parent(target)
         if os.path.lexists(target) and target != target_receipt:
-            if not matches(target, entry) and not matches(target, old.get(entry["path"], {})):
-                raise RuntimeError("Refusing to overwrite an unowned or modified path: " + str(target))
+            # An unowned path stays only when it already equals the new payload.
+            if not (matches(target, entry) or entry["path"] in owned and stat.S_ISREG(target.lstat().st_mode)):
+                conflicts.append(str(target))
+    if conflicts:
+        raise RuntimeError("Refusing to overwrite paths this install does not own:\n  " + "\n  ".join(conflicts))
     # No live file changes until the entire inventory has passed preflight.
     # Publish the receipt last so an interrupted update remains diagnosable.
     for entry in entries:
