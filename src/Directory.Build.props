@@ -14,4 +14,10 @@
          file, so locked-mode restores pass in both. -->
     <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
   </PropertyGroup>
+  <!-- Source packages have no .git directory. git archive expands this
+       marker so their assemblies retain the receipt's source identity. -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)../packaging/source-commit')">
+    <_OpenXlrArchiveCommit>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../packaging/source-commit').Trim())</_OpenXlrArchiveCommit>
+    <SourceRevisionId Condition="'$(SourceRevisionId)' == '' And $([System.Text.RegularExpressions.Regex]::IsMatch('$(_OpenXlrArchiveCommit)', '^[a-fA-F0-9]{40}$'))">$(_OpenXlrArchiveCommit)</SourceRevisionId>
+  </PropertyGroup>
 </Project>

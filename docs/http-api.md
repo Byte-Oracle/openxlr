@@ -31,6 +31,10 @@ query strings are not accepted. Keep the token out of logs and bug reports.
 | `POST /api/v1/commands` | Execute one existing cmd object |
 | `WS /api/v1/events` | Same authenticated protocol as /ws |
 
+`/state` also carries `daemonBuildId`, the running daemon assembly's module
+identity. It lets `openxlr doctor` compare the running build with the one
+installed on disk without restarting it. See [installation.md](installation.md).
+
 The device, profile and mixer resources are parts of the same snapshot
 `/state` returns, with the same field names; two requests may see two
 different moments. Channel and mix ids are exact and case-sensitive. Insert

@@ -133,6 +133,8 @@ public sealed class HttpApiTests
             Assert.Equal(HttpStatusCode.Forbidden, foreignEvents.StatusCode);
             http.DefaultRequestHeaders.Remove("Origin");
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using (var state = System.Text.Json.JsonDocument.Parse(await http.GetStringAsync("/api/v1/state")))
+                Assert.Equal(DaemonVersion.BuildId, state.RootElement.GetProperty("daemonBuildId").GetString());
             foreach (string path in new[] { "devices", "profiles", "diagnostics", "editor-rules", "plugin-diagnostics" })
             {
                 using var resource = await http.GetAsync("/api/v1/" + path);

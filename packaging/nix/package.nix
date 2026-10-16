@@ -17,6 +17,9 @@
 , pulseaudio
 , xdg-utils
 , glib
+, python3
+, sourceCommit ? null
+, dirtySource ? false
 }:
 
 buildDotnetModule {
@@ -44,8 +47,9 @@ buildDotnetModule {
 
   # The optional LV2 host, a small C program the daemon build compiles beside
   # itself. Its libraries are already runtime dependencies below.
-  dotnetFlags = [ "-p:EnableNativeLv2Host=true" ];
-  nativeBuildInputs = [ gcc pkg-config ];
+  dotnetFlags = [ "-p:EnableNativeLv2Host=true" ]
+    ++ lib.optional (sourceCommit != null) "-p:SourceRevisionId=${sourceCommit}";
+  nativeBuildInputs = [ gcc pkg-config python3 ];
   buildInputs = [ pipewire lilv lv2 libx11 ];
 
   dotnet-sdk = dotnetCorePackages.sdk_10_0;
@@ -76,6 +80,9 @@ buildDotnetModule {
   postFixup = ''
     ln -s $out/bin/OpenXLR.Daemon $out/bin/openxlr-daemon
     ln -s $out/bin/OpenXLR.UI $out/bin/openxlr
+    python3 packaging/install_receipt.py --root / --prefix "$out" --manager nix --version "$version" \
+      ${lib.optionalString (sourceCommit != null) "--commit ${lib.escapeShellArg sourceCommit}"} \
+      ${lib.optionalString dirtySource "--dirty"}
   '';
 
   postInstall = ''

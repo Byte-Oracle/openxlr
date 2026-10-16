@@ -549,6 +549,13 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   it. Scans get much slower and produce large logs. The switch takes effect
   without a daemon restart and is not saved across restarts
 
+### Installation checks
+
+`openxlr doctor` checks recorded package files and compares the
+running daemon with the installed build. It reports missing, changed and
+stale owned paths with repair commands, without changing audio or opening
+the window. See [installation.md](installation.md).
+
 ### Desktop keys
 
 The window registers global shortcuts through the desktop's GlobalShortcuts

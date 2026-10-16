@@ -98,6 +98,15 @@ if (instanceLock is null)
     return 75;
 }
 
+// Preserve the installed payload inventory before an upgrade or removal can
+// replace it. A failed inventory must never keep the user's microphone off.
+foreach (string receipt in OpenXLR.Core.InstallationHistory.PackageReceipts(AppContext.BaseDirectory))
+{
+    try { OpenXLR.Core.InstallationHistory.Remember(receipt); }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    { app.Logger.LogWarning("Could not record installation receipt {Path}: {Error}", receipt, ex.Message); }
+}
+
 // The hosted services (device connect, PipeWire graph build) start before
 // Kestrel binds, so a busy port used to mean: build the whole submix graph,
 // fail to bind, abort with a core dump, get restarted by systemd, repeat.

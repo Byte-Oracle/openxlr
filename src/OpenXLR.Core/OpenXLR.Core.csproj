@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="OpenXLR.Tests" />
+    <InternalsVisibleTo Include="OpenXLR.Daemon" />
     <!-- The flag decides whether the helper is built; its presence decides
          whether it is copied. Without the second half, one ordinary build
          after a native one deletes the helper from the output again, and
