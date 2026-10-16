@@ -304,17 +304,15 @@ public static class StartupIntegration
     }
 
     /// <summary>
-    /// Run at startup when daemon-at-login is on: replaces a stale unit left
-    /// by an earlier version and starts the daemon, without waiting for the
-    /// user to toggle the option again.
+    /// Repair startup integration when daemon-at-login is on. Start only
+    /// after a successful repair, leaving a refused foreign unit untouched.
     /// </summary>
     public static void RepairDaemonUnit()
     {
         try
         {
             if (!HasStaleUserUnit()) return;
-            SetDaemonAtLogin(true);
-            Systemctl("start", UnitName);
+            if (SetDaemonAtLogin(true)) Systemctl("start", UnitName);
         }
         catch (Exception) { /* best effort */ }
     }
@@ -438,127 +436,87 @@ public static class StartupIntegration
             .Any(d => File.Exists(Path.Combine(d, program)));
     }
 
-    /// <summary>
-    /// Write one of the two startup files, both of which live in directories
-    /// the desktop and systemd own rather than in OpenXLR's own tree:
-    /// ~/.config/autostart and ~/.config/systemd/user.
-    ///
-    /// Use the shared atomic writer without private permissions: the directory
-    /// keeps its mode and the process umask decides the file's mode. Its unique,
-    /// exclusive temporary file cannot follow a stale temporary symbolic link.
-    ///
-    /// False when the target is a symbolic link: whatever it points at
-    /// belongs to whoever made the link, so it is left untouched and the
-    /// caller reports the refusal.
-    /// </summary>
-    private static bool WriteStartupFile(string path, string text)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        if (IsSymbolicLink(path)) return false;
-        OpenXlrPaths.WriteAtomic(path, text, privatePermissions: false);
-        return true;
-    }
-
-    /// <summary>Remove a startup file, treating one that is already gone as done.</summary>
-    private static void RemoveStartupFile(string path)
-    {
-        // File.Delete is silent about a missing file but throws
-        // DirectoryNotFoundException when the directory itself is absent,
-        // which is the same "nothing to remove" state.
-        try { File.Delete(path); }
-        catch (DirectoryNotFoundException) { }
-    }
-
     private static bool IsSymbolicLink(string path) => new FileInfo(path).LinkTarget is not null;
 
     /// <summary>The autostart entry this window writes for a given executable.</summary>
-    private static string AutostartEntry(string executable) => $"""
+    internal static string AutostartEntry(string executable) => AutostartEntry("Exec=" + DesktopExec(executable), finalNewline: true);
+
+    /// <summary>
+    /// The entries earlier releases wrote for the executable, oldest first:
+    /// the bare path until v0.1.22, the quoted path until v0.1.32, both
+    /// without the final newline v0.1.33 added.
+    /// </summary>
+    internal static IEnumerable<string> LegacyAutostartEntries(string executable) =>
+        [AutostartEntry("Exec=" + executable, finalNewline: false), AutostartEntry("Exec=" + DesktopExec(executable), finalNewline: false)];
+
+    private static string AutostartEntry(string execLine, bool finalNewline) => $"""
         [Desktop Entry]
         Type=Application
         Name=OpenXLR
         Comment=OpenXLR mixer window
-        Exec={DesktopExec(executable)}
+        {execLine}
         Icon=openxlr
         Terminal=false
         X-GNOME-Autostart-enabled=true
-
-        """;
+        """ + (finalNewline ? "\n" : "");
 
     /// <summary>
     /// Apply the daemon-at-login preference. False when nothing could be
     /// applied, so Options reports it instead of saving a preference the
     /// system does not have.
     /// </summary>
-    public static bool SetDaemonAtLogin(bool enabled)
+    public static bool SetDaemonAtLogin(bool enabled) => SetDaemonAtLogin(enabled, PackagedUnit);
+
+    internal static bool SetDaemonAtLogin(bool enabled, string? packagedUnit)
     {
-        try { return ApplyDaemonAtLogin(enabled); }
+        try { return ApplyDaemonAtLogin(enabled, packagedUnit); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
 
-    private static bool ApplyDaemonAtLogin(bool enabled)
+    private static bool ApplyDaemonAtLogin(bool enabled, string? packagedUnit)
     {
-        if (enabled)
+        string unit = StartupReceipt.StartupPaths[1];
+        string wants = StartupReceipt.StartupPaths[2];
+        InstallationReceipt receipt = StartupReceipt.PrepareRemoval(packagedUnit, includeWindow: false);
+        if (!enabled)
         {
-            if (PackagedUnit is not null)
-            {
-                // Any copy in ~/.config would shadow the packaged unit.
-                try { RemoveStartupFile(UnitPath); } catch (IOException) { }
-            }
-            else
-            {
-                // No binary anywhere we know of: a unit would only loop on 203/EXEC.
-                if (DaemonBinary is not { } daemon) return false;
-                if (!WriteStartupFile(UnitPath, $"""
-                    # Written by the OpenXLR window for a source build (Options, Start at login).
-                    [Unit]
-                    Description=OpenXLR audio daemon
-                    After=pipewire-pulse.service wireplumber.service
-                    StartLimitIntervalSec=300
-                    StartLimitBurst=3
-
-                    [Service]
-                    Type=notify
-                    NotifyAccess=main
-                    WatchdogSec=60
-                    WatchdogSignal=SIGTERM
-                    TimeoutStartSec=120
-                    ExecStart={SystemdQuote(daemon)}
-                    Environment=OPENXLR_BUILD_MIXER=1
-                    TimeoutStopSec=45
-                    KillMode=mixed
-                    LimitMEMLOCK=infinity
-                    Restart=on-failure
-                    RestartSec=3
-                    NoNewPrivileges=true
-                    PrivateTmp=true
-                    ProtectSystem=strict
-                    ProtectControlGroups=true
-                    ProtectKernelTunables=true
-                    RestrictSUIDSGID=true
-                    UMask=0077
-                    KeyringMode=private
-                    ProtectClock=true
-                    ProtectHostname=true
-                    ProtectKernelLogs=true
-                    ProtectKernelModules=true
-                    LockPersonality=true
-                    RestrictNamespaces=true
-                    CapabilityBoundingSet=
-
-                    [Install]
-                    WantedBy=default.target
-                    """)) return false;
-            }
+            // Check both paths first: a refused unit then leaves its link in
+            // place too, instead of half of the integration.
+            foreach (string path in new[] { wants, unit })
+                if (StartupReceipt.RemovalProblem(receipt, path) is { } problem) throw new IOException(problem);
+            StartupReceipt.Remove(wants, packagedUnit);
+            StartupReceipt.Remove(unit);
             Systemctl("daemon-reload");
-            return Systemctl("enable", UnitName);
+            return true;
         }
-        bool disabled = Systemctl("disable", UnitName);
-        try { RemoveStartupFile(UnitPath); } catch (IOException) { }
-        Systemctl("daemon-reload");
-        // systemctl refuses to disable a unit that does not exist, but an
-        // install with no unit at all already starts no daemon at login, so
-        // turning the option off there has nothing to report.
-        return disabled || (PackagedUnit is null && !File.Exists(UnitPath));
+        if (packagedUnit is not null)
+        {
+            // Any copy in ~/.config would shadow the packaged unit.
+            StartupReceipt.Remove(unit);
+            // Removing our copy can restore an older user unit. systemd
+            // would still load it ahead of the packaged one, even if the
+            // enable link points at the package. Ask the user to move it.
+            if (EntryExists(unit))
+            {
+                StartupReceipt.Remove(wants, unit);
+                Systemctl("daemon-reload");
+                return false;
+            }
+            // systemctl enable left the link pointing at the copy just
+            // removed. Take it down so the packaged unit gets its own.
+            if (StartupReceipt.LinksTo(wants, unit)) StartupReceipt.Remove(wants, unit);
+        }
+        else
+        {
+            // No binary anywhere we know of: a unit would only loop on 203/EXEC.
+            if (DaemonBinary is not { } daemon) return false;
+            // A foreign link is refused before the unit is written, so the
+            // refusal leaves nothing behind.
+            if (!StartupReceipt.CanEnableLink(wants, unit)) return false;
+            StartupReceipt.Write(unit, SourceUnit(daemon));
+        }
+        StartupReceipt.EnableLink(wants, packagedUnit ?? unit);
+        return Systemctl("daemon-reload");
     }
 
     /// <summary>
@@ -577,9 +535,16 @@ public static class StartupIntegration
     {
         try
         {
-            if (!enabled) { RemoveStartupFile(AutostartPath); return true; }
+            if (!enabled)
+            {
+                StartupReceipt.Remove(AutostartPath);
+                // A restored foreign entry can still start the window. Do not
+                // claim it was disabled or erase the saved choice in that case.
+                return !EntryExists(AutostartPath);
+            }
             if (!File.Exists(executable)) return false;
-            return WriteStartupFile(AutostartPath, AutostartEntry(executable));
+            StartupReceipt.Write(AutostartPath, AutostartEntry(executable));
+            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
@@ -669,11 +634,113 @@ public static class StartupIntegration
                 lines[execLines[0]] = expected;
                 foreach (int i in execLines.Skip(1).OrderDescending()) lines.RemoveAt(i);
             }
-            return Written(WriteStartupFile(AutostartPath, string.Join("\n", lines) + "\n"));
+            StartupReceipt.Write(AutostartPath, string.Join("\n", lines) + "\n");
+            return AutostartRepair.Repaired;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return AutostartRepair.Failed; }
 
         static AutostartRepair Written(bool ok) => ok ? AutostartRepair.Repaired : AutostartRepair.Failed;
+    }
+
+    /// <summary>
+    /// Whether a startup file is one some release of this window generated:
+    /// the program is read from the file's own Exec or ExecStart line and the
+    /// file must equal a known template for it, byte for byte.
+    /// </summary>
+    internal static bool IsGeneratedStartupFile(string path, string text)
+    {
+        if (path == AutostartPath)
+        {
+            string[] lines = text.Split('\n').Where(l => l.StartsWith("Exec=", StringComparison.Ordinal)).ToArray();
+            if (lines.Length != 1 || DesktopExecBinary(lines[0][5..]) is not { } executable) return false;
+            return text == AutostartEntry(executable) || LegacyAutostartEntries(executable).Contains(text, StringComparer.Ordinal);
+        }
+        if (path != UnitPath) return false;
+        string[] starts = text.Split('\n').Where(l => l.StartsWith("ExecStart=", StringComparison.Ordinal)).ToArray();
+        if (starts.Length != 1) return false;
+        string value = starts[0][10..];
+        if (ExecStartBinary(value) is { } daemon && (text == SourceUnit(daemon) || LegacySourceUnits(daemon).Contains(text, StringComparer.Ordinal))) return true;
+        // The documented manual source install copies this exact reference
+        // unit and changes only ExecStart. Preserve every other byte.
+        using var stream = typeof(StartupIntegration).Assembly.GetManifestResourceStream("OpenXLR.StartupUnit");
+        if (stream is null) return false;
+        using var reader = new StreamReader(stream);
+        string template = reader.ReadToEnd();
+        string original = template.Split('\n').Single(l => l.StartsWith("ExecStart=", StringComparison.Ordinal));
+        return value.Length > 0 && !value.Any(char.IsControl) && text == template.Replace(original, starts[0], StringComparison.Ordinal);
+    }
+
+    internal static string SourceUnit(string daemon) => $"""
+                    # Written by the OpenXLR window for a source build (Options, Start at login).
+                    [Unit]
+                    Description=OpenXLR audio daemon
+                    After=pipewire-pulse.service wireplumber.service
+                    StartLimitIntervalSec=300
+                    StartLimitBurst=3
+
+                    [Service]
+                    Type=notify
+                    NotifyAccess=main
+                    WatchdogSec=60
+                    WatchdogSignal=SIGTERM
+                    TimeoutStartSec=120
+                    ExecStart={SystemdQuote(daemon)}
+                    Environment=OPENXLR_BUILD_MIXER=1
+                    TimeoutStopSec=45
+                    KillMode=mixed
+                    LimitMEMLOCK=infinity
+                    Restart=on-failure
+                    RestartSec=3
+                    NoNewPrivileges=true
+                    PrivateTmp=true
+                    ProtectSystem=strict
+                    ProtectControlGroups=true
+                    ProtectKernelTunables=true
+                    RestrictSUIDSGID=true
+                    UMask=0077
+                    KeyringMode=private
+                    ProtectClock=true
+                    ProtectHostname=true
+                    ProtectKernelLogs=true
+                    ProtectKernelModules=true
+                    LockPersonality=true
+                    RestrictNamespaces=true
+                    CapabilityBoundingSet=
+
+                    [Install]
+                    WantedBy=default.target
+                    """;
+
+    /// <summary>
+    /// The unit bodies earlier releases wrote, oldest first, so an upgrade
+    /// from any of them adopts the file its own window generated. Generation
+    /// 0 is v0.1.0; 1 adds TimeoutStopSec (v0.1.9); 2 the first sandbox lines
+    /// (v0.1.13); 3 the notify type, watchdog and start limit (v0.1.22); 4 the
+    /// comment line, the quoted path and UMask (v0.1.23); 5 the second sandbox
+    /// block (v0.1.24); 6 KillMode (v0.1.33). Generation 7 adds LimitMEMLOCK
+    /// (v0.1.37) and equals <see cref="SourceUnit(string)"/>.
+    /// </summary>
+    internal static IEnumerable<string> LegacySourceUnits(string daemon) => Enumerable.Range(0, 7).Select(g => SourceUnit(daemon, g));
+
+    internal static string SourceUnit(string daemon, int generation)
+    {
+        var lines = new List<string>();
+        if (generation >= 4) lines.Add("# Written by the OpenXLR window for a source build (Options, Start at login).");
+        lines.AddRange(["[Unit]", "Description=OpenXLR audio daemon", "After=pipewire-pulse.service wireplumber.service"]);
+        if (generation >= 3) lines.AddRange(["StartLimitIntervalSec=300", "StartLimitBurst=3"]);
+        lines.AddRange(["", "[Service]"]);
+        if (generation >= 3) lines.AddRange(["Type=notify", "NotifyAccess=main", "WatchdogSec=60", "WatchdogSignal=SIGTERM", "TimeoutStartSec=120"]);
+        lines.AddRange(["ExecStart=" + (generation >= 4 ? SystemdQuote(daemon) : daemon), "Environment=OPENXLR_BUILD_MIXER=1"]);
+        if (generation >= 1) lines.Add("TimeoutStopSec=45");
+        if (generation >= 6) lines.Add("KillMode=mixed");
+        if (generation >= 7) lines.Add("LimitMEMLOCK=infinity");
+        lines.AddRange(["Restart=on-failure", "RestartSec=3"]);
+        if (generation >= 2) lines.AddRange(["NoNewPrivileges=true", "PrivateTmp=true", "ProtectSystem=strict", "ProtectControlGroups=true", "ProtectKernelTunables=true", "RestrictSUIDSGID=true"]);
+        if (generation >= 4) lines.Add("UMask=0077");
+        if (generation >= 5) lines.AddRange(["KeyringMode=private", "ProtectClock=true", "ProtectHostname=true", "ProtectKernelLogs=true",
+            "ProtectKernelModules=true", "LockPersonality=true", "RestrictNamespaces=true", "CapabilityBoundingSet="]);
+        lines.AddRange(["", "[Install]", "WantedBy=default.target"]);
+        return string.Join("\n", lines);
     }
 
     /// <summary>An entry is there when the file exists, or when a symlink stands in its place.</summary>

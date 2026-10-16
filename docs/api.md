@@ -431,6 +431,8 @@ hardware strips are in [multiple Wave interfaces](wave-interfaces.md).
 
 All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
 
+- `installation.json`: exact startup ownership and replaced-file metadata
+- `installation-backups/<sha256>`: private originals retained for startup restoration
 - `installation-history/<sha256>.json`: retained package inventories across upgrades
 - `installation.lock`: serializes installation inventory writes
 - `mixer.json`: every mixer decision: the layout (`userChannels`,

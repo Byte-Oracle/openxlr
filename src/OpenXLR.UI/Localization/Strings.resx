@@ -2108,4 +2108,5 @@ Select the interface OpenXLR drives</value>
   <data name="Xlr2Jack" xml:space="preserve">
     <value>XLR 2 jack</value>
   </data>
+  <data name="StartupDoctorHint" xml:space="preserve"><value>Run openxlr doctor for the affected path and a repair command.</value></data>
 </root>

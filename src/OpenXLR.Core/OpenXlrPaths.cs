@@ -110,8 +110,14 @@ public static class OpenXlrPaths
     public static void WriteAtomic(string path, string text, bool privatePermissions = true)
         => WriteAtomic(path, Encoding.UTF8.GetBytes(text), privatePermissions);
 
-    /// <summary>Write bytes atomically, creating the directory; see the text overload.</summary>
+    /// <summary>
+    /// Write bytes atomically; an explicit Unix file mode is applied before
+    /// publication, for restoring an original without changing its directory.
+    /// </summary>
     public static void WriteAtomic(string path, byte[] bytes, bool privatePermissions = true)
+        => WriteAtomic(path, bytes, privatePermissions, fileMode: null);
+
+    public static void WriteAtomic(string path, byte[] bytes, bool privatePermissions, UnixFileMode? fileMode)
     {
         string dir = Path.GetDirectoryName(path)!;
         if (privatePermissions) EnsurePrivateDir(dir);
@@ -123,9 +129,12 @@ public static class OpenXlrPaths
         bool published = false;
         try
         {
-            using (FileStream stream = privatePermissions ? CreatePrivate(tmp)
+            using (FileStream stream = privatePermissions || fileMode is not null ? CreatePrivate(tmp)
                 : new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
                 stream.Write(bytes);
+                if (!OperatingSystem.IsWindows() && fileMode is { } mode) File.SetUnixFileMode(stream.SafeFileHandle, mode);
+            }
             File.Move(tmp, path, overwrite: true);
             published = true;
         }
