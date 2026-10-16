@@ -301,16 +301,67 @@ public sealed class InstallationReceiptTests : IDisposable
         InstallationHistory.Remember(Manifest);
         string archive = Assert.Single(InstallationHistory.ArchivedReceipts());
         WriteReceipt(Package(new Owned { Path = shared, Sha256 = Receipt.Digest(shared) }) with { Version = "1.2.4" });
-        DoctorReport report = await InstallationDoctor.Inspect([Manifest, archive], null, false);
+        DoctorReport report = await InstallationDoctor.Inspect([Manifest, archive], null, false, prefixes: [_home]);
         DoctorFinding leftover = Assert.Single(report.Findings);
         Assert.Equal(oldFile, leftover.Path);
         Assert.Contains("sudo mv -T -i --", leftover.Repair);
         Assert.Equal("old build", File.ReadAllText(oldFile)); // doctor is read-only
         File.Delete(oldFile);
         Assert.Empty((await InstallationDoctor.Inspect([Manifest, archive], null, false)).Findings);
+        // A damaged record is skipped when saving; the same inventory saved
+        // again lands under the same name and reads again.
         File.Copy(archive, Manifest, overwrite: true);
         File.WriteAllText(archive, "modified archive");
-        Assert.Throws<IOException>(() => InstallationHistory.Remember(Manifest));
+        InstallationHistory.Remember(Manifest);
+        Assert.Equal(archive, Assert.Single(InstallationHistory.ArchivedReceipts()));
+        Assert.Equal("1.2.3", Receipt.Read(archive, archived: true).Version);
+    }
+
+    [Fact]
+    public async Task ADamagedArchiveDoesNotStopNewerInventoriesFromBeingRecorded()
+    {
+        Directory.CreateDirectory(InstallationHistory.DirectoryPath);
+        string corrupt = Path.Combine(InstallationHistory.DirectoryPath, new string('b', 64) + ".json");
+        File.WriteAllText(corrupt, "not a receipt");
+        string misnamed = Path.Combine(InstallationHistory.DirectoryPath, new string('c', 64) + ".json");
+        string older = JsonSerializer.Serialize(Package() with { Version = "1.2.2" }, Receipt.Json);
+        File.WriteAllText(misnamed, older);
+        WriteReceipt(Package());
+        InstallationHistory.Remember(Manifest);
+        string[] archives = [.. InstallationHistory.ArchivedReceipts()];
+        string record = Assert.Single(archives.Except([corrupt, misnamed]));
+        Assert.Equal("1.2.3", Receipt.Read(record, archived: true).Version);
+        Assert.Equal("not a receipt", File.ReadAllText(corrupt));
+        Assert.Equal(older, File.ReadAllText(misnamed));
+        DoctorReport report = await InstallationDoctor.Inspect([Manifest, .. archives], null, false);
+        Assert.Equal(2, report.Findings.Count);
+        foreach (string bad in new[] { corrupt, misnamed })
+            Assert.StartsWith("mv -T -i -- ", Assert.Single(report.Findings, f => f.Path == bad).Repair);
+    }
+
+    [Theory]
+    [InlineData("/usr", "/usr/bin/env", true)]
+    [InlineData("/etc", "/etc/passwd", false)]
+    public async Task AMoveCommandIsOnlySuggestedForLeftoversUnderThePackagePrefixes(string prefix, string path, bool movable)
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists(path) || new FileInfo(path).LinkTarget is not null) return;
+        Receipt history = Package() with
+        {
+            Prefix = prefix,
+            Files = [new Owned { Path = path, Sha256 = Receipt.Digest(path) }, new() { Path = prefix + "/share/openxlr/installations/openxlr.json", Kind = "receipt" }],
+        };
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(history, Receipt.Json);
+        Directory.CreateDirectory(InstallationHistory.DirectoryPath);
+        string archive = Path.Combine(InstallationHistory.DirectoryPath, Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)) + ".json");
+        File.WriteAllBytes(archive, bytes);
+        DoctorReport report = await InstallationDoctor.Inspect([archive], null, false);
+        DoctorFinding finding = Assert.Single(report.Findings, f => f.Path == path);
+        if (movable) Assert.StartsWith("sudo mv -T -i -- ", finding.Repair);
+        else
+        {
+            Assert.Equal("namei -l -- " + InstallationDoctor.Quote(path), finding.Repair);
+            Assert.Contains("outside the package prefixes", finding.Problem);
+        }
     }
 
     [Fact]

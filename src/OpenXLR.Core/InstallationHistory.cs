@@ -15,14 +15,20 @@ internal static class InstallationHistory
 {
     internal static string DirectoryPath => OpenXlrPaths.ConfigFile("installation-history");
 
-    internal static IEnumerable<string> PackageReceipts(string baseDirectory)
+    /// <summary>The prefixes a package of this build is looked for under: the running installation's own, then the system ones.</summary>
+    internal static IEnumerable<string> PackagePrefixes(string baseDirectory)
     {
-        var prefixes = new List<string>();
         var directory = new DirectoryInfo(baseDirectory);
         var package = directory.Name is "ui" or "daemon" or "yabridge" ? directory.Parent : directory;
         if (package?.Name == "openxlr" && package.Parent?.Name == "lib" && package.Parent.Parent is { } prefix)
-            prefixes.Add(prefix.FullName);
-        prefixes.AddRange(["/usr", "/usr/local"]);
+            yield return prefix.FullName;
+        yield return "/usr";
+        yield return "/usr/local";
+    }
+
+    internal static IEnumerable<string> PackageReceipts(string baseDirectory)
+    {
+        var prefixes = new List<string>(PackagePrefixes(baseDirectory));
         foreach (string share in (Environment.GetEnvironmentVariable("XDG_DATA_DIRS") ?? "").Split(':', StringSplitOptions.RemoveEmptyEntries))
             if (Path.IsPathFullyQualified(share) && new DirectoryInfo(share).Name == "share")
                 prefixes.Add(Path.GetDirectoryName(share)!);
@@ -88,7 +94,14 @@ internal static class InstallationHistory
             foreach (string archive in archives)
                 if ((totalBytes += new FileInfo(archive).Length) > 16 * 1024 * 1024)
                     throw new IOException("Installation history exceeds the 16 MiB inspection limit; archive older versions before continuing.");
-            var previous = archives.Select(p => (Path: p, Receipt: InstallationReceipt.Read(p, archived: true))).ToArray();
+            // A damaged or misnamed archive stays on disk for doctor to report.
+            // It must not stop newer inventories from being recorded.
+            var previous = new List<(string Path, InstallationReceipt Receipt)>();
+            foreach (string archive in archives)
+            {
+                try { previous.Add((archive, InstallationReceipt.Read(archive, archived: true))); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* doctor reports this archive */ }
+            }
             var sameVersion = previous.Where(p => p.Receipt.Package == receipt.Package &&
                 p.Receipt.Prefix == receipt.Prefix && p.Receipt.Version == receipt.Version).ToArray();
             // Retain retired paths even when several rebuilds share a version.
@@ -107,7 +120,7 @@ internal static class InstallationHistory
             string hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
             string destination = Path.Combine(DirectoryPath, hash + ".json");
             if (sameVersion.Any(p => p.Path == destination)) return;
-            if (previous.Length - sameVersion.Length >= 128) throw new IOException("Installation history is full; archive older versions before continuing.");
+            if (archives.Length - sameVersion.Length >= 128) throw new IOException("Installation history is full; archive older versions before continuing.");
             OpenXlrPaths.WriteAtomic(destination, bytes);
             // Only validated, content-addressed records for this same version
             // are replaced, after the new inventory has been published.

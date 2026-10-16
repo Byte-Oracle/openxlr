@@ -68,13 +68,17 @@ openxlr installation remember
 These private copies survive an upgrade or package removal. Doctor compares
 old inventories with the current one and reports remaining paths that the
 current package no longer claims. It suggests moving an unchanged leftover
-to an explicit backup path, with an interactive overwrite prompt. Modified
-paths require inspection first. A rejected current receipt disables historical
+under the package prefixes (the running installation's own, `/usr` and
+`/usr/local`) to an explicit backup path, with an interactive overwrite
+prompt. Modified paths, and paths anywhere else, get an inspection command
+instead: a saved record proves its own integrity, not who wrote it. A
+rejected current receipt disables historical
 leftover suggestions until the current inventory can be read again, so active
 files are not mistaken for retired paths. Unreadable receipt locations remain
 in discovery and are reported rather than silently treated as missing.
 An invalid historical receipt gets
-a command to move that private copy aside, not to reinstall the package. Nix store outputs are managed by Nix's
+a command to move that private copy aside, not to reinstall the package;
+saving history skips it and keeps recording newer inventories. Nix store outputs are managed by Nix's
 garbage collector and are not treated as stale installation leftovers.
 Nix receipts are not archived. Rebuilds of the same package, prefix and
 version share one record, retaining paths retired by those rebuilds.

@@ -39,8 +39,12 @@ internal static class InstallationDoctor
     }
 
     internal static async Task<DoctorReport> Inspect(IEnumerable<string> paths, string? root, bool runtime,
-        Func<CancellationToken, Task<string>>? readState = null, bool removed = false)
+        Func<CancellationToken, Task<string>>? readState = null, bool removed = false, IEnumerable<string>? prefixes = null)
     {
+        // A leftover gets a move command only under a prefix this build looks
+        // in for packages. The content hash in an archive's name proves its
+        // integrity, not who wrote it, so any other path is left to inspection.
+        string[] movable = [.. (prefixes ?? InstallationHistory.PackagePrefixes(AppContext.BaseDirectory)).Select(p => p.TrimEnd('/') + '/')];
         var receipts = new List<DoctorReceipt>();
         var findings = new List<DoctorFinding>();
         long totalBytes = 0;
@@ -86,8 +90,10 @@ internal static class InstallationDoctor
                 if (!File.Exists(file.Path) && new FileInfo(file.Path).LinkTarget is null && !Directory.Exists(file.Path)) continue;
                 if (findings.Any(f => f.Path == file.Path)) continue;
                 string? problem = InstallationReceipt.Problem(file, history.Installation.Prefix);
-                string repair = problem is null ? "sudo mv -T -i -- " + Quote(file.Path) + " " + Quote(file.Path + ".openxlr-leftover") : "namei -l -- " + Quote(file.Path);
-                findings.Add(new(file.Path, "previously owned path remains outside the current inventory" + (problem is null ? "" : ": " + problem + "; inspect before moving it"), repair));
+                bool move = problem is null && movable.Any(p => file.Path.StartsWith(p, StringComparison.Ordinal));
+                string repair = move ? "sudo mv -T -i -- " + Quote(file.Path) + " " + Quote(file.Path + ".openxlr-leftover") : "namei -l -- " + Quote(file.Path);
+                string detail = problem is not null ? ": " + problem + "; inspect before moving it" : move ? "" : "; outside the package prefixes, inspect before moving it";
+                findings.Add(new(file.Path, "previously owned path remains outside the current inventory" + detail, repair));
             }
         }
         if (!removed && !receipts.Any(r => !r.Archived && r.Installation.Manager != "user"))
