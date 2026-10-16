@@ -118,33 +118,48 @@ public sealed class SoundCheckIntegrationTests
 
         static void AssertSound(double expected)
         {
-            var result = ProcessRunner.Run("python3", ["-c", """
-                import math, struct, subprocess, sys, tempfile, time
-                args = ['--format=f32', '--rate=48000', '--channels=2']
-                if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
-                with tempfile.TemporaryFile() as capture:
-                    p = subprocess.Popen(['pw-cat', '--record', *args, '--target', 'soundcheck_output', '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
-                    try:
-                        time.sleep(.7); p.terminate(); _, errors = p.communicate(timeout=5)
-                        capture.seek(0); raw = capture.read()
-                        values = struct.unpack('<' + 'f' * (len(raw) // 4), raw)
-                        assert len(values) > 24000, (len(values), errors.decode())
-                        tail = values[-12000:]
-                        expected = float(sys.argv[1])
-                        matching = sum(abs(v - expected) < .015 for v in tail) / len(tail)
-                        # A high-pass produces a brief transient at each loop seam.
-                        # Measure attenuation, not the false assumption that every
-                        # sample of a periodically restarted DC signal becomes zero.
-                        if expected == 0:
-                            rms = math.sqrt(sum(v*v for v in tail) / len(tail))
-                            assert rms < .06, (expected, rms, min(tail), max(tail))
-                        else:
-                            assert matching > .9, (expected, min(tail), max(tail), matching)
-                    finally:
-                        if p.poll() is None: p.kill()
-                        p.wait()
-                """, expected.ToString(System.Globalization.CultureInfo.InvariantCulture)], TimeSpan.FromSeconds(10));
+            var result = CaptureSound(expected);
             Assert.True(result.Ok, result.StdoutText + result.Stderr);
         }
+    }
+
+    internal static ProcessResult CaptureSound(double expected, TimeSpan? deadline = null,
+        IReadOnlyDictionary<string, string>? environment = null)
+    {
+        TimeSpan duration = deadline ?? TimeSpan.FromSeconds(5);
+        return ProcessRunner.Run("python3", ["-c", """
+            import math, os, struct, subprocess, sys, tempfile, time
+            args = ['--format=f32', '--rate=48000', '--channels=2']
+            if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
+            with tempfile.TemporaryFile() as capture:
+                p = subprocess.Popen(['pw-cat', '--record', *args, '--target', 'soundcheck_output', '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
+                try:
+                    expected = float(sys.argv[1])
+                    deadline = time.monotonic() + float(sys.argv[2])
+                    last = 'no captured samples'
+                    while time.monotonic() < deadline:
+                        size = os.fstat(capture.fileno()).st_size // 4 * 4
+                        if size > 24000 * 4:
+                            # pread leaves the writer's shared file offset alone.
+                            raw = os.pread(capture.fileno(), 12000 * 4, size - 12000 * 4)
+                            tail = struct.unpack('<12000f', raw)
+                            matching = sum(abs(v - expected) < .015 for v in tail) / len(tail)
+                            rms = math.sqrt(sum(v*v for v in tail) / len(tail))
+                            last = (expected, min(tail), max(tail), matching, rms)
+                            # Keep the same gain and high-pass attenuation checks.
+                            # A high-pass has a short transient at each loop seam.
+                            if all(map(math.isfinite, tail)) and (rms < .06 if expected == 0 else matching > .9):
+                                break
+                        if p.poll() is not None:
+                            raise AssertionError(('capture exited before stable audio', p.returncode, p.communicate()[1].decode(), last))
+                        time.sleep(.02)
+                    else:
+                        raise AssertionError(('no stable audio before the deadline', last))
+                finally:
+                    if p.poll() is None: p.kill()
+                    p.wait()
+            """, expected.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            duration.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)],
+            duration + TimeSpan.FromSeconds(5), environment: environment);
     }
 }

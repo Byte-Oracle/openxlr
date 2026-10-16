@@ -66,6 +66,8 @@ so a 1 kHz sine summed from Monitor A and B reads below the expected level
 although each leg's gain is right. With DC the sum does not depend on that
 delay. The test measures the settled part of the capture and the peak of
 the whole capture; it does not measure frequency response.
+Sound Check waits for captured samples to settle within a deadline after a
+filter change, rather than assuming a fixed startup time for the stream.
 
 The desktop keys tests in the main suite start a private session bus with
 `dbus-daemon` and skip when it is not installed. `OPENXLR_TEST_KWIN=1` adds
