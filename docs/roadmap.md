@@ -13,9 +13,9 @@ behaviour verified on hardware before it ships. The project is small on
 purpose. It prefers one small, idiomatic change over a framework, and a
 feature that is measured over one that is described.
 
-## Where it stands (0.1.50)
+## Where it stands (0.1.51)
 
-This is what 0.1.50 ships. A checked item is in the released packages.
+This is what 0.1.51 ships. A checked item is in the released packages.
 
 - [x] Wave XLR Pro, XLR Dock (MK.1 and MK.2 modules), Wave XLR, Wave XLR
   MK.2: hardware controls, verified by owners of each device.
@@ -170,7 +170,7 @@ a skin overlays values on top of them.
   palette the window publishes while it runs.
 - [x] Layout density: a compact mode for small screens and a large mode
   for touch.
-- [ ] Localization infrastructure and the first translations.
+- [x] Localization infrastructure and the first translations.
 
 ## Later: plugins
 
@@ -255,7 +255,7 @@ while fixes to existing hosts remain part of normal maintenance.
   daemon writes at start, presented by every client, on top of the
   origin check. Still open: binding the API to a Unix socket with peer
   credentials instead of a loopback port, so no token file is needed.
-- [ ] An installation receipt and a `doctor` command. The daemon and the
+- [x] An installation receipt and a `doctor` command. The daemon and the
   packages put files in several places a user never sees: a systemd unit,
   a udev rule, three WirePlumber rules, a pipewire-pulse drop-in, a
   desktop entry, the plugin host and the yabridge companion. Nothing

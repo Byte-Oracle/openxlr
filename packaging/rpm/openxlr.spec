@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.1.50
+Version: 0.1.51
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and the Wave:3
 License:        GPL-3.0-only
@@ -171,6 +171,13 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Fri Oct 16 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.1.51-1
+- Window: German translation of the UI. Deutsch is listed in Options and chosen for German desktop locales; numbers and the values sent to the daemon are unchanged.
+- Installation: the deb, RPM, AUR and Nix packages carry a receipt of their files. openxlr doctor checks an installation against it, says whether the running daemon is the installed build, keeps past inventories for leftover checks and names the repair command for each finding.
+- Window: startup files written by any earlier version are adopted on upgrade, so Options can turn startup off and repair a stale unit; openxlr installation repair-startup and remove-startup do the same from a terminal.
+- Mixer: the internal filter nodes are hidden and exempt from WirePlumber's saved state; a saved mute restored onto an XLR Dock's microphone filter had silenced the channel.
+- Packaging: the yabridge companion builds carry a receipt, and the package-free /usr/local install adopts installs made before receipts.
+
 * Sun Oct 11 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.1.50-1
 - Window: Arrange moved into the header between Profiles and Flow; Reset sections shows under the header while arranging.
 - Window: Desktop keys moved from the header into a DESKTOP card in Options, which opens the same dialog.
