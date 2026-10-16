@@ -1,4 +1,4 @@
-{ lib, runCommand, fetchFromGitHub, yabridge, yabridgectl, wineWow64Packages }:
+{ lib, runCommand, fetchFromGitHub, yabridge, yabridgectl, wineWow64Packages, python3 }:
 let
   pin = builtins.fromJSON (builtins.readFile ../yabridge/source.json);
   src = fetchFromGitHub {
@@ -44,6 +44,7 @@ let
     windowsArchitectures = [ "x86_64" ];
   };
 in runCommand "openxlr-yabridge-${pin.version}" {
+  nativeBuildInputs = [ python3 ];
   passthru = { inherit bridge controller; };
   meta = {
     description = "Tested Windows plugin bridge for OpenXLR";
@@ -63,4 +64,6 @@ in runCommand "openxlr-yabridge-${pin.version}" {
   patchShebangs "$out/bin/openxlr-yabridgectl"
   cp ${src}/COPYING ${../yabridge/source.json} ${../yabridge/private-plugin-home.patch} \
     "$out/share/licenses/openxlr-yabridge/"
+  python3 ${../install_receipt.py} --root / --prefix "$out" --manager nix \
+    --package openxlr-yabridge --version '${pin.version}-${toString pin.revision}' --commit '${pin.commit}'
 ''

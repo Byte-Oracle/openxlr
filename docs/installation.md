@@ -185,7 +185,8 @@ openxlr doctor --root "$pkgdir" \
   --receipt "$pkgdir/usr/share/openxlr/installations/openxlr.json" --json
 ```
 
-`--manager` accepts `debian`, `rpm`, `arch` and `nix`. The prefix is the
+`--manager` accepts `debian`, `rpm`, `arch` and `nix`. The companion also
+uses `manual` for its explicit package-free `/usr/local` installation. The prefix is the
 absolute installed prefix, not the staging path. Pass a full `--commit`
 when the builder already knows it. Otherwise the generator uses Git HEAD
 and its tracked-file dirty status, or `packaging/source-commit`, which

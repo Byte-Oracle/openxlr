@@ -11,6 +11,10 @@ ExclusiveArch: x86_64
 AutoProv: no
 Requires: wine dbus-libs
 
+%global __os_install_post %{__os_install_post}\
+python3 install_receipt.py --root %{buildroot} --manager rpm --package openxlr-yabridge --version %{version}-%{release} --commit @COMMIT@\
+%{nil}
+
 %description
 Pinned yabridge build with the Wine editor input fix, matching bridge
 libraries and private wrapper support. Supports 64-bit Windows VST3 and
@@ -26,4 +30,5 @@ cp -a usr %{buildroot}/
 %files
 /usr/bin/openxlr-yabridgectl
 /usr/lib/openxlr/yabridge
+/usr/share/openxlr/installations/openxlr-yabridge.json
 %license /usr/share/licenses/openxlr-yabridge

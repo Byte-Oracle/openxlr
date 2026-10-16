@@ -13,6 +13,10 @@ BuildRequires: python3 gcc-c++ meson ninja-build cmake pkgconf-pkg-config
 BuildRequires: wine wine-devel libxcb-devel dbus-devel cargo rust
 Requires: wine dbus-libs
 
+%global __os_install_post %{__os_install_post}\
+python3 openxlr-packaging/build.py receipt --source . --destdir %{buildroot} --manager rpm\
+%{nil}
+
 %description
 Pinned yabridge build with the Wine editor input fix, matching bridge
 libraries and private wrapper support. Supports 64-bit Windows VST3 and
@@ -39,7 +43,7 @@ export LDFLAGS="-Wl,-z,notext"
 python3 openxlr-packaging/build.py build --source . --output out --jobs %{_smp_build_ncpus}
 
 %install
-python3 openxlr-packaging/build.py stage --source . --output out --destdir %{buildroot}
+python3 openxlr-packaging/build.py stage --source . --output out --destdir %{buildroot} --manager rpm
 
 %check
 python3 openxlr-packaging/test-package.py %{buildroot}
@@ -47,4 +51,5 @@ python3 openxlr-packaging/test-package.py %{buildroot}
 %files
 /usr/bin/openxlr-yabridgectl
 /usr/lib/openxlr/yabridge
+/usr/share/openxlr/installations/openxlr-yabridge.json
 %license /usr/share/licenses/openxlr-yabridge
