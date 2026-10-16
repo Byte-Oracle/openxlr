@@ -140,7 +140,8 @@ The manual way, using the reference unit in
 ```sh
 mkdir -p ~/.config/systemd/user
 cp packaging/openxlr-daemon.service ~/.config/systemd/user/
-# edit ExecStart in the copy if you cloned somewhere other than ~/openxlr
+# edit ExecStart in the copy if you cloned somewhere other than ~/openxlr,
+# and change nothing else: the uninstall below recognizes the copy by its bytes
 systemctl --user daemon-reload
 systemctl --user enable --now openxlr-daemon.service
 journalctl --user -u openxlr-daemon.service -f   # watch it come up

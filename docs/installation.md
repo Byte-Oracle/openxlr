@@ -23,8 +23,9 @@ openxlr doctor --no-runtime
 Exit codes are 0 when the requested checks pass, 1 for findings, and 2 for
 invalid arguments or a maintenance command that could not be applied.
 `--no-runtime` skips the daemon comparison. `--json` includes the receipts,
-findings, suggested commands and daemon result; it does not include tokens
-or the contents of user files. Terminal messages are in English.
+findings, suggested commands, informational notes and daemon result; it
+does not include tokens or the contents of user files. Terminal messages
+are in English.
 An explicit companion receipt can be checked on its own with `--no-runtime`
 or as a staged payload with `--root`; it does not require the main package.
 
@@ -104,14 +105,23 @@ It does not delete directories or infer ownership from a filename. Existing
 directories at startup-file paths are rejected before recording a write.
 
 On upgrade, startup files identical to the window's generated templates or
-the source guide's reference unit are adopted before removal. The reference
-unit may differ only in its `ExecStart` line. Matching systemd enable links
-are adopted only when they point to the packaged unit or a recognized user
-unit. Modified and foreign files still require inspection. If restoration
-leaves an original user unit shadowing the packaged one, enabling is refused
-and its owned enable link is removed, so the original is not silently
-started at the next login. A restored foreign desktop entry may still start
-the window, so Options reports that startup could not be disabled.
+the source guide's reference unit are adopted before removal. The templates
+of every release since v0.1.0 are recognized: the launch path is read from
+the file's own `Exec` or `ExecStart` line and the file must equal that
+release's template for it byte for byte. The reference unit may differ only
+in its `ExecStart` line. The `default.target.wants` link is adopted when it
+points at the packaged unit or at the user unit path, whether or not that
+unit still exists, since `systemctl --user enable` leaves it behind. Doctor
+reports a recognized file that no receipt records yet as information, not
+as a finding; it is adopted by the next startup change in Options or by
+`installation repair-startup`. A file doctor does not recognize is a
+finding with a command to move it aside. Modified and foreign files still
+require inspection, and a refused startup change leaves every file as it
+was. If restoration leaves an original user unit shadowing the packaged
+one, enabling is refused and its owned enable link is removed, so the
+original is not silently started at the next login. A restored foreign
+desktop entry may still start the window, so Options reports that startup
+could not be disabled.
 
 ```sh
 openxlr doctor

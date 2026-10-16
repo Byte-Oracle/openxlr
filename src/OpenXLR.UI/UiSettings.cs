@@ -439,17 +439,26 @@ public static class StartupIntegration
     private static bool IsSymbolicLink(string path) => new FileInfo(path).LinkTarget is not null;
 
     /// <summary>The autostart entry this window writes for a given executable.</summary>
-    internal static string AutostartEntry(string executable) => $"""
+    internal static string AutostartEntry(string executable) => AutostartEntry("Exec=" + DesktopExec(executable), finalNewline: true);
+
+    /// <summary>
+    /// The entries earlier releases wrote for the executable, oldest first:
+    /// the bare path until v0.1.22, the quoted path until v0.1.32, both
+    /// without the final newline v0.1.33 added.
+    /// </summary>
+    internal static IEnumerable<string> LegacyAutostartEntries(string executable) =>
+        [AutostartEntry("Exec=" + executable, finalNewline: false), AutostartEntry("Exec=" + DesktopExec(executable), finalNewline: false)];
+
+    private static string AutostartEntry(string execLine, bool finalNewline) => $"""
         [Desktop Entry]
         Type=Application
         Name=OpenXLR
         Comment=OpenXLR mixer window
-        Exec={DesktopExec(executable)}
+        {execLine}
         Icon=openxlr
         Terminal=false
         X-GNOME-Autostart-enabled=true
-
-        """;
+        """ + (finalNewline ? "\n" : "");
 
     /// <summary>
     /// Apply the daemon-at-login preference. False when nothing could be
@@ -466,36 +475,48 @@ public static class StartupIntegration
 
     private static bool ApplyDaemonAtLogin(bool enabled, string? packagedUnit)
     {
-        _ = StartupReceipt.PrepareRemoval(packagedUnit, includeWindow: false);
-        if (enabled)
+        string unit = StartupReceipt.StartupPaths[1];
+        string wants = StartupReceipt.StartupPaths[2];
+        InstallationReceipt receipt = StartupReceipt.PrepareRemoval(packagedUnit, includeWindow: false);
+        if (!enabled)
         {
-            if (packagedUnit is not null)
-            {
-                // Any copy in ~/.config would shadow the packaged unit.
-                StartupReceipt.Remove(UnitPath);
-                // Removing our copy can restore an older user unit. systemd
-                // would still load it ahead of the packaged one, even if the
-                // enable link points at the package. Ask the user to move it.
-                if (EntryExists(UnitPath))
-                {
-                    StartupReceipt.Remove(StartupReceipt.StartupPaths[2], UnitPath);
-                    Systemctl("daemon-reload");
-                    return false;
-                }
-            }
-            else
-            {
-                // No binary anywhere we know of: a unit would only loop on 203/EXEC.
-                if (DaemonBinary is not { } daemon) return false;
-                StartupReceipt.Write(UnitPath, SourceUnit(daemon));
-            }
-            StartupReceipt.EnableLink(Path.Combine(ConfigHome, "systemd", "user", "default.target.wants", UnitName), packagedUnit ?? UnitPath);
-            return Systemctl("daemon-reload");
+            // Check both paths first: a refused unit then leaves its link in
+            // place too, instead of half of the integration.
+            foreach (string path in new[] { wants, unit })
+                if (StartupReceipt.RemovalProblem(receipt, path) is { } problem) throw new IOException(problem);
+            StartupReceipt.Remove(wants, packagedUnit);
+            StartupReceipt.Remove(unit);
+            Systemctl("daemon-reload");
+            return true;
         }
-        StartupReceipt.Remove(Path.Combine(ConfigHome, "systemd", "user", "default.target.wants", UnitName), packagedUnit);
-        StartupReceipt.Remove(UnitPath);
-        Systemctl("daemon-reload");
-        return true;
+        if (packagedUnit is not null)
+        {
+            // Any copy in ~/.config would shadow the packaged unit.
+            StartupReceipt.Remove(unit);
+            // Removing our copy can restore an older user unit. systemd
+            // would still load it ahead of the packaged one, even if the
+            // enable link points at the package. Ask the user to move it.
+            if (EntryExists(unit))
+            {
+                StartupReceipt.Remove(wants, unit);
+                Systemctl("daemon-reload");
+                return false;
+            }
+            // systemctl enable left the link pointing at the copy just
+            // removed. Take it down so the packaged unit gets its own.
+            if (StartupReceipt.LinksTo(wants, unit)) StartupReceipt.Remove(wants, unit);
+        }
+        else
+        {
+            // No binary anywhere we know of: a unit would only loop on 203/EXEC.
+            if (DaemonBinary is not { } daemon) return false;
+            // A foreign link is refused before the unit is written, so the
+            // refusal leaves nothing behind.
+            if (!StartupReceipt.CanEnableLink(wants, unit)) return false;
+            StartupReceipt.Write(unit, SourceUnit(daemon));
+        }
+        StartupReceipt.EnableLink(wants, packagedUnit ?? unit);
+        return Systemctl("daemon-reload");
     }
 
     /// <summary>
@@ -621,20 +642,24 @@ public static class StartupIntegration
         static AutostartRepair Written(bool ok) => ok ? AutostartRepair.Repaired : AutostartRepair.Failed;
     }
 
-    /// <summary>An entry is there when the file exists, or when a symlink stands in its place.</summary>
+    /// <summary>
+    /// Whether a startup file is one some release of this window generated:
+    /// the program is read from the file's own Exec or ExecStart line and the
+    /// file must equal a known template for it, byte for byte.
+    /// </summary>
     internal static bool IsGeneratedStartupFile(string path, string text)
     {
         if (path == AutostartPath)
         {
             string[] lines = text.Split('\n').Where(l => l.StartsWith("Exec=", StringComparison.Ordinal)).ToArray();
-            string? line = lines.Length == 1 ? lines[0] : null;
-            return line is not null && DesktopExecBinary(line[5..]) is { } executable && text == AutostartEntry(executable);
+            if (lines.Length != 1 || DesktopExecBinary(lines[0][5..]) is not { } executable) return false;
+            return text == AutostartEntry(executable) || LegacyAutostartEntries(executable).Contains(text, StringComparer.Ordinal);
         }
         if (path != UnitPath) return false;
         string[] starts = text.Split('\n').Where(l => l.StartsWith("ExecStart=", StringComparison.Ordinal)).ToArray();
         if (starts.Length != 1) return false;
         string value = starts[0][10..];
-        if (ExecStartBinary(value) is { } daemon && text == SourceUnit(daemon)) return true;
+        if (ExecStartBinary(value) is { } daemon && (text == SourceUnit(daemon) || LegacySourceUnits(daemon).Contains(text, StringComparer.Ordinal))) return true;
         // The documented manual source install copies this exact reference
         // unit and changes only ExecStart. Preserve every other byte.
         using var stream = typeof(StartupIntegration).Assembly.GetManifestResourceStream("OpenXLR.StartupUnit");
@@ -686,6 +711,39 @@ public static class StartupIntegration
                     WantedBy=default.target
                     """;
 
+    /// <summary>
+    /// The unit bodies earlier releases wrote, oldest first, so an upgrade
+    /// from any of them adopts the file its own window generated. Generation
+    /// 0 is v0.1.0; 1 adds TimeoutStopSec (v0.1.9); 2 the first sandbox lines
+    /// (v0.1.13); 3 the notify type, watchdog and start limit (v0.1.22); 4 the
+    /// comment line, the quoted path and UMask (v0.1.23); 5 the second sandbox
+    /// block (v0.1.24); 6 KillMode (v0.1.33). Generation 7 adds LimitMEMLOCK
+    /// (v0.1.37) and equals <see cref="SourceUnit(string)"/>.
+    /// </summary>
+    internal static IEnumerable<string> LegacySourceUnits(string daemon) => Enumerable.Range(0, 7).Select(g => SourceUnit(daemon, g));
+
+    internal static string SourceUnit(string daemon, int generation)
+    {
+        var lines = new List<string>();
+        if (generation >= 4) lines.Add("# Written by the OpenXLR window for a source build (Options, Start at login).");
+        lines.AddRange(["[Unit]", "Description=OpenXLR audio daemon", "After=pipewire-pulse.service wireplumber.service"]);
+        if (generation >= 3) lines.AddRange(["StartLimitIntervalSec=300", "StartLimitBurst=3"]);
+        lines.AddRange(["", "[Service]"]);
+        if (generation >= 3) lines.AddRange(["Type=notify", "NotifyAccess=main", "WatchdogSec=60", "WatchdogSignal=SIGTERM", "TimeoutStartSec=120"]);
+        lines.AddRange(["ExecStart=" + (generation >= 4 ? SystemdQuote(daemon) : daemon), "Environment=OPENXLR_BUILD_MIXER=1"]);
+        if (generation >= 1) lines.Add("TimeoutStopSec=45");
+        if (generation >= 6) lines.Add("KillMode=mixed");
+        if (generation >= 7) lines.Add("LimitMEMLOCK=infinity");
+        lines.AddRange(["Restart=on-failure", "RestartSec=3"]);
+        if (generation >= 2) lines.AddRange(["NoNewPrivileges=true", "PrivateTmp=true", "ProtectSystem=strict", "ProtectControlGroups=true", "ProtectKernelTunables=true", "RestrictSUIDSGID=true"]);
+        if (generation >= 4) lines.Add("UMask=0077");
+        if (generation >= 5) lines.AddRange(["KeyringMode=private", "ProtectClock=true", "ProtectHostname=true", "ProtectKernelLogs=true",
+            "ProtectKernelModules=true", "LockPersonality=true", "RestrictNamespaces=true", "CapabilityBoundingSet="]);
+        lines.AddRange(["", "[Install]", "WantedBy=default.target"]);
+        return string.Join("\n", lines);
+    }
+
+    /// <summary>An entry is there when the file exists, or when a symlink stands in its place.</summary>
     private static bool EntryExists(string path) => File.Exists(path) || IsSymbolicLink(path);
 
     /// <summary>

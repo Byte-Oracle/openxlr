@@ -11,7 +11,9 @@ internal static class StartupReceipt
 {
     private static readonly object Gate = new();
     internal static string Path => OpenXlrPaths.ConfigFile("installation.json");
-    private static string Root => System.IO.Path.GetFullPath(OpenXlrPaths.ConfigHome);
+    // A trailing separator in XDG_CONFIG_HOME would otherwise reach the
+    // receipt prefix, which the receipt format rejects.
+    private static string Root => System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(OpenXlrPaths.ConfigHome));
     private static string Backup(string hash) => System.IO.Path.Combine(OpenXlrPaths.ConfigDir, "installation-backups", hash);
     internal static string[] StartupPaths => [System.IO.Path.Combine(Root, "autostart", "openxlr.desktop"),
         System.IO.Path.Combine(Root, "systemd", "user", "openxlr-daemon.service"),
@@ -103,10 +105,9 @@ internal static class StartupReceipt
         lock (Gate)
         {
             using var lease = Lock();
-            if (path != StartupPaths[2] || InstallationReceipt.HasLinkedParent(path, Root)) throw new IOException("Unrecognized or linked startup directory.");
+            path = System.IO.Path.GetFullPath(path);
+            if (LinkProblem(path, target) is { } problem) throw new IOException(problem);
             var info = new FileInfo(path);
-            if (Directory.Exists(path) && info.LinkTarget is null || info.Exists && info.LinkTarget is null || info.LinkTarget is not null && !SameTarget(info, target))
-                throw new IOException("Refusing to replace a foreign startup link.");
             InstallationReceipt receipt = Load();
             var entry = new InstalledFile { Path = path, Kind = "link", LinkTarget = info.LinkTarget ?? target };
             Save(receipt with { Files = [.. receipt.Files.Where(f => f.Path != path), entry] });
@@ -114,6 +115,25 @@ internal static class StartupReceipt
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
             File.CreateSymbolicLink(path, target);
         }
+    }
+
+    /// <summary>Whether <see cref="EnableLink"/> would accept the path, checked before anything else is written.</summary>
+    internal static bool CanEnableLink(string path, string target) => LinkProblem(System.IO.Path.GetFullPath(path), target) is null;
+
+    private static string? LinkProblem(string path, string target)
+    {
+        if (path != StartupPaths[2] || InstallationReceipt.HasLinkedParent(path, Root)) return "Unrecognized or linked startup directory.";
+        var info = new FileInfo(path);
+        if (Directory.Exists(path) && info.LinkTarget is null || info.Exists && info.LinkTarget is null || info.LinkTarget is not null && !SameTarget(info, target))
+            return "Refusing to replace a foreign startup link.";
+        return null;
+    }
+
+    /// <summary>True when a symbolic link at the path names the target, whether or not the target exists.</summary>
+    internal static bool LinksTo(string path, string target)
+    {
+        var info = new FileInfo(path);
+        return info.LinkTarget is not null && SameTarget(info, target);
     }
 
     internal static void Remove(string path, string? packagedUnit = null)
@@ -147,25 +167,35 @@ internal static class StartupReceipt
     // target. A familiar filename alone never grants ownership.
     private static InstallationReceipt AdoptLegacy(InstallationReceipt receipt, string path, string? packagedUnit)
     {
-        if (!Allowed(path) || receipt.Files.Any(f => f.Path == path) || InstallationReceipt.HasLinkedParent(path, Root)) return receipt;
-        var info = new FileInfo(path);
-        InstalledFile? entry = null;
-        if (path == StartupPaths[2] && info.LinkTarget is not null &&
-            (SameTarget(info, StartupPaths[1]) && receipt.Files.Any(f => f.Path == StartupPaths[1]) ||
-             packagedUnit is not null && SameTarget(info, packagedUnit)))
-            entry = new() { Path = path, Kind = "link", LinkTarget = info.LinkTarget };
-        else if (info.Exists && info.LinkTarget is null && path != StartupPaths[2])
-        {
-            byte[] bytes = InstallationReceipt.ReadBytes(path, 1024 * 1024);
-            string text = Encoding.UTF8.GetString(bytes);
-            if (bytes.AsSpan().SequenceEqual(Encoding.UTF8.GetBytes(text)) && StartupIntegration.IsGeneratedStartupFile(path, text))
-                entry = new() { Path = path, Sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes)),
-                    Mode = OperatingSystem.IsWindows() ? null : (int)File.GetUnixFileMode(path) };
-        }
-        if (entry is null) return receipt;
+        if (receipt.Files.Any(f => f.Path == path) || LegacyEntry(path, packagedUnit) is not { } entry) return receipt;
         var next = receipt with { Files = [.. receipt.Files, entry] };
         Save(next);
         return next;
+    }
+
+    /// <summary>
+    /// Whether an unrecorded startup path would be adopted: a file equal to a
+    /// template some release of this window wrote for the program it names, or
+    /// an enable link to the user unit path or the packaged unit. The link is
+    /// ours by name and target alone; systemctl enable leaves it behind when
+    /// the unit it pointed at is gone. Read-only, for doctor.
+    /// </summary>
+    internal static bool Recognized(string path, string? packagedUnit) => LegacyEntry(path, packagedUnit) is not null;
+
+    private static InstalledFile? LegacyEntry(string path, string? packagedUnit)
+    {
+        if (!Allowed(path) || InstallationReceipt.HasLinkedParent(path, Root)) return null;
+        var info = new FileInfo(path);
+        if (path == StartupPaths[2])
+            return info.LinkTarget is not null && (SameTarget(info, StartupPaths[1]) || packagedUnit is not null && SameTarget(info, packagedUnit))
+                ? new InstalledFile { Path = path, Kind = "link", LinkTarget = info.LinkTarget }
+                : null;
+        if (!info.Exists || info.LinkTarget is not null || Directory.Exists(path)) return null;
+        byte[] bytes = InstallationReceipt.ReadBytes(path, 1024 * 1024);
+        string text = Encoding.UTF8.GetString(bytes);
+        if (!bytes.AsSpan().SequenceEqual(Encoding.UTF8.GetBytes(text)) || !StartupIntegration.IsGeneratedStartupFile(path, text)) return null;
+        return new() { Path = path, Sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes)),
+            Mode = OperatingSystem.IsWindows() ? null : (int)File.GetUnixFileMode(path) };
     }
 
     internal static InstallationReceipt PrepareRemoval(string? packagedUnit = null, bool includeWindow = true)

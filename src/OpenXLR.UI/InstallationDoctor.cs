@@ -15,7 +15,8 @@ namespace OpenXLR.UI;
 internal sealed record DoctorFinding(string Path, string Problem, string Repair);
 internal sealed record DoctorReceipt(string Path, InstallationReceipt Installation, bool Archived = false);
 internal sealed record DoctorRuntime(string Status, string? InstalledBuild = null, string? RunningBuild = null);
-internal sealed record DoctorReport(IReadOnlyList<DoctorReceipt> Receipts, IReadOnlyList<DoctorFinding> Findings, DoctorRuntime? Daemon);
+internal sealed record DoctorNote(string Path, string Information);
+internal sealed record DoctorReport(IReadOnlyList<DoctorReceipt> Receipts, IReadOnlyList<DoctorFinding> Findings, DoctorRuntime? Daemon, IReadOnlyList<DoctorNote> Notes);
 
 /// <summary>Read-only installation checks. This path never initializes Avalonia or starts the daemon.</summary>
 internal static class InstallationDoctor
@@ -131,7 +132,7 @@ internal static class InstallationDoctor
                 }
             }
         }
-        return new(receipts, findings, daemon);
+        return new(receipts, findings, daemon, []);
     }
 
     internal static string ModuleId(string assembly)
@@ -247,11 +248,19 @@ internal static class InstallationCommands
             {
                 HashSet<string> owned = [.. report.Receipts.Where(r => !r.Archived && r.Installation.Manager == "user")
                     .SelectMany(r => r.Installation.Files).Where(f => !f.Removed).Select(f => f.Path)];
-                var unowned = StartupReceipt.StartupPaths.Where(p => !owned.Contains(p) &&
-                    (File.Exists(p) || Directory.Exists(p) || new FileInfo(p).LinkTarget is not null))
-                    .Select(p => new DoctorFinding(p, "startup path is not owned by a receipt; it will not be removed",
+                var findings = new List<DoctorFinding>();
+                var notes = new List<DoctorNote>();
+                foreach (string p in StartupReceipt.StartupPaths.Where(p => !owned.Contains(p) &&
+                    (File.Exists(p) || Directory.Exists(p) || new FileInfo(p).LinkTarget is not null)))
+                {
+                    // The same read-only recognition the toggles apply: a file a
+                    // release of this window generated, or the enable link
+                    // systemctl leaves, is adopted later rather than moved aside.
+                    if (Recognized(p)) notes.Add(new(p, "recognized startup path not yet recorded in a receipt; it is adopted by the next startup change in Options or by openxlr installation repair-startup"));
+                    else findings.Add(new(p, "startup path is not owned by a receipt; it will not be removed",
                         "mv -T -i -- " + InstallationDoctor.Quote(p) + " " + InstallationDoctor.Quote(p + ".before-openxlr")));
-                report = report with { Findings = [.. report.Findings, .. unowned] };
+                }
+                report = report with { Findings = [.. report.Findings, .. findings], Notes = [.. report.Notes, .. notes] };
             }
             if (json) output.WriteLine(JsonSerializer.Serialize(report, InstallationReceipt.Json));
             else
@@ -262,6 +271,8 @@ internal static class InstallationCommands
                     if (receipt.Installation.Dirty) output.WriteLine("  Information: built from a modified source tree.");
                     if (receipt.Installation.Commit is null) output.WriteLine("  Information: source commit is unknown.");
                 }
+                foreach (DoctorNote note in report.Notes)
+                    output.WriteLine($"{note.Path}: Information: {note.Information}");
                 foreach (DoctorFinding finding in report.Findings)
                     output.WriteLine($"{finding.Path}: {finding.Problem}\n  Repair: {finding.Repair}");
                 if (report.Daemon is { } daemon) output.WriteLine("Daemon: " + daemon.Status);
@@ -271,6 +282,12 @@ internal static class InstallationCommands
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         { output.WriteLine("OpenXLR: " + ex.Message); return 2; }
+    }
+
+    private static bool Recognized(string path)
+    {
+        try { return StartupReceipt.Recognized(path, StartupIntegration.PackagedUnit); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
 
     private static int Usage(TextWriter output)

@@ -362,25 +362,418 @@ public sealed class StartupReceiptTests : IDisposable
     }
 
     [Fact]
-    public void AStaleGeneratedUnitCanBeReplacedByThePackagedUnit()
+    public void AStaleGeneratedUnitAndItsEnableLinkAreReplacedByThePackagedUnit()
     {
         string unit = StartupReceipt.StartupPaths[1];
-        Directory.CreateDirectory(Path.GetDirectoryName(unit)!);
+        string wants = StartupReceipt.StartupPaths[2];
+        Directory.CreateDirectory(Path.GetDirectoryName(wants)!);
         File.WriteAllText(unit, StartupIntegration.SourceUnit("/does-not-exist/OpenXLR.Daemon"));
+        // systemctl --user enable wrote the link with the unit's absolute path.
+        File.CreateSymbolicLink(wants, unit);
         string packaged = Path.Combine(_home, "packaged.service");
         File.WriteAllText(packaged, "package unit");
-        string bin = Path.Combine(_home, "bin");
-        Directory.CreateDirectory(bin);
-        ExecutableScript.Write(Path.Combine(bin, "systemctl"), "#!/bin/sh\nexit 0\n");
-        string? previous = Environment.GetEnvironmentVariable("PATH");
-        try
+        string log = Path.Combine(_home, "systemctl.log");
+        using (new FakeSystemctl(_home, log))
         {
-            Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + previous);
             Assert.True(StartupIntegration.SetDaemonAtLogin(true, packaged));
             Assert.False(File.Exists(unit));
-            Assert.Equal(packaged, new FileInfo(StartupReceipt.StartupPaths[2]).LinkTarget);
+            Assert.Equal(packaged, new FileInfo(wants).LinkTarget);
+            Assert.Contains("--user daemon-reload", File.ReadAllLines(log));
         }
-        finally { Environment.SetEnvironmentVariable("PATH", previous); }
+        Receipt receipt = StartupReceipt.Load();
+        Assert.True(receipt.Files.Single(f => f.Path == unit).Removed);
+        Owned link = receipt.Files.Single(f => f.Path == wants);
+        Assert.False(link.Removed);
+        Assert.Equal(packaged, link.LinkTarget);
+        Assert.Null(Receipt.Problem(link, _home));
+    }
+
+    [Fact]
+    public void ADanglingEnableLinkWithoutItsUnitCanBeDisabled()
+    {
+        string unit = StartupReceipt.StartupPaths[1];
+        string wants = StartupReceipt.StartupPaths[2];
+        Directory.CreateDirectory(Path.GetDirectoryName(wants)!);
+        File.CreateSymbolicLink(wants, unit);
+        using (new FakeSystemctl(_home, Path.Combine(_home, "systemctl.log")))
+            Assert.True(StartupIntegration.SetDaemonAtLogin(false, null));
+        Assert.Null(new FileInfo(wants).LinkTarget);
+        Assert.True(StartupReceipt.Load().Files.Single(f => f.Path == wants).Removed);
+    }
+
+    [Fact]
+    public void DisablingWithAForeignUnitBehindTheEnableLinkChangesNothing()
+    {
+        string unit = StartupReceipt.StartupPaths[1];
+        string wants = StartupReceipt.StartupPaths[2];
+        Directory.CreateDirectory(Path.GetDirectoryName(wants)!);
+        File.WriteAllText(unit, "hand-written unit");
+        File.CreateSymbolicLink(wants, unit);
+        using (new FakeSystemctl(_home, Path.Combine(_home, "systemctl.log")))
+            Assert.False(StartupIntegration.SetDaemonAtLogin(false, null));
+        Assert.Equal(unit, new FileInfo(wants).LinkTarget);
+        Assert.Equal("hand-written unit", File.ReadAllText(unit));
+    }
+
+    [Fact]
+    public void AForeignEnableLinkIsRefusedBeforeASourceUnitIsWritten()
+    {
+        string unit = StartupReceipt.StartupPaths[1];
+        string wants = StartupReceipt.StartupPaths[2];
+        Directory.CreateDirectory(Path.GetDirectoryName(wants)!);
+        File.CreateSymbolicLink(wants, "/foreign/openxlr-daemon.service");
+        using (new FakeSystemctl(_home, Path.Combine(_home, "systemctl.log")))
+            Assert.False(StartupIntegration.SetDaemonAtLogin(true, null));
+        Assert.False(File.Exists(unit));
+        Assert.Equal("/foreign/openxlr-daemon.service", new FileInfo(wants).LinkTarget);
+        Assert.DoesNotContain(StartupReceipt.Load().Files, f => f.Path == unit);
+    }
+
+    [Fact]
+    public void AConfigHomeWithATrailingSeparatorStillOwnsStartupFiles()
+    {
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _home + Path.DirectorySeparatorChar);
+        string executable = Path.Combine(_home, "OpenXLR.UI");
+        File.WriteAllText(executable, "fixture");
+        Assert.True(StartupIntegration.SetWindowAtLogin(true, executable));
+        Assert.Equal(_home, StartupReceipt.Load().Prefix);
+        Assert.Equal(StartupIntegration.AutostartEntry(executable), File.ReadAllText(Entry));
+        Assert.True(StartupIntegration.SetWindowAtLogin(false, executable));
+        Assert.False(File.Exists(Entry));
+    }
+
+    public static TheoryData<string, string> HistoricalTemplates => new()
+    {
+        { "entry v0.1.0", """
+            [Desktop Entry]
+            Type=Application
+            Name=OpenXLR
+            Comment=OpenXLR mixer window
+            Exec=/old/OpenXLR.UI
+            Icon=openxlr
+            Terminal=false
+            X-GNOME-Autostart-enabled=true
+            """ },
+        { "entry v0.1.23", """
+            [Desktop Entry]
+            Type=Application
+            Name=OpenXLR
+            Comment=OpenXLR mixer window
+            Exec="/old/OpenXLR.UI"
+            Icon=openxlr
+            Terminal=false
+            X-GNOME-Autostart-enabled=true
+            """ },
+        { "entry v0.1.33", """
+            [Desktop Entry]
+            Type=Application
+            Name=OpenXLR
+            Comment=OpenXLR mixer window
+            Exec="/old/OpenXLR.UI"
+            Icon=openxlr
+            Terminal=false
+            X-GNOME-Autostart-enabled=true
+
+            """ },
+        { "unit v0.1.0", """
+            [Unit]
+            Description=OpenXLR audio daemon
+            After=pipewire-pulse.service wireplumber.service
+
+            [Service]
+            ExecStart=/old/OpenXLR.Daemon
+            Environment=OPENXLR_BUILD_MIXER=1
+            Restart=on-failure
+            RestartSec=3
+
+            [Install]
+            WantedBy=default.target
+            """ },
+        { "unit v0.1.9", """
+            [Unit]
+            Description=OpenXLR audio daemon
+            After=pipewire-pulse.service wireplumber.service
+
+            [Service]
+            ExecStart=/old/OpenXLR.Daemon
+            Environment=OPENXLR_BUILD_MIXER=1
+            TimeoutStopSec=45
+            Restart=on-failure
+            RestartSec=3
+
+            [Install]
+            WantedBy=default.target
+            """ },
+        { "unit v0.1.13", """
+            [Unit]
+            Description=OpenXLR audio daemon
+            After=pipewire-pulse.service wireplumber.service
+
+            [Service]
+            ExecStart=/old/OpenXLR.Daemon
+            Environment=OPENXLR_BUILD_MIXER=1
+            TimeoutStopSec=45
+            Restart=on-failure
+            RestartSec=3
+            NoNewPrivileges=true
+            PrivateTmp=true
+            ProtectSystem=strict
+            ProtectControlGroups=true
+            ProtectKernelTunables=true
+            RestrictSUIDSGID=true
+
+            [Install]
+            WantedBy=default.target
+            """ },
+        { "unit v0.1.22", """
+            [Unit]
+            Description=OpenXLR audio daemon
+            After=pipewire-pulse.service wireplumber.service
+            StartLimitIntervalSec=300
+            StartLimitBurst=3
+
+            [Service]
+            Type=notify
+            NotifyAccess=main
+            WatchdogSec=60
+            WatchdogSignal=SIGTERM
+            TimeoutStartSec=120
+            ExecStart=/old/OpenXLR.Daemon
+            Environment=OPENXLR_BUILD_MIXER=1
+            TimeoutStopSec=45
+            Restart=on-failure
+            RestartSec=3
+            NoNewPrivileges=true
+            PrivateTmp=true
+            ProtectSystem=strict
+            ProtectControlGroups=true
+            ProtectKernelTunables=true
+            RestrictSUIDSGID=true
+
+            [Install]
+            WantedBy=default.target
+            """ },
+        { "unit v0.1.23", """
+            # Written by the OpenXLR window for a source build (Options, Start at login).
+            [Unit]
+            Description=OpenXLR audio daemon
+            After=pipewire-pulse.service wireplumber.service
+            StartLimitIntervalSec=300
+            StartLimitBurst=3
+
+            [Service]
+            Type=notify
+            NotifyAccess=main
+            WatchdogSec=60
+            WatchdogSignal=SIGTERM
+            TimeoutStartSec=120
+            ExecStart="/old/OpenXLR.Daemon"
+            Environment=OPENXLR_BUILD_MIXER=1
+            TimeoutStopSec=45
+            Restart=on-failure
+            RestartSec=3
+            NoNewPrivileges=true
+            PrivateTmp=true
+            ProtectSystem=strict
+            ProtectControlGroups=true
+            ProtectKernelTunables=true
+            RestrictSUIDSGID=true
+            UMask=0077
+
+            [Install]
+            WantedBy=default.target
+            """ },
+        { "unit v0.1.24", """
+            # Written by the OpenXLR window for a source build (Options, Start at login).
+            [Unit]
+            Description=OpenXLR audio daemon
+            After=pipewire-pulse.service wireplumber.service
+            StartLimitIntervalSec=300
+            StartLimitBurst=3
+
+            [Service]
+            Type=notify
+            NotifyAccess=main
+            WatchdogSec=60
+            WatchdogSignal=SIGTERM
+            TimeoutStartSec=120
+            ExecStart="/old/OpenXLR.Daemon"
+            Environment=OPENXLR_BUILD_MIXER=1
+            TimeoutStopSec=45
+            Restart=on-failure
+            RestartSec=3
+            NoNewPrivileges=true
+            PrivateTmp=true
+            ProtectSystem=strict
+            ProtectControlGroups=true
+            ProtectKernelTunables=true
+            RestrictSUIDSGID=true
+            UMask=0077
+            KeyringMode=private
+            ProtectClock=true
+            ProtectHostname=true
+            ProtectKernelLogs=true
+            ProtectKernelModules=true
+            LockPersonality=true
+            RestrictNamespaces=true
+            CapabilityBoundingSet=
+
+            [Install]
+            WantedBy=default.target
+            """ },
+        { "unit v0.1.33", """
+            # Written by the OpenXLR window for a source build (Options, Start at login).
+            [Unit]
+            Description=OpenXLR audio daemon
+            After=pipewire-pulse.service wireplumber.service
+            StartLimitIntervalSec=300
+            StartLimitBurst=3
+
+            [Service]
+            Type=notify
+            NotifyAccess=main
+            WatchdogSec=60
+            WatchdogSignal=SIGTERM
+            TimeoutStartSec=120
+            ExecStart="/old/OpenXLR.Daemon"
+            Environment=OPENXLR_BUILD_MIXER=1
+            TimeoutStopSec=45
+            KillMode=mixed
+            Restart=on-failure
+            RestartSec=3
+            NoNewPrivileges=true
+            PrivateTmp=true
+            ProtectSystem=strict
+            ProtectControlGroups=true
+            ProtectKernelTunables=true
+            RestrictSUIDSGID=true
+            UMask=0077
+            KeyringMode=private
+            ProtectClock=true
+            ProtectHostname=true
+            ProtectKernelLogs=true
+            ProtectKernelModules=true
+            LockPersonality=true
+            RestrictNamespaces=true
+            CapabilityBoundingSet=
+
+            [Install]
+            WantedBy=default.target
+            """ },
+        { "unit v0.1.37", """
+            # Written by the OpenXLR window for a source build (Options, Start at login).
+            [Unit]
+            Description=OpenXLR audio daemon
+            After=pipewire-pulse.service wireplumber.service
+            StartLimitIntervalSec=300
+            StartLimitBurst=3
+
+            [Service]
+            Type=notify
+            NotifyAccess=main
+            WatchdogSec=60
+            WatchdogSignal=SIGTERM
+            TimeoutStartSec=120
+            ExecStart="/old/OpenXLR.Daemon"
+            Environment=OPENXLR_BUILD_MIXER=1
+            TimeoutStopSec=45
+            KillMode=mixed
+            LimitMEMLOCK=infinity
+            Restart=on-failure
+            RestartSec=3
+            NoNewPrivileges=true
+            PrivateTmp=true
+            ProtectSystem=strict
+            ProtectControlGroups=true
+            ProtectKernelTunables=true
+            RestrictSUIDSGID=true
+            UMask=0077
+            KeyringMode=private
+            ProtectClock=true
+            ProtectHostname=true
+            ProtectKernelLogs=true
+            ProtectKernelModules=true
+            LockPersonality=true
+            RestrictNamespaces=true
+            CapabilityBoundingSet=
+
+            [Install]
+            WantedBy=default.target
+            """ },
+    };
+
+    // One sample per template a release wrote, copied from that release's
+    // source. Each is recognized from its own launch path and removed.
+    [Theory]
+    [MemberData(nameof(HistoricalTemplates))]
+    public void FilesGeneratedByEveryEarlierReleaseAreRecognizedAndRemoved(string release, string text)
+    {
+        string path = release.StartsWith("entry", StringComparison.Ordinal) ? Entry : StartupReceipt.StartupPaths[1];
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text);
+        Assert.True(StartupIntegration.IsGeneratedStartupFile(path, text));
+        Assert.True(StartupReceipt.Recognized(path, null));
+        Assert.False(StartupIntegration.IsGeneratedStartupFile(path, text + "Nice=5"));
+        StartupReceipt.Remove(path);
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public void TheNewestLegacyUnitGenerationIsTheCurrentTemplate()
+    {
+        const string daemon = "/My Projects/%/OpenXLR.Daemon";
+        Assert.Equal(StartupIntegration.SourceUnit(daemon), StartupIntegration.SourceUnit(daemon, 7));
+        string[] legacy = [.. StartupIntegration.LegacySourceUnits(daemon)];
+        Assert.Equal(7, legacy.Distinct().Count());
+        Assert.DoesNotContain(StartupIntegration.SourceUnit(daemon), legacy);
+        Assert.Equal(2, StartupIntegration.LegacyAutostartEntries(daemon).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task DoctorReportsRecognizedStartupFilesAsInformationAndForeignOnesAsFindings()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Entry)!);
+        File.WriteAllText(Entry, StartupIntegration.AutostartEntry("/old/OpenXLR.UI"));
+        string wants = StartupReceipt.StartupPaths[2];
+        Directory.CreateDirectory(Path.GetDirectoryName(wants)!);
+        File.CreateSymbolicLink(wants, StartupReceipt.StartupPaths[1]);
+        var output = new StringWriter();
+        await InstallationCommands.Run(["doctor", "--no-runtime", "--json"], output);
+        using (var json = JsonDocument.Parse(output.ToString()))
+        {
+            string[] findings = [.. json.RootElement.GetProperty("findings").EnumerateArray().Select(f => f.GetProperty("path").GetString()!)];
+            string[] notes = [.. json.RootElement.GetProperty("notes").EnumerateArray().Select(f => f.GetProperty("path").GetString()!)];
+            Assert.DoesNotContain(Entry, findings);
+            Assert.DoesNotContain(wants, findings);
+            Assert.Equal(new[] { Entry, wants }, notes);
+        }
+        output = new StringWriter();
+        await InstallationCommands.Run(["doctor", "--no-runtime"], output);
+        Assert.Contains(Entry + ": Information: recognized startup path", output.ToString());
+        File.WriteAllText(Entry, "foreign startup entry");
+        output = new StringWriter();
+        Assert.Equal(1, await InstallationCommands.Run(["doctor", "--no-runtime", "--json"], output));
+        using (var json = JsonDocument.Parse(output.ToString()))
+        {
+            Assert.Contains(json.RootElement.GetProperty("findings").EnumerateArray(), f => f.GetProperty("path").GetString() == Entry);
+            Assert.DoesNotContain(json.RootElement.GetProperty("notes").EnumerateArray(), f => f.GetProperty("path").GetString() == Entry);
+        }
+    }
+
+    /// <summary>A systemctl on PATH that records its arguments and succeeds.</summary>
+    private sealed class FakeSystemctl : IDisposable
+    {
+        private readonly string? _previous = Environment.GetEnvironmentVariable("PATH");
+
+        public FakeSystemctl(string home, string log)
+        {
+            string bin = Path.Combine(home, "bin");
+            Directory.CreateDirectory(bin);
+            ExecutableScript.Write(Path.Combine(bin, "systemctl"), "#!/bin/sh\nprintf '%s\\n' \"$*\" >> " + InstallationDoctor.Quote(log) + "\nexit 0\n");
+            Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + _previous);
+        }
+
+        public void Dispose() => Environment.SetEnvironmentVariable("PATH", _previous);
     }
 
     [Fact]
