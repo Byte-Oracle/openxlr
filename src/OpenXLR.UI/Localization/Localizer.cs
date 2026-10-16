@@ -31,6 +31,7 @@ public static class Localizer
     internal static IReadOnlyList<LanguageChoice> Languages { get; } = Array.AsReadOnly<LanguageChoice>(
     [
         new("en", "English"),
+        new("de", "Deutsch"),
     ]);
 
     internal static readonly ResourceManager Resources =
@@ -113,7 +114,8 @@ public static class Localizer
         if (cut >= 0) tag = tag[..cut];
         tag = tag.Replace('_', '-');
         if (tag.Length == 0 || !tag.All(c => char.IsAsciiLetterOrDigit(c) || c == '-')) return "";
-        string[] parts = tag.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = tag.Split('-');
+        if (parts.Any(p => p.Length == 0)) return "";
         if (!parts[0].Equals("zh", StringComparison.OrdinalIgnoreCase)) return string.Join('-', parts);
         string[] rest = parts.Skip(1).ToArray();
         if (rest.Any(p => p.Equals("Hant", StringComparison.OrdinalIgnoreCase) || p.Equals("Hans", StringComparison.OrdinalIgnoreCase)))

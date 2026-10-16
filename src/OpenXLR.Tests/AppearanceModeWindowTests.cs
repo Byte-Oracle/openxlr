@@ -5,6 +5,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using OpenXLR.UI;
+using OpenXLR.UI.Localization;
 using OpenXLR.UI.Skinning;
 
 namespace OpenXLR.Tests;
@@ -146,7 +147,7 @@ internal static class AppearanceModeWindowTests
             Pump();
             Assert.Equal(AppearanceModes.Light, SkinService.Mode);
             Assert.Equal(Light, Background(main));
-            Assert.StartsWith("Could not save ui.json.", vm.PreferenceError);
+            Assert.StartsWith(Localizer.Format("PreferenceFileNotSaved", "ui.json", ""), vm.PreferenceError);
         }
         finally
         {

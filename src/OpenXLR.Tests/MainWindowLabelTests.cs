@@ -6,6 +6,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
+using OpenXLR.UI.Localization;
 
 namespace OpenXLR.Tests;
 
@@ -19,7 +20,7 @@ internal static class MainWindowLabelTests
         CheckText(title);
         CheckText(main.FindControl<TextBlock>("HeaderVersion")!);
         var actions = header.GetVisualDescendants().OfType<Button>().Where(b => b.IsVisible && b.Name != "DevicePicker").ToArray();
-        Assert.Equal(new[] { "⚙", "Profiles", "Arrange", "Flow", "Restart daemon", "About" }, actions.Select(b => b.Content as string));
+        Assert.Equal(new[] { "⚙", Localizer.Text("Profiles"), Localizer.Text("Arrange"), Localizer.Text("Flow"), Localizer.Text("RestartDaemon"), Localizer.Text("About") }, actions.Select(b => b.Content as string));
         foreach (Button action in actions)
             foreach (TextBlock label in action.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsVisible))
                 CheckText(label);
@@ -28,7 +29,7 @@ internal static class MainWindowLabelTests
             var row = main.FindControl<WrapPanel>(name)!;
             var toggles = row.Children.OfType<ToggleButton>().Where(b => b.IsVisible).ToArray();
             Assert.NotEmpty(toggles);
-            Assert.Single(toggles, b => b.Content as string == "Compressor");
+            Assert.Single(toggles, b => b.Content as string == Localizer.Text("Compressor"));
             CheckSeparate(toggles);
             foreach (ToggleButton button in toggles)
                 foreach (TextBlock label in button.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsVisible))
@@ -40,14 +41,29 @@ internal static class MainWindowLabelTests
             var toolbar = main.FindControl<WrapPanel>("HeaderActions")!;
             Assert.InRange(toolbar.Bounds.Height, 0, toolbar.Children.Max(c => c.Bounds.Height) + 1);
         }
+        var vm = (MainViewModel)main.DataContext!;
+        int blend = vm.Crossfade;
+        try
+        {
+            foreach (int value in new[] { 0, 100, 200 })
+            {
+                vm.Crossfade = value;
+                Dispatcher.UIThread.RunJobs();
+                main.UpdateLayout();
+                var readout = main.FindControl<TextBlock>("CrossfadeValue")!;
+                CheckText(readout, ((Grid)readout.Parent!).ColumnDefinitions[2].ActualWidth);
+            }
+        }
+        finally { vm.Crossfade = blend; Dispatcher.UIThread.RunJobs(); main.UpdateLayout(); }
         Assert.Empty(failures);
 
-        void CheckText(TextBlock text)
+        void CheckText(TextBlock text, double maximumWidth = double.PositiveInfinity)
         {
             var measured = new FormattedText(text.Text ?? "", CultureInfo.InvariantCulture, text.FlowDirection,
                 new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, text.Foreground);
-            if (measured.Width > text.Bounds.Width + 1)
-                failures.Add($"'{text.Text}' needs {measured.Width:F1}px but has {text.Bounds.Width:F1}px at window width {main.ClientSize.Width}.");
+            double available = Math.Min(text.Bounds.Width, maximumWidth);
+            if (measured.Width > available + 1)
+                failures.Add($"'{text.Text}' needs {measured.Width:F1}px but has {available:F1}px at window width {main.ClientSize.Width}.");
             Point origin = text.TranslatePoint(default, main)!.Value;
             if (origin.X < 0 || origin.X + text.Bounds.Width > main.ClientSize.Width + 1)
                 failures.Add($"'{text.Text}' leaves the window at width {main.ClientSize.Width}.");

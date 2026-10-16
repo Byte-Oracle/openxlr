@@ -6,6 +6,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
+using OpenXLR.UI.Localization;
 using OpenXLR.UI.Skinning;
 
 namespace OpenXLR.Tests;
@@ -290,7 +291,7 @@ internal static class TouchControlsWindowTests
             picker.SelectedItem = standard;
             Pump(main);
             Assert.False(SkinService.TouchControls);
-            Assert.StartsWith("Could not save ui.json.", vm.PreferenceError);
+            Assert.StartsWith(Localizer.Format("PreferenceFileNotSaved", "ui.json", ""), vm.PreferenceError);
         }
         finally
         {

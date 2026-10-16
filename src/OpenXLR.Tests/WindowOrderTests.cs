@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
+using OpenXLR.UI.Localization;
 using OpenXLR.UI.Skinning;
 
 namespace OpenXLR.Tests;
@@ -199,7 +200,8 @@ internal static class WindowOrderTests
             try
             {
                 Drag("HeadphonesTile", before[0], false);
-                Wait(() => Ui(() => main!.FindControl<TextBlock>("ArrangementNote")!.Text!.Contains("could not be saved")));
+                string errorPrefix = Localizer.Text("SectionOrderNotSaved").Split("{0}")[0];
+                Wait(() => Ui(() => main!.FindControl<TextBlock>("ArrangementNote")!.Text!.StartsWith(errorPrefix, StringComparison.Ordinal)));
                 Assert.Equal("HeadphonesTile", Ui(() => Order()[0]));
             }
             finally { Directory.Delete(path); File.Move(path + ".saved", path); }
