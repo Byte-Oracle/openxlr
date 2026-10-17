@@ -1,5 +1,5 @@
 {
-  description = "Linux Wave Link replacement for Elgato XLR interfaces and the Wave:3";
+  description = "Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 

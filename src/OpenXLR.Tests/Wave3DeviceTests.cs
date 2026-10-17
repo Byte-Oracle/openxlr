@@ -13,7 +13,7 @@ namespace OpenXLR.Tests;
 public sealed class Wave3DeviceTests
 {
     /// <summary>A config block behind the transport: reads serve it, writes replace it.</summary>
-    private sealed class FakeUsb : IUsbTransport
+    internal sealed class FakeUsb : IUsbTransport
     {
         public byte[] Config { get; set; } = new byte[16];
         /// <summary>How many bytes the fake answers for the config block.</summary>

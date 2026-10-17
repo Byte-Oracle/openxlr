@@ -19,7 +19,7 @@ public sealed record DeviceState
     public bool LowImpedance { get; init; }     // block 0x0005 off1 bit1
 
     /// <summary>
-    /// Wave:3 only: the headphone mute the firmware keeps in its config block
+    /// Wave:3 and Wave:1 only: the headphone mute the firmware keeps in its config block
     /// (byte 9) and, per public research not yet run here, asserts itself
     /// when the headphone level reaches its floor. Read-only; a headphone
     /// level written above the floor releases it. False on every other model.

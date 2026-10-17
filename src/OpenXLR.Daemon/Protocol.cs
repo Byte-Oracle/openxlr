@@ -245,8 +245,9 @@ public sealed record DetectedDevice(
 /// The connected interface. <c>Note</c> is a sentence about how this unit is
 /// driven that differs from the usual, or null: today, an XLR Dock whose
 /// card lacks a mixer control and takes it through the config block, or a
-/// Wave:3 whose ALSA card was not found. <c>Firmware</c> is the version the
-/// unit reports, null on a model where it is not read (all but the Wave:3).
+/// Wave:3 or Wave:1 whose ALSA card was not found. <c>Firmware</c> is the
+/// version the unit reports, null on a model where it is not read (all but
+/// the Wave:3 and Wave:1).
 /// </summary>
 public sealed record DeviceDescriptor(string Vendor, string Model, string UsbId, string? Note = null, string? Firmware = null);
 
