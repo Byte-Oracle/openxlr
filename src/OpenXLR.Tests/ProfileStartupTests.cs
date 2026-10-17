@@ -204,6 +204,46 @@ public sealed class ProfileStartupTests
         => scenario == "corrupt" ? "{" : """{"device":{"gainDb":40},"mixer":{"mixVolumes":{"monitor":1e999}}}""";
 
     [Fact]
+    public async Task ARefusedDeletionKeepsTheActiveProfileAndUnrelatedDeletesLeaveItAlone()
+    {
+        string dir = Directory.CreateTempSubdirectory("openxlr-profile-delete-").FullName;
+        string? previous = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", dir);
+        try
+        {
+            new DaemonSettings { Submixer = false }.Save();
+            var config = new ConfigurationBuilder().Build();
+            var dock = new Dock();
+            using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => [dock]);
+            devices.SweepOnce();
+            using var lifetime = new Lifetime();
+            using var mixer = new MixerService(NullLogger<MixerService>.Instance, config, devices);
+            var hub = new WebSocketHub(devices, mixer, NullLogger<WebSocketHub>.Instance, lifetime);
+            Assert.True((await hub.ExecuteForApiAsync("""{"cmd":"saveProfile","name":"Keep"}""")).Ok);
+            Assert.Equal("Keep", hub.Snapshot().ActiveProfile);
+            OpenXlrPaths.WriteAtomic(Path.Combine(OpenXlrPaths.ConfigDir, "profiles", "0fd9-00a6", "recall-on-connect"), "../Outside");
+
+            var failed = await hub.ExecuteForApiAsync("""{"cmd":"deleteProfile","name":"Keep","requestId":"delete"}""");
+            Assert.False(failed.Ok);
+            Assert.Contains("invalid profile name", Assert.IsType<CommandResultMessage>(failed.Messages[^1]).Error);
+            Assert.Equal("Keep", hub.Snapshot().ActiveProfile);
+            Assert.NotNull(ProfileStore.Load("0fd9:00a6", "Keep"));
+
+            ProfileStore.SetRecallOnConnect("0fd9:00a6", null);
+            ProfileStore.Save("0fd9:00a6", "Other", new());
+            Assert.True((await hub.ExecuteForApiAsync("""{"cmd":"deleteProfile","name":"Other"}""")).Ok);
+            Assert.Equal("Keep", hub.Snapshot().ActiveProfile);
+            Assert.True((await hub.ExecuteForApiAsync("""{"cmd":"deleteProfile","name":"Keep"}""")).Ok);
+            Assert.Null(hub.Snapshot().ActiveProfile);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previous);
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task ManualRecallOfAnInvalidProfileNamesItAndAppliesNothing()
     {
         string dir = Directory.CreateTempSubdirectory("openxlr-profile-").FullName;
@@ -243,6 +283,9 @@ public sealed class ProfileStartupTests
     [InlineData("switched")]
     [InlineData("replugged")]
     [InlineData("stopping")]
+    [InlineData("oversized")]
+    [InlineData("bad-marker")]
+    [InlineData("large-marker")]
     public async Task ArrivalRejectsStaleWorkAndPreservesLastSettings(string scenario)
     {
         string dir = Directory.CreateTempSubdirectory("openxlr-profile-review-").FullName;
@@ -273,11 +316,20 @@ public sealed class ProfileStartupTests
             using var mixer = new MixerService(NullLogger<MixerService>.Instance, config, devices);
             var hub = new WebSocketHub(devices, mixer, NullLogger<WebSocketHub>.Instance, lifetime);
             await mixer.StartAsync(CancellationToken.None);
-            bool invalidProfile = scenario is "corrupt" or "invalid" or "missing";
+            bool invalidProfile = scenario is "corrupt" or "invalid" or "missing" or "oversized" or "bad-marker" or "large-marker";
             if (invalidProfile)
             {
                 ProfileStore.SetRecallOnConnect(deviceId, "Broken");
-                if (scenario != "missing")
+                string folder = Path.Combine(OpenXlrPaths.ConfigDir, "profiles", "0fd9-00a6");
+                if (scenario == "oversized")
+                {
+                    using var file = File.Create(Path.Combine(folder, "Broken.json"));
+                    file.SetLength(ProfileStore.MaxProfileBytes + 1);
+                }
+                else if (scenario is "bad-marker" or "large-marker")
+                    OpenXlrPaths.WriteAtomic(Path.Combine(folder, "recall-on-connect"),
+                        scenario == "bad-marker" ? "../Outside" : new string('x', 1025));
+                else if (scenario != "missing")
                     OpenXlrPaths.WriteAtomic(Path.Combine(OpenXlrPaths.ConfigDir, "profiles", "0fd9-00a6", "Broken.json"), BrokenProfile(scenario));
             }
             if (scenario == "stopping") lifetime.StopApplication();
