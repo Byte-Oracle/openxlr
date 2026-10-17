@@ -1,3 +1,16 @@
+openxlr (0.1.60) resolute; urgency=medium
+
+  * Devices: the Wave:1 (0fd9:006e) is recognized and driven with the Wave:3's controls, from the Wave:3's backend under its own id; coded only, never run on a Wave:1, and owners are asked for diagnostics. The udev rule gains the id.
+  * UI: the submixer can pop out into its own resizable window for a second display and return to the main UI; plugin windows opened from it close with it, and deleted channels, mixes and inserts discard their pending changes.
+  * UI: faders move in one-point steps with the arrow keys and ten-point page steps; Shift before dragging gives fine control; device faders step in their displayed units.
+  * UI: INPUT CHANNELS and OUTPUT MIXES headings in the submixer, in English and German.
+  * UI: a second launch during startup shows the first instance's window once ready instead of being lost.
+  * UI: diagnostics mask quoted, escaped and long credential values in scan logs, and omit a log when masking times out.
+  * Daemon: profile files are limited to 8 MiB and recall markers to 1 KiB, special files are refused before reading, an invalid recall name is rejected, and a deletion keeps the active profile when its marker cannot be read.
+  * Docs: a capture guide for the unmapped hardware effects.
+
+ -- Emanuele Sparvoli <sparvoli@gmail.com>  Sat, 17 Oct 2026 20:00:25 +0100
+
 openxlr (0.1.51) resolute; urgency=medium
 
   * Window: German translation of the UI. Deutsch is listed in Options and chosen for German desktop locales; numbers and the values sent to the daemon are unchanged.

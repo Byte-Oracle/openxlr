@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.1.51
+Version: 0.1.60
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
 License:        GPL-3.0-only
@@ -171,6 +171,16 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Sat Oct 17 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.1.60-1
+- Devices: the Wave:1 (0fd9:006e) is recognized and driven with the Wave:3's controls, from the Wave:3's backend under its own id; coded only, never run on a Wave:1, and owners are asked for diagnostics. The udev rule gains the id.
+- UI: the submixer can pop out into its own resizable window for a second display and return to the main UI; plugin windows opened from it close with it, and deleted channels, mixes and inserts discard their pending changes.
+- UI: faders move in one-point steps with the arrow keys and ten-point page steps; Shift before dragging gives fine control; device faders step in their displayed units.
+- UI: INPUT CHANNELS and OUTPUT MIXES headings in the submixer, in English and German.
+- UI: a second launch during startup shows the first instance's window once ready instead of being lost.
+- UI: diagnostics mask quoted, escaped and long credential values in scan logs, and omit a log when masking times out.
+- Daemon: profile files are limited to 8 MiB and recall markers to 1 KiB, special files are refused before reading, an invalid recall name is rejected, and a deletion keeps the active profile when its marker cannot be read.
+- Docs: a capture guide for the unmapped hardware effects.
+
 * Fri Oct 16 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.1.51-1
 - Window: German translation of the UI. Deutsch is listed in Options and chosen for German desktop locales; numbers and the values sent to the daemon are unchanged.
 - Installation: the deb, RPM, AUR and Nix packages carry a receipt of their files. openxlr doctor checks an installation against it, says whether the running daemon is the installed build, keeps past inventories for leftover checks and names the repair command for each finding.
