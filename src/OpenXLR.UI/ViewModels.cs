@@ -1486,7 +1486,7 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     public bool AuxPortEnabled
     {
         get => _auxPortEnabled;
-        set { if (Set(ref _auxPortEnabled, value) && !_applying) _ = _client.SetAuxPortEnabledAsync(value); }
+        set { if (Set(ref _auxPortEnabled, value) && !_applying && !Detached) _ = _client.SetAuxPortEnabledAsync(value); }
     }
 
     private double _meterL;

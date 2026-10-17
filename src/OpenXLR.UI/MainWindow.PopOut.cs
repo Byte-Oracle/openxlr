@@ -37,11 +37,9 @@ public partial class MainWindow
             panel.ClearValue(DataContextProperty);
             _mixerWindow = null;
             DetachedMixerNotice.IsVisible = false;
-            PopOutMixerButton.IsVisible = true;
             if (!_reallyExit && restoreMain) ShowMixer();
         };
         DetachedMixerNotice.IsVisible = true;
-        PopOutMixerButton.IsVisible = false;
         window.Show();
         return window;
     }

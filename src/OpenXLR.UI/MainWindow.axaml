@@ -511,8 +511,16 @@
             <Button Classes="ghost reorderHandle" Content="↕" Tag="SubmixerTile" AutomationProperties.Name="{loc:Text Key=MoveSubmixer}"
                     ToolTip.Tip="{loc:Text Key=DragToAnotherSectionArrowKeysMove}"/>
             <TextBlock Text="{loc:Text Key=SUBMIXER}" Classes="h" VerticalAlignment="Center"/>
-            <Button Name="PopOutMixerButton" Content="{loc:Text Key=PopOutMixer}" Click="OnPopOutMixer"
-                    ToolTip.Tip="{loc:Text Key=PopOutMixerHint}"/>
+            <Button Name="PopOutMixerButton" Content="{loc:Text Key=PopOutMixer}" Padding="8,1" FontSize="11" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center"
+                    Click="OnPopOutMixer" ToolTip.Tip="{loc:Text Key=PopOutMixerHint}">
+              <!-- Hidden with no mixer, and while the mixer is in its own window. -->
+              <Button.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="HasMixer"/>
+                  <Binding Path="!#DetachedMixerNotice.IsVisible"/>
+                </MultiBinding>
+              </Button.IsVisible>
+            </Button>
             <Button Content="{loc:Text Key=EditLayout}" Padding="8,1" FontSize="11" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center"
                     IsVisible="{Binding HasMixer}" IsEnabled="{Binding CanEditLayout}" Click="OnEditLayout"
                     ToolTip.Tip="{loc:Text Key=AddRenameReorderAndRemoveApplicationChannelsAnd}"/>
