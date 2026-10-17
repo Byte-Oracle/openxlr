@@ -153,6 +153,21 @@ pointer, and flips to whichever side of that control the screen has room
 for, so a tooltip near an edge of the screen never ends up over the
 button and never takes the click meant for it.
 
+### Precise fader adjustments
+
+Mixer and device faders move in their displayed units: one percentage point
+for sends, mix masters and monitor volume, one unit for hardware controls.
+Focus a fader and use the arrow keys for one step, or Page Up and Page Down
+for ten. Hold Shift before dragging for one tenth of the normal sensitivity,
+so a short fader can still reach an exact value. Release the pointer to end
+fine dragging. Locking or hiding a control, moving it between windows, or
+changing its range also ends its active drag. A hidden control or a new range
+cannot reuse an old pointer position. The 150% range keeps the same
+one-percentage-point steps. Additional touch contacts do not take over a drag.
+
+Incoming device or profile values retain their precision until you adjust
+them. Plugin parameter controls keep the steps supplied by their plugin.
+
 <a name="mic-to-call"></a>
 ### 3.1 Send your microphone to a call or a recording
 
