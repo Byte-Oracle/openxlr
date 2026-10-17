@@ -31,7 +31,8 @@ internal static class MixerFaderLifecycleWindowTests
                 JsonNode command = await SocketTestServer.Receive(socket, stop);
                 string cmd = command["cmd"]!.GetValue<string>();
                 if (cmd is "setLevel" or "setMixVolume" or "setChannelMuted" or "setMixMuted"
-                    or "setInsertParam" or "setInsertBypass" or "setInserts" or "showInsertUi" or "renameInsert")
+                    or "setInsertParam" or "setInsertBypass" or "setInserts" or "showInsertUi" or "renameInsert"
+                    or "setAuxPortEnabled")
                     changes.Enqueue($"{cmd}:{command["channel"]}:{command["mix"]}");
                 if (command["requestId"] is { } requestId)
                     await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>() }, stop);
@@ -133,6 +134,16 @@ internal static class MixerFaderLifecycleWindowTests
             }
             finally { current.ForgetPendingParameters(); }
         }
+
+        // A retired Aux mix cannot toggle the port either.
+        apply.Invoke(model, [JsonNode.Parse("""{"mixes":[{"id":"auxout","name":"Aux"}],"channels":[]}""")!]);
+        MixViewModel aux = model.Mixes.Single(m => m.Id == "auxout");
+        Assert.True(aux.AuxPortEnabled);
+        apply.Invoke(model, [State(true, true)]);
+        changes.Clear();
+        aux.AuxPortEnabled = false;
+        Assert.Null(await client.SetLayoutOrderAsync([], []));
+        Assert.Empty(changes);
 
         apply.Invoke(model, [State(true, true)]);
         var retiredChain = model.Mixes.Single(m => m.Id == "headset").Inserts;

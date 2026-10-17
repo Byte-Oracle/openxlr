@@ -33,6 +33,8 @@ internal static class MixerPopOutWindowTests
                 """)]);
             main.Show();
             Layout(main, 1040, 900);
+            var popOut = main.FindControl<Button>("PopOutMixerButton")!;
+            Assert.True(popOut.IsVisible);
             var host = main.FindControl<ContentControl>("MixerHost")!;
             var panel = (Control)host.Content!;
             InsertWindows.OpenChain(main, vm.Mixes[0].Inserts, "mix:monitor");
@@ -43,6 +45,7 @@ internal static class MixerPopOutWindowTests
             MixerWindow popped = main.PopOutMixer();
             Layout(popped, 800, 480);
             Assert.Same(popped, main.PopOutMixer());
+            Assert.False(popOut.IsVisible);
             Assert.Null(host.Content);
             Assert.Same(vm, popped.DataContext);
             Assert.Same(panel, popped.FindControl<ScrollViewer>("MixerScroll")!.Content);
@@ -99,6 +102,17 @@ internal static class MixerPopOutWindowTests
             Dispatcher.UIThread.RunJobs();
             Assert.True(main.IsVisible);
             Assert.Same(panel, host.Content);
+            Assert.True(popOut.IsVisible);
+            // The button follows the mixer, as Edit layout beside it does.
+            typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vm, [null]);
+            Assert.False(popOut.IsVisible);
+            typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vm, [JsonNode.Parse("""
+                {"mixes":[{"id":"monitor","name":"Monitor A with a long name","kind":"monitor","volume":0.42},
+                          {"id":"monitor2","name":"Monitor B","kind":"monitor"}],
+                 "channels":[{"id":"music","name":"Music with an especially long channel name","levels":{"monitor":0.5,"monitor2":0.7}},
+                             {"id":"game","name":"Game","levels":{"monitor":1,"monitor2":1}}]}
+                """)]);
+            Assert.True(popOut.IsVisible);
             Layout(main, 1040, 900);
             Assert.Equal(0.42, Master(main, vm).Value);
 
