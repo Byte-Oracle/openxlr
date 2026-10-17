@@ -579,7 +579,7 @@ public sealed partial class MainViewModel : ViewModelBase
         var mix = new MixViewModel(_client, node["id"]!.GetValue<string>(), node["name"]!.GetValue<string>())
             { Kind = node["kind"]?.GetValue<string>() ?? "monitor" };
         if (mix.IsMonitor && _desktopVolumeBoost is bool boost) mix.VolumeRange.Apply(boost);
-        mix.VolumeRange.Changed += boost => { if (mix.IsMonitor) RequestDesktopVolumeBoost(boost); };
+        mix.VolumeRange.Changed += boost => { if (!mix.Detached && mix.IsMonitor) RequestDesktopVolumeBoost(boost); };
         return mix;
     }
 
@@ -1119,7 +1119,12 @@ public sealed partial class MainViewModel : ViewModelBase
         {
             SyncList(Mixes, mixes, m => m["id"]!.GetValue<string>(),
                 (m, vm) => vm.ApplyFromDaemon(m),
-                CreateMix);
+                CreateMix, removed =>
+                {
+                    removed.Detach();
+                    removed.Inserts.Detach();
+                    InsertWindows.CloseChain(removed.Inserts, $"mix:{removed.Id}");
+                });
             bool auxOn = mixer["auxPortEnabled"]?.GetValue<bool>() ?? true;
             foreach (MixViewModel mv in Mixes.Where(mv => mv.IsAuxPort)) mv.ApplyAuxPort(auxOn);
             // Aux can feed a selected output even without a USB Aux port.
@@ -1143,7 +1148,8 @@ public sealed partial class MainViewModel : ViewModelBase
             string[] mixIds = [.. Mixes.Select(m => m.Id)];
             SyncList(Channels, channels, c => c["id"]!.GetValue<string>(),
                 (c, vm) => { vm.SyncSends(mixIds); vm.ApplyFromDaemon(c); },
-                c => new ChannelViewModel(_client, c["id"]!.GetValue<string>(), c["name"]!.GetValue<string>(), mixIds));
+                c => new ChannelViewModel(_client, c["id"]!.GetValue<string>(), c["name"]!.GetValue<string>(), mixIds),
+                removed => removed.SyncSends([]));
             // Send rows carry the mix's name, not its id.
             foreach (ChannelViewModel c in Channels)
                 foreach (SendViewModel send in c.Sends)
@@ -1163,7 +1169,8 @@ public sealed partial class MainViewModel : ViewModelBase
 
     /// <summary>Follow daemon order while retaining existing objects and their bindings.</summary>
     private static void SyncList<T>(ObservableCollection<T> target, JsonArray source,
-        Func<JsonNode, string> idOf, Action<JsonNode, T> update, Func<JsonNode, T> create)
+        Func<JsonNode, string> idOf, Action<JsonNode, T> update, Func<JsonNode, T> create,
+        Action<T>? removed = null)
         where T : class, IHasId
     {
         var seen = new HashSet<string>();
@@ -1192,7 +1199,11 @@ public sealed partial class MainViewModel : ViewModelBase
             position++;
         }
         for (int i = target.Count - 1; i >= 0; i--)
-            if (!seen.Contains(target[i].Id)) target.RemoveAt(i);
+            if (!seen.Contains(target[i].Id))
+            {
+                removed?.Invoke(target[i]);
+                target.RemoveAt(i);
+            }
     }
 }
 
@@ -1384,6 +1395,13 @@ public sealed class MonitorOutputItem : ViewModelBase
 /// <summary>A mix (monitor/stream/chat): master level and mute.</summary>
 public sealed class MixViewModel : ViewModelBase, IHasId
 {
+    internal bool Detached { get; private set; }
+    internal void Detach()
+    {
+        Detached = true;
+        SliderSync.Forget($"mixvol:{Id}");
+    }
+
     public LayoutAppearanceViewModel Appearance { get; } = new();
 
     private bool _displayVisible = true;
@@ -1403,7 +1421,14 @@ public sealed class MixViewModel : ViewModelBase, IHasId
 
     private string _name;
     /// <summary>Display name; the daemon renames virtual microphones live.</summary>
-    public string Name { get => _name; set => Set(ref _name, value); }
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            if (Set(ref _name, value)) Inserts.Title = Localizer.Format("MixInsertsTitle", value);
+        }
+    }
 
     private bool? _editable;
     /// <summary>The daemon owns editability; older daemons only allow virtual microphones.</summary>
@@ -1430,6 +1455,7 @@ public sealed class MixViewModel : ViewModelBase, IHasId
         get => _volume;
         set
         {
+            if (Detached) return;
             VolumeRange.Include(value);
             if (Set(ref _volume, value) && !_applying)
             {
@@ -1443,7 +1469,7 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     public string VolumeText => $"{_volume * 100:0}%";
 
     private bool _muted;
-    public bool Muted { get => _muted; set { if (Set(ref _muted, value) && !_applying) _ = _client.SetMixMutedAsync(Id, value); } }
+    public bool Muted { get => _muted; set { if (Set(ref _muted, value) && !_applying && !Detached) _ = _client.SetMixMutedAsync(Id, value); } }
 
     /// <summary>Only the Aux mix carries the port toggle.</summary>
     public bool IsAuxPort => Id == "auxout";
@@ -1532,7 +1558,11 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     {
         var wanted = new HashSet<string>(mixIds);
         for (int i = Sends.Count - 1; i >= 0; i--)
-            if (!wanted.Contains(Sends[i].MixId)) Sends.RemoveAt(i);
+            if (!wanted.Contains(Sends[i].MixId))
+            {
+                Sends[i].Detach();
+                Sends.RemoveAt(i);
+            }
         int position = 0;
         foreach (string mixId in mixIds)
         {
@@ -1595,6 +1625,13 @@ public sealed class SendViewModel : ViewModelBase
     private readonly DaemonClient _client;
     private readonly string _channelId;
     private bool _applying;
+    private bool _detached;
+
+    internal void Detach()
+    {
+        _detached = true;
+        SliderSync.Forget($"lvl:{_channelId}:{MixId}");
+    }
 
     public SendViewModel(DaemonClient client, string channelId, string mixId)
     {
@@ -1620,7 +1657,7 @@ public sealed class SendViewModel : ViewModelBase
         get => _level;
         set
         {
-            if (Set(ref _level, value) && !_applying)
+            if (Set(ref _level, value) && !_applying && !_detached)
             {
                 double v = value;
                 string key = $"lvl:{_channelId}:{MixId}";
@@ -1636,7 +1673,7 @@ public sealed class SendViewModel : ViewModelBase
     public bool Muted
     {
         get => _muted;
-        set { if (Set(ref _muted, value) && !_applying) _ = _client.SetChannelMutedAsync(_channelId, MixId, value); }
+        set { if (Set(ref _muted, value) && !_applying && !_detached) _ = _client.SetChannelMutedAsync(_channelId, MixId, value); }
     }
 
     public void ApplyFromDaemon(double level, bool muted)

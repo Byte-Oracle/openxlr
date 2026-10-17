@@ -1337,6 +1337,33 @@ choice stays until the window closes and a line says why: in Options for
 the view, above the strips for the channel and the mix. None of this
 changes a level, a mute or a route.
 
+#### Separate mixer window
+
+**Pop out** in the SUBMIXER header moves the existing channel strips and mix
+masters into their own resizable window. It can sit on a second display while
+the main window is hidden in the tray. The window uses the same live mixer,
+skin, control sizing and compact or mini view selected in Options. It scrolls
+when the controls do not fit, without changing any audio routing.
+
+**Return mixer to main window**, or closing the separate window, returns the
+panel and shows the main window. Quitting OpenXLR closes both. The separate
+window is opened explicitly each run; it does not change profiles or section
+order. Arrange mode ends when the mixer is detached; arrange tiles in the
+main window after returning it.
+
+Plugin windows opened from the detached mixer belong to that window. Deleting
+a mix closes its plugin windows. Recreating the mix opens its new chain rather
+than an older window with the same mix id. Renaming a mix updates its open
+plugin-chain window without reopening it.
+
+Deleting a channel or mix also discards its unsent fader changes. A new
+channel or mix with the same name starts from its own saved values; old
+controls cannot change it.
+
+Removing or replacing an insert also retires its controls. Queued parameter
+changes are discarded, and late bypass, host, removal or rename actions from
+the old controls cannot affect a plugin that now uses the same slot id.
+
 <a name="skins"></a>
 ### 3.10 Change how the window looks
 
