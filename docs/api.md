@@ -92,16 +92,16 @@ across an upgrade, including two builds with the same version. Older
 daemons omit it; clients that do not use it can ignore it.
 
 The state message in full. At the top level: `daemonVersion`, `daemonBuildId`, `warning`,
-`connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3), `capabilities` (`gain`,
+`connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 or Wave:1 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3 and Wave:1), `capabilities` (`gain`,
 `mute`, `lowCut`, `expander`, `voiceTune`, `hpVolume`, `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`, `compressor`, `outputRouting`,
 `auxInput`, `xlrInputs`, `hpOutputs`, `physicalControls`, `retainsSettings`,
 `builtInDefaults`, and `gainMaxDb`, the highest gain in dB that `gain` and
 `gain2` take, from 0: 80 on the Wave XLR Pro and the MK.2 family, 75 on the
-Wave XLR and the first XLR Dock, 40 on the Wave:3; a higher value is held
+Wave XLR and the first XLR Dock, 40 on the Wave:3 and Wave:1; a higher value is held
 to it), `state` (the hardware settings: `gainDb`, `mute`,
 `lowCut`, `expander`, `voiceTune`, `voiceTuneStrength`, `hpVolumeDb`,
-`hp2VolumeDb`, `hpMute` (read-only: the headphone mute the Wave:3's
+`hp2VolumeDb`, `hpMute` (read-only: the headphone mute the Wave:3's and Wave:1's
 firmware keeps and asserts at the headphone floor, released by a level
 written above it; false on every other model), `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`,

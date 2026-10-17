@@ -15,6 +15,7 @@ public sealed class DeviceInfoTests
     [InlineData("Wave XLR Pro", "Wave_XLR_Pro")]
     [InlineData("XLR Dock", "XLR_Dock")]
     [InlineData("Wave:3", "Wave_3")]
+    [InlineData("Wave:1", "Wave_1")]
     public void TheNodeNameFragmentSpellsTheModelLikeUdev(string model, string fragment)
     {
         var info = new DeviceInfo("Elgato", model, 0x0fd9, 0x0000);

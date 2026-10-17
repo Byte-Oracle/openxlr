@@ -28,16 +28,16 @@ Depends: ${misc:Depends},
  libsm6
 Recommends: alsa-utils, pulseaudio-utils, xdg-utils
 Suggests: swh-plugins, lsp-plugins-lv2, openxlr-yabridge
-Description: Linux Wave Link replacement for Elgato XLR interfaces and the Wave:3
+Description: Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
  A Wave Link replacement for Linux. It controls Elgato XLR interfaces
- and the Wave:3 over reverse-engineered USB protocols: gain, DSP,
+ and the Wave microphones over reverse-engineered USB protocols: gain, DSP,
  phantom power, output routing and the hardware mixer. It includes a
  PipeWire submixer with per-application channels, virtual microphones,
  multi-output monitoring and a dedicated mix for a second computer on
  the USB Aux port, plus an OpenDeck plugin for Stream Deck control.
  .
  Supported devices: Wave XLR Pro, XLR Dock and XLR Dock MK.2
- (Stream Deck+ modules), Wave XLR, Wave XLR MK.2 and Wave:3.
+ (Stream Deck+ modules), Wave XLR, Wave XLR MK.2, Wave:3 and Wave:1.
  .
  After installing, enable the per-user daemon with
  "systemctl --user enable --now openxlr-daemon" and replug the

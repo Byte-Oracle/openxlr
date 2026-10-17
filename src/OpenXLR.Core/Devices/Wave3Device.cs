@@ -84,8 +84,13 @@ namespace OpenXLR.Core.Devices;
 /// something else is written into the block. The gain is never read back: W3R
 /// found the firmware ignores a gain written through the class control, so a
 /// card value that differs from the block is a stale cache, not a request.
+///
+/// The Wave:1 (0fd9:006e), the smaller microphone of the same generation,
+/// is <see cref="Wave1Device"/>: this class with its product id and name.
+/// No public source has probed one; its class summary says what is taken
+/// from the Wave:3 and why.
 /// </summary>
-public sealed class Wave3Device : IAudioDevice
+public class Wave3Device : IAudioDevice
 {
     public const ushort VendorId = 0x0FD9;
     public const ushort ProductId = 0x0070;
@@ -164,14 +169,24 @@ public sealed class Wave3Device : IAudioDevice
 
     /// <summary>Tests substitute the transport, amixer, the card lookup and the clock.</summary>
     internal Wave3Device(IUsbTransport usb, Func<IReadOnlyList<string>, ProcessResult>? amixer, Func<int>? findCard, Func<DateTime>? now = null)
+        : this(ProductId, "Wave:3", usb, amixer, findCard, now) { }
+
+    /// <summary>
+    /// A microphone on this block under another product id and name; the
+    /// ALSA card is found by that id. The Wave:1 is the one such model.
+    /// </summary>
+    private protected Wave3Device(ushort productId, string model, IUsbTransport usb,
+        Func<IReadOnlyList<string>, ProcessResult>? amixer, Func<int>? findCard, Func<DateTime>? now)
     {
+        Info = UsbTransport.WithLocation(new("Elgato", model, VendorId, productId));
         _usb = usb;
         _amixer = amixer;
-        _findCard = amixer is null ? null : findCard ?? (() => AlsaCards.Find("/proc/asound", Info.Location, "0fd9:0070", Info.Model));
+        string usbId = $"{VendorId:x4}:{productId:x4}";
+        _findCard = amixer is null ? null : findCard ?? (() => AlsaCards.Find("/proc/asound", Info.Location, usbId, Info.Model));
         _now = now ?? (() => DateTime.UtcNow);
     }
 
-    public DeviceInfo Info { get; } = UsbTransport.WithLocation(new("Elgato", "Wave:3", VendorId, ProductId));
+    public DeviceInfo Info { get; }
 
     public string? ConnectionNote { get; private set; }
 
@@ -205,7 +220,7 @@ public sealed class Wave3Device : IAudioDevice
 
     public void Connect()
     {
-        if (!_usb.Open(VendorId, ProductId))
+        if (!_usb.Open(VendorId, Info.ProductId))
             throw new InvalidOperationException($"{Info.Model} present but could not be opened (udev rule?)");
         lock (_lock)
         {

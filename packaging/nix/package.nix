@@ -106,7 +106,7 @@ buildDotnetModule {
   '';
 
   meta = {
-    description = "Linux Wave Link replacement for Elgato XLR interfaces and the Wave:3";
+    description = "Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones";
     homepage = "https://github.com/emaspa/openxlr";
     license = lib.licenses.gpl3Only;
     platforms = lib.platforms.linux;

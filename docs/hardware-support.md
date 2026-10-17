@@ -13,11 +13,12 @@ the checks that still need an owner.
 | Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester |
 | XLR Dock MK.2 | `0fd9:00c7` | MK.2 backend with bank detection; exposed controls verified on the original 0x0103 unit |
 | Wave:3 | `0fd9:0070` | beta: coded from public protocol research; detection, gain, mute, headphone volume and the monitor balance worked in one user's quick test |
+| Wave:1 | `0fd9:006e` | coded: the Wave:3's backend under the Wave:1's id, never run on a Wave:1; an owner's diagnostics decide whether it answers the same block |
 
 ## USB access
 
 The udev rule ([packaging/70-openxlr.rules](../packaging/70-openxlr.rules))
-grants the logged-in user access to the six product ids above. Every
+grants the logged-in user access to the seven product ids above. Every
 backend opens its device through libusb and claims the vendor-specific
 interface 3 before the first control transfer, both when libusb runs in
 the daemon and in the USB helper process. No kernel driver owns that
@@ -310,9 +311,9 @@ ask for, and a replug on real hardware decides it.
 
 With another supported interface attached, the daemon drives that one:
 the registry lists attached devices in its own order, verified backends
-first and the Wave:3 last, and the daemon takes the first when none is
-chosen. The Wave:3 is driven when it is alone on the bus or picked from
-the header, or through `OPENXLR_DEVICE=0070`.
+first and the two microphones last, and the daemon takes the first when
+none is chosen. The Wave:3 is driven when it is alone on the bus or
+picked from the header, or through `OPENXLR_DEVICE=0070`.
 
 The PipeWire node names in wave3-research's dump are
 `alsa_input.usb-Elgato_Systems_Elgato_Wave_3_<serial>-00.mono-fallback`
@@ -324,6 +325,48 @@ XLR Dock and the original Wave XLR have has not been reported on a
 Wave:3 and its dump shows no shared node group. An owner who records
 silence after a playback stream opened first would need a copy of
 `52-openxlr-mk1-capture-hold.conf` matching `Elgato_Wave_3_`.
+
+## Wave:1 (0fd9:006e), coded
+
+The Wave:3's smaller sibling, a USB condenser microphone with a
+headphone jack. Nobody on the project owns one and none of the three
+sources above has probed one, so `Wave1Device` is the Wave:3 backend
+under the Wave:1's product id and name, and every control is coded only.
+A published review of the microphone (TechPowerUp's Wave:1 review) is
+the only evidence used, and it describes the settings, not the wire: one
+dial that sets the headphone volume by default or the gain when Wave Link
+is told so, the dial pressed to mute, and in Wave Link the gain, headphone
+volume, mic/PC mix, ClipGuard, low cut and gain lock. Those are the Wave:3's
+controls, and the two microphones shipped on one software generation. The
+backend refuses a config block of another length before it writes anything.
+With that guard, trying the Wave:3's block on a Wave:1 costs an owner one
+diagnostics archive if it is wrong.
+
+| Control | State | Notes |
+|---|---|---|
+| Gain 0 to 40 dB | coded | the Wave:3's word and range; the kernel's capture control range in an owner's dump says whether 40 is right |
+| Mute | coded | byte 4; on the Wave:1 the dial is pressed to mute, so the press should show in the block as the pad does on the Wave:3 |
+| ClipGuard | coded | byte 5 |
+| Headphone volume -60 to 0 dB | coded | the Wave:3's word |
+| Direct monitor balance, as the crossfade | coded | the Wave:3's word; the review calls it the mic/PC mix |
+| Headphone mute | read | byte 9, as on the Wave:3 |
+| Dial target | read | byte 12; the review gives the dial two targets, headphones and gain, so 3 (monitor mix) should never appear |
+| Low cut, gain lock | software | the submixer's and the daemon's, as on the Wave:3 |
+| Desktop volume controls, firmware version | coded | the Wave:3's mirror and device info offsets |
+
+The daemon prefers the Wave:1 after everything else, the Wave:3 included:
+it is driven when alone on the bus, picked from the header, or through
+`OPENXLR_DEVICE=006e`. The node-name fragment is `Wave_1`.
+
+An owner takes it from coded to tested with the steps under "Help
+confirm a control" below, in this order: connect the microphone alone,
+collect diagnostics before touching anything, then change the gain, the
+mute, the headphone volume and the mix one at a time from the UI and
+collect diagnostics again. The dump's `config` line shows whether the
+block answers 16 bytes and which bytes moved, `dial` what the dial was
+on, and `alsa` whether the card was found. If the first dump shows a
+block of another length, OpenXLR has written nothing and the report says
+what the firmware answers.
 
 ## Every device gets
 
