@@ -13,7 +13,7 @@ the checks that still need an owner.
 | Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester |
 | XLR Dock MK.2 | `0fd9:00c7` | MK.2 backend with bank detection; exposed controls verified on the original 0x0103 unit |
 | Wave:3 | `0fd9:0070` | beta: coded from public protocol research; detection, gain, mute, headphone volume and the monitor balance worked in one user's quick test |
-| Wave:1 | `0fd9:006e` | coded: the Wave:3's backend under the Wave:1's id, never run on a Wave:1; an owner's diagnostics decide whether it answers the same block |
+| Wave:1 | `0fd9:006e` | coded: the Wave:3's backend under the Wave:1's id, never run on a Wave:1; an owner's diagnostics needed to show it answers the same block |
 
 ## USB access
 
