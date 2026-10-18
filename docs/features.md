@@ -156,10 +156,14 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   five sections and the channel and mix tiles. Section order is a window
   preference; tile order is the layout's one order. See
   [Arrange](manual.md#arrange)
-- Skins can set the order of the window's five sections and run them in
-  one row that scrolls sideways instead of one column. Arrange moves made
-  under such a skin are kept for that skin, and Reset returns to its
-  order. See [Layout](skins.md#layout)
+- Skins can place the window's header and five sections in a tree of
+  stacks, grids and docks that scrolls sideways when it is wider than the
+  window, start a section folded or hidden, give a section a preferred
+  size, and order the header's actions with some in a ⋯ menu; Options
+  always stays first. Under such a skin Arrange trades sections' places,
+  across containers too, by pointer, arrow keys or a Swap with menu, and
+  shows hidden sections again. The moves are kept for that skin, and Reset
+  returns to its own places. See [Layout](skins.md#layout)
 - A compact view with one chosen channel strip, and a mini view with that
   channel's send into one chosen mix, its master and the monitor volume,
   for a narrow window. Chosen in Options and kept in `ui.json`; hidden

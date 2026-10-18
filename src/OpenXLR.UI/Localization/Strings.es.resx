@@ -1514,7 +1514,7 @@ Al guardar, se sustituirá por la escena actual.</value>
     <value>Devolver las cinco secciones a su orden original</value>
   </data>
   <data name="PutTheSectionsBackInTheSkinsOrder" xml:space="preserve">
-    <value>Devolver las cinco secciones al orden que define este tema</value>
+    <value>Devolver las secciones adonde las coloca este tema, mostradas u ocultas como indica</value>
   </data>
   <data name="QuitApp" xml:space="preserve">
     <value>Salir de la aplicación</value>
@@ -2136,4 +2136,22 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>Conector XLR 2</value>
   </data>
   <data name="StartupDoctorHint" xml:space="preserve"><value>Ejecuta openxlr doctor para ver la ruta afectada y un comando de reparación.</value></data>
+  <data name="ArrangeSwapHint" xml:space="preserve">
+    <value>Arrastra el tirador de una sección a otra sección para intercambiarlas, o el tirador de un mosaico a otro mosaico. Un tirador enfocado se mueve con las flechas, e Intro en el tirador de una sección muestra las secciones con las que puede intercambiarse. Escape cancela el arrastre.</value>
+  </data>
+  <data name="ArrangementDropped" xml:space="preserve">
+    <value>La disposición que hiciste con este tema ya no encaja en su diseño, así que se usa la disposición del propio tema.</value>
+  </data>
+  <data name="HiddenSections" xml:space="preserve">
+    <value>Secciones ocultas</value>
+  </data>
+  <data name="ShowSection" xml:space="preserve">
+    <value>Mostrar {0}</value>
+  </data>
+  <data name="SwapWithSection" xml:space="preserve">
+    <value>Intercambiar con {0}</value>
+  </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>Más acciones</value>
+  </data>
 </root>

@@ -67,7 +67,8 @@ public sealed class TuiSkinTests : IDisposable
     /// would take the layout, refuse it, or not understand its version.
     /// </summary>
     [Theory]
-    [InlineData("""{"version":1,"main":{"kind":"stack","orientation":"horizontal","spacing":12,"children":[{"kind":"region","region":"submixer"},{"kind":"region","region":"inputs"},{"kind":"region","region":"monitor"},{"kind":"region","region":"headphones"},{"kind":"region","region":"applications"}]}}""")]
+    [InlineData("""{"version":1,"main":{"kind":"stack","id":"row","orientation":"horizontal","spacing":12,"children":[{"kind":"region","region":"submixer"},{"kind":"region","region":"inputs"},{"kind":"region","region":"monitor"},{"kind":"region","region":"headphones"},{"kind":"region","region":"applications"}]}}""")]
+    [InlineData("""{"version":1,"main":{"kind":"grid","id":"desktop","rows":["auto","auto"],"columns":[{"size":600},{"star":1}],"children":[{"kind":"region","region":"header","row":0,"column":0,"columnSpan":2},{"kind":"region","region":"inputs","row":1,"column":0},{"kind":"dock","id":"right","row":1,"column":1,"children":[{"kind":"region","region":"monitor","dock":"top"},{"kind":"region","region":"headphones","dock":"left"},{"kind":"region","region":"applications","dock":"bottom"},{"kind":"region","region":"submixer","dock":"fill"}]}]},"regions":{"applications":{"visibility":"hidden"},"header":{"overflow":["about"]}}}""")]
     [InlineData("""{"version":2,"main":{"kind":"grid","rows":["auto"]}}""")]
     [InlineData("""{"version":1,"main":{"kind":"stack","orientation":"diagonal"}}""")]
     [InlineData("""[]""")]

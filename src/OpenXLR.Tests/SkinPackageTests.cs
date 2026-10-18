@@ -620,17 +620,17 @@ public sealed class SkinPackageTests : IDisposable
              {"kind":"region","region":"submixer"}]
             """;
         Skin("home", "wide", """{"schema":1,"tokens":{"Ox.Text.Primary":"#111111"},"layout":{"version":1,"main":"""
-            + """{"kind":"stack","orientation":"horizontal","children":""" + Regions + "}}}");
+            + """{"kind":"stack","id":"row","orientation":"horizontal","children":""" + Regions + "}}}");
         Skin("home", "misplaced", """{"schema":1,"tokens":{"Ox.Text.Primary":"#222222"},"layout":{"version":1,"main":"""
-            + """{"kind":"stack","orientation":"horizontal","children":""" + Regions.Replace("\"headphones\"", "\"phones\"") + "}}}");
+            + """{"kind":"stack","id":"row","orientation":"horizontal","children":""" + Regions.Replace("\"headphones\"", "\"phones\"") + "}}}");
         Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_root, "home"));
         Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(_root, "none"));
         Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(_root, "config"));
 
         SkinEntry wide = SkinCatalog.Find("wide")!;
         Assert.Empty(wide.Errors);
-        Assert.Equal(SkinLayoutOrientation.Horizontal, wide.Package.Layout!.Main.Orientation);
-        Assert.Equal("monitor", wide.Package.Layout.Main.Children[0].Id);
+        Assert.Equal(SkinLayoutOrientation.Horizontal, Assert.IsType<SkinLayoutStack>(wide.Package.Layout!.Main).Orientation);
+        Assert.Equal("monitor", wide.Package.Layout.Main.RegionOrder.First());
 
         SkinEntry misplaced = SkinCatalog.Find("misplaced")!;
         Assert.Null(misplaced.Package.Layout);

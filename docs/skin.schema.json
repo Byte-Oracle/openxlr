@@ -605,7 +605,7 @@
     },
     "layout": {
       "$ref": "#/$defs/desktopLayout",
-      "description": "The order and direction of the main window's sections. Taken whole or not at all."
+      "description": "Where the header and the main window's sections go. Taken whole or not at all."
     }
   },
   "$defs": {
@@ -860,23 +860,73 @@
           "description": "The layout format this block is written for."
         },
         "main": {
-          "$ref": "#/$defs/layoutStack",
-          "description": "The window's sections. Without it the sections keep the classic arrangement."
+          "$ref": "#/$defs/layoutContainer",
+          "unevaluatedProperties": false,
+          "description": "The window's tree. Without it the sections keep the classic arrangement."
+        },
+        "regions": {
+          "$ref": "#/$defs/layoutRegions"
         }
       }
     },
+    "layoutNode": {
+      "description": "A node of the tree, chosen by its kind: a container or a region.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/layoutStack"
+        },
+        {
+          "$ref": "#/$defs/layoutGrid"
+        },
+        {
+          "$ref": "#/$defs/layoutDock"
+        },
+        {
+          "$ref": "#/$defs/layoutRegion"
+        }
+      ]
+    },
+    "layoutContainer": {
+      "description": "A container: a stack, a grid or a dock. main is one.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/layoutStack"
+        },
+        {
+          "$ref": "#/$defs/layoutGrid"
+        },
+        {
+          "$ref": "#/$defs/layoutDock"
+        }
+      ]
+    },
+    "layoutId": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]{1,32}$",
+      "description": "The container's id, unique in the tree. Your own arrangement names its places by it."
+    },
+    "layoutSpacing": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 64,
+      "default": 8,
+      "description": "The gap between children in pixels."
+    },
     "layoutStack": {
       "type": "object",
-      "description": "A stack of the five sections, each placed once.",
-      "additionalProperties": false,
+      "description": "Children one after another, in one direction.",
       "required": [
         "kind",
+        "id",
         "orientation",
         "children"
       ],
       "properties": {
         "kind": {
           "const": "stack"
+        },
+        "id": {
+          "$ref": "#/$defs/layoutId"
         },
         "orientation": {
           "enum": [
@@ -886,28 +936,187 @@
           "description": "vertical is one above the other, the classic window; horizontal is one row."
         },
         "spacing": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 64,
-          "default": 8,
-          "description": "The gap between sections in pixels."
+          "$ref": "#/$defs/layoutSpacing"
         },
         "children": {
           "type": "array",
-          "minItems": 5,
-          "maxItems": 5,
-          "uniqueItems": true,
+          "maxItems": 16,
           "items": {
-            "$ref": "#/$defs/layoutRegion"
+            "$ref": "#/$defs/layoutNode",
+            "unevaluatedProperties": false
           },
-          "description": "The sections in the order they appear, each region once."
+          "description": "Regions and containers in the order they appear."
+        }
+      }
+    },
+    "layoutTrack": {
+      "description": "A grid row or column: auto, a star share, or a fixed size.",
+      "oneOf": [
+        {
+          "const": "auto",
+          "description": "As large as what it holds."
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "star"
+          ],
+          "properties": {
+            "star": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 10,
+              "description": "A share of what the other tracks leave."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size"
+          ],
+          "properties": {
+            "size": {
+              "type": "number",
+              "minimum": 40,
+              "maximum": 2000,
+              "description": "A fixed size in pixels, raised to what the track holds."
+            }
+          }
+        }
+      ]
+    },
+    "layoutGrid": {
+      "type": "object",
+      "description": "Children in cells of rows and columns.",
+      "required": [
+        "kind",
+        "id",
+        "rows",
+        "columns",
+        "children"
+      ],
+      "properties": {
+        "kind": {
+          "const": "grid"
+        },
+        "id": {
+          "$ref": "#/$defs/layoutId"
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/layoutTrack"
+          },
+          "description": "The rows, top to bottom."
+        },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/layoutTrack"
+          },
+          "description": "The columns, left to right."
+        },
+        "spacing": {
+          "$ref": "#/$defs/layoutSpacing"
+        },
+        "children": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/layoutNode",
+            "required": [
+              "row",
+              "column"
+            ],
+            "properties": {
+              "row": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 7,
+                "description": "The child's row, counted from 0."
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 7,
+                "description": "The child's column, counted from 0."
+              },
+              "rowSpan": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8,
+                "default": 1,
+                "description": "How many rows it covers, never past the last."
+              },
+              "columnSpan": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8,
+                "default": 1,
+                "description": "How many columns it covers, never past the last."
+              }
+            },
+            "unevaluatedProperties": false
+          },
+          "description": "Regions and containers, each in its cell. Two children never cover the same cell."
+        }
+      }
+    },
+    "layoutDock": {
+      "type": "object",
+      "description": "Children against its edges in order; the last one fills what is left.",
+      "required": [
+        "kind",
+        "id",
+        "children"
+      ],
+      "properties": {
+        "kind": {
+          "const": "dock"
+        },
+        "id": {
+          "$ref": "#/$defs/layoutId"
+        },
+        "spacing": {
+          "$ref": "#/$defs/layoutSpacing"
+        },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/layoutNode",
+            "required": [
+              "dock"
+            ],
+            "properties": {
+              "dock": {
+                "enum": [
+                  "top",
+                  "bottom",
+                  "left",
+                  "right",
+                  "fill"
+                ],
+                "description": "The edge it sits against. Exactly one child fills, and it is the last."
+              }
+            },
+            "unevaluatedProperties": false
+          },
+          "description": "Regions and containers, each against its edge."
         }
       }
     },
     "layoutRegion": {
       "type": "object",
-      "description": "One of the window's sections.",
-      "additionalProperties": false,
+      "description": "One part of the window the application builds.",
       "required": [
         "kind",
         "region"
@@ -918,15 +1127,104 @@
         },
         "region": {
           "enum": [
+            "header",
             "inputs",
             "headphones",
             "monitor",
             "applications",
             "submixer"
           ],
-          "description": "Which section goes here."
+          "description": "Which part goes here. Each section once, the header at most once."
         }
       }
+    },
+    "layoutRegions": {
+      "type": "object",
+      "description": "Options for the header and the sections, by region id.",
+      "additionalProperties": false,
+      "properties": {
+        "header": {
+          "$ref": "#/$defs/layoutHeaderOptions"
+        },
+        "inputs": {
+          "$ref": "#/$defs/layoutSectionOptions"
+        },
+        "headphones": {
+          "$ref": "#/$defs/layoutSectionOptions"
+        },
+        "monitor": {
+          "$ref": "#/$defs/layoutSectionOptions"
+        },
+        "applications": {
+          "$ref": "#/$defs/layoutSectionOptions"
+        },
+        "submixer": {
+          "$ref": "#/$defs/layoutSectionOptions"
+        }
+      }
+    },
+    "layoutSectionOptions": {
+      "type": "object",
+      "description": "What a skin says about one section beyond where it goes.",
+      "additionalProperties": false,
+      "properties": {
+        "visibility": {
+          "enum": [
+            "visible",
+            "collapsed",
+            "hidden"
+          ],
+          "default": "visible",
+          "description": "collapsed folds the section the first time the skin is worn; hidden leaves it out until it is shown from Arrange mode."
+        },
+        "width": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred width in pixels, where the section has a width of its own."
+        },
+        "height": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred height in pixels, the least the section takes."
+        }
+      }
+    },
+    "layoutHeaderOptions": {
+      "type": "object",
+      "description": "The header's action order and overflow menu. Options is always first and always shown.",
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/layoutHeaderAction"
+          },
+          "description": "Actions in the order the header shows them."
+        },
+        "overflow": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/layoutHeaderAction"
+          },
+          "description": "Actions in the menu at the end of the header. An action appears once across both lists."
+        }
+      }
+    },
+    "layoutHeaderAction": {
+      "enum": [
+        "profiles",
+        "arrange",
+        "flow",
+        "restart-daemon",
+        "version",
+        "about"
+      ]
     }
   }
 }

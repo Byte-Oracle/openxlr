@@ -369,9 +369,11 @@ public sealed class SkinDocumentTests
     }
 
     /// <summary>
-    /// The layout block as the document states it: the version, the region
-    /// ids with a row each, the spacing range and default, the child limit,
-    /// and a complete example that the reader takes without complaint.
+    /// The layout block as the document states it: the version, the
+    /// containers and their bounds, the region ids with a row each, the
+    /// region options and header actions, the limits, the saved arrangement,
+    /// and complete grid and dock examples that the reader takes without
+    /// complaint.
     /// </summary>
     [Fact]
     public void TheLayoutSectionStatesWhatTheLayoutReaderTakes()
@@ -385,27 +387,55 @@ public sealed class SkinDocumentTests
         Says($"\"version\": {SkinFormat.LayoutVersion}");
         Says($"from {Number(SkinFormat.MinLayoutSpacing)} to {Number(SkinFormat.MaxLayoutSpacing)}");
         Says($"{Number(SkinLayoutDefaults.Spacing)}, the classic gap");
-        Says($"more than {SkinFormat.MaxLayoutChildren} children");
-        Says($"at least {Number(SkinLayoutDefaults.RowSectionMinWidth)} pixels wide");
-        Says("`\"vertical\"`");
-        Says("`\"horizontal\"`");
-        Says("`skinSectionOrders`");
-        Says("`sectionOrder`");
+        Says($"no more than {SkinFormat.MaxLayoutChildren} children");
+        Says($"more than {SkinFormat.MaxLayoutChildren} children in a container");
+        Says($"no more than {SkinFormat.MaxLayoutNodes} nodes");
+        Says($"nest at most {SkinFormat.MaxLayoutDepth} deep");
+        Says($"at most {SkinFormat.MaxLayoutTracks}\nrows and {SkinFormat.MaxLayoutTracks} columns");
+        Says($"{1} to {SkinFormat.MaxLayoutTracks} tracks");
+        Says($"1 to {SkinFormat.MaxLayoutIdLength} lowercase letters, digits and hyphens");
+        Says($"from {Number(SkinFormat.MinLayoutStar)} to {Number(SkinFormat.MaxLayoutStar)}");
+        Says($"from {Number(SkinFormat.MinLayoutTrackSize)} to {Number(SkinFormat.MaxLayoutTrackSize)}");
+        Says($"from {Number(SkinFormat.MinRegionSize)} to {Number(SkinFormat.MaxRegionSize)}");
+        Says($"at least\n{Number(SkinLayoutDefaults.RowSectionMinWidth)} pixels wide");
+        Says($"The {OpenXLR.UI.UiSettings.MaxSkinArrangements}\n  most recent skins are kept");
+        foreach (string word in new[] { "`\"vertical\"`", "`\"horizontal\"`", "`\"stack\"`", "`\"grid\"`", "`\"dock\"`", "`\"region\"`",
+                     "`\"auto\"`", "`{ \"star\": n }`", "`{ \"size\": n }`", "`row`", "`column`", "`rowSpan`", "`columnSpan`",
+                     "`\"top\"`", "`\"bottom\"`", "`\"left\"`", "`\"right\"`", "`\"fill\"`", "`id`", "`regions`",
+                     "`\"visible\"`", "`\"collapsed\"`", "`\"hidden\"`", "`visibility`", "`width`", "`height`", "`actions`", "`overflow`",
+                     "`skinArrangements`", "`skinLayoutsSeen`", "`sectionOrder`", "`window:2`", "`desktop:1,0`" })
+            Says(word);
         Assert.True(missing.Count == 0, "docs/skins.md, Layout, no longer states: " + string.Join("; ", missing));
 
-        string[] documented = [.. layout.Split('\n')
-            .Select(line => System.Text.RegularExpressions.Regex.Match(line, @"^\| `([a-z]+)` \| [A-Z]+: "))
-            .Where(m => m.Success).Select(m => m.Groups[1].Value)];
-        Assert.Equal(SkinLayoutRegions.All, documented);
+        // Each table lists exactly the ids the reader knows, in order.
+        string[] Table(string header) => [.. layout[layout.IndexOf(header, StringComparison.Ordinal)..].Split('\n').Skip(2)
+            .TakeWhile(line => line.StartsWith('|'))
+            .Select(line => System.Text.RegularExpressions.Regex.Match(line, @"^\| `([a-z-]+)` \|").Groups[1].Value)];
+        Assert.Equal(SkinLayoutRegions.All, Table("| Region | What it is |"));
+        Assert.Equal(SkinHeaderActions.All, Table("| Action | What it is |"));
+        Assert.Equal(["visibility", "width", "height", "actions", "overflow"], Table("| Option | Region | What it is |"));
 
-        // The example is a whole skin, read as an installed one is.
-        int start = layout.IndexOf("```json\n", StringComparison.Ordinal) + "```json\n".Length;
-        string example = layout[start..layout.IndexOf("```", start, StringComparison.Ordinal)];
-        SkinReadResult result = SkinReader.Read("side-by-side", example, SkinOrigin.BuiltIn, null);
-        Assert.True(result.Ok, string.Join("\n", result.Errors));
-        SkinLayout read = Assert.IsType<SkinLayout>(result.Package!.Layout);
-        Assert.Equal(SkinLayoutOrientation.Horizontal, read.Main.Orientation);
-        Assert.Equal(SkinLayoutRegions.Submixer, read.Main.Children[0].Id);
+        // The examples are whole skins, read as an installed one is: one grid, one dock.
+        var read = new List<SkinLayout>();
+        for (int start = layout.IndexOf("```json\n", StringComparison.Ordinal); start >= 0;
+             start = layout.IndexOf("```json\n", start, StringComparison.Ordinal))
+        {
+            start += "```json\n".Length;
+            string example = layout[start..layout.IndexOf("```", start, StringComparison.Ordinal)];
+            using JsonDocument parsed = JsonDocument.Parse(example);
+            SkinReadResult result = SkinReader.Read(parsed.RootElement.GetProperty("id").GetString()!, example, SkinOrigin.BuiltIn, null);
+            Assert.True(result.Ok, string.Join("\n", result.Errors));
+            read.Add(Assert.IsType<SkinLayout>(result.Package!.Layout));
+        }
+        Assert.Equal(2, read.Count);
+        SkinLayoutGrid grid = Assert.IsType<SkinLayoutGrid>(read[0].Main);
+        Assert.True(read[0].PlacesHeader);
+        Assert.Contains(grid.Containers(), c => c is SkinLayoutStack);
+        Assert.Equal(SkinRegionVisibility.Collapsed, read[0].OptionsFor(SkinLayoutRegions.Applications).Visibility);
+        Assert.NotEmpty(read[0].Header.Overflow);
+        Assert.IsType<SkinLayoutDock>(read[1].Main);
+        Assert.Equal(SkinRegionVisibility.Hidden, read[1].OptionsFor(SkinLayoutRegions.Applications).Visibility);
+        Assert.NotNull(read[1].OptionsFor(SkinLayoutRegions.Inputs).Width);
     }
 
     [Fact]
@@ -419,39 +449,95 @@ public sealed class SkinDocumentTests
             root.GetProperty("properties").GetProperty("layout").GetProperty("$ref").GetString());
         // The layout's version moves on its own; the file's stays.
         Assert.Equal(SkinFormat.Schema, root.GetProperty("properties").GetProperty("schema").GetProperty("const").GetInt32());
+        JsonElement Definition(string name) => definitions.GetProperty(name);
+        JsonElement Properties(string name) => Definition(name).GetProperty("properties");
+        string[] Strings(JsonElement array) => [.. array.EnumerateArray().Select(v => v.GetString()!)];
+        string[] Names(JsonElement properties) => [.. properties.EnumerateObject().Select(p => p.Name)];
 
-        foreach (string name in new[] { "desktopLayout", "layoutStack", "layoutRegion" })
-        {
-            JsonElement definition = definitions.GetProperty(name);
-            Assert.False(definition.GetProperty("additionalProperties").GetBoolean(),
+        // Closed objects: a property the reader refuses is one the schema refuses.
+        foreach (string name in new[] { "desktopLayout", "layoutRegions", "layoutSectionOptions", "layoutHeaderOptions" })
+            Assert.False(Definition(name).GetProperty("additionalProperties").GetBoolean(),
                 $"{name} would accept a property the layout reader refuses.");
+        // A node is closed where it is used, so a grid's child may carry its cell and a dock's child its edge.
+        JsonElement mainUse = Properties("desktopLayout").GetProperty("main");
+        Assert.Equal("#/$defs/layoutContainer", mainUse.GetProperty("$ref").GetString());
+        Assert.False(mainUse.GetProperty("unevaluatedProperties").GetBoolean());
+        foreach (string container in new[] { "layoutStack", "layoutGrid", "layoutDock" })
+        {
+            JsonElement items = Properties(container).GetProperty("children").GetProperty("items");
+            Assert.Equal("#/$defs/layoutNode", items.GetProperty("$ref").GetString());
+            Assert.False(items.GetProperty("unevaluatedProperties").GetBoolean(), $"{container} children are open.");
+            Assert.Equal(SkinFormat.MaxLayoutChildren, Properties(container).GetProperty("children").GetProperty("maxItems").GetInt32());
+            Assert.Equal("#/$defs/layoutId", Properties(container).GetProperty("id").GetProperty("$ref").GetString());
+            Assert.Equal("#/$defs/layoutSpacing", Properties(container).GetProperty("spacing").GetProperty("$ref").GetString());
+            Assert.Contains("id", Strings(Definition(container).GetProperty("required")));
         }
 
-        JsonElement layout = definitions.GetProperty("desktopLayout").GetProperty("properties");
+        JsonElement layout = Properties("desktopLayout");
         Assert.Equal(SkinFormat.LayoutVersion, layout.GetProperty("version").GetProperty("const").GetInt32());
-        Assert.Equal(["main", "version"], layout.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
-        Assert.Equal(["version"], definitions.GetProperty("desktopLayout").GetProperty("required")
-            .EnumerateArray().Select(v => v.GetString()));
+        Assert.Equal(["main", "regions", "version"], Names(layout).Order(StringComparer.Ordinal));
+        Assert.Equal(["version"], Strings(Definition("desktopLayout").GetProperty("required")));
 
-        JsonElement stack = definitions.GetProperty("layoutStack").GetProperty("properties");
-        Assert.Equal("stack", stack.GetProperty("kind").GetProperty("const").GetString());
-        Assert.Equal(["vertical", "horizontal"],
-            stack.GetProperty("orientation").GetProperty("enum").EnumerateArray().Select(v => v.GetString()));
-        JsonElement spacing = stack.GetProperty("spacing");
+        // The node union, chosen by kind.
+        string Kind(JsonElement branch) =>
+            Properties(branch.GetProperty("$ref").GetString()!["#/$defs/".Length..]).GetProperty("kind").GetProperty("const").GetString()!;
+        Assert.Equal(["stack", "grid", "dock", "region"], Definition("layoutNode").GetProperty("oneOf").EnumerateArray().Select(Kind));
+        Assert.Equal(["stack", "grid", "dock"], Definition("layoutContainer").GetProperty("oneOf").EnumerateArray().Select(Kind));
+
+        JsonElement id = Definition("layoutId");
+        Assert.Equal($"^[a-z0-9-]{{1,{SkinFormat.MaxLayoutIdLength}}}$", id.GetProperty("pattern").GetString());
+        JsonElement spacing = Definition("layoutSpacing");
         Assert.Equal(SkinFormat.MinLayoutSpacing, spacing.GetProperty("minimum").GetDouble());
         Assert.Equal(SkinFormat.MaxLayoutSpacing, spacing.GetProperty("maximum").GetDouble());
         Assert.Equal(SkinLayoutDefaults.Spacing, spacing.GetProperty("default").GetDouble());
-        JsonElement children = stack.GetProperty("children");
-        Assert.Equal(SkinLayoutRegions.All.Count, children.GetProperty("minItems").GetInt32());
-        Assert.Equal(SkinLayoutRegions.All.Count, children.GetProperty("maxItems").GetInt32());
-        Assert.True(SkinLayoutRegions.All.Count <= SkinFormat.MaxLayoutChildren);
-        Assert.True(children.GetProperty("uniqueItems").GetBoolean());
-        Assert.Equal("#/$defs/layoutRegion", children.GetProperty("items").GetProperty("$ref").GetString());
 
-        JsonElement region = definitions.GetProperty("layoutRegion").GetProperty("properties");
-        Assert.Equal("region", region.GetProperty("kind").GetProperty("const").GetString());
-        Assert.Equal(SkinLayoutRegions.All,
-            region.GetProperty("region").GetProperty("enum").EnumerateArray().Select(v => v.GetString()!));
+        Assert.Equal(["vertical", "horizontal"], Strings(Properties("layoutStack").GetProperty("orientation").GetProperty("enum")));
+
+        foreach (string axis in new[] { "rows", "columns" })
+        {
+            JsonElement tracks = Properties("layoutGrid").GetProperty(axis);
+            Assert.Equal(1, tracks.GetProperty("minItems").GetInt32());
+            Assert.Equal(SkinFormat.MaxLayoutTracks, tracks.GetProperty("maxItems").GetInt32());
+            Assert.Equal("#/$defs/layoutTrack", tracks.GetProperty("items").GetProperty("$ref").GetString());
+        }
+        JsonElement[] track = [.. Definition("layoutTrack").GetProperty("oneOf").EnumerateArray()];
+        Assert.Equal("auto", track[0].GetProperty("const").GetString());
+        JsonElement star = track[1].GetProperty("properties").GetProperty("star");
+        Assert.Equal((SkinFormat.MinLayoutStar, SkinFormat.MaxLayoutStar), (star.GetProperty("minimum").GetDouble(), star.GetProperty("maximum").GetDouble()));
+        JsonElement size = track[2].GetProperty("properties").GetProperty("size");
+        Assert.Equal((SkinFormat.MinLayoutTrackSize, SkinFormat.MaxLayoutTrackSize), (size.GetProperty("minimum").GetDouble(), size.GetProperty("maximum").GetDouble()));
+        Assert.All(track.Skip(1), t => Assert.False(t.GetProperty("additionalProperties").GetBoolean()));
+
+        JsonElement cell = Properties("layoutGrid").GetProperty("children").GetProperty("items");
+        Assert.Equal(["column", "columnSpan", "row", "rowSpan"], Names(cell.GetProperty("properties")).Order(StringComparer.Ordinal));
+        Assert.Equal(["row", "column"], Strings(cell.GetProperty("required")));
+        Assert.Equal(SkinFormat.MaxLayoutTracks - 1, cell.GetProperty("properties").GetProperty("row").GetProperty("maximum").GetInt32());
+        Assert.Equal(SkinFormat.MaxLayoutTracks, cell.GetProperty("properties").GetProperty("columnSpan").GetProperty("maximum").GetInt32());
+
+        JsonElement edge = Properties("layoutDock").GetProperty("children").GetProperty("items");
+        Assert.Equal(["top", "bottom", "left", "right", "fill"], Strings(edge.GetProperty("properties").GetProperty("dock").GetProperty("enum")));
+        Assert.Equal(Enum.GetNames<SkinLayoutEdge>().Select(n => n.ToLowerInvariant()), Strings(edge.GetProperty("properties").GetProperty("dock").GetProperty("enum")));
+        Assert.Equal(["dock"], Strings(edge.GetProperty("required")));
+
+        Assert.Equal(SkinLayoutRegions.All, Strings(Properties("layoutRegion").GetProperty("region").GetProperty("enum")));
+        Assert.Equal(SkinLayoutRegions.All, Names(Properties("layoutRegions")));
+        Assert.Equal("#/$defs/layoutHeaderOptions", Properties("layoutRegions").GetProperty("header").GetProperty("$ref").GetString());
+        Assert.All(SkinLayoutRegions.Sections, r => Assert.Equal("#/$defs/layoutSectionOptions",
+            Properties("layoutRegions").GetProperty(r).GetProperty("$ref").GetString()));
+
+        JsonElement options = Properties("layoutSectionOptions");
+        Assert.Equal(["visibility", "width", "height"], Names(options));
+        Assert.Equal(Enum.GetNames<SkinRegionVisibility>().Select(n => n.ToLowerInvariant()),
+            Strings(options.GetProperty("visibility").GetProperty("enum")));
+        foreach (string dimension in new[] { "width", "height" })
+        {
+            Assert.Equal(SkinFormat.MinRegionSize, options.GetProperty(dimension).GetProperty("minimum").GetDouble());
+            Assert.Equal(SkinFormat.MaxRegionSize, options.GetProperty(dimension).GetProperty("maximum").GetDouble());
+        }
+        Assert.Equal(["actions", "overflow"], Names(Properties("layoutHeaderOptions")));
+        Assert.Equal(SkinHeaderActions.All, Strings(Definition("layoutHeaderAction").GetProperty("enum")));
+        Assert.All(new[] { "actions", "overflow" }, list =>
+            Assert.Equal(SkinHeaderActions.All.Count, Properties("layoutHeaderOptions").GetProperty(list).GetProperty("maxItems").GetInt32()));
     }
 
     /// <summary>

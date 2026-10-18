@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:OpenXLR.UI"
         xmlns:skin="using:OpenXLR.UI.Skinning"
+        xmlns:layout="using:OpenXLR.UI.Layout"
         x:Class="OpenXLR.UI.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="OpenXLR" Width="1040" Height="900" MinHeight="480"
@@ -60,8 +61,9 @@
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
   <StackPanel Name="MixerContent" Margin="16" HorizontalAlignment="Stretch">
 
-    <!-- header -->
-    <Border Classes="card" Margin="0,0,0,8">
+    <!-- header: the "header" region. Without a place in the skin's tree it
+         heads the page; Options in it is always shown, the way back. -->
+    <Border Name="HeaderCard" Classes="card" Margin="0,0,0,8">
       <Grid Name="WindowHeader" ColumnDefinitions="Auto,8,Auto,*" RowDefinitions="Auto,Auto">
         <Button Name="OptionsButton" Grid.RowSpan="2" Content="⚙" FontSize="18" Padding="8,4"
                 VerticalAlignment="Center" Classes="ghost"
@@ -100,7 +102,7 @@
         </Grid>
         <WrapPanel Name="HeaderActions" Grid.Column="3" ItemSpacing="8" LineSpacing="4" Margin="8,0,0,0"
                    HorizontalAlignment="Right" ItemsAlignment="End" VerticalAlignment="Center">
-          <DropDownButton Content="{loc:Text Key=Profiles}" Padding="10,3" FontSize="12" Classes="ghost"
+          <DropDownButton Name="ProfilesButton" Content="{loc:Text Key=Profiles}" Padding="10,3" FontSize="12" Classes="ghost"
                           ToolTip.Tip="{loc:Text Key=SaveAndRecallCompleteScenesHardwareDSPPlus}">
             <DropDownButton.Flyout>
               <Flyout Placement="BottomEdgeAlignedRight">
@@ -141,18 +143,31 @@
           <ToggleButton Name="ArrangeButton" Content="{loc:Text Key=Arrange}" Padding="10,3" FontSize="12" Classes="ghost"
                         Click="OnArrange" IsVisible="{Binding !IsMiniView}"
                         ToolTip.Tip="{loc:Text Key=ShowHandlesToMoveSectionsChannelsAnd}"/>
-          <Button Content="{loc:Text Key=Flow}" Padding="10,3" FontSize="12" Classes="ghost"
+          <Button Name="FlowButton" Content="{loc:Text Key=Flow}" Padding="10,3" FontSize="12" Classes="ghost"
                   Click="OnFlow" ToolTip.Tip="{loc:Text Key=ShowTheLiveAudioRoutingGraph}"/>
-          <Button Content="{loc:Text Key=RestartDaemon}" Padding="10,3" FontSize="12" Classes="ghost"
+          <Button Name="RestartDaemonButton" Content="{loc:Text Key=RestartDaemon}" Padding="10,3" FontSize="12" Classes="ghost"
                   IsEnabled="{Binding DaemonRestart.CanRestart}" Click="OnRestartDaemon"
                   ToolTip.Tip="{loc:Text Key=RestartTheOpenXLRUserServiceAudioWillBe}"/>
           <TextBlock Name="HeaderVersion" Text="v0.0.0" Classes="h" VerticalAlignment="Center"/>
-          <Button Content="{loc:Text Key=About}" Padding="10,3" FontSize="12" Classes="ghost"
+          <Button Name="AboutButton" Content="{loc:Text Key=About}" Padding="10,3" FontSize="12" Classes="ghost"
                   Click="OnAbout"/>
+          <!-- the actions a skin puts in its overflow, moved here from the row
+               above: the same controls with the same handlers -->
+          <DropDownButton Name="HeaderOverflow" Content="⋯" Padding="10,3" FontSize="12" Classes="ghost" IsVisible="False"
+                          AutomationProperties.Name="{loc:Text Key=MoreActions}" ToolTip.Tip="{loc:Text Key=MoreActions}">
+            <DropDownButton.Flyout>
+              <Flyout Placement="BottomEdgeAlignedRight">
+                <StackPanel Name="HeaderOverflowItems" Spacing="4" MinWidth="160"/>
+              </Flyout>
+            </DropDownButton.Flyout>
+          </DropDownButton>
         </WrapPanel>
       </Grid>
     </Border>
 
+    <!-- the application's own notices, above the whole tree wherever a skin
+         puts the header -->
+    <StackPanel Name="ApplicationNotices">
     <TextBlock Text="{Binding DaemonRestart.Status}" Classes="h" TextWrapping="Wrap"
                Margin="0,0,0,8" IsVisible="{Binding DaemonRestart.Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
     <TextBlock Text="{Binding DaemonWarning}" Classes="alert" TextWrapping="Wrap" FontSize="12"
@@ -183,17 +198,30 @@
     <Button Name="ResetSectionsButton" Content="{loc:Text Key=ResetSections}" Click="OnResetSections" Padding="8,1" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
             IsVisible="False" Margin="0,0,0,8" HorizontalAlignment="Left" FontSize="{DynamicResource Ox.Label.FontSize}"
             ToolTip.Tip="{loc:Text Key=PutTheFiveSectionsBackInTheir}"/>
+    <!-- in Arrange mode, the sections the skin hides, each with a way back -->
+    <WrapPanel Name="HiddenSections" IsVisible="False" Margin="0,0,0,8" ItemSpacing="6" LineSpacing="4">
+      <TextBlock Text="{loc:Text Key=HiddenSections}" Classes="h" VerticalAlignment="Center"/>
+    </WrapPanel>
     <TextBlock Name="ArrangementNote" Classes="note" TextWrapping="Wrap" IsVisible="False" Margin="0,0,0,8"
                Text="{loc:Text Key=DragAHandleOntoAnotherSectionOr}"/>
+    </StackPanel>
 
     <!-- the five sections, in the order saved in ui.json. A skin's layout may
-         set their order and run them in a row; the row scrolls on its own so
-         the header above keeps the window's width. In the column this
-         scroller never scrolls and the page's own does. -->
+         place them in its own tree of stacks, grids and docks, built in
+         Layout/DesktopLayoutHost.cs from these same cards; a tree wider than
+         the window scrolls on its own so the header above keeps the window's
+         width. In the classic column this scroller never scrolls and the
+         page's own does. A card shows when the window and the skin both let it. -->
     <vm:SectionScroller Name="SectionScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled">
     <StackPanel Name="SectionCards" Spacing="8">
     <!-- device controls -->
-    <Border Classes="card" IsVisible="{Binding ShowDetailedSections}">
+    <Border Classes="card">
+      <Border.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="ShowDetailedSections"/>
+          <Binding Path="(layout:RegionHost.Shown)" RelativeSource="{RelativeSource Self}"/>
+        </MultiBinding>
+      </Border.IsVisible>
       <Expander Name="InputsTile" Classes="section" Theme="{StaticResource TileExpanderTheme}" IsExpanded="True">
         <Expander.Header><StackPanel Orientation="Horizontal" Spacing="6">
           <Button Classes="ghost reorderHandle" Content="↕" Tag="InputsTile" AutomationProperties.Name="{loc:Text Key=MoveInputs}"
@@ -377,7 +405,13 @@
     </Border>
 
     <!-- headphone outputs (jack 1 on the front of the unit, jack 2 on the back) -->
-    <Border Classes="card" IsVisible="{Binding ShowDetailedSections}">
+    <Border Classes="card">
+      <Border.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="ShowDetailedSections"/>
+          <Binding Path="(layout:RegionHost.Shown)" RelativeSource="{RelativeSource Self}"/>
+        </MultiBinding>
+      </Border.IsVisible>
       <Expander Name="HeadphonesTile" Classes="section" Theme="{StaticResource TileExpanderTheme}" IsExpanded="True">
         <Expander.Header><StackPanel Orientation="Horizontal" Spacing="6">
           <Button Classes="ghost reorderHandle" Content="↕" Tag="HeadphonesTile" AutomationProperties.Name="{loc:Text Key=MoveHeadphones}"
@@ -417,7 +451,13 @@
     </Border>
 
     <!-- monitor destination: the device you hear the Monitor mix on -->
-    <Border Classes="card" IsVisible="{Binding HasMixer}">
+    <Border Classes="card">
+      <Border.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="HasMixer"/>
+          <Binding Path="(layout:RegionHost.Shown)" RelativeSource="{RelativeSource Self}"/>
+        </MultiBinding>
+      </Border.IsVisible>
       <Expander Name="MonitorTile" Classes="section" Theme="{StaticResource TileExpanderTheme}" IsExpanded="True">
         <Expander.Header>
           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -479,7 +519,13 @@
     </Border>
 
     <!-- running applications and the channel each is routed to -->
-    <Border Classes="card" IsVisible="{Binding ShowApplications}">
+    <Border Classes="card">
+      <Border.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="ShowApplications"/>
+          <Binding Path="(layout:RegionHost.Shown)" RelativeSource="{RelativeSource Self}"/>
+        </MultiBinding>
+      </Border.IsVisible>
       <Expander Name="ApplicationsTile" Classes="section" Theme="{StaticResource TileExpanderTheme}" IsExpanded="True">
         <Expander.Header>
           <StackPanel Orientation="Horizontal" Spacing="10">
@@ -513,7 +559,7 @@
     </Border>
 
     <!-- mixer -->
-    <Border Classes="card">
+    <Border Classes="card" IsVisible="{Binding (layout:RegionHost.Shown), RelativeSource={RelativeSource Self}}">
       <Expander Name="SubmixerTile" Classes="section" Theme="{StaticResource TileExpanderTheme}" IsExpanded="True">
         <Expander.Header>
           <StackPanel Orientation="Horizontal" Spacing="10">

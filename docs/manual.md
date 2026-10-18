@@ -1326,16 +1326,41 @@ collapsed sections, and **Reset sections** puts the five back in their
 usual order. If `ui.json` cannot be written, the new order stays until the
 window closes and the note above the sections says why.
 
-A skin can set its own section order, and can run the sections side by
-side in one row instead of one above the other ([Layout](skins.md#layout)).
-In a row a section lands left or right of the one you drop it on, any
-arrow key moves it one place along the row, and holding a handle near the
-side of the row scrolls it. Under such a skin, Arrange starts from the
-skin's order and remembers your moves for that skin alone; they do not
-change the order other skins use. **Reset sections** then puts the
-sections back in the skin's own order and forgets only that skin's moves.
-Switching to a skin without a layout, Material and every shipped skin
-included, brings back the order you arranged there.
+A skin can place the header and the sections itself, in rows, columns,
+grids and docked sides ([Layout](skins.md#layout)). Under such a skin a
+section dropped on another trades places with it, in the same row or
+column or across from one part of the window to another; the other
+handle shows ⇄ while you hold it there. Between neighbours in one row or
+column a drop still lands before or after, which comes to the same thing.
+The arrow keys trade places with the next section that way in the same
+row, column or grid. To move a section somewhere the arrows do not reach,
+focus its handle and press Enter or Space. A menu lists every other
+section by name, **Swap with INPUTS** and so on, and choosing one trades
+the two. Holding a handle near the edge of a layout wider than the window
+scrolls it sideways.
+
+A skin can also hide a section. While Arrange is on, a **Hidden
+sections** line under the header lists each one with a **Show** button;
+showing it is kept for that skin. A section the window itself sets aside,
+such as MONITOR without the software mixer, stays hidden whatever the
+skin says. A skin may start a section folded the first time you wear it;
+after that it stays folded or open as you leave it.
+
+Under a skin with a layout, Arrange starts from the skin's own places and
+remembers your moves and the sections you showed for that skin alone;
+they do not change the order other skins use. **Reset sections** then
+puts the sections back where the skin places them, hides again what it
+hides, and forgets only that skin's arrangement. If the skin is updated
+and its layout no longer has a place your arrangement names, the whole
+arrangement is set aside, the note under the header says so once, and
+the skin's own places are used. Switching to a skin without a layout,
+Material and every shipped skin included, brings back the order you
+arranged there.
+
+A skin can also order the header's actions and put some of them in a ⋯
+menu at the end of the header. The actions in that menu work as they do
+in the header. Options is always the first button in the header,
+wherever the skin puts the header, so the way back is always there.
 
 Channel and mix tiles follow the mixer layout's one order, the same one
 the layout editor's arrows and the terminal mixer change. A drop sends

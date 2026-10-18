@@ -30,7 +30,24 @@ public static class SkinLayoutReader
     }
 
     private const string Stack = "stack";
+    private const string Grid = "grid";
+    private const string Dock = "dock";
     private const string Region = "region";
+    private static readonly string[] Kinds = [Stack, Grid, Dock, Region];
+    private static readonly string[] Edges = ["top", "bottom", "left", "right", "fill"];
+    private static readonly string[] SectionOptions = ["visibility", "width", "height"];
+    private static readonly string[] HeaderOptions = ["actions", "overflow"];
+
+    /// <summary>What the reader has seen so far in one tree: nodes, container ids and placed regions.</summary>
+    private sealed class Tree
+    {
+        public int Nodes;
+        public readonly Dictionary<string, string> Ids = new(StringComparer.Ordinal);
+        public readonly HashSet<string> Placed = new(StringComparer.Ordinal);
+    }
+
+    /// <summary>The container a child sits in, which decides the placement properties it takes.</summary>
+    private sealed record Parent(string Kind, int Rows = 0, int Columns = 0);
 
     /// <summary>
     /// The layout this block describes, or null when it breaks a rule; the
@@ -66,22 +83,109 @@ public static class SkinLayoutReader
         if (version != SkinFormat.LayoutVersion)
             throw new LayoutException(path + ".version", $"layout version {version} is not a version this format ever had.");
 
-        Only(fields, path, "the layout", "version", "main");
-        SkinLayoutStack main = fields.TryGetValue("main", out JsonElement mainElement)
-            ? ReadMain(mainElement, path + ".main")
-            : SkinLayoutDefaults.Classic.Main;
-        return new SkinLayout(version, main);
+        Only(fields, path, "the layout", "version", "main", "regions");
+        SkinLayoutContainer main = SkinLayoutDefaults.Classic.Main;
+        if (fields.TryGetValue("main", out JsonElement mainElement))
+        {
+            var tree = new Tree();
+            if (ReadChild(mainElement, path + ".main", 1, null, tree).Node is not SkinLayoutContainer container)
+                throw new InvalidOperationException("main is read as a container or refused.");
+            main = container;
+            string[] missing = [.. SkinLayoutRegions.Sections.Where(id => !tree.Placed.Contains(id))];
+            if (missing.Length > 0)
+                throw new LayoutException(path + ".main.children",
+                    $"{Quoted(missing)} {(missing.Length == 1 ? "is" : "are")} not placed; "
+                    + "the tree places each of " + Quoted(SkinLayoutRegions.Sections) + " once, and the header at most once.");
+        }
+
+        var regions = new Dictionary<string, SkinRegionOptions>(StringComparer.Ordinal);
+        SkinHeaderOptions header = SkinHeaderOptions.Default;
+        if (fields.TryGetValue("regions", out JsonElement regionsElement))
+        {
+            string regionsPath = path + ".regions";
+            foreach ((string id, JsonElement value) in Fields(regionsElement, regionsPath, "\"regions\""))
+            {
+                string at = $"{regionsPath}.{Printable(id)}";
+                if (!SkinLayoutRegions.Exists(id))
+                    throw new LayoutException(at,
+                        $"\"{Printable(id)}\" is not a region this OpenXLR has; use one of {Quoted(SkinLayoutRegions.All)}.");
+                if (id == SkinLayoutRegions.Header) header = ReadHeader(value, at);
+                else regions[id] = ReadSection(value, at, id);
+            }
+        }
+        return new SkinLayout(version, main) { Regions = regions, Header = header };
     }
 
-    private static SkinLayoutStack ReadMain(JsonElement element, string path)
+    /// <summary>
+    /// One node with its place in <paramref name="parent"/>: a region, or a
+    /// container read with its children. <paramref name="parent"/> is null for
+    /// <c>main</c>, which is a container and takes no place of its own.
+    /// </summary>
+    private static SkinLayoutChild ReadChild(JsonElement element, string path, int depth, Parent? parent, Tree tree)
     {
-        Dictionary<string, JsonElement> fields = Fields(element, path, "\"main\"");
+        Dictionary<string, JsonElement> fields = Fields(element, path, parent is null ? "\"main\"" : "a child");
         string kind = Kind(fields, path);
-        if (kind == Region)
-            throw new LayoutException(path + ".kind", "\"main\" is a \"stack\" of regions, not a region of its own.");
-        if (kind != Stack) throw UnknownKind(path, kind);
-        Only(fields, path, "a stack", "kind", "orientation", "spacing", "children");
+        if (!Kinds.Contains(kind, StringComparer.Ordinal)) throw UnknownKind(path, kind);
+        if (kind == Region && parent is null)
+            throw new LayoutException(path + ".kind", "\"main\" is a container, a \"stack\", \"grid\" or \"dock\", not a region of its own.");
+        if (++tree.Nodes > SkinFormat.MaxLayoutNodes)
+            throw new LayoutException(path, $"the tree holds at most {SkinFormat.MaxLayoutNodes} nodes, containers and regions together.");
 
+        string[] placement = parent?.Kind switch
+        {
+            Grid => ["row", "column", "rowSpan", "columnSpan"],
+            Dock => ["dock"],
+            _ => [],
+        };
+        string what = kind == Region ? "a region" : $"a {kind}";
+        string[] own = kind switch
+        {
+            Stack => ["kind", "id", "orientation", "spacing", "children"],
+            Grid => ["kind", "id", "rows", "columns", "spacing", "children"],
+            Dock => ["kind", "id", "spacing", "children"],
+            _ => ["kind", "region"],
+        };
+        Only(fields, path, what, [.. own, .. placement]);
+        var child = new SkinLayoutChild(new SkinLayoutRegion(""));
+        if (parent?.Kind == Grid) child = ReadCell(fields, path, parent, child);
+        if (parent?.Kind == Dock)
+        {
+            if (!fields.TryGetValue("dock", out JsonElement edge))
+                throw new LayoutException(path, "a child of a dock needs a \"dock\" edge: " + Quoted(Edges, "or") + ".");
+            child = child with
+            {
+                Edge = (edge.ValueKind == JsonValueKind.String ? edge.GetString() : null) switch
+                {
+                    "top" => SkinLayoutEdge.Top,
+                    "bottom" => SkinLayoutEdge.Bottom,
+                    "left" => SkinLayoutEdge.Left,
+                    "right" => SkinLayoutEdge.Right,
+                    "fill" => SkinLayoutEdge.Fill,
+                    _ => throw new LayoutException(path + ".dock", "expected " + Quoted(Edges, "or") + "."),
+                },
+            };
+        }
+
+        if (kind == Region) return child with { Node = ReadRegion(fields, path, tree) };
+
+        if (depth > SkinFormat.MaxLayoutDepth)
+            throw new LayoutException(path, $"containers nest at most {SkinFormat.MaxLayoutDepth} deep, \"main\" included.");
+        string id = ReadId(fields, path, tree);
+        double spacing = fields.TryGetValue("spacing", out JsonElement spacingElement)
+            ? Number(spacingElement, path + ".spacing", SkinFormat.MinLayoutSpacing, SkinFormat.MaxLayoutSpacing)
+            : SkinLayoutDefaults.Spacing;
+        SkinLayoutContainer container = kind switch
+        {
+            Stack => ReadStack(fields, path, id, spacing, depth, tree),
+            Grid => ReadGrid(fields, path, id, spacing, depth, tree),
+            _ => ReadDock(fields, path, id, spacing, depth, tree),
+        };
+        return child with { Node = container };
+    }
+
+    private static SkinLayoutStack ReadStack(Dictionary<string, JsonElement> fields, string path, string id,
+        double spacing, int depth, Tree tree)
+    {
         if (!fields.TryGetValue("orientation", out JsonElement orientationElement))
             throw new LayoutException(path, "a stack needs an \"orientation\" of \"vertical\" or \"horizontal\".");
         SkinLayoutOrientation orientation = (orientationElement.ValueKind == JsonValueKind.String
@@ -91,58 +195,122 @@ public static class SkinLayoutReader
             "horizontal" => SkinLayoutOrientation.Horizontal,
             _ => throw new LayoutException(path + ".orientation", "expected \"vertical\" or \"horizontal\"."),
         };
+        return new SkinLayoutStack(id, orientation, spacing,
+            ReadChildren(fields, path, "a stack", depth, new Parent(Stack), tree));
+    }
 
-        double spacing = SkinLayoutDefaults.Spacing;
-        if (fields.TryGetValue("spacing", out JsonElement spacingElement))
+    private static SkinLayoutGrid ReadGrid(Dictionary<string, JsonElement> fields, string path, string id,
+        double spacing, int depth, Tree tree)
+    {
+        SkinLayoutTrack[] rows = ReadTracks(fields, path, "rows");
+        SkinLayoutTrack[] columns = ReadTracks(fields, path, "columns");
+        IReadOnlyList<SkinLayoutChild> children =
+            ReadChildren(fields, path, "a grid", depth, new Parent(Grid, rows.Length, columns.Length), tree);
+
+        // Each cell holds at most one child; an empty cell is allowed.
+        var owner = new int?[rows.Length, columns.Length];
+        for (int index = 0; index < children.Count; index++)
         {
-            if (spacingElement.ValueKind != JsonValueKind.Number)
-                throw new LayoutException(path + ".spacing", "expected a number.");
-            if (!spacingElement.TryGetDouble(out spacing) || !double.IsFinite(spacing))
-                throw new LayoutException(path + ".spacing", "expected a finite number.");
-            if (spacing is < SkinFormat.MinLayoutSpacing or > SkinFormat.MaxLayoutSpacing)
-                throw new LayoutException(path + ".spacing",
-                    $"{spacing.ToString(CultureInfo.InvariantCulture)} is outside the allowed range "
-                    + $"{SkinFormat.MinLayoutSpacing} to {SkinFormat.MaxLayoutSpacing}.");
+            SkinLayoutChild child = children[index];
+            for (int row = child.Row; row < child.Row + child.RowSpan; row++)
+                for (int column = child.Column; column < child.Column + child.ColumnSpan; column++)
+                {
+                    if (owner[row, column] is int other)
+                        throw new LayoutException($"{path}.children[{index}]",
+                            $"covers row {row}, column {column}, which {path}.children[{other}] already covers; grid children do not overlap.");
+                    owner[row, column] = index;
+                }
         }
+        return new SkinLayoutGrid(id, rows, columns, spacing, children);
+    }
 
+    private static SkinLayoutDock ReadDock(Dictionary<string, JsonElement> fields, string path, string id,
+        double spacing, int depth, Tree tree)
+    {
+        IReadOnlyList<SkinLayoutChild> children = ReadChildren(fields, path, "a dock", depth, new Parent(Dock), tree);
+        if (children.Count == 0)
+            throw new LayoutException(path + ".children", "a dock needs a last child with \"dock\": \"fill\".");
+        for (int index = 0; index < children.Count - 1; index++)
+            if (children[index].Edge == SkinLayoutEdge.Fill)
+                throw new LayoutException($"{path}.children[{index}].dock",
+                    "only the last child of a dock fills; give this one \"top\", \"bottom\", \"left\" or \"right\".");
+        if (children[^1].Edge != SkinLayoutEdge.Fill)
+            throw new LayoutException($"{path}.children[{children.Count - 1}].dock",
+                "the last child of a dock fills what the others leave; give it \"dock\": \"fill\".");
+        return new SkinLayoutDock(id, spacing, children);
+    }
+
+    private static IReadOnlyList<SkinLayoutChild> ReadChildren(Dictionary<string, JsonElement> fields, string path,
+        string what, int depth, Parent parent, Tree tree)
+    {
         if (!fields.TryGetValue("children", out JsonElement childrenElement))
-            throw new LayoutException(path, "a stack needs a \"children\" array.");
+            throw new LayoutException(path, $"{what} needs a \"children\" array.");
         if (childrenElement.ValueKind != JsonValueKind.Array)
-            throw new LayoutException(path + ".children", "expected an array of regions.");
+            throw new LayoutException(path + ".children", "expected an array of regions and containers.");
         if (childrenElement.GetArrayLength() > SkinFormat.MaxLayoutChildren)
             throw new LayoutException(path + ".children",
                 $"a container holds at most {SkinFormat.MaxLayoutChildren} children.");
-
-        var children = new List<SkinLayoutRegion>();
-        var placed = new HashSet<string>(StringComparer.Ordinal);
+        var children = new List<SkinLayoutChild>();
         int index = 0;
         foreach (JsonElement child in childrenElement.EnumerateArray())
-        {
-            SkinLayoutRegion region = ReadRegion(child, $"{path}.children[{index}]");
-            if (!placed.Add(region.Id))
-                throw new LayoutException($"{path}.children[{index}].region",
-                    $"\"{region.Id}\" is placed twice; each region appears once.");
-            children.Add(region);
-            index++;
-        }
-        string[] missing = [.. SkinLayoutRegions.All.Where(id => !placed.Contains(id))];
-        if (missing.Length > 0)
-            throw new LayoutException(path + ".children",
-                $"{Quoted(missing)} {(missing.Length == 1 ? "is" : "are")} not placed; "
-                + "the main stack places each of " + Quoted(SkinLayoutRegions.All) + " once.");
-        return new SkinLayoutStack(orientation, spacing, children);
+            children.Add(ReadChild(child, $"{path}.children[{index++}]", depth + 1, parent, tree));
+        return children;
     }
 
-    private static SkinLayoutRegion ReadRegion(JsonElement element, string path)
+    /// <summary>A grid child's cell and spans, all inside the grid's tracks.</summary>
+    private static SkinLayoutChild ReadCell(Dictionary<string, JsonElement> fields, string path, Parent grid,
+        SkinLayoutChild child)
     {
-        Dictionary<string, JsonElement> fields = Fields(element, path, "a child");
-        string kind = Kind(fields, path);
-        if (kind == Stack)
-            throw new LayoutException(path + ".kind",
-                $"layout version {SkinFormat.LayoutVersion} has one stack, \"main\"; a container cannot sit inside it.");
-        if (kind != Region) throw UnknownKind(path, kind);
-        Only(fields, path, "a region", "kind", "region");
+        if (!fields.ContainsKey("row") || !fields.ContainsKey("column"))
+            throw new LayoutException(path, "a child of a grid needs a \"row\" and a \"column\", counted from 0.");
+        int row = Whole(fields["row"], path + ".row", 0, grid.Rows - 1,
+            $"the grid has {grid.Rows} {(grid.Rows == 1 ? "row" : "rows")}, counted from 0");
+        int column = Whole(fields["column"], path + ".column", 0, grid.Columns - 1,
+            $"the grid has {grid.Columns} {(grid.Columns == 1 ? "column" : "columns")}, counted from 0");
+        int rowSpan = fields.TryGetValue("rowSpan", out JsonElement rs)
+            ? Whole(rs, path + ".rowSpan", 1, grid.Rows - row, "a span stays inside the grid") : 1;
+        int columnSpan = fields.TryGetValue("columnSpan", out JsonElement cs)
+            ? Whole(cs, path + ".columnSpan", 1, grid.Columns - column, "a span stays inside the grid") : 1;
+        return child with { Row = row, Column = column, RowSpan = rowSpan, ColumnSpan = columnSpan };
+    }
 
+    private static SkinLayoutTrack[] ReadTracks(Dictionary<string, JsonElement> fields, string path, string name)
+    {
+        string at = $"{path}.{name}";
+        if (!fields.TryGetValue(name, out JsonElement element))
+            throw new LayoutException(path, $"a grid needs \"rows\" and \"columns\", each an array of 1 to {SkinFormat.MaxLayoutTracks} tracks.");
+        if (element.ValueKind != JsonValueKind.Array)
+            throw new LayoutException(at, "expected an array of tracks.");
+        int count = element.GetArrayLength();
+        if (count < 1 || count > SkinFormat.MaxLayoutTracks)
+            throw new LayoutException(at, $"a grid has 1 to {SkinFormat.MaxLayoutTracks} {name}; this one has {count}.");
+        var tracks = new SkinLayoutTrack[count];
+        int index = 0;
+        foreach (JsonElement track in element.EnumerateArray())
+        {
+            string trackPath = $"{at}[{index}]";
+            const string shape = "a track is \"auto\" or an object with one of \"star\" and \"size\".";
+            if (track.ValueKind == JsonValueKind.String)
+            {
+                if (track.GetString() != "auto") throw new LayoutException(trackPath, shape);
+                tracks[index++] = SkinLayoutTrack.Auto;
+                continue;
+            }
+            if (track.ValueKind != JsonValueKind.Object) throw new LayoutException(trackPath, shape);
+            Dictionary<string, JsonElement> trackFields = Fields(track, trackPath, "a track");
+            Only(trackFields, trackPath, "a track", "star", "size");
+            if (trackFields.Count != 1) throw new LayoutException(trackPath, shape);
+            tracks[index++] = trackFields.TryGetValue("star", out JsonElement star)
+                ? new SkinLayoutTrack(SkinTrackUnit.Star,
+                    Number(star, trackPath + ".star", SkinFormat.MinLayoutStar, SkinFormat.MaxLayoutStar))
+                : new SkinLayoutTrack(SkinTrackUnit.Pixel,
+                    Number(trackFields["size"], trackPath + ".size", SkinFormat.MinLayoutTrackSize, SkinFormat.MaxLayoutTrackSize));
+        }
+        return tracks;
+    }
+
+    private static SkinLayoutRegion ReadRegion(Dictionary<string, JsonElement> fields, string path, Tree tree)
+    {
         if (!fields.TryGetValue("region", out JsonElement regionElement))
             throw new LayoutException(path, "a region needs a \"region\" id.");
         if (regionElement.ValueKind != JsonValueKind.String)
@@ -151,7 +319,106 @@ public static class SkinLayoutReader
         if (!SkinLayoutRegions.Exists(id))
             throw new LayoutException(path + ".region",
                 $"\"{Printable(id)}\" is not a region this OpenXLR has; use one of {Quoted(SkinLayoutRegions.All)}.");
+        if (!tree.Placed.Add(id))
+            throw new LayoutException(path + ".region", $"\"{id}\" is placed twice; each region appears once.");
         return new SkinLayoutRegion(id);
+    }
+
+    /// <summary>A container's id: short, plain and unique in the tree, so ui.json can name its places.</summary>
+    private static string ReadId(Dictionary<string, JsonElement> fields, string path, Tree tree)
+    {
+        if (!fields.TryGetValue("id", out JsonElement element))
+            throw new LayoutException(path, "every container needs an \"id\", so your own arrangement can name its places.");
+        string? id = element.ValueKind == JsonValueKind.String ? element.GetString() : null;
+        if (id is null || id.Length is 0 or > SkinFormat.MaxLayoutIdLength
+            || !id.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9' or '-'))
+            throw new LayoutException(path + ".id",
+                $"expected 1 to {SkinFormat.MaxLayoutIdLength} lowercase letters, digits and hyphens.");
+        if (tree.Ids.TryGetValue(id, out string? other))
+            throw new LayoutException(path + ".id", $"\"{id}\" is already the id of {other}; container ids are unique.");
+        tree.Ids[id] = path;
+        return id;
+    }
+
+    private static SkinRegionOptions ReadSection(JsonElement element, string path, string region)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, $"the options of \"{region}\"");
+        Only(fields, path, $"\"{region}\"", SectionOptions);
+        var options = SkinRegionOptions.Default;
+        if (fields.TryGetValue("visibility", out JsonElement visibility))
+            options = options with
+            {
+                Visibility = (visibility.ValueKind == JsonValueKind.String ? visibility.GetString() : null) switch
+                {
+                    "visible" => SkinRegionVisibility.Visible,
+                    "collapsed" => SkinRegionVisibility.Collapsed,
+                    "hidden" => SkinRegionVisibility.Hidden,
+                    _ => throw new LayoutException(path + ".visibility", "expected \"visible\", \"collapsed\" or \"hidden\"."),
+                },
+            };
+        if (fields.TryGetValue("width", out JsonElement width))
+            options = options with { Width = Number(width, path + ".width", SkinFormat.MinRegionSize, SkinFormat.MaxRegionSize) };
+        if (fields.TryGetValue("height", out JsonElement height))
+            options = options with { Height = Number(height, path + ".height", SkinFormat.MinRegionSize, SkinFormat.MaxRegionSize) };
+        return options;
+    }
+
+    private static SkinHeaderOptions ReadHeader(JsonElement element, string path)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, "the options of \"header\"");
+        Only(fields, path, "\"header\"", HeaderOptions);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        List<string> Actions(string name)
+        {
+            var actions = new List<string>();
+            if (!fields.TryGetValue(name, out JsonElement list)) return actions;
+            string at = $"{path}.{name}";
+            if (list.ValueKind != JsonValueKind.Array)
+                throw new LayoutException(at, "expected an array of header action ids.");
+            int index = 0;
+            foreach (JsonElement item in list.EnumerateArray())
+            {
+                string itemPath = $"{at}[{index++}]";
+                string? id = item.ValueKind == JsonValueKind.String ? item.GetString() : null;
+                if (id == "options")
+                    throw new LayoutException(itemPath,
+                        "Options is always first and always shown, so no skin places it; leave it out.");
+                if (id is null || !SkinHeaderActions.Exists(id))
+                    throw new LayoutException(itemPath,
+                        $"{(id is null ? "this" : $"\"{Printable(id)}\"")} is not a header action; use one of {Quoted(SkinHeaderActions.All)}.");
+                if (!seen.Add(id))
+                    throw new LayoutException(itemPath,
+                        $"\"{id}\" is listed twice; an action appears once across \"actions\" and \"overflow\".");
+                actions.Add(id);
+            }
+            return actions;
+        }
+        List<string> row = Actions("actions");
+        return new SkinHeaderOptions(row, Actions("overflow"));
+    }
+
+    /// <summary>A finite number inside its bounds.</summary>
+    private static double Number(JsonElement element, string path, double minimum, double maximum)
+    {
+        if (element.ValueKind != JsonValueKind.Number)
+            throw new LayoutException(path, "expected a number.");
+        if (!element.TryGetDouble(out double value) || !double.IsFinite(value))
+            throw new LayoutException(path, "expected a finite number.");
+        if (value < minimum || value > maximum)
+            throw new LayoutException(path,
+                $"{value.ToString(CultureInfo.InvariantCulture)} is outside the allowed range "
+                + $"{minimum.ToString(CultureInfo.InvariantCulture)} to {maximum.ToString(CultureInfo.InvariantCulture)}.");
+        return value;
+    }
+
+    /// <summary>A whole number inside its bounds; <paramref name="why"/> says where the bounds come from.</summary>
+    private static int Whole(JsonElement element, string path, int minimum, int maximum, string why)
+    {
+        if (element.ValueKind != JsonValueKind.Number || !element.TryGetInt32(out int value))
+            throw new LayoutException(path, "expected a whole number.");
+        if (value < minimum || value > maximum)
+            throw new LayoutException(path, $"{value} is outside {minimum} to {maximum}: {why}.");
+        return value;
     }
 
     /// <summary>An object's properties by name. A name given twice has no single meaning, so it is refused.</summary>
@@ -180,18 +447,18 @@ public static class SkinLayoutReader
         if (!fields.TryGetValue("kind", out JsonElement kind))
             throw new LayoutException(path, "every node needs a \"kind\".");
         if (kind.ValueKind != JsonValueKind.String)
-            throw new LayoutException(path + ".kind", "expected \"stack\" or \"region\".");
+            throw new LayoutException(path + ".kind", "expected " + Quoted(Kinds, "or") + ".");
         return kind.GetString()!;
     }
 
     private static LayoutException UnknownKind(string path, string kind) =>
-        new(path + ".kind", $"\"{Printable(kind)}\" is not a kind this OpenXLR has; use \"stack\" or \"region\".");
+        new(path + ".kind", $"\"{Printable(kind)}\" is not a kind this OpenXLR has; use {Quoted(Kinds, "or")}.");
 
-    private static string Quoted(IEnumerable<string> names)
+    private static string Quoted(IEnumerable<string> names, string last = "and")
     {
         string[] quoted = [.. names.Select(n => $"\"{n}\"")];
         return quoted.Length <= 1 ? string.Concat(quoted)
-            : string.Join(", ", quoted[..^1]) + " and " + quoted[^1];
+            : string.Join(", ", quoted[..^1]) + $" {last} " + quoted[^1];
     }
 
     /// <summary>A name from the file, short and without control characters, for a message.</summary>
