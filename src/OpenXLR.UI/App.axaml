@@ -239,5 +239,21 @@
             <Setter Property="Background" Value="{DynamicResource Ox.Danger.Background}"/>
             <Setter Property="Foreground" Value="{DynamicResource Ox.Danger.Foreground}"/>
         </Style>
+
+        <!-- The button that opens a plugin chain wears the chain's state in the
+             lamp colours: green while a plugin is processing, red when the chain
+             has plugins and none is. An empty chain keeps the plain button. -->
+        <Style Selector="Button.fx.fxOn">
+            <Setter Property="Foreground" Value="{DynamicResource Ox.Led.On}"/>
+        </Style>
+        <Style Selector="Button.fx.fxOn /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource Ox.Led.On}"/>
+        </Style>
+        <Style Selector="Button.fx.fxOff">
+            <Setter Property="Foreground" Value="{DynamicResource Ox.Led.Alert}"/>
+        </Style>
+        <Style Selector="Button.fx.fxOff /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource Ox.Led.Alert}"/>
+        </Style>
     </Application.Styles>
 </Application>

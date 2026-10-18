@@ -321,7 +321,8 @@
           <Grid ColumnDefinitions="90,*,Auto">
             <TextBlock Text="{loc:Text Key=Inserts}" Classes="h" VerticalAlignment="Center"
                        ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
-            <Button Grid.Column="2" Content="{Binding Inserts.ButtonText}" Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+            <Button Grid.Column="2" Content="{Binding Inserts.ButtonText}" Classes="fx" Classes.fxOn="{Binding Inserts.IsProcessing}" Classes.fxOff="{Binding Inserts.IsOff}"
+                    Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                     Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
           </Grid>
           <!-- the chain at a glance: LED, name, bypass, controls; adding,
@@ -386,7 +387,8 @@
           <Grid ColumnDefinitions="90,*,Auto">
             <TextBlock Text="{loc:Text Key=Inserts}" Classes="h" VerticalAlignment="Center"
                        ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
-            <Button Grid.Column="2" Content="{Binding Inserts2.ButtonText}" Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+            <Button Grid.Column="2" Content="{Binding Inserts2.ButtonText}" Classes="fx" Classes.fxOn="{Binding Inserts2.IsProcessing}" Classes.fxOff="{Binding Inserts2.IsOff}"
+                    Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                     Tag="xlr2" Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
           </Grid>
           <!-- the chain at a glance: LED, name, bypass, controls; adding,
@@ -684,7 +686,7 @@
                                   IsVisible="{Binding IsMonitor}" Margin="6,0,0,0"
                                   ToolTip.Tip="{loc:Text Key=AllowThisMonitorMixAbove100Up}"/>
                   </Grid>
-                  <Button Content="{Binding Inserts.ButtonText}" HorizontalAlignment="Stretch"
+                  <Button Content="{Binding Inserts.ButtonText}" HorizontalAlignment="Stretch" Classes="fx" Classes.fxOn="{Binding Inserts.IsProcessing}" Classes.fxOff="{Binding Inserts.IsOff}"
                           HorizontalContentAlignment="Center" Padding="8,4" FontSize="12" Click="OnMixInserts"
                           ToolTip.Tip="{loc:Text Key=StereoPluginsProcessingThisMixBeforeItReaches}"/>
                   <!-- the chain at a glance: LED, name, bypass, controls; adding,

@@ -217,7 +217,7 @@
         },
         "Ox.Led.On": {
           "$ref": "#/$defs/flatColour",
-          "description": "a connected device, a plugin that is processing"
+          "description": "a connected device, a plugin that is processing, the button of a chain with one"
         },
         "Ox.Led.Off": {
           "$ref": "#/$defs/flatColour",
@@ -225,7 +225,7 @@
         },
         "Ox.Led.Alert": {
           "$ref": "#/$defs/flatColour",
-          "description": "a plugin bypassed or failed"
+          "description": "a plugin bypassed or failed, the button of a chain with nothing processing"
         },
         "Ox.Meter.Fill": {
           "$ref": "#/$defs/flatColour",

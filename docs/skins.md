@@ -512,9 +512,9 @@ with a message saying why.
 
 | Token | Kind | Default | Range | What it paints |
 |---|---|---|---|---|
-| `Ox.Led.On` | colour | #3ecf7a |  | a connected device, a plugin that is processing |
+| `Ox.Led.On` | colour | #3ecf7a |  | a connected device, a plugin that is processing, the button of a chain with one |
 | `Ox.Led.Off` | colour | #4a4f5c |  | a device that is not there |
-| `Ox.Led.Alert` | colour | #ff3c4e |  | a plugin bypassed or failed |
+| `Ox.Led.Alert` | colour | #ff3c4e |  | a plugin bypassed or failed, the button of a chain with nothing processing |
 | `Ox.Meter.Fill` | colour | #3ecf7a |  | the quiet end of the scale |
 | `Ox.Meter.Warning` | colour | #3ecf7a |  | the middle of the scale |
 | `Ox.Meter.Hot` | colour | #3ecf7a |  | the loud end of the scale |
