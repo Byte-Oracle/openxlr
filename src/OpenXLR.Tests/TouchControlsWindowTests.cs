@@ -90,7 +90,7 @@ internal static class TouchControlsWindowTests
             DragFader(main, slider);
             CheckPopup(main);
             foreach (Slider send in main.GetVisualDescendants().OfType<Slider>()
-                .Where(s => s.DataContext is SendViewModel or MixViewModel)
+                .Where(s => s.IsEffectivelyVisible && s.DataContext is SendViewModel or MixViewModel)
                 .GroupBy(s => s.DataContext!.GetType()).Select(g => g.First()))
                 CheckThumbCorners(main, send);
         }
@@ -160,7 +160,10 @@ internal static class TouchControlsWindowTests
 
         var inserts = main.GetVisualDescendants().OfType<Control>()
             .Where(c => c.Classes.Contains("insertmini") && c.IsEffectivelyVisible).ToArray();
-        Assert.NotEmpty(inserts);
+        // The channel tiles draw a chain's insert rows; a skin whose submixer
+        // is mix banks, such as Broadcast, draws plugin lamps on its master
+        // strips instead, and its buttons are held to the target above.
+        if (SkinService.Layout?.Submixer.IsBanks != true) Assert.NotEmpty(inserts);
         foreach (Control control in inserts)
         {
             Assert.True(control.Bounds.Width >= Target && control.Bounds.Height >= Target,

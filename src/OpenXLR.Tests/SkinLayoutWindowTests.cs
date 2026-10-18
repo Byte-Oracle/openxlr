@@ -182,6 +182,7 @@ internal static partial class SkinLayoutWindowTests
             CheckStale();
             CheckTemplates(dir);
             CheckCompactTemplates(dir);
+            CheckBroadcast();
 
             // Material brings the legacy order back, in the column it always was.
             Wear(SkinPackage.DefaultId);

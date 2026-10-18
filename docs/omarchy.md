@@ -70,7 +70,9 @@ Popout meters use the OpenXLR skin whose id matches the active Omarchy
 theme. The plugin watches
 `$HOME/.local/state/omarchy/current/theme.name`, so a theme switch repaints
 the open mixer without a shell restart. Eleven Omarchy themes have a
-matching skin. An unknown theme, a missing file or an unreadable file uses
+matching skin. `Skins.js` also carries Deck and Broadcast, which no
+Omarchy theme is named after; their rows are meter colours only, and
+Broadcast's layout never reaches the plugin. An unknown theme, a missing file or an unreadable file uses
 the popout foreground shades instead. The old Omarchy 3 configuration
 symlink is not used.
 

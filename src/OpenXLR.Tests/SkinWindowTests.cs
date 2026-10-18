@@ -304,7 +304,8 @@ public sealed partial class SkinWindowTests
     /// while the window is connected to a daemon: the banks hand out the same
     /// channel, mix and send objects the tiles drew, a colour-only skin in
     /// between leaves the banks as they are, and nothing goes to the daemon,
-    /// no level, no mute and no layout order.
+    /// no level, no mute and no layout order. The shipped Broadcast skin,
+    /// switched to Material and back, keeps to the same rules.
     /// </summary>
     private static void ASwitchToMixBanksKeepsEveryViewModelAndSendsNothing(MainWindow main)
     {
@@ -398,6 +399,33 @@ public sealed partial class SkinWindowTests
             }
             SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
             Pump(main);
+
+            // Broadcast to Material and back, twice: its rack and two banks on
+            // Monitor A and Stream hand out the same objects, and send nothing.
+            SkinEntry broadcast = Assert.Single(SkinCatalog.BuiltIn(), e => e.Id == "broadcast");
+            foreach (int round in new[] { 1, 2 })
+            {
+                Assert.Empty(SkinService.Apply(broadcast));
+                Pump(main);
+                Layout(main, 1040, 900);
+                Assert.NotNull(panel.Banks);
+                Assert.NotNull(main.InputRackModel);
+                Assert.Equal(["monitor", "stream"], panel.Banks!.Selection);
+                foreach (var bank in panel.Banks.Banks)
+                {
+                    Assert.Contains(bank.Mix!, mixes);
+                    foreach (var cell in bank.Cells) Assert.Contains(cell.Send!, sends);
+                }
+                Capture(main, $"layout-broadcast-{round}");
+                Assert.Empty(SkinService.Apply(new SkinEntry(SkinPackage.Default, [])));
+                Pump(main);
+                Layout(main, 1040, 900);
+                Assert.Null(panel.Banks);
+                Assert.Null(main.InputRackModel);
+                Assert.Equal(channels, vm.Channels);
+                Assert.Equal(mixes, vm.Mixes);
+                Assert.Equal(sends, vm.Channels.SelectMany(c => c.Sends));
+            }
 
             Assert.Equal(channels, vm.Channels);
             Assert.Equal(mixes, vm.Mixes);
@@ -613,10 +641,20 @@ public sealed partial class SkinWindowTests
         }
     }
 
+    /// <summary>
+    /// Every shipped palette keeps the classic window's labels whole and
+    /// readable. These checks name the classic controls, so a skin with a
+    /// layout is worn here with its colours and control appearances under a
+    /// different id and without its arrangement; Broadcast's own arrangement
+    /// is checked, labels included, by the skin layout test.
+    /// </summary>
     private static void EveryBuiltInSkinKeepsTheMainLabelsReadable(MainWindow main)
     {
-        foreach (SkinEntry skin in new[] { new SkinEntry(SkinPackage.Default, []) }.Concat(SkinCatalog.BuiltIn()))
+        foreach (SkinEntry entry in new[] { new SkinEntry(SkinPackage.Default, []) }.Concat(SkinCatalog.BuiltIn()))
         {
+            SkinEntry skin = entry.Package.Layout is null
+                ? entry
+                : entry with { Package = entry.Package with { Id = entry.Id + "-palette", Layout = null } };
             Assert.Empty(SkinService.Apply(skin));
             foreach (double width in new[] { 640d, 1040 })
             {

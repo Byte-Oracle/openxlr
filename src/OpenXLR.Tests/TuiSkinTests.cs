@@ -456,7 +456,8 @@ public sealed class TuiSkinTests : IDisposable
     {
         string shipped = Path.Combine(Root(), "src", "OpenXLR.UI", "Assets", "Skins");
         string[] folders = [.. Directory.GetDirectories(shipped),
-            Path.Combine(Root(), "docs", "examples", "skins", "example")];
+            Path.Combine(Root(), "docs", "examples", "skins", "example"),
+            Path.Combine(Root(), "docs", "examples", "skins", "broadcast")];
         Assert.True(folders.Length > 2, "only one appearance ships");
 
         foreach (string folder in folders)
@@ -472,6 +473,29 @@ public sealed class TuiSkinTests : IDisposable
         }
     }
 
+
+    /// <summary>
+    /// Broadcast is the shipped skin with a layout. The terminal takes every
+    /// colour, threshold and control appearance from it exactly as it would
+    /// from the same file with the layout block taken out.
+    /// </summary>
+    [Fact]
+    public void TheBroadcastSkinGivesTheTerminalThePaletteItWouldHaveWithoutItsLayout()
+    {
+        string json = File.ReadAllText(Path.Combine(Root(), "src", "OpenXLR.UI", "Assets", "Skins", "broadcast", "skin.json"));
+        System.Text.Json.Nodes.JsonObject stripped = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+        Assert.True(stripped.Remove("layout"));
+        Theme theme = Theme.FromJson(json, "broadcast", "broadcast");
+        Theme flat = Theme.FromJson(stripped.ToJsonString(), "broadcast", "broadcast");
+        Assert.Equal("Broadcast", theme.Name);
+        Assert.NotEqual(Theme.Material.Window, theme.Window);
+        Assert.True(theme.ConsoleFaders);
+        Assert.True(theme.LampLeds);
+        Assert.False(theme.Light);
+        foreach (System.Reflection.PropertyInfo property in typeof(Theme).GetProperties(
+                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+            Assert.Equal(property.GetValue(flat), property.GetValue(theme));
+    }
 
     [Fact]
     public void ControlAppearancesAreReadEvenWithoutAnyColourOverrides()

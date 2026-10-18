@@ -1,0 +1,204 @@
+{
+  "$schema": "https://raw.githubusercontent.com/emaspa/openxlr/main/docs/skin.schema.json",
+  "schema": 1,
+  "id": "broadcast",
+  "name": "Broadcast",
+  "description": "A rack of inputs down the left, Monitor A and Stream as two banks of upright faders beside it and the monitor output under them, on a dark console palette",
+  "author": "OpenXLR",
+  "controls": {
+    "button": "cap",
+    "fader": "console",
+    "meter": "segmented",
+    "led": "lamp",
+    "mute": "cap"
+  },
+  "tokens": {
+    "Ox.Window.Background": "#0f1114",
+    "Ox.Card.Background": "#171a1f",
+    "Ox.Card.BorderBrush": "#262b32",
+    "Ox.Card.BorderThickness": 1,
+    "Ox.Card.CornerRadius": 6,
+    "Ox.Tile.Background": "#1e2228",
+    "Ox.Tile.BorderBrush": "#2e343c",
+    "Ox.Tile.BorderThickness": 1,
+    "Ox.Tile.CornerRadius": 4,
+    "Ox.Dialog.Background": "#171a1f",
+    "Ox.Danger.Background": "#ef6461",
+    "Ox.Danger.Foreground": "#0f1114",
+    "Ox.Badge.Background": "#262b32",
+    "Ox.Divider": "#2e343c",
+    "Ox.Text.Primary": "#e8ebef",
+    "Ox.Text.Secondary": "#a9b0bb",
+    "Ox.Text.Muted": "#878e99",
+    "Ox.Text.Detail": "#c3c8d0",
+    "Ox.Text.Warning": "#f0a35e",
+    "Ox.Text.Alert": "#e9b949",
+    "Ox.Text.Info": "#6cb6f2",
+    "Ox.Link.Foreground": "#6cb6f2",
+    "Ox.Link.ForegroundPointerOver": "#9ccdf7",
+    "Ox.Font.Family": "sans-serif",
+    "Ox.Led.On": "#3ddc84",
+    "Ox.Led.Off": "#3a4049",
+    "Ox.Led.Alert": "#ff5f5f",
+    "Ox.Led.Size": 12,
+    "Ox.Meter.Fill": "#3ddc84",
+    "Ox.Meter.Warning": "#f2c14e",
+    "Ox.Meter.Hot": "#ff5f5f",
+    "Ox.Meter.Track": "#0a0b0d",
+    "Ox.Meter.CornerRadius": 1,
+    "Ox.Meter.Height": 6,
+    "Ox.Meter.VerticalWidth": 6,
+    "Ox.Meter.WarningLevel": 0.7,
+    "Ox.Meter.HotLevel": 0.9,
+    "Ox.Meter.Segments": 24,
+    "Ox.Meter.SegmentGap": 1,
+    "Ox.Mute.Background": "#1a1d22",
+    "Ox.Mute.Foreground": "#3ddc84",
+    "Ox.Mute.BackgroundPointerOver": "#262b32",
+    "Ox.Mute.BackgroundChecked": "#ef6461",
+    "Ox.Mute.ForegroundChecked": "#0f1114",
+    "Ox.Mute.BorderBrush": "#3a414b",
+    "Ox.Mute.BorderThickness": 1,
+    "Ox.Fader.Track": "#0a0b0d",
+    "Ox.Fader.Fill": "#4c9be8",
+    "Ox.Fader.TrackHeight": 4,
+    "Ox.Fader.TrackCornerRadius": 2,
+    "Ox.Fader.Thumb.Background": "#d9dde3",
+    "Ox.Fader.Thumb.BorderBrush": "#5b6470",
+    "Ox.Fader.Thumb.BorderThickness": 1,
+    "Ox.Fader.Thumb.Width": 26,
+    "Ox.Fader.Thumb.Height": 14,
+    "Ox.Fader.Thumb.CornerRadius": 2,
+    "Ox.Fader.Thumb.Grip": "#0f1114",
+    "Ox.Fader.Thumb.GripLength": 12,
+    "Ox.Control.Background": "#22272e",
+    "Ox.Control.BackgroundPointerOver": "#2a3038",
+    "Ox.Control.BackgroundPressed": "#15181c",
+    "Ox.Control.BackgroundChecked": "#283039",
+    "Ox.Control.BackgroundDisabled": "#191c21",
+    "Ox.Control.Foreground": "#e8ebef",
+    "Ox.Control.ForegroundChecked": "#7cc0f5",
+    "Ox.Control.ForegroundDisabled": "#a9b0bb",
+    "Ox.Control.BorderBrush": "#3a414b",
+    "Ox.Control.BorderBrushPointerOver": "#4c9be8",
+    "Ox.Control.BorderBrushDisabled": "#262b32",
+    "Ox.Control.BorderThickness": 1,
+    "Ox.Control.CornerRadius": 3,
+    "Ox.Control.DisabledOpacity": 0.6,
+    "Ox.Ghost.Background": "#171a1f",
+    "Ox.Toggle.Foreground": "#a9b0bb",
+    "Ox.Toggle.ForegroundChecked": "#3ddc84",
+    "Ox.Toggle.ForegroundDisabled": "#a9b0bb",
+    "Ox.Toggle.BorderBrushChecked": "#3ddc84",
+    "Ox.Bypass.Foreground": "#3ddc84",
+    "Ox.Bypass.ForegroundBypassed": "#ff7a78",
+    "Ox.Check.Foreground": "#e8ebef",
+    "Ox.Input.Background": "#0a0b0d",
+    "Ox.Input.Foreground": "#e8ebef",
+    "Ox.Input.BorderBrush": "#4a525d",
+    "Ox.Flyout.Background": "#171a1f",
+    "Ox.Tooltip.Background": "#08090b",
+    "Ox.Tooltip.Foreground": "#e8ebef",
+    "Ox.Tooltip.BorderBrush": "#3a414b",
+    "Ox.Accent": "#4c9be8",
+    "Ox.Flow.Background": "#0f1114",
+    "Ox.Flow.Card": "#1e2228",
+    "Ox.Flow.CardSelected": "#283039",
+    "Ox.Flow.Text": "#e8ebef",
+    "Ox.Flow.TextDim": "#a9b0bb",
+    "Ox.Flow.Input": "#3fc1c9",
+    "Ox.Flow.Channel": "#b48ef0",
+    "Ox.Flow.Output": "#3ddc84",
+    "Ox.Flow.Muted": "#878e99",
+    "Ox.Flow.NodeHoverBackground": "#283039",
+    "Ox.Flow.NodeHoverBorderBrush": "#4c9be8",
+    "Ox.Cap.Bevel": {
+      "type": "linear",
+      "from": [0, 0],
+      "to": [0, 1],
+      "stops": [
+        { "offset": 0, "color": "#14e8ebef" },
+        { "offset": 0.45, "color": "#00e8ebef" },
+        { "offset": 1, "color": "#1c08090b" }
+      ]
+    },
+    "Ox.Led.Bezel": "#08090b",
+    "Ox.Led.BezelThickness": 1,
+    "Ox.Led.Glow": 0.3,
+    "Ox.Led.CoreScale": 0.6
+  },
+  "layout": {
+    "version": 1,
+    "main": {
+      "kind": "stack",
+      "id": "desk",
+      "orientation": "vertical",
+      "spacing": 12,
+      "children": [
+        {
+          "kind": "dock",
+          "id": "console",
+          "spacing": 12,
+          "children": [
+            {
+              "kind": "stack",
+              "id": "rack-column",
+              "orientation": "vertical",
+              "spacing": 12,
+              "dock": "left",
+              "children": [
+                { "kind": "region", "region": "inputs" },
+                { "kind": "region", "region": "applications" }
+              ]
+            },
+            {
+              "kind": "stack",
+              "id": "mix-column",
+              "orientation": "vertical",
+              "spacing": 12,
+              "dock": "fill",
+              "children": [
+                { "kind": "region", "region": "submixer" },
+                { "kind": "region", "region": "monitor" }
+              ]
+            }
+          ]
+        },
+        { "kind": "region", "region": "headphones" }
+      ]
+    },
+    "regions": {
+      "header": {
+        "actions": ["profiles", "flow", "arrange"],
+        "overflow": ["restart-daemon", "about"]
+      },
+      "inputs": {
+        "template": "input-rack",
+        "strip": {
+          "template": "input-row",
+          "partsOrder": ["identity", "meter", "gain", "hardware-controls", "effects"],
+          "label": { "style": "icon-and-text" },
+          "meter": { "orientation": "horizontal", "placement": "below-label" }
+        }
+      },
+      "applications": { "template": "application-list" },
+      "submixer": {
+        "template": "mix-banks",
+        "orientation": "horizontal",
+        "visibleBanks": 2,
+        "selectionDefaults": ["monitor", "stream"],
+        "strip": {
+          "template": "vertical-strip",
+          "partsOrder": ["identity", "meter", "fader", "value", "mute"],
+          "label": { "style": "text" },
+          "fader": { "orientation": "vertical", "direction": "normal" },
+          "meter": { "orientation": "vertical", "placement": "beside-fader" }
+        },
+        "master": { "template": "master-strip" },
+        "popOut": { "default": "docked" }
+      },
+      "monitor": { "template": "output-toolbar" },
+      "headphones": { "visibility": "collapsed" }
+    }
+  }
+}

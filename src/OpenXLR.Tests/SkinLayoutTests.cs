@@ -111,11 +111,21 @@ public sealed class SkinLayoutTests
         Assert.Empty(classic.Header.Overflow);
     }
 
+    /// <summary>
+    /// Broadcast is the one shipped skin that rearranges the window, and the
+    /// whole of its layout is taken. Every other shipped skin is colours and
+    /// control appearances only, so it keeps the classic arrangement and the
+    /// user's own section order.
+    /// </summary>
     [Fact]
-    public void EveryShippedSkinKeepsTheClassicArrangement()
+    public void EveryShippedSkinButBroadcastKeepsTheClassicArrangement()
     {
         foreach (SkinEntry entry in SkinCatalog.BuiltIn())
-            Assert.Null(entry.Package.Layout);
+        {
+            Assert.Empty(entry.Errors);
+            if (entry.Id == "broadcast") Assert.NotNull(entry.Package.Layout);
+            else Assert.Null(entry.Package.Layout);
+        }
     }
 
     [Fact]

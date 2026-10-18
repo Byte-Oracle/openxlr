@@ -663,4 +663,30 @@ public sealed class SkinDocumentTests
         Assert.Contains(entry.Package.Tokens.Values, v => v is SkinGradient);
         Assert.Contains("examples/skins/example/skin.json", Document, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The complete layout example is the Broadcast skin the application
+    /// ships, byte for byte, so the copy an author starts from is the one the
+    /// window wears. It reads as an installed skin does, with its layout
+    /// whole, and the documents point at it.
+    /// </summary>
+    [Fact]
+    public void TheBroadcastExampleIsTheShippedSkinAndReadsWithItsLayout()
+    {
+        string folder = Path.Combine(Root, "docs", "examples", "skins", "broadcast");
+        Assert.Equal(File.ReadAllText(Path.Combine(Root, "src", "OpenXLR.UI", "Assets", "Skins", "broadcast", "skin.json")),
+            File.ReadAllText(Path.Combine(folder, "skin.json")));
+        SkinEntry entry = Assert.IsType<SkinEntry>(SkinCatalog.Read(folder, "broadcast", SkinOrigin.User));
+        Assert.True(entry.Errors.Count == 0, string.Join("\n", entry.Errors));
+        Assert.Equal("Broadcast", entry.Name);
+        SkinLayout layout = Assert.IsType<SkinLayout>(entry.Package.Layout);
+        Assert.True(layout.Inputs.IsRack);
+        Assert.True(layout.Submixer.IsBanks);
+        Assert.Equal(layout.Description(), SkinCatalog.BuiltIn().Single(e => e.Id == "broadcast").Package.Layout!.Description());
+        Assert.Contains("examples/skins/broadcast", Section(Document, "Layout", "What a skin cannot do"), StringComparison.Ordinal);
+        Assert.Contains("**Broadcast**", Document, StringComparison.Ordinal);
+        string readme = File.ReadAllText(Path.Combine(Root, "docs", "examples", "skins", "README.md"));
+        Assert.Contains("~/.local/share/openxlr/skins/", readme, StringComparison.Ordinal);
+        Assert.Contains("examples/skins/broadcast/skin.json", readme, StringComparison.Ordinal);
+    }
 }

@@ -1354,8 +1354,8 @@ hides, and forgets only that skin's arrangement. If the skin is updated
 and its layout no longer has a place your arrangement names, the whole
 arrangement is set aside, the note under the header says so once, and
 the skin's own places are used. Switching to a skin without a layout,
-Material and every shipped skin included, brings back the order you
-arranged there.
+Material and every shipped skin but Broadcast included, brings back the
+order you arranged there.
 
 A skin can also order the header's actions and put some of them in a ⋯
 menu at the end of the header. The actions in that menu work as they do
@@ -1466,7 +1466,7 @@ the old controls cannot affect a plugin that now uses the same slot id.
 <a name="skins"></a>
 ### 3.10 Change how the window looks
 
-Options, APPEARANCE picks a skin. OpenXLR ships thirteen, all built into
+Options, APPEARANCE picks a skin. OpenXLR ships fourteen, all built into
 the application, so a package brings them with it:
 
 - **Material**, the default, in a dark palette, which is what the window
@@ -1480,7 +1480,28 @@ the application, so a package brings them with it:
 - eleven built from the Omarchy palettes, for a desktop already wearing
   one of them: Catppuccin, Catppuccin Latte, Everforest, Gruvbox,
   Kanagawa, Matte Black, Nord, Osaka Jade, Ristretto, Rose Pine and Tokyo
-  Night. Catppuccin Latte and Rose Pine are light.
+  Night. Catppuccin Latte and Rose Pine are light;
+- **Broadcast**, a dark console palette that also rearranges the window,
+  described below.
+
+<a name="broadcast"></a>
+**Broadcast** lays the window out like a broadcast desk. INPUTS is a rack
+down the left, one strip per channel: its icon and name, its meter, and
+for an XLR input its gain, switches and plugin chain. The applications
+are a list under the rack. Beside it the SUBMIXER is two mix banks of
+upright faders, starting on Monitor A and Stream, each with its master
+strip at the end; the picker at the top of each bank switches it to any
+other mix, Monitor B, Aux and the mixes you added included. MONITOR is a
+toolbar under the banks with the output picker and the volume.
+HEADPHONES runs along the bottom, folded the first time you wear the
+skin, so the interface's headphone levels stay apart from the software
+mixes. The header stays across the top. In a narrow window the rack and
+the banks keep their width and scroll sideways together; in the mini view
+the rack's column folds away with INPUTS. Your Arrange moves and bank
+picks are kept for Broadcast alone, and **Reset this skin's arrangement**
+in Options puts everything back where the skin places it. A copy of the
+skin to start your own from is in
+[docs/examples/skins](examples/skins/README.md).
 
 The choice takes effect at once. Windows that are already open repaint;
 audio, the mixer, the routing and the layout are untouched, and nothing is
@@ -1517,7 +1538,7 @@ preference through the desktop portal and repaints the open windows when
 the desktop switches; a desktop that states no preference gets the dark
 palette. On a desktop that prefers light, Material therefore opens light
 unless you choose Dark. Other skins keep their own colours in every mode,
-so a window wearing Deck or an Omarchy palette looks as it did, and Mode is
+so a window wearing Deck, Broadcast or an Omarchy palette looks as it did, and Mode is
 greyed out while one of them is chosen. The mode is saved in `ui.json`
 beside the skin.
 
