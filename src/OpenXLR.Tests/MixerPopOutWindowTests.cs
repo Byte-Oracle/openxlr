@@ -188,6 +188,65 @@ internal static partial class MixerPopOutWindowTests
         Assert.True(panel.BankItems.IsEffectivelyVisible);
     }
 
+    /// <summary>
+    /// The mix matrix popped out and docked again: the same matrix, rows,
+    /// columns and cells in the mixer's window, as wide as the whole matrix,
+    /// a cell's fader writing to the window's own send, and the same objects
+    /// back in the main window.
+    /// </summary>
+    internal static void CheckMatrix(MainWindow main, MainViewModel vm)
+    {
+        var host = main.FindControl<ContentControl>("MixerHost")!;
+        var panel = Assert.IsType<OpenXLR.UI.Views.MixerPanel>(host.Content);
+        var matrix = Assert.IsType<OpenXLR.UI.Layout.MixMatrixViewModel>(panel.Matrix);
+        OpenXLR.UI.Layout.MatrixRowViewModel[] rows = [.. matrix.Rows];
+        OpenXLR.UI.Layout.MatrixColumnViewModel[] columns = [.. matrix.Columns];
+        OpenXLR.UI.Layout.MatrixCellViewModel[] cells = [.. matrix.Rows.SelectMany(r => r.Cells)];
+        MixerWindow popped = main.PopOutMixer();
+        try
+        {
+            Layout(popped, 1200, 700);
+            Assert.Null(host.Content);
+            Assert.Same(panel, popped.FindControl<ScrollViewer>("MixerScroll")!.Content);
+            Assert.Same(matrix, panel.Matrix);
+            Assert.Null(panel.Banks);
+            Assert.Equal(rows, matrix.Rows);
+            Assert.Equal(columns, matrix.Columns);
+            Assert.Equal(cells, matrix.Rows.SelectMany(r => r.Cells));
+            Assert.True(panel.MatrixItems.IsEffectivelyVisible);
+            Assert.False(panel.BankItems.IsVisible);
+            // The whole matrix: the row heads and every column beside them.
+            double cell = (double)popped.FindResource("Ox.Matrix.CellWidth")!;
+            double name = (double)popped.FindResource("Ox.Matrix.NameWidth")!;
+            Assert.Equal(name + cell + columns.Length * (cell + OpenXLR.UI.Skinning.SkinLayoutDefaults.MatrixSpacing), panel.MinimumWidth(), 0.5);
+            Assert.True(panel.Bounds.Width >= panel.MinimumWidth() + 8 - 0.5, $"the panel is {panel.Bounds.Width} wide");
+            SkinLayoutWindowTests.CheckMatrixCells(popped, matrix, "detached");
+            Border first = popped.GetVisualDescendants().OfType<Border>().First(b => b.Name == "MatrixCell" && b.IsEffectivelyVisible
+                && b.DataContext is OpenXLR.UI.Layout.MatrixCellViewModel { IsEmpty: false });
+            var model = (OpenXLR.UI.Layout.MatrixCellViewModel)first.DataContext!;
+            Slider fader = first.GetVisualDescendants().OfType<Slider>().Single();
+            fader.Value = 0.33;
+            Assert.Equal(0.33, model.Send!.Level);
+            Assert.Same(vm.Channels.Single(c => c.Id == model.Channel.Id).Sends.Single(s => s.MixId == model.Mix.Id), model.Send);
+            Capture(popped, "popout-matrix");
+            Layout(popped, 360, 400);
+            Assert.True(panel.Bounds.Width >= panel.MinimumWidth() + 8 - 0.5);
+            Assert.True(popped.FindControl<ScrollViewer>("MixerScroll")!.Extent.Width
+                > popped.FindControl<ScrollViewer>("MixerScroll")!.Viewport.Width, "a narrow mixer window scrolls the matrix sideways");
+        }
+        finally
+        {
+            popped.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
+        Assert.Same(panel, host.Content);
+        Assert.Same(matrix, panel.Matrix);
+        Assert.Equal(rows, matrix.Rows);
+        Assert.Equal(cells, matrix.Rows.SelectMany(r => r.Cells));
+        Layout(main, 1040, 1200);
+        Assert.True(panel.MatrixItems.IsEffectivelyVisible);
+    }
+
     private static Slider Master(Window window, MainViewModel vm) => window.GetVisualDescendants().OfType<Slider>()
         .Single(s => s.DataContext == vm.Mixes[0]);
 

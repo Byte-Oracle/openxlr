@@ -23,6 +23,10 @@ public sealed partial class SkinWindowTests
                "submixer":{"template":"mix-banks","orientation":"vertical","visibleBanks":3,"selectionDefaults":["mix2","mix1"],
                  "strip":{"template":"send-list"}}}}}
             """,
+        ["focus-matrix"] = """
+            {"schema":1,"name":"Matrix","tokens":{"Ox.Card.Background":"#2c3038"},"layout":{"version":1,
+             "regions":{"submixer":{"template":"mix-matrix","matrix":{"cell":{"parts":["fader","mute"]}}}}}}
+            """,
         ["focus-row"] = """
             {"schema":1,"name":"Row","tokens":{"Ox.Card.Background":"#2c3038"},"layout":{"version":1,
              "main":{"kind":"stack","id":"row","orientation":"horizontal","children":[
@@ -34,7 +38,7 @@ public sealed partial class SkinWindowTests
     /// <summary>
     /// A structural switch that builds the focused fader again: focus goes to
     /// the new fader for the same channel and mix, through upright strips, a
-    /// send list and back to the channel tiles. The sections' folds, the
+    /// send list, the channel tiles, a mix matrix and back. The sections' folds, the
     /// compact view's channel and mix and the page's scroll come through a
     /// switch that keeps the tree. Eighteen switches between three skins leave
     /// <see cref="SkinService.Changed"/> with the handlers it had, and the last
@@ -95,6 +99,20 @@ public sealed partial class SkinWindowTests
             // Back to strips: the bank fader once more.
             Wear("focus-strips");
             Assert.Same(BankFader(), Focused());
+            // To the matrix: the cell where Game's row crosses the mix's column, and on through the tiles and back.
+            Slider MatrixFader() => main.GetVisualDescendants().OfType<Slider>().Single(s => s.IsEffectivelyVisible
+                && s.DataContext is MatrixCellViewModel cell && cell.Channel == game && cell.Mix == stream);
+            Wear("focus-matrix");
+            Slider cellFader = MatrixFader();
+            Assert.Same(cellFader, Focused());
+            Assert.Same(game.Sends.Single(s => s.MixId == "mix1"), ((MatrixCellViewModel)cellFader.DataContext!).Send);
+            Wear(SkinPackage.DefaultId);
+            Assert.Same(game.Sends.Single(s => s.MixId == "mix1"), Assert.IsType<SendViewModel>(Focused().DataContext));
+            Wear("focus-matrix");
+            Assert.NotSame(cellFader, MatrixFader());
+            Assert.Same(MatrixFader(), Focused());
+            Wear("focus-strips");
+            Assert.Same(BankFader(), Focused());
 
             // A mute keeps its role: the mute for the same pair, not the fader.
             ToggleButton Mute() => main.GetVisualDescendants().OfType<ToggleButton>().Single(t => t.IsEffectivelyVisible
@@ -103,6 +121,12 @@ public sealed partial class SkinWindowTests
             ToggleButton before = Mute();
             Wear("focus-list");
             Assert.NotSame(before, Focused());
+            Assert.Same(Mute(), Focused());
+            // And the matrix's mute for the same pair, then the bank's again.
+            Wear("focus-matrix");
+            Assert.Same(main.GetVisualDescendants().OfType<ToggleButton>().Single(t => t.IsEffectivelyVisible && t.Classes.Contains("mute")
+                && t.DataContext is MatrixCellViewModel cell && cell.Channel == game && cell.Mix == stream), Focused());
+            Wear("focus-list");
             Assert.Same(Mute(), Focused());
 
             // What the user set comes through every switch untouched.

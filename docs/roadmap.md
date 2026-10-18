@@ -152,10 +152,13 @@ few releases, and they get to settle in users' hands first.
   focus by channel, mix and role, keeps scroll offsets, folds, the
   detached mixer and plugin window ownership, and sends no command; Options
   describes the skin's layout and resets its arrangement, banks and
-  docking choice. Broadcast ships as the complete example: an input rack
-  beside two banks of upright strips on Monitor A and Stream, MONITOR's
-  toolbar under them and HEADPHONES folded along the bottom, on a dark
-  console palette, with a copy to start from in `docs/examples/skins`.
+  docking choice. A mix matrix draws a row per channel and a column per
+  mix, each send's fader over the channel's meter where they cross, with
+  the input controls in the row heads and the mix masters in the column
+  heads. Broadcast ships as the complete example: the matrix across the
+  window, MONITOR's toolbar at the top right, INPUTS hidden and the other
+  sections folded under it, on a dark neutral palette, with a copy to
+  start from in `docs/examples/skins`.
   [skins.md](skins.md#layout)
 - [ ] Inputs from more than one attached Wave interface at once. The
   daemon drives one interface today; a second one is reachable only as a

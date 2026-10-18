@@ -161,29 +161,33 @@ public sealed class SkinPackageTests : IDisposable
         SkinLayout layout = Assert.IsType<SkinLayout>(broadcast.Package.Layout);
         // The header stays above the tree, across the window.
         Assert.False(layout.PlacesHeader);
-        // A column: the rack docked on the left of the mix column, then HEADPHONES across the window.
+        // A column: a grid with MONITOR in its top right cell and the matrix across both columns
+        // under it, then INPUTS, APPLICATIONS and HEADPHONES across the window.
         SkinLayoutStack desk = Assert.IsType<SkinLayoutStack>(layout.Main);
         Assert.Equal(SkinLayoutOrientation.Vertical, desk.Orientation);
-        SkinLayoutDock console = Assert.IsType<SkinLayoutDock>(desk.Children[0].Node);
-        Assert.Equal([SkinLayoutEdge.Left, SkinLayoutEdge.Fill], console.Children.Select(c => c.Edge));
-        Assert.Equal(new SkinLayoutRegion(SkinLayoutRegions.Headphones), desk.Children[1].Node);
-        Assert.Equal(SkinLayoutTemplates.InputRack, layout.Inputs.Template);
-        Assert.Equal(SkinLayoutTemplates.InputRow, layout.Inputs.Strip.Template);
-        Assert.Equal(SkinStripParts.InputRow, layout.Inputs.Strip.Order);
-        Assert.Equal(SkinLabelStyle.IconAndText, layout.Inputs.Strip.Label);
-        Assert.Equal(new SkinMeterOptions(SkinLayoutOrientation.Horizontal, SkinMeterPlacement.BelowLabel), layout.Inputs.Strip.Meter);
-        Assert.True(layout.Submixer.IsBanks);
-        Assert.Equal(SkinLayoutOrientation.Horizontal, layout.Submixer.Orientation);
-        Assert.Equal(2, layout.Submixer.VisibleBanks);
-        Assert.Equal(["monitor", "stream"], layout.Submixer.SelectionDefaults);
-        Assert.Equal(SkinStripOptions.BankDefault, layout.Submixer.Strip with { Order = SkinStripOptions.BankDefault.Order, Hidden = SkinStripOptions.BankDefault.Hidden });
-        Assert.Equal(SkinStripParts.Send, layout.Submixer.Strip.Order);
-        Assert.Equal(SkinLayoutTemplates.MasterStrip, layout.Submixer.Master.Template);
+        SkinLayoutGrid mixes = Assert.IsType<SkinLayoutGrid>(desk.Children[0].Node);
+        Assert.Equal([new SkinLayoutTrack(SkinTrackUnit.Star, 1), new SkinLayoutTrack(SkinTrackUnit.Pixel, 360)], mixes.Columns);
+        SkinLayoutChild monitor = mixes.Children.Single(c => c.Node == new SkinLayoutRegion(SkinLayoutRegions.Monitor));
+        Assert.Equal((0, 1), (monitor.Row, monitor.Column));
+        SkinLayoutChild submixer = mixes.Children.Single(c => c.Node == new SkinLayoutRegion(SkinLayoutRegions.Submixer));
+        Assert.Equal((1, 0, 2), (submixer.Row, submixer.Column, submixer.ColumnSpan));
+        Assert.Equal([SkinLayoutRegions.Inputs, SkinLayoutRegions.Applications, SkinLayoutRegions.Headphones],
+            desk.Children.Skip(1).Select(c => ((SkinLayoutRegion)c.Node).Id));
+        Assert.Equal(SkinLayoutTemplates.HardwarePanel, layout.Inputs.Template);
+        Assert.Equal(SkinRegionVisibility.Hidden, layout.OptionsFor(SkinLayoutRegions.Inputs).Visibility);
+        Assert.True(layout.Submixer.IsMatrix);
+        SkinMatrixOptions matrix = layout.Submixer.Matrix;
+        Assert.Equal(["identity", "mute", "gain", "meter", "effects"], matrix.RowHead.Shown);
+        Assert.Equal(["identity", "outputs", "mute", "master", "effects"], matrix.ColumnHead.Shown);
+        Assert.Equal(["mute", "fader"], matrix.Cell.Shown);
+        Assert.Equal(SkinLabelStyle.IconAndText, matrix.RowHead.Label);
+        Assert.Equal(SkinMatrixMuted.Tint, matrix.Muted);
+        Assert.Equal(SkinMatrixMeter.UnderFader, matrix.Meter);
         Assert.Equal(SkinLayoutTemplates.OutputToolbar, layout.Monitor);
         Assert.Equal(SkinLayoutTemplates.ApplicationList, layout.Applications);
         Assert.Equal(SkinMixerPlacement.Docked, layout.PopOut);
         Assert.Equal(SkinRegionVisibility.Collapsed, layout.OptionsFor(SkinLayoutRegions.Headphones).Visibility);
-        Assert.Equal(SkinRegionVisibility.Visible, layout.OptionsFor(SkinLayoutRegions.Applications).Visibility);
+        Assert.Equal(SkinRegionVisibility.Collapsed, layout.OptionsFor(SkinLayoutRegions.Applications).Visibility);
         Assert.Equal(["profiles", "flow", "arrange"], layout.Header.Row.Take(3));
         Assert.Equal(["restart-daemon", "about"], layout.Header.Overflow);
 
@@ -857,6 +861,8 @@ public sealed class SkinPackageTests : IDisposable
                          ("Ox.Bypass.ForegroundBypassed", "Ox.Control.BackgroundChecked", 4.5),
                          ("Ox.Mute.Foreground", "Ox.Mute.Background", 4.5),
                          ("Ox.Mute.ForegroundChecked", "Ox.Mute.BackgroundChecked", 4.5),
+                         // A muted send's mute in a tinted matrix cell is lettered in its own colour.
+                         ("Ox.Matrix.MutedForeground", "Ox.Mute.BackgroundChecked", 4.5),
                          ("Ox.Danger.Foreground", "Ox.Danger.Background", 4.5),
                          ("Ox.Check.Foreground", "Ox.Card.Background", 4.5),
                          // A switched-off toggle is lettered, not greyed out, so

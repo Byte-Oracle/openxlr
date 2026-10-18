@@ -2244,4 +2244,19 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="ResetSkinArrangementHint" xml:space="preserve">
     <value>Devolver las secciones adonde las coloca este tema, empezar sus bancos en sus mezclas predeterminadas y olvidar dónde dejaste el submezclador</value>
   </data>
+  <data name="LayoutPartMatrix" xml:space="preserve">
+    <value>una matriz de mezclas</value>
+  </data>
+  <data name="MatrixOneOutput" xml:space="preserve">
+    <value>1 salida</value>
+  </data>
+  <data name="MatrixOutputs" xml:space="preserve">
+    <value>{0} salidas</value>
+  </data>
+  <data name="MatrixNoOutput" xml:space="preserve">
+    <value>Sin salida</value>
+  </data>
+  <data name="MatrixEffects" xml:space="preserve">
+    <value>FX</value>
+  </data>
 </root>

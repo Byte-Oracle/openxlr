@@ -51,6 +51,10 @@ internal static partial class MixerPopOutWindowTests
              "regions":{"submixer":{"template":"mix-banks","visibleBanks":3,"selectionDefaults":["stream","monitor"],
                "master":{"template":"master-strip"}}}}}
             """,
+        ["switch-matrix"] = """
+            {"schema":1,"name":"Matrix","tokens":{"Ox.Card.Background":"#24282e"},"layout":{"version":1,
+             "regions":{"submixer":{"template":"mix-matrix"}}}}
+            """,
         ["switch-detached"] = """
             {"schema":1,"name":"Detached","tokens":{"Ox.Card.Background":"#2a262e"},"layout":{"version":1,
              "regions":{"applications":{"template":"application-list"},"submixer":{"popOut":{"default":"detached"}}}}}
@@ -97,7 +101,7 @@ internal static partial class MixerPopOutWindowTests
             {
                 MixerWindow popped = main.PopOutMixer();
                 Layout(popped, 800, 600);
-                foreach (string id in new[] { "switch-row", "switch-grid", "switch-banks", SkinPackage.DefaultId })
+                foreach (string id in new[] { "switch-row", "switch-grid", "switch-banks", "switch-matrix", SkinPackage.DefaultId })
                 {
                     Wear(id);
                     Layout(main, 1040, 900);
@@ -109,12 +113,21 @@ internal static partial class MixerPopOutWindowTests
                     Assert.Same(panel, popped.FindControl<ScrollViewer>("MixerScroll")!.Content);
                     AssertOnePanel(main, panel);
                     Assert.Equal(id == "switch-banks", panel.Banks is not null);
+                    Assert.Equal(id == "switch-matrix", panel.Matrix is not null);
                     Assert.True(panel.Bounds.Width >= panel.MinimumWidth() + 8 - 0.5, where);
                     // The panel in the detached window still writes to the window's sends.
-                    Slider fader = id == "switch-banks"
-                        ? SkinLayoutWindowTests.BankCells(popped)[0][0].GetVisualDescendants().OfType<Slider>().Single()
-                        : popped.GetVisualDescendants().OfType<Slider>().First(s => s.DataContext is SendViewModel);
-                    SendViewModel send = fader.DataContext is BankCellViewModel cell ? cell.Send! : (SendViewModel)fader.DataContext!;
+                    Slider fader = id switch
+                    {
+                        "switch-banks" => SkinLayoutWindowTests.BankCells(popped)[0][0].GetVisualDescendants().OfType<Slider>().Single(),
+                        "switch-matrix" => popped.GetVisualDescendants().OfType<Slider>().First(s => s.IsEffectivelyVisible && s.DataContext is MatrixCellViewModel),
+                        _ => popped.GetVisualDescendants().OfType<Slider>().First(s => s.DataContext is SendViewModel),
+                    };
+                    SendViewModel send = fader.DataContext switch
+                    {
+                        BankCellViewModel cell => cell.Send!,
+                        MatrixCellViewModel cell => cell.Send!,
+                        var other => (SendViewModel)other!,
+                    };
                     fader.Value = round == 1 ? 0.21 : 0.37;
                     Assert.Equal(fader.Value, send.Level);
                     Assert.Contains(send, sends);
@@ -137,10 +150,19 @@ internal static partial class MixerPopOutWindowTests
             Assert.True(banksNeed > 320, $"the banks need {banksNeed}");
             Assert.Equal(banksNeed, sized.ClientSize.Width, 0.5);
             Assert.Equal(panel.MinimumWidth(), sized.FittedMinimum, 0.5);
+            // The whole matrix needs more than the banks did: the window widens again, to the matrix.
+            Wear("switch-matrix");
+            Layout(sized, sized.ClientSize.Width, 600);
+            double matrixNeed = panel.MinimumWidth() + 8 + 16;
+            Assert.True(matrixNeed > banksNeed, $"the matrix needs {matrixNeed}, the banks {banksNeed}");
+            Assert.Equal(matrixNeed, sized.ClientSize.Width, 0.5);
             // A presentation that needs less leaves the width as it was.
+            Wear("switch-banks");
+            Layout(sized, sized.ClientSize.Width, 600);
+            Assert.Equal(matrixNeed, sized.ClientSize.Width, 0.5);
             Wear(SkinPackage.DefaultId);
             Layout(sized, sized.ClientSize.Width, 600);
-            Assert.Equal(banksNeed, sized.ClientSize.Width, 0.5);
+            Assert.Equal(matrixNeed, sized.ClientSize.Width, 0.5);
             // A window the user narrows stays narrow through a switch whose need did not grow.
             Layout(sized, 320, 600);
             Wear("switch-row");

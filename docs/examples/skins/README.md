@@ -3,9 +3,9 @@
 Each folder here is a whole skin, ready to copy. `example` is a short palette
 to start a skin of your own from. `broadcast` is the Broadcast skin OpenXLR
 ships, byte for byte: its palette, its control appearances and a layout that
-puts the inputs in a rack down the left, Monitor A and Stream as two banks of
-upright faders beside it and the monitor output under them. It is the
-reference for writing a layout. The test suite reads both on every build, so
+draws the submixer as a mix matrix, a row per channel and a column per mix,
+with the monitor output at the top right and the inputs hidden until Arrange
+mode shows them. It is the reference for writing a layout. The test suite reads both on every build, so
 they are always files the current OpenXLR accepts. JSON has no comments, so
 the explanation lives here and in [docs/skins.md](../../skins.md).
 

@@ -120,6 +120,8 @@ public static class SkinLayoutTemplates
     public const string ChannelTiles = "channel-tiles";
     /// <summary>The submixer by mix: banks, each showing every channel's send into the mix its picker chose.</summary>
     public const string MixBanks = "mix-banks";
+    /// <summary>The submixer as a matrix: a row per channel, a column per mix, and the channel's send into the mix where they cross.</summary>
+    public const string MixMatrix = "mix-matrix";
     /// <summary>An input rack's strip: one row of parts for one input channel.</summary>
     public const string InputRow = "input-row";
     /// <summary>A bank's strip: the parts of one send stacked in a column, the strips side by side.</summary>
@@ -144,7 +146,7 @@ public static class SkinLayoutTemplates
     public static IReadOnlyList<string> Inputs { get; } = [HardwarePanel, InputRack];
 
     /// <summary>What <c>regions.submixer.template</c> may name; the first is the default.</summary>
-    public static IReadOnlyList<string> Submixer { get; } = [ChannelTiles, MixBanks];
+    public static IReadOnlyList<string> Submixer { get; } = [ChannelTiles, MixBanks, MixMatrix];
 
     /// <summary>What <c>regions.monitor.template</c> may name; the first is the default.</summary>
     public static IReadOnlyList<string> Monitor { get; } = [OutputPanel, OutputToolbar];
@@ -191,6 +193,106 @@ public static class SkinStripParts
 
     /// <summary>A send strip's parts, in their default order.</summary>
     public static IReadOnlyList<string> Send { get; } = [Identity, Meter, Fader, Value, Mute];
+}
+
+/// <summary>
+/// The named parts of a mix matrix: its row heads, its column heads and its
+/// cells. As with a strip, a skin orders them and leaves some out; it cannot
+/// add one, and a part only ever shows the control the matrix gives it.
+/// </summary>
+public static class SkinMatrixParts
+{
+    /// <summary>A column head's mix master: its level as a short fader and that level as a number.</summary>
+    public const string Master = "master";
+    /// <summary>A column head's outputs line: how many monitor outputs hear the mix, or what kind of mix it is.</summary>
+    public const string Outputs = "outputs";
+
+    /// <summary>
+    /// A row head's parts, in their default order: the channel's icon and
+    /// name, its own meter, the input's hardware gain or Aux In's level, the
+    /// input's hardware mute and the input's plugin chain. A channel without
+    /// one of them, an application channel without gain, mute or chain, simply
+    /// does not draw it.
+    /// </summary>
+    public static IReadOnlyList<string> RowHead { get; } =
+        [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute, SkinStripParts.Effects];
+
+    /// <summary>
+    /// A column head's parts, in their default order: the mix's icon and
+    /// name, its master, its mute, the button that opens its plugin chain and
+    /// its outputs line.
+    /// </summary>
+    public static IReadOnlyList<string> ColumnHead { get; } =
+        [SkinStripParts.Identity, Master, SkinStripParts.Mute, SkinStripParts.Effects, Outputs];
+
+    /// <summary>
+    /// A cell's parts, in their default order: the send's mute in the
+    /// column's mix, its level as a short fader, and that level as a number.
+    /// </summary>
+    public static IReadOnlyList<string> Cell { get; } = [SkinStripParts.Mute, SkinStripParts.Fader, SkinStripParts.Value];
+
+    /// <summary>The part a row or column head can never hide: it always says whose it is.</summary>
+    public const string HeadKept = SkinStripParts.Identity;
+
+    /// <summary>The part a cell can never hide: it always shows its send's level.</summary>
+    public const string CellKept = SkinStripParts.Fader;
+}
+
+/// <summary>How a matrix cell shows that its send is muted.</summary>
+public enum SkinMatrixMuted
+{
+    /// <summary>The cell's background takes <c>Ox.Matrix.MutedBackground</c> and its mute <c>Ox.Matrix.MutedForeground</c>.</summary>
+    Tint,
+    /// <summary>The cell fades to <c>Ox.Control.DisabledOpacity</c>.</summary>
+    Dim,
+}
+
+/// <summary>Where a matrix draws a channel's meter beside its faders.</summary>
+public enum SkinMatrixMeter
+{
+    /// <summary>As the track of every fader in the channel's row: the source fader and each send's.</summary>
+    UnderFader,
+    /// <summary>Not under the faders. The row head's meter part still shows it unless the skin hides that part.</summary>
+    None,
+}
+
+/// <summary>
+/// One part list of a matrix: the order of its parts, the parts left out
+/// and how it names its channel or mix. <see cref="Order"/> is complete: the
+/// parts the skin ordered, then the rest in their default order.
+/// </summary>
+public sealed record SkinMatrixPartOptions(IReadOnlyList<string> Order, IReadOnlyList<string> Hidden, SkinLabelStyle Label)
+{
+    /// <summary>The parts drawn, in the order they are drawn.</summary>
+    public IReadOnlyList<string> Shown => [.. Order.Where(p => !Hidden.Contains(p, StringComparer.Ordinal))];
+
+    /// <summary>True when this part is drawn.</summary>
+    public bool Shows(string part) => Order.Contains(part, StringComparer.Ordinal) && !Hidden.Contains(part, StringComparer.Ordinal);
+
+    internal string Description() => $"[{string.Join(',', Shown)}]{Label}";
+}
+
+/// <summary>
+/// A mix matrix: how its row heads, column heads and cells are drawn, how a
+/// muted cell shows it, and whether the channel's meter runs under the
+/// faders. Which rows and columns show is never the skin's to say: every
+/// channel and every mix the view shows has one.
+/// </summary>
+public sealed record SkinMatrixOptions(
+    SkinMatrixPartOptions RowHead,
+    SkinMatrixPartOptions ColumnHead,
+    SkinMatrixPartOptions Cell,
+    SkinMatrixMuted Muted = SkinMatrixMuted.Tint,
+    SkinMatrixMeter Meter = SkinMatrixMeter.UnderFader)
+{
+    /// <summary>Every part in its default order, muted cells tinted and the meter under the faders.</summary>
+    public static SkinMatrixOptions Default { get; } = new(
+        new SkinMatrixPartOptions(SkinMatrixParts.RowHead, [], SkinLabelStyle.Text),
+        new SkinMatrixPartOptions(SkinMatrixParts.ColumnHead, [], SkinLabelStyle.Text),
+        new SkinMatrixPartOptions(SkinMatrixParts.Cell, [], SkinLabelStyle.Text));
+
+    internal string Description() =>
+        $"{RowHead.Description()}/{ColumnHead.Description()}/{Cell.Description()}/{Muted}/{Meter}";
 }
 
 /// <summary>How a strip names its channel.</summary>
@@ -297,10 +399,12 @@ public sealed record SkinInputsOptions(string Template, SkinStripOptions Strip)
 }
 
 /// <summary>
-/// The submixer: the channel tiles the window has always drawn, or mix
-/// banks. A bank always has a picker that lists every mix; the skin only
-/// says how many banks show, which way they run, which mixes they start on
-/// and how their strips and masters are drawn.
+/// The submixer: the channel tiles the window has always drawn, mix banks or
+/// a mix matrix. A bank always has a picker that lists every mix; the skin
+/// only says how many banks show, which way they run, which mixes they start
+/// on and how their strips and masters are drawn. A matrix always shows every
+/// mix the view shows, so it has nothing to pick; the skin says how its heads
+/// and cells are drawn (<see cref="Matrix"/>).
 /// </summary>
 /// <param name="SelectionDefaults">
 /// Mix ids as mixer.json names them, which the banks show first when the
@@ -322,9 +426,14 @@ public sealed record SkinSubmixerOptions(
 
     public bool IsBanks => Template == SkinLayoutTemplates.MixBanks;
 
+    public bool IsMatrix => Template == SkinLayoutTemplates.MixMatrix;
+
+    /// <summary>How a <c>mix-matrix</c> is drawn; <see cref="SkinMatrixOptions.Default"/> with any other template.</summary>
+    public SkinMatrixOptions Matrix { get; init; } = SkinMatrixOptions.Default;
+
     internal string Description() => IsBanks
         ? $"{Template}({Orientation},{VisibleBanks},{string.Join(',', SelectionDefaults)},{Strip.Description()},{Master.Description()})"
-        : Template;
+        : IsMatrix ? $"{Template}({Matrix.Description()})" : Template;
 }
 
 /// <summary>Where the submixer starts out under a skin, until the user docks it or pops it out.</summary>

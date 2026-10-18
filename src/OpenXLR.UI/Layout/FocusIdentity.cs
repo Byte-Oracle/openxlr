@@ -38,6 +38,9 @@ internal sealed record FocusIdentity(string Role, string? Channel, string? Mix, 
         return control.DataContext switch
         {
             BankCellViewModel cell => new(role, cell.Channel.Id, cell.Bank.Mix?.Id, null, name, null),
+            MatrixCellViewModel cell => new(role, cell.Channel.Id, cell.Mix.Id, null, name, null),
+            MatrixColumnViewModel column => new(role, null, column.Mix.Id, null, name, null),
+            MatrixRowViewModel row => new(role, row.Channel.Id, null, null, name, null),
             BankMasterViewModel master => new(role, null, master.Mix.Id, null, name, null),
             MixBankViewModel bank => new(role, null, bank.Mix?.Id, null, name, null),
             SendViewModel send => new(role, send.ChannelId, send.MixId, null, name, null),

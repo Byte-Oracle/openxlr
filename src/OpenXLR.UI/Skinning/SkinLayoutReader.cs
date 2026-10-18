@@ -38,9 +38,13 @@ public static class SkinLayoutReader
     private static readonly string[] SectionOptions = ["visibility", "width", "height"];
     private static readonly string[] InputsOptions = [.. SectionOptions, "template", "strip"];
     private static readonly string[] SubmixerOptions =
-        [.. SectionOptions, "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master", "popOut"];
+        [.. SectionOptions, "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master", "matrix", "popOut"];
     private static readonly string[] TemplateOptions = [.. SectionOptions, "template"];
     private static readonly string[] BankOnlyOptions = ["orientation", "visibleBanks", "selectionDefaults", "strip", "master"];
+    private static readonly string[] MatrixOnlyOptions = ["matrix"];
+    private static readonly string[] MatrixOptions = ["rowHead", "columnHead", "cell", "meter"];
+    private static readonly string[] MatrixMuted = ["tint", "dim"];
+    private static readonly string[] MatrixMeters = ["under-fader", "none"];
     private static readonly string[] Orientations = ["horizontal", "vertical"];
     private static readonly string[] Placements = ["below-label", "beside-label", "beside-fader"];
     private static readonly string[] Directions = ["normal", "reversed"];
@@ -425,13 +429,21 @@ public static class SkinLayoutReader
         string template = fields.TryGetValue("template", out JsonElement element)
             ? Name(element, path + ".template", SkinLayoutTemplates.Submixer, "a submixer template")
             : SkinLayoutTemplates.ChannelTiles;
-        if (template != SkinLayoutTemplates.MixBanks)
-        {
-            if (BankOnlyOptions.FirstOrDefault(fields.ContainsKey) is { } bankOnly)
-                throw new LayoutException($"{path}.{bankOnly}",
-                    $"\"{bankOnly}\" belongs to the \"{SkinLayoutTemplates.MixBanks}\" template; set \"template\": \"{SkinLayoutTemplates.MixBanks}\" or leave it out.");
-            return SkinSubmixerOptions.Default;
-        }
+        if (template != SkinLayoutTemplates.MixBanks && BankOnlyOptions.FirstOrDefault(fields.ContainsKey) is { } bankOnly)
+            throw new LayoutException($"{path}.{bankOnly}",
+                $"\"{bankOnly}\" belongs to the \"{SkinLayoutTemplates.MixBanks}\" template; set \"template\": \"{SkinLayoutTemplates.MixBanks}\" or leave it out.");
+        if (template != SkinLayoutTemplates.MixMatrix && MatrixOnlyOptions.FirstOrDefault(fields.ContainsKey) is { } matrixOnly)
+            throw new LayoutException($"{path}.{matrixOnly}",
+                $"\"{matrixOnly}\" belongs to the \"{SkinLayoutTemplates.MixMatrix}\" template; set \"template\": \"{SkinLayoutTemplates.MixMatrix}\" or leave it out.");
+        if (template == SkinLayoutTemplates.MixMatrix)
+            return SkinSubmixerOptions.Default with
+            {
+                Template = template,
+                Matrix = fields.TryGetValue("matrix", out JsonElement matrixElement)
+                    ? ReadMatrix(matrixElement, path + ".matrix")
+                    : SkinMatrixOptions.Default,
+            };
+        if (template != SkinLayoutTemplates.MixBanks) return SkinSubmixerOptions.Default;
         SkinLayoutOrientation orientation = fields.TryGetValue("orientation", out JsonElement orientationElement)
             ? Orientation(orientationElement, path + ".orientation")
             : SkinLayoutOrientation.Horizontal;
@@ -449,6 +461,95 @@ public static class SkinLayoutReader
             ? ReadMaster(masterElement, path + ".master")
             : SkinMasterOptions.Default;
         return new SkinSubmixerOptions(template, orientation, banks, defaults, strip, master);
+    }
+
+    /// <summary>
+    /// A matrix: its row heads, its column heads, its cells and where the
+    /// channel's meter goes. Every one is optional, and what it leaves out
+    /// keeps its default.
+    /// </summary>
+    private static SkinMatrixOptions ReadMatrix(JsonElement element, string path)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, "\"matrix\"");
+        Only(fields, path, "\"matrix\"", MatrixOptions);
+        SkinMatrixOptions options = SkinMatrixOptions.Default;
+        if (fields.TryGetValue("rowHead", out JsonElement rowHead))
+            options = options with
+            {
+                RowHead = ReadMatrixParts(rowHead, path + ".rowHead", "\"rowHead\"", "a row head", SkinMatrixParts.RowHead,
+                    SkinMatrixParts.HeadKept, label: true, muted: false).Parts,
+            };
+        if (fields.TryGetValue("columnHead", out JsonElement columnHead))
+            options = options with
+            {
+                ColumnHead = ReadMatrixParts(columnHead, path + ".columnHead", "\"columnHead\"", "a column head",
+                    SkinMatrixParts.ColumnHead, SkinMatrixParts.HeadKept, label: true, muted: false).Parts,
+            };
+        if (fields.TryGetValue("cell", out JsonElement cell))
+        {
+            (SkinMatrixPartOptions parts, SkinMatrixMuted? muted) = ReadMatrixParts(cell, path + ".cell", "\"cell\"", "a cell",
+                SkinMatrixParts.Cell, SkinMatrixParts.CellKept, label: false, muted: true);
+            options = options with { Cell = parts, Muted = muted ?? SkinMatrixMuted.Tint };
+        }
+        if (fields.TryGetValue("meter", out JsonElement meter))
+            options = options with
+            {
+                Meter = Name(meter, path + ".meter", MatrixMeters, "a matrix meter placement") == "none"
+                    ? SkinMatrixMeter.None : SkinMatrixMeter.UnderFader,
+            };
+        return options;
+    }
+
+    /// <summary>
+    /// One part list of a matrix: <c>parts</c> in the order they are drawn,
+    /// <c>hidden</c>, and, where the list has them, <c>label</c> and
+    /// <c>muted</c>. A part named in neither list keeps its default place
+    /// after the ordered ones; <paramref name="kept"/> can never be hidden.
+    /// </summary>
+    private static (SkinMatrixPartOptions Parts, SkinMatrixMuted? Muted) ReadMatrixParts(JsonElement element, string path,
+        string quoted, string what, IReadOnlyList<string> parts, string kept, bool label, bool muted)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, quoted);
+        Only(fields, path, quoted, label ? ["parts", "hidden", "label"] : ["parts", "hidden", "muted"]);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        List<string> Parts(string name)
+        {
+            var list = new List<string>();
+            if (!fields.TryGetValue(name, out JsonElement array)) return list;
+            string at = $"{path}.{name}";
+            if (array.ValueKind != JsonValueKind.Array)
+                throw new LayoutException(at, $"expected an array of part names: {Quoted(parts)}.");
+            if (array.GetArrayLength() > parts.Count)
+                throw new LayoutException(at, $"{what} has {parts.Count} parts, so \"{name}\" lists at most {parts.Count}.");
+            int index = 0;
+            foreach (JsonElement item in array.EnumerateArray())
+            {
+                string itemPath = $"{at}[{index++}]";
+                string? part = item.ValueKind == JsonValueKind.String ? item.GetString() : null;
+                if (part is null || !parts.Contains(part, StringComparer.Ordinal))
+                    throw new LayoutException(itemPath,
+                        $"{(part is null ? "this" : $"\"{Printable(part)}\"")} is not a part of {what}; use one of {Quoted(parts)}.");
+                if (!seen.Add(part))
+                    throw new LayoutException(itemPath,
+                        $"\"{part}\" is listed twice; a part appears once across \"parts\" and \"hidden\".");
+                if (name == "hidden" && part == kept)
+                    throw new LayoutException(itemPath, kept == SkinMatrixParts.CellKept
+                        ? $"a cell always shows its send's level, so \"{kept}\" cannot be hidden."
+                        : $"{what} always shows whose it is, so \"{kept}\" cannot be hidden.");
+                list.Add(part);
+            }
+            return list;
+        }
+        List<string> ordered = Parts("parts");
+        List<string> hidden = Parts("hidden");
+        string[] order = [.. ordered, .. parts.Where(p => !ordered.Contains(p, StringComparer.Ordinal))];
+        SkinLabelStyle style = label && fields.TryGetValue("label", out JsonElement labelElement)
+            ? ReadLabel(labelElement, path + ".label")
+            : SkinLabelStyle.Text;
+        SkinMatrixMuted? mutedStyle = muted && fields.TryGetValue("muted", out JsonElement mutedElement)
+            ? Name(mutedElement, path + ".muted", MatrixMuted, "a muted cell style") == "dim" ? SkinMatrixMuted.Dim : SkinMatrixMuted.Tint
+            : null;
+        return (new SkinMatrixPartOptions(order, hidden, style), mutedStyle);
     }
 
     /// <summary>

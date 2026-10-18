@@ -1,0 +1,329 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:OpenXLR.UI.Localization"
+             xmlns:vm="using:OpenXLR.UI"
+             xmlns:skin="using:OpenXLR.UI.Skinning"
+             xmlns:layout="using:OpenXLR.UI.Layout"
+             x:Class="OpenXLR.UI.Views.MixMatrixView"
+             x:DataType="layout:MixMatrixViewModel">
+
+  <!-- The submixer as a matrix: a head per mix across the top, a row per
+       channel under it, and in each row the channel's head and one cell per
+       mix. Every cell is Ox.Matrix.CellWidth wide and every row
+       Ox.Matrix.RowHeight tall, so the columns line up. The row heads are the
+       INPUTS panel's own controls; the cells and column heads are bound to
+       the mixer's own sends and mixes. Every colour, size and radius is an
+       Ox.* token. -->
+
+  <UserControl.Styles>
+    <Style Selector="Border.matrixHead">
+      <Setter Property="Height" Value="{DynamicResource Ox.Matrix.RowHeight}"/>
+    </Style>
+    <Style Selector="Border.matrixCell">
+      <Setter Property="Width" Value="{DynamicResource Ox.Matrix.CellWidth}"/>
+      <Setter Property="Height" Value="{DynamicResource Ox.Matrix.RowHeight}"/>
+      <Setter Property="Padding" Value="4,0"/>
+    </Style>
+    <!-- a muted send: the cell tinted and its mute lettered in the muted colour, or the cell faded -->
+    <Style Selector="Border.matrixCell.tinted">
+      <Setter Property="Background" Value="{DynamicResource Ox.Matrix.MutedBackground}"/>
+    </Style>
+    <Style Selector="Border.matrixCell.tinted ToggleButton.matrixMute:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Foreground" Value="{DynamicResource Ox.Matrix.MutedForeground}"/>
+    </Style>
+    <Style Selector="Border.matrixCell.dimmed">
+      <Setter Property="Opacity" Value="{DynamicResource Ox.Control.DisabledOpacity}"/>
+    </Style>
+    <Style Selector="Border.matrixColumn">
+      <Setter Property="Width" Value="{DynamicResource Ox.Matrix.CellWidth}"/>
+    </Style>
+  </UserControl.Styles>
+
+  <UserControl.Resources>
+    <!-- A row head, by what the channel is. -->
+    <layout:StripTemplateSelector x:Key="RowHeads">
+      <!-- XLR 1: its hardware gain over its meter, its mute and its chain, under the INPUTS panel's rules -->
+      <DataTemplate x:Key="xlr1" x:DataType="layout:MatrixRowViewModel">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead">
+          <DockPanel>
+              <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
+              <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
+                      Name="MatrixRowName">
+                <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                  <Button Grid.RowSpan="2" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                          Content="↕" Tag="{Binding Channel}"
+                          AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                          ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+                  <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                             Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" VerticalAlignment="Center"
+                             IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+                </Grid>
+              </Border>
+            <Border Width="{DynamicResource Ox.Matrix.CellWidth}" Padding="4,0" Name="MatrixSource">
+              <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center">
+                <StackPanel layout:StripPanel.Part="meter" Orientation="Vertical" Spacing="1" VerticalAlignment="Center"
+                            ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+                </StackPanel>
+                <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                    <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
+                            Value="{Binding Main.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
+                            AutomationProperties.Name="{loc:Text Key=XLR1Gain}"/>
+                  </layout:MeterFader>
+                </Grid>
+                <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Main.Mute, Mode=TwoWay}"
+                              IsEnabled="{Binding !Main.PhantomSettling}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
+                              MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
+                              ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                <Button layout:StripPanel.Part="effects" Classes="matrixEffects" Content="{loc:Text Key=MatrixEffects}"
+                        Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                        IsVisible="{Binding Main.HasMixer}" Click="OnXlrInserts"
+                        AutomationProperties.Name="{Binding Main.Inserts.ButtonText}" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
+              </layout:StripPanel>
+            </Border>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+      <!-- XLR 2: the same with the second input's properties, shown only on an interface with two -->
+      <DataTemplate x:Key="xlr2" x:DataType="layout:MatrixRowViewModel">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead">
+          <DockPanel>
+              <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
+              <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
+                      Name="MatrixRowName">
+                <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                  <Button Grid.RowSpan="2" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                          Content="↕" Tag="{Binding Channel}"
+                          AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                          ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+                  <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                             Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" VerticalAlignment="Center"
+                             IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+                </Grid>
+              </Border>
+            <Border Width="{DynamicResource Ox.Matrix.CellWidth}" Padding="4,0" Name="MatrixSource">
+              <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center">
+                <StackPanel layout:StripPanel.Part="meter" Orientation="Vertical" Spacing="1" VerticalAlignment="Center"
+                            ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+                </StackPanel>
+                <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                    <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
+                            Value="{Binding Main.Gain2Db, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
+                            AutomationProperties.Name="{loc:Text Key=XLR2Gain}"/>
+                  </layout:MeterFader>
+                </Grid>
+                <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Main.Mute2, Mode=TwoWay}"
+                              IsEnabled="{Binding !Main.PhantomSettling2}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
+                              MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
+                              ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                <Button layout:StripPanel.Part="effects" Classes="matrixEffects" Content="{loc:Text Key=MatrixEffects}"
+                        Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                        IsVisible="{Binding Main.HasMixer}" Click="OnXlrInserts"
+                        AutomationProperties.Name="{Binding Main.Inserts2.ButtonText}" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
+              </layout:StripPanel>
+            </Border>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+      <!-- Aux In: its level over its meter and the level lock, where the interface has the stage -->
+      <DataTemplate x:Key="aux" x:DataType="layout:MatrixRowViewModel">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead">
+          <DockPanel>
+              <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
+              <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
+                      Name="MatrixRowName">
+                <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                  <Button Grid.RowSpan="2" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                          Content="↕" Tag="{Binding Channel}"
+                          AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                          ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+                  <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                             Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" VerticalAlignment="Center"
+                             IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+                </Grid>
+              </Border>
+            <Border Width="{DynamicResource Ox.Matrix.CellWidth}" Padding="4,0" Name="MatrixSource">
+              <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center">
+                <StackPanel layout:StripPanel.Part="meter" Orientation="Vertical" Spacing="1" VerticalAlignment="Center"
+                            ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+                </StackPanel>
+                <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center" IsVisible="{Binding Main.CapAuxInput}">
+                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                    <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="-60" Maximum="0"
+                            Value="{Binding Main.AuxLevelDb, Mode=TwoWay}"
+                            AutomationProperties.Name="{loc:Text Key=USBAuxIn}"/>
+                  </layout:MeterFader>
+                  <ToggleButton Grid.Column="1" Content="{loc:Text Key=Lock}" IsChecked="{Binding Main.AuxLevelLock, Mode=TwoWay}"
+                                Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                                AutomationProperties.Name="{loc:Text Key=LevelLock}" ToolTip.Tip="{loc:Text Key=LevelLock}"/>
+                </Grid>
+              </layout:StripPanel>
+            </Border>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+      <!-- an application or capture channel: its name and its meter, which is all it has -->
+      <DataTemplate x:Key="channel" x:DataType="layout:MatrixRowViewModel">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead">
+          <DockPanel>
+              <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
+              <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
+                      Name="MatrixRowName">
+                <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                  <Button Grid.RowSpan="2" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                          Content="↕" Tag="{Binding Channel}"
+                          AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                          ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+                  <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                             Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" VerticalAlignment="Center"
+                             IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Channel.CaptureLabel}" Classes="hint" FontSize="11"
+                             TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Channel.CaptureLabel}"
+                             IsVisible="{Binding Channel.CaptureLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </Grid>
+              </Border>
+            <Border Width="{DynamicResource Ox.Matrix.CellWidth}" Padding="4,0" Name="MatrixSource">
+              <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center">
+                <StackPanel layout:StripPanel.Part="meter" Orientation="Vertical" Spacing="1" VerticalAlignment="Center"
+                            ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+                </StackPanel>
+              </layout:StripPanel>
+            </Border>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+    </layout:StripTemplateSelector>
+  </UserControl.Resources>
+
+  <!-- The whole matrix scrolls sideways inside its card when it is wider;
+       the row heads scroll with it, so focus runs row by row, head first. -->
+  <ScrollViewer Name="MatrixScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+    <!-- room under the last row for the sideways scroll bar, which is drawn over the content -->
+    <StackPanel Name="MatrixLines" Spacing="{x:Static skin:SkinLayoutDefaults.MatrixSpacing}" HorizontalAlignment="Left" Margin="0,0,0,10">
+      <StackPanel Orientation="Horizontal" Spacing="{x:Static skin:SkinLayoutDefaults.MatrixSpacing}">
+        <!-- the corner over the row heads: as wide as a head, so the columns stand over their cells -->
+        <Border Classes="tile" Name="MatrixCorner" Background="Transparent" BorderBrush="Transparent">
+          <StackPanel Orientation="Horizontal">
+            <Panel Width="{DynamicResource Ox.Matrix.NameWidth}"/>
+            <Panel Width="{DynamicResource Ox.Matrix.CellWidth}"/>
+          </StackPanel>
+        </Border>
+        <ItemsControl Name="MatrixColumns" ItemsSource="{Binding Columns}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="{x:Static skin:SkinLayoutDefaults.MatrixSpacing}"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="layout:MatrixColumnViewModel">
+              <Border Classes="tile matrixColumn" Name="MatrixColumn" Padding="6,6,6,4">
+                <DockPanel>
+                  <!-- a thin line in the mix's own colour, where the layout editor gave it one -->
+                  <Border DockPanel.Dock="Bottom" Height="2" Margin="0,4,0,0" CornerRadius="1" Name="MatrixColumnLine"
+                          Background="{Binding Mix.Appearance.Accent}" IsVisible="{Binding Mix.Appearance.HasColour}"/>
+                  <layout:StripPanel DockPanel.Dock="{Binding ControlsDock}" Spec="{Binding ControlSpec}" Spacing="4"
+                                     IsVisible="{Binding HasControls}" Margin="0,4">
+                    <layout:MeterFader layout:StripPanel.Part="master" ShowsMeter="{Binding Matrix.MeterUnderFader}"
+                                       LeftLevel="{Binding Mix.MeterL}" RightLevel="{Binding Mix.MeterR}"
+                                       LeftName="{loc:Text Key=LeftLevel}" RightName="{loc:Text Key=RightLevel}" VerticalAlignment="Center">
+                      <Slider Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="{Binding Mix.VolumeRange.Maximum}"
+                              Value="{Binding Mix.Volume, Mode=TwoWay}" AutomationProperties.Name="{Binding MasterName}"/>
+                    </layout:MeterFader>
+                    <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Mix.Muted, Mode=TwoWay}"
+                                  Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                                  AutomationProperties.Name="{Binding MuteName}" ToolTip.Tip="{Binding MuteName}"/>
+                    <Button layout:StripPanel.Part="effects" Classes="matrixEffects" Content="{loc:Text Key=MatrixEffects}"
+                            Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                            Click="OnMixInserts" AutomationProperties.Name="{Binding Mix.Inserts.ButtonText}"
+                            ToolTip.Tip="{loc:Text Key=StereoPluginsProcessingThisMixBeforeItReaches}"/>
+                  </layout:StripPanel>
+                  <layout:StripPanel Spec="{Binding TextSpec}" Spacing="1">
+                    <Grid layout:StripPanel.Part="identity" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                      <TextBlock Text="{Binding Mix.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
+                                 VerticalAlignment="Center" IsVisible="{Binding ShowsIcon}"
+                                 AutomationProperties.Name="{Binding Mix.Name}" ToolTip.Tip="{Binding Mix.Name}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Mix.Name}" Classes="strip" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Mix.Name}"/>
+                      <Button Grid.Column="2" Classes="ghost reorderHandle" Classes.fixedPlace="{Binding HandleHidden}"
+                              Content="↔" Tag="{Binding Mix}"
+                              AutomationProperties.Name="{Binding Mix.Name, StringFormat={loc:Text Key=MoveItem}}"
+                              ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+                    </Grid>
+                    <TextBlock layout:StripPanel.Part="outputs" Text="{Binding OutputsText}" Classes="hint" FontSize="11"
+                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding OutputsText}"/>
+                  </layout:StripPanel>
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <ItemsControl Name="MatrixRows" ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="{x:Static skin:SkinLayoutDefaults.MatrixSpacing}"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="layout:MatrixRowViewModel">
+            <StackPanel Orientation="Horizontal" Spacing="{x:Static skin:SkinLayoutDefaults.MatrixSpacing}" Name="MatrixRow">
+              <ContentControl Content="{Binding}" ContentTemplate="{StaticResource RowHeads}" Focusable="False"/>
+              <ItemsControl ItemsSource="{Binding Cells}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="{x:Static skin:SkinLayoutDefaults.MatrixSpacing}"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="layout:MatrixCellViewModel">
+                    <Border Classes="tile matrixCell" Name="MatrixCell" Classes.tinted="{Binding Tinted}"
+                            Classes.dimmed="{Binding Dimmed}" Classes.empty="{Binding IsEmpty}">
+                      <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding HasSend}">
+                        <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Send.Muted, Mode=TwoWay}"
+                                      Padding="5,2" FontSize="11" VerticalAlignment="Center"
+                                      MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                                      AutomationProperties.Name="{Binding MuteName}" ToolTip.Tip="{Binding MuteName}"/>
+                        <layout:MeterFader layout:StripPanel.Part="fader" ShowsMeter="{Binding MeterUnderFader}"
+                                           LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                           LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}"
+                                           VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
+                          <Slider Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                                  Value="{Binding Send.Level, Mode=TwoWay}" AutomationProperties.Name="{Binding SendName}"/>
+                        </layout:MeterFader>
+                        <TextBlock layout:StripPanel.Part="value" Text="{Binding Send.LevelText}" Classes="val" FontSize="11"
+                                   MinWidth="22" TextAlignment="Right" VerticalAlignment="Center"/>
+                      </layout:StripPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -624,6 +624,32 @@
           "minimum": 0,
           "maximum": 64,
           "description": "the gap between mix banks"
+        },
+        "Ox.Matrix.NameWidth": {
+          "type": "number",
+          "minimum": 56,
+          "maximum": 400,
+          "description": "the width of a row head's name column"
+        },
+        "Ox.Matrix.CellWidth": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 400,
+          "description": "the width of a cell, of a column head and of a row head's source controls"
+        },
+        "Ox.Matrix.RowHeight": {
+          "type": "number",
+          "minimum": 28,
+          "maximum": 120,
+          "description": "the height of a row: its head and every cell in it"
+        },
+        "Ox.Matrix.MutedBackground": {
+          "$ref": "#/$defs/brush",
+          "description": "the background of a cell whose send is muted, when the matrix tints muted cells. Translucent by default, so the cell's own surface shows through as a red tint"
+        },
+        "Ox.Matrix.MutedForeground": {
+          "$ref": "#/$defs/brush",
+          "description": "the lettering of a muted send's mute in a tinted cell"
         }
       }
     },
@@ -1274,7 +1300,7 @@
     },
     "layoutSubmixerOptions": {
       "type": "object",
-      "description": "The submixer: the options every section has, the template it is drawn with, and for mix banks how many show and how they are drawn.",
+      "description": "The submixer: the options every section has, the template it is drawn with, for mix banks how many show and how they are drawn, and for a mix matrix how its heads and cells are drawn.",
       "additionalProperties": false,
       "properties": {
         "visibility": {
@@ -1301,10 +1327,11 @@
         "template": {
           "enum": [
             "channel-tiles",
-            "mix-banks"
+            "mix-banks",
+            "mix-matrix"
           ],
           "default": "channel-tiles",
-          "description": "channel-tiles is the classic submixer; mix-banks draws banks by mix, each with a picker of every mix."
+          "description": "channel-tiles is the classic submixer; mix-banks draws banks by mix, each with a picker of every mix; mix-matrix draws a row per channel and a column per mix, with each send where they cross."
         },
         "orientation": {
           "enum": [
@@ -1338,6 +1365,10 @@
         "master": {
           "$ref": "#/$defs/layoutMaster",
           "description": "How a bank's master is drawn. Only with template mix-banks."
+        },
+        "matrix": {
+          "$ref": "#/$defs/layoutMatrix",
+          "description": "How the matrix's row heads, column heads and cells are drawn. Only with template mix-matrix."
         },
         "popOut": {
           "$ref": "#/$defs/layoutPopOut",
@@ -1384,7 +1415,28 @@
             }
           ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "template"
+            ],
+            "properties": {
+              "template": {
+                "const": "mix-matrix"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "matrix"
+              ]
+            }
+          }
+        }
+      ]
     },
     "layoutInputStrip": {
       "type": "object",
@@ -1508,6 +1560,148 @@
         },
         "fader": {
           "$ref": "#/$defs/layoutFader"
+        }
+      }
+    },
+    "layoutMatrix": {
+      "type": "object",
+      "description": "A mix matrix: how its row heads, column heads and cells are drawn, and where the channel's meter goes.",
+      "additionalProperties": false,
+      "properties": {
+        "rowHead": {
+          "$ref": "#/$defs/layoutMatrixRowHead"
+        },
+        "columnHead": {
+          "$ref": "#/$defs/layoutMatrixColumnHead"
+        },
+        "cell": {
+          "$ref": "#/$defs/layoutMatrixCell"
+        },
+        "meter": {
+          "enum": [
+            "under-fader",
+            "none"
+          ],
+          "default": "under-fader",
+          "description": "under-fader draws the channel's meter as the track of every fader in its row; none leaves plain faders."
+        }
+      }
+    },
+    "layoutMatrixRowHead": {
+      "type": "object",
+      "description": "A matrix row head: a channel's name and the controls the INPUTS panel shows for it.",
+      "additionalProperties": false,
+      "properties": {
+        "parts": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 5,
+          "items": {
+            "enum": [
+              "identity",
+              "meter",
+              "gain",
+              "mute",
+              "effects"
+            ]
+          },
+          "description": "Parts in the order they are drawn. Parts left out follow in their default order; a part appears once across parts and hidden."
+        },
+        "hidden": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 4,
+          "items": {
+            "enum": [
+              "meter",
+              "gain",
+              "mute",
+              "effects"
+            ]
+          },
+          "description": "Parts left out. identity is always shown."
+        },
+        "label": {
+          "$ref": "#/$defs/layoutLabel"
+        }
+      }
+    },
+    "layoutMatrixColumnHead": {
+      "type": "object",
+      "description": "A matrix column head: a mix's name, its outputs line, its master, mute and chain button.",
+      "additionalProperties": false,
+      "properties": {
+        "parts": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 5,
+          "items": {
+            "enum": [
+              "identity",
+              "master",
+              "mute",
+              "effects",
+              "outputs"
+            ]
+          },
+          "description": "Parts in the order they are drawn. Parts left out follow in their default order; a part appears once across parts and hidden."
+        },
+        "hidden": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 4,
+          "items": {
+            "enum": [
+              "master",
+              "mute",
+              "effects",
+              "outputs"
+            ]
+          },
+          "description": "Parts left out. identity is always shown."
+        },
+        "label": {
+          "$ref": "#/$defs/layoutLabel"
+        }
+      }
+    },
+    "layoutMatrixCell": {
+      "type": "object",
+      "description": "A matrix cell: one channel's send into one mix.",
+      "additionalProperties": false,
+      "properties": {
+        "parts": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 3,
+          "items": {
+            "enum": [
+              "mute",
+              "fader",
+              "value"
+            ]
+          },
+          "description": "Parts in the order they are drawn. Parts left out follow in their default order; a part appears once across parts and hidden."
+        },
+        "hidden": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 2,
+          "items": {
+            "enum": [
+              "mute",
+              "value"
+            ]
+          },
+          "description": "Parts left out. fader is always shown."
+        },
+        "muted": {
+          "enum": [
+            "tint",
+            "dim"
+          ],
+          "default": "tint",
+          "description": "tint colours a muted send's cell with Ox.Matrix.MutedBackground; dim fades it to Ox.Control.DisabledOpacity."
         }
       }
     },

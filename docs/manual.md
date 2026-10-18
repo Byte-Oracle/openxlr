@@ -1481,26 +1481,40 @@ the application, so a package brings them with it:
   one of them: Catppuccin, Catppuccin Latte, Everforest, Gruvbox,
   Kanagawa, Matte Black, Nord, Osaka Jade, Ristretto, Rose Pine and Tokyo
   Night. Catppuccin Latte and Rose Pine are light;
-- **Broadcast**, a dark console palette that also rearranges the window,
+- **Broadcast**, a dark neutral palette that also rearranges the window,
   described below.
 
 <a name="broadcast"></a>
-**Broadcast** lays the window out like a broadcast desk. INPUTS is a rack
-down the left, one strip per channel: its icon and name, its meter, and
-for an XLR input its gain, switches and plugin chain. The applications
-are a list under the rack. Beside it the SUBMIXER is two mix banks of
-upright faders, starting on Monitor A and Stream, each with its master
-strip at the end; the picker at the top of each bank switches it to any
-other mix, Monitor B, Aux and the mixes you added included. MONITOR is a
-toolbar under the banks with the output picker and the volume.
-HEADPHONES runs along the bottom, folded the first time you wear the
-skin, so the interface's headphone levels stay apart from the software
-mixes. The header stays across the top. In a narrow window the rack and
-the banks keep their width and scroll sideways together; in the mini view
-the rack's column folds away with INPUTS. Your Arrange moves and bank
-picks are kept for Broadcast alone, and **Reset this skin's arrangement**
-in Options puts everything back where the skin places it. A copy of the
-skin to start your own from is in
+**Broadcast** draws the SUBMIXER as a mix matrix. Each row is a channel and
+each column a mix, both in the mixer's order, and where a row crosses a
+column is a cell with that channel's send into that mix: a mute button on
+the left and a short fader whose track is the channel's own meter, green
+rising to yellow and red. A muted send's cell turns red, its mute button
+with it. A channel with no send into a mix has an empty cell there.
+
+The head at the start of each row carries the channel's icon and name and
+what INPUTS would show for it. XLR 1 and XLR 2 have their mute, their gain
+with the meter under it, and **FX**, which opens their plugin chain; the
+gain lock and phantom power's settling time still apply. Aux In has its
+level and **Lock**. An application or capture channel has its meter only.
+XLR 2 has a row only on an interface with two XLR inputs. The head at the
+top of each column carries the mix's name, how many outputs ticked in
+MONITOR hear it (or what kind of mix it is when none does), a thin line in
+the mix's colour when you gave it one in the layout editor, and its mute,
+master level and **FX**, which opens the mix's plugin chain.
+
+MONITOR is a toolbar at the top right with the output picker and the
+volume. INPUTS is hidden, since the row heads carry the input gain, mute
+and plugins; **Arrange** lists it with a button that shows it again, under
+the matrix. APPLICATIONS and HEADPHONES sit under the matrix, folded the
+first time you wear the skin. When the matrix is wider than the window it
+scrolls sideways inside its card, the row heads with it. In Arrange mode a
+channel's handle is on its row head and a mix's on its column head; a drop
+saves the new order as it does with the tiles. The compact view shows the
+chosen channel's row, and the mini view that row's cell in the chosen mix.
+Your Arrange moves are kept for Broadcast alone, and **Reset this skin's
+arrangement** in Options puts everything back where the skin places it. A
+copy of the skin to start your own from is in
 [docs/examples/skins](examples/skins/README.md).
 
 The choice takes effect at once. Windows that are already open repaint;
@@ -1510,7 +1524,7 @@ part of a profile or of the mixer layout. A skin you install may also set
 the order of the window's sections and run them in a row; the sections
 move in place, and [Arrange](#arrange) says how your own moves are kept
 under it. It may also draw INPUTS as a rack and the SUBMIXER as
-[mix banks](#mix-banks), MONITOR as a one-row toolbar, APPLICATIONS as a
+[mix banks](#mix-banks) or a mix matrix, as Broadcast does, MONITOR as a one-row toolbar, APPLICATIONS as a
 list for a narrow column, and open the submixer in its own window the
 first time you put it on (see [Separate mixer window](#separate-mixer-window)).
 

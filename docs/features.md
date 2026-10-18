@@ -182,13 +182,19 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   the daemon. Options says what the skin arranges and resets that skin's
   arrangement, bank picks and docking choice. See
   [Switching skins](skins.md#switching-skins)
-- The Broadcast skin, shipped with the application: INPUTS as a rack down
-  the left with the applications listed under it, the submixer beside it
-  as two banks of upright faders starting on Monitor A and Stream, MONITOR
-  as a toolbar under the banks and HEADPHONES folded along the bottom, on
-  a dark console palette. It is the complete example of a layout skin, and
-  a copy to start from is in `docs/examples/skins`. See
-  [Broadcast](manual.md#broadcast)
+- A mix matrix for the submixer: a row per channel, a column per mix, and
+  each channel's send into each mix where they cross, its fader drawn over
+  the channel's meter and its cell tinted red while muted. Row heads carry
+  the input gain, mute and plugin chain under the INPUTS panel's rules, and
+  column heads the mix's master, mute, chain and how many outputs hear it.
+  A skin orders and hides the parts of the heads and cells. See
+  [The mix matrix](skins.md#the-mix-matrix)
+- The Broadcast skin, shipped with the application: the submixer as a mix
+  matrix across the window, MONITOR as a toolbar at the top right, INPUTS
+  hidden until Arrange mode shows it, and APPLICATIONS and HEADPHONES folded
+  under the matrix, on a dark neutral palette. It is the complete example
+  of a layout skin, and a copy to start from is in `docs/examples/skins`.
+  See [Broadcast](manual.md#broadcast)
 - A compact view with one chosen channel strip, and a mini view with that
   channel's send into one chosen mix, its master and the monitor volume,
   for a narrow window. Chosen in Options and kept in `ui.json`; hidden
