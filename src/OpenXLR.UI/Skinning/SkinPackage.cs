@@ -135,9 +135,43 @@ public static class SkinFormat
     /// <summary>How many children one layout container may hold.</summary>
     public const int MaxLayoutChildren = 16;
 
-    /// <summary>The smallest gap a layout stack may put between its children.</summary>
+    /// <summary>
+    /// How many nodes, containers and regions together, one layout tree may
+    /// hold. Six regions need far fewer; the bound is there so a tree of empty
+    /// containers cannot grow without end.
+    /// </summary>
+    public const int MaxLayoutNodes = 64;
+
+    /// <summary>How deep containers may nest; <c>main</c> is the first level.</summary>
+    public const int MaxLayoutDepth = 4;
+
+    /// <summary>How many rows, and separately how many columns, one grid may define.</summary>
+    public const int MaxLayoutTracks = 8;
+
+    /// <summary>The longest container id. Ids use lowercase letters, digits and hyphens.</summary>
+    public const int MaxLayoutIdLength = 32;
+
+    /// <summary>The smallest gap a layout container may put between its children.</summary>
     public const double MinLayoutSpacing = 0;
 
-    /// <summary>The largest gap a layout stack may put between its children.</summary>
+    /// <summary>The largest gap a layout container may put between its children.</summary>
     public const double MaxLayoutSpacing = 64;
+
+    /// <summary>The smallest share a grid's <c>star</c> track may take.</summary>
+    public const double MinLayoutStar = 0.1;
+
+    /// <summary>The largest share a grid's <c>star</c> track may take.</summary>
+    public const double MaxLayoutStar = 10;
+
+    /// <summary>The smallest fixed <c>size</c> of a grid track, in device-independent pixels.</summary>
+    public const double MinLayoutTrackSize = 40;
+
+    /// <summary>The largest fixed <c>size</c> of a grid track, in device-independent pixels.</summary>
+    public const double MaxLayoutTrackSize = 2000;
+
+    /// <summary>The smallest preferred <c>width</c> or <c>height</c> a section may ask for.</summary>
+    public const double MinRegionSize = 120;
+
+    /// <summary>The largest preferred <c>width</c> or <c>height</c> a section may ask for.</summary>
+    public const double MaxRegionSize = 4000;
 }

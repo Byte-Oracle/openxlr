@@ -8,27 +8,30 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
-using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using OpenXLR.UI.Layout;
 using OpenXLR.UI.Skinning;
 
 namespace OpenXLR.UI;
 
 /// <summary>
 /// Arrange mode: drag handles on the five sections and on the channel and
-/// mix tiles. Section order is a window preference in ui.json, kept per skin
-/// when the skin sets its own layout (see <see cref="SectionArrangement"/>);
-/// the skin also decides whether the sections run down the window or across
-/// it, and the drag, the arrow keys and the autoscroll follow. Channel and
-/// mix order is the layout's one order, so a tile move is a
-/// <c>setLayoutOrder</c> and the tiles follow the state the daemon publishes
-/// after saving it; nothing moves here before that.
+/// mix tiles. Where the sections stand is a window preference in ui.json,
+/// kept per skin when the skin sets its own layout (see
+/// <see cref="SectionArrangement"/>); the skin's tree, built by
+/// <see cref="DesktopLayoutHost"/>, decides whether a drop lands beside a
+/// section or trades places with it, and the arrow keys and the autoscroll
+/// follow. Channel and mix order is the layout's one order, so a tile move
+/// is a <c>setLayoutOrder</c> and the tiles follow the state the daemon
+/// publishes after saving it; nothing moves here before that.
 /// </summary>
 public partial class MainWindow
 {
     private static readonly string ArrangeHint =
         Localizer.Text("DragAHandleOntoAnotherSectionOr");
+    private static readonly string SwapHint =
+        Localizer.Text("ArrangeSwapHint");
     private Button? _dragHandle;
     private Button? _dropHandle;
     private Button[] _dragTargets = [];
@@ -37,27 +40,41 @@ public partial class MainWindow
     private bool _dragging, _dropAfter, _reorderSaving;
     private readonly DispatcherTimer _dragScroll = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private SectionArrangement? _arrangement;
+    private DesktopLayoutHost _layoutHost = null!;
     private IPointer? _lastPointer;
+    private HashSet<(string Skin, int Version)> _layoutsSeen = [];
 
-    /// <summary>The arrangement the sections stand in now.</summary>
+    /// <summary>The arrangement the regions stand in now.</summary>
     internal SectionArrangement Arrangement => _arrangement!;
 
-    /// <summary>True while the skin in force runs the sections across the window.</summary>
-    private bool SectionsInARow => _arrangement?.Orientation == SkinLayoutOrientation.Horizontal;
+    /// <summary>What builds the window's tree from the arrangement.</summary>
+    internal DesktopLayoutHost LayoutHost => _layoutHost;
+
+    /// <summary>The menu Enter or Space on a section's handle opened last, for the tests.</summary>
+    internal MenuFlyout? SwapMenu { get; private set; }
 
     private void SetupReordering()
     {
-        ApplyArrangement(ResolveArrangement());
+        var hosts = new Dictionary<string, Control>(StringComparer.Ordinal) { [SkinLayoutRegions.Header] = HeaderCard };
+        foreach (string region in SkinLayoutRegions.Sections)
+            hosts[region] = (Control)this.FindControl<Expander>(SectionArrangement.TileFor(region))!.Parent!;
+        _layoutHost = new DesktopLayoutHost(hosts, MixerContent, SectionCards, SectionScroll);
+        _layoutsSeen = [.. UiSettings.Load().SkinLayoutsSeen.Select(k => (k.Skin, k.Version))];
+        // The overflow menu's actions keep the window's data context while the menu is closed.
+        HeaderOverflowItems.Bind(DataContextProperty, this.GetObservable(DataContextProperty));
+        HeaderOverflowItems.AddHandler(Button.ClickEvent, OnOverflowAction);
+        ApplyArrangement(ResolveArrangement(out string? note));
+        if (note is not null) ReportArrangement(note);
         SkinService.Changed += OnSkinArrangement;
         // The last pointer that pressed anywhere in the window, so a skin
         // switch can end a fader drag before it moves the sections.
         AddHandler(PointerPressedEvent, (_, e) => _lastPointer = e.Pointer, RoutingStrategies.Tunnel, handledEventsToo: true);
-        foreach (Border card in SectionCards.Children.OfType<Border>())
-            card.PropertyChanged += (_, e) =>
+        foreach (Control host in hosts.Values)
+            host.PropertyChanged += (_, e) =>
             {
-                if (e.Property == IsVisibleProperty) UpdateRowWidths();
+                if (e.Property == IsVisibleProperty) _layoutHost.UpdateWidths();
             };
-        SectionScroll.SizeChanged += (_, _) => UpdateRowWidths();
+        SectionScroll.SizeChanged += (_, _) => _layoutHost.UpdateWidths();
         // Tunnel so a handle is seen before the expander header's
         // press-to-toggle; every other control keeps its own input.
         AddHandler(PointerPressedEvent, OnReorderPressed, RoutingStrategies.Tunnel);
@@ -100,20 +117,27 @@ public partial class MainWindow
         bool arranging = ArrangeButton.IsChecked == true;
         Classes.Set("arranging", arranging);
         ResetSectionsButton.IsVisible = arranging;
+        UpdateHiddenSections();
         ReportArrangement(null);
     }
 
+    /// <summary>An action chosen from the overflow menu closes it; Profiles opens its own menu instead.</summary>
+    private void OnOverflowAction(object? sender, RoutedEventArgs e)
+    {
+        if (e.Source is not DropDownButton) HeaderOverflow.Flyout?.Hide();
+    }
+
     /// <summary>
-    /// Reset puts back the order the skin in force starts from: the usual one
-    /// for a skin without a layout, the skin's own for one with. Only that
-    /// skin's arrangement is cleared; another skin's, and the legacy order
-    /// under a skin with a layout, stay as they are.
+    /// Reset puts back what the skin in force starts from: the usual order
+    /// for a skin without a layout, the skin's own placement and visibility
+    /// for one with. Only that skin's arrangement is cleared; another
+    /// skin's, and the legacy order under a skin with a layout, stay as they are.
     /// </summary>
     private void OnResetSections(object? sender, RoutedEventArgs e)
     {
         CancelReorder();
         SectionArrangement arrangement = Arrangement;
-        ApplyArrangement(arrangement with { Order = arrangement.SkinOrder });
+        ApplyArrangement(arrangement.Restored());
         string? error = arrangement.Reset(UiSettings.Load()).Save();
         ReportArrangement(error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
     }
@@ -121,9 +145,54 @@ public partial class MainWindow
     /// <summary>The note under the Arrange button: the hint, or why the last move failed.</summary>
     private void ReportArrangement(string? error)
     {
-        ArrangementNote.Text = error ?? ArrangeHint;
+        ArrangementNote.Text = error ?? (_arrangement?.Layout is null ? ArrangeHint : SwapHint);
         ArrangementNote.IsVisible = error is not null || ArrangeButton.IsChecked == true;
     }
+
+    /// <summary>
+    /// In Arrange mode, one button for each section the skin hides, which
+    /// shows it again and keeps that for the skin.
+    /// </summary>
+    private void UpdateHiddenSections()
+    {
+        IReadOnlyList<string> hidden = _arrangement?.Hidden ?? [];
+        string[] listed = [.. HiddenSections.Children.OfType<Button>().Select(b => (string)b.Tag!)];
+        if (!listed.SequenceEqual(hidden, StringComparer.Ordinal))
+        {
+            while (HiddenSections.Children.Count > 1) HiddenSections.Children.RemoveAt(1);
+            foreach (string region in hidden)
+            {
+                var show = new Button
+                {
+                    Content = Localizer.Format("ShowSection", SectionTitle(region)),
+                    Tag = region,
+                    Padding = new Thickness(8, 1),
+                };
+                show.Bind(MinHeightProperty, show.GetResourceObservable("Ox.Mixer.SmallControlMinSize"));
+                show.Bind(FontSizeProperty, show.GetResourceObservable("Ox.Label.FontSize"));
+                show.Click += OnShowSection;
+                HiddenSections.Children.Add(show);
+            }
+        }
+        HiddenSections.IsVisible = ArrangeButton.IsChecked == true && hidden.Count > 0;
+    }
+
+    private void OnShowSection(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not string region) return;
+        CancelReorder();
+        SaveArrangement(Arrangement.Show(region));
+    }
+
+    /// <summary>A section's name as its header shows it.</summary>
+    private static string SectionTitle(string region) => region switch
+    {
+        SkinLayoutRegions.Inputs => Localizer.Text("INPUTS"),
+        SkinLayoutRegions.Headphones => Localizer.Text("HEADPHONES"),
+        SkinLayoutRegions.Monitor => Localizer.Text("MONITOR"),
+        SkinLayoutRegions.Applications => Localizer.Text("APPLICATIONS"),
+        _ => Localizer.Text("SUBMIXER"),
+    };
 
     /// <summary>
     /// A saved order made whole: known sections in their saved order, then
@@ -132,10 +201,7 @@ public partial class MainWindow
     internal static string[] CompleteSectionOrder(IEnumerable<string>? saved) =>
         CompleteSectionOrder(saved, SectionTiles);
 
-    /// <summary>
-    /// The same, made whole against another order: a skin's own, for the
-    /// moves saved under that skin.
-    /// </summary>
+    /// <summary>The same, made whole against another order.</summary>
     internal static string[] CompleteSectionOrder(IEnumerable<string>? saved, IReadOnlyList<string> usual) =>
         [.. (saved ?? []).Concat(usual).Where(usual.Contains).Distinct(StringComparer.Ordinal)];
 
@@ -149,31 +215,48 @@ public partial class MainWindow
         return [.. result];
     }
 
-    private SectionArrangement ResolveArrangement() => SectionArrangement.Resolve(
-        SkinService.Current.Id, SkinService.Layout, UiSettings.Load());
+    /// <summary>
+    /// The arrangement for the skin in force. A saved arrangement that no
+    /// longer fits the skin's tree is forgotten here, and
+    /// <paramref name="note"/> says so once.
+    /// </summary>
+    private SectionArrangement ResolveArrangement(out string? note)
+    {
+        note = null;
+        SectionArrangement next = SectionArrangement.Resolve(SkinService.Current.Id, SkinService.Layout,
+            UiSettings.Load(), out bool dropped);
+        if (dropped)
+        {
+            string? error = next.Reset(UiSettings.Load()).Save();
+            note = Localizer.Text("ArrangementDropped");
+            if (error is not null) note += " " + Localizer.Format("SectionOrderNotSaved", error);
+        }
+        return next;
+    }
 
     /// <summary>
     /// A skin was put on, or the sizing changed. Only a skin whose layout
     /// differs from what the window shows moves anything; a change of colours
-    /// alone stays the resource update it has always been. While the order
-    /// still belongs to the same skin and starts from the same place, the one
-    /// on screen is kept, so a move that could not be saved lasts the run.
+    /// alone stays the resource update it has always been. While the
+    /// arrangement still belongs to the same skin and starts from the same
+    /// layout, the one on screen is kept, so a move that could not be saved
+    /// lasts the run.
     /// </summary>
     private void OnSkinArrangement()
     {
-        SectionArrangement next = ResolveArrangement();
-        if (_arrangement is { } current && current.Skin == next.Skin && current.Version == next.Version
-            && current.SkinOrder.SequenceEqual(next.SkinOrder, StringComparer.Ordinal))
-            next = next with { Order = current.Order };
+        SectionArrangement next = ResolveArrangement(out string? note);
+        if (_arrangement is { } current && current.SameOrigin(next))
+            next = next with { Placement = current.Placement, Shown = current.Shown };
         ApplyArrangement(next);
+        if (note is not null) ReportArrangement(note);
     }
 
     /// <summary>
-    /// Stand the sections as <paramref name="next"/> says. The cards, their
+    /// Stand the regions as <paramref name="next"/> says. The cards, their
     /// expanders and everything inside them are the same objects before and
-    /// after: they change place in the one panel and the panel changes
-    /// direction. A drag in progress, of a section or of a fader, ends first,
-    /// since the geometry it was measured against is about to change.
+    /// after; only the containers around them change. A drag in progress, of
+    /// a section or of a fader, ends first, since the geometry it was
+    /// measured against is about to change.
     /// </summary>
     private void ApplyArrangement(SectionArrangement next)
     {
@@ -181,77 +264,88 @@ public partial class MainWindow
         _arrangement = next;
         ToolTip.SetTip(ResetSectionsButton, next.Skin is null
             ? Localizer.Text("PutTheFiveSectionsBackInTheir") : Localizer.Text("PutTheSectionsBackInTheSkinsOrder"));
+        UpdateHiddenSections();
+        FoldOnFirstSight(next);
         if (previous is not null && previous.SameStructure(next)) return;
         if (previous is not null)
         {
             CancelReorder();
-            if (_lastPointer?.Captured is Visual captured && captured.GetVisualAncestors().Contains(SectionCards))
+            if (_lastPointer?.Captured is Visual captured && captured.GetVisualAncestors().Contains(MixerContent))
                 _lastPointer.Capture(null);
         }
 
-        string[] complete = CompleteSectionOrder(next.Order);
-        for (int index = 0; index < complete.Length; index++)
-            if (this.FindControl<Expander>(complete[index])?.Parent is Control card)
-                SectionCards.Children.Move(SectionCards.Children.IndexOf(card), index);
-
-        bool row = next.Orientation == SkinLayoutOrientation.Horizontal;
-        SectionCards.Orientation = row ? Orientation.Horizontal : Orientation.Vertical;
-        SectionCards.Spacing = next.Spacing;
-        // A row is as wide as its sections; the column follows the window.
-        SectionScroll.HorizontalScrollBarVisibility = row ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
-        // Room under the row for its scroll bar, which is drawn over the content.
-        SectionCards.Margin = row ? new Thickness(0, 0, 0, 12) : default;
-        foreach (Border card in SectionCards.Children.OfType<Border>())
-        {
-            // In a row a collapsed section is as tall as its header rather
-            // than as tall as the tallest section beside it.
-            if (row) card.VerticalAlignment = VerticalAlignment.Top;
-            else card.ClearValue(VerticalAlignmentProperty);
-        }
+        _layoutHost.Apply(next);
+        ApplyHeaderActions(next.Header);
         foreach (Button handle in SectionHandles()) ClearDropTarget(handle);
-        UpdateRowWidths();
-        if (previous?.Orientation != next.Orientation) SectionScroll.Offset = default;
+        if (previous is null || previous.Tree.Description() != next.Tree.Description()) SectionScroll.Offset = default;
     }
 
     /// <summary>
-    /// In a row, the shown sections share the window's width, each at least
-    /// <see cref="SkinLayoutDefaults.RowSectionMinWidth"/> wide; the row
-    /// scrolls when that is more than the window has. In a column a section
-    /// takes the window's width, as it always has.
+    /// The header's actions in the order the skin gives, the ones it names
+    /// nowhere after them in their usual order, and the ones it puts in the
+    /// overflow in the menu at the end. The controls are the same ones,
+    /// moved; Options is never among them.
     /// </summary>
-    private void UpdateRowWidths()
+    private void ApplyHeaderActions(SkinHeaderOptions header)
     {
-        Border[] cards = [.. SectionCards.Children.OfType<Border>()];
-        if (!SectionsInARow)
+        Control Action(string id) => id switch
         {
-            foreach (Border card in cards) card.ClearValue(WidthProperty);
-            return;
+            SkinHeaderActions.Profiles => ProfilesButton,
+            SkinHeaderActions.Arrange => ArrangeButton,
+            SkinHeaderActions.Flow => FlowButton,
+            SkinHeaderActions.RestartDaemon => RestartDaemonButton,
+            SkinHeaderActions.Version => HeaderVersion,
+            _ => AboutButton,
+        };
+        Control[] row = [.. header.Row.Select(Action), HeaderOverflow];
+        Control[] overflow = [.. header.Overflow.Select(Action)];
+        foreach (Control action in SkinHeaderActions.All.Select(Action))
+        {
+            Panel goes = overflow.Contains(action) ? HeaderOverflowItems : HeaderActions;
+            if (action.Parent is Panel parent && !ReferenceEquals(parent, goes)) parent.Children.Remove(action);
+            if (ReferenceEquals(goes, HeaderOverflowItems))
+                action.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            else action.ClearValue(HorizontalAlignmentProperty);
         }
-        int shown = Math.Max(1, cards.Count(c => c.IsVisible));
-        double available = SectionScroll.Bounds.Width - SectionCards.Spacing * (shown - 1);
-        double width = Math.Max(SkinLayoutDefaults.RowSectionMinWidth, Math.Floor(available / shown));
-        foreach (Border card in cards) card.Width = width;
+        DesktopLayoutHost.SetChildren(HeaderActions, row);
+        DesktopLayoutHost.SetChildren(HeaderOverflowItems, overflow);
+        HeaderOverflow.IsVisible = overflow.Length > 0;
+    }
+
+    /// <summary>
+    /// The first time the window wears a skin layout, fold the sections it
+    /// starts collapsed. That goes into the collapsed sections like a fold of
+    /// the user's own, so from then on the user's choice holds. First means
+    /// not in ui.json when the window opened and not folded by it since, so
+    /// a second window open at the time folds its own sections too.
+    /// </summary>
+    private void FoldOnFirstSight(SectionArrangement next)
+    {
+        if (next.Skin is not { } skin || next.Layout is not { } layout) return;
+        string[] collapsed = [.. SkinLayoutRegions.Sections
+            .Where(r => layout.OptionsFor(r).Visibility == SkinRegionVisibility.Collapsed)];
+        if (collapsed.Length == 0 || !_layoutsSeen.Add((skin, layout.Version))) return;
+        foreach (string region in collapsed)
+            if (this.FindControl<Expander>(SectionArrangement.TileFor(region)) is { } tile) tile.IsExpanded = false;
+        UiSettings.Load().WithSkinLayoutSeen(skin, layout.Version).Save();
     }
 
     /// <summary>The handle in each section's header.</summary>
-    private IEnumerable<Button> SectionHandles() => SectionTiles
-        .Select(name => this.FindControl<Expander>(name)?.Header as Panel)
-        .SelectMany(header => header?.Children.OfType<Button>() ?? [])
-        .Where(b => b.Classes.Contains("reorderHandle"));
+    private IEnumerable<Button> SectionHandles() => SectionTiles.Select(SectionHandle).OfType<Button>();
 
-    private string[] CurrentSections() =>
-        [.. SectionCards.Children.OfType<Border>().Select(card => ((Expander)card.Child!).Name!)];
+    private Button? SectionHandle(string tile) =>
+        (this.FindControl<Expander>(tile)?.Header as Panel)?.Children.OfType<Button>()
+            .FirstOrDefault(b => b.Classes.Contains("reorderHandle"));
 
     /// <summary>
-    /// Show the order for this run and save it, under the skin in force when
-    /// it sets a layout and as the legacy order otherwise; a failed save is
-    /// said once in the note.
+    /// Show this arrangement for the run and save it, under the skin in
+    /// force when it sets a layout and as the legacy order otherwise; a
+    /// failed save is said once in the note.
     /// </summary>
-    private void SaveSectionOrder(IReadOnlyList<string> order)
+    private void SaveArrangement(SectionArrangement next)
     {
-        SectionArrangement arrangement = Arrangement;
-        ApplyArrangement(arrangement with { Order = [.. order] });
-        string? error = arrangement.Save(UiSettings.Load(), order).Save();
+        ApplyArrangement(next);
+        string? error = next.Save(UiSettings.Load()).Save();
         ReportArrangement(error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
     }
 
@@ -269,6 +363,9 @@ public partial class MainWindow
     {
         string id => id, ChannelViewModel channel => channel.Id, MixViewModel mix => mix.Id, _ => "",
     };
+
+    /// <summary>The region a section's handle moves.</summary>
+    private static string RegionOf(Button handle) => SectionArrangement.RegionFor(Id(handle)) ?? "";
 
     private IEnumerable<Button> Handles(int group) => this.GetVisualDescendants().OfType<Button>()
         .Where(h => h.Classes.Contains("reorderHandle") && h.IsEffectivelyVisible && Group(h) == group);
@@ -304,9 +401,14 @@ public partial class MainWindow
         UpdateDropTarget();
     }
 
+    /// <summary>What dropping one handle on another does: sections may trade places, tiles always land beside.</summary>
+    private SectionDrop DropFor(Button source, Button target) =>
+        Group(source) == 0 ? Arrangement.DropFor(RegionOf(source), RegionOf(target)) : SectionDrop.Place;
+
     /// <summary>
     /// Mark the handle of the tile under the pointer, with an arrow for the
-    /// side the dragged one lands on. A tile only counts where it can be seen.
+    /// side the dragged one lands on, or the swap sign when the two trade
+    /// places. A tile only counts where it can be seen.
     /// </summary>
     private void UpdateDropTarget()
     {
@@ -323,7 +425,9 @@ public partial class MainWindow
                 if (ancestor.TranslatePoint(default, this) is { } clip)
                     visible = visible.Intersect(new Rect(clip, ancestor.Bounds.Size));
             if (!visible.Contains(_dragPoint)) continue;
-            bool after = AlongY(source) ? _dragPoint.Y > bounds.Center.Y : _dragPoint.X > bounds.Center.X;
+            bool swap = DropFor(source, target) == SectionDrop.Swap;
+            bool along = AlongY(source);
+            bool after = !swap && (along ? _dragPoint.Y > bounds.Center.Y : _dragPoint.X > bounds.Center.X);
             // Pointer moves and scroll ticks mostly land on the same side of
             // the same tile; leave its style and arrow alone then.
             if (ReferenceEquals(_dropHandle, target) && _dropAfter == after) return;
@@ -334,7 +438,7 @@ public partial class MainWindow
                 target.Classes.Add("reorderTarget");
             }
             _dropAfter = after;
-            target.Content = AlongY(source) ? (after ? "↓" : "↑") : (after ? "→" : "←");
+            target.Content = swap ? "⇄" : along ? (after ? "↓" : "↑") : (after ? "→" : "←");
             return;
         }
         ClearDropTarget();
@@ -347,18 +451,24 @@ public partial class MainWindow
         _dropHandle = null;
     }
 
-    /// <summary>A handle at rest: no target style, and an arrow along the way its group moves.</summary>
+    /// <summary>
+    /// A handle at rest: no target style, and an arrow along the way its
+    /// group moves, or the swap sign for a section in a grid or a dock, where
+    /// every move is a trade of places.
+    /// </summary>
     private void ClearDropTarget(Button target)
     {
         target.Classes.Remove("reorderTarget");
-        target.Content = AlongY(target) ? "↕" : "↔";
+        target.Content = Group(target) == 0 && _arrangement is { } arrangement
+            && arrangement.OrientationOf(RegionOf(target)) is null ? "⇄" : AlongY(target) ? "↕" : "↔";
     }
 
     /// <summary>
-    /// True when a handle's group runs down the window: the sections in a
-    /// column. Sections in a row, and the channel and mix tiles, run across.
+    /// True when a handle's group runs down the window: a section in a
+    /// vertical stack. Sections in a row, and the channel and mix tiles, run across.
     /// </summary>
-    private bool AlongY(Button handle) => Group(handle) == 0 && !SectionsInARow;
+    private bool AlongY(Button handle) => Group(handle) == 0
+        && _arrangement?.OrientationOf(RegionOf(handle)) is null or SkinLayoutOrientation.Vertical;
 
     private async void OnReorderReleased(object? sender, PointerReleasedEventArgs e)
     {
@@ -396,10 +506,33 @@ public partial class MainWindow
             return;
         }
         if (Handle(e.Source) is not { } source || e.KeyModifiers != KeyModifiers.None) return;
-        int direction = e.Key switch { Key.Left or Key.Up => -1, Key.Right or Key.Down => 1, _ => 0 };
-        if (direction == 0) return;
+        if (e.Key is Key.Enter or Key.Space && Group(source) == 0 && _arrangement?.Layout is not null)
+        {
+            e.Handled = true;
+            if (CanReorder(source) && _dragHandle is null) OpenSwapMenu(source);
+            return;
+        }
+        (int dx, int dy) = e.Key switch
+        {
+            Key.Left => (-1, 0), Key.Right => (1, 0), Key.Up => (0, -1), Key.Down => (0, 1), _ => (0, 0),
+        };
+        if (dx == 0 && dy == 0) return;
         e.Handled = true;
         if (!CanReorder(source) || _dragHandle is not null) return;
+        if (Group(source) == 0 && _arrangement?.Layout is not null)
+        {
+            // Under a skin layout the arrows trade places with the next
+            // section that way in the same container.
+            string region = RegionOf(source);
+            if (Arrangement.Neighbour(region, dx, dy, r => SectionHandle(SectionArrangement.TileFor(r))?.IsEffectivelyVisible == true)
+                is { } neighbour)
+            {
+                SaveArrangement(Arrangement.Swap(region, neighbour));
+                source.BringIntoView();
+            }
+            return;
+        }
+        int direction = dx + dy;
         var handles = Handles(Group(source)).ToList();
         int target = handles.IndexOf(source) + direction;
         if (target >= 0 && target < handles.Count)
@@ -409,15 +542,42 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>
+    /// A menu of every other section, by name, that the focused handle's
+    /// section can trade places with: how a section crosses from one
+    /// container to another from the keyboard.
+    /// </summary>
+    private void OpenSwapMenu(Button handle)
+    {
+        string source = RegionOf(handle);
+        var menu = new MenuFlyout { Placement = PlacementMode.BottomEdgeAlignedLeft };
+        foreach (string target in Arrangement.Order.Select(t => SectionArrangement.RegionFor(t)!))
+        {
+            if (target == source || SectionHandle(SectionArrangement.TileFor(target))?.IsEffectivelyVisible != true) continue;
+            var item = new MenuItem { Header = Localizer.Format("SwapWithSection", SectionTitle(target)), Tag = target };
+            item.Click += (_, _) =>
+            {
+                if (!CanReorder(handle)) return;
+                SaveArrangement(Arrangement.Swap(source, target));
+                handle.BringIntoView();
+                handle.Focus();
+            };
+            menu.Items.Add(item);
+        }
+        if (menu.Items.Count == 0) return;
+        SwapMenu?.Hide();
+        SwapMenu = menu;
+        menu.ShowAt(handle);
+    }
+
     private async Task PlaceTile(Button source, Button target, bool after)
     {
         if (!CanReorder(source) || !source.IsEffectivelyVisible || !target.IsEffectivelyVisible
             || TopLevel.GetTopLevel(source) != this || TopLevel.GetTopLevel(target) != this || Group(source) != Group(target)) return;
         if (Group(source) == 0)
         {
-            string[] order = CurrentSections();
-            string[] updated = PlaceSection(order, Id(source), Id(target), after);
-            if (!order.SequenceEqual(updated)) SaveSectionOrder(updated);
+            SectionArrangement moved = Arrangement.Move(RegionOf(source), RegionOf(target), after);
+            if (!Arrangement.SameStructure(moved)) SaveArrangement(moved);
             return;
         }
         if (DataContext is not MainViewModel vm) return;
@@ -430,7 +590,8 @@ public partial class MainWindow
 
     /// <summary>
     /// While a handle is held near the edge of a scrolled view, scroll it:
-    /// the page vertically, and sideways the channel row or a row of sections.
+    /// the page vertically, and sideways the channel row or a tree of
+    /// sections wider than the window, whichever the drag is in.
     /// </summary>
     private void ScrollReorder()
     {
@@ -443,7 +604,7 @@ public partial class MainWindow
             double left = Math.Max(0, origin.X), right = Math.Min(Bounds.Width, origin.X + scroll.Bounds.Width);
             if (_dragPoint.X < left || _dragPoint.X > right || _dragPoint.Y < top || _dragPoint.Y > bottom) continue;
             double x = scroll.Offset.X, y = scroll.Offset.Y;
-            if (scroll.Extent.Width > scroll.Viewport.Width && Group(handle) is 0 or 1 && !AlongY(handle))
+            if (scroll.Extent.Width > scroll.Viewport.Width && Group(handle) is 0 or 1)
                 x += _dragPoint.X < left + 32 ? -16 : _dragPoint.X > right - 32 ? 16 : 0;
             if (scroll.Extent.Height > scroll.Viewport.Height)
                 y += _dragPoint.Y < top + 32 ? -16 : _dragPoint.Y > bottom - 32 ? 16 : 0;

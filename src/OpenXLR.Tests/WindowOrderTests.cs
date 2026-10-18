@@ -92,8 +92,18 @@ internal static class WindowOrderTests
             string row = Path.Combine(config, "data", "openxlr", "skins", "in-a-row");
             Directory.CreateDirectory(row);
             File.WriteAllText(Path.Combine(row, "skin.json"), "{\"schema\":1,\"tokens\":{},\"layout\":{\"version\":1,\"main\":"
-                + "{\"kind\":\"stack\",\"orientation\":\"horizontal\",\"children\":["
-                + string.Join(",", SkinLayoutRegions.All.Select(r => $"{{\"kind\":\"region\",\"region\":\"{r}\"}}")) + "]}}}");
+                + "{\"kind\":\"stack\",\"id\":\"row\",\"orientation\":\"horizontal\",\"children\":["
+                + string.Join(",", SkinLayoutRegions.Sections.Select(r => $"{{\"kind\":\"region\",\"region\":\"{r}\"}}")) + "]}}}");
+            // A grid of one column: INPUTS in its own cell, the other four in a stack under it.
+            string parts = Path.Combine(config, "data", "openxlr", "skins", "two-part");
+            Directory.CreateDirectory(parts);
+            File.WriteAllText(Path.Combine(parts, "skin.json"), """
+                {"schema":1,"tokens":{},"layout":{"version":1,"main":{"kind":"grid","id":"top","columns":[{"star":1}],"rows":["auto","auto"],
+                 "children":[{"kind":"region","region":"inputs","row":0,"column":0},
+                  {"kind":"stack","id":"lower","orientation":"vertical","row":1,"column":0,"children":[
+                   {"kind":"region","region":"headphones"},{"kind":"region","region":"monitor"},
+                   {"kind":"region","region":"applications"},{"kind":"region","region":"submixer"}]}]}}}
+                """);
             new UiSettings { CollapsedSections = Sections, CheckForUpdates = false }.Save();
             main = Open();
             using var quit = new CancellationTokenSource();
@@ -306,11 +316,40 @@ internal static class WindowOrderTests
             pointer.SetButton(false); Thread.Sleep(150);
             Wait(() => Ui(() => Order()[0] == "HeadphonesTile"));
             Assert.Equal(Sections, Ui(() => UiSettings.Load().SectionOrder));
-            Assert.Equal(["headphones", "inputs", "monitor", "applications", "submixer"],
-                Ui(() => UiSettings.Load().SkinSectionOrderFor("in-a-row", 1)!.Order));
+            Assert.Equal(new Dictionary<string, string> { ["row:0"] = "headphones", ["row:1"] = "inputs" },
+                Ui(() => UiSettings.Load().SkinArrangementFor("in-a-row", 1)!.Slots));
             Ui(() => { Assert.Empty(SkinService.Apply(new SkinEntry(SkinPackage.Default, []))); return true; });
             Wait(() => Ui(() => Order().SequenceEqual(Sections)));
             Assert.Equal("↕", Ui(() => Handle("InputsTile").Content));
+
+            // Across containers a drop trades places: INPUTS from the grid's
+            // cell onto MONITOR in the stack under it, the swap sign on the
+            // target while the pointer holds it there.
+            Ui(() => { Assert.Empty(SkinService.Apply(SkinCatalog.Find("two-part")!)); return true; });
+            Wait(() => Ui(() => Equals(Handle("InputsTile").Content, "⇄") && Equals(Handle("MonitorTile").Content, "↕")));
+            Move(Center(Handle("InputsTile"))); pointer.SetButton(true); Thread.Sleep(60);
+            Move(Ui(() =>
+            {
+                var card = (Border)main!.FindControl<Expander>("MonitorTile")!.Parent!;
+                return card.PointToScreen(new Point(card.Bounds.Width * .5, card.Bounds.Height * .5));
+            }));
+            Wait(() => Ui(() => Equals(Handle("MonitorTile").Content, "⇄") && Handle("MonitorTile").Classes.Contains("reorderTarget")));
+            pointer.SetButton(false); Thread.Sleep(150);
+            Wait(() => Ui(() => main!.FindControl<Expander>("MonitorTile")!.Parent is Border { Parent: Grid }));
+            Assert.Equal(["headphones", "inputs", "applications", "submixer"], Ui(() => main!.LayoutHost.PanelFor("lower").Children
+                .Select(c => SectionArrangement.RegionFor(((Expander)((Border)c).Child!).Name!)!).ToArray()));
+            Assert.Equal(new Dictionary<string, string> { ["top:0,0"] = "monitor", ["lower:1"] = "inputs" },
+                Ui(() => UiSettings.Load().SkinArrangementFor("two-part", 1)!.Slots));
+            // Two apart in one stack, a drop trades places too, whichever half it lands on.
+            Drag("HeadphonesTile", "ApplicationsTile", true);
+            Wait(() => Ui(() => main!.LayoutHost.PanelFor("lower").Children.IndexOf((Control)main!.FindControl<Expander>("ApplicationsTile")!.Parent!) == 0));
+            Assert.Equal(Sections, Ui(() => UiSettings.Load().SectionOrder));
+            Assert.All(commands, c => Assert.Matches("^(setLayoutOrder|get[A-Za-z]*|list[A-Za-z]*)$", c["cmd"]!.GetValue<string>()));
+            Click(Ui(() => main!.FindControl<Button>("ResetSectionsButton")!));
+            Wait(() => Ui(() => main!.FindControl<Expander>("InputsTile")!.Parent is Border { Parent: Grid }));
+            Assert.Null(Ui(() => UiSettings.Load().SkinArrangementFor("two-part", 1)));
+            Ui(() => { Assert.Empty(SkinService.Apply(new SkinEntry(SkinPackage.Default, []))); return true; });
+            Wait(() => Ui(() => Order().SequenceEqual(Sections)));
 
             void Move(PixelPoint point) { pointer.MoveTo(point.X, point.Y); Thread.Sleep(80); }
             void Click(Control control) { Move(Center(control)); pointer.Click(); Thread.Sleep(100); }

@@ -1512,7 +1512,7 @@ Speichern ersetzt es durch die aktuelle Szene.</value>
     <value>Die fünf Abschnitte in ihre ursprüngliche Reihenfolge zurücksetzen</value>
   </data>
   <data name="PutTheSectionsBackInTheSkinsOrder" xml:space="preserve">
-    <value>Die fünf Abschnitte in die Reihenfolge zurücksetzen, die dieser Skin vorgibt</value>
+    <value>Die Abschnitte dorthin zurücksetzen, wo dieser Skin sie platziert, ein- oder ausgeblendet, wie er es vorgibt</value>
   </data>
   <data name="QuitApp" xml:space="preserve">
     <value>App beenden</value>
@@ -2135,5 +2135,23 @@ Von OpenXLR gesteuertes Interface wählen</value>
   </data>
   <data name="StartupDoctorHint" xml:space="preserve">
     <value>Führe openxlr doctor aus, um den betroffenen Pfad und einen Reparaturbefehl zu sehen.</value>
+  </data>
+  <data name="ArrangeSwapHint" xml:space="preserve">
+    <value>Ziehe den Griff eines Abschnitts auf einen anderen Abschnitt, um die Plätze zu tauschen, oder den Griff einer Kachel auf eine andere Kachel. Ein fokussierter Griff bewegt sich mit den Pfeiltasten, und die Eingabetaste am Griff eines Abschnitts listet die Abschnitte auf, mit denen er tauschen kann. Escape bricht das Ziehen ab.</value>
+  </data>
+  <data name="ArrangementDropped" xml:space="preserve">
+    <value>Deine Anordnung für diesen Skin passt nicht mehr zu seinem Layout, daher wird die Anordnung des Skins verwendet.</value>
+  </data>
+  <data name="HiddenSections" xml:space="preserve">
+    <value>Ausgeblendete Abschnitte</value>
+  </data>
+  <data name="ShowSection" xml:space="preserve">
+    <value>{0} einblenden</value>
+  </data>
+  <data name="SwapWithSection" xml:space="preserve">
+    <value>Mit {0} tauschen</value>
+  </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>Weitere Aktionen</value>
   </data>
 </root>

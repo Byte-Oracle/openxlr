@@ -193,7 +193,7 @@ public sealed class SkinWindowTests
             Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(data, "none"));
             File.WriteAllText(Path.Combine(folder, "skin.json"), """
                 {"schema":1,"name":"Row","tokens":{"Ox.Card.Background":"#30343c"},
-                 "layout":{"version":1,"main":{"kind":"stack","orientation":"horizontal","spacing":20,"children":[
+                 "layout":{"version":1,"main":{"kind":"stack","id":"row","orientation":"horizontal","spacing":20,"children":[
                    {"kind":"region","region":"submixer"},{"kind":"region","region":"monitor"},
                    {"kind":"region","region":"inputs"},{"kind":"region","region":"headphones"},
                    {"kind":"region","region":"applications"}]}}}
@@ -217,6 +217,53 @@ public sealed class SkinWindowTests
             Assert.Equal(20, panel.Spacing);
             Assert.Equal(["SubmixerTile", "MonitorTile", "InputsTile", "HeadphonesTile", "ApplicationsTile"], Order());
             Capture(main, "layout-row");
+
+            // A grid that takes the header in too, and back to the row: the
+            // same cards and header, moved, with their data context held.
+            string gridFolder = Path.Combine(data, "openxlr", "skins", "grid");
+            Directory.CreateDirectory(gridFolder);
+            File.WriteAllText(Path.Combine(gridFolder, "skin.json"), """
+                {"schema":1,"name":"Grid","tokens":{"Ox.Card.Background":"#30343c"},
+                 "layout":{"version":1,"main":{"kind":"grid","id":"desktop","columns":[{"star":1},{"star":1}],"rows":["auto","auto","auto"],"children":[
+                   {"kind":"region","region":"header","row":0,"column":0,"columnSpan":2},
+                   {"kind":"region","region":"inputs","row":1,"column":0},
+                   {"kind":"dock","id":"right","row":1,"column":1,"rowSpan":2,"children":[
+                     {"kind":"region","region":"monitor","dock":"top"},{"kind":"region","region":"submixer","dock":"fill"}]},
+                   {"kind":"stack","id":"left","orientation":"vertical","row":2,"column":0,"children":[
+                     {"kind":"region","region":"headphones"},{"kind":"region","region":"applications"}]}]}}}
+                """);
+            Control header = main.FindControl<Border>("HeaderCard")!;
+            header.DataContextChanged += ContextChanged;
+            try
+            {
+                SkinEntry grid = Assert.Single(SkinCatalog.Discover(), e => e.Id == "grid");
+                Assert.Empty(grid.Errors);
+                Assert.Empty(SkinService.Apply(grid));
+                Pump(main);
+                Layout(main, 1600, 900);
+                Assert.Empty(panel.Children);
+                Grid gridPanel = Assert.IsType<Grid>(main.FindControl<ScrollViewer>("SectionScroll")!.Content);
+                Assert.Same(gridPanel, header.Parent);
+                Assert.Same(gridPanel, cards[0].Parent);
+                Assert.IsType<DockPanel>(cards[4].Parent);
+                Assert.IsType<StackPanel>(cards[1].Parent);
+                for (int i = 0; i < tiles.Length; i++)
+                {
+                    Assert.Same(cards[i], expanders[i].Parent);
+                    Assert.Same(contents[i], expanders[i].Content);
+                    Assert.Same(context, expanders[i].DataContext);
+                }
+                Assert.Same(context, header.DataContext);
+                Capture(main, "layout-grid");
+
+                Assert.Empty(SkinService.Apply(row));
+                Pump(main);
+                Layout(main, 1040, 900);
+                Assert.Equal(["SubmixerTile", "MonitorTile", "InputsTile", "HeadphonesTile", "ApplicationsTile"], Order());
+                Assert.Same(main.FindControl<StackPanel>("MixerContent"), header.Parent);
+                Assert.Same(panel, main.FindControl<ScrollViewer>("SectionScroll")!.Content);
+            }
+            finally { header.DataContextChanged -= ContextChanged; }
 
             // And back, through a colour-only skin, to the shipped appearance.
             Assert.Empty(SkinService.Apply(SkinCatalog.Find("opendeck")!));

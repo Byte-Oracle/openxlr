@@ -2,8 +2,8 @@
 
 A skin changes how the OpenXLR window looks. It is a folder with a
 `skin.json` in it and, optionally, a few images beside it. It sets named
-appearance values and, if it wants, the order and direction of the
-window's sections ([Layout](#layout)); it carries no markup, no script and
+appearance values and, if it wants, where the header and the
+window's sections go ([Layout](#layout)); it carries no markup, no script and
 no code, and it cannot reach a file outside its own folder.
 
 OpenXLR ships thirteen appearances, all compiled into the application, so
@@ -49,7 +49,7 @@ The choice is saved in
 part of the mixer layout, the daemon's preferences or a profile, and
 changing it never touches audio. Windows that are already open repaint;
 nothing is rebuilt and nothing is restarted. A skin with a layout moves the
-sections that are already there; their controls are the same ones.
+header and the sections that are already there; their controls are the same ones.
 If the terminal cannot read `ui.json`, it uses the default appearance.
 A malformed document, including duplicate keys or a value other than a
 JSON object, is left untouched when saving a terminal skin choice. Repair
@@ -267,7 +267,7 @@ name.
 | `author` | no | shown under the picker as "By ..." |
 | `controls` | no | one of OpenXLR's own appearances per control, see [Controls](#controls) |
 | `tokens` | yes | the appearance values, see [The tokens](#the-tokens) |
-| `layout` | no | the order and direction of the window's sections, see [Layout](#layout) |
+| `layout` | no | where the header and the window's sections go, see [Layout](#layout) |
 
 `name`, `description` and `author` are cut at 400 characters, and control
 characters in them are dropped.
@@ -725,33 +725,96 @@ six flat indicator colours.
 
 ## Layout
 
-A skin can also say how the main window arranges its five sections: the
-order they come in, and whether they run down the window, as they always
-have, or across it in one row. That is the optional `layout` object,
-beside `tokens` and `controls`. A complete skin that puts the submixer
-first and runs the sections in a row:
+A skin can also say where the main window's parts go: the header and the
+five sections, placed in a tree of stacks, grids and docks, with a few
+options for each of them. That is the optional `layout` object, beside
+`tokens` and `controls`. It moves what the application builds; it never
+adds a control, a binding or a picture of its own.
+
+A complete skin that puts the header across the top, INPUTS beside the
+submixer, the headphones and the monitor under INPUTS, and the
+applications along the bottom, folded at first:
 
 ```json
 {
   "schema": 1,
-  "id": "side-by-side",
-  "name": "Side by side",
+  "id": "console-grid",
+  "name": "Console grid",
   "tokens": {
     "Ox.Card.Background": "#1d2027"
   },
   "layout": {
     "version": 1,
     "main": {
-      "kind": "stack",
-      "orientation": "horizontal",
+      "kind": "grid",
+      "id": "desktop",
       "spacing": 12,
+      "columns": [{ "size": 640 }, { "star": 1 }],
+      "rows": ["auto", "auto", "auto", "auto"],
       "children": [
-        { "kind": "region", "region": "submixer" },
-        { "kind": "region", "region": "inputs" },
-        { "kind": "region", "region": "monitor" },
-        { "kind": "region", "region": "headphones" },
-        { "kind": "region", "region": "applications" }
+        { "kind": "region", "region": "header", "row": 0, "column": 0, "columnSpan": 2 },
+        { "kind": "region", "region": "inputs", "row": 1, "column": 0 },
+        { "kind": "region", "region": "submixer", "row": 1, "column": 1, "rowSpan": 2 },
+        {
+          "kind": "stack",
+          "id": "outputs",
+          "orientation": "vertical",
+          "row": 2,
+          "column": 0,
+          "children": [
+            { "kind": "region", "region": "headphones" },
+            { "kind": "region", "region": "monitor" }
+          ]
+        },
+        { "kind": "region", "region": "applications", "row": 3, "column": 0, "columnSpan": 2 }
       ]
+    },
+    "regions": {
+      "applications": { "visibility": "collapsed" },
+      "header": { "actions": ["flow", "profiles"], "overflow": ["restart-daemon", "about"] }
+    }
+  }
+}
+```
+
+And one that docks the header at the bottom, INPUTS down the left side,
+the headphones and the monitor in a row along the top and the submixer in
+what is left, with the applications hidden until you show them:
+
+```json
+{
+  "schema": 1,
+  "id": "docked",
+  "name": "Docked",
+  "tokens": {
+    "Ox.Card.Background": "#20232a"
+  },
+  "layout": {
+    "version": 1,
+    "main": {
+      "kind": "dock",
+      "id": "window",
+      "spacing": 8,
+      "children": [
+        { "kind": "region", "region": "header", "dock": "bottom" },
+        { "kind": "region", "region": "inputs", "dock": "left" },
+        {
+          "kind": "stack",
+          "id": "outputs",
+          "orientation": "horizontal",
+          "dock": "top",
+          "children": [
+            { "kind": "region", "region": "headphones" },
+            { "kind": "region", "region": "monitor" },
+            { "kind": "region", "region": "applications" }
+          ]
+        },
+        { "kind": "region", "region": "submixer", "dock": "fill" }
+      ]
+    },
+    "regions": {
+      "inputs": { "width": 680 },
+      "applications": { "visibility": "hidden" }
     }
   }
 }
@@ -764,45 +827,151 @@ rest of the skin unreadable to an older OpenXLR.
 | Field | Required | What it is |
 |---|---|---|
 | `version` | yes | the layout format this block is written for, `1` |
-| `main` | no | the window's sections, a stack. Without it the sections keep the classic arrangement |
+| `main` | no | the window's tree: a stack, a grid or a dock. Without it the sections keep the classic arrangement |
+| `regions` | no | options for the header and the sections, by region id |
 
-`main` is a stack:
+### The tree
+
+`main` and every container inside it is a stack, a grid or a dock, and
+every container has these fields:
 
 | Field | Required | What it is |
 |---|---|---|
-| `kind` | yes | `"stack"` |
-| `orientation` | yes | `"vertical"` puts the sections one above the other, the classic window. `"horizontal"` puts them side by side in one row |
-| `spacing` | no | the gap between sections in pixels, from 0 to 64; 8, the classic gap, when it is missing |
-| `children` | yes | the sections in the order they appear, each a region |
+| `kind` | yes | `"stack"`, `"grid"` or `"dock"` |
+| `id` | yes | 1 to 32 lowercase letters, digits and hyphens, unique in the tree. Your own arrangement names its places by it |
+| `spacing` | no | the gap between children in pixels, from 0 to 64; 8, the classic gap, when it is missing |
+| `children` | yes | regions and containers; a container holds no more than 16 children |
 
-Each child is a region:
+A stack puts its children one after another:
+
+| Field | Required | What it is |
+|---|---|---|
+| `orientation` | yes | `"vertical"` puts them one above the other, the classic window. `"horizontal"` puts them side by side in one row |
+
+A grid puts its children in cells:
+
+| Field | Required | What it is |
+|---|---|---|
+| `rows` | yes | 1 to 8 tracks, top to bottom |
+| `columns` | yes | 1 to 8 tracks, left to right |
+
+A track is `"auto"`, as large as what it holds; `{ "star": n }`, a share of
+what the other tracks leave, with `n` from 0.1 to 10; or `{ "size": n }`, a
+fixed size in pixels from 40 to 2000. Each child of a grid says where it
+goes:
+
+| Field | Required | What it is |
+|---|---|---|
+| `row` | yes | its row, counted from 0 |
+| `column` | yes | its column, counted from 0 |
+| `rowSpan` | no | how many rows it covers, 1 when it is missing, and never past the last row |
+| `columnSpan` | no | how many columns it covers, 1 when it is missing, and never past the last column |
+
+Two children never cover the same cell. A cell can stay empty.
+
+A dock puts its children against its edges, in order, and the last one
+fills what is left. Each child of a dock says which edge:
+
+| Field | Required | What it is |
+|---|---|---|
+| `dock` | yes | `"top"`, `"bottom"`, `"left"`, `"right"` or `"fill"`. Exactly one child fills, and it is the last |
+
+A child that is not a container is a region:
 
 | Field | Required | What it is |
 |---|---|---|
 | `kind` | yes | `"region"` |
-| `region` | yes | which section goes here, by the ids below |
+| `region` | yes | which part of the window goes here, by the ids below |
 
-| Region | The section |
+| Region | What it is |
 |---|---|
+| `header` | the header: Options, the interface status and the header actions |
 | `inputs` | INPUTS: the gain, the input switches and the microphone inserts |
 | `headphones` | HEADPHONES: the headphone levels and the direct monitor blend |
 | `monitor` | MONITOR: the output picker and its volume |
 | `applications` | APPLICATIONS: the running applications and their channels |
 | `submixer` | SUBMIXER: the channel strips and the mix masters |
 
-`main` places each of the five regions exactly once. The header with
-Options, Profiles and Arrange is not a region: it stays at the top of the
-window whatever the skin says, so the way back is always reachable. A
-section the window sets aside, such as INPUTS, HEADPHONES and
-APPLICATIONS in the mini view, or MONITOR without the software mixer,
-stays hidden wherever the skin puts it.
+`main` places each of the five sections exactly once, and the header at
+most once. A tree that leaves the header out sits under it. The header
+stays at the top of the window, as wide as the window, and the tree goes
+below it, as in the classic window. A stack of the five sections without
+the header therefore looks the way it always has. A tree that places the
+header puts it where it says.
 
-In a horizontal row each section is at least 600 pixels wide, and the
-sections share the window's width when it has more. When the row is wider
-than the window it scrolls sideways under the header, which keeps the
-window's width. Each section is as tall as its own contents and the row
-lines them up along the top, so a collapsed section is just its header
-and does not stretch to the height of the one beside it.
+A tree holds no more than 64 nodes, containers and regions together.
+Containers nest at most 4 deep, `main` included, and a grid has at most 8
+rows and 8 columns. Options in the header is always shown, so the way back
+is always reachable wherever the header goes. The notes the application
+shows, such as an update or a daemon left running across an upgrade, stay
+above the tree: under the header when the tree leaves it out, at the top
+of the window when the tree places it.
+
+A section the window sets aside, such as INPUTS, HEADPHONES and
+APPLICATIONS in the mini view, or MONITOR without the software mixer,
+stays hidden wherever the skin puts it. A skin can hide a section; it can
+never bring back one the window hides.
+
+### Sizes
+
+Wherever a container gives a region a width of its own, in a horizontal
+stack, a grid cell or a dock's left or right side, the region is at least
+600 pixels wide, the width every section is held to fit. A region in a
+vertical stack, or along a dock's top or bottom, or filling it, takes the
+container's width. A `size` column smaller than what its region needs
+grows to fit, and a column of `auto` is as wide as its widest region.
+
+When the tree needs more width than the window has, it scrolls sideways
+instead of squeezing a region. With the header above the tree the header
+keeps the window's width; with the header inside the tree it scrolls with
+the rest. A horizontal stack at the top of the tree shares the window's
+width among its regions; one inside another container gives each region
+the width it needs.
+
+Heights follow the contents, since the page scrolls downwards. A `size`
+row is the least it takes and grows with what it holds, and a `star` row
+is as tall as its contents, like an `auto` one. A region lines up along
+the top of its cell or side, so a collapsed section is just its header and
+does not stretch to the height of the one beside it.
+
+### Region options
+
+`regions` holds an object for each region it sets options for, by region
+id, with only the options that region has:
+
+| Option | Region | What it is |
+|---|---|---|
+| `visibility` | the five sections | `"visible"`, the default. `"collapsed"` folds the section the first time the window wears the skin, and after that the section stays as you leave it. `"hidden"` leaves it out of the window and out of the tab order until you show it from Arrange mode |
+| `width` | the five sections | a preferred width in pixels, from 120 to 4000 |
+| `height` | the five sections | a preferred height in pixels, from 120 to 4000 |
+| `actions` | `header` | header action ids in the order the header shows them |
+| `overflow` | `header` | header action ids to put in the ⋯ menu at the end of the header instead |
+
+A preferred width applies where the region has a width of its own: in a
+horizontal stack, a grid cell and a dock's left or right side. It never
+goes below the 600 pixels a section needs, and in a vertical stack, or
+along a dock's top or bottom, it is ignored and the section takes the
+container's width. In a grid the region is that wide at the start of its
+cell, and its column is at least that wide. A preferred height is the
+least the section takes; it grows past it with its contents and never
+cuts them off.
+
+The header actions:
+
+| Action | What it is |
+|---|---|
+| `profiles` | Profiles and its menu |
+| `arrange` | the Arrange toggle |
+| `flow` | Flow |
+| `restart-daemon` | Restart daemon |
+| `version` | the version number |
+| `about` | About |
+
+An action appears at most once across `actions` and `overflow`. One left
+out of both keeps its usual place after the listed ones. Options is not
+an action a skin places. It is always first in the header and always
+shown. The actions in the ⋯ menu are the same controls, with the same
+names for a screen reader; Profiles opens its own menu from there.
 
 ### How a layout is read
 
@@ -813,13 +982,26 @@ A layout is taken whole or not at all. Any of these drops the whole
   version says to update OpenXLR;
 - a property the object does not have, or one it needs and lacks;
 - the same key twice in one object;
-- a `kind` other than `stack` and `region`, or a stack inside `main`.
-  Layout version 1 has one container;
+- a `kind` other than `stack`, `grid`, `dock` and `region`, or a region as
+  `main`;
+- a container `id` that is missing, is not 1 to 32 lowercase letters,
+  digits and hyphens, or is used twice;
 - an `orientation` other than `vertical` and `horizontal`;
 - a `spacing` that is not a finite number from 0 to 64;
-- a region id this OpenXLR does not have, a region placed twice, or one
-  left out;
-- more than 16 children in a container.
+- `rows` or `columns` that are not 1 to 8 tracks, or a track that is not
+  `"auto"`, a `star` from 0.1 to 10 or a `size` from 40 to 2000;
+- a grid child without its `row` and `column`, one outside the grid, a
+  span past the last track, or two children over one cell;
+- a dock child without its `dock` edge, an edge other than the five, or a
+  dock that does not end with exactly one `fill` child;
+- a region id this OpenXLR does not have, a region placed twice, or a
+  section left out;
+- more than 16 children in a container, more than 64 nodes in the tree,
+  or containers more than 4 deep;
+- in `regions`, a region id this OpenXLR does not have, an option the
+  region does not have, a `visibility` other than the three, a `width` or
+  `height` that is not a finite number from 120 to 4000, or a header
+  action that does not exist, is `options`, or is listed twice.
 
 The complaint names where in the file the fault is, for example
 `layout.main.children[2].region`, and appears in Options under the picker
@@ -838,28 +1020,44 @@ on the skin:
 
 - A skin without a layout, Material and every shipped skin included, uses
   the order you arranged, kept in `ui.json` as `sectionOrder`, exactly as
-  before skins had layouts.
-- A skin with a layout starts from its own order and direction. The moves
-  you make are kept for that skin and its layout version in `ui.json` under
-  `skinSectionOrders`, and never change `sectionOrder`. **Reset sections**
-  returns to the skin's own order and forgets only that skin's moves.
+  before skins had layouts. A section dropped on another lands before or
+  after it.
+- A skin with a layout starts from its own tree. Each region in the tree
+  is a place, named by its container's id and its index in a stack or a
+  dock (`window:2`), or by its container's id, row and column in a grid
+  (`desktop:1,0`). Your arrangement says which section sits in which
+  place. Dropping a section on another trades their places, in the same
+  container or across containers. In a stack, dropping a section on its
+  neighbour still lands it before or after, which is the same as trading
+  places with it; dropped on a section further away, the two trade places.
+  The header stays in the place the skin gives it.
+- Under a skin with a layout, your moves are kept in `ui.json` under
+  `skinArrangements`, one entry for each skin and layout version, holding
+  only the places you changed and the hidden sections you showed. The 32
+  most recent skins are kept. They never change `sectionOrder`.
+  **Reset sections** returns to the skin's own places and visibility and
+  forgets only that skin's entry.
 - Switching back to a skin without a layout brings your `sectionOrder`
-  back, and switching to the layout skin again brings back the moves you
-  made under it.
+  back, and switching to the layout skin again brings back what you
+  arranged under it.
 
-The direction and the spacing always come from the skin. If a skin update
-changes its layout, the window ignores saved moves that name a region the
-skin no longer places, and any region the moves leave out follows in the
-skin's order. OpenXLR never rewrites a skin. Collapsed sections stay
-collapsed whichever skin is worn, as before.
+The tree, the gaps and the sizes always come from the skin. If a skin
+update changes its tree so that your entry names a place or a section the
+tree no longer has, the whole entry is dropped rather than half applied,
+the window says so once in the note under the header, and the skin's own
+arrangement is used. OpenXLR never rewrites a skin. Collapsed sections stay
+collapsed whichever skin is worn, as before; a skin's `"collapsed"` only
+sets where a section starts the first time, recorded in `ui.json` under
+`skinLayoutsSeen`.
 
 ## What a skin cannot do
 
 - It cannot carry markup, a template, a style or code. It picks from the
-  appearances listed under Controls and tints them. Apart from the order
-  and direction of the five sections under [Layout](#layout), there is no
-  way for a skin to add a control, move one, resize the window, or change
-  what a control does.
+  appearances listed under Controls and tints them. Apart from placing
+  the header and the five sections under [Layout](#layout), ordering the
+  header's actions and hiding a section the user can bring back, there is
+  no way for a skin to add a control, move one inside its section, resize
+  the window, or change what a control does.
 - It cannot change the mixer layout, the mixer, the routing or anything
   the daemon owns. It sets the values in this document and nothing else.
 - It cannot reach outside its own folder, and it cannot make a network

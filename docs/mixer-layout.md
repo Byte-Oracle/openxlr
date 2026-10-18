@@ -49,10 +49,12 @@ ignored. Existing monitor-feed settings and profile semantics are unchanged.
 
 This file owns the channels and mixes: which exist, their names, their
 order, their routing and their per-item appearance. It says nothing about
-how the desktop window arranges its sections. The order of the window's
-five sections, and whether they run down the window or across it, comes
-from the skin's optional `layout` ([skins.md](skins.md#layout)), and the
-moves a user makes with Arrange are window preferences in `ui.json`.
+how the desktop window arranges its sections. Where the window's header
+and five sections go, whether a section starts folded or hidden, and the
+order of the header's actions come from the skin's optional `layout`
+([skins.md](skins.md#layout)), and the moves a user makes with Arrange,
+including the hidden sections they show again, are window preferences in
+`ui.json`.
 Choosing a skin never sends a layout command, and a channel or mix order
 set here never moves a section.
 

@@ -42,17 +42,29 @@ public sealed record UiSettings
     /// </summary>
     public IReadOnlyList<string> SectionOrder { get; init; } = [];
     /// <summary>
-    /// The section order the user arranged under a skin that sets its own
-    /// layout, one entry per skin id and layout version, by region id. A skin
-    /// with a layout starts from its own order and these moves go on top;
-    /// they never touch <see cref="SectionOrder"/>, which stays the order for
-    /// skins without one. At most <see cref="MaxSkinSectionOrders"/> are kept,
-    /// the most recently arranged last.
+    /// The arrangement the user made under a skin that sets its own layout,
+    /// one entry per skin id and layout version: which section the user put
+    /// in which of the skin's places, and which of the sections the skin
+    /// hides the user brought back. A skin with a layout starts from its own
+    /// placement and these moves go on top; they never touch
+    /// <see cref="SectionOrder"/>, which stays the order for skins without
+    /// one. At most <see cref="MaxSkinArrangements"/> are kept, the most
+    /// recently arranged last.
     /// </summary>
-    public IReadOnlyList<SkinSectionOrder> SkinSectionOrders { get; init; } = [];
+    public IReadOnlyList<SkinArrangement> SkinArrangements { get; init; } = [];
 
-    /// <summary>How many skins' arrangements <see cref="SkinSectionOrders"/> keeps.</summary>
-    public const int MaxSkinSectionOrders = 32;
+    /// <summary>How many skins' arrangements <see cref="SkinArrangements"/> keeps.</summary>
+    public const int MaxSkinArrangements = 32;
+
+    /// <summary>
+    /// The skin layouts, by skin id and layout version, whose collapsed
+    /// sections have been folded once. A skin's <c>collapsed</c> is the
+    /// start state the first time the window wears it; after that the
+    /// sections stay as the user leaves them in <see cref="CollapsedSections"/>.
+    /// At most <see cref="MaxSkinArrangements"/> are kept, the most recent last.
+    /// </summary>
+    public IReadOnlyList<SkinLayoutKey> SkinLayoutsSeen { get; init; } = [];
+
     /// <summary>
     /// How the submixer is drawn: absent or <c>full</c> for every strip,
     /// <c>compact</c> for one chosen channel, <c>mini</c> for one channel's
@@ -132,46 +144,98 @@ public sealed record UiSettings
         {
             CollapsedSections = settings.CollapsedSections ?? [],
             SectionOrder = settings.SectionOrder ?? [],
-            SkinSectionOrders = NormalizeSkinSectionOrders(settings.SkinSectionOrders),
+            SkinArrangements = NormalizeSkinArrangements(settings.SkinArrangements),
+            SkinLayoutsSeen = NormalizeSeen(settings.SkinLayoutsSeen),
+            // The per-skin section orders of an unreleased build, which the
+            // arrangements replaced. They are not read, and go at the next save.
+            UnknownKeys = WithoutObsoleteKeys(settings.UnknownKeys),
         };
     }
 
+    private static Dictionary<string, JsonElement>? WithoutObsoleteKeys(Dictionary<string, JsonElement>? keys)
+    {
+        if (keys is null || !keys.ContainsKey("skinSectionOrders")) return keys;
+        var kept = new Dictionary<string, JsonElement>(keys);
+        kept.Remove("skinSectionOrders");
+        return kept.Count == 0 ? null : kept;
+    }
+
     /// <summary>The user's arrangement for this skin and layout version, or null when there is none.</summary>
-    public SkinSectionOrder? SkinSectionOrderFor(string skin, int version) =>
-        SkinSectionOrders.LastOrDefault(e => e.Skin == skin && e.Version == version);
+    public SkinArrangement? SkinArrangementFor(string skin, int version) =>
+        SkinArrangements.LastOrDefault(e => e.Skin == skin && e.Version == version);
 
     /// <summary>
     /// These settings with the arrangement for one skin and layout version
-    /// replaced by <paramref name="order"/>, or removed when it is null. The
-    /// entry moves to the end, and the oldest go once there are more than
-    /// <see cref="MaxSkinSectionOrders"/>.
+    /// replaced, or removed when <paramref name="slots"/> and
+    /// <paramref name="shown"/> are both null or empty. The entry moves to the
+    /// end, and the oldest go once there are more than
+    /// <see cref="MaxSkinArrangements"/>.
     /// </summary>
-    public UiSettings WithSkinSectionOrder(string skin, int version, IReadOnlyList<string>? order)
+    public UiSettings WithSkinArrangement(string skin, int version,
+        IReadOnlyDictionary<string, string>? slots, IReadOnlyList<string>? shown)
     {
-        List<SkinSectionOrder> entries = [.. SkinSectionOrders.Where(e => e.Skin != skin || e.Version != version)];
-        if (order is not null) entries.Add(new SkinSectionOrder { Skin = skin, Version = version, Order = [.. order] });
-        return this with { SkinSectionOrders = NormalizeSkinSectionOrders(entries) };
+        List<SkinArrangement> entries = [.. SkinArrangements.Where(e => e.Skin != skin || e.Version != version)];
+        if (slots is { Count: > 0 } || shown is { Count: > 0 })
+            entries.Add(new SkinArrangement
+            {
+                Skin = skin,
+                Version = version,
+                Slots = new Dictionary<string, string>(slots ?? new Dictionary<string, string>(), StringComparer.Ordinal),
+                Shown = [.. shown ?? []],
+            });
+        return this with { SkinArrangements = NormalizeSkinArrangements(entries) };
     }
 
+    /// <summary>True when the skin layout's collapsed sections were already folded once.</summary>
+    public bool HasSeenSkinLayout(string skin, int version) =>
+        SkinLayoutsSeen.Any(k => k.Skin == skin && k.Version == version);
+
+    /// <summary>These settings with the skin layout recorded as seen, the most recent last.</summary>
+    public UiSettings WithSkinLayoutSeen(string skin, int version) => this with
+    {
+        SkinLayoutsSeen = NormalizeSeen([.. SkinLayoutsSeen.Where(k => k.Skin != skin || k.Version != version),
+            new SkinLayoutKey { Skin = skin, Version = version }]),
+    };
+
     /// <summary>
-    /// The per-skin arrangements made safe to use: null lists and entries,
-    /// entries with no skin, and repeats of one skin and version (the last
-    /// wins) go; an order is cut to the most a layout can place.
+    /// The per-skin arrangements made safe to use: null lists, entries and
+    /// values, entries with no skin, and repeats of one skin and version (the
+    /// last wins) go; the places and the shown sections are cut to the most a
+    /// layout can have. Whether the places still exist in the skin's tree is
+    /// for the window to decide, since only it has the tree.
     /// </summary>
-    private static IReadOnlyList<SkinSectionOrder> NormalizeSkinSectionOrders(IReadOnlyList<SkinSectionOrder?>? entries)
+    private static IReadOnlyList<SkinArrangement> NormalizeSkinArrangements(IReadOnlyList<SkinArrangement?>? entries)
     {
         if (entries is null) return [];
-        var kept = new List<SkinSectionOrder>();
-        foreach (SkinSectionOrder? entry in entries)
+        var kept = new List<SkinArrangement>();
+        foreach (SkinArrangement? entry in entries)
         {
             if (entry is not { Skin.Length: > 0 }) continue;
             kept.RemoveAll(e => e.Skin == entry.Skin && e.Version == entry.Version);
+            var slots = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, string> slot in entry.Slots ?? new Dictionary<string, string>())
+                if (slot.Value is not null && slots.Count < Skinning.SkinFormat.MaxLayoutNodes) slots[slot.Key] = slot.Value;
             kept.Add(entry with
             {
-                Order = [.. (entry.Order ?? []).OfType<string>().Take(Skinning.SkinFormat.MaxLayoutChildren)],
+                Slots = slots,
+                Shown = [.. (entry.Shown ?? []).OfType<string>().Distinct(StringComparer.Ordinal)
+                    .Take(Skinning.SkinLayoutRegions.All.Count)],
             });
         }
-        return kept.Count <= MaxSkinSectionOrders ? kept : kept[^MaxSkinSectionOrders..];
+        return kept.Count <= MaxSkinArrangements ? kept : kept[^MaxSkinArrangements..];
+    }
+
+    private static IReadOnlyList<SkinLayoutKey> NormalizeSeen(IReadOnlyList<SkinLayoutKey?>? keys)
+    {
+        if (keys is null) return [];
+        var kept = new List<SkinLayoutKey>();
+        foreach (SkinLayoutKey? key in keys)
+        {
+            if (key is not { Skin.Length: > 0 }) continue;
+            kept.RemoveAll(k => k.Skin == key.Skin && k.Version == key.Version);
+            kept.Add(key);
+        }
+        return kept.Count <= MaxSkinArrangements ? kept : kept[^MaxSkinArrangements..];
     }
 
     /// <summary>
@@ -183,17 +247,27 @@ public sealed record UiSettings
 }
 
 /// <summary>
-/// One skin's section order as the user arranged it in the window: the
-/// skin's id, the layout version it was arranged under, and the region ids
-/// (<c>inputs</c>, <c>submixer</c>, ...) in order. A region the layout does
-/// not have is ignored and one it has but the list leaves out follows in the
-/// skin's own order.
+/// One skin's arrangement as the user made it in the window: the skin's id,
+/// the layout version it was made under, the places the user moved a section
+/// into, as place id to region id (<c>"main:0": "submixer"</c>, a stack's or
+/// a dock's place by container id and index, a grid's by container id, row
+/// and column as <c>"desktop:1,0"</c>), and the sections the skin hides that
+/// the user showed. An entry naming a place or a region the skin's tree no
+/// longer has is dropped whole.
 /// </summary>
-public sealed record SkinSectionOrder
+public sealed record SkinArrangement
 {
     public string Skin { get; init; } = "";
     public int Version { get; init; }
-    public IReadOnlyList<string> Order { get; init; } = [];
+    public IReadOnlyDictionary<string, string> Slots { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
+    public IReadOnlyList<string> Shown { get; init; } = [];
+}
+
+/// <summary>A skin's layout by skin id and layout version.</summary>
+public sealed record SkinLayoutKey
+{
+    public string Skin { get; init; } = "";
+    public int Version { get; init; }
 }
 
 /// <summary>
