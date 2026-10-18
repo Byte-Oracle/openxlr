@@ -170,13 +170,13 @@ public sealed class Wave3DeviceTests
         Assert.True(s.ClipGuard);
         Assert.Equal(-12.5, s.HpVolumeDb);
         Assert.False(s.HpMute);
-        Assert.Equal(80, s.Crossfade);          // 40 percent of the way to PC
+        Assert.Equal(120, s.Crossfade);         // 40 percent is 40 percent of the way to the microphone
         // Nothing the microphone lacks is reported as on.
         Assert.False(s.LowCut || s.Phantom || s.LowImpedance || s.Expander || s.VoiceTune || s.Compressor);
 
         (dev, _) = Mic(Block(gainDb: 0, mute: true, clipGuard: false, hpDb: -60, hpMute: true, mixPercent: 100));
         s = dev.ReadState();
-        Assert.Equal((0, true, false, -60.0, true, 200), (s.GainDb, s.Mute, s.ClipGuard, s.HpVolumeDb, s.HpMute, s.Crossfade));
+        Assert.Equal((0, true, false, -60.0, true, 0), (s.GainDb, s.Mute, s.ClipGuard, s.HpVolumeDb, s.HpMute, s.Crossfade));
     }
 
     [Fact]
@@ -311,14 +311,14 @@ public sealed class Wave3DeviceTests
     }
 
     [Theory]
-    [InlineData(0, 0)]
-    [InlineData(1, 128)]            // one crossfade unit is half a percent
-    [InlineData(95, 12160)]
+    [InlineData(0, 25600)]          // the microphone alone is 100 percent on the Wave:3
+    [InlineData(1, 25472)]          // one crossfade unit is half a percent
+    [InlineData(95, 13440)]
     [InlineData(100, 12800)]
-    [InlineData(105, 13440)]
-    [InlineData(200, 25600)]
-    [InlineData(250, 25600)]        // held to the top
-    [InlineData(-9, 0)]
+    [InlineData(105, 12160)]
+    [InlineData(200, 0)]            // the computer alone is 0 percent
+    [InlineData(250, 0)]            // held to the end
+    [InlineData(-9, 25600)]
     public void TheCrossfadeIsHalfAPercentPerUnitWithNoGrid(int crossfade, int raw)
     {
         Assert.Equal((short)raw, Wave3Device.CrossfadeToWord(crossfade));
@@ -326,10 +326,10 @@ public sealed class Wave3DeviceTests
     }
 
     [Theory]
-    [InlineData(12200, 95)]         // 95.3 from the dial
-    [InlineData(12224, 96)]         // 95.5 rounds away from zero
-    [InlineData(-128, 0)]
-    [InlineData(30000, 200)]
+    [InlineData(12200, 105)]        // 95.3 from the dial, mirrored
+    [InlineData(12224, 104)]        // 95.5 rounds away from zero
+    [InlineData(-128, 200)]
+    [InlineData(30000, 0)]
     public void ACrossfadeWordOffTheHalfPercentIsRoundedAndHeld(int raw, int crossfade)
         => Assert.Equal(crossfade, Wave3Device.CrossfadeFromWord((short)raw));
 
@@ -356,7 +356,7 @@ public sealed class Wave3DeviceTests
             Assert.Equal(at, dev.ReadState().Crossfade);
         }
         Assert.Equal(130, dev.ReadState().Crossfade);
-        Assert.Equal(65 * 256, Word(usb, 10));
+        Assert.Equal(35 * 256, Word(usb, 10));     // 130 of 200 is 35 percent, the word being mirrored
 
         // The headphone dial steps 0.6 dB; every step reads back lower than
         // the one before, and at or just above the level asked, since the
@@ -394,7 +394,7 @@ public sealed class Wave3DeviceTests
         Assert.Equal(0, c[5]);
         Assert.Equal(-30.25 * 256, Word(usb, 7));
         Assert.Equal(0, c[9]);                     // was 0, a level above the floor keeps it released
-        Assert.Equal(75 * 256, Word(usb, 10));     // 150 of 200 is 75 percent
+        Assert.Equal(25 * 256, Word(usb, 10));     // 150 of 200 is 25 percent on the mirrored word
         foreach (int i in Carried) Assert.Equal(before[i], c[i]);
 
         // Each write was preceded by a read of the block it modified, and
@@ -458,9 +458,9 @@ public sealed class Wave3DeviceTests
         Assert.Equal(-15360, Word(usb, 7));
 
         dev.SetCrossfade(999);
-        Assert.Equal(0x6400, Word(usb, 10));
+        Assert.Equal(0, Word(usb, 10));            // the computer alone
         dev.SetCrossfade(-9);
-        Assert.Equal(0, Word(usb, 10));
+        Assert.Equal(0x6400, Word(usb, 10));       // the microphone alone
     }
 
     [Fact]
@@ -471,13 +471,13 @@ public sealed class Wave3DeviceTests
         BinaryPrimitives.WriteInt16LittleEndian(c.AsSpan(7), -80 * 256);
         BinaryPrimitives.WriteInt16LittleEndian(c.AsSpan(10), 112 * 256);
         DeviceState s = Wave3Device.Decode(c, null);
-        Assert.Equal((40, -60.0, 200), (s.GainDb, s.HpVolumeDb, s.Crossfade));
+        Assert.Equal((40, -60.0, 0), (s.GainDb, s.HpVolumeDb, s.Crossfade));   // 112 percent is held to the microphone end
 
         BinaryPrimitives.WriteInt16LittleEndian(c.AsSpan(0), -1 * 256);
         BinaryPrimitives.WriteInt16LittleEndian(c.AsSpan(7), 5 * 256);
         BinaryPrimitives.WriteInt16LittleEndian(c.AsSpan(10), -1 * 256);
         s = Wave3Device.Decode(c, null);
-        Assert.Equal((0, 0.0, 0), (s.GainDb, s.HpVolumeDb, s.Crossfade));
+        Assert.Equal((0, 0.0, 200), (s.GainDb, s.HpVolumeDb, s.Crossfade));   // a negative percent is held to the computer end
 
         // A half-dB gain reads as the nearest whole dB, halves away from zero.
         BinaryPrimitives.WriteInt16LittleEndian(c.AsSpan(0), (short)(20.5 * 256));

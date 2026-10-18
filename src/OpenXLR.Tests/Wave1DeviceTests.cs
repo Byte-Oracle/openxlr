@@ -96,7 +96,7 @@ public sealed class Wave1DeviceTests
         Assert.False(s.Mute);
         Assert.True(s.ClipGuard);
         Assert.Equal(-18, s.HpVolumeDb);
-        Assert.Equal(70, s.Crossfade);
+        Assert.Equal(130, s.Crossfade);        // 35 percent, mirrored as on the Wave:3
         dev.SetMute(true);
         byte[] w = Assert.Single(usb.Writes);
         Assert.Equal(1, w[4]);
