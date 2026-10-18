@@ -37,6 +37,7 @@ public sealed class SkinWindowTests
         {
             SkinsReachOpenWindowsAndTheDefaultComesBackExactly(main, options, flow);
             AnInstalledSkinIsFoundAndItsImageIsUsed(main);
+            ALayoutSkinTurnsTheSectionsWithoutRebuildingThem(main);
             ABrokenSkinLeavesTheWindowUsableAndSaysWhy(main);
             ControlAppearancesSwitchAndTheFaderStillWorks(main);
             NeitherShippedAppearanceBreaksTheLayoutOrTheLabels(main, options, flow);
@@ -154,6 +155,93 @@ public sealed class SkinWindowTests
         }
         finally
         {
+            SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", oldHome);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", oldDirs);
+            Directory.Delete(data, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// A skin whose layout runs the sections in a row, put on and taken off
+    /// while the window is open: the sections turn and reorder, and they are
+    /// the same cards, expanders and contents with the same data context
+    /// throughout. A skin that only changes colours leaves the sections
+    /// exactly where they are, without touching the panel at all.
+    /// </summary>
+    private static void ALayoutSkinTurnsTheSectionsWithoutRebuildingThem(MainWindow main)
+    {
+        string data = Path.Combine(Path.GetTempPath(), "openxlr-skinlayout-" + Guid.NewGuid());
+        string folder = Path.Combine(data, "openxlr", "skins", "row");
+        string? oldHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        string? oldDirs = Environment.GetEnvironmentVariable("XDG_DATA_DIRS");
+        Directory.CreateDirectory(folder);
+        string[] tiles = ["InputsTile", "HeadphonesTile", "MonitorTile", "ApplicationsTile", "SubmixerTile"];
+        var panel = main.FindControl<StackPanel>("SectionCards")!;
+        Expander[] expanders = [.. tiles.Select(name => main.FindControl<Expander>(name)!)];
+        Control[] cards = [.. expanders.Select(e => (Control)e.Parent!)];
+        object?[] contents = [.. expanders.Select(e => e.Content)];
+        object? context = main.DataContext;
+        int contextChanges = 0, panelChanges = 0;
+        void ContextChanged(object? sender, EventArgs args) => contextChanges++;
+        void PanelChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs args) => panelChanges++;
+        string[] Order() => [.. panel.Children.Select(c => ((Expander)((Border)c).Child!).Name!)];
+        string[] before = Order();
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", data);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(data, "none"));
+            File.WriteAllText(Path.Combine(folder, "skin.json"), """
+                {"schema":1,"name":"Row","tokens":{"Ox.Card.Background":"#30343c"},
+                 "layout":{"version":1,"main":{"kind":"stack","orientation":"horizontal","spacing":20,"children":[
+                   {"kind":"region","region":"submixer"},{"kind":"region","region":"monitor"},
+                   {"kind":"region","region":"inputs"},{"kind":"region","region":"headphones"},
+                   {"kind":"region","region":"applications"}]}}}
+                """);
+            foreach (Control control in expanders.Concat(cards)) control.DataContextChanged += ContextChanged;
+            panel.Children.CollectionChanged += PanelChanged;
+
+            // Colours alone: the panel is not touched.
+            Assert.Empty(SkinService.Apply(SkinCatalog.Find("opendeck")!));
+            Pump(main);
+            Assert.Equal(0, panelChanges);
+            Assert.Equal(before, Order());
+            Assert.Equal(Avalonia.Layout.Orientation.Vertical, panel.Orientation);
+
+            SkinEntry row = Assert.Single(SkinCatalog.Discover(), e => e.Id == "row");
+            Assert.Empty(row.Errors);
+            Assert.Empty(SkinService.Apply(row));
+            Pump(main);
+            Layout(main, 1040, 900);
+            Assert.Equal(Avalonia.Layout.Orientation.Horizontal, panel.Orientation);
+            Assert.Equal(20, panel.Spacing);
+            Assert.Equal(["SubmixerTile", "MonitorTile", "InputsTile", "HeadphonesTile", "ApplicationsTile"], Order());
+            Capture(main, "layout-row");
+
+            // And back, through a colour-only skin, to the shipped appearance.
+            Assert.Empty(SkinService.Apply(SkinCatalog.Find("opendeck")!));
+            Pump(main);
+            Assert.Equal(Avalonia.Layout.Orientation.Vertical, panel.Orientation);
+            Assert.Equal(before, Order());
+            SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
+            Pump(main);
+            Assert.Equal(before, Order());
+
+            Assert.Equal(expanders, tiles.Select(name => main.FindControl<Expander>(name)!));
+            for (int i = 0; i < tiles.Length; i++)
+            {
+                Assert.Same(cards[i], expanders[i].Parent);
+                Assert.Same(contents[i], expanders[i].Content);
+                Assert.Same(context, expanders[i].DataContext);
+                Assert.Contains(cards[i], panel.Children);
+            }
+            Assert.Same(context, main.DataContext);
+            Assert.Equal(0, contextChanges);
+        }
+        finally
+        {
+            foreach (Control control in expanders.Concat(cards)) control.DataContextChanged -= ContextChanged;
+            panel.Children.CollectionChanged -= PanelChanged;
             SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
             Environment.SetEnvironmentVariable("XDG_DATA_HOME", oldHome);
             Environment.SetEnvironmentVariable("XDG_DATA_DIRS", oldDirs);

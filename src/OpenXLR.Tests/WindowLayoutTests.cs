@@ -581,6 +581,7 @@ public sealed class WindowLayoutTests
                 FaderInputWindowTests.Check(main);
                 SoundCheckWindowTests.CheckPendingClose();
                 AssertLayoutAppearance(main, vm);
+                SkinLayoutWindowTests.Check();
                 MixerViewWindowTests.Check();
                 MixerPopOutWindowTests.Check();
                 // The arrange check opens its own window, with a real pointer

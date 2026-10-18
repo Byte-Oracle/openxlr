@@ -61,6 +61,37 @@ public sealed class TuiSkinTests : IDisposable
         Assert.Equal(Theme.Material.Card, theme.Card);
     }
 
+    /// <summary>
+    /// The desktop layout block is the window's business. The terminal reads
+    /// the same palette and controls with it present, whether the window
+    /// would take the layout, refuse it, or not understand its version.
+    /// </summary>
+    [Theory]
+    [InlineData("""{"version":1,"main":{"kind":"stack","orientation":"horizontal","spacing":12,"children":[{"kind":"region","region":"submixer"},{"kind":"region","region":"inputs"},{"kind":"region","region":"monitor"},{"kind":"region","region":"headphones"},{"kind":"region","region":"applications"}]}}""")]
+    [InlineData("""{"version":2,"main":{"kind":"grid","rows":["auto"]}}""")]
+    [InlineData("""{"version":1,"main":{"kind":"stack","orientation":"diagonal"}}""")]
+    [InlineData("""[]""")]
+    public void ALayoutBlockLeavesTheTerminalPaletteAlone(string layout)
+    {
+        string document = "{\"schema\":1,\"name\":\"Laid out\",\"controls\":{\"fader\":\"console\"},"
+            + "\"tokens\":{\"Ox.Card.Background\":\"#123456\"},\"layout\":" + layout + "}";
+        Theme theme = Theme.FromJson(document, "laid-out", "Fallback");
+        Assert.Equal("Laid out", theme.Name);
+        Assert.Equal(Rgb.Parse("#123456"), theme.Card);
+        Assert.True(theme.ConsoleFaders);
+        Assert.Equal(Theme.Material.Window, theme.Window);
+
+        // Installed the way a user installs one, it is listed and loads the same.
+        Skin("home", "laid-out", document);
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_root, "home"));
+        Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(_root, "empty"));
+        Assert.Single(SkinCatalog.Scan(), skin => skin.Id == "laid-out");
+        Theme installed = SkinCatalog.Load("laid-out");
+        Assert.Equal("Laid out", installed.Name);
+        Assert.Equal(Rgb.Parse("#123456"), installed.Card);
+        Assert.True(installed.ConsoleFaders);
+    }
+
     // --- colours ---
 
     [Theory]

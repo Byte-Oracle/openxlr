@@ -1513,6 +1513,9 @@ Saving will replace it with the current scene.</value>
   <data name="PutTheFiveSectionsBackInTheir" xml:space="preserve">
     <value>Put the five sections back in their original order</value>
   </data>
+  <data name="PutTheSectionsBackInTheSkinsOrder" xml:space="preserve">
+    <value>Put the five sections back in the order this skin sets</value>
+  </data>
   <data name="QuitApp" xml:space="preserve">
     <value>Quit app</value>
   </data>

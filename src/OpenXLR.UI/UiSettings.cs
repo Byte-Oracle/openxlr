@@ -42,6 +42,18 @@ public sealed record UiSettings
     /// </summary>
     public IReadOnlyList<string> SectionOrder { get; init; } = [];
     /// <summary>
+    /// The section order the user arranged under a skin that sets its own
+    /// layout, one entry per skin id and layout version, by region id. A skin
+    /// with a layout starts from its own order and these moves go on top;
+    /// they never touch <see cref="SectionOrder"/>, which stays the order for
+    /// skins without one. At most <see cref="MaxSkinSectionOrders"/> are kept,
+    /// the most recently arranged last.
+    /// </summary>
+    public IReadOnlyList<SkinSectionOrder> SkinSectionOrders { get; init; } = [];
+
+    /// <summary>How many skins' arrangements <see cref="SkinSectionOrders"/> keeps.</summary>
+    public const int MaxSkinSectionOrders = 32;
+    /// <summary>
     /// How the submixer is drawn: absent or <c>full</c> for every strip,
     /// <c>compact</c> for one chosen channel, <c>mini</c> for one channel's
     /// send into one chosen mix with the other sections out of the way.
@@ -116,7 +128,50 @@ public sealed record UiSettings
         if (settings is null) return new UiSettings();
         // "collapsedSections": null is valid JSON for a list the window
         // enumerates, so it reads as an empty list rather than failing later.
-        return settings with { CollapsedSections = settings.CollapsedSections ?? [], SectionOrder = settings.SectionOrder ?? [] };
+        return settings with
+        {
+            CollapsedSections = settings.CollapsedSections ?? [],
+            SectionOrder = settings.SectionOrder ?? [],
+            SkinSectionOrders = NormalizeSkinSectionOrders(settings.SkinSectionOrders),
+        };
+    }
+
+    /// <summary>The user's arrangement for this skin and layout version, or null when there is none.</summary>
+    public SkinSectionOrder? SkinSectionOrderFor(string skin, int version) =>
+        SkinSectionOrders.LastOrDefault(e => e.Skin == skin && e.Version == version);
+
+    /// <summary>
+    /// These settings with the arrangement for one skin and layout version
+    /// replaced by <paramref name="order"/>, or removed when it is null. The
+    /// entry moves to the end, and the oldest go once there are more than
+    /// <see cref="MaxSkinSectionOrders"/>.
+    /// </summary>
+    public UiSettings WithSkinSectionOrder(string skin, int version, IReadOnlyList<string>? order)
+    {
+        List<SkinSectionOrder> entries = [.. SkinSectionOrders.Where(e => e.Skin != skin || e.Version != version)];
+        if (order is not null) entries.Add(new SkinSectionOrder { Skin = skin, Version = version, Order = [.. order] });
+        return this with { SkinSectionOrders = NormalizeSkinSectionOrders(entries) };
+    }
+
+    /// <summary>
+    /// The per-skin arrangements made safe to use: null lists and entries,
+    /// entries with no skin, and repeats of one skin and version (the last
+    /// wins) go; an order is cut to the most a layout can place.
+    /// </summary>
+    private static IReadOnlyList<SkinSectionOrder> NormalizeSkinSectionOrders(IReadOnlyList<SkinSectionOrder?>? entries)
+    {
+        if (entries is null) return [];
+        var kept = new List<SkinSectionOrder>();
+        foreach (SkinSectionOrder? entry in entries)
+        {
+            if (entry is not { Skin.Length: > 0 }) continue;
+            kept.RemoveAll(e => e.Skin == entry.Skin && e.Version == entry.Version);
+            kept.Add(entry with
+            {
+                Order = [.. (entry.Order ?? []).OfType<string>().Take(Skinning.SkinFormat.MaxLayoutChildren)],
+            });
+        }
+        return kept.Count <= MaxSkinSectionOrders ? kept : kept[^MaxSkinSectionOrders..];
     }
 
     /// <summary>
@@ -125,6 +180,20 @@ public sealed record UiSettings
     /// left as it is, so a hand edit with a typo can still be repaired.
     /// </summary>
     public string? Save() => PreferenceFile.Write(FilePath, this, Json);
+}
+
+/// <summary>
+/// One skin's section order as the user arranged it in the window: the
+/// skin's id, the layout version it was arranged under, and the region ids
+/// (<c>inputs</c>, <c>submixer</c>, ...) in order. A region the layout does
+/// not have is ignored and one it has but the list leaves out follows in the
+/// skin's own order.
+/// </summary>
+public sealed record SkinSectionOrder
+{
+    public string Skin { get; init; } = "";
+    public int Version { get; init; }
+    public IReadOnlyList<string> Order { get; init; } = [];
 }
 
 /// <summary>

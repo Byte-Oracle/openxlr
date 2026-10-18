@@ -56,6 +56,11 @@ public enum SkinOrigin
 /// A validated skin. Every value here has passed its token's type and bounds
 /// check; nothing in it can run, fetch or reach outside <see cref="Directory"/>.
 /// </summary>
+/// <param name="Layout">
+/// The desktop arrangement the skin declares, or null when it declares none
+/// or its layout block was refused. Null keeps the classic arrangement and
+/// the user's own saved section order.
+/// </param>
 public sealed record SkinPackage(
     string Id,
     string Name,
@@ -65,7 +70,8 @@ public sealed record SkinPackage(
     SkinOrigin Origin,
     string? Directory,
     IReadOnlyDictionary<string, SkinValue> Tokens,
-    IReadOnlyDictionary<string, string> Controls)
+    IReadOnlyDictionary<string, string> Controls,
+    SkinLayout? Layout = null)
 {
     /// <summary>The id of the appearance the application ships and falls back to.</summary>
     public const string DefaultId = "default";
@@ -118,4 +124,20 @@ public static class SkinFormat
 
     /// <summary>The longest id, name, description or author a package may carry.</summary>
     public const int MaxTextLength = 400;
+
+    /// <summary>
+    /// The version of the optional <c>layout</c> block this version reads. It
+    /// moves on its own, so a newer layout leaves the top-level schema, the
+    /// tokens and the controls readable by older builds.
+    /// </summary>
+    public const int LayoutVersion = 1;
+
+    /// <summary>How many children one layout container may hold.</summary>
+    public const int MaxLayoutChildren = 16;
+
+    /// <summary>The smallest gap a layout stack may put between its children.</summary>
+    public const double MinLayoutSpacing = 0;
+
+    /// <summary>The largest gap a layout stack may put between its children.</summary>
+    public const double MaxLayoutSpacing = 64;
 }

@@ -87,6 +87,14 @@ public static class SkinService
     public static SkinEntry Current { get; private set; } = new(SkinPackage.Default, []);
 
     /// <summary>
+    /// The desktop layout of the skin in force, or null for the classic one.
+    /// Material's light palette is colours only, so in either mode Material
+    /// has none. The window reads it when <see cref="Changed"/> fires and
+    /// moves its sections only when the arrangement it resolves to differs.
+    /// </summary>
+    public static SkinLayout? Layout => Current.Package.Layout;
+
+    /// <summary>
     /// What went wrong applying <see cref="Current"/>: the reader's complaints
     /// plus anything the images or the bridged keys could not take. Empty when
     /// the skin applied cleanly. Options shows these; the mixer window does not.

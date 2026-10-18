@@ -369,6 +369,92 @@ public sealed class SkinDocumentTests
     }
 
     /// <summary>
+    /// The layout block as the document states it: the version, the region
+    /// ids with a row each, the spacing range and default, the child limit,
+    /// and a complete example that the reader takes without complaint.
+    /// </summary>
+    [Fact]
+    public void TheLayoutSectionStatesWhatTheLayoutReaderTakes()
+    {
+        string layout = Section(Document, "Layout", "What a skin cannot do");
+        var missing = new List<string>();
+        void Says(string text)
+        {
+            if (!layout.Contains(text, StringComparison.Ordinal)) missing.Add(text);
+        }
+        Says($"\"version\": {SkinFormat.LayoutVersion}");
+        Says($"from {Number(SkinFormat.MinLayoutSpacing)} to {Number(SkinFormat.MaxLayoutSpacing)}");
+        Says($"{Number(SkinLayoutDefaults.Spacing)}, the classic gap");
+        Says($"more than {SkinFormat.MaxLayoutChildren} children");
+        Says($"at least {Number(SkinLayoutDefaults.RowSectionMinWidth)} pixels wide");
+        Says("`\"vertical\"`");
+        Says("`\"horizontal\"`");
+        Says("`skinSectionOrders`");
+        Says("`sectionOrder`");
+        Assert.True(missing.Count == 0, "docs/skins.md, Layout, no longer states: " + string.Join("; ", missing));
+
+        string[] documented = [.. layout.Split('\n')
+            .Select(line => System.Text.RegularExpressions.Regex.Match(line, @"^\| `([a-z]+)` \| [A-Z]+: "))
+            .Where(m => m.Success).Select(m => m.Groups[1].Value)];
+        Assert.Equal(SkinLayoutRegions.All, documented);
+
+        // The example is a whole skin, read as an installed one is.
+        int start = layout.IndexOf("```json\n", StringComparison.Ordinal) + "```json\n".Length;
+        string example = layout[start..layout.IndexOf("```", start, StringComparison.Ordinal)];
+        SkinReadResult result = SkinReader.Read("side-by-side", example, SkinOrigin.BuiltIn, null);
+        Assert.True(result.Ok, string.Join("\n", result.Errors));
+        SkinLayout read = Assert.IsType<SkinLayout>(result.Package!.Layout);
+        Assert.Equal(SkinLayoutOrientation.Horizontal, read.Main.Orientation);
+        Assert.Equal(SkinLayoutRegions.Submixer, read.Main.Children[0].Id);
+    }
+
+    [Fact]
+    public void TheJsonSchemaDescribesTheLayoutThisVersionReads()
+    {
+        using JsonDocument schema = JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(Root, "docs", "skin.schema.json")));
+        JsonElement root = schema.RootElement;
+        JsonElement definitions = root.GetProperty("$defs");
+        Assert.Equal("#/$defs/desktopLayout",
+            root.GetProperty("properties").GetProperty("layout").GetProperty("$ref").GetString());
+        // The layout's version moves on its own; the file's stays.
+        Assert.Equal(SkinFormat.Schema, root.GetProperty("properties").GetProperty("schema").GetProperty("const").GetInt32());
+
+        foreach (string name in new[] { "desktopLayout", "layoutStack", "layoutRegion" })
+        {
+            JsonElement definition = definitions.GetProperty(name);
+            Assert.False(definition.GetProperty("additionalProperties").GetBoolean(),
+                $"{name} would accept a property the layout reader refuses.");
+        }
+
+        JsonElement layout = definitions.GetProperty("desktopLayout").GetProperty("properties");
+        Assert.Equal(SkinFormat.LayoutVersion, layout.GetProperty("version").GetProperty("const").GetInt32());
+        Assert.Equal(["main", "version"], layout.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(["version"], definitions.GetProperty("desktopLayout").GetProperty("required")
+            .EnumerateArray().Select(v => v.GetString()));
+
+        JsonElement stack = definitions.GetProperty("layoutStack").GetProperty("properties");
+        Assert.Equal("stack", stack.GetProperty("kind").GetProperty("const").GetString());
+        Assert.Equal(["vertical", "horizontal"],
+            stack.GetProperty("orientation").GetProperty("enum").EnumerateArray().Select(v => v.GetString()));
+        JsonElement spacing = stack.GetProperty("spacing");
+        Assert.Equal(SkinFormat.MinLayoutSpacing, spacing.GetProperty("minimum").GetDouble());
+        Assert.Equal(SkinFormat.MaxLayoutSpacing, spacing.GetProperty("maximum").GetDouble());
+        Assert.Equal(SkinLayoutDefaults.Spacing, spacing.GetProperty("default").GetDouble());
+        JsonElement children = stack.GetProperty("children");
+        Assert.Equal(SkinLayoutRegions.All.Count, children.GetProperty("minItems").GetInt32());
+        Assert.Equal(SkinLayoutRegions.All.Count, children.GetProperty("maxItems").GetInt32());
+        Assert.True(SkinLayoutRegions.All.Count <= SkinFormat.MaxLayoutChildren);
+        Assert.True(children.GetProperty("uniqueItems").GetBoolean());
+        Assert.Equal("#/$defs/layoutRegion", children.GetProperty("items").GetProperty("$ref").GetString());
+
+        JsonElement region = definitions.GetProperty("layoutRegion").GetProperty("properties");
+        Assert.Equal("region", region.GetProperty("kind").GetProperty("const").GetString());
+        Assert.Equal(SkinLayoutRegions.All,
+            region.GetProperty("region").GetProperty("enum").EnumerateArray().Select(v => v.GetString()!));
+    }
+
+    /// <summary>
     /// The example an author is told to copy. It is read exactly as an
     /// installed skin is, so a token renamed in the code leaves the example
     /// broken here rather than in someone's window.

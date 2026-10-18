@@ -130,6 +130,11 @@ few releases, and they get to settle in users' hands first.
   pair, healed by the sweep when the device returns. A capture channel
   is edited like an application channel but takes no application
   assignments.
+- [x] Skins can set the section order and orientation of the desktop
+  window's cards: an optional `layout` block, version 1, places the five
+  sections in a column or a row. The user's Arrange moves are kept per
+  skin, Reset returns to the skin's order, and a skin without a layout
+  keeps the saved order it always had. [skins.md](skins.md#layout)
 - [ ] Inputs from more than one attached Wave interface at once. The
   daemon drives one interface today; a second one is reachable only as a
   capture source.

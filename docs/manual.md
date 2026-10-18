@@ -1326,6 +1326,17 @@ collapsed sections, and **Reset sections** puts the five back in their
 usual order. If `ui.json` cannot be written, the new order stays until the
 window closes and the note above the sections says why.
 
+A skin can set its own section order, and can run the sections side by
+side in one row instead of one above the other ([Layout](skins.md#layout)).
+In a row a section lands left or right of the one you drop it on, any
+arrow key moves it one place along the row, and holding a handle near the
+side of the row scrolls it. Under such a skin, Arrange starts from the
+skin's order and remembers your moves for that skin alone; they do not
+change the order other skins use. **Reset sections** then puts the
+sections back in the skin's own order and forgets only that skin's moves.
+Switching to a skin without a layout, Material and every shipped skin
+included, brings back the order you arranged there.
+
 Channel and mix tiles follow the mixer layout's one order, the same one
 the layout editor's arrows and the terminal mixer change. A drop sends
 the new order to the daemon, and the tiles move when it has saved it; a
@@ -1411,7 +1422,10 @@ the application, so a package brings them with it:
 The choice takes effect at once. Windows that are already open repaint;
 audio, the mixer, the routing and the layout are untouched, and nothing is
 restarted. The choice is saved in `~/.config/openxlr/ui.json` and is not
-part of a profile or of the mixer layout.
+part of a profile or of the mixer layout. A skin you install may also set
+the order of the window's sections and run them in a row; the sections
+move in place, and [Arrange](#arrange) says how your own moves are kept
+under it.
 
 Below the skin, **Mode** picks Material's palette: **System**, **Light** or
 **Dark**. System, the default, follows the desktop's light or dark
