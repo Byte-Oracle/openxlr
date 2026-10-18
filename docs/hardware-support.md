@@ -276,7 +276,7 @@ grid would swallow the Stream Deck's five-unit crossfade ticks.
 | Mute | tested briefly | byte 4; the capacitive mute pad toggles the same byte in wave3-research's log |
 | ClipGuard | coded | byte 5; taken as hardware, so the software limiter is not offered |
 | Headphone volume -60 to 0 dB | tested briefly | signed Q8.8 word at 7, written truncated toward zero as openwave does ("matching the firmware setter's int()"). openwave lets the word go down to -128 dB; the kernel's control and wave3-research's class range stop at -60, and so does the backend |
-| Direct monitor balance, as the crossfade | tested briefly | Q8.8 percent at 10, half a percent per crossfade unit, shown as the Mic and PC crossfade (0 to 200). 0 is taken as microphone only and 100 as PC only; none of the sources states the direction, and the quick test did not settle it |
+| Direct monitor balance, as the crossfade | verified on hardware | Q8.8 percent at 10, half a percent per crossfade unit, shown as the Mic and PC crossfade (0 to 200). The word runs the other way from the crossfade: 0 percent is the computer alone and 100 the microphone alone. None of the sources states the direction; an owner settled it by ear on 2026-10-18, when the straight mapping put all computer audio at the slider's microphone end, and the backend mirrors the scales since |
 | Headphone mute | read | byte 9, in the state as `hpMute`. wave3-research saw the firmware assert it when the level reaches its floor; a level written above the floor releases it, so the jack cannot stay silent with nothing in OpenXLR to release it. No control sets it |
 | Low cut | software | the submixer's high-pass, by design; byte 6 is carried as read |
 | Gain lock | software | the daemon's own lock, kept off the window because of the dial, as on every device with one; byte 15 is carried as read |
@@ -375,7 +375,7 @@ back the dial's own word and nothing changes.
 | Mute | verified on hardware | byte 4; set from the UI, the owner saw the microphone's LED turn red. On the Wave:1 the dial is pressed to mute, and the press showing in the block is not confirmed yet |
 | ClipGuard | read on hardware | byte 5, read as on; the setter awaits an archive collected with it changed |
 | Headphone volume -60 to 0 dB | verified on hardware | the Wave:3's word, read as 0 dB with the kernel's playback control at 120; moved from the UI, the owner saw the white LED follow the slider |
-| Direct monitor balance, as the crossfade | read on hardware | the Wave:3's word, read as 0; the review calls it the mic/PC mix; the setter awaits an archive collected with it changed |
+| Direct monitor balance, as the crossfade | read on hardware | the Wave:3's word, read as 0, which on a Wave:3 is the computer alone; the review calls it the mic/PC mix; the setter and the direction on a Wave:1 await an archive collected with it changed |
 | Headphone mute | read on hardware | byte 9, as on the Wave:3, read as unmuted on an owner's unit |
 | Dial target | read on hardware | byte 12 read 2 (headphones) on an owner's unit, the review's default; the review gives the dial two targets, so 3 (monitor mix) should never appear. The target is set in Wave Link, not on the microphone, and OpenXLR does not write byte 12, so the gain word has not been read with the dial on gain on a Wave:1 |
 | Low cut, gain lock | software | the submixer's and the daemon's, as on the Wave:3 |

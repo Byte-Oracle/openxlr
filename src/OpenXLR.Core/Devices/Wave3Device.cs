@@ -53,7 +53,9 @@ namespace OpenXLR.Core.Devices;
 ///          firmware set it when the level reaches its floor. Read into the
 ///          state, and released by a level written above the floor.
 ///   10..11 direct monitor balance, Q8.8 percent, 0 to 100 (OW, capped at
-///          0x6400, on the hardware; LW). W3R reads byte 11 as the dial's mix
+///          0x6400, on the hardware; LW), 0 the computer alone and 100 the
+///          microphone alone, the direction a Wave:3 owner settled by ear
+///          (see CrossfadeToWord). W3R reads byte 11 as the dial's mix
 ///          value in mix mode, which is that word's integer byte, and bytes
 ///          10 and 13 as the ring's red and blue with a separate mix byte at
 ///          14. OW's users would have a bug report if writing 10 coloured the
@@ -466,15 +468,17 @@ public class Wave3Device : IAudioDevice
     /// playback inside the device, on the way to the headphones, with the
     /// microphone alone at one end and the computer alone at the other; the
     /// Pro's word runs 0 to 200 with 100 at the centre, the Wave:3's 0 to 100
-    /// percent, so one crossfade unit is half a percent, 128 raw. Which end of
-    /// the Wave:3's word is the microphone is stated by none of the sources;
-    /// 0 is taken as microphone only, the direction of the Pro's crossfade
-    /// and of W3R's reading of its byte 14, and an owner settles it by ear.
+    /// percent, so one crossfade unit is half a percent, 128 raw. The word runs
+    /// the other way from the crossfade: none of the sources states its
+    /// direction, and a Wave:3 owner settled it by ear on 2026-10-18, with the
+    /// crossfade mapped straight the left end of the slider was all computer
+    /// audio and the right end all microphone. So 0 percent is the computer
+    /// alone and 100 the microphone alone, and the two scales are mirrored.
     /// </summary>
-    internal static short CrossfadeToWord(int crossfade) => (short)(Math.Clamp(crossfade, 0, 200) * 128);
+    internal static short CrossfadeToWord(int crossfade) => (short)((200 - Math.Clamp(crossfade, 0, 200)) * 128);
 
     internal static int CrossfadeFromWord(short raw)
-        => Math.Clamp((int)Math.Round(raw / 128.0, MidpointRounding.AwayFromZero), 0, 200);
+        => Math.Clamp(200 - (int)Math.Round(raw / 128.0, MidpointRounding.AwayFromZero), 0, 200);
 
     /// <summary>The headphone level as the firmware's word: held to the range, then truncated toward zero as OW does.</summary>
     internal static short HpToWord(double db)
