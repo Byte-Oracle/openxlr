@@ -81,7 +81,8 @@
                               MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                               AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
                               ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
-                <Button layout:StripPanel.Part="effects" Classes="matrixEffects" Content="{loc:Text Key=MatrixEffects}"
+                <Button layout:StripPanel.Part="effects" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
+                        Classes.fxOn="{Binding Main.Inserts.IsProcessing}" Classes.fxOff="{Binding Main.Inserts.IsOff}"
                         Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                         IsVisible="{Binding Main.HasMixer}" Click="OnXlrInserts"
                         AutomationProperties.Name="{Binding Main.Inserts.ButtonText}" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
@@ -129,7 +130,8 @@
                               MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                               AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
                               ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
-                <Button layout:StripPanel.Part="effects" Classes="matrixEffects" Content="{loc:Text Key=MatrixEffects}"
+                <Button layout:StripPanel.Part="effects" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
+                        Classes.fxOn="{Binding Main.Inserts2.IsProcessing}" Classes.fxOff="{Binding Main.Inserts2.IsOff}"
                         Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                         IsVisible="{Binding Main.HasMixer}" Click="OnXlrInserts"
                         AutomationProperties.Name="{Binding Main.Inserts2.ButtonText}" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
@@ -254,7 +256,8 @@
                     <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Mix.Muted, Mode=TwoWay}"
                                   Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                                   AutomationProperties.Name="{Binding MuteName}" ToolTip.Tip="{Binding MuteName}"/>
-                    <Button layout:StripPanel.Part="effects" Classes="matrixEffects" Content="{loc:Text Key=MatrixEffects}"
+                    <Button layout:StripPanel.Part="effects" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
+                            Classes.fxOn="{Binding Mix.Inserts.IsProcessing}" Classes.fxOff="{Binding Mix.Inserts.IsOff}"
                             Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                             Click="OnMixInserts" AutomationProperties.Name="{Binding Mix.Inserts.ButtonText}"
                             ToolTip.Tip="{loc:Text Key=StereoPluginsProcessingThisMixBeforeItReaches}"/>

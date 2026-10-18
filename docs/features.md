@@ -290,7 +290,8 @@ catalogue. The same window rescans every format and manages the Windows
 plugin folders. See [Plugin folders](manual.md#plugin-search-folders).
 
 The Inserts row provides bypass, ordering, removal and generated parameter
-controls. Native plugin editors open on the instance processing the audio.
+controls, and the button that opens a chain is green while a plugin in it
+is processing and red when none is; an empty chain keeps the plain button. Native plugin editors open on the instance processing the audio.
 For LV2, enabling "Native host" moves only that insert out of filter-chain
 and briefly interrupts its chain. CLAP and VST3 always use that host.
 Packages include the helper; source builds need

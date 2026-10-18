@@ -71,6 +71,19 @@ public sealed partial class InsertsViewModel : ViewModelBase
 
     public bool HasItems => Items.Count > 0;
 
+    /// <summary>A plugin in the chain is processing: in the path and not failed.</summary>
+    public bool IsProcessing => Items.Any(i => i.IsActive);
+
+    /// <summary>The chain holds plugins and none is processing: every one bypassed or failed.</summary>
+    public bool IsOff => Items.Count > 0 && !IsProcessing;
+
+    /// <summary>The button that opens the chain wears these; an insert raises them when its state moves.</summary>
+    internal void RaiseChainState()
+    {
+        Raise(nameof(IsProcessing));
+        Raise(nameof(IsOff));
+    }
+
     /// <summary>One-line state for the strip: count, or a hint when empty.</summary>
     public string Summary => Items.Count switch
     {
@@ -244,6 +257,7 @@ public sealed partial class InsertsViewModel : ViewModelBase
                 Raise(nameof(Summary));
                 Raise(nameof(ButtonText));
             }
+            RaiseChainState();
         }
         finally { _applying = false; }
         CheckComparison();
@@ -434,14 +448,14 @@ public sealed class InsertViewModel : ViewModelBase
     public bool Bypass
     {
         get => _bypass;
-        set { if (!IsDetached && Set(ref _bypass, value)) { Raise(nameof(StateText)); Raise(nameof(IsActive)); RaiseNativeFlags(); _owner.SendBypass(this, value); } }
+        set { if (!IsDetached && Set(ref _bypass, value)) { Raise(nameof(StateText)); Raise(nameof(IsActive)); RaiseNativeFlags(); _owner.RaiseChainState(); _owner.SendBypass(this, value); } }
     }
 
     private string? _error;
     public string? Error
     {
         get => _error;
-        private set { if (Set(ref _error, value)) { Raise(nameof(HasError)); Raise(nameof(StateText)); Raise(nameof(IsActive)); RaiseNativeFlags(); } }
+        private set { if (Set(ref _error, value)) { Raise(nameof(HasError)); Raise(nameof(StateText)); Raise(nameof(IsActive)); RaiseNativeFlags(); _owner.RaiseChainState(); } }
     }
     public bool HasError => _error is not null;
 

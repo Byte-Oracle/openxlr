@@ -105,7 +105,8 @@
               </StackPanel>
               <StackPanel layout:StripPanel.Part="effects" Spacing="4">
                 <StackPanel Spacing="4" IsVisible="{Binding Main.HasMixer}">
-                  <Button Content="{Binding Main.Inserts.ButtonText}" Padding="12,3" FontSize="12" HorizontalAlignment="Left"
+                  <Button Content="{Binding Main.Inserts.ButtonText}" Classes="fx" Classes.fxOn="{Binding Main.Inserts.IsProcessing}" Classes.fxOff="{Binding Main.Inserts.IsOff}"
+                          Padding="12,3" FontSize="12" HorizontalAlignment="Left"
                           MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                           Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
                   <ItemsControl ItemsSource="{Binding Main.Inserts.Items}" IsVisible="{Binding Main.Inserts.HasItems}"
@@ -166,7 +167,8 @@
               </StackPanel>
               <StackPanel layout:StripPanel.Part="effects" Spacing="4">
                 <StackPanel Spacing="4" IsVisible="{Binding Main.HasMixer}">
-                  <Button Content="{Binding Main.Inserts2.ButtonText}" Padding="12,3" FontSize="12" HorizontalAlignment="Left"
+                  <Button Content="{Binding Main.Inserts2.ButtonText}" Classes="fx" Classes.fxOn="{Binding Main.Inserts2.IsProcessing}" Classes.fxOff="{Binding Main.Inserts2.IsOff}"
+                          Padding="12,3" FontSize="12" HorizontalAlignment="Left"
                           MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                           Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
                   <ItemsControl ItemsSource="{Binding Main.Inserts2.Items}" IsVisible="{Binding Main.Inserts2.HasItems}"

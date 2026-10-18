@@ -420,7 +420,10 @@ channel, with its level and lock in the INPUTS card.
    feature requirements can exclude a plugin; install a compatible set
    such as `lsp-plugins-lv2` if the list is empty.
 2. Add. The plugin appears in the chain window and in the Inserts row on
-   the strip, with a green light while active.
+   the strip, with a green light while active. The button that opens the
+   chain takes the same colours: green while a plugin in it is processing,
+   red when it holds plugins and none is (every one bypassed or failed).
+   An empty chain keeps the plain button.
 3. Controls opens a window generated from the plugin's parameters,
    grouped, with a Defaults button. Bypass takes it out of the path
    (red light); the arrows reorder the chain; the cross removes it. The
@@ -1501,7 +1504,9 @@ XLR 2 has a row only on an interface with two XLR inputs. The head at the
 top of each column carries the mix's name, how many outputs ticked in
 MONITOR hear it (or what kind of mix it is when none does), a thin line in
 the mix's colour when you gave it one in the layout editor, and its mute,
-master level and **FX**, which opens the mix's plugin chain.
+master level and **FX**, which opens the mix's plugin chain. **FX** is
+green while the chain is processing and red when its plugins are all
+bypassed or failed; an empty chain keeps the plain button.
 
 HEADPHONES and MONITOR share the row above the matrix: the headphone
 levels and the direct monitor blend on the left, the output picker and its
