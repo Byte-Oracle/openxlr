@@ -614,8 +614,86 @@ public sealed class OptionsViewModel : ViewModelBase
             SkinChoices.Add(new SkinChoice(entry.Id, Localizer.Format("SkinChoiceLabel", entry.Name, entry.Package.OriginLabel)));
     }
 
+    /// <summary>
+    /// The main window's own reset of the skin in force, which also stands
+    /// its sections back at once; without it, as when Options is opened on
+    /// its own, the reset is made in ui.json alone. Null when it was saved,
+    /// otherwise why not.
+    /// </summary>
+    internal Func<string?>? ResetArrangement { get; init; }
+
+    private string _skinLayoutSummary = "";
+    /// <summary>One line on what the skin in force does to the window's arrangement.</summary>
+    public string SkinLayoutSummary { get => _skinLayoutSummary; private set => Set(ref _skinLayoutSummary, value); }
+
+    private string _mixerDockingNote = "";
+    /// <summary>Where the mixer goes: the user's docking choice, or the skin's pop-out default while there is none.</summary>
+    public string MixerDockingNote { get => _mixerDockingNote; private set => Set(ref _mixerDockingNote, value); }
+
+    /// <summary>
+    /// Put the skin in force back as its author drew it: the sections where
+    /// it puts them, its banks on their default mixes, and the docking choice
+    /// forgotten so its pop-out default applies the next time it is put on.
+    /// Other skins' arrangements stay.
+    /// </summary>
+    public void ResetSkinArrangement()
+    {
+        string? error;
+        if (ResetArrangement is { } reset) error = reset();
+        else
+        {
+            UiSettings settings = UiSettings.Load();
+            Skinning.SkinLayout? layout = Skinning.SkinService.Layout;
+            string skin = Skinning.SkinService.Current.Id;
+            settings = SectionArrangement.Resolve(skin, layout, settings).Reset(settings);
+            settings = layout is null ? settings with { MixerDocked = null } : settings.WithoutSkinChoices(skin, layout.Version);
+            error = settings.Save();
+        }
+        Report(error);
+        DescribeLayout();
+    }
+
+    /// <summary>Say what the skin in force arranges and where the mixer goes.</summary>
+    private void DescribeLayout()
+    {
+        Skinning.SkinLayout? layout = Skinning.SkinService.Layout;
+        SkinLayoutSummary = LayoutSummary(layout);
+        MixerDockingNote = UiSettings.Load().MixerDocked switch
+        {
+            true => Localizer.Text("MixerDockingDocked"),
+            false => Localizer.Text("MixerDockingDetached"),
+            null => layout?.PopOut == Skinning.SkinMixerPlacement.Detached
+                ? Localizer.Text("MixerDockingSkinDetached") : Localizer.Text("MixerDockingNone"),
+        };
+    }
+
+    /// <summary>The summary line: the kind of tree, then each template or default that differs from the classic window.</summary>
+    internal static string LayoutSummary(Skinning.SkinLayout? layout)
+    {
+        if (layout is null) return Localizer.Text("SkinLayoutClassic");
+        var parts = new System.Collections.Generic.List<string>
+        {
+            layout.Main switch
+            {
+                Skinning.SkinLayoutGrid => Localizer.Text("LayoutPartGrid"),
+                Skinning.SkinLayoutDock => Localizer.Text("LayoutPartDock"),
+                Skinning.SkinLayoutStack { Orientation: Skinning.SkinLayoutOrientation.Horizontal } => Localizer.Text("LayoutPartRow"),
+                _ => Localizer.Text("LayoutPartColumn"),
+            },
+        };
+        if (layout.Inputs.IsRack) parts.Add(Localizer.Text("LayoutPartInputRack"));
+        if (layout.Submixer.IsBanks)
+            parts.Add(layout.Submixer.VisibleBanks == 1 ? Localizer.Text("LayoutPartOneBank")
+                : Localizer.Format("LayoutPartBanks", layout.Submixer.VisibleBanks));
+        if (layout.Monitor == Skinning.SkinLayoutTemplates.OutputToolbar) parts.Add(Localizer.Text("LayoutPartOutputToolbar"));
+        if (layout.Applications == Skinning.SkinLayoutTemplates.ApplicationList) parts.Add(Localizer.Text("LayoutPartApplicationList"));
+        if (layout.PopOut == Skinning.SkinMixerPlacement.Detached) parts.Add(Localizer.Text("LayoutPartDetached"));
+        return Localizer.Format("SkinLayoutSummary", string.Join(", ", parts));
+    }
+
     private void ReportSkin(System.Collections.Generic.IReadOnlyList<string> errors)
     {
+        DescribeLayout();
         Skinning.SkinPackage package = Skinning.SkinService.Current.Package;
         string note = package.Description ?? "";
         if (package.Author is { Length: > 0 } author) note = note.Length == 0 ? Localizer.Format("SkinByAuthor", author) : Localizer.Format("SkinNoteByAuthor", note, author);

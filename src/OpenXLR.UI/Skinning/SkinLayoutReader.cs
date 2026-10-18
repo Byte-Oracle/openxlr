@@ -38,7 +38,8 @@ public static class SkinLayoutReader
     private static readonly string[] SectionOptions = ["visibility", "width", "height"];
     private static readonly string[] InputsOptions = [.. SectionOptions, "template", "strip"];
     private static readonly string[] SubmixerOptions =
-        [.. SectionOptions, "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master"];
+        [.. SectionOptions, "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master", "popOut"];
+    private static readonly string[] TemplateOptions = [.. SectionOptions, "template"];
     private static readonly string[] BankOnlyOptions = ["orientation", "visibleBanks", "selectionDefaults", "strip", "master"];
     private static readonly string[] Orientations = ["horizontal", "vertical"];
     private static readonly string[] Placements = ["below-label", "beside-label", "beside-fader"];
@@ -110,6 +111,9 @@ public static class SkinLayoutReader
         SkinHeaderOptions header = SkinHeaderOptions.Default;
         SkinInputsOptions inputs = SkinInputsOptions.Default;
         SkinSubmixerOptions submixer = SkinSubmixerOptions.Default;
+        string monitor = SkinLayoutTemplates.OutputPanel;
+        string applications = SkinLayoutTemplates.ApplicationChips;
+        SkinMixerPlacement popOut = SkinMixerPlacement.Docked;
         if (fields.TryGetValue("regions", out JsonElement regionsElement))
         {
             string regionsPath = path + ".regions";
@@ -125,11 +129,23 @@ public static class SkinLayoutReader
                     Dictionary<string, JsonElement> section = Fields(value, at, $"the options of \"{id}\"");
                     regions[id] = ReadSection(section, at, id);
                     if (id == SkinLayoutRegions.Inputs) inputs = ReadInputs(section, at);
-                    if (id == SkinLayoutRegions.Submixer) submixer = ReadSubmixer(section, at);
+                    if (id == SkinLayoutRegions.Submixer)
+                    {
+                        submixer = ReadSubmixer(section, at);
+                        if (section.TryGetValue("popOut", out JsonElement popOutElement)) popOut = ReadPopOut(popOutElement, at + ".popOut");
+                    }
+                    if (id == SkinLayoutRegions.Monitor && section.TryGetValue("template", out JsonElement monitorTemplate))
+                        monitor = Name(monitorTemplate, at + ".template", SkinLayoutTemplates.Monitor, "a MONITOR template");
+                    if (id == SkinLayoutRegions.Applications && section.TryGetValue("template", out JsonElement appsTemplate))
+                        applications = Name(appsTemplate, at + ".template", SkinLayoutTemplates.Applications, "an APPLICATIONS template");
                 }
             }
         }
-        return new SkinLayout(version, main) { Regions = regions, Header = header, Inputs = inputs, Submixer = submixer };
+        return new SkinLayout(version, main)
+        {
+            Regions = regions, Header = header, Inputs = inputs, Submixer = submixer,
+            Monitor = monitor, Applications = applications, PopOut = popOut,
+        };
     }
 
     /// <summary>
@@ -362,6 +378,7 @@ public static class SkinLayoutReader
         {
             SkinLayoutRegions.Inputs => InputsOptions,
             SkinLayoutRegions.Submixer => SubmixerOptions,
+            SkinLayoutRegions.Monitor or SkinLayoutRegions.Applications => TemplateOptions,
             _ => SectionOptions,
         });
         var options = SkinRegionOptions.Default;
@@ -432,6 +449,21 @@ public static class SkinLayoutReader
             ? ReadMaster(masterElement, path + ".master")
             : SkinMasterOptions.Default;
         return new SkinSubmixerOptions(template, orientation, banks, defaults, strip, master);
+    }
+
+    /// <summary>
+    /// The submixer's pop-out default: an object whose one property,
+    /// <c>default</c>, says where the submixer starts out. Whatever the user
+    /// chose since wins over it; that is the window's to decide.
+    /// </summary>
+    private static SkinMixerPlacement ReadPopOut(JsonElement element, string path)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, "\"popOut\"");
+        Only(fields, path, "\"popOut\"", "default");
+        if (!fields.TryGetValue("default", out JsonElement value))
+            throw new LayoutException(path, "\"popOut\" needs a \"default\": " + Quoted(SkinPopOutDefaults.All, "or") + ".");
+        return Name(value, path + ".default", SkinPopOutDefaults.All, "a pop-out default") == SkinPopOutDefaults.Detached
+            ? SkinMixerPlacement.Detached : SkinMixerPlacement.Docked;
     }
 
     /// <summary>

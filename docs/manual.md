@@ -1420,6 +1420,7 @@ choice stays until the window closes and a line says why: in Options for
 the view, above the strips for the channel and the mix. None of this
 changes a level, a mute or a route.
 
+<a name="separate-mixer-window"></a>
 #### Separate mixer window
 
 **Pop out** in the SUBMIXER header moves the existing channel strips and mix
@@ -1431,13 +1432,25 @@ routing.
 
 **Return mixer to main window**, or closing the separate window, returns the
 panel and shows the main window. Quitting OpenXLR closes both. The separate
-window is opened explicitly each run; it does not change profiles or section
+window opens when you ask for it, or once when you put on a skin that opens
+the submixer in its own window; it does not change profiles or section
 order. Arrange mode ends when the mixer is detached; arrange tiles in the
 main window after returning it.
 
-Plugin windows opened from the detached mixer belong to that window.
-Returning the mixer to the main window, or closing the separate window, also
-closes the plugin windows that were opened from it. Deleting
+Pressing Pop out, or returning the mixer, is remembered in `ui.json` as
+your choice. While you have made one, no skin moves the submixer: a skin
+that would open it in its own window does not, and no skin switch ever
+closes the separate window. Switching skins while the mixer is detached
+keeps it detached and changes its presentation in place; the window widens
+when the new presentation needs more room than the old one and than the
+window has, and otherwise keeps the size you gave it. **Reset this skin's
+arrangement** in Options forgets the choice. The order is in
+[The mixer's own window](skins.md#the-mixers-own-window).
+
+Plugin windows opened from the detached mixer belong to that window and
+stay open through skin switches. Returning the mixer to the main window, or
+closing the separate window, opens them again under the main window, in
+the same place, on the same chain or plugin. Deleting
 a mix closes its plugin windows. Recreating the mix opens its new chain rather
 than an older window with the same mix id. Renaming a mix updates its open
 plugin-chain window without reopening it.
@@ -1476,7 +1489,27 @@ part of a profile or of the mixer layout. A skin you install may also set
 the order of the window's sections and run them in a row; the sections
 move in place, and [Arrange](#arrange) says how your own moves are kept
 under it. It may also draw INPUTS as a rack and the SUBMIXER as
-[mix banks](#mix-banks).
+[mix banks](#mix-banks), MONITOR as a one-row toolbar, APPLICATIONS as a
+list for a narrow column, and open the submixer in its own window the
+first time you put it on (see [Separate mixer window](#separate-mixer-window)).
+
+Under the skin picker, one line says what the chosen skin does to the
+window's arrangement, for example "This skin arranges the window: a grid,
+an input rack, 2 mix banks." A skin without a layout keeps the usual
+arrangement. The next line says where the submixer goes: where you last
+put it, or, while you have not chosen, what the skin does with it.
+**Reset this skin's arrangement** puts the sections back where the skin
+places them, as Reset sections does, starts its banks on the skin's own
+mixes again and forgets where you put the submixer. Arrange moves and bank
+picks under other skins stay as they are. Nothing opens or closes when you
+press it; a skin that opens the submixer in its own window does so again
+the next time you put it on.
+
+Switching to a skin that rearranges the window keeps what you were doing.
+A fader held down stops where it is. Focus stays on the same control, or on
+the control for the same channel, mix and role when the skin draws it
+differently, and the page keeps its scroll. Folded sections, the compact
+view's choices, levels and routing are untouched.
 
 Below the skin, **Mode** picks Material's palette: **System**, **Light** or
 **Dark**. System, the default, follows the desktop's light or dark

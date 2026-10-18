@@ -1640,6 +1640,9 @@ public sealed class SendViewModel : ViewModelBase
 
     public string MixId { get; }
 
+    /// <summary>The channel whose send this is.</summary>
+    internal string ChannelId => _channelId;
+
     private string _mixName;
     /// <summary>The mix's display name for the row header (the id until the mixes are known).</summary>
     public string MixName { get => _mixName; set => Set(ref _mixName, value); }

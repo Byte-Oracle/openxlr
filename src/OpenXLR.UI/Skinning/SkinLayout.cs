@@ -131,11 +131,26 @@ public static class SkinLayoutTemplates
     /// <summary>A bank's master drawn like one more strip at the end of the bank.</summary>
     public const string MasterStrip = "master-strip";
 
+    /// <summary>MONITOR as it has always been: the output picker and the volume, each with its label.</summary>
+    public const string OutputPanel = "output-panel";
+    /// <summary>MONITOR as one compact row: the output picker, the volume and its readout, for a footer or a side slot.</summary>
+    public const string OutputToolbar = "output-toolbar";
+    /// <summary>APPLICATIONS as it has always been: one chip per running application, wrapping across the section.</summary>
+    public const string ApplicationChips = "application-chips";
+    /// <summary>APPLICATIONS as a list, one application per line with its channel picker, for a narrow column.</summary>
+    public const string ApplicationList = "application-list";
+
     /// <summary>What <c>regions.inputs.template</c> may name; the first is the default.</summary>
     public static IReadOnlyList<string> Inputs { get; } = [HardwarePanel, InputRack];
 
     /// <summary>What <c>regions.submixer.template</c> may name; the first is the default.</summary>
     public static IReadOnlyList<string> Submixer { get; } = [ChannelTiles, MixBanks];
+
+    /// <summary>What <c>regions.monitor.template</c> may name; the first is the default.</summary>
+    public static IReadOnlyList<string> Monitor { get; } = [OutputPanel, OutputToolbar];
+
+    /// <summary>What <c>regions.applications.template</c> may name; the first is the default.</summary>
+    public static IReadOnlyList<string> Applications { get; } = [ApplicationChips, ApplicationList];
 
     /// <summary>What an input rack's <c>strip.template</c> may name.</summary>
     public static IReadOnlyList<string> InputStrips { get; } = [InputRow];
@@ -310,6 +325,27 @@ public sealed record SkinSubmixerOptions(
     internal string Description() => IsBanks
         ? $"{Template}({Orientation},{VisibleBanks},{string.Join(',', SelectionDefaults)},{Strip.Description()},{Master.Description()})"
         : Template;
+}
+
+/// <summary>Where the submixer starts out under a skin, until the user docks it or pops it out.</summary>
+public enum SkinMixerPlacement
+{
+    /// <summary>In the main window, as it has always been.</summary>
+    Docked,
+    /// <summary>In its own window, opened once when the skin is put on.</summary>
+    Detached,
+}
+
+/// <summary>
+/// The values <c>regions.submixer.popOut.default</c> may take, in the order
+/// of <see cref="SkinMixerPlacement"/>; the first is the default.
+/// </summary>
+public static class SkinPopOutDefaults
+{
+    public const string Docked = "docked";
+    public const string Detached = "detached";
+
+    public static IReadOnlyList<string> All { get; } = [Docked, Detached];
 }
 
 /// <summary>A node of the layout tree: a region or a container.</summary>
@@ -493,6 +529,19 @@ public sealed record SkinLayout(int Version, SkinLayoutContainer Main)
     /// <summary>The template the submixer is drawn with, its banks, strips and masters.</summary>
     public SkinSubmixerOptions Submixer { get; init; } = SkinSubmixerOptions.Default;
 
+    /// <summary>The template MONITOR is drawn with: one of <see cref="SkinLayoutTemplates.Monitor"/>.</summary>
+    public string Monitor { get; init; } = SkinLayoutTemplates.OutputPanel;
+
+    /// <summary>The template APPLICATIONS is drawn with: one of <see cref="SkinLayoutTemplates.Applications"/>.</summary>
+    public string Applications { get; init; } = SkinLayoutTemplates.ApplicationChips;
+
+    /// <summary>
+    /// Where the submixer starts out under this skin. It is a default only:
+    /// it applies while ui.json holds no docking choice of the user's, and
+    /// then once per skin and layout version.
+    /// </summary>
+    public SkinMixerPlacement PopOut { get; init; } = SkinMixerPlacement.Docked;
+
     /// <summary>True when the tree places the header itself rather than leaving it above the tree.</summary>
     public bool PlacesHeader => Main.Regions().Contains(SkinLayoutRegions.Header, StringComparer.Ordinal);
 
@@ -512,6 +561,7 @@ public sealed record SkinLayout(int Version, SkinLayoutContainer Main)
         }
         text.Append(" header=").Append(string.Join(',', Header.Row)).Append('|').Append(string.Join(',', Header.Overflow));
         text.Append(" inputs=").Append(Inputs.Description()).Append(" submixer=").Append(Submixer.Description());
+        text.Append(" monitor=").Append(Monitor).Append(" applications=").Append(Applications).Append(" popOut=").Append(PopOut);
         return text.ToString();
     }
 }

@@ -124,6 +124,9 @@ public static class SkinService
     /// <summary>Raised on the UI thread after a skin is applied, for what resources cannot reach.</summary>
     public static event Action? Changed;
 
+    /// <summary>How many handlers <see cref="Changed"/> holds now, for the tests that prove a switch leaves none behind.</summary>
+    internal static int ChangedSubscribers => Changed?.GetInvocationList().Length ?? 0;
+
     /// <summary>True when a token is one of the flat indicator colours drawn in code.</summary>
     private static bool IsLive(SkinToken token) => token is { SolidOnly: true, Default: ISolidColorBrush };
 

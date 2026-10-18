@@ -43,10 +43,21 @@ public static class SkinLayoutDefaults
     public const int RowStrips = 3;
 
     /// <summary>
+    /// Below this width MONITOR's controls stand in two rows, the output
+    /// picker above the volume, so the device name and a usable fader both
+    /// keep their room. Both MONITOR templates stack at it. It is structure,
+    /// not appearance, so it is written here rather than as a token: a skin
+    /// chooses the template, never the width at which its rows fold.
+    /// </summary>
+    public const double MonitorStackWidth = 560;
+
+    /// <summary>
     /// The narrowest a region is drawn wherever its container gives it a
     /// width of its own, by the template it wears. The classic templates keep
     /// <see cref="RowSectionMinWidth"/>. An input rack needs
-    /// <see cref="RowStrips"/> strip widths for its rows; a submixer of banks
+    /// <see cref="RowStrips"/> strip widths for its rows, and so do an output
+    /// toolbar, stacked into its two rows, and an application list, whose
+    /// line holds a lamp, a name that shortens and a picker; a submixer of banks
     /// needs each bank's strips, up to <see cref="BankMinimumStrips"/>, or the
     /// master card's width, side by side or one above the other, with the gap
     /// between banks. Neither ever asks for more than the classic width.
@@ -55,7 +66,9 @@ public static class SkinLayoutDefaults
     public static double RegionMinWidth(string region, SkinLayout? layout, RegionSizes sizes)
     {
         if (layout is null || region == SkinLayoutRegions.Header) return RowSectionMinWidth;
-        if (region == SkinLayoutRegions.Inputs && layout.Inputs.IsRack)
+        if (region == SkinLayoutRegions.Inputs && layout.Inputs.IsRack
+            || region == SkinLayoutRegions.Monitor && layout.Monitor == SkinLayoutTemplates.OutputToolbar
+            || region == SkinLayoutRegions.Applications && layout.Applications == SkinLayoutTemplates.ApplicationList)
             return Math.Min(RowSectionMinWidth, RowStrips * sizes.StripWidth + CardPadding);
         if (region != SkinLayoutRegions.Submixer || !layout.Submixer.IsBanks) return RowSectionMinWidth;
         SkinSubmixerOptions banks = layout.Submixer;

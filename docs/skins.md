@@ -981,8 +981,8 @@ names for a screen reader; Profiles opens its own menu from there.
 
 ### Templates
 
-INPUTS and the submixer can each be drawn with another template, chosen by
-`template` in their entry under `regions`. A template is markup the
+INPUTS, MONITOR, APPLICATIONS and the submixer can each be drawn with
+another template, chosen by `template` in their entry under `regions`. A template is markup the
 application owns: the skin names it, orders the parts it has and leaves
 some out. It cannot add a control, bind one to something else or move one
 out of its template, so a phantom power switch stays with its input and a
@@ -990,16 +990,35 @@ send fader stays a send fader.
 
 | Option | Template | What it is |
 |---|---|---|
-| `template` | `inputs`, `submixer` | which template draws the section. INPUTS takes `"hardware-panel"`, the INPUTS panel as it has always been and the default, or `"input-rack"`. The submixer takes `"channel-tiles"`, the channel tiles and mix masters as they have always been and the default, or `"mix-banks"` |
+| `template` | `inputs`, `monitor`, `applications`, `submixer` | which template draws the section. INPUTS takes `"hardware-panel"`, the INPUTS panel as it has always been and the default, or `"input-rack"`. MONITOR takes `"output-panel"`, the default, or `"output-toolbar"`. APPLICATIONS takes `"application-chips"`, the default, or `"application-list"`. The submixer takes `"channel-tiles"`, the channel tiles and mix masters as they have always been and the default, or `"mix-banks"` |
 | `strip` | `"input-rack"`, `"mix-banks"` | how one strip of the rack or of a bank is drawn, below |
 | `orientation` | `"mix-banks"` | `"horizontal"`, the default, puts the banks side by side; `"vertical"` one above the other |
 | `visibleBanks` | `"mix-banks"` | how many banks show, from 1 to 4; 2 when it is missing |
 | `selectionDefaults` | `"mix-banks"` | the mixes the banks start on, by the id `mixer.json` gives them, such as `"monitor"` and `"stream"`: at most 16 mix ids, each 1 to 64 lowercase letters, digits, hyphens and underscores |
 | `master` | `"mix-banks"` | how each bank's master is drawn, below |
+| `popOut` | `submixer`, any template | where the submixer starts out: `{ "default": "docked" }`, the default, or `{ "default": "detached" }`. See [The mixer's own window](#the-mixers-own-window) |
 
 An option that belongs to another template, such as `strip` with
 `"hardware-panel"` or `visibleBanks` without `"mix-banks"`, drops the
-layout like any other fault.
+layout like any other fault. MONITOR and APPLICATIONS take `template` and
+the options every section has, nothing else; HEADPHONES has no template.
+
+MONITOR's toolbar is one compact row, meant for a footer or a slot beside
+the header: the output picker, the volume and its readout. The panel's
+labels go, and stay the controls' names for a screen reader and the
+volume's tooltip. The picker opens the same list the panel's does, so every
+output stays reachable, each with its tick and, while it is ticked, the
+mix it hears. The 150% switch and the help stay in the section's header.
+Below 560 pixels of room the toolbar stands in two rows, the picker above
+the volume, exactly as the panel does below the same width. MONITOR has no
+mute of its own in either template; an output's monitor mixes are muted
+from their mix masters.
+
+APPLICATIONS' list is one line per running application, meant for a narrow
+column: its state lamp, its name, which shortens to fit and shows whole in
+its tooltip, and its channel picker. The picker assigns the application to
+a channel exactly as a chip's does. Levels and sends stay with the
+channels; the list only assigns.
 
 The input rack draws one strip per channel, in the mixer's channel
 order. The strip of an XLR input holds the parts the INPUTS panel shows for
@@ -1109,6 +1128,8 @@ templates keep their 600 pixels. The others need less:
 
 - an input rack is three times `Ox.Mixer.StripWidth` wide, plus the card's
   padding: 252 pixels with the default tokens;
+- an output toolbar and an application list need the same three strip
+  widths and the padding, the toolbar in its two rows;
 - mix banks need each bank's width side by side, with
   `Ox.Mixer.BankSpacing` between them, or one bank's width for banks one
   above the other. A bank of upright strips needs one channel strip and,
@@ -1117,8 +1138,8 @@ templates keep their 600 pixels. The others need less:
   `Ox.Mixer.MixWidth`. More strips than fit scroll sideways inside the
   bank.
 
-Neither asks for more than the classic 600 pixels, and Touch sizing raises
-`Ox.Mixer.StripWidth` to 96, which widens both. A popped out mixer window
+None asks for more than the classic 600 pixels, and Touch sizing raises
+`Ox.Mixer.StripWidth` to 96, which widens them all. A popped out mixer window
 holding banks is as wide as the banks need, and scrolls sideways when it
 is narrower.
 
@@ -1200,6 +1221,121 @@ bank. A drop still sends the new channel order to the daemon and the
 strips move when it has saved it, as the channel tiles do. Mixes are
 reordered in the layout editor while the submixer shows banks.
 
+### The mixer's own window
+
+**Pop out** moves the submixer into a window of its own and **Return mixer
+to main window** brings it back. A skin's `popOut` says where the submixer
+starts out under that skin, and it is a default only. Where the submixer
+goes is decided in this order:
+
+1. The window's own reasons. With no mixer there is nothing to pop out, and
+   a skin never brings back what the view sets aside.
+2. Your choice. Pressing Pop out, or closing the mixer's window, is kept in
+   `ui.json` as `mixerDocked`, `false` after popping it out and `true` after
+   docking it. While it holds a choice, no skin's `popOut` applies.
+3. The skin's `popOut`. With `"detached"`, and no choice of yours, putting
+   the skin on opens the mixer's window once. That is recorded in `ui.json`
+   under `skinPopOutsApplied`, one entry for each skin and layout version,
+   so it does not open again. Put on while the main window is hidden in the
+   tray, it waits until the window shows.
+4. Docked, as the mixer has always started.
+
+Reading the skin again with **Reload**, or changing colours or Touch
+sizing, never opens or closes the mixer's window, and no switch ever closes
+it. A mixer that is popped out stays popped out through every switch, and
+one that is docked stays docked unless a skin's `"detached"` default
+applies as above. **Reset this skin's arrangement** in Options forgets your choice and
+the record, without opening anything; the skin's default applies again the
+next time you put it on.
+
+The mixer's window keeps fitting the screen it opened on. When a switch
+gives the submixer a template that needs more room than the one before and
+more than the window has, the window widens to fit, never past that
+screen; a template that needs less leaves the width as you set it.
+
+### Switching skins
+
+Putting on a skin that only changes colours or control appearances
+repaints the window and does nothing else. Putting on one whose layout
+differs moves the regions and changes templates, and keeps to these rules:
+
+- A drag in progress ends first: an Arrange drag, the swap menu, and a
+  fader held down in the main window or in the mixer's window. The fader
+  keeps the value it had reached and sends nothing more until it is
+  pressed again.
+- The submixer changes template in whichever window holds it.
+- Focus stays on the control that had it. When the new template draws that
+  control again, focus goes to the new one for the same channel, mix and
+  role: the send fader for Game into Stream stays focused as the send
+  fader for Game into Stream, a mute as the same mute, a picker as the same
+  picker.
+- The page keeps its scroll, and so does every scroller that is still
+  there. A new tree is drawn from its left.
+- The sections' folds, the compact view's channel and mix, your Arrange
+  moves and your bank picks for each skin are kept.
+- Every channel, mix and send is the same object before and after. No
+  level, mute, routing or layout order is sent to the daemon, and a plugin
+  window stays open under the window that opened it. When the mixer's
+  window closes, the plugin windows opened from it open again under the
+  main window.
+
+#### A complete example with a toolbar, a list and its own window
+
+The application list and MONITOR's toolbar in a 280 pixel column on the
+left, the other sections beside them, and the submixer opened in its own
+window the first time the skin is put on:
+
+```json
+{
+  "schema": 1,
+  "id": "side-column",
+  "name": "Side column",
+  "tokens": {
+    "Ox.Card.Background": "#24262c"
+  },
+  "layout": {
+    "version": 1,
+    "main": {
+      "kind": "grid",
+      "id": "desktop",
+      "columns": [{ "size": 280 }, { "star": 1 }],
+      "rows": ["auto", "auto"],
+      "children": [
+        { "kind": "region", "region": "header", "row": 0, "column": 0, "columnSpan": 2 },
+        {
+          "kind": "stack",
+          "id": "side",
+          "orientation": "vertical",
+          "row": 1,
+          "column": 0,
+          "children": [
+            { "kind": "region", "region": "applications" },
+            { "kind": "region", "region": "monitor" }
+          ]
+        },
+        {
+          "kind": "stack",
+          "id": "centre",
+          "orientation": "vertical",
+          "row": 1,
+          "column": 1,
+          "children": [
+            { "kind": "region", "region": "inputs" },
+            { "kind": "region", "region": "headphones" },
+            { "kind": "region", "region": "submixer" }
+          ]
+        }
+      ]
+    },
+    "regions": {
+      "applications": { "template": "application-list" },
+      "monitor": { "template": "output-toolbar" },
+      "submixer": { "popOut": { "default": "detached" } }
+    }
+  }
+}
+```
+
 ### How a layout is read
 
 A layout is taken whole or not at all. Any of these drops the whole
@@ -1236,7 +1372,9 @@ A layout is taken whole or not at all. Any of these drops the whole
   than the strip has parts; a `visibleBanks` that is not a whole number
   from 1 to 4; or `selectionDefaults` that is not an array of at most 16
   mix ids, each 1 to 64 lowercase letters, digits, hyphens and
-  underscores, with none listed twice.
+  underscores, with none listed twice;
+- a `popOut` that is not an object, lacks its `default`, has another
+  property, or has a `default` other than `"docked"` and `"detached"`.
 
 The complaint names where in the file the fault is, for example
 `layout.main.children[2].region`, and appears in Options under the picker
@@ -1271,7 +1409,9 @@ on the skin:
   only the places you changed and the hidden sections you showed. The 32
   most recent skins are kept. They never change `sectionOrder`.
   **Reset sections** returns to the skin's own places and visibility and
-  forgets only that skin's entry.
+  forgets only that skin's entry. **Reset this skin's arrangement** in
+  Options does the same and also forgets your bank picks for that skin and
+  where you put the mixer.
 - Switching back to a skin without a layout brings your `sectionOrder`
   back, and switching to the layout skin again brings back what you
   arranged under it.

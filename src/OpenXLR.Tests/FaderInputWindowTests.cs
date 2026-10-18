@@ -190,7 +190,7 @@ internal static class FaderInputWindowTests
         return slider.Value;
     }
 
-    private static double Drag(Slider slider, XPointer input, bool fine, Action<Slider>? cancel = null)
+    internal static double Drag(Slider slider, XPointer input, bool fine, Action<Slider>? cancel = null)
     {
         slider.Value = .5;
         Pump();
@@ -224,7 +224,7 @@ internal static class FaderInputWindowTests
         return slider.Value;
     }
 
-    private static void Pump()
+    internal static void Pump()
     {
         using var stop = new CancellationTokenSource();
         DispatcherTimer.RunOnce(stop.Cancel, TimeSpan.FromMilliseconds(100));

@@ -1177,10 +1177,10 @@
           "$ref": "#/$defs/layoutSectionOptions"
         },
         "monitor": {
-          "$ref": "#/$defs/layoutSectionOptions"
+          "$ref": "#/$defs/layoutMonitorOptions"
         },
         "applications": {
-          "$ref": "#/$defs/layoutSectionOptions"
+          "$ref": "#/$defs/layoutApplicationsOptions"
         },
         "submixer": {
           "$ref": "#/$defs/layoutSubmixerOptions"
@@ -1338,6 +1338,10 @@
         "master": {
           "$ref": "#/$defs/layoutMaster",
           "description": "How a bank's master is drawn. Only with template mix-banks."
+        },
+        "popOut": {
+          "$ref": "#/$defs/layoutPopOut",
+          "description": "Where the submixer starts out, with any template."
         }
       },
       "if": {
@@ -1601,6 +1605,96 @@
         "version",
         "about"
       ]
+    },
+    "layoutMonitorOptions": {
+      "type": "object",
+      "description": "MONITOR: the options every section has, and the template it is drawn with.",
+      "additionalProperties": false,
+      "properties": {
+        "visibility": {
+          "enum": [
+            "visible",
+            "collapsed",
+            "hidden"
+          ],
+          "default": "visible",
+          "description": "collapsed folds the section the first time the skin is worn; hidden leaves it out until it is shown from Arrange mode."
+        },
+        "width": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred width in pixels, where the section has a width of its own."
+        },
+        "height": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred height in pixels, the least the section takes."
+        },
+        "template": {
+          "enum": [
+            "output-panel",
+            "output-toolbar"
+          ],
+          "default": "output-panel",
+          "description": "output-panel is the MONITOR panel; output-toolbar is one compact row with the output picker, the volume and its readout, in two rows below 560 pixels."
+        }
+      }
+    },
+    "layoutApplicationsOptions": {
+      "type": "object",
+      "description": "APPLICATIONS: the options every section has, and the template it is drawn with.",
+      "additionalProperties": false,
+      "properties": {
+        "visibility": {
+          "enum": [
+            "visible",
+            "collapsed",
+            "hidden"
+          ],
+          "default": "visible",
+          "description": "collapsed folds the section the first time the skin is worn; hidden leaves it out until it is shown from Arrange mode."
+        },
+        "width": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred width in pixels, where the section has a width of its own."
+        },
+        "height": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred height in pixels, the least the section takes."
+        },
+        "template": {
+          "enum": [
+            "application-chips",
+            "application-list"
+          ],
+          "default": "application-chips",
+          "description": "application-chips is the APPLICATIONS chips; application-list is one line per application with its channel picker, for a narrow column."
+        }
+      }
+    },
+    "layoutPopOut": {
+      "type": "object",
+      "description": "Where the submixer starts out under this skin. A default only: it applies while ui.json holds no docking choice of the user's, and then once per skin and layout version.",
+      "additionalProperties": false,
+      "required": [
+        "default"
+      ],
+      "properties": {
+        "default": {
+          "enum": [
+            "docked",
+            "detached"
+          ],
+          "default": "docked",
+          "description": "docked keeps the submixer in the main window; detached opens it in its own window once when the skin is put on."
+        }
+      }
     }
   }
 }

@@ -2184,4 +2184,64 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="BankChoiceNotSaved" xml:space="preserve">
     <value>Die Auswahl der Bänke gilt bis zum Schließen des Fensters, konnte aber nicht gespeichert werden: {0}</value>
   </data>
+  <data name="ApplicationChannelName" xml:space="preserve">
+    <value>Kanal für {0}</value>
+  </data>
+  <data name="DockingNotSaved" xml:space="preserve">
+    <value>Der Platz des Submixers gilt bis zum Schließen des Fensters, konnte aber nicht gespeichert werden: {0}</value>
+  </data>
+  <data name="SkinLayoutClassic" xml:space="preserve">
+    <value>Dieser Skin behält die übliche Anordnung des Fensters.</value>
+  </data>
+  <data name="SkinLayoutSummary" xml:space="preserve">
+    <value>Dieser Skin ordnet das Fenster an: {0}. Verschiebungen mit Anordnen und die Auswahl der Bänke werden pro Skin gespeichert.</value>
+  </data>
+  <data name="LayoutPartColumn" xml:space="preserve">
+    <value>die Abschnitte untereinander</value>
+  </data>
+  <data name="LayoutPartRow" xml:space="preserve">
+    <value>die Abschnitte nebeneinander</value>
+  </data>
+  <data name="LayoutPartGrid" xml:space="preserve">
+    <value>ein Raster</value>
+  </data>
+  <data name="LayoutPartDock" xml:space="preserve">
+    <value>ein Dock</value>
+  </data>
+  <data name="LayoutPartInputRack" xml:space="preserve">
+    <value>ein Eingangs-Rack</value>
+  </data>
+  <data name="LayoutPartOneBank" xml:space="preserve">
+    <value>eine Mix-Bank</value>
+  </data>
+  <data name="LayoutPartBanks" xml:space="preserve">
+    <value>{0} Mix-Bänke</value>
+  </data>
+  <data name="LayoutPartOutputToolbar" xml:space="preserve">
+    <value>eine Monitor-Leiste</value>
+  </data>
+  <data name="LayoutPartApplicationList" xml:space="preserve">
+    <value>eine Anwendungsliste</value>
+  </data>
+  <data name="LayoutPartDetached" xml:space="preserve">
+    <value>der Submixer in einem eigenen Fenster</value>
+  </data>
+  <data name="MixerDockingDocked" xml:space="preserve">
+    <value>Submixer: im Hauptfenster, wo du ihn zuletzt hingestellt hast. Kein Skin holt ihn dort weg.</value>
+  </data>
+  <data name="MixerDockingDetached" xml:space="preserve">
+    <value>Submixer: abgekoppelt, wo du ihn zuletzt hingestellt hast. Kein Skin holt ihn dort weg.</value>
+  </data>
+  <data name="MixerDockingSkinDetached" xml:space="preserve">
+    <value>Submixer: du hast noch keinen Platz gewählt, also koppelt dieser Skin ihn einmal ab, wenn er angelegt wird.</value>
+  </data>
+  <data name="MixerDockingNone" xml:space="preserve">
+    <value>Submixer: im Hauptfenster. Abkoppeln und das Zurückholen ins Hauptfenster merken sich deine Wahl.</value>
+  </data>
+  <data name="ResetSkinArrangement" xml:space="preserve">
+    <value>Anordnung dieses Skins zurücksetzen</value>
+  </data>
+  <data name="ResetSkinArrangementHint" xml:space="preserve">
+    <value>Die Abschnitte dorthin zurücksetzen, wo dieser Skin sie platziert, seine Bänke mit ihren Standard-Mixes beginnen lassen und vergessen, wo du den Submixer hingestellt hast</value>
+  </data>
 </root>

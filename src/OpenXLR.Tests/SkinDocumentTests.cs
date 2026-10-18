@@ -407,6 +407,9 @@ public sealed class SkinDocumentTests
         Says($"{Number(SkinLayoutDefaults.RowStrips * (double)SkinTokens.Find("Ox.Mixer.StripWidth")!.Default! + SkinLayoutDefaults.CardPadding)} pixels with the default tokens");
         Says($"raises\n`Ox.Mixer.StripWidth` to {Number(SkinTokens.TouchMinimums["Ox.Mixer.StripWidth"])}");
         Says("`skinBankSelections`");
+        Says("`mixerDocked`");
+        Says("`skinPopOutsApplied`");
+        Says($"Below {Number(SkinLayoutDefaults.MonitorStackWidth)} pixels of room the toolbar stands in two rows");
         Says("is the channel's own meter, before its send");
         Says($"The {OpenXLR.UI.UiSettings.MaxSkinArrangements}\n  most recent skins are kept");
         foreach (string word in new[] { "`\"vertical\"`", "`\"horizontal\"`", "`\"stack\"`", "`\"grid\"`", "`\"dock\"`", "`\"region\"`",
@@ -424,11 +427,12 @@ public sealed class SkinDocumentTests
         Assert.Equal(SkinLayoutRegions.All, Table("| Region | What it is |"));
         Assert.Equal(SkinHeaderActions.All, Table("| Action | What it is |"));
         Assert.Equal(["visibility", "width", "height", "actions", "overflow"], Table("| Option | Region | What it is |"));
-        Assert.Equal(["template", "strip", "orientation", "visibleBanks", "selectionDefaults", "master"], Table("| Option | Template | What it is |"));
+        Assert.Equal(["template", "strip", "orientation", "visibleBanks", "selectionDefaults", "master", "popOut"], Table("| Option | Template | What it is |"));
         Assert.Equal(["template", "partsOrder", "hidden", "label", "meter", "fader"], Table("| Strip option | What it is |"));
         Assert.Equal(SkinStripParts.InputRow.Concat(SkinStripParts.Send).Distinct(), Table("| Part | What it is |"));
         Assert.Equal(["label.style", "meter.orientation", "meter.placement", "fader.orientation", "fader.direction"], Table("| Value | What it is |"));
         foreach (string name in SkinLayoutTemplates.Inputs.Concat(SkinLayoutTemplates.Submixer).Concat(SkinLayoutTemplates.InputStrips)
+                     .Concat(SkinLayoutTemplates.Monitor).Concat(SkinLayoutTemplates.Applications).Concat(SkinPopOutDefaults.All)
                      .Concat(SkinLayoutTemplates.BankStrips).Concat(SkinLayoutTemplates.Masters)
                      .Concat(["text", "icon-and-text", "icon", "below-label", "beside-label", "beside-fader", "normal", "reversed"]))
             Says($"`\"{name}\"`");
@@ -446,7 +450,7 @@ public sealed class SkinDocumentTests
             Assert.True(result.Ok, string.Join("\n", result.Errors));
             read.Add(Assert.IsType<SkinLayout>(result.Package!.Layout));
         }
-        Assert.Equal(3, read.Count);
+        Assert.Equal(4, read.Count);
         SkinLayoutGrid grid = Assert.IsType<SkinLayoutGrid>(read[0].Main);
         Assert.True(read[0].PlacesHeader);
         Assert.Contains(grid.Containers(), c => c is SkinLayoutStack);
@@ -460,6 +464,10 @@ public sealed class SkinDocumentTests
         Assert.True(read[2].Submixer.IsBanks);
         Assert.Equal(SkinSubmixerOptions.DefaultVisibleBanks, read[2].Submixer.VisibleBanks);
         Assert.Equal(SkinLayoutTemplates.MasterStrip, read[2].Submixer.Master.Template);
+        // The fourth: the toolbar and the list in a side column, the submixer in its own window.
+        Assert.Equal(SkinLayoutTemplates.OutputToolbar, read[3].Monitor);
+        Assert.Equal(SkinLayoutTemplates.ApplicationList, read[3].Applications);
+        Assert.Equal(SkinMixerPlacement.Detached, read[3].PopOut);
     }
 
     [Fact]
@@ -480,7 +488,7 @@ public sealed class SkinDocumentTests
 
         // Closed objects: a property the reader refuses is one the schema refuses.
         foreach (string name in new[] { "desktopLayout", "layoutRegions", "layoutSectionOptions", "layoutHeaderOptions",
-                     "layoutInputsOptions", "layoutSubmixerOptions", "layoutInputStrip", "layoutBankStrip", "layoutMaster",
+                     "layoutInputsOptions", "layoutSubmixerOptions", "layoutMonitorOptions", "layoutApplicationsOptions", "layoutPopOut", "layoutInputStrip", "layoutBankStrip", "layoutMaster",
                      "layoutLabel", "layoutMeter", "layoutFader" })
             Assert.False(Definition(name).GetProperty("additionalProperties").GetBoolean(),
                 $"{name} would accept a property the layout reader refuses.");
@@ -548,8 +556,22 @@ public sealed class SkinDocumentTests
         Assert.Equal(SkinLayoutRegions.All, Strings(Properties("layoutRegion").GetProperty("region").GetProperty("enum")));
         Assert.Equal(SkinLayoutRegions.All, Names(Properties("layoutRegions")));
         Assert.Equal("#/$defs/layoutHeaderOptions", Properties("layoutRegions").GetProperty("header").GetProperty("$ref").GetString());
-        Assert.All(new[] { "headphones", "monitor", "applications" }, r => Assert.Equal("#/$defs/layoutSectionOptions",
-            Properties("layoutRegions").GetProperty(r).GetProperty("$ref").GetString()));
+        Assert.Equal("#/$defs/layoutSectionOptions", Properties("layoutRegions").GetProperty("headphones").GetProperty("$ref").GetString());
+        Assert.Equal("#/$defs/layoutMonitorOptions", Properties("layoutRegions").GetProperty("monitor").GetProperty("$ref").GetString());
+        Assert.Equal("#/$defs/layoutApplicationsOptions", Properties("layoutRegions").GetProperty("applications").GetProperty("$ref").GetString());
+        // MONITOR and APPLICATIONS take every section option and a template, nothing else.
+        foreach ((string def, IReadOnlyList<string> templates) in new[]
+                 { ("layoutMonitorOptions", SkinLayoutTemplates.Monitor), ("layoutApplicationsOptions", SkinLayoutTemplates.Applications) })
+        {
+            Assert.Equal(["visibility", "width", "height", "template"], Names(Properties(def)));
+            Assert.Equal(templates, Strings(Properties(def).GetProperty("template").GetProperty("enum")));
+            Assert.Equal(templates[0], Properties(def).GetProperty("template").GetProperty("default").GetString());
+        }
+        JsonElement popOut = Definition("layoutPopOut");
+        Assert.Equal(["default"], Strings(popOut.GetProperty("required")));
+        Assert.Equal(["default"], Names(popOut.GetProperty("properties")));
+        Assert.Equal(SkinPopOutDefaults.All, Strings(popOut.GetProperty("properties").GetProperty("default").GetProperty("enum")));
+        Assert.Equal(Enum.GetNames<SkinMixerPlacement>().Select(n => n.ToLowerInvariant()), SkinPopOutDefaults.All);
         Assert.Equal("#/$defs/layoutInputsOptions", Properties("layoutRegions").GetProperty("inputs").GetProperty("$ref").GetString());
         Assert.Equal("#/$defs/layoutSubmixerOptions", Properties("layoutRegions").GetProperty("submixer").GetProperty("$ref").GetString());
 
@@ -559,8 +581,9 @@ public sealed class SkinDocumentTests
         Assert.Equal(SkinLayoutTemplates.Inputs, Strings(inputs.GetProperty("template").GetProperty("enum")));
         Assert.Equal("#/$defs/layoutInputStrip", inputs.GetProperty("strip").GetProperty("$ref").GetString());
         JsonElement submixer = Properties("layoutSubmixerOptions");
-        Assert.Equal(["visibility", "width", "height", "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master"],
+        Assert.Equal(["visibility", "width", "height", "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master", "popOut"],
             Names(submixer));
+        Assert.Equal("#/$defs/layoutPopOut", submixer.GetProperty("popOut").GetProperty("$ref").GetString());
         Assert.Equal(SkinLayoutTemplates.Submixer, Strings(submixer.GetProperty("template").GetProperty("enum")));
         Assert.Equal(["horizontal", "vertical"], Strings(submixer.GetProperty("orientation").GetProperty("enum")));
         Assert.Equal((SkinFormat.MinVisibleBanks, SkinFormat.MaxVisibleBanks, SkinSubmixerOptions.DefaultVisibleBanks),
