@@ -152,7 +152,11 @@ few releases, and they get to settle in users' hands first.
   focus by channel, mix and role, keeps scroll offsets, folds, the
   detached mixer and plugin window ownership, and sends no command; Options
   describes the skin's layout and resets its arrangement, banks and
-  docking choice. [skins.md](skins.md#layout)
+  docking choice. Broadcast ships as the complete example: an input rack
+  beside two banks of upright strips on Monitor A and Stream, MONITOR's
+  toolbar under them and HEADPHONES folded along the bottom, on a dark
+  console palette, with a copy to start from in `docs/examples/skins`.
+  [skins.md](skins.md#layout)
 - [ ] Inputs from more than one attached Wave interface at once. The
   daemon drives one interface today; a second one is reachable only as a
   capture source.
@@ -167,10 +171,10 @@ a skin overlays values on top of them.
   faders, text and accents; views reference tokens only, and the tokens a
   skin sets also feed the theme keys behind buttons, sliders and dropdowns.
 - [x] Skins: a user-supplied value set loaded from a file, selectable in
-  Options, so the mixer can look like the hardware it drives. Thirteen
+  Options, so the mixer can look like the hardware it drives. Fourteen
   appearances are compiled into the application, so every package carries
   them: Material, a Deck appearance built from the plugin's own key and
-  dial art, and one for each of the eleven Omarchy palettes.
+  dial art, one for each of the eleven Omarchy palettes, and Broadcast.
   Skins are data: no markup, no code, no path outside their own folder, no
   network. [skins.md](skins.md) is the contract.
 - [x] System, light and dark appearance, following the desktop by default.

@@ -99,7 +99,7 @@ public sealed class SkinPackageTests : IDisposable
         // Every appearance the application carries is compiled in, so a
         // package has them all without installing a single file.
         Assert.Equal(
-            ["catppuccin", "catppuccin-latte", "everforest", "gruvbox", "kanagawa", "matte-black",
+            ["broadcast", "catppuccin", "catppuccin-latte", "everforest", "gruvbox", "kanagawa", "matte-black",
                 "nord", "opendeck", "osaka-jade", "ristretto", "rose-pine", "tokyo-night"],
             built.Select(e => e.Id).Order(StringComparer.Ordinal));
         foreach (SkinEntry entry in built)
@@ -138,6 +138,62 @@ public sealed class SkinPackageTests : IDisposable
                      "Ox.Mute.Background", "Ox.Mute.BackgroundChecked" })
             Assert.All(Colours(openDeck, face), c => Assert.True(Luminance(c) < 0.05,
                 $"{face} has a stop at luminance {Luminance(c):F3}, which is a fill and not a face"));
+    }
+
+    /// <summary>
+    /// Broadcast is the one shipped skin with a layout, and the reference an
+    /// author copies: its whole layout is taken, with the input rack, two
+    /// banks of upright strips starting on Monitor A and Stream, MONITOR's
+    /// toolbar, the application list and HEADPHONES folded at first. Its meter
+    /// colours are flat, so both palette exporters can carry it.
+    /// </summary>
+    [Fact]
+    public void TheBroadcastSkinCarriesTheWholeLayout()
+    {
+        SkinEntry broadcast = Assert.Single(SkinCatalog.BuiltIn(), e => e.Id == "broadcast");
+        Assert.Empty(broadcast.Errors);
+        Assert.Equal("Broadcast", broadcast.Name);
+        Assert.Equal("OpenXLR", broadcast.Package.Author);
+        Assert.False(string.IsNullOrWhiteSpace(broadcast.Package.Description));
+        Assert.DoesNotContain("Wave Link", broadcast.Package.Description!, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Elgato", broadcast.Package.Description!, StringComparison.OrdinalIgnoreCase);
+
+        SkinLayout layout = Assert.IsType<SkinLayout>(broadcast.Package.Layout);
+        // The header stays above the tree, across the window.
+        Assert.False(layout.PlacesHeader);
+        // A column: the rack docked on the left of the mix column, then HEADPHONES across the window.
+        SkinLayoutStack desk = Assert.IsType<SkinLayoutStack>(layout.Main);
+        Assert.Equal(SkinLayoutOrientation.Vertical, desk.Orientation);
+        SkinLayoutDock console = Assert.IsType<SkinLayoutDock>(desk.Children[0].Node);
+        Assert.Equal([SkinLayoutEdge.Left, SkinLayoutEdge.Fill], console.Children.Select(c => c.Edge));
+        Assert.Equal(new SkinLayoutRegion(SkinLayoutRegions.Headphones), desk.Children[1].Node);
+        Assert.Equal(SkinLayoutTemplates.InputRack, layout.Inputs.Template);
+        Assert.Equal(SkinLayoutTemplates.InputRow, layout.Inputs.Strip.Template);
+        Assert.Equal(SkinStripParts.InputRow, layout.Inputs.Strip.Order);
+        Assert.Equal(SkinLabelStyle.IconAndText, layout.Inputs.Strip.Label);
+        Assert.Equal(new SkinMeterOptions(SkinLayoutOrientation.Horizontal, SkinMeterPlacement.BelowLabel), layout.Inputs.Strip.Meter);
+        Assert.True(layout.Submixer.IsBanks);
+        Assert.Equal(SkinLayoutOrientation.Horizontal, layout.Submixer.Orientation);
+        Assert.Equal(2, layout.Submixer.VisibleBanks);
+        Assert.Equal(["monitor", "stream"], layout.Submixer.SelectionDefaults);
+        Assert.Equal(SkinStripOptions.BankDefault, layout.Submixer.Strip with { Order = SkinStripOptions.BankDefault.Order, Hidden = SkinStripOptions.BankDefault.Hidden });
+        Assert.Equal(SkinStripParts.Send, layout.Submixer.Strip.Order);
+        Assert.Equal(SkinLayoutTemplates.MasterStrip, layout.Submixer.Master.Template);
+        Assert.Equal(SkinLayoutTemplates.OutputToolbar, layout.Monitor);
+        Assert.Equal(SkinLayoutTemplates.ApplicationList, layout.Applications);
+        Assert.Equal(SkinMixerPlacement.Docked, layout.PopOut);
+        Assert.Equal(SkinRegionVisibility.Collapsed, layout.OptionsFor(SkinLayoutRegions.Headphones).Visibility);
+        Assert.Equal(SkinRegionVisibility.Visible, layout.OptionsFor(SkinLayoutRegions.Applications).Visibility);
+        Assert.Equal(["profiles", "flow", "arrange"], layout.Header.Row.Take(3));
+        Assert.Equal(["restart-daemon", "about"], layout.Header.Overflow);
+
+        Assert.Equal("console", broadcast.Package.Controls["fader"]);
+        foreach (string zone in new[] { "Ox.Meter.Fill", "Ox.Meter.Warning", "Ox.Meter.Hot", "Ox.Meter.Track" })
+            Assert.IsType<SkinSolid>(broadcast.Package.Tokens[zone]);
+        Assert.Equal(3, new[] { "Ox.Meter.Fill", "Ox.Meter.Warning", "Ox.Meter.Hot" }
+            .Select(z => ((SkinSolid)broadcast.Package.Tokens[z]).Color).Distinct().Count());
+        Assert.True(((SkinNumber)broadcast.Package.Tokens["Ox.Meter.WarningLevel"]).Value
+            < ((SkinNumber)broadcast.Package.Tokens["Ox.Meter.HotLevel"]).Value);
     }
 
     /// <summary>

@@ -13,6 +13,20 @@
     "Ox.Meter.WarningLevel": 0.7,
     "Ox.Meter.HotLevel": 0.9
   },
+  "broadcast": {
+    "Ox.Card.Background": "#171a1f",
+    "Ox.Text.Primary": "#e8ebef",
+    "Ox.Text.Muted": "#878e99",
+    "Ox.Led.On": "#3ddc84",
+    "Ox.Led.Off": "#3a4049",
+    "Ox.Led.Alert": "#ff5f5f",
+    "Ox.Meter.Track": "#0a0b0d",
+    "Ox.Meter.Fill": "#3ddc84",
+    "Ox.Meter.Warning": "#f2c14e",
+    "Ox.Meter.Hot": "#ff5f5f",
+    "Ox.Meter.WarningLevel": 0.7,
+    "Ox.Meter.HotLevel": 0.9
+  },
   "catppuccin": {
     "Ox.Card.Background": "#232336",
     "Ox.Text.Primary": "#cdd6f4",

@@ -151,10 +151,11 @@ SUPPORT, Collect diagnostics).
   checked on Omarchy 4.0.4; the live theme switch and the hardware
   controls still need desktop acceptance.
 - **Skins**: the window's appearance is a set of named values a skin file
-  can replace. Thirteen ship, all built into the application: Material, its
+  can replace. Fourteen ship, all built into the application: Material, its
   own look, Deck, which dresses the window in the visual language of the
-  OpenDeck plugin's keys and dials, and one for each of the eleven Omarchy
-  palettes. A skin is data, not code: colours, sizes, local images from its
+  OpenDeck plugin's keys and dials, one for each of the eleven Omarchy
+  palettes, and Broadcast, which also lays the window out with an input
+  rack beside two mix banks. A skin is data, not code: colours, sizes, local images from its
   own folder and a choice between the control appearances OpenXLR draws,
   picked in Options and applied to open windows without touching audio. The
   terminal mixer reads the same files and follows the same choice.

@@ -6,7 +6,7 @@ appearance values and, if it wants, where the header and the
 window's sections go ([Layout](#layout)); it carries no markup, no script and
 no code, and it cannot reach a file outside its own folder.
 
-OpenXLR ships thirteen appearances, all compiled into the application, so
+OpenXLR ships fourteen appearances, all compiled into the application, so
 every package has them and there is nothing to install:
 
 - **Material**, the default, in a dark and a light palette (see
@@ -23,6 +23,12 @@ every package has them and there is nothing to install:
   Latte, Everforest, Gruvbox, Kanagawa, Matte Black, Nord, Osaka Jade,
   Ristretto, Rose Pine and Tokyo Night. Rose Pine and Catppuccin Latte
   are the light ones.
+- **Broadcast**, the one that also rearranges the window: INPUTS as a rack
+  of strips down the left, the submixer beside it as two banks of upright
+  faders starting on Monitor A and Stream, MONITOR as a toolbar under them,
+  the applications as a list under the rack and HEADPHONES folded along the
+  bottom, on a dark console palette. It is the reference for writing a
+  layout skin; see [Layout](#layout).
 
 Pick one in Options under APPEARANCE. The terminal mixer reads the same
 folders and the same saved choice, on its own Options tab, so an appearance
@@ -83,7 +89,7 @@ palette.
 
 On a desktop that prefers light, a window on Material with no saved mode
 therefore opens in the light palette. A window wearing any other skin looks
-as it did. Deck, the Omarchy palettes and installed skins are one set of
+as it did. Deck, Broadcast, the Omarchy palettes and installed skins are one set of
 values each and keep them in every mode, and the Mode picker is greyed out
 while one of them is chosen. The mode is kept for when Material is chosen
 again.
@@ -182,6 +188,9 @@ curl -fLo ~/.local/share/openxlr/skins/my-skin/skin.json \
 # or the whole Deck appearance, which uses every feature of the format
 curl -fLo ~/.local/share/openxlr/skins/my-skin/skin.json \
   https://raw.githubusercontent.com/emaspa/openxlr/main/src/OpenXLR.UI/Assets/Skins/opendeck/skin.json
+# or Broadcast, a palette with a complete layout
+curl -fLo ~/.local/share/openxlr/skins/my-skin/skin.json \
+  https://raw.githubusercontent.com/emaspa/openxlr/main/docs/examples/skins/broadcast/skin.json
 ```
 
 Any of the other appearances works the same way. They are the `skin.json`
@@ -192,8 +201,10 @@ read than Deck.
 
 Then change `name` (and `id`, if you keep one) so your copy is not
 confused with the original, and edit from there. In a source checkout the
-starting point is at
-[docs/examples/skins/example/skin.json](examples/skins/example/skin.json).
+starting points are under [docs/examples/skins](examples/skins/README.md):
+[example/skin.json](examples/skins/example/skin.json), and
+[broadcast/skin.json](examples/skins/broadcast/skin.json), a copy of the
+shipped Broadcast skin.
 
 The example skin and every shipped one are read by the test suite on every
 build, so they are always files this version accepts.
@@ -333,7 +344,7 @@ draws, and then tint and size it with the tokens further down.
 | Control | Appearances | What it is |
 |---|---|---|
 | `button` | `flat` (default), `cap` | `flat` is the framework's button. `cap` is the raised key: the control paints its own face and `Ox.Cap.Bevel` lays the gloss over it. One drawing serves the plain button, the toggle and the dropdown button, so a skin cannot raise one and leave the next one flat. Corner shape comes from `Ox.Control.CornerRadius`, so a skin can make every key square |
-| `fader` | `flat` (default), `console` | `flat` is the framework's slider. `console` is OpenXLR's own: an inset groove, a filled section up to the value, and a machined cap with a grip line across it. It is drawn for horizontal faders, which is all the window has; a vertical one keeps the framework's |
+| `fader` | `flat` (default), `console` | `flat` is the framework's slider. `console` is OpenXLR's own: an inset groove, a filled section up to the value, and a machined cap with a grip line across it. It is drawn flat and upright, so the upright faders of a mix bank wear it too |
 | `meter` | `continuous` (default), `segmented` | `continuous` is one bar that grows. `segmented` is a ladder of cells that light one after another, as on a console |
 | `led` | `flat` (default), `lamp` | `flat` is a filled dot. `lamp` puts the dot in a bezel ring and gives it a halo while it is lit |
 | `mute` | `flat` (default), `cap` | `flat` is the framework's button. `cap` is the same raised key the `button` slot draws, so the mute matches the controls around it |
@@ -735,6 +746,22 @@ five sections, placed in a tree of stacks, grids and docks, with a few
 options for each of them. That is the optional `layout` object, beside
 `tokens` and `controls`. It moves what the application builds; it never
 adds a control, a binding or a picture of its own.
+
+The shipped Broadcast skin is the complete example: a palette, control
+appearances and a layout that uses the templates below, in
+[docs/examples/skins/broadcast](examples/skins/broadcast/skin.json). Its
+arrangement is inspired by Wave Link's; Broadcast has no connection to
+Elgato and is not endorsed by it. Its tree is a vertical
+stack of two things. The first is a dock: on its left a column holding
+INPUTS as an `"input-rack"` with the application list under it, as wide as
+the rack needs, so it widens with Touch sizing and folds away in the mini
+view; filling the rest, a column holding the submixer as two `"mix-banks"`
+of upright strips with master strips, and MONITOR's `"output-toolbar"`
+under them. The second is HEADPHONES across the whole width,
+`"collapsed"` at first, so the hardware headphone levels stay apart from
+the software mixes. The tree leaves the header out, so the header stays
+across the top of the window when the tree scrolls sideways in a narrow
+window.
 
 A complete skin that puts the header across the top, INPUTS beside the
 submixer, the headphones and the monitor under INPUTS, and the
@@ -1391,8 +1418,8 @@ not know, and wears the skin in the classic arrangement.
 Arrange moves sections under any skin. Where it keeps your moves depends
 on the skin:
 
-- A skin without a layout, Material and every shipped skin included, uses
-  the order you arranged, kept in `ui.json` as `sectionOrder`, exactly as
+- A skin without a layout, Material and every shipped skin but Broadcast
+  included, uses the order you arranged, kept in `ui.json` as `sectionOrder`, exactly as
   before skins had layouts. A section dropped on another lands before or
   after it.
 - A skin with a layout starts from its own tree. Each region in the tree

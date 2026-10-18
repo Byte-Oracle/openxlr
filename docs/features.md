@@ -182,6 +182,13 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   the daemon. Options says what the skin arranges and resets that skin's
   arrangement, bank picks and docking choice. See
   [Switching skins](skins.md#switching-skins)
+- The Broadcast skin, shipped with the application: INPUTS as a rack down
+  the left with the applications listed under it, the submixer beside it
+  as two banks of upright faders starting on Monitor A and Stream, MONITOR
+  as a toolbar under the banks and HEADPHONES folded along the bottom, on
+  a dark console palette. It is the complete example of a layout skin, and
+  a copy to start from is in `docs/examples/skins`. See
+  [Broadcast](manual.md#broadcast)
 - A compact view with one chosen channel strip, and a mini view with that
   channel's send into one chosen mix, its master and the monitor volume,
   for a narrow window. Chosen in Options and kept in `ui.json`; hidden
@@ -565,10 +572,11 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   a bezel, a flat or a bevelled mute cap. A meter is coloured by position on
   its scale, so a skin can give it a hi-fi green, amber and red ladder
   without the bar ever repainting itself end to end. What a skin leaves out
-  keeps the shipped default. Thirteen appearances ship, all compiled into
+  keeps the shipped default. Fourteen appearances ship, all compiled into
   the application: Material, the window's own, Deck, built from the
-  OpenDeck plugin's key and dial art, and one for each of the eleven
-  Omarchy palettes, two of them light. The picker is in Options, the
+  OpenDeck plugin's key and dial art, one for each of the eleven
+  Omarchy palettes, two of them light, and Broadcast, which also
+  arranges the window. The picker is in Options, the
   choice lives in `ui.json` alone, and switching
   repaints open windows without touching audio or the layout. A skin is
   data. It carries no markup and no code, reaches no file outside its own
