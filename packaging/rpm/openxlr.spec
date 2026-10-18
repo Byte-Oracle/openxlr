@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.1.61
+Version: 0.1.70
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
 License:        GPL-3.0-only
@@ -171,6 +171,16 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Sun Oct 18 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.1.70-1
+- UI: skins can rearrange the UI: a layout tree of stacks, grids and docks places the header and the five sections, with templates for an input rack, mix banks, a mix matrix, an output toolbar and an application list, and Arrange mode moves sections within what the skin allows.
+- UI: Broadcast, a new skin shipped with the application, draws the submixer as a mix matrix, a row per channel and a column per mix, and is the complete example of a layout skin; a copy to start from is in docs/examples/skins.
+- UI: channels, mixes and the headphone outputs take an icon from a built-in set of twenty-two vector icons, with a default by kind, a picker when a channel or mix is created and in Appearance; a skin may add icons of its own.
+- UI: the button that opens a plugin chain is green while a plugin in it is processing and red when the chain's plugins are all bypassed or failed.
+- Plugin: Stream Deck keys draw a channel's or mix's icon from the same set in its colour.
+- Devices: the Wave:1's gain, mute and headphone writes are verified on hardware from an owner's archive; a gain write the Wave:3 firmware drops is no longer reported as taken.
+- Devices: the Wave:3's microphone to computer mix ran the other way from the crossfade and is mirrored.
+- API: appearance.icon takes a name, none or a legacy glyph; the state carries appearance.defaultIcon and mixer.outputAppearance; createChannel and createMix take an optional icon; setLayoutAppearance takes output.
+
 * Sun Oct 18 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.1.61-1
 - UI: Spanish translation, chosen as Español in Options; a saved regional tag such as es-MX shows as its language in the picker.
 - UI: in a narrow UI the MONITOR device picker sits above the volume row, long output names shorten with an ellipsis and the full name shows on hover.
