@@ -1,3 +1,16 @@
+openxlr (0.1.61) resolute; urgency=medium
+
+  * UI: Spanish translation, chosen as Español in Options; a saved regional tag such as es-MX shows as its language in the picker.
+  * UI: in a narrow UI the MONITOR device picker sits above the volume row, long output names shorten with an ellipsis and the full name shows on hover.
+  * UI: the German startup repair hint is complete.
+  * Mixer: a monitor output selection changed while the hardware stream restarts is kept, and a restart that finishes after teardown no longer reconnects outputs.
+  * Devices: the Wave:1 moves to beta after an owner's diagnostics showed detection, the config block, the firmware line and the desktop volume mirror working; the setters await that owner's second run.
+  * Devices: saved hardware snapshots must be regular JSON files of at most 64 KiB; an unreadable one is logged on restore and reported by Reset.
+  * Daemon: a daemon.json with duplicate keys is reported as unreadable and never written over.
+  * Plugins: CLAP read-only parameters are queried on the main thread with the status tick, as CLAP requires, instead of from the audio callback.
+
+ -- Emanuele Sparvoli <sparvoli@gmail.com>  Sun, 18 Oct 2026 07:55:30 +0100
+
 openxlr (0.1.60) resolute; urgency=medium
 
   * Devices: the Wave:1 (0fd9:006e) is recognized and driven with the Wave:3's controls, from the Wave:3's backend under its own id; coded only, never run on a Wave:1, and owners are asked for diagnostics. The udev rule gains the id.
