@@ -337,15 +337,16 @@ while fixes to existing hosts remain part of normal maintenance.
   move them. The desktop volume sync and the firmware line came after
   that test. A Wave:3 owner willing to run the full checklist takes it
   out of beta.
-- [ ] Wave:1 (`0fd9:006e`), the Wave:3's smaller sibling, coded only: the
+- [ ] Wave:1 (`0fd9:006e`), the Wave:3's smaller sibling, in beta: the
   Wave:3 backend under the Wave:1's product id and name, `Wave1Device`,
   added after a user reported the microphone unrecognized. No public
-  source has probed one. A published review says it keeps the Wave:3's
-  settings, so the backend tries the Wave:3's block and refuses one of
-  another length before writing anything. It comes last in the registry's
-  order. An owner's diagnostics archive, taken before and after changing
-  a control, is what moves it to tested
-  ([hardware-support.md](hardware-support.md)).
+  source has probed one. An owner's diagnostics on 0.1.60 showed the
+  unit answering the Wave:3's block, the firmware line and the desktop
+  volume mirror, so the reading side is verified; the setters move to
+  tested with that owner's second archive, taken after changing each
+  control from the UI ([hardware-support.md](hardware-support.md)). The
+  backend still refuses a block of another length before writing
+  anything, and it comes last in the registry's order.
 
 ## How a change lands
 

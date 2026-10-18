@@ -13,7 +13,7 @@ the checks that still need an owner.
 | Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester |
 | XLR Dock MK.2 | `0fd9:00c7` | MK.2 backend with bank detection; exposed controls verified on the original 0x0103 unit |
 | Wave:3 | `0fd9:0070` | beta: coded from public protocol research; detection, gain, mute, headphone volume and the monitor balance worked in one user's quick test |
-| Wave:1 | `0fd9:006e` | coded: the Wave:3's backend under the Wave:1's id, never run on a Wave:1; an owner's diagnostics needed to show it answers the same block |
+| Wave:1 | `0fd9:006e` | beta: the Wave:3's backend under the Wave:1's id; an owner's diagnostics on 0.1.60 showed the Wave:3's block, firmware line and desktop volume mirror, the setters are not yet confirmed |
 
 ## USB access
 
@@ -326,47 +326,55 @@ Wave:3 and its dump shows no shared node group. An owner who records
 silence after a playback stream opened first would need a copy of
 `52-openxlr-mk1-capture-hold.conf` matching `Elgato_Wave_3_`.
 
-## Wave:1 (0fd9:006e), coded
+## Wave:1 (0fd9:006e), beta
 
 The Wave:3's smaller sibling, a USB condenser microphone with a
 headphone jack. Nobody on the project owns one and none of the three
 sources above has probed one, so `Wave1Device` is the Wave:3 backend
-under the Wave:1's product id and name, and every control is coded only.
-A published review of the microphone (TechPowerUp's Wave:1 review) is
-the only evidence used, and it describes the settings, not the wire: one
-dial that sets the headphone volume by default or the gain when Wave Link
-is told so, the dial pressed to mute, and in Wave Link the gain, headphone
-volume, mic/PC mix, ClipGuard, low cut and gain lock. Those are the Wave:3's
-controls, and the two microphones shipped on one software generation. The
-backend refuses a config block of another length before it writes anything.
-With that guard, trying the Wave:3's block on a Wave:1 costs an owner one
-diagnostics archive if it is wrong.
+under the Wave:1's product id and name. A published review of the
+microphone (TechPowerUp's Wave:1 review) describes the settings, not
+the wire: one dial that sets the headphone volume by default or the
+gain when Wave Link is told so, the dial pressed to mute, and in Wave
+Link the gain, headphone volume, mic/PC mix, ClipGuard, low cut and
+gain lock. Those are the Wave:3's controls, and the two microphones
+shipped on one software generation. The backend refuses a config block
+of another length before it writes anything.
+
+An owner's diagnostics archive, taken on 0.1.60 before any control was
+touched, settled the reading side. The unit answered both blocks:
+firmware 1.2.2 and a 16-byte config block holding gain 11 dB at 0,
+mute off at 4, ClipGuard on at 5, headphone level 0 dB at 7, headphone
+mute off at 9, mix 0 at 10 and the dial on headphones at 12, the
+Wave:1's default according to the review. The kernel's card held Mic
+Capture Volume 22 for those 11 dB, capture on and PCM Playback Volume
+120, so the daemon had written the desktop volume mirror and it agreed
+with the block. One difference from every Wave:3 log: bytes 2 and 3
+read 0x00EC where a Wave:3 reads zero. The backend retransmits them as
+read. That archive covered no write, so every setter below stays coded
+until the owner's second archive.
 
 | Control | State | Notes |
 |---|---|---|
-| Gain 0 to 40 dB | coded | the Wave:3's word and range; the kernel's capture control range in an owner's dump says whether 40 is right |
-| Mute | coded | byte 4; on the Wave:1 the dial is pressed to mute, so the press should show in the block as the pad does on the Wave:3 |
-| ClipGuard | coded | byte 5 |
-| Headphone volume -60 to 0 dB | coded | the Wave:3's word |
-| Direct monitor balance, as the crossfade | coded | the Wave:3's word; the review calls it the mic/PC mix |
-| Headphone mute | read | byte 9, as on the Wave:3 |
-| Dial target | read | byte 12; the review gives the dial two targets, headphones and gain, so 3 (monitor mix) should never appear |
+| Gain 0 to 40 dB | read on hardware | the Wave:3's word; an owner's block read 11 dB where the kernel's capture control read 22, two steps per dB as on the Wave:3; the setter awaits the second archive |
+| Mute | read on hardware | byte 4 read 0 on an owner's unit; on the Wave:1 the dial is pressed to mute, so the press should show in the block as the pad does on the Wave:3, which the second archive checks |
+| ClipGuard | read on hardware | byte 5, read as on; the setter awaits the second archive |
+| Headphone volume -60 to 0 dB | read on hardware | the Wave:3's word, read as 0 dB with the kernel's playback control at 120; the setter awaits the second archive |
+| Direct monitor balance, as the crossfade | read on hardware | the Wave:3's word, read as 0; the review calls it the mic/PC mix |
+| Headphone mute | read on hardware | byte 9, as on the Wave:3, read as unmuted on an owner's unit |
+| Dial target | read on hardware | byte 12 read 2 (headphones) on an owner's unit, the review's default; the review gives the dial two targets, so 3 (monitor mix) should never appear |
 | Low cut, gain lock | software | the submixer's and the daemon's, as on the Wave:3 |
-| Desktop volume controls, firmware version | coded | the Wave:3's mirror and device info offsets |
+| Desktop volume controls, firmware version | verified on hardware | the Wave:3's mirror and device info offsets; an owner's dump showed firmware 1.2.2 and the card's three controls in step with the block |
 
 The daemon prefers the Wave:1 after everything else, the Wave:3 included:
 it is driven when alone on the bus, picked from the header, or through
 `OPENXLR_DEVICE=006e`. The node-name fragment is `Wave_1`.
 
-An owner takes it from coded to tested with the steps under "Help
-confirm a control" below, in this order: connect the microphone alone,
-collect diagnostics before touching anything, then change the gain, the
-mute, the headphone volume and the mix one at a time from the UI and
-collect diagnostics again. The dump's `config` line shows whether the
-block answers 16 bytes and which bytes moved, `dial` what the dial was
-on, and `alsa` whether the card was found. If the first dump shows a
-block of another length, OpenXLR has written nothing and the report says
-what the firmware answers.
+The second archive moves the setters to tested, with the steps under
+"Help confirm a control" below: switch the dial to gain once, so the
+gain word is read in that mode, then change the gain, the mute, the
+headphone volume and the mix one at a time from the UI and collect
+diagnostics again. The dump's `config` line shows which bytes moved,
+`dial` what the dial was on, and `alsa` whether the card followed.
 
 ## Every device gets
 

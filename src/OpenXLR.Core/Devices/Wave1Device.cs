@@ -4,7 +4,10 @@ namespace OpenXLR.Core.Devices;
 /// The Elgato Wave:1 (0fd9:006e), the smaller USB condenser microphone of
 /// the Wave:3's generation, not an XLR interface. Nobody on this project owns
 /// one and no public source has probed one, so this is the Wave:3's backend
-/// under the Wave:1's product id and name, and every control is coded only.
+/// under the Wave:1's product id and name. An owner's diagnostics on 0.1.60
+/// showed the unit answering both blocks in the Wave:3's layout, with bytes
+/// 2 and 3 reading 0x00EC where a Wave:3 reads zero; the setters are not
+/// yet confirmed (docs/hardware-support.md).
 ///
 /// What is known of the microphone comes from a published review
 /// (TechPowerUp, Elgato Wave:1 Review): a 3.5 mm jack for direct monitoring,
