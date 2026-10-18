@@ -19,6 +19,13 @@ public sealed class LayoutAppearanceTests
 {
     [Theory]
     [InlineData("<svg/>", "#123456", false)]
+    [InlineData("music", null, true)]
+    [InlineData("none", null, true)]
+    [InlineData("a-skin-icon2", null, true)]
+    [InlineData("Music", null, false)]
+    [InlineData("2music", null, false)]
+    [InlineData("my_icon", null, false)]
+    [InlineData("abcdefghijklmnopqrstuvwxyzabcdefg", null, false)]
     [InlineData("♪", "red", false)]
     [InlineData("♪", "#fff", false)]
     [InlineData("♪", "#ffffff\"", false)]
@@ -82,7 +89,7 @@ public sealed class LayoutAppearanceTests
             Assert.Equal(MixerConfig.Default().Channels.Select(c => c.Id), state.Channels.Select(c => c.Id));
             Assert.True(state.Channels.Single(c => c.Id == "game").Appearance.Hidden);
             Assert.Equal("◆", state.Mixes.Single(m => m.Id == "stream").Appearance.Icon);
-            Assert.Equal(LayoutAppearance.Default, state.Channels.Single(c => c.Id == "music").Appearance);
+            Assert.Equal(new LayoutAppearanceState("", null, false, "music"), state.Channels.Single(c => c.Id == "music").Appearance);
 
             Assert.Throws<InvalidOperationException>(() => mixer.SetLayoutAppearance("mix:monitor", new(Hidden: true), _ => null));
             Assert.Throws<InvalidOperationException>(() => mixer.SetLayoutAppearance("channel:gone", new("●"), _ => null));

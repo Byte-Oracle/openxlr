@@ -954,4 +954,64 @@ public sealed class SkinPackageTests : IDisposable
         }
         return 0.2126 * Channel(c.R) + 0.7152 * Channel(c.G) + 0.0722 * Channel(c.B);
     }
+
+    [Fact]
+    public void IconsAreNamedPathDataAndABadEntryCostsOnlyItself()
+    {
+        SkinReadResult result = Read("""
+            {"schema":1,"tokens":{},"icons":{
+              "mic":{"path":"M0 0h24v24h-24z"},
+              "on-air":{"path":"M2 6h20v12h-20z","colour":"red"},
+              "none":{"path":"M0 0h1v1z"},
+              "Bad":{"path":"M0 0h1v1z"},
+              "no-path":{"d":"M0 0h1v1z"},
+              "markup":{"path":"<path d='M0 0'/>"},
+              "twice":{"path":"M0 0h1v1z"},
+              "twice":{"path":"M0 0h2v2z"},
+              "string":"M0 0h1v1z"
+            }}
+            """);
+        SkinPackage package = Assert.IsType<SkinPackage>(result.Package);
+        Assert.Equal(["mic", "on-air"], package.Icons.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal("M0 0h24v24h-24z", package.Icons["mic"]);
+        foreach (string expected in new[] { "icons.on-air: \"colour\"", "icons: \"none\"", "icons: \"Bad\"", "icons.no-path:",
+                     "icons.markup:", "icons.twice: is given twice", "icons.string:" })
+            Assert.Contains(result.Errors, e => e.StartsWith(expected, StringComparison.Ordinal));
+        Assert.Equal(7, result.Errors.Count);
+    }
+
+    [Fact]
+    public void IconsAreBoundedInNumberAndLength()
+    {
+        string many = string.Join(",", Enumerable.Range(0, SkinFormat.MaxIcons + 3).Select(n => $"\"i{n}\":{{\"path\":\"M0 0h1v1z\"}}"));
+        SkinReadResult result = Read("{\"schema\":1,\"tokens\":{},\"icons\":{" + many + "}}");
+        Assert.Equal(SkinFormat.MaxIcons, result.Package!.Icons.Count);
+        Assert.Contains(result.Errors, e => e.StartsWith($"icons: a skin may define at most {SkinFormat.MaxIcons} icons", StringComparison.Ordinal));
+        Assert.Single(result.Errors);
+
+        string longPath = "M0 0" + string.Concat(Enumerable.Repeat("h1", SkinFormat.MaxIconPathLength / 2));
+        result = Read("{\"schema\":1,\"tokens\":{},\"icons\":{\"long\":{\"path\":\"" + longPath + "\"}}}");
+        Assert.Empty(result.Package!.Icons);
+        Assert.Contains(result.Errors, e => e.StartsWith("icons.long: the path is longer", StringComparison.Ordinal));
+
+        result = Read("""{"schema":1,"tokens":{},"icons":["mic"]}""");
+        Assert.Empty(result.Package!.Icons);
+        Assert.Contains(result.Errors, e => e.StartsWith("\"icons\" must be an object", StringComparison.Ordinal));
+        Assert.Empty(Read("""{"schema":1,"tokens":{}}""").Package!.Icons);
+    }
+
+    [Fact]
+    public void WearingASkinPublishesItsIconsToTheWindowAndTakingItOffWithdrawsThem()
+    {
+        SkinPackage package = Read("""{"schema":1,"tokens":{},"icons":{"on-air":{"path":"M2 6h20v12h-20z"}}}""").Package!;
+        try
+        {
+            SkinService.Apply(new SkinEntry(package, []));
+            Assert.True(LayoutIconRegistry.Knows("on-air"));
+            Assert.Equal("on-air", OpenXLR.UI.LayoutIcons.Resolve("on-air", "apps", LayoutIconRegistry.Knows));
+        }
+        finally { SkinService.Apply(new SkinEntry(SkinPackage.Default, [])); }
+        Assert.False(LayoutIconRegistry.Knows("on-air"));
+        Assert.True(LayoutIconRegistry.Knows("mic"));
+    }
 }

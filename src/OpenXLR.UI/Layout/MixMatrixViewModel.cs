@@ -308,6 +308,9 @@ public sealed class MatrixColumnViewModel : ViewModelBase
     /// <summary>The mix, the same object the mixer holds.</summary>
     public MixViewModel Mix { get; }
 
+    /// <summary>The item's appearance, where the <c>layoutAccent</c> style looks for the colour the user chose.</summary>
+    public LayoutAppearanceViewModel Appearance => Mix.Appearance;
+
     /// <summary>The head's lines: the name and the outputs line, in the skin's order.</summary>
     public StripSpec TextSpec { get; }
 
@@ -416,6 +419,9 @@ public sealed class MatrixRowViewModel : ViewModelBase
     public MixMatrixViewModel Matrix { get; }
 
     public ChannelViewModel Channel { get; }
+
+    /// <summary>The item's appearance, where the <c>layoutAccent</c> style looks for the colour the user chose.</summary>
+    public LayoutAppearanceViewModel Appearance => Channel.Appearance;
 
     public InputStripKind Kind { get; }
 

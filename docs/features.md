@@ -149,7 +149,10 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   by id when System is gone
 - An icon and a colour for any channel or mix, and a hidden flag that
   leaves a channel's strip out of the mixer while its audio, sends and
-  apps carry on. The window, the terminal mixer and the Stream Deck keys
+  apps carry on. Icons come from a built-in vector set of 22, every item
+  starts with one chosen by its kind, and the icon can be picked when the
+  channel or mix is added. A skin may redraw an icon or add its own as
+  path data. The window, the terminal mixer and the Stream Deck keys
   show the same icon and colour. See
   [Edit the mixer layout](manual.md#layout)
 - Arrange mode in the window: drag handles, or the arrow keys, move the

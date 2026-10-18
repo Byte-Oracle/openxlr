@@ -1501,7 +1501,7 @@ with the meter under it, and **FX**, which opens their plugin chain; the
 gain lock and phantom power's settling time still apply. Aux In has its
 level and **Lock**. An application or capture channel has its meter only.
 XLR 2 has a row only on an interface with two XLR inputs. The head at the
-top of each column carries the mix's name, how many outputs ticked in
+top of each column carries the mix's icon and name, how many outputs ticked in
 MONITOR hear it (or what kind of mix it is when none does), a thin line in
 the mix's colour when you gave it one in the layout editor, and its mute,
 master level and **FX**, which opens the mix's plugin chain. **FX** is
@@ -1666,15 +1666,36 @@ whose channel is deleted, or whose remembered channel no longer exists,
 goes to System; if you deleted System, it goes to the application channel
 whose id comes first alphabetically.
 
+Every channel and mix wears an icon. Until you pick one it wears the
+default for its kind: a microphone for XLR 1 and XLR 2, a jack for Aux In
+and the Aux port, a camera for a capture input, a gamepad, a note, a
+browser window, a cog, a speech bubble and a burst for Game, Music,
+Browser, System, Voice Chat and SFX, a grid of tiles for any other
+application channel, headphones for every monitor mix, a broadcast mast
+for Stream, two people for Chat and a podcast microphone for any other
+virtual microphone.
+
 **Appearance**, under each channel and mix name in the layout editor, gives
-that item an icon (● ♪ ♫ ✦ ◆ ▶ ◉ or none) and a colour typed as `#RRGGBB`.
-Leave the colour empty to keep the skin's colours. The window draws the icon
-above a channel's name and before a mix's, both in that colour. The terminal
-mixer puts the icon before the name on its strip, in the same colour. Stream
-Deck keys and dials whose target is that channel or mix show the icon in
-place of their glyph and the colour on the label and border, unless the key
-has its own icon chosen in its settings. Mute and offline indicators keep
-their usual colours.
+that item an icon and a colour typed as `#RRGGBB`. The icon list shows each
+icon beside its name: **Default** with the name of the kind's icon, **None**
+for no icon at all, the built-in set, the worn skin's own icons if it has
+any, and under **Text** the seven text glyphs ● ♪ ♫ ✦ ◆ ▶ ◉ that older
+layouts used. The same list sits beside the name box where you add a
+channel or a mix, starting at **Default**, so a new item gets its icon in
+the same step. Leave the colour empty to keep the skin's colours. The
+window draws the icon above a channel's name and before a mix's, both in
+that colour, in every skin; a skin can redraw an icon but not choose it.
+The terminal mixer puts the icon before the name on its strip as one text
+character, in the same colour. Stream Deck keys and dials whose target is
+that channel or mix show the icon in place of their glyph and the colour on
+the label and border, unless the key has its own icon chosen in its
+settings. Mute and offline indicators keep their usual colours. An icon
+that only a skin draws shows as the kind's default in the terminal mixer,
+on the Stream Deck, and in the window under another skin.
+The headphone outputs are listed at the top of CHANNELS: **Phones 1** and,
+on a device with a second jack, **Phones 2** open the same dialog without
+the hidden flag. Their icon, a headset until you pick another, and their
+colour show before the labels in HEADPHONES.
 For a channel, **Hide this channel's strip in the mixer** removes its tile
 from the SUBMIXER card and its strip from the terminal mixer's Mixer
 section. Nothing about its audio changes: its sends, meter, applications

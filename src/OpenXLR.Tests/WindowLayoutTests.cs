@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -332,6 +333,7 @@ public sealed class WindowLayoutTests
                 Capture(captureDialog, "capture-input-360");
                 captureDialog.Close();
                 AssertInside(setup.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ExclusiveGroupsButton"), setup);
+                CheckCreateIconPickers(setup);
                 CheckAppearanceDialog(setup, windows);
                 setup.Close();
 
@@ -601,7 +603,7 @@ public sealed class WindowLayoutTests
             }
         }) { IsBackground = true };
         thread.Start();
-        Assert.True(thread.Join(TimeSpan.FromSeconds(150)), "Window layout hung.");
+        Assert.True(thread.Join(TimeSpan.FromSeconds(300)), "Window layout hung.");
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
@@ -632,9 +634,13 @@ public sealed class WindowLayoutTests
     private static void AssertLayoutAppearance(MainWindow main, MainViewModel model)
     {
         typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(model, [JsonNode.Parse("""
-            {"mixes":[{"id":"monitor","name":"Monitor A","appearance":{"icon":"◆","colour":"#12ABCD"}}],
+            {"mixes":[{"id":"monitor","name":"Monitor A","appearance":{"icon":"◆","colour":"#12ABCD"}},
+                      {"id":"stream","name":"Stream","appearance":{"defaultIcon":"broadcast"}}],
              "channels":[{"id":"game","name":"Game","levels":{"monitor":1},"appearance":{"hidden":true}},
-                         {"id":"music","name":"Music","levels":{"monitor":1},"appearance":{"icon":"♫","colour":"#ABC123"}}]}
+                         {"id":"music","name":"Music","levels":{"monitor":1},"appearance":{"icon":"♫","colour":"#ABC123"}},
+                         {"id":"browser","name":"Browser","levels":{"monitor":1},"appearance":{"defaultIcon":"browser","colour":"#33CC99"}},
+                         {"id":"sfx","name":"SFX","levels":{"monitor":1},"appearance":{"icon":"none","defaultIcon":"burst"}}],
+             "outputAppearance":{"phones1":{"icon":"star","colour":"#AA3355","defaultIcon":"headset"}}}
             """)]);
         Layout(main, 1040, 900);
         var strips = main.GetVisualDescendants().OfType<Border>()
@@ -648,26 +654,96 @@ public sealed class WindowLayoutTests
             Assert.True(label.IsVisible);
             Assert.Equal(Avalonia.Media.Color.Parse("#ABC123"), ((Avalonia.Media.ISolidColorBrush)label.Foreground!).Color);
         }
+        // A default icon is a drawing in the item's colour, above the name; "none" draws nothing.
+        LayoutIconBlock browser = strips.Single(b => ((ChannelViewModel)b.DataContext!).Id == "browser")
+            .GetVisualDescendants().OfType<LayoutIconBlock>().Single();
+        Assert.True(browser.IsVisible && browser.DrawsPath);
+        Assert.Equal("browser", browser.Shown);
+        Assert.Equal(Avalonia.Media.Color.Parse("#33CC99"), ((Avalonia.Media.ISolidColorBrush)browser.Foreground!).Color);
+        Assert.False(strips.Single(b => ((ChannelViewModel)b.DataContext!).Id == "sfx")
+            .GetVisualDescendants().OfType<LayoutIconBlock>().Single().IsVisible);
+        LayoutIconBlock stream = main.GetVisualDescendants().OfType<Border>()
+            .Single(b => b.DataContext is MixViewModel { Id: "stream" } && b.Width == 232).GetVisualDescendants().OfType<LayoutIconBlock>().Single();
+        Assert.True(stream.IsVisible && stream.DrawsPath);
+        // The headphone jacks wear their icon before their label, in their colour; without one, the headset.
+        LayoutIconBlock phones1 = main.FindControl<Grid>("Phones1Label")!.GetVisualDescendants().OfType<LayoutIconBlock>().Single();
+        Assert.True(phones1.IsEffectivelyVisible && phones1.DrawsPath);
+        Assert.Equal("star", phones1.Shown);
+        Assert.Equal(Avalonia.Media.Color.Parse("#AA3355"), ((Avalonia.Media.ISolidColorBrush)phones1.Foreground!).Color);
+        Assert.Equal("headset", main.FindControl<Grid>("Phones2Label")!.GetVisualDescendants().OfType<LayoutIconBlock>().Single().Shown);
+        // Every built-in drawing is one Avalonia accepts.
+        Assert.All(OpenXLR.UI.LayoutIcons.BuiltIn, icon => Assert.NotNull(LayoutIconRegistry.Geometry(icon.Name)));
         Border mix = main.GetVisualDescendants().OfType<Border>().Single(b => b.DataContext is MixViewModel { Id: "monitor" } && b.Width == 232);
         TextBlock mixName = mix.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == "Monitor A");
         Assert.Equal(Avalonia.Media.Color.Parse("#12ABCD"), ((Avalonia.Media.ISolidColorBrush)mixName.Foreground!).Color);
         Capture(main, "layout-appearance-1040");
+        foreach (string section in new[] { "InputsTile", "HeadphonesTile", "MonitorTile", "ApplicationsTile" })
+            if (main.FindControl<Expander>(section) is { } expander) expander.IsExpanded = false;
+        Layout(main, 1040, 900);
+        Capture(main, "layout-appearance-tiles-1040");
+        foreach (string section in new[] { "InputsTile", "HeadphonesTile", "MonitorTile", "ApplicationsTile" })
+            if (main.FindControl<Expander>(section) is { } expander) expander.IsExpanded = true;
+    }
+
+    /// <summary>
+    /// The create rows offer the icon beside the name, starting at the default,
+    /// and the mix row's default follows the kind chosen beside it.
+    /// </summary>
+    private static void CheckCreateIconPickers(MixerSetupWindow setup)
+    {
+        ComboBox Named(string name) => setup.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == name);
+        ComboBox channelIcon = Named("NewChannelIcon"), mixIcon = Named("NewMixIcon"), kind = Named("NewMixKind");
+        Assert.Equal("", LayoutIconPicker.Chosen(channelIcon));
+        Assert.Equal(Localizer.Format("IconDefaultNamed", "apps"), AutomationProperties.GetName((ComboBoxItem)channelIcon.Items[0]!));
+        Assert.Equal(Localizer.Format("IconDefaultNamed", "podcast"), AutomationProperties.GetName((ComboBoxItem)mixIcon.Items[0]!));
+        mixIcon.SelectedItem = mixIcon.Items.OfType<ComboBoxItem>().Single(i => i.Tag as string == "record");
+        kind.SelectedIndex = 1;
+        Assert.Equal(Localizer.Format("IconDefaultNamed", "headset"), AutomationProperties.GetName((ComboBoxItem)mixIcon.Items[0]!));
+        Assert.Equal("record", LayoutIconPicker.Chosen(mixIcon));
+        // The Text heading is a label, not a choice.
+        Assert.Single(mixIcon.Items.OfType<ComboBoxItem>(), i => !i.IsEnabled && i.Tag is null);
+        Layout(setup, 600, 640);
+        foreach (ComboBox box in new[] { channelIcon, mixIcon, kind }) AssertInside(box, setup);
+        AssertInside(setup.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "Phones1AppearanceButton"), setup);
+        Capture(setup, "layout-editor-600");
+
+        // Open, every entry draws its icon beside its name; a built-in one as a drawing.
+        mixIcon.IsDropDownOpen = true;
+        Dispatcher.UIThread.RunJobs();
+        Layout(setup, 600, 640);
+        var record = mixIcon.Items.OfType<ComboBoxItem>().Single(i => i.Tag as string == "record");
+        LayoutIconBlock drawn = record.GetVisualDescendants().OfType<LayoutIconBlock>().Single();
+        Assert.True(drawn.DrawsPath);
+        Assert.True(drawn.Bounds.Width > 8);
+        if (TopLevel.GetTopLevel(record) is { } popup) Capture(popup, "layout-editor-icon-picker");
+        mixIcon.IsDropDownOpen = false;
+        kind.SelectedIndex = 0;
+        LayoutIconPicker.Fill(mixIcon, "", "podcast");
+        Dispatcher.UIThread.RunJobs();
     }
 
     /// <summary>The layout editor's appearance dialog offers the hidden flag for a channel only.</summary>
     private static void CheckAppearanceDialog(MixerSetupWindow setup, List<Window> windows)
     {
         var client = new DaemonClient();
-        foreach (object item in new object[] { new ChannelViewModel(client, "game", "Game", []), new MixViewModel(client, "stream", "Stream") })
+        foreach (object item in new object[] { new ChannelViewModel(client, "game", "Game", []), new MixViewModel(client, "stream", "Stream"), "phones1" })
         {
+            // A headphone output's button carries its id and the window's own data.
+            Button sender = item is string output ? new Button { Tag = output } : new Button { DataContext = item };
             typeof(MixerSetupWindow).GetMethod("OnAppearance", BindingFlags.Instance | BindingFlags.NonPublic)!
-                .Invoke(setup, [new Button { DataContext = item }, new Avalonia.Interactivity.RoutedEventArgs()]);
+                .Invoke(setup, [sender, new Avalonia.Interactivity.RoutedEventArgs()]);
             Dispatcher.UIThread.RunJobs();
             var dialog = Assert.Single(setup.OwnedWindows);
             windows.Add(dialog);
             Layout(dialog, 440, 360);
             Control Named(string name) => dialog.GetVisualDescendants().OfType<Control>().Single(c => c.Name == name);
-            Assert.Equal(LayoutAppearanceViewModel.Icons.Length, ((ComboBox)Named("AppearanceIcon")).ItemCount);
+            // Default, None, the built-in set, the Text heading and the seven glyphs.
+            var picker = (ComboBox)Named("AppearanceIcon");
+            Assert.Equal(OpenXLR.UI.LayoutIcons.BuiltIn.Count + OpenXLR.UI.LayoutIcons.Glyphs.Count + 3, picker.ItemCount);
+            Assert.Equal("", LayoutIconPicker.Chosen(picker));
+            picker.SelectedIndex = 1;
+            Assert.Equal("none", LayoutIconPicker.Chosen(picker));
+            picker.SelectedIndex = 0;
             Assert.Equal(item is ChannelViewModel, dialog.GetVisualDescendants().OfType<CheckBox>().Any(c => c.Name == "AppearanceHidden" && c.IsVisible));
             ((TextBox)Named("AppearanceColour")).Text = "red";
             Named("AppearanceSave").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
@@ -675,7 +751,7 @@ public sealed class WindowLayoutTests
             Assert.True(dialog.IsVisible);   // a colour that is not #RRGGBB is not sent
             foreach (var button in dialog.GetVisualDescendants().OfType<Button>().Where(b => b.IsVisible))
                 AssertInside(button, dialog);
-            Capture(dialog, "layout-appearance-dialog-" + (item is ChannelViewModel ? "channel" : "mix"));
+            Capture(dialog, "layout-appearance-dialog-" + (item is ChannelViewModel ? "channel" : item is string ? "output" : "mix"));
             dialog.Close();
             Dispatcher.UIThread.RunJobs();
         }
@@ -750,7 +826,7 @@ public sealed class WindowLayoutTests
             }
     }
 
-    internal static void Capture(Window window, string name)
+    internal static void Capture(TopLevel window, string name)
     {
         if (Environment.GetEnvironmentVariable("OPENXLR_LAYOUT_ARTIFACTS") is not { Length: > 0 } directory) return;
         Directory.CreateDirectory(directory);

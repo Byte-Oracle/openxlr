@@ -135,6 +135,9 @@ public sealed class InputStripViewModel : ViewModelBase
 
     public ChannelViewModel Channel { get; }
 
+    /// <summary>The item's appearance, where the <c>layoutAccent</c> style looks for the colour the user chose.</summary>
+    public LayoutAppearanceViewModel Appearance => Channel.Appearance;
+
     public InputStripKind Kind { get; }
 
     /// <summary>The window's model: the hardware controls bind to its properties, exactly as the INPUTS panel does.</summary>

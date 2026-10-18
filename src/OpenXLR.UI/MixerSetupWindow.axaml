@@ -51,16 +51,40 @@
         <DockPanel>
           <Button DockPanel.Dock="Bottom" Content="{loc:Text Key=AddCaptureInput}" Margin="0,8,0,0"
                   HorizontalAlignment="Left" IsEnabled="{Binding CanEditLayout}" Click="OnAddCapture"/>
-          <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,8,Auto" Margin="0,10,0,0">
+          <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,8,Auto" RowDefinitions="Auto,6,Auto" Margin="0,10,0,0">
             <TextBox Name="ChannelName" PlaceholderText="{loc:Text Key=NewChannelEGPodcast}" MaxLength="60"
                      KeyDown="OnChannelNameKey"/>
             <Button Grid.Column="2" Content="{loc:Text Key=AddChannel}" Padding="12,4"
                     IsEnabled="{Binding CanEditLayout}" Click="OnAddChannel"/>
+            <ComboBox Grid.Row="2" Name="NewChannelIcon" MaxDropDownHeight="360" HorizontalAlignment="Left" MinWidth="200"
+                      AutomationProperties.Name="{loc:Text Key=NewChannelIcon}" ToolTip.Tip="{loc:Text Key=NewChannelIcon}"/>
           </Grid>
           <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
             <TextBlock Text="{loc:Text Key=CHANNELS}" Classes="h"/>
             <TextBlock Text="{loc:Text Key=ANewChannelStartsMutedInEvery}"
                        FontSize="11" Foreground="{DynamicResource Ox.Text.Muted}" TextWrapping="Wrap"/>
+            <!-- the headphone jacks are hardware, not channels: an icon and a colour, nothing else -->
+            <WrapPanel Margin="0,6,0,0">
+              <TextBlock Text="{loc:Text Key=HeadphoneOutputs}" FontSize="11" Foreground="{DynamicResource Ox.Text.Secondary}"
+                         VerticalAlignment="Center" Margin="0,0,8,4"/>
+              <Button Name="Phones1AppearanceButton" Classes="small" Tag="phones1" Click="OnAppearance" Margin="0,0,6,4"
+                      AutomationProperties.Name="{loc:Text Key=Phones1Appearance}" ToolTip.Tip="{loc:Text Key=IconAndColour}">
+                <Grid ColumnDefinitions="Auto,*" DataContext="{Binding Phones1Appearance}" x:DataType="vm:LayoutAppearanceViewModel">
+                  <vm:LayoutIconBlock Icon="{Binding Icon}" Fallback="{Binding DefaultIcon}" IsVisible="{Binding HasIcon}"
+                                      Margin="0,0,5,0" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" Text="{loc:Text Key=Phones1}" VerticalAlignment="Center"/>
+                </Grid>
+              </Button>
+              <Button Name="Phones2AppearanceButton" Classes="small" Tag="phones2" Click="OnAppearance" Margin="0,0,6,4"
+                      IsVisible="{Binding HasHp2}"
+                      AutomationProperties.Name="{loc:Text Key=Phones2Appearance}" ToolTip.Tip="{loc:Text Key=IconAndColour}">
+                <Grid ColumnDefinitions="Auto,*" DataContext="{Binding Phones2Appearance}" x:DataType="vm:LayoutAppearanceViewModel">
+                  <vm:LayoutIconBlock Icon="{Binding Icon}" Fallback="{Binding DefaultIcon}" IsVisible="{Binding HasIcon}"
+                                      Margin="0,0,5,0" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" Text="{loc:Text Key=Phones2}" VerticalAlignment="Center"/>
+                </Grid>
+              </Button>
+            </WrapPanel>
           </StackPanel>
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Channels}">
@@ -70,7 +94,13 @@
                           IsVisible="{Binding Visible}">
                     <Grid ColumnDefinitions="*,Auto,4,Auto,8,Auto,4,Auto">
                       <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource Ox.Text.Primary}" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="Auto,*">
+                          <vm:LayoutIconBlock Icon="{Binding Appearance.Icon}" Fallback="{Binding Appearance.DefaultIcon}"
+                                              Foreground="{DynamicResource Ox.Text.Primary}" Margin="0,0,6,0"
+                                              IsVisible="{Binding Appearance.HasIcon}" VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="{DynamicResource Ox.Text.Primary}" FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis"/>
+                        </Grid>
                         <TextBlock Text="{Binding Id}" Foreground="{DynamicResource Ox.Text.Muted}" FontFamily="monospace" FontSize="10"/>
                         <TextBlock Text="{Binding CaptureLabel}" Foreground="{DynamicResource Ox.Text.Secondary}"
                                    TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding CaptureSource}"
@@ -109,6 +139,8 @@
                 <ComboBoxItem Content="{loc:Text Key=VirtualMicrophone}"/>
                 <ComboBoxItem Content="{loc:Text Key=MonitorMix}"/>
               </ComboBox>
+              <ComboBox Name="NewMixIcon" MaxDropDownHeight="360" MinWidth="200" Margin="0,0,8,4"
+                        AutomationProperties.Name="{loc:Text Key=NewMixIcon}" ToolTip.Tip="{loc:Text Key=NewMixIcon}"/>
               <Button Name="AddMix" Content="{loc:Text Key=AddMix}" Padding="12,4"
                       IsEnabled="{Binding CanEditLayout}" Click="OnAddMix"/>
             </WrapPanel>
@@ -126,7 +158,13 @@
                           IsVisible="{Binding Visible}">
                     <Grid ColumnDefinitions="*,Auto,4,Auto,8,Auto,4,Auto">
                       <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource Ox.Text.Primary}" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="Auto,*">
+                          <vm:LayoutIconBlock Icon="{Binding Appearance.Icon}" Fallback="{Binding Appearance.DefaultIcon}"
+                                              Foreground="{DynamicResource Ox.Text.Primary}" Margin="0,0,6,0"
+                                              IsVisible="{Binding Appearance.HasIcon}" VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="{DynamicResource Ox.Text.Primary}" FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis"/>
+                        </Grid>
                         <TextBlock Text="{Binding Id}" Foreground="{DynamicResource Ox.Text.Muted}" FontFamily="monospace" FontSize="10"/>
                         <Button Content="{loc:Text Key=MixerAppearance}" Classes="small" HorizontalAlignment="Left" Margin="0,4,0,0"
                                 Click="OnAppearance" ToolTip.Tip="{loc:Text Key=IconAndColour}"/>

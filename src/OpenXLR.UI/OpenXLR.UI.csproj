@@ -17,6 +17,8 @@
     <Compile Include="../OpenXLR.Core/RegularFile.cs" Link="RegularFile.cs" />
     <!-- Shared with the terminal mixer: the saved Material mode. -->
     <Compile Include="../OpenXLR.Core/AppearanceModes.cs" Link="AppearanceModes.cs" />
+    <!-- Shared with the daemon and the terminal mixer: the built-in icon set. -->
+    <Compile Include="../OpenXLR.Core/Mixing/LayoutIcons.cs" Link="LayoutIcons.cs" />
   </ItemGroup>
 
   <ItemGroup>

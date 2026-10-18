@@ -458,16 +458,17 @@ public sealed class MixerService : IHostedService, IDisposable
                         switch (cmd.Cmd)
                         {
                             case "createCaptureChannel": _mixer.CreateCaptureChannel(cmd.Name!, cmd.Source!, cmd.CapturePair, save, cmd.CaptureMonoChannel); break;
-                            case "createChannel": _mixer.CreateApplicationChannel(cmd.Name!, save); break;
+                            case "createChannel": _mixer.CreateApplicationChannel(cmd.Name!, save, cmd.Icon); break;
                             case "renameChannel": _mixer.RenameApplicationChannel(cmd.Channel!, cmd.Name!, save); break;
                             case "deleteChannel": _mixer.DeleteApplicationChannel(cmd.Channel!, save); break;
-                            case "createMix": _mixer.CreateMix(cmd.Name!, save, cmd.Kind == "monitor" ? MixKind.Monitor : MixKind.VirtualMic); break;
+                            case "createMix": _mixer.CreateMix(cmd.Name!, save, cmd.Kind == "monitor" ? MixKind.Monitor : MixKind.VirtualMic, cmd.Icon); break;
                             case "renameMix": _mixer.RenameMix(cmd.Mix!, cmd.Name!, save); break;
                             case "deleteMix": _mixer.DeleteMix(cmd.Mix!, save); break;
                             case "setExclusiveGroup": _mixer.SetExclusiveGroup(cmd.Group, cmd.Name!, cmd.Channels!, save); break;
                             case "deleteExclusiveGroup": _mixer.DeleteExclusiveGroup(cmd.Group!, save); break;
                             case "setLayoutAppearance":
-                                _mixer.SetLayoutAppearance(cmd.Channel is null ? "mix:" + cmd.Mix : "channel:" + cmd.Channel, cmd.Appearance!, save);
+                                _mixer.SetLayoutAppearance(cmd.Output is not null ? "output:" + cmd.Output
+                                    : cmd.Channel is null ? "mix:" + cmd.Mix : "channel:" + cmd.Channel, cmd.Appearance!, save);
                                 break;
                             default: _mixer.SetLayoutOrder(cmd.Channels!, cmd.Mixes!, save); break;
                         }

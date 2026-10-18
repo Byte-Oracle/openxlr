@@ -205,6 +205,7 @@ public static class SkinService
     {
         var errors = new List<string>(entry.Errors);
         Current = entry;
+        LayoutIconRegistry.UseSkin(entry.Package.Icons);
         if (Application.Current is not { } application)
         {
             Errors = errors;
@@ -254,6 +255,11 @@ public static class SkinService
 
         ApplyControls(palette, application, resources, errors);
         DeckPalette.Publish(entry.Id, resources, errors);
+        // The reader checked each icon's grammar; this is where Avalonia
+        // builds it, so an entry it still refuses is reported like a bad token.
+        foreach (string icon in entry.Package.Icons.Keys)
+            if (!LayoutIconRegistry.SkinIconDraws(icon))
+                errors.Add($"icons.{icon}: this path could not be drawn; the item keeps the built-in icon or its default.");
 
         Images.AddRange(realizer.Bitmaps);
         foreach (IDisposable image in previous) image.Dispose();

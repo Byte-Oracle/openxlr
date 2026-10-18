@@ -45,6 +45,14 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     assert.ok(keyImage("appearance-key").includes(">♫</text>"));
     assert.ok(keyImage("appearance-key").includes("#1234AB"));
     assert.ok(!keyImage("own-glyph-key").includes("♫"));
+    // A built-in icon by name is drawn as a path in the colour; a key's own glyph still wins.
+    state.mixer.channels[0].appearance = {icon:"music",defaultIcon:"cog",colour:"#1234AB"};
+    daemon.receive(state);
+    assert.match(keyImage("appearance-key"), /<path d="M[^"]+" fill="#1234AB"\/>/);
+    assert.ok(!keyImage("own-glyph-key").includes('fill="#1234AB"/>'));
+    state.mixer.channels[0].appearance = {icon:"none",defaultIcon:"cog"};
+    daemon.receive(state);
+    assert.ok(!/<path d="M[^"]+" fill="[^"]+"\/>/.test(keyImage("appearance-key")));
     delete state.mixer.channels[0].appearance;
     daemon.receive(state);
     assert.ok(!keyImage("appearance-key").includes("#1234AB"));

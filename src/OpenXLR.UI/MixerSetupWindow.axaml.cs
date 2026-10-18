@@ -2,6 +2,7 @@ using OpenXLR.UI.Localization;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -17,7 +18,18 @@ namespace OpenXLR.UI;
 /// </summary>
 public partial class MixerSetupWindow : Window
 {
-    public MixerSetupWindow() => InitializeComponent();
+    public MixerSetupWindow()
+    {
+        InitializeComponent();
+        LayoutIconPicker.Fill(NewChannelIcon, "", LayoutDefaultIcons.ForChannel("", false, null));
+        LayoutIconPicker.Fill(NewMixIcon, "", NewMixDefaultIcon);
+        NewMixKind.SelectionChanged += (_, _) => LayoutIconPicker.SetDefault(NewMixIcon, NewMixDefaultIcon);
+    }
+
+    private string NewMixKindName => NewMixKind.SelectedIndex == 1 ? "monitor" : "virtualMic";
+
+    /// <summary>What a mix of the chosen kind wears by default; a new mix never has a structural id.</summary>
+    private string NewMixDefaultIcon => LayoutDefaultIcons.ForMix("", NewMixKindName);
 
     private MainViewModel? Vm => DataContext as MainViewModel;
 
@@ -30,7 +42,11 @@ public partial class MixerSetupWindow : Window
     {
         string name = ChannelName.Text?.Trim() ?? "";
         if (name.Length == 0 || Vm is not { } vm) return;
-        if (await Run(vm.CreateChannel(name))) ChannelName.Text = "";
+        if (await Run(vm.CreateChannel(name, LayoutIconPicker.Chosen(NewChannelIcon))))
+        {
+            ChannelName.Text = "";
+            LayoutIconPicker.Fill(NewChannelIcon, "", LayoutDefaultIcons.ForChannel("", false, null));
+        }
     }
 
     private async void OnAddCapture(object? sender, RoutedEventArgs e)
@@ -71,7 +87,11 @@ public partial class MixerSetupWindow : Window
     {
         string name = MixName.Text?.Trim() ?? "";
         if (name.Length == 0 || Vm is not { } vm) return;
-        if (await Run(vm.CreateMix(name, NewMixKind.SelectedIndex == 1 ? "monitor" : "virtualMic"))) MixName.Text = "";
+        if (await Run(vm.CreateMix(name, NewMixKindName, LayoutIconPicker.Chosen(NewMixIcon))))
+        {
+            MixName.Text = "";
+            LayoutIconPicker.Fill(NewMixIcon, "", NewMixDefaultIcon);
+        }
     }
 
     private void OnChannelNameKey(object? sender, KeyEventArgs e)
@@ -153,11 +173,17 @@ public partial class MixerSetupWindow : Window
         if (Vm is not { } vm) return;
         ChannelViewModel? channel = Item<ChannelViewModel>(sender);
         MixViewModel? mix = Item<MixViewModel>(sender);
-        LayoutAppearanceViewModel? appearance = channel?.Appearance ?? mix?.Appearance;
+        // The headphone outputs' buttons carry the output id; they have an icon and a colour, never a hidden flag.
+        string? output = channel is null && mix is null && (sender as Control)?.Tag is "phones1" or "phones2"
+            ? (string)((Control)sender!).Tag! : null;
+        LayoutAppearanceViewModel? appearance = channel?.Appearance ?? mix?.Appearance ?? (output is null ? null : vm.OutputAppearance(output));
         if (appearance is null) return;
-        string name = channel?.Name ?? mix!.Name;
-        var icon = new ComboBox { Name = "AppearanceIcon", ItemsSource = LayoutAppearanceViewModel.Icons,
-            SelectedItem = appearance.Icon, MinWidth = 120 };
+        string name = channel?.Name ?? mix?.Name ?? (output == "phones1" ? Localizer.Text("Phones1") : Localizer.Text("Phones2"));
+        var icon = new ComboBox { Name = "AppearanceIcon", MinWidth = 200, MaxDropDownHeight = 360 };
+        AutomationProperties.SetName(icon, Localizer.Text("Icon"));
+        LayoutIconPicker.Fill(icon, appearance.Icon, appearance.DefaultIcon.Length > 0 ? appearance.DefaultIcon
+            : channel is not null ? LayoutDefaultIcons.ForChannel(channel.Id, channel.IsHardware, channel.CaptureSource)
+            : mix is not null ? LayoutDefaultIcons.ForMix(mix.Id, mix.Kind) : "headset");
         var colour = new TextBox { Name = "AppearanceColour", Text = appearance.Colour ?? "", MaxLength = 7,
             PlaceholderText = Localizer.Text("ColourPlaceholder") };
         var hidden = new CheckBox { Name = "AppearanceHidden", IsChecked = appearance.Hidden, IsVisible = channel is not null,
@@ -196,8 +222,10 @@ public partial class MixerSetupWindow : Window
             save.IsEnabled = false;
             try
             {
-                string? error = await vm.SetLayoutAppearance(channel?.Id ?? mix!.Id, mix is not null,
-                    icon.SelectedItem as string ?? "", chosen, channel is not null && hidden.IsChecked == true);
+                string? error = output is not null
+                    ? await vm.SetOutputAppearance(output, LayoutIconPicker.Chosen(icon), chosen)
+                    : await vm.SetLayoutAppearance(channel?.Id ?? mix!.Id, mix is not null,
+                        LayoutIconPicker.Chosen(icon), chosen, channel is not null && hidden.IsChecked == true);
                 if (error is null) dialog.Close(); else note.Text = error;
             }
             finally { save.IsEnabled = true; }

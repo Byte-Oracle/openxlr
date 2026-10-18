@@ -1,6 +1,10 @@
 // Pure helpers for the editable mixer layout. Targets always carry stable
 // daemon ids; labels come from the latest state so renames do not invalidate
 // existing OpenDeck actions.
+import fs from "node:fs";
+
+// The built-in icon set, generated from LayoutIcons.cs by tools/deck-icons.py.
+const ICON_TABLE = JSON.parse(fs.readFileSync(new URL("./icons.json", import.meta.url), "utf8"));
 
 const LEGACY_CHANNELS = {
   xlr1: "XLR 1", xlr2: "XLR 2", aux: "Aux In", game: "Game",
@@ -115,13 +119,19 @@ export function openGroupMember(mixer, group) {
 }
 
 // The icon and colour a channel or mix was given in the layout editor, for
-// the key or dial whose target names it; a group key takes its open member's. Only a listed icon and a #RRGGBB
-// colour come through, so state can never put markup or an attribute into
-// the key's SVG.
-const APPEARANCE_ICONS = ["●", "♪", "♫", "✦", "◆", "▶", "◉"];
+// the key or dial whose target names it; a group key takes its open member's.
+// Only a listed glyph, a built-in icon's own path data and a #RRGGBB colour
+// come through, so state can never put markup or an attribute into the key's
+// SVG. An empty icon or a name the plugin does not know (a skin's own icon)
+// draws the default for the item's kind; "none" draws no icon.
+const APPEARANCE_ICONS = ICON_TABLE.glyphs;
+
+export function iconPath(name) {
+  return typeof name === "string" && Object.hasOwn(ICON_TABLE.icons, name) ? ICON_TABLE.icons[name].path : null;
+}
 
 export function targetAppearance(mixer, target) {
-  if (typeof target !== "string") return { icon: "", colour: null };
+  if (typeof target !== "string") return { icon: "", path: null, colour: null };
   let item;
   if (/^(mixmute|mixvol):/.test(target)) item = mixer?.mixes?.find(m => m.id === target.split(":")[1]);
   else if (/^(sendmute|send|focus):/.test(target)) item = mixer?.channels?.find(c => c.id === target.split(":")[1]);
@@ -134,8 +144,11 @@ export function targetAppearance(mixer, target) {
     item = key.startsWith("mix:") ? mixer?.mixes?.find(m => m.id === key.slice(4)) : mixer?.channels?.find(c => c.id === key);
   }
   const value = item?.appearance;
+  const glyph = APPEARANCE_ICONS.includes(value?.icon);
+  const path = value?.icon === "none" || glyph ? null : iconPath(value?.icon) ?? iconPath(value?.defaultIcon);
   return {
-    icon: APPEARANCE_ICONS.includes(value?.icon) ? value.icon : "",
+    icon: glyph ? value.icon : "",
+    path,
     colour: typeof value?.colour === "string" && /^#[0-9a-f]{6}$/i.test(value.colour) ? value.colour : null,
   };
 }

@@ -49,12 +49,16 @@ public sealed partial class MonitorVolumeIntegrationTests
         mixer.Build(MonitorConfig());
         pw.CreateNullSink("test_user_monitor_output", "Output");
         mixer.SetMonitorOutputs(["test_user_monitor_output"]);
-        Assert.Throws<IOException>(() => mixer.CreateMix("Rejected", _ => "disk full", MixKind.Monitor));
+        Assert.Throws<IOException>(() => mixer.CreateMix("Rejected", _ => "disk full", MixKind.Monitor, "star"));
         Assert.False(mixer.HasMix("rejected"));
+        Assert.DoesNotContain("mix:rejected", mixer.ExportSettings().Appearance.Keys);
         Assert.True(SpinWait.SpinUntil(() => !pw.OwnSinkLevels().Any(n => n.Name.Contains("rejected", StringComparison.Ordinal)), TimeSpan.FromSeconds(3)));
         MixerSettings? saved = null;
-        mixer.CreateMix("Headphones", s => { saved = s; return null; }, MixKind.Monitor);
+        mixer.CreateMix("Headphones", s => { saved = s; return null; }, MixKind.Monitor, "record");
         Assert.Equal("monitor", saved!.UserMixes!.Single(m => m.Id == "headphones").Kind);
+        // The icon is saved in the same write that creates the mix.
+        Assert.Equal(new LayoutAppearance("record"), saved.Appearance["mix:headphones"]);
+        Assert.Equal(new LayoutAppearanceState("record", null, false, "headset"), mixer.Snapshot().Mixes.Single(m => m.Id == "headphones").Appearance);
         var added = mixer.Snapshot().Mixes.Single(m => m.Id == "headphones");
         Assert.True(added.Editable);
         Assert.False(mixer.Snapshot().Mixes.Single(m => m.Id == "monitor").Editable);

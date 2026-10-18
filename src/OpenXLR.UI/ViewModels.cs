@@ -622,10 +622,10 @@ public sealed partial class MainViewModel : ViewModelBase
 
     public Task<string?> CreateCaptureChannel(string name, string source, int pair)
         => Edit(_client.CreateCaptureChannelAsync(name, source, pair));
-    public Task<string?> CreateChannel(string name) => Edit(_client.CreateChannelAsync(name));
+    public Task<string?> CreateChannel(string name, string? icon = null) => Edit(_client.CreateChannelAsync(name, icon));
     public Task<string?> RenameChannel(string id, string name) => Edit(_client.RenameChannelAsync(id, name));
     public Task<string?> DeleteChannel(string id) => Edit(_client.DeleteChannelAsync(id));
-    public Task<string?> CreateMix(string name, string kind = "virtualMic") => Edit(_client.CreateMixAsync(name, kind));
+    public Task<string?> CreateMix(string name, string kind = "virtualMic", string? icon = null) => Edit(_client.CreateMixAsync(name, kind, icon));
     public Task<string?> RenameMix(string id, string name) => Edit(_client.RenameMixAsync(id, name));
     public Task<string?> DeleteMix(string id) => Edit(_client.DeleteMixAsync(id));
 
@@ -1096,6 +1096,7 @@ public sealed partial class MainViewModel : ViewModelBase
     {
         if (mixer is null) { Inserts.SoundCheck.Apply(null); Inserts2.SoundCheck.Apply(null); HasMixer = false; RenamedSinceStart = false; LayoutWarning = ""; ExclusiveGroups = []; return; }
         HasMixer = true;
+        ApplyOutputAppearance(mixer["outputAppearance"]);
         ExclusiveGroups = [.. (mixer["exclusiveGroups"] as JsonArray ?? []).OfType<JsonObject>()
             .Where(g => g["id"] is JsonValue && g["name"] is JsonValue && g["channels"] is JsonArray)
             .Select(g => new ExclusiveGroupItem(g["id"]!.GetValue<string>(), g["name"]!.GetValue<string>(),

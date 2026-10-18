@@ -117,7 +117,18 @@ public static class SkinReader
             else if (root.TryGetProperty("layout", out JsonElement layoutElement))
                 layout = SkinLayoutReader.Read(layoutElement, errors);
 
-            var package = new SkinPackage(id, name, description, author, schema, origin, directory, tokens, controls, layout);
+            var icons = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (root.TryGetProperty("icons", out JsonElement iconElement))
+            {
+                if (iconElement.ValueKind != JsonValueKind.Object)
+                    errors.Add("\"icons\" must be an object of icon name to {\"path\": \"...\"}.");
+                else ReadIcons(iconElement, icons, errors);
+            }
+
+            var package = new SkinPackage(id, name, description, author, schema, origin, directory, tokens, controls, layout)
+            {
+                Icons = icons,
+            };
             return new SkinReadResult(package, errors);
         }
     }
@@ -174,6 +185,59 @@ public static class SkinReader
                 continue;
             }
             controls[slot.Name] = variant;
+        }
+    }
+
+    /// <summary>
+    /// The "icons" section: a name to an object holding SVG path data. Each
+    /// entry is checked on its own; a bad one is reported and dropped, and the
+    /// item that names it wears the built-in icon of that name or its default.
+    /// Path data is text with numbers and drawing commands only, so it cannot
+    /// carry markup or reach a file.
+    /// </summary>
+    private static void ReadIcons(JsonElement element, Dictionary<string, string> icons, List<string> errors)
+    {
+        int seen = 0;
+        foreach (JsonProperty property in element.EnumerateObject())
+        {
+            string name = property.Name.Length > LayoutIcons.MaxNameLength + 8
+                ? property.Name[..(LayoutIcons.MaxNameLength + 8)] + "..." : property.Name;
+            if (++seen > SkinFormat.MaxIcons)
+            {
+                errors.Add($"icons: a skin may define at most {SkinFormat.MaxIcons} icons; \"{name}\" and the rest are ignored.");
+                return;
+            }
+            if (!LayoutIcons.IsName(property.Name) || property.Name == LayoutIcons.None)
+            {
+                errors.Add($"icons: \"{name}\" is not a usable icon name: start with a lower-case letter and use lower-case letters, digits or hyphens, at most {LayoutIcons.MaxNameLength} characters, never \"none\".");
+                continue;
+            }
+            if (icons.ContainsKey(property.Name))
+            {
+                icons.Remove(property.Name);
+                errors.Add($"icons.{name}: is given twice; neither is used.");
+                continue;
+            }
+            if (property.Value.ValueKind != JsonValueKind.Object
+                || !property.Value.TryGetProperty("path", out JsonElement path) || path.ValueKind != JsonValueKind.String)
+            {
+                errors.Add($"icons.{name}: expected an object with a \"path\" string of SVG path data.");
+                continue;
+            }
+            foreach (JsonProperty extra in property.Value.EnumerateObject().Where(p => p.Name != "path"))
+                errors.Add($"icons.{name}: \"{(extra.Name.Length > 40 ? extra.Name[..40] + "..." : extra.Name)}\" is not an icon field this OpenXLR reads; it is ignored.");
+            string data = path.GetString()!;
+            if (data.Length > SkinFormat.MaxIconPathLength)
+            {
+                errors.Add($"icons.{name}: the path is longer than {SkinFormat.MaxIconPathLength} characters.");
+                continue;
+            }
+            if (!LayoutIcons.IsValidPath(data, SkinFormat.MaxIconPathLength))
+            {
+                errors.Add($"icons.{name}: the path is not SVG path data of M, L, H, V, C, S, Q, T, A and Z commands with plain numbers, starting with M.");
+                continue;
+            }
+            icons[property.Name] = data;
         }
     }
 

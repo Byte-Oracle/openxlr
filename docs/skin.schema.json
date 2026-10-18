@@ -656,6 +656,29 @@
     "layout": {
       "$ref": "#/$defs/desktopLayout",
       "description": "Where the header and the main window's sections go. Taken whole or not at all."
+    },
+    "icons": {
+      "type": "object",
+      "description": "The skin's own channel and mix icons, name to SVG path data. Only the window draws them.",
+      "maxProperties": 64,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]{0,31}$",
+        "not": { "const": "none" }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^[MmLlHhVvCcSsQqTtAaZz0-9eE.,+\\- \\t\\r\\n]+$",
+            "description": "SVG path data in a 24 by 24 box, filled under the nonzero rule."
+          }
+        }
+      }
     }
   },
   "$defs": {

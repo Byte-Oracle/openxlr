@@ -46,15 +46,18 @@ public sealed partial class Mixer
     /// muted in every mix, so a new channel is silent until the user opens a
     /// send. Readers cannot observe the channel until the save succeeded.
     /// </summary>
-    public void CreateApplicationChannel(string name, Func<MixerSettings, string?> persist)
-        => CreateUserChannel(name, null, 0, persist);
+    /// <param name="icon">The channel's icon as <c>setLayoutAppearance</c> takes it; empty for the default.</param>
+    public void CreateApplicationChannel(string name, Func<MixerSettings, string?> persist, string? icon = null)
+        => CreateUserChannel(name, null, 0, persist, icon: icon);
 
     public void CreateCaptureChannel(string name, string source, int pair, Func<MixerSettings, string?> persist, int? monoChannel = null)
         => CreateUserChannel(name, source, pair, persist, monoChannel);
 
-    private void CreateUserChannel(string name, string? source, int pair, Func<MixerSettings, string?> persist, int? monoChannel = null)
+    private void CreateUserChannel(string name, string? source, int pair, Func<MixerSettings, string?> persist,
+        int? monoChannel = null, string? icon = null)
     {
         ArgumentNullException.ThrowIfNull(persist);
+        if (!string.IsNullOrEmpty(icon) && !LayoutIcons.IsValidChoice(icon)) throw new InvalidOperationException("invalid icon");
         name = CleanName(name);
         lock (_gate)
         {
@@ -75,6 +78,7 @@ public sealed partial class Mixer
                 MutedIn = _config.Mixes.Select(m => m.Id).ToHashSet(),
             };
             MixerConfig previous = _config;
+            var previousAppearance = _appearance;
             uint module = _pw.CreateCombineSink(channel.SinkName, MixSinkPattern, $"OpenXLR {name}", visible: channel.IsApplication);
             try
             {
@@ -91,11 +95,13 @@ public sealed partial class Mixer
                     throw new InvalidOperationException("the channel's sends did not come up within 3 s; nothing was changed");
                 foreach (MixDefinition mix in _config.Mixes) ApplyCellLocked(id, mix.Id);
                 EnsureCaptureFeedsLocked();
+                SetCreatedIconLocked("channel:" + id, icon);
                 PersistLocked(persist);
             }
             catch (Exception editError)
             {
                 _config = previous;
+                _appearance = previousAppearance;
                 _combineModules.Remove(id);
                 RemoveCaptureFeedLocked(id);
                 RemoveChannelCellsLocked(id, previous.Mixes);
@@ -209,9 +215,11 @@ public sealed partial class Mixer
     /// published, so nothing reaches the new mix until
     /// the user opens a send. The layout is saved before the command succeeds.
     /// </summary>
-    public void CreateMix(string name, Func<MixerSettings, string?> persist, MixKind kind = MixKind.VirtualMic)
+    /// <param name="icon">The mix's icon as <c>setLayoutAppearance</c> takes it; empty for the default.</param>
+    public void CreateMix(string name, Func<MixerSettings, string?> persist, MixKind kind = MixKind.VirtualMic, string? icon = null)
     {
         ArgumentNullException.ThrowIfNull(persist);
+        if (!string.IsNullOrEmpty(icon) && !LayoutIcons.IsValidChoice(icon)) throw new InvalidOperationException("invalid icon");
         name = CleanName(name);
         lock (_gate)
         {
@@ -224,6 +232,7 @@ public sealed partial class Mixer
             MixerConfig previous = _config;
             MixerConfig next = _config.WithMix(mix);   // validates the limit before any node is loaded
             string key = MixKey(mix);
+            var previousAppearance = _appearance;
             try
             {
                 _mixModules[id] = _pw.CreateNullSink(mix.SinkName, $"OpenXLR {name}");
@@ -245,11 +254,13 @@ public sealed partial class Mixer
                     _virtualMicModules[id] = _pw.CreateVirtualMic(mix.VirtualMicName, $"{mix.PostSinkName}.monitor", $"OpenXLR {name}");
                 }
                 WireMixChainLocked(mix);
+                SetCreatedIconLocked("mix:" + id, icon);
                 PersistLocked(persist);
             }
             catch (Exception editError)
             {
                 _config = previous;
+                _appearance = previousAppearance;
                 RemoveMixChainLocked(key);
                 RemoveMixCellsLocked(id);
                 var cleanupErrors = new List<Exception>();

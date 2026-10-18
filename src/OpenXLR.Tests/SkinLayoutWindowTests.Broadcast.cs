@@ -43,16 +43,19 @@ internal static partial class SkinLayoutWindowTests
             Assert.Equal(40, LongName.Length);
             var model = (MainViewModel)window.DataContext!;
             string mixer = """
-                {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor"},{"id":"monitor2","name":"Monitor B","kind":"monitor"},
-                          {"id":"stream","name":"Stream","kind":"virtualMic"},{"id":"chat","name":"Chat","kind":"virtualMic"},
-                          {"id":"auxout","name":"Aux","kind":"auxPort"},{"id":"music-bed","name":"Music bed","kind":"virtualMic"}],
-                 "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":0.8,"stream":0.6}},
-                             {"id":"xlr2","name":"XLR 2","hardware":true,"present":false},
-                             {"id":"aux","name":"Aux In","hardware":true},
-                             {"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.4},"mutedIn":["stream"],"appearance":{"icon":"♫"}},
-                             {"id":"board","name":"LONGNAME","levels":{"monitor":1,"stream":1}},
-                             {"id":"game","name":"Game","levels":{"monitor":1,"stream":1}},
-                             {"id":"cam","name":"Capture card","captureSource":"alsa_input.usb-capture","captureConnected":false}],
+                {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor","appearance":{"defaultIcon":"headset"}},
+                          {"id":"monitor2","name":"Monitor B","kind":"monitor","appearance":{"defaultIcon":"headset"}},
+                          {"id":"stream","name":"Stream","kind":"virtualMic","appearance":{"defaultIcon":"broadcast","colour":"#FF7A00"}},
+                          {"id":"chat","name":"Chat","kind":"virtualMic","appearance":{"defaultIcon":"people"}},
+                          {"id":"auxout","name":"Aux","kind":"auxPort","appearance":{"defaultIcon":"jack"}},
+                          {"id":"music-bed","name":"Music bed","kind":"virtualMic","appearance":{"icon":"music","defaultIcon":"podcast"}}],
+                 "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":0.8,"stream":0.6},"appearance":{"defaultIcon":"mic"}},
+                             {"id":"xlr2","name":"XLR 2","hardware":true,"present":false,"appearance":{"defaultIcon":"mic"}},
+                             {"id":"aux","name":"Aux In","hardware":true,"appearance":{"defaultIcon":"jack"}},
+                             {"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.4},"mutedIn":["stream"],"appearance":{"icon":"♫","defaultIcon":"music"}},
+                             {"id":"board","name":"LONGNAME","levels":{"monitor":1,"stream":1},"appearance":{"defaultIcon":"apps"}},
+                             {"id":"game","name":"Game","levels":{"monitor":1,"stream":1},"appearance":{"defaultIcon":"game"}},
+                             {"id":"cam","name":"Capture card","captureSource":"alsa_input.usb-capture","captureConnected":false,"appearance":{"defaultIcon":"camera"}}],
                  "monitorOutputs":["speakers"],"outputVolume":0.6,"inserts":{}}
                 """.Replace("LONGNAME", LongName);
             typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [JsonNode.Parse(mixer)]);
@@ -133,6 +136,31 @@ internal static partial class SkinLayoutWindowTests
             Assert.Equal(Localizer.Text("MatrixOneOutput"), matrix.Columns[0].OutputsText);
             Assert.Equal(Localizer.Text("MatrixNoOutput"), matrix.Columns[1].OutputsText);
             Assert.Equal(Localizer.Text("VirtualMicrophone"), matrix.Columns[2].OutputsText);
+
+            // Every row head and column head wears an icon before its name: the
+            // default by kind, or the one chosen, a glyph as text and a name as a
+            // drawing. A mix's own colour reaches its icon.
+            Layout(window, 1040, 1400);
+            foreach (string id in new[] { "xlr1", "aux", "music", "board", "game", "cam" })
+            {
+                LayoutIconBlock icon = RowHead(window, id).GetVisualDescendants().OfType<LayoutIconBlock>().Single();
+                Assert.True(icon.IsEffectivelyVisible, id);
+                Assert.Equal(id != "music", icon.DrawsPath);
+                Assert.True(icon.Bounds.Width > 8 && icon.Bounds.Height > 8, id);
+            }
+            Assert.Equal("♫", RowHead(window, "music").GetVisualDescendants().OfType<LayoutIconBlock>().Single().Text);
+            Assert.Equal("camera", RowHead(window, "cam").GetVisualDescendants().OfType<LayoutIconBlock>().Single().Shown);
+            foreach (MatrixColumnViewModel column in matrix.Columns)
+            {
+                LayoutIconBlock icon = ColumnHead(window, column.Mix.Id).GetVisualDescendants().OfType<LayoutIconBlock>().Single();
+                Assert.True(icon.IsEffectivelyVisible && icon.DrawsPath, column.Mix.Id);
+                TextBlock name = ColumnHead(window, column.Mix.Id).GetVisualDescendants().OfType<TextBlock>()
+                    .Single(t => t is not LayoutIconBlock && t.Text == column.Mix.Name);
+                Assert.True(icon.TranslatePoint(default, name)!.Value.X < 0, column.Mix.Id);
+            }
+            Assert.Equal("music", ColumnHead(window, "music-bed").GetVisualDescendants().OfType<LayoutIconBlock>().Single().Shown);
+            Assert.Equal(Color.Parse("#FF7A00"),
+                ((ISolidColorBrush)ColumnHead(window, "stream").GetVisualDescendants().OfType<LayoutIconBlock>().Single().Foreground!).Color);
 
             foreach (bool enlarged in new[] { false, true })
             {
@@ -433,6 +461,11 @@ internal static partial class SkinLayoutWindowTests
     internal static Border RowHead(Visual root, string channel) =>
         root.GetVisualDescendants().OfType<Border>()
             .Single(b => b.Name == "MatrixRowHead" && b.DataContext is MatrixRowViewModel r && r.Channel.Id == channel);
+
+    /// <summary>The head at the top of a mix's column.</summary>
+    internal static Border ColumnHead(Visual root, string mix) =>
+        root.GetVisualDescendants().OfType<Border>()
+            .Single(b => b.Name == "MatrixColumn" && b.DataContext is MatrixColumnViewModel c && c.Mix.Id == mix);
 
     /// <summary>The cell where a channel's row crosses a mix's column.</summary>
     internal static Border MatrixCell(Visual root, string channel, string mix) =>

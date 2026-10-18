@@ -2259,4 +2259,28 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="MatrixEffects" xml:space="preserve">
     <value>FX</value>
   </data>
+  <data name="IconDefaultNamed" xml:space="preserve">
+    <value>Predeterminado ({0})</value>
+  </data>
+  <data name="IconNone" xml:space="preserve">
+    <value>Ninguno</value>
+  </data>
+  <data name="IconTextHeading" xml:space="preserve">
+    <value>Texto</value>
+  </data>
+  <data name="NewChannelIcon" xml:space="preserve">
+    <value>Icono del canal nuevo</value>
+  </data>
+  <data name="NewMixIcon" xml:space="preserve">
+    <value>Icono de la mezcla nueva</value>
+  </data>
+  <data name="HeadphoneOutputs" xml:space="preserve">
+    <value>Salidas de auriculares</value>
+  </data>
+  <data name="Phones1Appearance" xml:space="preserve">
+    <value>Icono y color de Auriculares 1</value>
+  </data>
+  <data name="Phones2Appearance" xml:space="preserve">
+    <value>Icono y color de Auriculares 2</value>
+  </data>
 </root>

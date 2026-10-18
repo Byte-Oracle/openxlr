@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { channelName, layoutChoices, mixName, controllableOutputs, outputKey, targetAppearance } from "../com.emaspa.openxlr.sdPlugin/layout-choices.mjs";
+import { channelName, layoutChoices, mixName, controllableOutputs, outputKey, targetAppearance, iconPath } from "../com.emaspa.openxlr.sdPlugin/layout-choices.mjs";
 
 const mixer = {
   mixes: [
@@ -96,14 +96,14 @@ test("a key's appearance follows its stable target and admits only listed icons 
     mixes: [{id: "stream", appearance: {icon: "◆", colour: "#ABC123"}}],
   };
   for (const target of ["focus:music", "sendmute:music:stream", "send:music:stream", "insert|music|id"])
-    assert.deepEqual(targetAppearance(state, target), {icon: "♫", colour: "#12abEF"});
+    assert.deepEqual(targetAppearance(state, target), {icon: "♫", path: null, colour: "#12abEF"});
   for (const target of ["mixmute:stream", "mixvol:stream", "inschain|mix:stream", "insparam|mix:stream|id|0"])
-    assert.deepEqual(targetAppearance(state, target), {icon: "◆", colour: "#ABC123"});
+    assert.deepEqual(targetAppearance(state, target), {icon: "◆", path: null, colour: "#ABC123"});
   state.channels[0].appearance = {icon: '<image href="file:///etc/passwd"/>', colour: '#fff" onload="alert(1)'};
-  assert.deepEqual(targetAppearance(state, "focus:music"), {icon: "", colour: null});
-  assert.deepEqual(targetAppearance(state, "focus:gone"), {icon: "", colour: null});
-  assert.deepEqual(targetAppearance(state, "gain"), {icon: "", colour: null});
-  assert.deepEqual(targetAppearance(null, undefined), {icon: "", colour: null});
+  assert.deepEqual(targetAppearance(state, "focus:music"), {icon: "", path: null, colour: null});
+  assert.deepEqual(targetAppearance(state, "focus:gone"), {icon: "", path: null, colour: null});
+  assert.deepEqual(targetAppearance(state, "gain"), {icon: "", path: null, colour: null});
+  assert.deepEqual(targetAppearance(null, undefined), {icon: "", path: null, colour: null});
 
   // A group key wears the look of the member that is heard.
   state.channels = [
@@ -111,8 +111,25 @@ test("a key's appearance follows its stable target and admits only listed icons 
     {id: "headset", levels: {stream: 1}, mutedIn: [], appearance: {icon: "▶", colour: "#222222"}},
   ];
   state.exclusiveGroups = [{id: "voices", name: "Voices", channels: ["mic", "headset"]}];
-  assert.deepEqual(targetAppearance(state, "group:voices"), {icon: "▶", colour: "#222222"});
+  assert.deepEqual(targetAppearance(state, "group:voices"), {icon: "▶", path: null, colour: "#222222"});
   state.channels[1].mutedIn = ["stream"];
-  assert.deepEqual(targetAppearance(state, "group:voices"), {icon: "", colour: null});
-  assert.deepEqual(targetAppearance(state, "group:gone"), {icon: "", colour: null});
+  assert.deepEqual(targetAppearance(state, "group:voices"), {icon: "", path: null, colour: null});
+  assert.deepEqual(targetAppearance(state, "group:gone"), {icon: "", path: null, colour: null});
+});
+
+test("a named icon draws the built-in path, an unknown or empty one the default, and none draws nothing", () => {
+  const music = iconPath("music"), apps = iconPath("apps");
+  assert.match(music, /^M[0-9MmLlHhVvCcSsQqTtAaZz .,-]+$/);
+  const state = {channels: [{id: "c", appearance: {icon: "music", defaultIcon: "apps"}}]};
+  assert.deepEqual(targetAppearance(state, "focus:c"), {icon: "", path: music, colour: null});
+  state.channels[0].appearance = {icon: "", defaultIcon: "apps"};
+  assert.equal(targetAppearance(state, "focus:c").path, apps);
+  state.channels[0].appearance = {icon: "a-skin-only-icon", defaultIcon: "apps"};
+  assert.equal(targetAppearance(state, "focus:c").path, apps);
+  state.channels[0].appearance = {icon: "none", defaultIcon: "apps"};
+  assert.deepEqual(targetAppearance(state, "focus:c"), {icon: "", path: null, colour: null});
+  // Only the plugin's own table reaches the SVG, never a path from the state.
+  state.channels[0].appearance = {icon: "", defaultIcon: '"/><script/>'};
+  assert.equal(targetAppearance(state, "focus:c").path, null);
+  assert.equal(iconPath("__proto__"), null);
 });

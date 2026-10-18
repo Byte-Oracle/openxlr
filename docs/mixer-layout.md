@@ -66,23 +66,53 @@ this file or of a profile.
 
 ## Appearance
 
-`appearance` maps `channel:<id>` or `mix:<id>` to how that item is drawn:
+`appearance` maps `channel:<id>`, `mix:<id>`, `output:phones1` or
+`output:phones2` to how that item is drawn:
 
 ```json
 {
   "appearance": {
-    "channel:music": {"icon": "♫", "colour": "#2E9BFF", "hidden": false},
+    "channel:music": {"icon": "music", "colour": "#2E9BFF", "hidden": false},
     "channel:sfx": {"icon": "", "hidden": true},
-    "mix:stream": {"icon": "◆", "colour": "#FF7A00"}
+    "channel:game": {"icon": "none"},
+    "mix:stream": {"icon": "◆", "colour": "#FF7A00"},
+    "output:phones1": {"icon": "headset", "colour": "#2E9BFF"}
   }
 }
 ```
 
-`icon` is empty or one of ● ♪ ♫ ✦ ◆ ▶ ◉. `colour` is `#RRGGBB`; absent or
-null keeps the skin's colours. `hidden` leaves a channel's strip out of the
+`icon` is one of:
+
+- empty or absent: the default for the item's kind, which the daemon
+  publishes in the state as `defaultIcon` ([api.md](api.md)). Hardware
+  inputs wear `mic` (Aux In wears `jack`), capture inputs `camera`, the
+  shipped application channels `game`, `music`, `browser`, `cog` (System),
+  `chat` (Voice Chat) and `burst` (SFX), any other application channel
+  `apps`, monitor mixes `headset`, Stream `broadcast`, Chat `people`, any
+  other virtual microphone `podcast`, and the Aux port `jack`;
+- `none`: no icon at all;
+- one of the text glyphs ● ♪ ♫ ✦ ◆ ▶ ◉, drawn as text, as layouts from
+  before the icon set keep them;
+- an icon name: a lower-case letter followed by up to 31 lower-case
+  letters, digits or hyphens. The built-in set is `mic`, `headset`,
+  `speaker`, `jack`, `music`, `game`, `browser`, `chat`, `people`,
+  `broadcast`, `camera`, `bell`, `star`, `globe`, `cog`, `film`, `voice`,
+  `podcast`, `record`, `apps`, `burst` and `monitor`; a skin may add names
+  of its own ([skins.md](skins.md#icons)).
+
+The daemon checks a name's shape only, so a layout may keep the name of an
+icon only one skin draws. A client that cannot draw a name draws the
+default instead: the window when it wears another skin, the terminal mixer
+and the Stream Deck plugin always, unless the name is in the built-in set.
+The terminal mixer draws each built-in icon as one text character.
+
+`colour` is `#RRGGBB`; absent or null keeps the skin's colours. `hidden` leaves a channel's strip out of the
 window's and the terminal mixer's full mixer; the channel keeps its sends,
 meter, applications and audio, and stays in the layout editor, the
 application pickers and the Stream Deck targets. A mix cannot be hidden.
+The two headphone outputs are hardware, not channels: they take an icon
+and a colour, drawn before their labels in the window's HEADPHONES card,
+default to `headset` and are never hidden.
 An entry for an id the layout does not hold, a key of more than 44
 characters, or a value outside these rules is dropped and logged. An entry
 equal to the default is not written. Deleting a channel or a mix deletes
@@ -132,8 +162,10 @@ restores the previous layout and reports an error. A rename to the current
 name is acknowledged without a save. Ordinary fader saves keep their
 debounced, retried behaviour.
 
-- `createChannel {name}` adds an application channel. Only its sink is
-  loaded; it starts muted in every mix. The sink's sends into the mixes
+- `createChannel {name, icon?}` adds an application channel. Only its sink
+  is loaded; it starts muted in every mix. `icon` takes the values listed
+  under [Appearance](#appearance) and is saved with the channel in the same
+  write; absent or empty leaves the default. The sink's sends into the mixes
   must appear within three seconds, or the sink is unloaded again and
   the command fails: a send that showed up later would carry PipeWire's
   defaults, full level and unmuted, instead of the stored fader.
@@ -148,8 +180,8 @@ debounced, retried behaviour.
   (`system`, or the remaining application channel whose id sorts first);
   then its sink is unloaded, and a capture channel's link to its source
   with it. The last application channel stays.
-- `createMix {name, kind?}` adds a user mix after the existing ones, ahead
-  of Aux. Without `kind`, or with `kind: "virtualMic"`, it is a virtual
+- `createMix {name, kind?, icon?}` adds a user mix after the existing ones,
+  ahead of Aux, with `icon` as `createChannel` takes it. Without `kind`, or with `kind: "virtualMic"`, it is a virtual
   microphone. With `kind: "monitor"` it is a monitor mix: one sink and no
   capture device, for an output to follow. Its master is the sink's own
   volume, so desktop volume controls move it and it goes to 150% like
@@ -184,9 +216,10 @@ debounced, retried behaviour.
   Arrange mode and Ctrl+Left/Right in the terminal mixer all send this
   command with both complete lists; a drag places the item before or
   after the tile it was dropped on.
-- `setLayoutAppearance {channel | mix, appearance}` replaces one item's
-  `icon`, `colour` and `hidden` as described under [Appearance](#appearance),
-  hardware inputs and Monitor A/B and Aux included. No node changes.
+- `setLayoutAppearance {channel | mix | output, appearance}` replaces one
+  item's `icon`, `colour` and `hidden` as described under
+  [Appearance](#appearance), hardware inputs and Monitor A/B and Aux
+  included; `output` is `phones1` or `phones2`. No node changes.
 
 Every added channel or mix costs pipewire-pulse a few dozen open files;
 the daemon refuses an addition the server has no room for, and the packages
