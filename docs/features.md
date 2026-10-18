@@ -173,6 +173,15 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   every mix; your pick is kept per skin, and a bank whose mix is deleted
   moves to the next one. Channel and mix order stay the layout's. See
   [Templates](skins.md#templates) and [Mix banks](manual.md#mix-banks)
+- Skins can draw MONITOR as a one-row toolbar that keeps every output and
+  its feed in its picker, APPLICATIONS as a list for a narrow column, and
+  open the submixer in its own window once when the skin is put on, unless
+  you have already chosen where it goes. A skin switch ends a fader drag,
+  keeps focus on the same channel, mix and control, keeps the page's
+  scroll, the detached mixer and its plugin windows, and sends nothing to
+  the daemon. Options says what the skin arranges and resets that skin's
+  arrangement, bank picks and docking choice. See
+  [Switching skins](skins.md#switching-skins)
 - A compact view with one chosen channel strip, and a mini view with that
   channel's send into one chosen mix, its master and the monitor volume,
   for a narrow window. Chosen in Options and kept in `ui.json`; hidden

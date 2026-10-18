@@ -740,4 +740,103 @@ public sealed class SkinLayoutTests
         // Never more than a classic section.
         Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("submixer", rack, sizes with { Banks = 4 }));
     }
+
+    [Fact]
+    public void MonitorAndApplicationsReadTheirTemplates()
+    {
+        SkinLayout classic = Taken(Regions("\"monitor\":{\"width\":300},\"applications\":{\"visibility\":\"collapsed\"}"));
+        Assert.Equal(SkinLayoutTemplates.OutputPanel, classic.Monitor);
+        Assert.Equal(SkinLayoutTemplates.ApplicationChips, classic.Applications);
+        Assert.Equal(SkinLayoutTemplates.OutputPanel, SkinLayoutDefaults.Classic.Monitor);
+        Assert.Equal(SkinLayoutTemplates.ApplicationChips, SkinLayoutDefaults.Classic.Applications);
+        Assert.Equal([SkinLayoutTemplates.OutputPanel, SkinLayoutTemplates.OutputToolbar], SkinLayoutTemplates.Monitor);
+        Assert.Equal([SkinLayoutTemplates.ApplicationChips, SkinLayoutTemplates.ApplicationList], SkinLayoutTemplates.Applications);
+
+        SkinLayout compact = Taken(Regions("""
+            "monitor":{"template":"output-toolbar","visibility":"collapsed"},"applications":{"template":"application-list","width":280}
+            """));
+        Assert.Equal(SkinLayoutTemplates.OutputToolbar, compact.Monitor);
+        Assert.Equal(SkinLayoutTemplates.ApplicationList, compact.Applications);
+        // The options every section has still apply beside the template.
+        Assert.Equal(SkinRegionVisibility.Collapsed, compact.OptionsFor("monitor").Visibility);
+        Assert.Equal(280, compact.OptionsFor("applications").Width);
+        // Each template is a structural fact: two layouts that differ only in one draw differently.
+        Assert.NotEqual(classic.Description(), compact.Description());
+        Assert.NotEqual(Taken(Regions("\"monitor\":{\"template\":\"output-toolbar\"}")).Description(),
+            Taken(Regions("\"applications\":{\"template\":\"application-list\"}")).Description());
+        Assert.Equal(Taken(Regions("\"monitor\":{\"template\":\"output-panel\"}")).Description(),
+            Taken(Regions("\"monitor\":{}")).Description());
+    }
+
+    [Fact]
+    public void AnUnknownMonitorOrApplicationsTemplateOrOptionIsRefused()
+    {
+        Assert.Contains("\"output-strip\" is not a MONITOR template",
+            Refused(Regions("\"monitor\":{\"template\":\"output-strip\"}"), "layout.regions.monitor.template"), StringComparison.Ordinal);
+        Refused(Regions("\"monitor\":{\"template\":2}"), "layout.regions.monitor.template");
+        Assert.Contains("\"application-chips\" or \"application-list\"",
+            Refused(Regions("\"applications\":{\"template\":\"application-grid\"}"), "layout.regions.applications.template"),
+            StringComparison.Ordinal);
+        // A template of another region is not one of this region's.
+        Refused(Regions("\"monitor\":{\"template\":\"application-list\"}"), "layout.regions.monitor.template");
+        Refused(Regions("\"applications\":{\"template\":\"input-rack\"}"), "layout.regions.applications.template");
+        // An option of another template: neither MONITOR nor APPLICATIONS template takes strips, banks or a pop-out default.
+        Refused(Regions("\"monitor\":{\"template\":\"output-toolbar\",\"strip\":{}}"), "layout.regions.monitor.strip");
+        Refused(Regions("\"applications\":{\"template\":\"application-list\",\"orientation\":\"vertical\"}"),
+            "layout.regions.applications.orientation");
+        Refused(Regions("\"monitor\":{\"popOut\":{\"default\":\"detached\"}}"), "layout.regions.monitor.popOut");
+        // HEADPHONES has one way of being drawn, so no template at all.
+        Refused(Regions("\"headphones\":{\"template\":\"output-panel\"}"), "layout.regions.headphones.template");
+        Refused(Regions("\"monitor\":{\"template\":\"output-toolbar\",\"template\":\"output-panel\"}"), "layout.regions.monitor.template");
+    }
+
+    [Fact]
+    public void TheSubmixerReadsItsPopOutDefault()
+    {
+        Assert.Equal(SkinMixerPlacement.Docked, SkinLayoutDefaults.Classic.PopOut);
+        Assert.Equal(SkinMixerPlacement.Docked, Taken(Regions("\"submixer\":{\"visibility\":\"visible\"}")).PopOut);
+        Assert.Equal([SkinPopOutDefaults.Docked, SkinPopOutDefaults.Detached], SkinPopOutDefaults.All);
+        SkinLayout detached = Taken(Regions("\"submixer\":{\"popOut\":{\"default\":\"detached\"}}"));
+        Assert.Equal(SkinMixerPlacement.Detached, detached.PopOut);
+        // The pop-out default belongs to the submixer whatever template it wears.
+        Assert.Equal(SkinMixerPlacement.Detached,
+            Taken(Regions("\"submixer\":{\"template\":\"mix-banks\",\"popOut\":{\"default\":\"detached\"}}")).PopOut);
+        SkinLayout docked = Taken(Regions("\"submixer\":{\"popOut\":{\"default\":\"docked\"}}"));
+        Assert.Equal(SkinMixerPlacement.Docked, docked.PopOut);
+        Assert.NotEqual(detached.Description(), docked.Description());
+        // Bank options stay refused on the classic tiles with a pop-out default beside them.
+        Refused(Regions("\"submixer\":{\"popOut\":{\"default\":\"detached\"},\"visibleBanks\":2}"), "layout.regions.submixer.visibleBanks");
+    }
+
+    [Fact]
+    public void AMalformedPopOutDefaultIsRefused()
+    {
+        Refused(Regions("\"submixer\":{\"popOut\":\"detached\"}"), "layout.regions.submixer.popOut");
+        Assert.Contains("needs a \"default\"",
+            Refused(Regions("\"submixer\":{\"popOut\":{}}"), "layout.regions.submixer.popOut"), StringComparison.Ordinal);
+        Assert.Contains("\"floating\" is not a pop-out default",
+            Refused(Regions("\"submixer\":{\"popOut\":{\"default\":\"floating\"}}"), "layout.regions.submixer.popOut.default"),
+            StringComparison.Ordinal);
+        Refused(Regions("\"submixer\":{\"popOut\":{\"default\":true}}"), "layout.regions.submixer.popOut.default");
+        Refused(Regions("\"submixer\":{\"popOut\":{\"default\":\"docked\",\"screen\":1}}"), "layout.regions.submixer.popOut.screen");
+        Refused(Regions("\"submixer\":{\"popOut\":{\"default\":\"docked\",\"default\":\"detached\"}}"),
+            "layout.regions.submixer.popOut.default");
+    }
+
+    [Fact]
+    public void TheCompactTemplatesNeedThreeStripWidthsAndBothMonitorTemplatesStackAtOneWidth()
+    {
+        var sizes = new RegionSizes(StripWidth: 76, MixWidth: 232, BankSpacing: 12, Banks: 2, VisibleChannels: 6);
+        SkinLayout compact = Taken(Regions("\"monitor\":{\"template\":\"output-toolbar\"},\"applications\":{\"template\":\"application-list\"}"));
+        Assert.Equal(3 * 76 + SkinLayoutDefaults.CardPadding, SkinLayoutDefaults.RegionMinWidth("monitor", compact, sizes));
+        Assert.Equal(3 * 76 + SkinLayoutDefaults.CardPadding, SkinLayoutDefaults.RegionMinWidth("applications", compact, sizes));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("monitor", SkinLayoutDefaults.Classic, sizes));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("applications", SkinLayoutDefaults.Classic, sizes));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth,
+            SkinLayoutDefaults.RegionMinWidth("monitor", compact, sizes with { StripWidth = 300 }));
+        // The stacking width sits below what a classic section leaves its controls, so a panel only stacks in a narrow window.
+        Assert.Equal(560, SkinLayoutDefaults.MonitorStackWidth);
+        Assert.True(SkinLayoutDefaults.MonitorStackWidth < SkinLayoutDefaults.RowSectionMinWidth - SkinLayoutDefaults.CardPadding);
+        Assert.True(SkinLayoutDefaults.RegionMinWidth("monitor", compact, sizes) - SkinLayoutDefaults.CardPadding < SkinLayoutDefaults.MonitorStackWidth);
+    }
 }

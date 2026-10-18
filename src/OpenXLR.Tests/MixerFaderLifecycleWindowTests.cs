@@ -1,8 +1,15 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json.Nodes;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using OpenXLR.UI;
+using OpenXLR.UI.Skinning;
 
 namespace OpenXLR.Tests;
 
@@ -19,6 +26,140 @@ internal static class MixerFaderLifecycleWindowTests
         }
         Assert.True(check.IsCompleted, "Retired fader check hung.");
         check.GetAwaiter().GetResult();
+        CheckDragAcrossSwitch();
+    }
+
+    /// <summary>Wait for a task on the UI thread, running its jobs meanwhile.</summary>
+    private static T Await<T>(Task<T> task)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!task.IsCompleted && DateTime.UtcNow < deadline)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(5);
+        }
+        Assert.True(task.IsCompleted, "the fake daemon did not answer");
+        return task.GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// A fader held down with the real pointer while a structural skin
+    /// switch happens: the switch takes the pointer back from the fader, the
+    /// drag goes no further however the pointer moves until it is released,
+    /// and no value reaches the daemon after the switch. Before the switch
+    /// the same drag did send, so the silence afterwards means something.
+    /// The switch only changes the submixer's template, so MONITOR's volume
+    /// stays under the pointer the whole time.
+    /// </summary>
+    private static void CheckDragAcrossSwitch()
+    {
+        string data = Directory.CreateTempSubdirectory("openxlr-drag-switch-").FullName;
+        string? dataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        string? dataDirs = Environment.GetEnvironmentVariable("XDG_DATA_DIRS");
+        SkinEntry worn = SkinService.Current;
+        var commands = new ConcurrentQueue<string>();
+        SocketTestServer server = Await(SocketTestServer.Start(async (socket, stop) =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                JsonNode command = await SocketTestServer.Receive(socket, stop);
+                string cmd = command["cmd"]!.GetValue<string>();
+                if (cmd is "setOutputVolume" or "setLevel" or "setMixVolume" or "setChannelMuted" or "setMixMuted" or "setLayoutOrder" or "setMonitorOutputs")
+                    commands.Enqueue(cmd);
+                if (command["requestId"] is { } requestId)
+                    await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>() }, stop);
+            }
+        }));
+        MainWindow? main = null;
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", data);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(data, "none"));
+            string folder = Path.Combine(data, "openxlr", "skins", "column-banks");
+            Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder, "skin.json"), """
+                {"schema":1,"name":"Column banks","tokens":{"Ox.Card.Background":"#262a30"},"layout":{"version":1,"regions":{"submixer":{"template":"mix-banks"}}}}
+                """);
+            SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
+            var client = new DaemonClient(server.Url);
+            main = new MainWindow(client);
+            var vm = (MainViewModel)main.DataContext!;
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (!vm.DaemonConnected && DateTime.UtcNow < deadline)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(5);
+            }
+            Assert.True(vm.DaemonConnected);
+            typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vm, [JsonNode.Parse("""
+                {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor"},{"id":"stream","name":"Stream"}],
+                 "channels":[{"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.4}}]}
+                """)]);
+            main.Show();
+            WindowLayoutTests.Layout(main, 1040, 900);
+            main.Activate();
+            IPointer? pressed = null;
+            main.AddHandler(InputElement.PointerPressedEvent, (_, e) => pressed = e.Pointer, RoutingStrategies.Tunnel, handledEventsToo: true);
+            var slider = main.FindControl<Slider>("OutputVolumeSlider")!;
+            slider.BringIntoView();
+            FaderInputWindowTests.Pump();
+            using var input = new XPointer();
+            input.Focus(main.TryGetPlatformHandle()!.Handle);
+            var thumb = slider.GetVisualDescendants().OfType<Thumb>().Single();
+            PixelPoint point = thumb.PointToScreen(new Point(thumb.Bounds.Width / 2, thumb.Bounds.Height / 2));
+            Point before = slider.TranslatePoint(default, main)!.Value;
+            double start = slider.Value;
+            try
+            {
+                input.MoveTo(point.X, point.Y);
+                FaderInputWindowTests.Pump();
+                input.SetButton(true);
+                FaderInputWindowTests.Pump();
+                input.MoveTo(point.X + 40, point.Y);
+                FaderInputWindowTests.Pump();
+                double dragged = slider.Value;
+                Assert.True(dragged > start + 0.05, $"the drag did not move the fader from {start}: {dragged}");
+                Assert.NotNull(pressed);
+                Assert.NotNull(pressed!.Captured);
+                SliderSync.FlushPending();
+                Assert.Null(Await(client.SetLayoutOrderAsync([], [])));
+                Assert.Contains("setOutputVolume", commands);
+                commands.Clear();
+
+                Assert.Empty(SkinService.Apply(SkinCatalog.Find("column-banks")!));
+                FaderInputWindowTests.Pump();
+                Assert.NotNull(main.MixBanks);
+                Assert.Equal(before, slider.TranslatePoint(default, main)!.Value);
+                Assert.Null(pressed.Captured);
+                // Still held, still over the fader: it goes no further.
+                foreach (int dx in new[] { 60, 90, 20 })
+                {
+                    input.MoveTo(point.X + dx, point.Y);
+                    FaderInputWindowTests.Pump();
+                    Assert.Equal(dragged, slider.Value);
+                }
+            }
+            finally
+            {
+                input.SetButton(false);
+                FaderInputWindowTests.Pump();
+            }
+            Assert.Equal(slider.Value, vm.OutputVolume);
+            SliderSync.FlushPending();
+            Assert.Null(Await(client.SetLayoutOrderAsync([], [])));
+            Assert.Equal(["setLayoutOrder"], commands.ToArray());
+        }
+        finally
+        {
+            SliderSync.Forget("outvol");
+            main?.Quit();
+            Dispatcher.UIThread.RunJobs();
+            SkinService.Apply(worn);
+            Await(server.DisposeAsync().AsTask().ContinueWith(_ => true));
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", dataHome);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", dataDirs);
+            Directory.Delete(data, true);
+        }
     }
 
     private static async Task CheckCommands()

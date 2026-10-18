@@ -131,6 +131,11 @@ public partial class OptionsWindow : Window
         if (DataContext is OptionsViewModel vm) vm.ReloadSkins();
     }
 
+    private void OnResetSkinArrangement(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is OptionsViewModel vm) vm.ResetSkinArrangement();
+    }
+
     private void OnSkinsManual(object? sender, RoutedEventArgs e) => ExternalLink.Open(SkinsManual);
 
     private const string SkinsManual = "https://github.com/emaspa/openxlr/blob/main/docs/manual.md#skins";

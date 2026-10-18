@@ -76,6 +76,24 @@ public sealed record UiSettings
     public IReadOnlyList<SkinLayoutKey> SkinLayoutsSeen { get; init; } = [];
 
     /// <summary>
+    /// Where the user last put the submixer: true after docking it, false
+    /// after popping it out, null while the user has done neither. Only the
+    /// user's own Pop out and Dock write it, never a skin, and while it holds
+    /// a choice no skin's pop-out default applies.
+    /// </summary>
+    [JsonConverter(typeof(LocalMixerDockedConverter))]
+    public bool? MixerDocked { get; init; }
+
+    /// <summary>
+    /// The skin layouts, by skin id and layout version, whose pop-out default
+    /// already opened the submixer in its own window. A skin's
+    /// <c>"detached"</c> default opens it once, so a reload or a colour change
+    /// never opens it again. At most <see cref="MaxSkinArrangements"/> are
+    /// kept, the most recent last.
+    /// </summary>
+    public IReadOnlyList<SkinLayoutKey> SkinPopOutsApplied { get; init; } = [];
+
+    /// <summary>
     /// How the submixer is drawn: absent or <c>full</c> for every strip,
     /// <c>compact</c> for one chosen channel, <c>mini</c> for one channel's
     /// send into one chosen mix with the other sections out of the way.
@@ -157,6 +175,7 @@ public sealed record UiSettings
             SkinArrangements = NormalizeSkinArrangements(settings.SkinArrangements),
             SkinLayoutsSeen = NormalizeSeen(settings.SkinLayoutsSeen),
             SkinBankSelections = NormalizeBankSelections(settings.SkinBankSelections),
+            SkinPopOutsApplied = NormalizeSeen(settings.SkinPopOutsApplied),
             // The per-skin section orders of an unreleased build, which the
             // arrangements replaced. They are not read, and go at the next save.
             UnknownKeys = WithoutObsoleteKeys(settings.UnknownKeys),
@@ -244,6 +263,31 @@ public sealed record UiSettings
         SkinLayoutsSeen = NormalizeSeen([.. SkinLayoutsSeen.Where(k => k.Skin != skin || k.Version != version),
             new SkinLayoutKey { Skin = skin, Version = version }]),
     };
+
+    /// <summary>True when the skin layout's pop-out default already opened the submixer once.</summary>
+    public bool HasAppliedSkinPopOut(string skin, int version) =>
+        SkinPopOutsApplied.Any(k => k.Skin == skin && k.Version == version);
+
+    /// <summary>These settings with the skin layout's pop-out default recorded as applied, the most recent last.</summary>
+    public UiSettings WithSkinPopOutApplied(string skin, int version) => this with
+    {
+        SkinPopOutsApplied = NormalizeSeen([.. SkinPopOutsApplied.Where(k => k.Skin != skin || k.Version != version),
+            new SkinLayoutKey { Skin = skin, Version = version }]),
+    };
+
+    /// <summary>
+    /// These settings with what the user chose under one skin layout
+    /// forgotten: the arrangement, the bank picks, the record that its
+    /// pop-out default was applied, and the docking choice, which is the one
+    /// thing that keeps any skin's pop-out default from applying. What the
+    /// user chose under other skins stays.
+    /// </summary>
+    public UiSettings WithoutSkinChoices(string skin, int version) =>
+        WithSkinArrangement(skin, version, null, null).WithSkinBanks(skin, version, null) with
+        {
+            SkinPopOutsApplied = [.. SkinPopOutsApplied.Where(k => k.Skin != skin || k.Version != version)],
+            MixerDocked = null,
+        };
 
     /// <summary>
     /// The per-skin arrangements made safe to use: null lists, entries and

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Avalonia;
 using Avalonia.Controls;
 
 namespace OpenXLR.UI;
@@ -19,7 +21,7 @@ public static class InsertWindows
     {
         if (Controls.TryGetValue(insert, out InsertControlsWindow? open) && Reuse(open, owner, insert)) return;
         var w = new InsertControlsWindow { DataContext = insert };
-        w.Closed += (_, _) => Controls.Remove(insert);
+        w.Closed += (_, _) => { if (Controls.TryGetValue(insert, out InsertControlsWindow? kept) && kept == w) Controls.Remove(insert); };
         Controls[insert] = w;
         w.Show(owner);
     }
@@ -41,9 +43,45 @@ public static class InsertWindows
     {
         if (Chains.TryGetValue(key, out MixInsertsWindow? open) && Reuse(open, owner, chain)) return;
         var w = new MixInsertsWindow { DataContext = chain };
-        w.Closed += (_, _) => Chains.Remove(key);
+        w.Closed += (_, _) => { if (Chains.TryGetValue(key, out MixInsertsWindow? kept) && kept == w) Chains.Remove(key); };
         Chains[key] = w;
         w.Show(owner);
+    }
+
+    /// <summary>
+    /// What it takes to open again, under another window, every plugin
+    /// window <paramref name="owner"/> holds open now. An owned window closes
+    /// with its owner, and a window's owner cannot change while it is shown,
+    /// so a window that is about to close hands its plugin windows on this
+    /// way: each one opens again under the new owner, at the same place, on
+    /// the same chain or insert. One whose insert has left its chain since
+    /// does not come back.
+    /// </summary>
+    internal static IReadOnlyList<Action<Window>> Handover(Window owner)
+    {
+        var reopen = new List<Action<Window>>();
+        foreach ((InsertViewModel insert, InsertControlsWindow window) in Controls)
+        {
+            if (window.Owner != owner || !window.IsVisible) continue;
+            PixelPoint place = window.Position;
+            reopen.Add(next =>
+            {
+                if (!insert.Owner.Items.Contains(insert)) return;
+                OpenControls(next, insert);
+                Controls[insert].Position = place;
+            });
+        }
+        foreach ((string key, MixInsertsWindow window) in Chains)
+        {
+            if (window.Owner != owner || !window.IsVisible || window.DataContext is not InsertsViewModel chain) continue;
+            PixelPoint place = window.Position;
+            reopen.Add(next =>
+            {
+                OpenChain(next, chain, key);
+                Chains[key].Position = place;
+            });
+        }
+        return reopen;
     }
 
     private static bool Reuse(Window window, Window owner, object model)

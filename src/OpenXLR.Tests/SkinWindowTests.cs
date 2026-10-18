@@ -26,7 +26,7 @@ namespace OpenXLR.Tests;
 /// Run separately under Xvfb; Avalonia owns one UI thread per process.
 /// </summary>
 [Collection("xdg-config")]
-public sealed class SkinWindowTests
+public sealed partial class SkinWindowTests
 {
     // Avalonia sets its platform up once per process, so the whole class is one
     // test with three parts rather than three tests that cannot share a thread.
@@ -39,6 +39,7 @@ public sealed class SkinWindowTests
             AnInstalledSkinIsFoundAndItsImageIsUsed(main);
             ALayoutSkinTurnsTheSectionsWithoutRebuildingThem(main);
             ASwitchToMixBanksKeepsEveryViewModelAndSendsNothing(main);
+            AStructuralSwitchKeepsFocusFoldsAndScrollAndLeavesNothingBehind(main);
             ABrokenSkinLeavesTheWindowUsableAndSaysWhy(main);
             ControlAppearancesSwitchAndTheFaderStillWorks(main);
             NeitherShippedAppearanceBreaksTheLayoutOrTheLabels(main, options, flow);
@@ -363,7 +364,8 @@ public sealed class SkinWindowTests
             File.WriteAllText(Path.Combine(folder, "skin.json"), """
                 {"schema":1,"name":"Banks","tokens":{"Ox.Card.Background":"#30343c"},
                  "layout":{"version":1,"regions":{"submixer":{"template":"mix-banks","visibleBanks":3,
-                   "selectionDefaults":["chat","monitor"],"master":{"template":"master-strip"}}}}}
+                   "selectionDefaults":["chat","monitor"],"master":{"template":"master-strip"}},
+                   "monitor":{"template":"output-toolbar"},"applications":{"template":"application-list"}}}}
                 """);
             SkinEntry banks = Assert.Single(SkinCatalog.Discover(), e => e.Id == "banks");
             Assert.Empty(banks.Errors);

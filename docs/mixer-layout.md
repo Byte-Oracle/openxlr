@@ -59,7 +59,10 @@ Choosing a skin never sends a layout command, and a channel or mix order
 set here never moves a section. Under a skin that draws the submixer as
 mix banks, the mix each bank shows is a window preference in `ui.json`
 too. Picking one never changes the order kept here, and the banks list
-the channels in that order.
+the channels in that order. Whether the submixer sits in the main window
+or its own is a window preference in `ui.json` as well, and so is the
+record of which skins' pop-out defaults have applied; neither is part of
+this file or of a profile.
 
 ## Appearance
 

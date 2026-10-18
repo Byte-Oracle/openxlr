@@ -23,7 +23,8 @@ public partial class MainWindow : Window
     private bool _hideToTrayPending;
     private readonly CancellationTokenSource _lifetime = new();
     private bool _automaticUpdateCheckStarted;
-    private bool? _monitorStacked;
+    private (bool Toolbar, bool Stacked)? _monitorStacked;
+    private string _monitorTemplate = Skinning.SkinLayoutTemplates.OutputPanel;
 
     public MainWindow() : this(new DaemonClient(), syncDesktopVolume: true) { }
 
@@ -133,6 +134,7 @@ public partial class MainWindow : Window
         Show();
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Activate();
+        ApplyPendingPopOut();
     }
 
     internal void Quit()
@@ -142,22 +144,51 @@ public partial class MainWindow : Window
         Close();
     }
 
-    private void OnMonitorSizeChanged(object? sender, SizeChangedEventArgs e)
+    private void OnMonitorSizeChanged(object? sender, SizeChangedEventArgs e) => LayOutMonitor(e.NewSize.Width);
+
+    /// <summary>
+    /// Stand MONITOR's controls as its template and its width call for. The
+    /// panel puts a label before the output picker and before the volume; the
+    /// toolbar drops both labels, which stay the controls' accessible names
+    /// and tooltips, and keeps the picker, the volume and its readout in one
+    /// row. Under <see cref="Skinning.SkinLayoutDefaults.MonitorStackWidth"/>
+    /// either one stands in two rows, the picker above the volume, so the
+    /// device name and a usable fader both keep their room. The controls are
+    /// the same ones throughout; only their cells change.
+    /// </summary>
+    private void LayOutMonitor(double width)
     {
-        // Two rows leave room for both the device name and a usable fader
-        // when the window or the skin's card padding narrows this area.
-        bool stacked = e.NewSize.Width < 560;
-        if (_monitorStacked == stacked) return;
-        _monitorStacked = stacked;
-        MonitorControls.ColumnDefinitions = new(stacked ? "90,*,64" : "90,*,20,90,*,64");
+        bool toolbar = _monitorTemplate == Skinning.SkinLayoutTemplates.OutputToolbar;
+        bool stacked = width < Skinning.SkinLayoutDefaults.MonitorStackWidth;
+        if (_monitorStacked == (toolbar, stacked)) return;
+        _monitorStacked = (toolbar, stacked);
+        MonitorDevicesLabel.IsVisible = MonitorVolumeLabel.IsVisible = !toolbar;
+        ToolTip.SetTip(OutputVolumeSlider, toolbar ? Localizer.Text("Volume") : null);
+        MonitorControls.ColumnDefinitions = new((toolbar, stacked) switch
+        {
+            (false, false) => "90,*,20,90,*,64",
+            (false, true) => "90,*,64",
+            (true, false) => "*,12,*,64",
+            (true, true) => "*,64",
+        });
         MonitorControls.RowDefinitions = new(stacked ? "Auto,Auto" : "Auto");
         MonitorControls.RowSpacing = stacked ? 6 : 0;
-        Grid.SetColumnSpan(MonitorDestination, stacked ? 2 : 1);
-        Grid.SetColumn(MonitorVolumeLabel, stacked ? 0 : 3);
+        // Column by column: the label, the picker, the volume's label, the volume, its readout.
+        (int label, int picker, int span, int volumeLabel, int volume, int readout) = (toolbar, stacked) switch
+        {
+            (false, false) => (0, 1, 1, 3, 4, 5),
+            (false, true) => (0, 1, 2, 0, 1, 2),
+            (true, false) => (0, 0, 1, 0, 2, 3),
+            (true, true) => (0, 0, 2, 0, 0, 1),
+        };
+        Grid.SetColumn(MonitorDevicesLabel, label);
+        Grid.SetColumn(MonitorDestination, picker);
+        Grid.SetColumnSpan(MonitorDestination, span);
+        Grid.SetColumn(MonitorVolumeLabel, volumeLabel);
         Grid.SetRow(MonitorVolumeLabel, stacked ? 1 : 0);
-        Grid.SetColumn(OutputVolumeSlider, stacked ? 1 : 4);
+        Grid.SetColumn(OutputVolumeSlider, volume);
         Grid.SetRow(OutputVolumeSlider, stacked ? 1 : 0);
-        Grid.SetColumn(MonitorVolumeReadout, stacked ? 2 : 5);
+        Grid.SetColumn(MonitorVolumeReadout, readout);
         Grid.SetRow(MonitorVolumeReadout, stacked ? 1 : 0);
     }
 
@@ -205,7 +236,7 @@ public partial class MainWindow : Window
     }
 
     private void OnOptions(object? sender, RoutedEventArgs e)
-        => new OptionsWindow(new OptionsViewModel(_client, _vm), _desktopKeys).ShowDialog(this);
+        => new OptionsWindow(new OptionsViewModel(_client, _vm) { ResetArrangement = ResetSkinArrangement }, _desktopKeys).ShowDialog(this);
 
     private void OnManageApps(object? sender, RoutedEventArgs e)
         => new AppsWindow { DataContext = _vm }.ShowDialog(this);

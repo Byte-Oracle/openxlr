@@ -11,9 +11,10 @@ using static OpenXLR.Tests.WindowLayoutTests;
 
 namespace OpenXLR.Tests;
 
-internal static class MixerPopOutWindowTests
+internal static partial class MixerPopOutWindowTests
 {
-    internal static void Check()
+    /// <param name="outer">The layout test's own window, set aside while a skin's pop-out default is tried, since one process has one main window.</param>
+    internal static void Check(MainWindow outer)
     {
         string dir = Directory.CreateTempSubdirectory("openxlr-popout-").FullName;
         string? config = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
@@ -125,6 +126,7 @@ internal static class MixerPopOutWindowTests
             Assert.False(main.IsVisible);
 
             CheckRecreatedMix();
+            CheckSkinSwitching(outer);
             MixerFaderLifecycleWindowTests.Check();
         }
         finally

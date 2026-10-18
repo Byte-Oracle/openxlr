@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using OpenXLR.UI.Layout;
 using OpenXLR.UI.Localization;
 using OpenXLR.UI.Skinning;
@@ -73,8 +74,27 @@ public partial class MainWindow
             _banks.OwnsHandles = !rack || arrangement.Hidden.Contains(SkinLayoutRegions.Inputs);
         }
         MixerPanel.Show(_banks);
-        _mixerWindow?.UpdatePanelWidth();
+        _mixerWindow?.FitPresentation();
+
+        // MONITOR and APPLICATIONS: the same controls and the same
+        // application objects, in other cells or another item template.
+        string monitor = layout?.Monitor ?? SkinLayoutTemplates.OutputPanel;
+        if (_monitorTemplate != monitor)
+        {
+            _monitorTemplate = monitor;
+            LayOutMonitor(MonitorControls.Bounds.Width > 0 ? MonitorControls.Bounds.Width : double.PositiveInfinity);
+        }
+        bool list = layout?.Applications == SkinLayoutTemplates.ApplicationList;
+        object chip = this.FindResource(list ? "ApplicationLine" : "ApplicationChip")!;
+        if (!ReferenceEquals(ApplicationRows.ItemTemplate, chip))
+        {
+            ApplicationRows.ItemsPanel = (ITemplate<Panel?>)this.FindResource(list ? "ApplicationListPanel" : "ApplicationChipsPanel")!;
+            ApplicationRows.ItemTemplate = (Avalonia.Controls.Templates.IDataTemplate)chip;
+        }
     }
+
+    /// <summary>The template MONITOR wears now: one of <see cref="SkinLayoutTemplates.Monitor"/>.</summary>
+    internal string MonitorTemplate => _monitorTemplate;
 
     /// <summary>A pick from a bank's picker, kept for the skin in force.</summary>
     private void SaveBanks(IReadOnlyList<string> banks)

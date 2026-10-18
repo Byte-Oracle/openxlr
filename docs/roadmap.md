@@ -145,7 +145,14 @@ few releases, and they get to settle in users' hands first.
   or hides, upright and reversed faders, upright meters, label styles and
   a master card or strip. Each bank's picker lists every mix, the choice
   is kept per skin in `ui.json`, and a bank never changes the mixer's
-  order. [skins.md](skins.md#layout)
+  order. MONITOR can be a one-row toolbar and APPLICATIONS a list, and a
+  skin can start the submixer in its own window, which applies once and
+  only while the user has made no docking choice. A structural switch ends
+  drags first, changes the submixer in whichever window holds it, restores
+  focus by channel, mix and role, keeps scroll offsets, folds, the
+  detached mixer and plugin window ownership, and sends no command; Options
+  describes the skin's layout and resets its arrangement, banks and
+  docking choice. [skins.md](skins.md#layout)
 - [ ] Inputs from more than one attached Wave interface at once. The
   daemon drives one interface today; a second one is reachable only as a
   capture source.

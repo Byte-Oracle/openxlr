@@ -2184,4 +2184,64 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="BankChoiceNotSaved" xml:space="preserve">
     <value>La elección de los bancos se aplica hasta que se cierre la ventana, pero no se ha podido guardar: {0}</value>
   </data>
+  <data name="ApplicationChannelName" xml:space="preserve">
+    <value>Canal de {0}</value>
+  </data>
+  <data name="DockingNotSaved" xml:space="preserve">
+    <value>El lugar del submezclador se aplica hasta que se cierre la ventana, pero no se ha podido guardar: {0}</value>
+  </data>
+  <data name="SkinLayoutClassic" xml:space="preserve">
+    <value>Este tema mantiene la disposición habitual de la ventana.</value>
+  </data>
+  <data name="SkinLayoutSummary" xml:space="preserve">
+    <value>Este tema organiza la ventana: {0}. Los cambios con Organizar y la elección de los bancos se guardan para cada tema.</value>
+  </data>
+  <data name="LayoutPartColumn" xml:space="preserve">
+    <value>las secciones una encima de otra</value>
+  </data>
+  <data name="LayoutPartRow" xml:space="preserve">
+    <value>las secciones una al lado de otra</value>
+  </data>
+  <data name="LayoutPartGrid" xml:space="preserve">
+    <value>una cuadrícula</value>
+  </data>
+  <data name="LayoutPartDock" xml:space="preserve">
+    <value>un acoplamiento</value>
+  </data>
+  <data name="LayoutPartInputRack" xml:space="preserve">
+    <value>un rack de entradas</value>
+  </data>
+  <data name="LayoutPartOneBank" xml:space="preserve">
+    <value>un banco de mezcla</value>
+  </data>
+  <data name="LayoutPartBanks" xml:space="preserve">
+    <value>{0} bancos de mezcla</value>
+  </data>
+  <data name="LayoutPartOutputToolbar" xml:space="preserve">
+    <value>una barra de monitor</value>
+  </data>
+  <data name="LayoutPartApplicationList" xml:space="preserve">
+    <value>una lista de aplicaciones</value>
+  </data>
+  <data name="LayoutPartDetached" xml:space="preserve">
+    <value>el submezclador en su propia ventana</value>
+  </data>
+  <data name="MixerDockingDocked" xml:space="preserve">
+    <value>Submezclador: en la ventana principal, donde lo dejaste la última vez. Ningún tema lo mueve de ahí.</value>
+  </data>
+  <data name="MixerDockingDetached" xml:space="preserve">
+    <value>Submezclador: separado, donde lo dejaste la última vez. Ningún tema lo mueve de ahí.</value>
+  </data>
+  <data name="MixerDockingSkinDetached" xml:space="preserve">
+    <value>Submezclador: aún no has elegido un lugar, así que este tema lo separa una vez al aplicarlo.</value>
+  </data>
+  <data name="MixerDockingNone" xml:space="preserve">
+    <value>Submezclador: en la ventana principal. Separarlo y devolverlo a la ventana principal guardan tu elección.</value>
+  </data>
+  <data name="ResetSkinArrangement" xml:space="preserve">
+    <value>Restablecer la disposición de este tema</value>
+  </data>
+  <data name="ResetSkinArrangementHint" xml:space="preserve">
+    <value>Devolver las secciones adonde las coloca este tema, empezar sus bancos en sus mezclas predeterminadas y olvidar dónde dejaste el submezclador</value>
+  </data>
 </root>

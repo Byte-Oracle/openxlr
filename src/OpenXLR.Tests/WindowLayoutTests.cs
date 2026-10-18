@@ -583,7 +583,7 @@ public sealed class WindowLayoutTests
                 AssertLayoutAppearance(main, vm);
                 SkinLayoutWindowTests.Check();
                 MixerViewWindowTests.Check();
-                MixerPopOutWindowTests.Check();
+                MixerPopOutWindowTests.Check(main);
                 // The arrange check opens its own window, with a real pointer
                 // on it; nothing else may sit in front.
                 foreach (var window in windows) window.Hide();

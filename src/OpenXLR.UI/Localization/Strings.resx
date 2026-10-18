@@ -2184,4 +2184,64 @@ Select the interface OpenXLR drives</value>
   <data name="BankChoiceNotSaved" xml:space="preserve">
     <value>The bank choice applies until the window closes, but could not be saved: {0}</value>
   </data>
+  <data name="ApplicationChannelName" xml:space="preserve">
+    <value>Channel for {0}</value>
+  </data>
+  <data name="DockingNotSaved" xml:space="preserve">
+    <value>Where the submixer goes applies until the window closes, but could not be saved: {0}</value>
+  </data>
+  <data name="SkinLayoutClassic" xml:space="preserve">
+    <value>This skin keeps the usual arrangement of the window.</value>
+  </data>
+  <data name="SkinLayoutSummary" xml:space="preserve">
+    <value>This skin arranges the window: {0}. Arrange moves and bank choices are kept per skin.</value>
+  </data>
+  <data name="LayoutPartColumn" xml:space="preserve">
+    <value>the sections one above the other</value>
+  </data>
+  <data name="LayoutPartRow" xml:space="preserve">
+    <value>the sections side by side</value>
+  </data>
+  <data name="LayoutPartGrid" xml:space="preserve">
+    <value>a grid</value>
+  </data>
+  <data name="LayoutPartDock" xml:space="preserve">
+    <value>a dock</value>
+  </data>
+  <data name="LayoutPartInputRack" xml:space="preserve">
+    <value>an input rack</value>
+  </data>
+  <data name="LayoutPartOneBank" xml:space="preserve">
+    <value>one mix bank</value>
+  </data>
+  <data name="LayoutPartBanks" xml:space="preserve">
+    <value>{0} mix banks</value>
+  </data>
+  <data name="LayoutPartOutputToolbar" xml:space="preserve">
+    <value>a monitor toolbar</value>
+  </data>
+  <data name="LayoutPartApplicationList" xml:space="preserve">
+    <value>an application list</value>
+  </data>
+  <data name="LayoutPartDetached" xml:space="preserve">
+    <value>the submixer in its own window</value>
+  </data>
+  <data name="MixerDockingDocked" xml:space="preserve">
+    <value>Submixer: in the main window, where you last put it. No skin moves it from there.</value>
+  </data>
+  <data name="MixerDockingDetached" xml:space="preserve">
+    <value>Submixer: popped out, where you last put it. No skin moves it from there.</value>
+  </data>
+  <data name="MixerDockingSkinDetached" xml:space="preserve">
+    <value>Submixer: you have not chosen a place yet, so this skin pops it out once when it is put on.</value>
+  </data>
+  <data name="MixerDockingNone" xml:space="preserve">
+    <value>Submixer: in the main window. Pop out, and returning it to the main window, keep your choice.</value>
+  </data>
+  <data name="ResetSkinArrangement" xml:space="preserve">
+    <value>Reset this skin's arrangement</value>
+  </data>
+  <data name="ResetSkinArrangementHint" xml:space="preserve">
+    <value>Put the sections back where this skin puts them, start its banks on their default mixes and forget where you put the submixer</value>
+  </data>
 </root>

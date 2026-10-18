@@ -69,6 +69,8 @@ public partial class MainWindow
         // The last pointer that pressed anywhere in the window, so a skin
         // switch can end a fader drag before it moves the sections.
         AddHandler(PointerPressedEvent, (_, e) => _lastPointer = e.Pointer, RoutingStrategies.Tunnel, handledEventsToo: true);
+        Opened += (_, _) => ApplyPendingPopOut();
+        _wornSkin = SkinService.Current.Id;
         foreach (Control host in hosts.Values)
             host.PropertyChanged += (_, e) =>
             {
@@ -110,6 +112,8 @@ public partial class MainWindow
 
     private void OnMixerViewChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        // A skin's pop-out default waits for a mixer to pop out.
+        if (e.PropertyName == nameof(MainViewModel.HasMixer)) ApplyPendingPopOut();
         if (e.PropertyName != nameof(MainViewModel.IsMiniView) || _watchedView?.IsMiniView != true
             || ArrangeButton.IsChecked != true) return;
         ArrangeButton.IsChecked = false;
@@ -145,6 +149,30 @@ public partial class MainWindow
         ApplyArrangement(arrangement.Restored());
         string? error = arrangement.Reset(UiSettings.Load()).Save();
         ReportArrangement(error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
+    }
+
+    /// <summary>
+    /// Options' "Reset this skin's arrangement": what Reset sections does,
+    /// and the bank picks, the docking choice and the record that the skin's
+    /// pop-out default was applied forgotten too, so the skin starts again as
+    /// its author drew it. Nothing opens or closes now; the skin's pop-out
+    /// default applies the next time the skin is put on. Null when it was
+    /// saved, otherwise why not.
+    /// </summary>
+    internal string? ResetSkinArrangement()
+    {
+        CancelReorder();
+        SectionArrangement arrangement = Arrangement;
+        UiSettings settings = arrangement.Reset(UiSettings.Load());
+        settings = arrangement is { Skin: { } skin, Version: { } version }
+            ? settings.WithoutSkinChoices(skin, version)
+            : settings with { MixerDocked = null };
+        string? error = settings.Save();
+        // The banks start again from the skin's defaults, as a skin put on afresh.
+        _banks?.Configure(_banks.Options, null);
+        ApplyArrangement(arrangement.Restored());
+        ReportArrangement(error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
+        return error;
     }
 
     /// <summary>The note under the Arrange button: the hint, or why the last move failed.</summary>
@@ -258,14 +286,24 @@ public partial class MainWindow
         // changing the arrangement.
         _layoutHost.UpdateWidths();
         if (note is not null) ReportArrangement(note);
+        // Only putting on another skin can open the mixer's own window; the
+        // same skin again, read afresh or with other sizing, never does.
+        string worn = SkinService.Current.Id;
+        if (worn != _wornSkin) _popOutPending = true;
+        _wornSkin = worn;
+        ApplyPendingPopOut();
     }
 
     /// <summary>
-    /// Stand the regions as <paramref name="next"/> says. The cards, their
-    /// expanders and everything inside them are the same objects before and
-    /// after; only the containers around them change. A drag in progress, of
-    /// a section or of a fader, ends first, since the geometry it was
-    /// measured against is about to change.
+    /// Stand the regions as <paramref name="next"/> says, in the order a
+    /// structural switch needs (see <see cref="SwitchState"/>). The cards,
+    /// their expanders and everything inside them are the same objects before
+    /// and after; only the containers around them change, and a template
+    /// that changed builds its own controls again. A drag in progress, of a
+    /// section or of a fader in either window, ends first, since the geometry
+    /// it was measured against is about to change. The mixer panel changes
+    /// presentation in whichever window holds it, and focus, the scroll
+    /// offsets and the sections' folds come through as the switch found them.
     /// </summary>
     private void ApplyArrangement(SectionArrangement next)
     {
@@ -276,18 +314,15 @@ public partial class MainWindow
         UpdateHiddenSections();
         FoldOnFirstSight(next);
         if (previous is not null && previous.SameStructure(next)) return;
-        if (previous is not null)
-        {
-            CancelReorder();
-            if (_lastPointer?.Captured is Visual captured && captured.GetVisualAncestors().Contains(MixerContent))
-                _lastPointer.Capture(null);
-        }
+        SwitchState? kept = previous is null ? null : SwitchState.Capture(this);
 
         ApplyTemplates(next);
         _layoutHost.Apply(next);
         ApplyHeaderActions(next.Header);
         foreach (Button handle in SectionHandles()) ClearDropTarget(handle);
-        if (previous is null || previous.Tree.Description() != next.Tree.Description()) SectionScroll.Offset = default;
+        bool newTree = previous is null || previous.Tree.Description() != next.Tree.Description();
+        if (kept is not null) kept.Restore(newTree);
+        else if (newTree) SectionScroll.Offset = default;
     }
 
     /// <summary>

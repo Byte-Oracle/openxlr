@@ -241,4 +241,85 @@ public sealed class SectionOrderTests
         Assert.Equal(OpenXLR.UI.Skinning.SkinFormat.MaxVisibleBanks,
             settings.WithSkinBanks("many", 1, ["a", "b", "c", "d", "e", "f"]).SkinBanksFor("many", 1)!.Count);
     }
+
+    /// <summary>
+    /// The user's docking choice and the record of the skins whose pop-out
+    /// default already opened the mixer: no key, null, and anything that is
+    /// not true or false all read as no choice; a choice round-trips; the
+    /// record is per skin and layout version, read back safely and bounded;
+    /// and forgetting one skin's choices takes the docking choice with it but
+    /// leaves every other skin's arrangement, banks and record alone.
+    /// </summary>
+    [Fact]
+    public void TheDockingChoiceAndThePopOutRecordRoundTripAndAnythingBrokenReadsAsNone()
+    {
+        string home = Directory.CreateTempSubdirectory("openxlr-docking-").FullName;
+        string? previous = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", home);
+            string file = Path.Combine(home, "openxlr", "ui.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            Assert.Null(new UiSettings().MixerDocked);
+            Assert.Empty(new UiSettings().SkinPopOutsApplied);
+            foreach (string text in new[] { "{}", """{"mixerDocked":null}""", """{"mixerDocked":"yes","sectionOrder":["MonitorTile"]}""",
+                         """{"mixerDocked":1}""", """{"mixerDocked":{"docked":true}}""", """{"skinPopOutsApplied":null}""" })
+            {
+                File.WriteAllText(file, text);
+                UiSettings read = UiSettings.Load(out string? problem);
+                Assert.Null(problem);
+                Assert.Null(read.MixerDocked);
+                Assert.Empty(read.SkinPopOutsApplied);
+            }
+            // A damaged value costs only itself.
+            File.WriteAllText(file, """{"mixerDocked":"yes","sectionOrder":["MonitorTile"]}""");
+            Assert.Equal(["MonitorTile"], UiSettings.Load().SectionOrder);
+
+            foreach (bool docked in new[] { false, true })
+            {
+                Assert.Null((UiSettings.Load() with { MixerDocked = docked }).Save());
+                Assert.Contains($"\"mixerDocked\": {(docked ? "true" : "false")}", File.ReadAllText(file), StringComparison.Ordinal);
+                Assert.Equal(docked, UiSettings.Load().MixerDocked);
+            }
+            Assert.Null((UiSettings.Load() with { MixerDocked = null }).Save());
+            Assert.Contains("\"mixerDocked\": null", File.ReadAllText(file), StringComparison.Ordinal);
+            Assert.Null(UiSettings.Load().MixerDocked);
+
+            File.WriteAllText(file, """
+                {"skinPopOutsApplied":[null,{"skin":"","version":1},{"skin":"broadcast","version":1},{"skin":"wide","version":1},
+                  {"skin":"broadcast","version":1}]}
+                """);
+            UiSettings loaded = UiSettings.Load();
+            Assert.Equal(["wide", "broadcast"], loaded.SkinPopOutsApplied.Select(k => k.Skin));
+            Assert.True(loaded.HasAppliedSkinPopOut("broadcast", 1));
+            Assert.False(loaded.HasAppliedSkinPopOut("broadcast", 2));
+            Assert.False(loaded.HasAppliedSkinPopOut("dock", 1));
+            Assert.Null(loaded.WithSkinPopOutApplied("dock", 1).Save());
+            Assert.True(UiSettings.Load().HasAppliedSkinPopOut("dock", 1));
+            Assert.Equal("dock", UiSettings.Load().SkinPopOutsApplied[^1].Skin);
+
+            var settings = new UiSettings();
+            for (int i = 0; i < UiSettings.MaxSkinArrangements + 4; i++) settings = settings.WithSkinPopOutApplied("skin" + i, 1);
+            Assert.Equal(UiSettings.MaxSkinArrangements, settings.SkinPopOutsApplied.Count);
+            Assert.False(settings.HasAppliedSkinPopOut("skin0", 1));
+
+            var moved = new Dictionary<string, string> { ["main:0"] = "submixer" };
+            UiSettings chosen = new UiSettings { MixerDocked = false }
+                .WithSkinArrangement("broadcast", 1, moved, null).WithSkinBanks("broadcast", 1, ["stream"]).WithSkinPopOutApplied("broadcast", 1)
+                .WithSkinArrangement("wide", 1, moved, null).WithSkinBanks("wide", 1, ["chat"]).WithSkinPopOutApplied("wide", 1);
+            UiSettings forgotten = chosen.WithoutSkinChoices("broadcast", 1);
+            Assert.Null(forgotten.MixerDocked);
+            Assert.Null(forgotten.SkinArrangementFor("broadcast", 1));
+            Assert.Null(forgotten.SkinBanksFor("broadcast", 1));
+            Assert.False(forgotten.HasAppliedSkinPopOut("broadcast", 1));
+            Assert.Equal(moved, forgotten.SkinArrangementFor("wide", 1)!.Slots);
+            Assert.Equal(["chat"], forgotten.SkinBanksFor("wide", 1));
+            Assert.True(forgotten.HasAppliedSkinPopOut("wide", 1));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previous);
+            Directory.Delete(home, true);
+        }
+    }
 }
