@@ -497,4 +497,247 @@ public sealed class SkinLayoutTests
         Assert.StartsWith("layout.main.bad: ", error, StringComparison.Ordinal);
         Assert.DoesNotContain(error, char.IsControl);
     }
+
+    private static string Regions(string body) => "{\"version\":1,\"regions\":{" + body + "}}";
+
+    [Fact]
+    public void WithoutTemplatesTheSectionsKeepTheClassicOnes()
+    {
+        SkinLayout layout = Taken(Regions("\"inputs\":{\"width\":300},\"submixer\":{\"visibility\":\"collapsed\"}"));
+        Assert.Equal(SkinLayoutTemplates.HardwarePanel, layout.Inputs.Template);
+        Assert.False(layout.Inputs.IsRack);
+        Assert.Equal(SkinLayoutTemplates.ChannelTiles, layout.Submixer.Template);
+        Assert.False(layout.Submixer.IsBanks);
+        Assert.Same(SkinInputsOptions.Default, SkinLayoutDefaults.Classic.Inputs);
+        Assert.Same(SkinSubmixerOptions.Default, SkinLayoutDefaults.Classic.Submixer);
+        Assert.Equal([SkinLayoutTemplates.HardwarePanel, SkinLayoutTemplates.InputRack], SkinLayoutTemplates.Inputs);
+        Assert.Equal([SkinLayoutTemplates.ChannelTiles, SkinLayoutTemplates.MixBanks], SkinLayoutTemplates.Submixer);
+        Assert.Equal(["identity", "meter", "gain", "hardware-controls", "effects"], SkinStripParts.InputRow);
+        Assert.Equal(["identity", "meter", "fader", "value", "mute"], SkinStripParts.Send);
+    }
+
+    [Fact]
+    public void AnInputRackReadsItsStripPartsLabelAndMeter()
+    {
+        SkinLayout layout = Taken(Regions("""
+            "inputs":{"template":"input-rack","strip":{"template":"input-row","partsOrder":["gain","identity"],
+              "hidden":["effects","meter"],"label":{"style":"icon-and-text"},"meter":{"orientation":"vertical","placement":"beside-fader"}}}
+            """));
+        Assert.True(layout.Inputs.IsRack);
+        SkinStripOptions strip = layout.Inputs.Strip;
+        Assert.Equal(SkinLayoutTemplates.InputRow, strip.Template);
+        Assert.Equal(["gain", "identity", "meter", "hardware-controls", "effects"], strip.Order);
+        Assert.Equal(["effects", "meter"], strip.Hidden);
+        Assert.Equal(["gain", "identity", "hardware-controls"], strip.Shown);
+        Assert.Equal(SkinLabelStyle.IconAndText, strip.Label);
+        Assert.Equal(new SkinMeterOptions(SkinLayoutOrientation.Vertical, SkinMeterPlacement.BesideFader), strip.Meter);
+
+        // A rack without a strip takes the default row: every part, flat, the meter under the name.
+        SkinStripOptions plain = Taken(Regions("\"inputs\":{\"template\":\"input-rack\"}")).Inputs.Strip;
+        Assert.Same(SkinStripOptions.InputRowDefault, plain);
+        Assert.Equal(SkinStripParts.InputRow, plain.Shown);
+        Assert.Equal(SkinMeterOptions.Default, plain.Meter);
+    }
+
+    [Fact]
+    public void MixBanksReadTheirOrientationCountDefaultsStripAndMaster()
+    {
+        SkinLayout layout = Taken(Regions("""
+            "submixer":{"template":"mix-banks","orientation":"vertical","visibleBanks":3,"selectionDefaults":["monitor","stream","my_mix-2"],
+              "strip":{"template":"send-list","partsOrder":["mute","fader"],"hidden":["value"],"label":{"style":"icon"},
+                       "fader":{"orientation":"vertical","direction":"reversed"},"meter":{"placement":"beside-label"}},
+              "master":{"template":"master-strip","label":{"style":"text"},"fader":{"direction":"reversed"}}}
+            """));
+        SkinSubmixerOptions banks = layout.Submixer;
+        Assert.True(banks.IsBanks);
+        Assert.Equal(SkinLayoutOrientation.Vertical, banks.Orientation);
+        Assert.Equal(3, banks.VisibleBanks);
+        Assert.Equal(["monitor", "stream", "my_mix-2"], banks.SelectionDefaults);
+        Assert.Equal(SkinLayoutTemplates.SendList, banks.Strip.Template);
+        Assert.Equal(["mute", "fader", "identity", "meter"], banks.Strip.Shown);
+        Assert.Equal(SkinLabelStyle.Icon, banks.Strip.Label);
+        Assert.Equal(new SkinFaderOptions(SkinLayoutOrientation.Vertical, SkinFaderDirection.Reversed), banks.Strip.Fader);
+        // A send list lies its meter flat unless told otherwise.
+        Assert.Equal(new SkinMeterOptions(SkinLayoutOrientation.Horizontal, SkinMeterPlacement.BesideLabel), banks.Strip.Meter);
+        Assert.Equal(SkinLayoutTemplates.MasterStrip, banks.Master.Template);
+        // A master strip stands its fader and meter up unless told otherwise.
+        Assert.Equal(new SkinFaderOptions(SkinLayoutOrientation.Vertical, SkinFaderDirection.Reversed), banks.Master.Fader);
+        Assert.Equal(new SkinMeterOptions(SkinLayoutOrientation.Vertical, SkinMeterPlacement.BesideFader), banks.Master.Meter);
+
+        // Banks with nothing else said: two, side by side, upright strips, the master card.
+        SkinSubmixerOptions plain = Taken(Regions("\"submixer\":{\"template\":\"mix-banks\"}")).Submixer;
+        Assert.Equal(SkinSubmixerOptions.DefaultVisibleBanks, plain.VisibleBanks);
+        Assert.Equal(2, plain.VisibleBanks);
+        Assert.Equal(SkinLayoutOrientation.Horizontal, plain.Orientation);
+        Assert.Empty(plain.SelectionDefaults);
+        Assert.Same(SkinStripOptions.BankDefault, plain.Strip);
+        Assert.Equal(new SkinFaderOptions(SkinLayoutOrientation.Vertical), plain.Strip.Fader);
+        Assert.Same(SkinMasterOptions.Default, plain.Master);
+        Assert.Equal(SkinFaderOptions.Default, plain.Master.Fader);
+    }
+
+    [Fact]
+    public void TheTemplatesAreInTheLayoutDescription()
+    {
+        string Described(string body) => Taken(Regions(body)).Description();
+        string classic = SkinLayoutDefaults.Classic.Description();
+        Assert.Equal(classic, Described("\"inputs\":{\"template\":\"hardware-panel\"}"));
+        string rack = Described("\"inputs\":{\"template\":\"input-rack\"}");
+        Assert.NotEqual(classic, rack);
+        Assert.NotEqual(rack, Described("\"inputs\":{\"template\":\"input-rack\",\"strip\":{\"partsOrder\":[\"meter\"]}}"));
+        Assert.NotEqual(rack, Described("\"inputs\":{\"template\":\"input-rack\",\"strip\":{\"label\":{\"style\":\"icon\"}}}"));
+        string banks = Described("\"submixer\":{\"template\":\"mix-banks\"}");
+        Assert.NotEqual(classic, banks);
+        foreach (string change in new[]
+                 {
+                     "\"visibleBanks\":3", "\"orientation\":\"vertical\"", "\"selectionDefaults\":[\"chat\"]",
+                     "\"strip\":{\"template\":\"send-list\"}", "\"strip\":{\"hidden\":[\"value\"]}",
+                     "\"strip\":{\"fader\":{\"direction\":\"reversed\"}}", "\"strip\":{\"meter\":{\"placement\":\"below-label\"}}",
+                     "\"master\":{\"template\":\"master-strip\"}", "\"master\":{\"label\":{\"style\":\"icon\"}}",
+                 })
+            Assert.NotEqual(banks, Described("\"submixer\":{\"template\":\"mix-banks\"," + change + "}"));
+        // The same banks written two ways describe alike.
+        Assert.Equal(banks, Described("\"submixer\":{\"template\":\"mix-banks\",\"visibleBanks\":2,\"strip\":{\"template\":\"vertical-strip\"}}"));
+    }
+
+    [Fact]
+    public void ABadTemplateNameIsRefusedWithItsPath()
+    {
+        Refused(Regions("\"inputs\":{\"template\":\"mixer\"}"), "layout.regions.inputs.template");
+        Refused(Regions("\"inputs\":{\"template\":3}"), "layout.regions.inputs.template");
+        Refused(Regions("\"submixer\":{\"template\":\"send-bank\"}"), "layout.regions.submixer.template");
+        Refused(Regions("\"headphones\":{\"template\":\"input-rack\"}"), "layout.regions.headphones.template");
+        Refused(Regions("\"inputs\":{\"template\":\"input-rack\",\"strip\":{\"template\":\"vertical-strip\"}}"),
+            "layout.regions.inputs.strip.template");
+        Refused(Regions("\"submixer\":{\"template\":\"mix-banks\",\"strip\":{\"template\":\"input-row\"}}"),
+            "layout.regions.submixer.strip.template");
+        Refused(Regions("\"submixer\":{\"template\":\"mix-banks\",\"master\":{\"template\":\"master-tile\"}}"),
+            "layout.regions.submixer.master.template");
+    }
+
+    [Fact]
+    public void AnOptionOfAnotherTemplateIsRefused()
+    {
+        string strip = Refused(Regions("\"inputs\":{\"strip\":{}}"), "layout.regions.inputs.strip");
+        Assert.Contains("input-rack", strip, StringComparison.Ordinal);
+        Refused(Regions("\"inputs\":{\"template\":\"hardware-panel\",\"strip\":{}}"), "layout.regions.inputs.strip");
+        foreach (string option in new[] { "orientation", "visibleBanks", "selectionDefaults", "strip", "master" })
+            Assert.Contains("mix-banks", Refused(Regions("\"submixer\":{\"template\":\"channel-tiles\",\"" + option + "\":{}}"),
+                "layout.regions.submixer." + option), StringComparison.Ordinal);
+        Refused(Regions("\"monitor\":{\"strip\":{}}"), "layout.regions.monitor.strip");
+        Refused(Regions("\"inputs\":{\"template\":\"input-rack\",\"visibleBanks\":2}"), "layout.regions.inputs.visibleBanks");
+        // An input row has no fader of its own; its gain is the interface's.
+        Refused(Regions("\"inputs\":{\"template\":\"input-rack\",\"strip\":{\"fader\":{}}}"), "layout.regions.inputs.strip.fader");
+        Refused(Regions("\"submixer\":{\"template\":\"mix-banks\",\"master\":{\"partsOrder\":[]}}"), "layout.regions.submixer.master.partsOrder");
+        Refused(Regions("\"submixer\":{\"template\":\"mix-banks\",\"strip\":{\"label\":{\"wrap\":true}}}"), "layout.regions.submixer.strip.label.wrap");
+        Refused(Regions("\"submixer\":{\"template\":\"mix-banks\",\"strip\":{\"meter\":{\"colour\":\"red\"}}}"), "layout.regions.submixer.strip.meter.colour");
+        Refused(Regions("\"submixer\":{\"template\":\"mix-banks\",\"strip\":{\"fader\":{\"length\":200}}}"), "layout.regions.submixer.strip.fader.length");
+    }
+
+    [Fact]
+    public void PartsAreKnownListedOnceAndIdentityIsNeverHidden()
+    {
+        string Rack(string strip) => Regions("\"inputs\":{\"template\":\"input-rack\",\"strip\":{" + strip + "}}");
+        string Bank(string strip) => Regions("\"submixer\":{\"template\":\"mix-banks\",\"strip\":{" + strip + "}}");
+        Refused(Rack("\"partsOrder\":[\"fader\"]"), "layout.regions.inputs.strip.partsOrder[0]");
+        Refused(Bank("\"partsOrder\":[\"gain\"]"), "layout.regions.submixer.strip.partsOrder[0]");
+        Refused(Bank("\"partsOrder\":[\"meter\",3]"), "layout.regions.submixer.strip.partsOrder[1]");
+        Refused(Bank("\"partsOrder\":\"meter\""), "layout.regions.submixer.strip.partsOrder");
+        Refused(Bank("\"partsOrder\":[\"meter\",\"meter\"]"), "layout.regions.submixer.strip.partsOrder[1]");
+        Assert.Contains("identity", Refused(Rack("\"hidden\":[\"identity\"]"), "layout.regions.inputs.strip.hidden[0]"), StringComparison.Ordinal);
+        Refused(Bank("\"partsOrder\":[\"value\"],\"hidden\":[\"value\"]"), "layout.regions.submixer.strip.hidden[0]");
+        // Never more entries than the strip has parts.
+        string six = "[\"identity\",\"meter\",\"fader\",\"value\",\"mute\",\"meter\"]";
+        Assert.Contains("at most 5", Refused(Bank("\"partsOrder\":" + six), "layout.regions.submixer.strip.partsOrder"), StringComparison.Ordinal);
+        Refused(Bank("\"hidden\":" + six), "layout.regions.submixer.strip.hidden");
+        // Every part but identity may be hidden.
+        SkinStripOptions bare = Taken(Bank("\"hidden\":[\"meter\",\"fader\",\"value\",\"mute\"]")).Submixer.Strip;
+        Assert.Equal(["identity"], bare.Shown);
+        SkinStripOptions all = Taken(Bank("\"partsOrder\":[\"mute\",\"value\",\"fader\",\"meter\",\"identity\"]")).Submixer.Strip;
+        Assert.Equal(["mute", "value", "fader", "meter", "identity"], all.Shown);
+    }
+
+    [Fact]
+    public void LabelMeterAndFaderTakeOnlyTheirNames()
+    {
+        string Bank(string strip) => Regions("\"submixer\":{\"template\":\"mix-banks\",\"strip\":{" + strip + "}}");
+        Refused(Bank("\"label\":{\"style\":\"bold\"}"), "layout.regions.submixer.strip.label.style");
+        Refused(Bank("\"label\":\"icon\""), "layout.regions.submixer.strip.label");
+        Refused(Bank("\"meter\":{\"orientation\":\"diagonal\"}"), "layout.regions.submixer.strip.meter.orientation");
+        Refused(Bank("\"meter\":{\"placement\":\"above-label\"}"), "layout.regions.submixer.strip.meter.placement");
+        Refused(Bank("\"fader\":{\"orientation\":\"Vertical\"}"), "layout.regions.submixer.strip.fader.orientation");
+        Refused(Bank("\"fader\":{\"direction\":\"up\"}"), "layout.regions.submixer.strip.fader.direction");
+        Refused(Regions("\"submixer\":{\"template\":\"mix-banks\",\"orientation\":\"grid\"}"), "layout.regions.submixer.orientation");
+        Refused(Regions("\"submixer\":{\"template\":\"mix-banks\",\"master\":{\"fader\":{\"direction\":1}}}"),
+            "layout.regions.submixer.master.fader.direction");
+        Taken(Bank("\"label\":{},\"meter\":{},\"fader\":{}"));
+    }
+
+    [Fact]
+    public void TheBankCountAndTheSelectionDefaultsAreBounded()
+    {
+        string Banks(string option) => Regions("\"submixer\":{\"template\":\"mix-banks\"," + option + "}");
+        foreach (string count in new[] { "0", "5", "2.5", "\"2\"" })
+            Refused(Banks("\"visibleBanks\":" + count), "layout.regions.submixer.visibleBanks");
+        Assert.Equal(SkinFormat.MinVisibleBanks, Taken(Banks("\"visibleBanks\":1")).Submixer.VisibleBanks);
+        Assert.Equal(SkinFormat.MaxVisibleBanks, Taken(Banks("\"visibleBanks\":4")).Submixer.VisibleBanks);
+
+        Refused(Banks("\"selectionDefaults\":\"monitor\""), "layout.regions.submixer.selectionDefaults");
+        foreach (string id in new[] { "\"\"", "\"Monitor\"", "\"mix one\"", "\"mix.one\"", "3", "\"" + new string('a', 65) + "\"" })
+            Refused(Banks("\"selectionDefaults\":[\"monitor\"," + id + "]"), "layout.regions.submixer.selectionDefaults[1]");
+        Refused(Banks("\"selectionDefaults\":[\"monitor\",\"monitor\"]"), "layout.regions.submixer.selectionDefaults[1]");
+        string many = "[" + string.Join(",", Enumerable.Range(0, SkinFormat.MaxSelectionDefaults + 1).Select(i => $"\"mix{i}\"")) + "]";
+        Refused(Banks("\"selectionDefaults\":" + many), "layout.regions.submixer.selectionDefaults");
+        string most = "[" + string.Join(",", Enumerable.Range(0, SkinFormat.MaxSelectionDefaults).Select(i => $"\"mix{i}\"")) + "]";
+        Assert.Equal(SkinFormat.MaxSelectionDefaults, Taken(Banks("\"selectionDefaults\":" + most)).Submixer.SelectionDefaults.Count);
+        // An id may name a mix the user has since deleted; the window skips it.
+        Assert.Equal(["gone", new string('a', 64)], Taken(Banks("\"selectionDefaults\":[\"gone\",\"" + new string('a', 64) + "\"]")).Submixer.SelectionDefaults);
+        Assert.True(SkinLayoutReader.ValidMixId("monitor2"));
+        Assert.False(SkinLayoutReader.ValidMixId(null));
+        Assert.False(SkinLayoutReader.ValidMixId("Monitor"));
+    }
+
+    [Fact]
+    public void ARepeatedKeyInsideATemplateOptionIsRefused()
+    {
+        Refused(Regions("\"submixer\":{\"template\":\"mix-banks\",\"strip\":{\"label\":{\"style\":\"icon\",\"style\":\"text\"}}}"),
+            "layout.regions.submixer.strip.label.style");
+        Refused(Regions("\"inputs\":{\"template\":\"input-rack\",\"template\":\"hardware-panel\"}"), "layout.regions.inputs.template");
+    }
+
+    [Fact]
+    public void ARegionsNarrowestWidthFollowsItsTemplate()
+    {
+        var sizes = new RegionSizes(StripWidth: 76, MixWidth: 232, BankSpacing: 12, Banks: 2, VisibleChannels: 6);
+        // The classic templates, the header and a skin without a layout keep the classic width.
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("inputs", null, sizes));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("inputs", SkinLayoutDefaults.Classic, sizes));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("submixer", SkinLayoutDefaults.Classic, sizes));
+        SkinLayout rack = Taken(Regions("\"inputs\":{\"template\":\"input-rack\"},\"submixer\":{\"template\":\"mix-banks\"}"));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("header", rack, sizes));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("monitor", rack, sizes));
+        // An input rack: three strip widths and the card's padding.
+        Assert.Equal(3 * 76 + SkinLayoutDefaults.CardPadding, SkinLayoutDefaults.RegionMinWidth("inputs", rack, sizes));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth,
+            SkinLayoutDefaults.RegionMinWidth("inputs", rack, sizes with { StripWidth = 200 }));
+        // Upright banks with the master card: each as wide as the card, side by side with the gap.
+        double card = 232 + SkinLayoutDefaults.BankPadding;
+        Assert.Equal(Math.Min(600, 2 * card + 12 + SkinLayoutDefaults.CardPadding), SkinLayoutDefaults.RegionMinWidth("submixer", rack, sizes));
+        Assert.Equal(card + SkinLayoutDefaults.CardPadding, SkinLayoutDefaults.RegionMinWidth("submixer", rack, sizes with { Banks = 1 }));
+        // Master strips: one channel strip and the master strip, then the rest scroll.
+        SkinLayout strips = Taken(Regions("\"submixer\":{\"template\":\"mix-banks\",\"master\":{\"template\":\"master-strip\"}}"));
+        double bank = 2 * 76 + SkinLayoutDefaults.StripSpacing + SkinLayoutDefaults.BankPadding;
+        Assert.Equal(2 * bank + 12 + SkinLayoutDefaults.CardPadding, SkinLayoutDefaults.RegionMinWidth("submixer", strips, sizes));
+        Assert.Equal(76 + SkinLayoutDefaults.BankPadding + SkinLayoutDefaults.CardPadding,
+            SkinLayoutDefaults.RegionMinWidth("submixer", strips, sizes with { Banks = 1, VisibleChannels = 0 }));
+        // Banks one above the other need one bank's width.
+        SkinLayout column = Taken(Regions("\"submixer\":{\"template\":\"mix-banks\",\"orientation\":\"vertical\",\"master\":{\"template\":\"master-strip\"}}"));
+        Assert.Equal(bank + SkinLayoutDefaults.CardPadding, SkinLayoutDefaults.RegionMinWidth("submixer", column, sizes with { Banks = 4 }));
+        // A send list: three strip widths for its rows.
+        SkinLayout list = Taken(Regions("\"submixer\":{\"template\":\"mix-banks\",\"visibleBanks\":1,\"strip\":{\"template\":\"send-list\"},\"master\":{\"template\":\"master-strip\"}}"));
+        Assert.Equal(3 * 76 + SkinLayoutDefaults.BankPadding + SkinLayoutDefaults.CardPadding,
+            SkinLayoutDefaults.RegionMinWidth("submixer", list, sizes with { Banks = 1 }));
+        // Never more than a classic section.
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("submixer", rack, sizes with { Banks = 4 }));
+    }
 }

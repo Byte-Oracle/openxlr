@@ -4,6 +4,7 @@
         xmlns:vm="using:OpenXLR.UI"
         xmlns:skin="using:OpenXLR.UI.Skinning"
         xmlns:layout="using:OpenXLR.UI.Layout"
+        xmlns:views="using:OpenXLR.UI.Views"
         x:Class="OpenXLR.UI.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="OpenXLR" Width="1040" Height="900" MinHeight="480"
@@ -228,7 +229,11 @@
           ToolTip.Tip="{loc:Text Key=DragToAnotherSectionArrowKeysMove}"/>
           <TextBlock Text="{loc:Text Key=INPUTS}" Classes="h" VerticalAlignment="Center"/>
         </StackPanel></Expander.Header>
-      <StackPanel Classes="dev" Spacing="4">
+      <!-- The hardware panel, or a skin's input rack in its place: one of the
+           two shows, both bound to the same properties. -->
+      <Panel>
+      <views:InputRackView Name="InputRack" IsVisible="False"/>
+      <StackPanel Name="HardwarePanel" Classes="dev" Spacing="4">
 
         <!-- XLR 1 -->
         <Grid ColumnDefinitions="90,*,64,Auto">
@@ -401,6 +406,7 @@
           <ToggleButton Grid.Column="4" Content="{loc:Text Key=LevelLock}" IsChecked="{Binding AuxLevelLock, Mode=TwoWay}"/>
         </Grid>
       </StackPanel>
+      </Panel>
       </Expander>
     </Border>
 
@@ -587,12 +593,16 @@
           <Button Content="{loc:Text Key=DockMixer}" HorizontalAlignment="Left" Click="OnDockMixer"/>
         </StackPanel>
       <ContentControl Name="MixerHost" HorizontalContentAlignment="Stretch">
-      <DockPanel>
-        <TextBlock DockPanel.Dock="Top" Text="{Binding MixerPlaceholder}" TextWrapping="Wrap"
+      <!-- The panel Pop out moves: the channel tiles below, or a skin's mix
+           banks in their place (Views/MixerPanel.axaml). -->
+      <views:MixerPanel Name="MixerPanel">
+      <views:MixerPanel.Header>
+      <StackPanel>
+        <TextBlock Text="{Binding MixerPlaceholder}" TextWrapping="Wrap"
                    Classes="note" IsVisible="{Binding !HasMixer}"/>
 
         <!-- the compact and mini views' choices; the view itself is chosen in Options -->
-        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8" IsVisible="{Binding ShowChannelSelector}">
+        <StackPanel Spacing="4" Margin="0,0,0,8" IsVisible="{Binding ShowChannelSelector}">
           <WrapPanel>
             <ComboBox Name="CompactChannelPicker" ItemsSource="{Binding Channels}" Margin="0,0,8,4"
                       SelectedItem="{Binding SelectedCompactChannel, Mode=TwoWay}" MinWidth="150" MaxWidth="260"
@@ -609,7 +619,10 @@
           <TextBlock Text="{Binding ViewPreferenceError}" Classes="warn" TextWrapping="Wrap"
                      IsVisible="{Binding ViewPreferenceError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         </StackPanel>
-
+      </StackPanel>
+      </views:MixerPanel.Header>
+      <views:MixerPanel.Tiles>
+      <DockPanel>
         <TextBlock Name="InputChannelHeading" DockPanel.Dock="Top" Text="{loc:Text Key=InputChannelsHeading}"
                    Classes="h" Margin="0,0,0,8" IsVisible="{Binding HasMixer}"/>
 
@@ -739,6 +752,8 @@
           </ItemsControl>
         </ScrollViewer>
       </DockPanel>
+      </views:MixerPanel.Tiles>
+      </views:MixerPanel>
       </ContentControl>
       </Grid>
       </Expander>

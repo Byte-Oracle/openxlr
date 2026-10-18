@@ -38,8 +38,9 @@ public sealed class RegionHost
 /// wherever they stand, with the same contents and the same data context,
 /// and a top-level stack reuses the panel the window was drawn with.
 ///
-/// Every region keeps the width it needs, <see cref="SkinLayoutDefaults.RowSectionMinWidth"/>,
-/// wherever its container gives it a width of its own; when the tree needs
+/// Every region keeps the width it needs, which its template decides
+/// (<see cref="SkinLayoutDefaults.RegionMinWidth"/>), wherever its container
+/// gives it a width of its own; when the tree needs
 /// more than the window has, it scrolls sideways instead of squeezing a
 /// region. Heights follow the contents, since the page scrolls downwards.
 /// </summary>
@@ -54,13 +55,20 @@ internal sealed class DesktopLayoutHost
     private SectionArrangement? _arrangement;
     private Dictionary<string, Panel> _panels = new(StringComparer.Ordinal);
     private Dictionary<SkinLayoutChild, LayoutSlot> _slots = new(ReferenceEqualityComparer.Instance);
+    private readonly Func<string, double> _minimumWidth;
 
     /// <param name="hosts">Each region's host, by region id: the header card and the five section cards.</param>
     /// <param name="page">The page the header heads when the tree leaves it out.</param>
     /// <param name="classic">The panel the sections were drawn in, reused for a top-level stack.</param>
     /// <param name="scroll">The scroller the tree sits in, which scrolls it sideways when it is wider than the window.</param>
-    internal DesktopLayoutHost(IReadOnlyDictionary<string, Control> hosts, Panel page, StackPanel classic, ScrollViewer scroll)
+    /// <param name="minimumWidth">
+    /// The narrowest a region can be drawn, by the template it wears now;
+    /// <see cref="SkinLayoutDefaults.RowSectionMinWidth"/> for every region when it is missing.
+    /// </param>
+    internal DesktopLayoutHost(IReadOnlyDictionary<string, Control> hosts, Panel page, StackPanel classic, ScrollViewer scroll,
+        Func<string, double>? minimumWidth = null)
     {
+        _minimumWidth = minimumWidth ?? (_ => SkinLayoutDefaults.RowSectionMinWidth);
         _hosts = hosts;
         _header = hosts[SkinLayoutRegions.Header];
         _page = page;
@@ -326,8 +334,9 @@ internal sealed class DesktopLayoutHost
     /// <summary>A region's preferred width where its place honours one, raised to what it needs.</summary>
     private double RegionWidth(SkinLayoutContainer parent, SkinLayoutChild child)
     {
-        double? preferred = OwnWidth(parent, child) ? _arrangement!.OptionsFor(RegionOf(child)).Width : null;
-        return Math.Max(SkinLayoutDefaults.RowSectionMinWidth, preferred ?? 0);
+        string region = RegionOf(child);
+        double? preferred = OwnWidth(parent, child) ? _arrangement!.OptionsFor(region).Width : null;
+        return Math.Max(_minimumWidth(region), preferred ?? 0);
     }
 
     /// <summary>The width a child needs to show without squeezing anything in it.</summary>

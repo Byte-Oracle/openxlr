@@ -1,0 +1,310 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:OpenXLR.UI.Localization"
+             xmlns:vm="using:OpenXLR.UI"
+             xmlns:skin="using:OpenXLR.UI.Skinning"
+             xmlns:layout="using:OpenXLR.UI.Layout"
+             x:Class="OpenXLR.UI.Views.MixerPanel">
+
+  <!-- The submixer's one panel, which Pop out moves between the main window
+       and its own window. It holds whichever presentation the skin chose:
+       the channel tiles, written in MainWindow.axaml and handed in as Tiles,
+       or the mix banks below. Both draw the same channel, mix and send
+       objects; switching between them builds nothing but the banks. Every
+       colour, size and radius here is an Ox.* token. -->
+
+  <UserControl.Resources>
+    <!-- A bank's cell, by the skin's strip template. -->
+    <layout:StripTemplateSelector x:Key="BankCells">
+      <DataTemplate x:Key="vertical-strip" x:DataType="layout:BankCellViewModel">
+        <Border Classes="tile strip upright" Name="BankCell" IsVisible="{Binding Shown}" VerticalAlignment="Top">
+          <DockPanel>
+            <Button DockPanel.Dock="Top" Classes="ghost reorderHandle" Classes.fixedPlace="{Binding HandleHidden}"
+                    Content="↔" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"
+                    AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                    ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+            <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
+              <StackPanel layout:StripPanel.Part="identity" Spacing="2">
+                <TextBlock Text="{Binding Channel.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                           HorizontalAlignment="Center" IsVisible="{Binding ShowsIcon}"
+                           AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                <TextBlock Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                           TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" IsVisible="{Binding ShowsName}"
+                           ToolTip.Tip="{Binding Channel.Name}"/>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1"
+                          ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}"
+                                 AutomationProperties.Name="{Binding LeftLevelName}"/>
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}"
+                                 AutomationProperties.Name="{Binding RightLevelName}"/>
+              </StackPanel>
+              <Panel layout:StripPanel.Part="fader">
+                <Slider Classes="stripFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                        Orientation="{Binding Spec.FaderOrientation}" IsDirectionReversed="{Binding Spec.FaderReversed}"
+                        Value="{Binding Send.Level, Mode=TwoWay}" AutomationProperties.Name="{Binding SendName}"/>
+              </Panel>
+              <Panel layout:StripPanel.Part="value">
+                <TextBlock Text="{Binding Send.LevelText}" Classes="val" FontSize="11" HorizontalAlignment="Center"/>
+              </Panel>
+              <Panel layout:StripPanel.Part="mute">
+                <ToggleButton Classes="mute mutemini" IsChecked="{Binding Send.Muted, Mode=TwoWay}"
+                              Padding="7,2" FontSize="11" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                              HorizontalAlignment="Center" AutomationProperties.Name="{Binding MuteName}"
+                              ToolTip.Tip="{Binding MuteName}"/>
+              </Panel>
+            </layout:StripPanel>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+      <DataTemplate x:Key="send-list" x:DataType="layout:BankCellViewModel">
+        <Border Classes="strip" Name="BankCell" IsVisible="{Binding Shown}" Padding="0,2">
+          <DockPanel>
+            <Button DockPanel.Dock="Left" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                    Content="↔" Tag="{Binding Channel}" Margin="0,0,4,0"
+                    AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                    ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+            <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
+              <!-- a fixed column, so the rows' faders line up; the name shortens to fit it -->
+              <DockPanel layout:StripPanel.Part="identity" VerticalAlignment="Center" Width="{DynamicResource Ox.Mixer.StripWidth}">
+                <TextBlock DockPanel.Dock="Left" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                           Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" Margin="0,0,4,0"
+                           VerticalAlignment="Center" IsVisible="{Binding ShowsIcon}"
+                           AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                <TextBlock Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding ShowsName}"
+                           ToolTip.Tip="{Binding Channel.Name}"/>
+              </DockPanel>
+              <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1"
+                          VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}"
+                                 AutomationProperties.Name="{Binding LeftLevelName}"/>
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}"
+                                 AutomationProperties.Name="{Binding RightLevelName}"/>
+              </StackPanel>
+              <Panel layout:StripPanel.Part="fader" VerticalAlignment="Center">
+                <Slider Classes="stripFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                        Orientation="{Binding Spec.FaderOrientation}" IsDirectionReversed="{Binding Spec.FaderReversed}"
+                        Value="{Binding Send.Level, Mode=TwoWay}" AutomationProperties.Name="{Binding SendName}"/>
+              </Panel>
+              <Panel layout:StripPanel.Part="value" VerticalAlignment="Center" MinWidth="28">
+                <TextBlock Text="{Binding Send.LevelText}" Classes="val" FontSize="11" HorizontalAlignment="Right"/>
+              </Panel>
+              <Panel layout:StripPanel.Part="mute" VerticalAlignment="Center">
+                <ToggleButton Classes="mute mutemini" IsChecked="{Binding Send.Muted, Mode=TwoWay}"
+                              Padding="7,2" FontSize="11" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                              AutomationProperties.Name="{Binding MuteName}" ToolTip.Tip="{Binding MuteName}"/>
+              </Panel>
+            </layout:StripPanel>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+    </layout:StripTemplateSelector>
+
+    <!-- A bank's master, by the skin's master template. Built again for each
+         mix the bank shows, never rebound from one to the next. -->
+    <layout:StripTemplateSelector x:Key="BankMasters">
+      <DataTemplate x:Key="master-card" x:DataType="layout:BankMasterViewModel">
+        <Border Classes="tile" Name="BankMaster" Padding="10">
+          <StackPanel Spacing="6">
+            <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
+              <Grid layout:StripPanel.Part="identity" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                <TextBlock Text="{Binding Mix.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
+                           AutomationProperties.Name="{Binding Mix.Name}" ToolTip.Tip="{Binding Mix.Name}">
+                  <TextBlock.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                      <Binding Path="Spec.WantsIcon"/>
+                      <Binding Path="Mix.Appearance.HasIcon"/>
+                    </MultiBinding>
+                  </TextBlock.IsVisible>
+                </TextBlock>
+                <TextBlock Grid.Column="1" Text="{Binding Mix.Name}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
+                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Mix.Name}">
+                  <TextBlock.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                      <Binding Path="Spec.WantsName"/>
+                      <Binding Path="!Mix.Appearance.HasIcon"/>
+                    </MultiBinding>
+                  </TextBlock.IsVisible>
+                </TextBlock>
+              </Grid>
+              <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1">
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Mix.MeterL}" AutomationProperties.Name="{loc:Text Key=LeftLevel}"/>
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Mix.MeterR}" AutomationProperties.Name="{loc:Text Key=RightLevel}"/>
+              </StackPanel>
+              <Panel layout:StripPanel.Part="fader">
+                <Slider Classes="stripFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="{Binding Mix.VolumeRange.Maximum}"
+                        Orientation="{Binding Spec.FaderOrientation}" IsDirectionReversed="{Binding Spec.FaderReversed}"
+                        Value="{Binding Mix.Volume, Mode=TwoWay}"
+                        AutomationProperties.Name="{Binding Mix.Name, StringFormat={loc:Text Key=MixFaderName}}"/>
+              </Panel>
+              <Panel layout:StripPanel.Part="value">
+                <TextBlock Text="{Binding Mix.VolumeText}" Classes="val" HorizontalAlignment="Right"/>
+              </Panel>
+              <Grid layout:StripPanel.Part="mute" ColumnDefinitions="*,Auto">
+                <ToggleButton Content="{loc:Text Key=Mute}" Classes="mute" IsChecked="{Binding Mix.Muted, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Mix.Name, StringFormat={loc:Text Key=MixMuteName}}"/>
+                <ToggleButton Grid.Column="1" Content="150%" IsChecked="{Binding Mix.VolumeRange.Boost, Mode=TwoWay}"
+                              IsVisible="{Binding Mix.IsMonitor}" Margin="6,0,0,0"
+                              ToolTip.Tip="{loc:Text Key=AllowThisMonitorMixAbove100Up}"/>
+              </Grid>
+            </layout:StripPanel>
+            <Button Content="{Binding Mix.Inserts.ButtonText}" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" Padding="8,4" FontSize="12" Click="OnMixInserts"
+                    ToolTip.Tip="{loc:Text Key=StereoPluginsProcessingThisMixBeforeItReaches}"/>
+            <ItemsControl ItemsSource="{Binding Mix.Inserts.Items}" IsVisible="{Binding Mix.Inserts.HasItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:InsertViewModel">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,2,0,0">
+                    <skin:StatusLed IsOn="{Binding IsActive}" Kind="Insert" Margin="0,0,6,0"
+                                    AutomationProperties.Name="{loc:Text Key=PluginState}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="insertName body"
+                               FontSize="11" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}"/>
+                    <ToggleButton Grid.Column="2" Content="{loc:Text Key=NativeHostLetter}" Classes="insertmini"
+                                  IsChecked="{Binding NativeHost, Mode=TwoWay}"
+                                  IsVisible="{Binding CanChooseNativeHost}"
+                                  IsEnabled="{Binding CanTurnNativeHostOn}"
+                                  Margin="4,0,0,0" HorizontalAlignment="Right"
+                                  AutomationProperties.Name="{loc:Text Key=RunThisPluginInItsOwnProcess}"
+                                  ToolTip.Tip="{loc:Text Key=RunThisPluginInItsOwnProcessWhich}"/>
+                    <ToggleButton Grid.Column="3" Content="{loc:Text Key=BypassLetter}" Classes="insertmini bypass"
+                                  IsChecked="{Binding Bypass, Mode=TwoWay}"
+                                  Margin="4,0,2,0" HorizontalAlignment="Right"
+                                  AutomationProperties.Name="{loc:Text Key=BypassThisPlugin}"
+                                  ToolTip.Tip="{loc:Text Key=Bypass}"/>
+                    <Button Grid.Column="4" Content="⚙" Classes="insertmini"
+                            AutomationProperties.Name="{loc:Text Key=OpenThisPluginSControls}"
+                            Click="OnInsertControls" ToolTip.Tip="{Binding ControlsHint}"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ToggleButton Content="{loc:Text Key=ToUSBAuxPort}" IsChecked="{Binding Mix.AuxPortEnabled, Mode=TwoWay}"
+                          IsVisible="{Binding Mix.ShowAuxPortToggle}"
+                          ToolTip.Tip="{loc:Text Key=SendThisMixToTheSecondComputerOn}"/>
+          </StackPanel>
+        </Border>
+      </DataTemplate>
+      <DataTemplate x:Key="master-strip" x:DataType="layout:BankMasterViewModel">
+        <Border Classes="tile strip upright" Name="BankMaster" VerticalAlignment="Top">
+          <StackPanel Spacing="6">
+            <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
+              <StackPanel layout:StripPanel.Part="identity" Spacing="2">
+                <TextBlock Text="{Binding Mix.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
+                           HorizontalAlignment="Center" AutomationProperties.Name="{Binding Mix.Name}" ToolTip.Tip="{Binding Mix.Name}">
+                  <TextBlock.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                      <Binding Path="Spec.WantsIcon"/>
+                      <Binding Path="Mix.Appearance.HasIcon"/>
+                    </MultiBinding>
+                  </TextBlock.IsVisible>
+                </TextBlock>
+                <TextBlock Text="{Binding Mix.Name}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
+                           TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" ToolTip.Tip="{Binding Mix.Name}">
+                  <TextBlock.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                      <Binding Path="Spec.WantsName"/>
+                      <Binding Path="!Mix.Appearance.HasIcon"/>
+                    </MultiBinding>
+                  </TextBlock.IsVisible>
+                </TextBlock>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1">
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Mix.MeterL}" AutomationProperties.Name="{loc:Text Key=LeftLevel}"/>
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Mix.MeterR}" AutomationProperties.Name="{loc:Text Key=RightLevel}"/>
+              </StackPanel>
+              <Panel layout:StripPanel.Part="fader">
+                <Slider Classes="stripFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="{Binding Mix.VolumeRange.Maximum}"
+                        Orientation="{Binding Spec.FaderOrientation}" IsDirectionReversed="{Binding Spec.FaderReversed}"
+                        Value="{Binding Mix.Volume, Mode=TwoWay}"
+                        AutomationProperties.Name="{Binding Mix.Name, StringFormat={loc:Text Key=MixFaderName}}"/>
+              </Panel>
+              <Panel layout:StripPanel.Part="value">
+                <TextBlock Text="{Binding Mix.VolumeText}" Classes="val" FontSize="11" HorizontalAlignment="Center"/>
+              </Panel>
+              <Panel layout:StripPanel.Part="mute">
+                <ToggleButton Classes="mute mutemini" IsChecked="{Binding Mix.Muted, Mode=TwoWay}"
+                              Padding="7,2" FontSize="11" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                              HorizontalAlignment="Center"
+                              AutomationProperties.Name="{Binding Mix.Name, StringFormat={loc:Text Key=MixMuteName}}"
+                              ToolTip.Tip="{Binding Mix.Name, StringFormat={loc:Text Key=MixMuteName}}"/>
+              </Panel>
+            </layout:StripPanel>
+            <ToggleButton Content="150%" IsChecked="{Binding Mix.VolumeRange.Boost, Mode=TwoWay}" IsVisible="{Binding Mix.IsMonitor}"
+                          Padding="4,2" FontSize="11" ToolTip.Tip="{loc:Text Key=AllowThisMonitorMixAbove100Up}"/>
+            <!-- compact effects access: the chain's button and one lamp per
+                 plugin, failing ones lit in the alert colour; bypass and the
+                 rest live in the chain window -->
+            <Button Click="OnMixInserts" Padding="4,2" FontSize="11" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" ToolTip.Tip="{loc:Text Key=StereoPluginsProcessingThisMixBeforeItReaches}">
+              <TextBlock Text="{Binding Mix.Inserts.ButtonText}" TextTrimming="CharacterEllipsis"/>
+            </Button>
+            <ItemsControl ItemsSource="{Binding Mix.Inserts.Items}" IsVisible="{Binding Mix.Inserts.HasItems}" HorizontalAlignment="Center">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel ItemSpacing="3" LineSpacing="3"/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:InsertViewModel">
+                  <skin:StatusLed IsOn="{Binding IsActive}" Kind="Insert" ToolTip.Tip="{Binding Label}"
+                                  AutomationProperties.Name="{Binding Label}"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ToggleButton Content="{loc:Text Key=ToUSBAuxPort}" IsChecked="{Binding Mix.AuxPortEnabled, Mode=TwoWay}"
+                          IsVisible="{Binding Mix.ShowAuxPortToggle}" Padding="4,2" FontSize="11"
+                          ToolTip.Tip="{loc:Text Key=SendThisMixToTheSecondComputerOn}"/>
+          </StackPanel>
+        </Border>
+      </DataTemplate>
+    </layout:StripTemplateSelector>
+  </UserControl.Resources>
+
+  <DockPanel>
+    <ContentPresenter Name="HeaderPresenter" DockPanel.Dock="Top"/>
+    <Panel>
+      <ContentPresenter Name="TilesPresenter"/>
+      <!-- the mix banks: one per chosen mix, each with a picker of every mix -->
+      <ItemsControl Name="BankList" x:DataType="layout:MixerPresentationViewModel" IsVisible="False"
+                    ItemsSource="{Binding Banks}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Name="BankGrid" x:DataType="layout:MixerPresentationViewModel"
+                         Columns="{Binding BankColumns}" Rows="{Binding BankRows}" ColumnSpacing="{DynamicResource Ox.Mixer.BankSpacing}"
+                         RowSpacing="{DynamicResource Ox.Mixer.BankSpacing}"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="layout:MixBankViewModel">
+            <Border Classes="tile" Name="Bank" Padding="8" VerticalAlignment="Top">
+              <DockPanel>
+                <ComboBox DockPanel.Dock="Top" Name="BankPicker" ItemsSource="{Binding Available}"
+                          SelectedItem="{Binding Mix, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,0,0,8"
+                          AutomationProperties.Name="{Binding PickerName}" ToolTip.Tip="{loc:Text Key=BankPickerTip}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MixViewModel">
+                      <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ContentControl Name="BankMasterHost" DockPanel.Dock="{Binding MasterDock}" Content="{Binding Master}"
+                                ContentTemplate="{StaticResource BankMasters}" Margin="{Binding MasterMargin}"
+                                HorizontalContentAlignment="Stretch" VerticalAlignment="Top"/>
+                <ScrollViewer Name="BankCells" HorizontalScrollBarVisibility="{Binding CellsScrollAcross}"
+                              VerticalScrollBarVisibility="Disabled">
+                  <ItemsControl ItemsSource="{Binding Cells}" ItemTemplate="{StaticResource BankCells}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel x:DataType="layout:MixBankViewModel" Orientation="{Binding CellOrientation}" Spacing="4"/>
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                  </ItemsControl>
+                </ScrollViewer>
+              </DockPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Panel>
+  </DockPanel>
+</UserControl>

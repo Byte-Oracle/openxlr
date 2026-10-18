@@ -265,6 +265,12 @@
           "maximum": 24,
           "description": "how tall a meter is"
         },
+        "Ox.Meter.VerticalWidth": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 24,
+          "description": "how thick an upright meter is, where a strip template stands its meter up; it is as long as what it stands beside"
+        },
         "Ox.Meter.Segments": {
           "type": "number",
           "minimum": 2,
@@ -600,6 +606,24 @@
           "minimum": 232,
           "maximum": 500,
           "description": "the width of a mix master tile"
+        },
+        "Ox.Mixer.StripWidth": {
+          "type": "number",
+          "minimum": 56,
+          "maximum": 200,
+          "description": "the width of an upright strip in a mix bank, the name column of a send list, and the unit an input rack and mix banks reckon their narrowest width in"
+        },
+        "Ox.Mixer.VerticalFaderLength": {
+          "type": "number",
+          "minimum": 80,
+          "maximum": 480,
+          "description": "the length of an upright fader"
+        },
+        "Ox.Mixer.BankSpacing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 64,
+          "description": "the gap between mix banks"
         }
       }
     },
@@ -1147,7 +1171,7 @@
           "$ref": "#/$defs/layoutHeaderOptions"
         },
         "inputs": {
-          "$ref": "#/$defs/layoutSectionOptions"
+          "$ref": "#/$defs/layoutInputsOptions"
         },
         "headphones": {
           "$ref": "#/$defs/layoutSectionOptions"
@@ -1159,7 +1183,7 @@
           "$ref": "#/$defs/layoutSectionOptions"
         },
         "submixer": {
-          "$ref": "#/$defs/layoutSectionOptions"
+          "$ref": "#/$defs/layoutSubmixerOptions"
         }
       }
     },
@@ -1188,6 +1212,358 @@
           "minimum": 120,
           "maximum": 4000,
           "description": "A preferred height in pixels, the least the section takes."
+        }
+      }
+    },
+    "layoutInputsOptions": {
+      "type": "object",
+      "description": "INPUTS: the options every section has, and the template it is drawn with.",
+      "additionalProperties": false,
+      "properties": {
+        "visibility": {
+          "enum": [
+            "visible",
+            "collapsed",
+            "hidden"
+          ],
+          "default": "visible",
+          "description": "collapsed folds the section the first time the skin is worn; hidden leaves it out until it is shown from Arrange mode."
+        },
+        "width": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred width in pixels, where the section has a width of its own."
+        },
+        "height": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred height in pixels, the least the section takes."
+        },
+        "template": {
+          "enum": [
+            "hardware-panel",
+            "input-rack"
+          ],
+          "default": "hardware-panel",
+          "description": "hardware-panel is the INPUTS panel; input-rack draws one strip per input channel."
+        },
+        "strip": {
+          "$ref": "#/$defs/layoutInputStrip",
+          "description": "How an input rack's strips are drawn. Only with template input-rack."
+        }
+      },
+      "if": {
+        "required": [
+          "template"
+        ],
+        "properties": {
+          "template": {
+            "const": "input-rack"
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "required": [
+            "strip"
+          ]
+        }
+      }
+    },
+    "layoutSubmixerOptions": {
+      "type": "object",
+      "description": "The submixer: the options every section has, the template it is drawn with, and for mix banks how many show and how they are drawn.",
+      "additionalProperties": false,
+      "properties": {
+        "visibility": {
+          "enum": [
+            "visible",
+            "collapsed",
+            "hidden"
+          ],
+          "default": "visible",
+          "description": "collapsed folds the section the first time the skin is worn; hidden leaves it out until it is shown from Arrange mode."
+        },
+        "width": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred width in pixels, where the section has a width of its own."
+        },
+        "height": {
+          "type": "number",
+          "minimum": 120,
+          "maximum": 4000,
+          "description": "A preferred height in pixels, the least the section takes."
+        },
+        "template": {
+          "enum": [
+            "channel-tiles",
+            "mix-banks"
+          ],
+          "default": "channel-tiles",
+          "description": "channel-tiles is the classic submixer; mix-banks draws banks by mix, each with a picker of every mix."
+        },
+        "orientation": {
+          "enum": [
+            "horizontal",
+            "vertical"
+          ],
+          "default": "horizontal",
+          "description": "The way the banks follow one another. Only with template mix-banks."
+        },
+        "visibleBanks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 2,
+          "description": "How many banks show, never more than there are mixes. Only with template mix-banks."
+        },
+        "selectionDefaults": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]{1,64}$"
+          },
+          "description": "Mix ids the banks start on until the user picks; an id with no mix is skipped. Only with template mix-banks."
+        },
+        "strip": {
+          "$ref": "#/$defs/layoutBankStrip",
+          "description": "How a bank's strips are drawn. Only with template mix-banks."
+        },
+        "master": {
+          "$ref": "#/$defs/layoutMaster",
+          "description": "How a bank's master is drawn. Only with template mix-banks."
+        }
+      },
+      "if": {
+        "required": [
+          "template"
+        ],
+        "properties": {
+          "template": {
+            "const": "mix-banks"
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "orientation"
+              ]
+            },
+            {
+              "required": [
+                "visibleBanks"
+              ]
+            },
+            {
+              "required": [
+                "selectionDefaults"
+              ]
+            },
+            {
+              "required": [
+                "strip"
+              ]
+            },
+            {
+              "required": [
+                "master"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "layoutInputStrip": {
+      "type": "object",
+      "description": "An input rack's strip.",
+      "additionalProperties": false,
+      "properties": {
+        "template": {
+          "enum": [
+            "input-row"
+          ],
+          "default": "input-row"
+        },
+        "partsOrder": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 5,
+          "items": {
+            "enum": [
+              "identity",
+              "meter",
+              "gain",
+              "hardware-controls",
+              "effects"
+            ]
+          },
+          "description": "The input row's parts in the order the strip draws them. Parts left out follow in their default order; a part appears once across partsOrder and hidden."
+        },
+        "hidden": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 4,
+          "items": {
+            "enum": [
+              "meter",
+              "gain",
+              "hardware-controls",
+              "effects"
+            ]
+          },
+          "description": "Parts the strip leaves out. identity is always shown."
+        },
+        "label": {
+          "$ref": "#/$defs/layoutLabel"
+        },
+        "meter": {
+          "$ref": "#/$defs/layoutMeter"
+        }
+      }
+    },
+    "layoutBankStrip": {
+      "type": "object",
+      "description": "A mix bank's strip: one channel's send into the bank's mix.",
+      "additionalProperties": false,
+      "properties": {
+        "template": {
+          "enum": [
+            "vertical-strip",
+            "send-list"
+          ],
+          "default": "vertical-strip",
+          "description": "vertical-strip stacks a send's parts in a column, the strips side by side; send-list puts them in a row, the rows one above the other."
+        },
+        "partsOrder": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 5,
+          "items": {
+            "enum": [
+              "identity",
+              "meter",
+              "fader",
+              "value",
+              "mute"
+            ]
+          },
+          "description": "The send strip's parts in the order the strip draws them. Parts left out follow in their default order; a part appears once across partsOrder and hidden."
+        },
+        "hidden": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 4,
+          "items": {
+            "enum": [
+              "meter",
+              "fader",
+              "value",
+              "mute"
+            ]
+          },
+          "description": "Parts the strip leaves out. identity is always shown."
+        },
+        "label": {
+          "$ref": "#/$defs/layoutLabel"
+        },
+        "meter": {
+          "$ref": "#/$defs/layoutMeter"
+        },
+        "fader": {
+          "$ref": "#/$defs/layoutFader"
+        }
+      }
+    },
+    "layoutMaster": {
+      "type": "object",
+      "description": "A mix bank's master.",
+      "additionalProperties": false,
+      "properties": {
+        "template": {
+          "enum": [
+            "master-card",
+            "master-strip"
+          ],
+          "default": "master-card",
+          "description": "master-card is the mix tile under the strips; master-strip is one more strip at their end."
+        },
+        "label": {
+          "$ref": "#/$defs/layoutLabel"
+        },
+        "meter": {
+          "$ref": "#/$defs/layoutMeter"
+        },
+        "fader": {
+          "$ref": "#/$defs/layoutFader"
+        }
+      }
+    },
+    "layoutLabel": {
+      "type": "object",
+      "description": "How a strip names its channel or mix.",
+      "additionalProperties": false,
+      "properties": {
+        "style": {
+          "enum": [
+            "text",
+            "icon-and-text",
+            "icon"
+          ],
+          "default": "text",
+          "description": "icon shows the icon alone where there is one; a screen reader still hears the whole name."
+        }
+      }
+    },
+    "layoutMeter": {
+      "type": "object",
+      "description": "A strip's meter. It is always the channel's or the mix's own level.",
+      "additionalProperties": false,
+      "properties": {
+        "orientation": {
+          "enum": [
+            "horizontal",
+            "vertical"
+          ],
+          "description": "Flat or upright. Upright by default in a vertical strip or a master strip."
+        },
+        "placement": {
+          "enum": [
+            "below-label",
+            "beside-label",
+            "beside-fader"
+          ],
+          "description": "below-label is a part of its own; beside-label and beside-fader stand it beside that part. beside-fader by default in a vertical strip or a master strip."
+        }
+      }
+    },
+    "layoutFader": {
+      "type": "object",
+      "description": "A strip's fader.",
+      "additionalProperties": false,
+      "properties": {
+        "orientation": {
+          "enum": [
+            "horizontal",
+            "vertical"
+          ],
+          "description": "Flat or upright. Upright by default in a vertical strip or a master strip."
+        },
+        "direction": {
+          "enum": [
+            "normal",
+            "reversed"
+          ],
+          "default": "normal",
+          "description": "reversed puts the maximum at the bottom or at the left."
         }
       }
     },

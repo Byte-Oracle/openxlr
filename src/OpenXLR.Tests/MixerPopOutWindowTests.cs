@@ -137,6 +137,55 @@ internal static class MixerPopOutWindowTests
         }
     }
 
+    /// <summary>
+    /// The mix banks detach with the panel they are drawn in: the same panel,
+    /// the same banks and cells, the faders still writing to the window's
+    /// sends, a width the banks fit, and the same panel back on docking.
+    /// Run from the skin layout test while a skin with banks is worn.
+    /// </summary>
+    internal static void CheckBanks(MainWindow main, MainViewModel vm)
+    {
+        var host = main.FindControl<ContentControl>("MixerHost")!;
+        var panel = Assert.IsType<OpenXLR.UI.Views.MixerPanel>(host.Content);
+        var banks = Assert.IsType<OpenXLR.UI.Layout.MixerPresentationViewModel>(panel.Banks);
+        OpenXLR.UI.Layout.MixBankViewModel[] bankModels = [.. banks.Banks];
+        MixerWindow popped = main.PopOutMixer();
+        try
+        {
+            Layout(popped, 800, 600);
+            Assert.Null(host.Content);
+            Assert.Same(panel, popped.FindControl<ScrollViewer>("MixerScroll")!.Content);
+            Assert.Same(banks, panel.Banks);
+            Assert.Equal(bankModels, banks.Banks);
+            Assert.True(panel.BankItems.IsEffectivelyVisible);
+            Border[] tiles = SkinLayoutWindowTests.Banks(popped);
+            Assert.Equal(bankModels.Length, tiles.Length);
+            AssertNoOverlap(tiles);
+            Assert.True(panel.Bounds.Width >= panel.MinimumWidth() + 8 - 0.5, $"the panel is {panel.Bounds.Width} wide");
+            var cell = SkinLayoutWindowTests.BankCells(popped)[0][0];
+            var model = (OpenXLR.UI.Layout.BankCellViewModel)cell.DataContext!;
+            Slider fader = cell.GetVisualDescendants().OfType<Slider>().Single();
+            fader.Value = 0.33;
+            Assert.Equal(0.33, model.Send!.Level);
+            Assert.Same(vm.Channels.Single(c => c.Id == model.Channel.Id).Sends.Single(s => s.MixId == bankModels[0].Mix!.Id), model.Send);
+            Layout(popped, 360, 400);
+            Assert.True(panel.Bounds.Width >= panel.MinimumWidth() + 8 - 0.5);
+            Assert.True(popped.FindControl<ScrollViewer>("MixerScroll")!.Extent.Width
+                > popped.FindControl<ScrollViewer>("MixerScroll")!.Viewport.Width, "a narrow mixer window scrolls the banks sideways");
+            Capture(popped, "popout-banks-360");
+        }
+        finally
+        {
+            popped.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
+        Assert.Same(panel, host.Content);
+        Assert.Same(banks, panel.Banks);
+        Assert.Equal(bankModels, banks.Banks);
+        Layout(main, 1040, 1200);
+        Assert.True(panel.BankItems.IsEffectivelyVisible);
+    }
+
     private static Slider Master(Window window, MainViewModel vm) => window.GetVisualDescendants().OfType<Slider>()
         .Single(s => s.DataContext == vm.Mixes[0]);
 

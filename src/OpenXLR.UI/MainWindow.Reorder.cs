@@ -58,7 +58,7 @@ public partial class MainWindow
         var hosts = new Dictionary<string, Control>(StringComparer.Ordinal) { [SkinLayoutRegions.Header] = HeaderCard };
         foreach (string region in SkinLayoutRegions.Sections)
             hosts[region] = (Control)this.FindControl<Expander>(SectionArrangement.TileFor(region))!.Parent!;
-        _layoutHost = new DesktopLayoutHost(hosts, MixerContent, SectionCards, SectionScroll);
+        _layoutHost = new DesktopLayoutHost(hosts, MixerContent, SectionCards, SectionScroll, RegionMinWidth);
         _layoutsSeen = [.. UiSettings.Load().SkinLayoutsSeen.Select(k => (k.Skin, k.Version))];
         // The overflow menu's actions keep the window's data context while the menu is closed.
         HeaderOverflowItems.Bind(DataContextProperty, this.GetObservable(DataContextProperty));
@@ -88,8 +88,13 @@ public partial class MainWindow
         {
             SkinService.Changed -= OnSkinArrangement;
             CancelReorder();
+            DisposePresentations();
         };
-        DataContextChanged += (_, _) => WatchMixerView();
+        DataContextChanged += (_, _) =>
+        {
+            WatchMixerView();
+            if (_arrangement is { } arrangement) ApplyTemplates(arrangement);
+        };
         WatchMixerView();
     }
 
@@ -248,6 +253,10 @@ public partial class MainWindow
         if (_arrangement is { } current && current.SameOrigin(next))
             next = next with { Placement = current.Placement, Shown = current.Shown };
         ApplyArrangement(next);
+        // An input rack's and the banks' narrowest widths follow the strip
+        // width, which Touch sizing and a skin's tokens change without
+        // changing the arrangement.
+        _layoutHost.UpdateWidths();
         if (note is not null) ReportArrangement(note);
     }
 
@@ -274,6 +283,7 @@ public partial class MainWindow
                 _lastPointer.Capture(null);
         }
 
+        ApplyTemplates(next);
         _layoutHost.Apply(next);
         ApplyHeaderActions(next.Header);
         foreach (Button handle in SectionHandles()) ClearDropTarget(handle);
@@ -465,10 +475,12 @@ public partial class MainWindow
 
     /// <summary>
     /// True when a handle's group runs down the window: a section in a
-    /// vertical stack. Sections in a row, and the channel and mix tiles, run across.
+    /// vertical stack, or a channel in the input rack or a send list. Sections
+    /// in a row, and the channel and mix tiles, run across.
     /// </summary>
     private bool AlongY(Button handle) => Group(handle) == 0
-        && _arrangement?.OrientationOf(RegionOf(handle)) is null or SkinLayoutOrientation.Vertical;
+        ? _arrangement?.OrientationOf(RegionOf(handle)) is null or SkinLayoutOrientation.Vertical
+        : handle.Classes.Contains("alongY");
 
     private async void OnReorderReleased(object? sender, PointerReleasedEventArgs e)
     {

@@ -174,4 +174,16 @@ public static class SkinFormat
 
     /// <summary>The largest preferred <c>width</c> or <c>height</c> a section may ask for.</summary>
     public const double MaxRegionSize = 4000;
+
+    /// <summary>The fewest mix banks a submixer of banks shows.</summary>
+    public const int MinVisibleBanks = 1;
+
+    /// <summary>The most mix banks a submixer of banks shows. Every mix stays reachable through each bank's picker.</summary>
+    public const int MaxVisibleBanks = 4;
+
+    /// <summary>How many mix ids <c>selectionDefaults</c> may list.</summary>
+    public const int MaxSelectionDefaults = 16;
+
+    /// <summary>The longest mix id <c>selectionDefaults</c> may list. Ids use lowercase letters, digits, hyphens and underscores.</summary>
+    public const int MaxMixIdLength = 64;
 }

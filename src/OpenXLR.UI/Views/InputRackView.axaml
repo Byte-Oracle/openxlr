@@ -1,0 +1,251 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:OpenXLR.UI.Localization"
+             xmlns:vm="using:OpenXLR.UI"
+             xmlns:skin="using:OpenXLR.UI.Skinning"
+             xmlns:layout="using:OpenXLR.UI.Layout"
+             x:Class="OpenXLR.UI.Views.InputRackView"
+             x:DataType="layout:InputRackViewModel">
+
+  <!-- INPUTS as a rack of strips, one per channel in the mixer's order. The
+       hardware controls are the INPUTS panel's, bound to the same properties
+       with the same capability, lock and phantom settling rules; a skin only
+       orders the parts and leaves some out. -->
+
+  <UserControl.Resources>
+    <!-- One plugin of an input's chain at a glance, as the INPUTS panel shows it. -->
+    <DataTemplate x:Key="InsertRow" x:DataType="vm:InsertViewModel">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,0,0,3">
+        <skin:StatusLed IsOn="{Binding IsActive}" Kind="Insert" Margin="0,0,8,0"
+                        AutomationProperties.Name="{loc:Text Key=PluginState}"/>
+        <Grid Grid.Column="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+              ColumnSpacing="8" VerticalAlignment="Center" ClipToBounds="True">
+          <TextBlock Text="{Binding Label}" Classes="insertName body" FontSize="12"
+                     TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}"/>
+          <TextBlock Grid.Column="1" Text="{Binding StateText}" Classes="h" FontSize="11"/>
+          <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="warn"
+                     FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
+        </Grid>
+        <ToggleButton Grid.Column="2" Content="{loc:Text Key=NativeHostLetter}" Classes="insertmini"
+                      IsChecked="{Binding NativeHost, Mode=TwoWay}"
+                      IsVisible="{Binding CanChooseNativeHost}"
+                      IsEnabled="{Binding CanTurnNativeHostOn}"
+                      Margin="4,0,0,0"
+                      AutomationProperties.Name="{loc:Text Key=RunThisPluginInItsOwnProcess}"
+                      ToolTip.Tip="{loc:Text Key=RunThisPluginInItsOwnProcessWhich}"/>
+        <ToggleButton Grid.Column="3" Content="{loc:Text Key=BypassLetter}" Classes="insertmini bypass"
+                      IsChecked="{Binding Bypass, Mode=TwoWay}"
+                      Margin="4,0,2,0"
+                      AutomationProperties.Name="{loc:Text Key=BypassThisPlugin}"
+                      ToolTip.Tip="{loc:Text Key=Bypass}"/>
+        <Button Grid.Column="4" Content="⚙" Classes="insertmini"
+                AutomationProperties.Name="{loc:Text Key=OpenThisPluginSControls}"
+                Click="OnInsertControls" ToolTip.Tip="{Binding ControlsHint}"/>
+      </Grid>
+    </DataTemplate>
+
+    <layout:StripTemplateSelector x:Key="InputRows">
+      <!-- XLR 1: the gain with its lock, every switch the interface has, the voice tune strength and the chain -->
+      <DataTemplate x:Key="xlr1" x:DataType="layout:InputStripViewModel">
+        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}">
+          <DockPanel>
+            <Button DockPanel.Dock="Top" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                    Content="↕" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"
+                    AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                    ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+            <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
+              <!-- a grid, not a horizontal stack: the name gets what the icon leaves and trims, whatever the font -->
+              <Grid layout:StripPanel.Part="identity" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                <TextBlock Text="{Binding Channel.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                           IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                           TextTrimming="CharacterEllipsis" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+              </Grid>
+              <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1">
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="gain" Classes="dev">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                  <Slider Name="RackGain" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
+                          Value="{Binding Main.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
+                          AutomationProperties.Name="{loc:Text Key=XLR1Gain}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Main.GainText}" Classes="val" VerticalAlignment="Center"/>
+                  <ToggleButton Grid.Column="2" Content="{loc:Text Key=Lock}" Classes="mute" FontSize="11" Padding="8,2"
+                                MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding Main.ShowGainLock}"
+                                IsChecked="{Binding Main.GainLocked, Mode=TwoWay}" VerticalAlignment="Center"
+                                ToolTip.Tip="{loc:Text Key=GainLockTheDaemonRejectsEveryGainChange}"/>
+                </Grid>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" Spacing="4">
+                <WrapPanel Name="RackInputControls" ItemSpacing="6" LineSpacing="4">
+                  <ToggleButton Content="{Binding Main.MuteLabel}" Classes="mute" IsChecked="{Binding Main.Mute, Mode=TwoWay}"
+                                IsEnabled="{Binding !Main.PhantomSettling}"
+                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                  <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding Main.LowCut, Mode=TwoWay}" IsVisible="{Binding Main.CapLowCut}"/>
+                  <ToggleButton Content="{Binding Main.SoftLowCutText}" IsVisible="{Binding Main.ShowSoftLowCut}"
+                                IsChecked="{Binding Main.SoftLowCutOn, Mode=OneWay}" Click="OnCycleSoftLowCut"
+                                ToolTip.Tip="{loc:Text Key=HostSideLowCutForThisDeviceIts}"/>
+                  <ToggleButton Content="{loc:Text Key=ClipGuard}" IsVisible="{Binding Main.ShowSoftClipGuard}"
+                                IsChecked="{Binding Main.SoftClipGuard, Mode=TwoWay}"
+                                IsEnabled="{Binding Main.SoftClipGuardAvailable}"
+                                ToolTip.Tip="{Binding Main.SoftClipGuardTip}"/>
+                  <ToggleButton Content="{loc:Text Key=Expander}" IsChecked="{Binding Main.Expander, Mode=TwoWay}" IsVisible="{Binding Main.CapExpander}"/>
+                  <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding Main.VoiceTune, Mode=TwoWay}" IsVisible="{Binding Main.CapVoiceTune}"/>
+                  <ToggleButton Name="RackPhantom" Content="{loc:Text Key=Phantom}" IsChecked="{Binding Main.Phantom, Mode=TwoWay}" IsVisible="{Binding Main.CapPhantom}"/>
+                  <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding Main.ClipGuard, Mode=TwoWay}" IsVisible="{Binding Main.CapClipGuard}"/>
+                  <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Main.Compressor, Mode=TwoWay}" IsVisible="{Binding Main.CapCompressor}"/>
+                </WrapPanel>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" IsVisible="{Binding Main.VoiceTune}">
+                  <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
+                  <Slider Grid.Column="1" vm:FaderInput.Step="1" Minimum="0" Maximum="100"
+                          Value="{Binding Main.VoiceTuneStrength, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=VTStrength}"/>
+                  <TextBlock Grid.Column="2" Text="{Binding Main.VoiceTuneStrengthText}" Classes="val" VerticalAlignment="Center"/>
+                </Grid>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="effects" Spacing="4">
+                <StackPanel Spacing="4" IsVisible="{Binding Main.HasMixer}">
+                  <Button Content="{Binding Main.Inserts.ButtonText}" Padding="12,3" FontSize="12" HorizontalAlignment="Left"
+                          MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                          Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
+                  <ItemsControl ItemsSource="{Binding Main.Inserts.Items}" IsVisible="{Binding Main.Inserts.HasItems}"
+                                ItemTemplate="{StaticResource InsertRow}"/>
+                </StackPanel>
+              </StackPanel>
+            </layout:StripPanel>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+
+      <!-- XLR 2: the same, with the second input's properties, shown only on an interface with two -->
+      <DataTemplate x:Key="xlr2" x:DataType="layout:InputStripViewModel">
+        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}">
+          <DockPanel>
+            <Button DockPanel.Dock="Top" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                    Content="↕" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"
+                    AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                    ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+            <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
+              <!-- a grid, not a horizontal stack: the name gets what the icon leaves and trims, whatever the font -->
+              <Grid layout:StripPanel.Part="identity" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                <TextBlock Text="{Binding Channel.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                           IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                           TextTrimming="CharacterEllipsis" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+              </Grid>
+              <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1">
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="gain" Classes="dev">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                  <Slider vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
+                          Value="{Binding Main.Gain2Db, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
+                          AutomationProperties.Name="{loc:Text Key=XLR2Gain}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Main.Gain2Text}" Classes="val" VerticalAlignment="Center"/>
+                </Grid>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" Spacing="4">
+                <WrapPanel ItemSpacing="6" LineSpacing="4">
+                  <ToggleButton Content="{Binding Main.Mute2Label}" Classes="mute" IsChecked="{Binding Main.Mute2, Mode=TwoWay}"
+                                IsEnabled="{Binding !Main.PhantomSettling2}"
+                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                  <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding Main.LowCut2, Mode=TwoWay}"/>
+                  <ToggleButton Content="{loc:Text Key=Expander}" IsChecked="{Binding Main.Expander2, Mode=TwoWay}"/>
+                  <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding Main.VoiceTune2, Mode=TwoWay}"/>
+                  <ToggleButton Content="{loc:Text Key=Phantom}" IsChecked="{Binding Main.Phantom2, Mode=TwoWay}"/>
+                  <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding Main.ClipGuard2, Mode=TwoWay}"/>
+                  <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Main.Compressor2, Mode=TwoWay}"/>
+                </WrapPanel>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" IsVisible="{Binding Main.VoiceTune2}">
+                  <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
+                  <Slider Grid.Column="1" vm:FaderInput.Step="1" Minimum="0" Maximum="100"
+                          Value="{Binding Main.VoiceTuneStrength2, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=VTStrength}"/>
+                  <TextBlock Grid.Column="2" Text="{Binding Main.VoiceTuneStrength2Text}" Classes="val" VerticalAlignment="Center"/>
+                </Grid>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="effects" Spacing="4">
+                <StackPanel Spacing="4" IsVisible="{Binding Main.HasMixer}">
+                  <Button Content="{Binding Main.Inserts2.ButtonText}" Padding="12,3" FontSize="12" HorizontalAlignment="Left"
+                          MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                          Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
+                  <ItemsControl ItemsSource="{Binding Main.Inserts2.Items}" IsVisible="{Binding Main.Inserts2.HasItems}"
+                                ItemTemplate="{StaticResource InsertRow}"/>
+                </StackPanel>
+              </StackPanel>
+            </layout:StripPanel>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+
+      <!-- Aux In: the USB Aux and Line In level and its lock, where the interface has the stage -->
+      <DataTemplate x:Key="aux" x:DataType="layout:InputStripViewModel">
+        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}">
+          <DockPanel>
+            <Button DockPanel.Dock="Top" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                    Content="↕" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"
+                    AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                    ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+            <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
+              <!-- a grid, not a horizontal stack: the name gets what the icon leaves and trims, whatever the font -->
+              <Grid layout:StripPanel.Part="identity" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                <TextBlock Text="{Binding Channel.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                           IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                           TextTrimming="CharacterEllipsis" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+              </Grid>
+              <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1">
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="gain" Classes="dev" IsVisible="{Binding Main.CapAuxInput}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                  <Slider vm:FaderInput.Step="1" Minimum="-60" Maximum="0" Value="{Binding Main.AuxLevelDb, Mode=TwoWay}"
+                          AutomationProperties.Name="{loc:Text Key=USBAuxIn}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Main.AuxLevelText}" Classes="val" VerticalAlignment="Center"/>
+                </Grid>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" IsVisible="{Binding Main.CapAuxInput}">
+                <ToggleButton Content="{loc:Text Key=LevelLock}" IsChecked="{Binding Main.AuxLevelLock, Mode=TwoWay}" HorizontalAlignment="Left"/>
+              </StackPanel>
+            </layout:StripPanel>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+
+      <!-- an application or capture channel: its name and its meter, which is all it has here -->
+      <DataTemplate x:Key="channel" x:DataType="layout:InputStripViewModel">
+        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}">
+          <DockPanel>
+            <Button DockPanel.Dock="Top" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                    Content="↕" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"
+                    AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                    ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+            <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
+              <StackPanel layout:StripPanel.Part="identity" Spacing="2">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                  <TextBlock Text="{Binding Channel.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                             IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                             TextTrimming="CharacterEllipsis" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+                </Grid>
+                <TextBlock Text="{Binding Channel.CaptureLabel}" Classes="h" FontSize="11" TextTrimming="CharacterEllipsis"
+                           IsVisible="{Binding Channel.CaptureLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1">
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+              </StackPanel>
+            </layout:StripPanel>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+    </layout:StripTemplateSelector>
+  </UserControl.Resources>
+
+  <ItemsControl Name="RackStrips" ItemsSource="{Binding Strips}" ItemTemplate="{StaticResource InputRows}">
+    <ItemsControl.ItemsPanel>
+      <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
+    </ItemsControl.ItemsPanel>
+  </ItemsControl>
+</UserControl>

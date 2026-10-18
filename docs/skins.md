@@ -518,6 +518,7 @@ The rest of an indicator's appearance is shape and size:
 | `Ox.Meter.Track` | brush | #14161b |  | the groove a meter sits in, and an unlit cell |
 | `Ox.Meter.CornerRadius` | radius | 2 | 0 to 48 | the meter's corners, and each cell's |
 | `Ox.Meter.Height` | number | 4 | 2 to 24 | how tall a meter is |
+| `Ox.Meter.VerticalWidth` | number | 4 | 2 to 24 | how thick an upright meter is, where a strip template stands its meter up; it is as long as what it stands beside |
 | `Ox.Meter.Segments` | number | 16 | 2 to 64 | how many cells, `meter: segmented` only |
 | `Ox.Meter.SegmentGap` | number | 2 | 0 to 8 | the gap between cells in pixels, `meter: segmented` only |
 
@@ -674,11 +675,12 @@ skin that only recolours the cards leaves buttons exactly as they are.
 These size the main mixer's controls and strips. Options offers two
 sizings, saved in `ui.json` as `"touchControls"`: Standard wears the values
 below, and Touch raises the five control minimums to 44 units, a channel
-strip to 180 and a mix tile to 280. A skin value larger than that is kept in
-both. While Touch is on, or while a skin sets `Ox.Mixer.ControlMinSize`, a
-slider is also made at least as tall as the control minimum and the
-`Ox.Fader.Thumb.Height` cap, so an enlarged cap stays inside its row. The
-other windows and the plugins' own editors keep their sizes.
+strip to 180, a mix tile to 280 and an upright strip to 96. A skin value
+larger than that is kept in both. While Touch is on, or while a skin sets
+`Ox.Mixer.ControlMinSize`, a slider is also made at least as tall as the
+control minimum and the `Ox.Fader.Thumb.Height` cap, so an enlarged cap
+stays inside its row. The other windows and the plugins' own editors keep
+their sizes.
 
 | Token | Kind | Default | Range | What it paints |
 |---|---|---|---|---|
@@ -689,6 +691,9 @@ other windows and the plugins' own editors keep their sizes.
 | `Ox.Mixer.InsertControlMinSize` | number | 24 | 16 to 64 | the smallest width and height of an insert row's own process, bypass and controls buttons |
 | `Ox.Mixer.ChannelWidth` | number | 132 | 132 to 400 | the width of a submixer channel strip |
 | `Ox.Mixer.MixWidth` | number | 232 | 232 to 500 | the width of a mix master tile |
+| `Ox.Mixer.StripWidth` | number | 76 | 56 to 200 | the width of an upright strip in a mix bank, the name column of a send list, and the unit an input rack and mix banks reckon their narrowest width in |
+| `Ox.Mixer.VerticalFaderLength` | number | 160 | 80 to 480 | the length of an upright fader |
+| `Ox.Mixer.BankSpacing` | number | 12 | 0 to 64 | the gap between mix banks |
 
 ## Images
 
@@ -916,9 +921,10 @@ never bring back one the window hides.
 
 Wherever a container gives a region a width of its own, in a horizontal
 stack, a grid cell or a dock's left or right side, the region is at least
-600 pixels wide, the width every section is held to fit. A region in a
-vertical stack, or along a dock's top or bottom, or filling it, takes the
-container's width. A `size` column smaller than what its region needs
+600 pixels wide, the width every section is held to fit. An input rack and
+mix banks need less, and say how much under [Templates](#templates). A
+region in a vertical stack, or along a dock's top or bottom, or filling
+it, takes the container's width. A `size` column smaller than what its region needs
 grows to fit, and a column of `auto` is as wide as its widest region.
 
 When the tree needs more width than the window has, it scrolls sideways
@@ -973,6 +979,227 @@ an action a skin places. It is always first in the header and always
 shown. The actions in the ⋯ menu are the same controls, with the same
 names for a screen reader; Profiles opens its own menu from there.
 
+### Templates
+
+INPUTS and the submixer can each be drawn with another template, chosen by
+`template` in their entry under `regions`. A template is markup the
+application owns: the skin names it, orders the parts it has and leaves
+some out. It cannot add a control, bind one to something else or move one
+out of its template, so a phantom power switch stays with its input and a
+send fader stays a send fader.
+
+| Option | Template | What it is |
+|---|---|---|
+| `template` | `inputs`, `submixer` | which template draws the section. INPUTS takes `"hardware-panel"`, the INPUTS panel as it has always been and the default, or `"input-rack"`. The submixer takes `"channel-tiles"`, the channel tiles and mix masters as they have always been and the default, or `"mix-banks"` |
+| `strip` | `"input-rack"`, `"mix-banks"` | how one strip of the rack or of a bank is drawn, below |
+| `orientation` | `"mix-banks"` | `"horizontal"`, the default, puts the banks side by side; `"vertical"` one above the other |
+| `visibleBanks` | `"mix-banks"` | how many banks show, from 1 to 4; 2 when it is missing |
+| `selectionDefaults` | `"mix-banks"` | the mixes the banks start on, by the id `mixer.json` gives them, such as `"monitor"` and `"stream"`: at most 16 mix ids, each 1 to 64 lowercase letters, digits, hyphens and underscores |
+| `master` | `"mix-banks"` | how each bank's master is drawn, below |
+
+An option that belongs to another template, such as `strip` with
+`"hardware-panel"` or `visibleBanks` without `"mix-banks"`, drops the
+layout like any other fault.
+
+The input rack draws one strip per channel, in the mixer's channel
+order. The strip of an XLR input holds the parts the INPUTS panel shows for
+it: its gain with the gain lock, its switches and its plugin chain. The
+strip of Aux In holds its level and level lock. These are the INPUTS
+panel's own controls, so a switch the interface does not have stays
+hidden, the gain lock still disables both gains, a mute still waits while
+phantom power settles, and XLR 2 shows only on an interface with two XLR
+inputs. An application or capture channel has no hardware gain and no
+chain of its own, so its strip has only its name and its meter whatever
+the skin orders.
+
+Mix banks draw the submixer by mix instead of by channel. Each bank
+shows one mix: the send of every channel into that mix, then the mix's
+master. Every bank has a picker at its top that lists every mix, so Monitor
+B, Aux and the mixes you added stay reachable with two banks. The skin
+only says which mixes the banks start on:
+
+- A bank starts on the mix you last picked for it under this skin. Without
+  a pick of yours it takes the next mix in `selectionDefaults`, skipping an
+  id that no mix has, and then the next mix in the mixer's order that no
+  other bank shows.
+- Picking a mix another bank shows trades the two banks' mixes, so two
+  banks never show one mix. Your picks are kept in `ui.json` under
+  `skinBankSelections`, one entry for each skin and layout version. The 32
+  most recent skins are kept.
+- When a bank's mix is deleted, or the view stops showing it, the bank
+  moves on to the next mix in the mixer's order that no other bank shows.
+  It never creates, deletes, renames, reorders or reroutes a mix.
+- There are never more banks than mixes the view shows. In the mini view
+  that is the one mix it shows; in the compact view each bank shows only
+  the chosen channel.
+
+A bank's pick changes nothing in the mixer. Channel and mix order stay the
+layout's one order, set in the layout editor or with Arrange, and every
+strip writes to the same send, mix and mute the channel tiles do.
+
+A meter drawn beside a send is the channel's own meter, before its send.
+It is named that way for a screen reader. No template shows the level of a
+send after its fader.
+
+#### Strips and their parts
+
+| Strip option | What it is |
+|---|---|
+| `template` | the strip template. An input rack takes `"input-row"`. A bank takes `"vertical-strip"`, the default, which stacks a send's parts in a column and stands the strips side by side, or `"send-list"`, which puts them in a row and the rows one above the other |
+| `partsOrder` | part names in the order the strip draws them. Parts it leaves out follow in their default order |
+| `hidden` | part names the strip leaves out. A hidden part is not drawn and is out of the tab order |
+| `label` | `{ "style": ... }`, how the strip names its channel, below |
+| `meter` | `{ "orientation": ..., "placement": ... }`, below |
+| `fader` | `{ "orientation": ..., "direction": ... }`, below. Bank strips only, since an input row's gain is the interface's and lies flat |
+
+An input row's parts, in their default order, are `identity`, `meter`,
+`gain`, `hardware-controls` and `effects`. A bank strip's are `identity`,
+`meter`, `fader`, `value` and `mute`.
+
+| Part | What it is |
+|---|---|
+| `identity` | the channel's icon and name. It cannot be hidden |
+| `meter` | the channel's own level meter, left and right |
+| `gain` | the input's hardware gain, or Aux In's level |
+| `hardware-controls` | the input's switches, or Aux In's level lock |
+| `effects` | the input's plugin chain: its button and the chain at a glance |
+| `fader` | the send's level into the bank's mix |
+| `value` | that level as a number |
+| `mute` | the send's mute in the bank's mix |
+
+Each list holds no more names than the strip has parts, and a part
+appears once across `partsOrder` and `hidden`. A part a channel does not
+have is skipped, so ordering `gain` first changes nothing on an
+application channel.
+
+`master` takes `template`, `label`, `meter` and `fader`. Its template is
+`"master-card"`, the mix tile the channel tiles have always shown, under
+the bank's strips, and the default; or `"master-strip"`, one more strip at
+the end of the bank, on the right of upright strips or under a send list.
+Both keep the master's level, mute, 150% range for a monitor mix, the
+button that opens its plugin chain and the To USB Aux port switch. The
+master card also shows the chain at a glance; the master strip shows one
+lamp per plugin, lit in the alert colour when a plugin fails, and its
+bypass switches are in the chain window. A master's parts stay in their
+default order.
+
+#### Labels, meters and faders
+
+| Value | What it is |
+|---|---|
+| `label.style` | `"text"`, the name, the default; `"icon-and-text"`, the icon chosen in the layout editor and then the name; `"icon"`, the icon alone, or the name for a channel without an icon. A screen reader hears the whole name in every style |
+| `meter.orientation` | `"horizontal"`, a flat meter that fills from the left, or `"vertical"`, an upright one that fills from the bottom. Both read the same scale with the same zones |
+| `meter.placement` | `"below-label"`, a part of its own where `partsOrder` puts it, which by default is straight under the name; `"beside-label"`, beside the name in the name's place; `"beside-fader"`, beside the fader in the fader's place, or beside the gain on an input row. With that part hidden the meter is a part of its own again |
+| `fader.orientation` | `"horizontal"` or `"vertical"` |
+| `fader.direction` | `"normal"`, the maximum at the top or at the right, the default; `"reversed"`, the maximum at the bottom or at the left. The arrow keys and Shift-drag for fine steps follow the direction |
+
+A `"vertical-strip"` and a `"master-strip"` stand the fader and the meter
+up, with the meter beside the fader, unless the skin says otherwise. Every
+other strip lays them flat with the meter under the name. An upright fader
+is as long as `Ox.Mixer.VerticalFaderLength`, an upright meter as thick as
+`Ox.Meter.VerticalWidth`, an upright strip as wide as
+`Ox.Mixer.StripWidth`, and the banks stand `Ox.Mixer.BankSpacing` apart.
+The console fader and every meter presentation draw upright as well as
+flat.
+
+#### Narrowest widths
+
+Where a container gives the section a width of its own, the classic
+templates keep their 600 pixels. The others need less:
+
+- an input rack is three times `Ox.Mixer.StripWidth` wide, plus the card's
+  padding: 252 pixels with the default tokens;
+- mix banks need each bank's width side by side, with
+  `Ox.Mixer.BankSpacing` between them, or one bank's width for banks one
+  above the other. A bank of upright strips needs one channel strip and,
+  with a master strip, the master beside it;
+  a send list needs three strip widths; a master card needs
+  `Ox.Mixer.MixWidth`. More strips than fit scroll sideways inside the
+  bank.
+
+Neither asks for more than the classic 600 pixels, and Touch sizing raises
+`Ox.Mixer.StripWidth` to 96, which widens both. A popped out mixer window
+holding banks is as wide as the banks need, and scrolls sideways when it
+is narrower.
+
+#### A complete example
+
+INPUTS as a rack in a 280 pixel column on the left, two banks of upright
+strips on the right starting on Monitor A and Stream, and the other
+sections below:
+
+```json
+{
+  "schema": 1,
+  "id": "rack-and-banks",
+  "name": "Rack and banks",
+  "tokens": {
+    "Ox.Card.Background": "#22252b",
+    "Ox.Mixer.BankSpacing": 16
+  },
+  "controls": { "fader": "console" },
+  "layout": {
+    "version": 1,
+    "main": {
+      "kind": "grid",
+      "id": "desktop",
+      "columns": [{ "size": 280 }, { "star": 1 }],
+      "rows": ["auto", "auto", "auto"],
+      "children": [
+        { "kind": "region", "region": "header", "row": 0, "column": 0, "columnSpan": 2 },
+        { "kind": "region", "region": "inputs", "row": 1, "column": 0 },
+        { "kind": "region", "region": "submixer", "row": 1, "column": 1 },
+        {
+          "kind": "stack",
+          "id": "lower",
+          "orientation": "vertical",
+          "row": 2,
+          "column": 0,
+          "columnSpan": 2,
+          "children": [
+            { "kind": "region", "region": "headphones" },
+            { "kind": "region", "region": "monitor" },
+            { "kind": "region", "region": "applications" }
+          ]
+        }
+      ]
+    },
+    "regions": {
+      "inputs": {
+        "template": "input-rack",
+        "strip": {
+          "template": "input-row",
+          "partsOrder": ["identity", "meter", "gain", "hardware-controls", "effects"],
+          "label": { "style": "icon-and-text" },
+          "meter": { "orientation": "horizontal", "placement": "below-label" }
+        }
+      },
+      "submixer": {
+        "template": "mix-banks",
+        "orientation": "horizontal",
+        "visibleBanks": 2,
+        "selectionDefaults": ["monitor", "stream"],
+        "strip": {
+          "template": "vertical-strip",
+          "partsOrder": ["identity", "meter", "fader", "value", "mute"],
+          "fader": { "orientation": "vertical", "direction": "normal" },
+          "meter": { "orientation": "vertical", "placement": "beside-fader" },
+          "label": { "style": "text" }
+        },
+        "master": { "template": "master-strip" }
+      },
+      "applications": { "visibility": "collapsed" }
+    }
+  }
+}
+```
+
+In Arrange mode a channel has one handle. It is on the input rack's strip
+while the rack shows, otherwise on the first bank's strip, never once per
+bank. A drop still sends the new channel order to the daemon and the
+strips move when it has saved it, as the channel tiles do. Mixes are
+reordered in the layout editor while the submixer shows banks.
+
 ### How a layout is read
 
 A layout is taken whole or not at all. Any of these drops the whole
@@ -1001,7 +1228,15 @@ A layout is taken whole or not at all. Any of these drops the whole
 - in `regions`, a region id this OpenXLR does not have, an option the
   region does not have, a `visibility` other than the three, a `width` or
   `height` that is not a finite number from 120 to 4000, or a header
-  action that does not exist, is `options`, or is listed twice.
+  action that does not exist, is `options`, or is listed twice;
+- a `template`, strip template, master template, part, label style,
+  orientation, placement or direction this OpenXLR does not have; an
+  option that belongs to another template; `identity` in `hidden`; a part
+  listed twice across `partsOrder` and `hidden`, or more names in either
+  than the strip has parts; a `visibleBanks` that is not a whole number
+  from 1 to 4; or `selectionDefaults` that is not an array of at most 16
+  mix ids, each 1 to 64 lowercase letters, digits, hyphens and
+  underscores, with none listed twice.
 
 The complaint names where in the file the fault is, for example
 `layout.main.children[2].region`, and appears in Options under the picker
@@ -1052,12 +1287,14 @@ sets where a section starts the first time, recorded in `ui.json` under
 
 ## What a skin cannot do
 
-- It cannot carry markup, a template, a style or code. It picks from the
-  appearances listed under Controls and tints them. Apart from placing
-  the header and the five sections under [Layout](#layout), ordering the
-  header's actions and hiding a section the user can bring back, there is
-  no way for a skin to add a control, move one inside its section, resize
-  the window, or change what a control does.
+- It cannot carry markup, a control template of its own, a style or
+  code. It picks from the appearances listed under Controls and tints
+  them. Apart from placing the header and the five sections under
+  [Layout](#layout), ordering the header's actions, hiding a section the
+  user can bring back, and choosing one of the application's templates
+  with its parts in another order, there is no way for a skin to add a
+  control, move one out of its template, resize the window, or change
+  what a control does.
 - It cannot change the mixer layout, the mixer, the routing or anything
   the daemon owns. It sets the values in this document and nothing else.
 - It cannot reach outside its own folder, and it cannot make a network

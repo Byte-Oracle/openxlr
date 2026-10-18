@@ -1362,6 +1362,30 @@ menu at the end of the header. The actions in that menu work as they do
 in the header. Options is always the first button in the header,
 wherever the skin puts the header, so the way back is always there.
 
+<a name="mix-banks"></a>
+A skin can also draw INPUTS as a rack, one strip per channel, and the
+SUBMIXER as mix banks ([Templates](skins.md#templates)). The rack holds
+the INPUTS panel's own controls: an XLR input's gain, switches and plugin
+chain, Aux In's level and lock, and the name and meter of every other
+channel. What your interface does not have stays hidden, as in the panel.
+
+Each mix bank shows one mix: every channel's send into it and the mix's
+master. The picker at the top of a bank lists every mix. Choose one to
+show it in that bank; a mix another bank already shows trades places with
+it, so two banks never show the same mix and every mix stays reachable
+however few banks the skin shows. Your choice is remembered for that skin
+in `ui.json` and comes back the next time you wear it; until you choose,
+the banks start on the mixes the skin names. When a bank's mix is deleted,
+the bank moves on to the next mix. The compact and mini views apply in the
+banks too.
+
+Choosing a bank's mix changes no level, mute or route, and the channel
+and mix order stays the mixer layout's. In Arrange mode each channel has
+one handle, on its strip in the input rack while the rack shows,
+otherwise on the first bank, and the daemon saves a move as it saves any
+other. While banks show, reorder mixes in the layout editor. A meter
+beside a send is the channel's own level, before the send.
+
 Channel and mix tiles follow the mixer layout's one order, the same one
 the layout editor's arrows and the terminal mixer change. A drop sends
 the new order to the daemon, and the tiles move when it has saved it; a
@@ -1399,10 +1423,11 @@ changes a level, a mute or a route.
 #### Separate mixer window
 
 **Pop out** in the SUBMIXER header moves the existing channel strips and mix
-masters into their own resizable window. It can sit on a second display while
-the main window is hidden in the tray. The window uses the same live mixer,
-skin, control sizing and compact or mini view selected in Options. It scrolls
-when the controls do not fit, without changing any audio routing.
+masters, or a skin's mix banks, into their own resizable window. It can sit on
+a second display while the main window is hidden in the tray. The window uses
+the same live mixer, skin, control sizing and compact or mini view selected in
+Options. It scrolls when the controls do not fit, without changing any audio
+routing.
 
 **Return mixer to main window**, or closing the separate window, returns the
 panel and shows the main window. Quitting OpenXLR closes both. The separate
@@ -1450,7 +1475,8 @@ restarted. The choice is saved in `~/.config/openxlr/ui.json` and is not
 part of a profile or of the mixer layout. A skin you install may also set
 the order of the window's sections and run them in a row; the sections
 move in place, and [Arrange](#arrange) says how your own moves are kept
-under it.
+under it. It may also draw INPUTS as a rack and the SUBMIXER as
+[mix banks](#mix-banks).
 
 Below the skin, **Mode** picks Material's palette: **System**, **Light** or
 **Dark**. System, the default, follows the desktop's light or dark

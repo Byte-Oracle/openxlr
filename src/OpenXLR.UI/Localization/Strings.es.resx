@@ -2154,4 +2154,34 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="MoreActions" xml:space="preserve">
     <value>Más acciones</value>
   </data>
+  <data name="BankPickerName" xml:space="preserve">
+    <value>Mezcla visible en el banco {0}</value>
+  </data>
+  <data name="BankPickerTip" xml:space="preserve">
+    <value>La mezcla que muestra este banco. Aparecen todas las mezclas; si eliges una que ya muestra otro banco, los dos se intercambian. La elección se guarda para este tema y nunca cambia el orden del mezclador.</value>
+  </data>
+  <data name="BankSendName" xml:space="preserve">
+    <value>Envío de {0} a {1}</value>
+  </data>
+  <data name="BankMuteName" xml:space="preserve">
+    <value>Silenciar {0} en {1}</value>
+  </data>
+  <data name="ChannelLevelLeft" xml:space="preserve">
+    <value>Nivel del canal {0}, izquierdo</value>
+  </data>
+  <data name="ChannelLevelRight" xml:space="preserve">
+    <value>Nivel del canal {0}, derecho</value>
+  </data>
+  <data name="ChannelMeterTip" xml:space="preserve">
+    <value>El nivel propio del canal, antes de su envío a esta mezcla</value>
+  </data>
+  <data name="MixFaderName" xml:space="preserve">
+    <value>Nivel general de {0}</value>
+  </data>
+  <data name="MixMuteName" xml:space="preserve">
+    <value>Silenciar {0}</value>
+  </data>
+  <data name="BankChoiceNotSaved" xml:space="preserve">
+    <value>La elección de los bancos se aplica hasta que se cierre la ventana, pero no se ha podido guardar: {0}</value>
+  </data>
 </root>

@@ -164,6 +164,15 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   across containers too, by pointer, arrow keys or a Swap with menu, and
   shows hidden sections again. The moves are kept for that skin, and Reset
   returns to its own places. See [Layout](skins.md#layout)
+- Skins can draw INPUTS as an input rack, one strip per channel with the
+  INPUTS panel's own controls, and the submixer as up to four mix banks
+  side by side or stacked. A skin picks upright strips or send lists,
+  orders their parts or leaves some out, stands faders and meters up,
+  reverses faders, labels channels with icons, and draws each master as a
+  card or a strip. Every bank has a picker listing
+  every mix; your pick is kept per skin, and a bank whose mix is deleted
+  moves to the next one. Channel and mix order stay the layout's. See
+  [Templates](skins.md#templates) and [Mix banks](manual.md#mix-banks)
 - A compact view with one chosen channel strip, and a mini view with that
   channel's send into one chosen mix, its master and the monitor volume,
   for a narrow window. Chosen in Options and kept in `ui.json`; hidden

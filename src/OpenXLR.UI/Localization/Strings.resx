@@ -2154,4 +2154,34 @@ Select the interface OpenXLR drives</value>
   <data name="MoreActions" xml:space="preserve">
     <value>More actions</value>
   </data>
+  <data name="BankPickerName" xml:space="preserve">
+    <value>Mix shown in bank {0}</value>
+  </data>
+  <data name="BankPickerTip" xml:space="preserve">
+    <value>The mix this bank shows. Every mix is listed; picking one another bank shows swaps the two. The choice is kept for this skin and never changes the mixer's order.</value>
+  </data>
+  <data name="BankSendName" xml:space="preserve">
+    <value>{0} send to {1}</value>
+  </data>
+  <data name="BankMuteName" xml:space="preserve">
+    <value>Mute {0} in {1}</value>
+  </data>
+  <data name="ChannelLevelLeft" xml:space="preserve">
+    <value>{0} channel level, left</value>
+  </data>
+  <data name="ChannelLevelRight" xml:space="preserve">
+    <value>{0} channel level, right</value>
+  </data>
+  <data name="ChannelMeterTip" xml:space="preserve">
+    <value>The channel's own level, before its send into this mix</value>
+  </data>
+  <data name="MixFaderName" xml:space="preserve">
+    <value>{0} master level</value>
+  </data>
+  <data name="MixMuteName" xml:space="preserve">
+    <value>Mute {0}</value>
+  </data>
+  <data name="BankChoiceNotSaved" xml:space="preserve">
+    <value>The bank choice applies until the window closes, but could not be saved: {0}</value>
+  </data>
 </root>

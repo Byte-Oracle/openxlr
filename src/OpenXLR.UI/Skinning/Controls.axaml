@@ -52,6 +52,33 @@
     </Setter>
   </ControlTheme>
 
+  <!-- The same groove standing up, for a fader a strip template stands up. -->
+  <ControlTheme x:Key="Ox.Fader.FilledGrooveUpright" TargetType="RepeatButton">
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="Template">
+      <ControlTemplate TargetType="RepeatButton">
+        <Border Background="Transparent" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+          <Border Width="{DynamicResource SliderTrackThemeHeight}" HorizontalAlignment="Center"
+                  Background="{DynamicResource SliderTrackValueFill}"
+                  CornerRadius="{DynamicResource Ox.Fader.TrackCornerRadius}"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="Ox.Fader.EmptyGrooveUpright" TargetType="RepeatButton">
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="Template">
+      <ControlTemplate TargetType="RepeatButton">
+        <Border Background="Transparent" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+          <Border Width="{DynamicResource SliderTrackThemeHeight}" HorizontalAlignment="Center"
+                  Background="{DynamicResource SliderTrackFill}"
+                  CornerRadius="{DynamicResource Ox.Fader.TrackCornerRadius}"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
   <!-- The cap: a machined block with an optional grip line across its middle. -->
   <ControlTheme x:Key="Ox.Fader.Cap" TargetType="Thumb">
     <Setter Property="Background" Value="{DynamicResource SliderThumbBackground}"/>
@@ -82,6 +109,31 @@
     </Style>
   </ControlTheme>
 
+  <!--
+    The cap of an upright fader: the same block turned a quarter, so its
+    length along the groove is still Ox.Fader.Thumb.Width and its depth
+    across it Ox.Fader.Thumb.Height, as the theme keys those tokens feed
+    already say for a vertical slider. The grip line turns with it.
+  -->
+  <ControlTheme x:Key="Ox.Fader.CapUpright" TargetType="Thumb" BasedOn="{StaticResource Ox.Fader.Cap}">
+    <Setter Property="Width" Value="{DynamicResource Ox.Fader.Thumb.Height}"/>
+    <Setter Property="Height" Value="{DynamicResource Ox.Fader.Thumb.Width}"/>
+    <Setter Property="Template">
+      <ControlTemplate TargetType="Thumb">
+        <Panel>
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}"/>
+          <Rectangle Width="{DynamicResource Ox.Fader.Thumb.GripLength}" Height="2"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     RadiusX="1" RadiusY="1" IsHitTestVisible="False"
+                     Fill="{DynamicResource Ox.Fader.Thumb.Grip}"/>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
   <ControlTheme x:Key="Ox.Slider.Console" TargetType="Slider">
     <Setter Property="MinHeight" Value="{DynamicResource SliderHorizontalHeight}"/>
     <Setter Property="Template">
@@ -104,10 +156,34 @@
         </Grid>
       </ControlTemplate>
     </Setter>
-    <!-- The window has no vertical fader. If one is ever added, it keeps the
-         framework's own appearance rather than a template that was never seen. -->
+    <!-- An upright fader, which a skin's strip template can ask for: the same
+         Track, repeat buttons and Thumb under the same names, turned. The
+         filled groove is below the cap, or above it when the direction is
+         reversed, which the Track works out from IsDirectionReversed. The
+         horizontal template above is untouched. -->
     <Style Selector="^:vertical">
-      <Setter Property="Template" Value="{x:Null}"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="MinWidth" Value="{DynamicResource SliderVerticalWidth}"/>
+      <Setter Property="Template">
+        <ControlTemplate TargetType="Slider">
+          <Grid Name="SliderContainer" Background="Transparent">
+            <Track Name="PART_Track" Orientation="Vertical"
+                   Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                   Value="{TemplateBinding Value, Mode=TwoWay}"
+                   IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+              <Track.DecreaseButton>
+                <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource Ox.Fader.FilledGrooveUpright}"/>
+              </Track.DecreaseButton>
+              <Track.IncreaseButton>
+                <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource Ox.Fader.EmptyGrooveUpright}"/>
+              </Track.IncreaseButton>
+              <Track.Thumb>
+                <Thumb Name="thumb" Theme="{StaticResource Ox.Fader.CapUpright}"/>
+              </Track.Thumb>
+            </Track>
+          </Grid>
+        </ControlTemplate>
+      </Setter>
     </Style>
     <Style Selector="^:disabled">
       <Setter Property="Opacity" Value="0.5"/>
@@ -127,6 +203,14 @@
     <Setter Property="Hot" Value="{DynamicResource Ox.Meter.Hot}"/>
     <Setter Property="WarningLevel" Value="{DynamicResource Ox.Meter.WarningLevel}"/>
     <Setter Property="HotLevel" Value="{DynamicResource Ox.Meter.HotLevel}"/>
+    <!-- Stood up by a strip template: its thickness is its own token, and its
+         length is the length of what it stands beside. -->
+    <Style Selector="^[Orientation=Vertical]">
+      <Setter Property="Height" Value="NaN"/>
+      <Setter Property="Width" Value="{DynamicResource Ox.Meter.VerticalWidth}"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
   </ControlTheme>
 
   <ControlTheme x:Key="Ox.Meter.Segmented" TargetType="skin:LevelMeter"

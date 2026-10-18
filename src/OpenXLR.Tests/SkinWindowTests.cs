@@ -38,6 +38,7 @@ public sealed class SkinWindowTests
             SkinsReachOpenWindowsAndTheDefaultComesBackExactly(main, options, flow);
             AnInstalledSkinIsFoundAndItsImageIsUsed(main);
             ALayoutSkinTurnsTheSectionsWithoutRebuildingThem(main);
+            ASwitchToMixBanksKeepsEveryViewModelAndSendsNothing(main);
             ABrokenSkinLeavesTheWindowUsableAndSaysWhy(main);
             ControlAppearancesSwitchAndTheFaderStillWorks(main);
             NeitherShippedAppearanceBreaksTheLayoutOrTheLabels(main, options, flow);
@@ -47,6 +48,7 @@ public sealed class SkinWindowTests
             IndicatorsAndMetersDrawInsideTheBoxTheyAreGiven();
             AMeterIsColouredByPositionAndNotByItsReading();
             AContinuousBarIsWholeWhereItsZonesMeet();
+            AnUprightMeterFillsFromTheBottomOnTheSameScale();
             ButtonsCarryTheirStateInTheirLettering(main);
             EveryRectangularControlWearsTheSameFace(main, options);
             EveryKeyIsDrawnLikeTheMuteKey();
@@ -294,6 +296,192 @@ public sealed class SkinWindowTests
             Environment.SetEnvironmentVariable("XDG_DATA_DIRS", oldDirs);
             Directory.Delete(data, recursive: true);
         }
+    }
+
+    /// <summary>
+    /// A skin that draws the submixer as mix banks, put on and taken off
+    /// while the window is connected to a daemon: the banks hand out the same
+    /// channel, mix and send objects the tiles drew, a colour-only skin in
+    /// between leaves the banks as they are, and nothing goes to the daemon,
+    /// no level, no mute and no layout order.
+    /// </summary>
+    private static void ASwitchToMixBanksKeepsEveryViewModelAndSendsNothing(MainWindow main)
+    {
+        string data = Path.Combine(Path.GetTempPath(), "openxlr-skinbanks-" + Guid.NewGuid());
+        string folder = Path.Combine(data, "openxlr", "skins", "banks");
+        string? oldHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        string? oldDirs = Environment.GetEnvironmentVariable("XDG_DATA_DIRS");
+        object? context = main.DataContext;
+        var commands = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        T Await<T>(Task<T> task)
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (!task.IsCompleted && DateTime.UtcNow < deadline)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(5);
+            }
+            Assert.True(task.IsCompleted, "the fake daemon did not answer");
+            return task.GetAwaiter().GetResult();
+        }
+        SocketTestServer server = Await(SocketTestServer.Start(async (socket, stop) =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                JsonNode command = await SocketTestServer.Receive(socket, stop);
+                if (command["cmd"]?.GetValue<string>() != "auth") commands.Enqueue(command["cmd"]!.GetValue<string>());
+                if (command["requestId"] is { } requestId)
+                    await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>() }, stop);
+            }
+        }));
+        var client = new DaemonClient(server.Url);
+        try
+        {
+            var connected = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            client.ConnectionChanged += up => { if (up) connected.TrySetResult(true); };
+            client.Start();
+            Await(connected.Task);
+            var vm = new MainViewModel(client);
+            typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(vm, [JsonNode.Parse("""
+                {"mixes":[{"id":"monitor","name":"Monitor A","volume":1.2,"kind":"monitor"},{"id":"stream","name":"Stream","volume":0.5},
+                          {"id":"chat","name":"Chat","volume":0.7}],
+                 "channels":[{"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.4,"chat":0.3},"mutedIn":["chat"]},
+                             {"id":"game","name":"Game","levels":{"monitor":1,"stream":0.2,"chat":0.9}}]}
+                """)]);
+            vm.Mixes[0].VolumeRange.Boost = true;
+            main.DataContext = vm;
+            Pump(main);
+            ChannelViewModel[] channels = [.. vm.Channels];
+            MixViewModel[] mixes = [.. vm.Mixes];
+            SendViewModel[] sends = [.. vm.Channels.SelectMany(c => c.Sends)];
+            (double, bool)[] values = [.. sends.Select(s => (s.Level, s.Muted))];
+            double[] volumes = [.. mixes.Select(m => m.Volume)];
+
+            Directory.CreateDirectory(folder);
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", data);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(data, "none"));
+            File.WriteAllText(Path.Combine(folder, "skin.json"), """
+                {"schema":1,"name":"Banks","tokens":{"Ox.Card.Background":"#30343c"},
+                 "layout":{"version":1,"regions":{"submixer":{"template":"mix-banks","visibleBanks":3,
+                   "selectionDefaults":["chat","monitor"],"master":{"template":"master-strip"}}}}}
+                """);
+            SkinEntry banks = Assert.Single(SkinCatalog.Discover(), e => e.Id == "banks");
+            Assert.Empty(banks.Errors);
+            var panel = main.FindControl<OpenXLR.UI.Views.MixerPanel>("MixerPanel")!;
+            foreach (int round in new[] { 1, 2 })
+            {
+                Assert.Empty(SkinService.Apply(banks));
+                Pump(main);
+                Layout(main, 1040, 900);
+                Assert.NotNull(panel.Banks);
+                Assert.True(panel.BankItems.IsEffectivelyVisible);
+                Assert.Equal(["chat", "monitor", "stream"], panel.Banks!.Selection);
+                foreach (var bank in panel.Banks.Banks)
+                {
+                    Assert.Contains(bank.Mix!, mixes);
+                    foreach (var cell in bank.Cells) Assert.Contains(cell.Send!, sends);
+                }
+                // Colours alone leave the banks as they are.
+                var before = panel.Banks;
+                SkinService.ChooseControlSizing(SkinService.TouchControls, out _);
+                Pump(main);
+                Assert.Same(before, panel.Banks);
+                Capture(main, $"layout-banks-{round}");
+
+                Assert.Empty(SkinService.Apply(SkinCatalog.Find("opendeck")!));
+                Pump(main);
+                Layout(main, 1040, 900);
+                Assert.Null(panel.Banks);
+                Assert.False(panel.BankItems.IsVisible);
+            }
+            SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
+            Pump(main);
+
+            Assert.Equal(channels, vm.Channels);
+            Assert.Equal(mixes, vm.Mixes);
+            Assert.Equal(sends, vm.Channels.SelectMany(c => c.Sends));
+            Assert.Equal(values, sends.Select(s => (s.Level, s.Muted)));
+            Assert.Equal(volumes, mixes.Select(m => m.Volume));
+            // A layout edit waits for its answer, so everything sent before it has arrived.
+            Assert.Null(Await(client.DeleteExclusiveGroupAsync("barrier")));
+            string[] sent = [.. commands];
+            Assert.Equal("deleteExclusiveGroup", sent[^1]);
+            // The model asks for the plugin catalogue when it connects; nothing else may have been sent.
+            Assert.All(sent[..^1], cmd => Assert.True(cmd.StartsWith("list", StringComparison.Ordinal) || cmd.StartsWith("get", StringComparison.Ordinal),
+                $"the skin switch sent {cmd}"));
+        }
+        finally
+        {
+            main.DataContext = context;
+            SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
+            Pump(main);
+            Await(client.DisposeAsync().AsTask().ContinueWith(_ => true));
+            Await(server.DisposeAsync().AsTask().ContinueWith(_ => true));
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", oldHome);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", oldDirs);
+            if (Directory.Exists(data)) Directory.Delete(data, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// An upright meter reads the scale a flat one does, turned: cells of whole
+    /// pixels from the bottom edge up, the top cell of a full meter in the hot
+    /// colour, and a continuous bar lit from the bottom to its level.
+    /// </summary>
+    private static void AnUprightMeterFillsFromTheBottomOnTheSameScale()
+    {
+        var ground = new SolidColorBrush(Color.FromRgb(0, 0, 0));
+        var meter = new LevelMeter
+        {
+            Orientation = Avalonia.Layout.Orientation.Vertical,
+            Presentation = MeterPresentation.Segmented, Segments = 20, SegmentGap = 2, Level = 0.5,
+            Width = 7, Height = 140, CornerRadius = new CornerRadius(1),
+            Track = new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x10)),
+            Fill = new SolidColorBrush(Color.FromRgb(0x3e, 0xcf, 0x7a)),
+            Hot = new SolidColorBrush(Color.FromRgb(0xff, 0x3c, 0x4e)),
+        };
+        var host = new Border { Background = ground, Child = meter };
+        var probe = new Window { Content = host, Width = 7, Height = 140, WindowDecorations = WindowDecorations.None };
+        probe.Show();
+        Layout(probe, 7, 140);
+        try
+        {
+            var size = new PixelSize((int)host.Bounds.Width, (int)host.Bounds.Height);
+            int column = size.Width / 2;
+            bool Green(byte[] p, int y) { int i = (y * size.Width + column) * 4; return p[i + 1] > 0x60 && p[i + 2] < 0xa0; }
+            byte[] pixels = Read(host, size);
+            var runs = new List<(int Start, int End)>();
+            bool inRun = false;
+            for (int y = size.Height - 1; y >= 0; y--)
+            {
+                bool lit = Green(pixels, y);
+                if (lit && !inRun) { runs.Add((y, y)); inRun = true; }
+                else if (lit) runs[^1] = (runs[^1].Start, y);
+                else inRun = false;
+            }
+            Assert.Equal(10, runs.Count);
+            Assert.Equal(size.Height - 1, runs[0].Start);     // the bottom cell is not shaved
+            Assert.True(runs[^1].End > size.Height / 2 - 8, "the lit cells run up from the bottom, not down from the top");
+            int[] heights = [.. runs.Select(r => r.Start - r.End + 1)];
+            Assert.True(heights.Max() - heights.Min() <= 1, $"cells came out uneven: {string.Join(",", heights)}");
+
+            meter.Level = 1;
+            Layout(probe, 7, 140);
+            pixels = Read(host, size);
+            int top = column * 4;
+            Assert.True(pixels[top + 1] is > 0x20 and < 0x60 && (pixels[top] > 0xc0 || pixels[top + 2] > 0xc0),
+                "the top cell of a full upright meter is not in the peak colour");
+
+            meter.Presentation = MeterPresentation.Continuous;
+            meter.Level = 0.5;
+            Layout(probe, 7, 140);
+            pixels = Read(host, size);
+            Assert.True(Green(pixels, size.Height - 2), "a continuous upright bar is not lit at the bottom");
+            Assert.True(Green(pixels, size.Height / 2 + 2), "a continuous upright bar at half is not lit below the middle");
+            Assert.False(Green(pixels, size.Height / 2 - 4), "a continuous upright bar at half is lit above the middle");
+            Assert.False(Green(pixels, 1), "a continuous upright bar at half is lit at the top");
+        }
+        finally { probe.Close(); }
     }
 
     /// <summary>A plain opaque PNG, written by hand so the test carries no binary.</summary>

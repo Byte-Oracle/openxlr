@@ -2154,4 +2154,34 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="MoreActions" xml:space="preserve">
     <value>Weitere Aktionen</value>
   </data>
+  <data name="BankPickerName" xml:space="preserve">
+    <value>In Bank {0} angezeigter Mix</value>
+  </data>
+  <data name="BankPickerTip" xml:space="preserve">
+    <value>Der Mix, den diese Bank zeigt. Jeder Mix steht in der Liste; wählst du einen, den eine andere Bank zeigt, tauschen die beiden. Die Wahl wird für diesen Skin gespeichert und ändert nie die Reihenfolge des Mixers.</value>
+  </data>
+  <data name="BankSendName" xml:space="preserve">
+    <value>{0}, Send an {1}</value>
+  </data>
+  <data name="BankMuteName" xml:space="preserve">
+    <value>{0} in {1} stummschalten</value>
+  </data>
+  <data name="ChannelLevelLeft" xml:space="preserve">
+    <value>Kanalpegel {0}, links</value>
+  </data>
+  <data name="ChannelLevelRight" xml:space="preserve">
+    <value>Kanalpegel {0}, rechts</value>
+  </data>
+  <data name="ChannelMeterTip" xml:space="preserve">
+    <value>Der eigene Pegel des Kanals, vor seinem Send in diesen Mix</value>
+  </data>
+  <data name="MixFaderName" xml:space="preserve">
+    <value>Gesamtpegel von {0}</value>
+  </data>
+  <data name="MixMuteName" xml:space="preserve">
+    <value>{0} stummschalten</value>
+  </data>
+  <data name="BankChoiceNotSaved" xml:space="preserve">
+    <value>Die Auswahl der Bänke gilt bis zum Schließen des Fensters, konnte aber nicht gespeichert werden: {0}</value>
+  </data>
 </root>

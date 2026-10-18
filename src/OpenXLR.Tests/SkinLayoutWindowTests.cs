@@ -26,7 +26,7 @@ namespace OpenXLR.Tests;
 /// bringing the legacy order back. Run from the window layout test, on its UI
 /// thread, with preferences and skins of its own.
 /// </summary>
-internal static class SkinLayoutWindowTests
+internal static partial class SkinLayoutWindowTests
 {
     private static readonly string[] Usual = ["InputsTile", "HeadphonesTile", "MonitorTile", "ApplicationsTile", "SubmixerTile"];
     private static readonly string[] Legacy = ["HeadphonesTile", "SubmixerTile", "InputsTile", "MonitorTile", "ApplicationsTile"];
@@ -180,6 +180,7 @@ internal static class SkinLayoutWindowTests
             CheckGrid(main, cards);
             CheckDock(main, cards);
             CheckStale();
+            CheckTemplates(dir);
 
             // Material brings the legacy order back, in the column it always was.
             Wear(SkinPackage.DefaultId);

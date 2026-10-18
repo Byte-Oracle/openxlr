@@ -61,14 +61,18 @@ public partial class MixerWindow : Window
         UpdatePanelWidth();
     }
 
-    private void UpdatePanelWidth()
+    /// <summary>
+    /// Keep wrapping at the viewport width. A panel that needs more than the
+    /// window has, wide tiles or banks side by side, scrolls sideways instead
+    /// of clipping a control. How much it needs is the active presentation's
+    /// to say: the wider tile for the channel tiles, or what the banks need.
+    /// </summary>
+    internal void UpdatePanelWidth()
     {
         if (_panel is null) return;
-        // Keep wrapping at the viewport width. A skin with wider tiles can
-        // still scroll sideways, instead of clipping the tile's controls.
-        double tileWidth = Math.Max((double)this.FindResource("Ox.Mixer.MixWidth")!,
-            (double)this.FindResource("Ox.Mixer.ChannelWidth")!);
-        _panel.Width = Math.Max(MixerScroll.Viewport.Width, tileWidth + 8);
+        double minimum = _panel is Views.MixerPanel mixer ? mixer.MinimumWidth()
+            : Math.Max((double)this.FindResource("Ox.Mixer.MixWidth")!, (double)this.FindResource("Ox.Mixer.ChannelWidth")!);
+        _panel.Width = Math.Max(MixerScroll.Viewport.Width, minimum + 8);
     }
 
     private void OnDockMixer(object? sender, RoutedEventArgs e) => Close();

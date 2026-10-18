@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Media;
 
 namespace OpenXLR.UI.Skinning;
@@ -65,13 +66,24 @@ public sealed class LevelMeter : Control
     public static readonly StyledProperty<CornerRadius> CornerRadiusProperty =
         AvaloniaProperty.Register<LevelMeter, CornerRadius>(nameof(CornerRadius));
 
+    public static readonly StyledProperty<Orientation> OrientationProperty =
+        AvaloniaProperty.Register<LevelMeter, Orientation>(nameof(Orientation));
+
     static LevelMeter()
     {
         AffectsRender<LevelMeter>(LevelProperty, PresentationProperty, SegmentsProperty,
             SegmentGapProperty, TrackProperty, FillProperty, WarningProperty, HotProperty,
-            WarningLevelProperty, HotLevelProperty, CornerRadiusProperty);
-        AffectsMeasure<LevelMeter>(PresentationProperty);
+            WarningLevelProperty, HotLevelProperty, CornerRadiusProperty, OrientationProperty);
+        AffectsMeasure<LevelMeter>(PresentationProperty, OrientationProperty);
     }
+
+    /// <summary>
+    /// Which way the scale runs: from the left to the right, as the window has
+    /// always drawn it, or from the bottom to the top for a meter a strip
+    /// template stands up. Both read the same scale with the same zones; only
+    /// the axis turns.
+    /// </summary>
+    public Orientation Orientation { get => GetValue(OrientationProperty); set => SetValue(OrientationProperty, value); }
 
     /// <summary>0 is silence, 1 is the top of the scale.</summary>
     public double Level { get => GetValue(LevelProperty); set => SetValue(LevelProperty, value); }
@@ -136,6 +148,26 @@ public sealed class LevelMeter : Control
         base.OnDetachedFromVisualTree(e);
     }
 
+    /// <summary>The length of the scale: the width of a flat meter, the height of an upright one.</summary>
+    private double Length(Rect bounds) => Orientation == Orientation.Vertical ? bounds.Height : bounds.Width;
+
+    /// <summary>
+    /// The part of the meter between two points along its scale, measured
+    /// from the quiet end: from the left of a flat meter, from the bottom of
+    /// an upright one. Every presentation draws through this one mapping, so
+    /// the two orientations cannot disagree about where a zone starts.
+    /// </summary>
+    private Rect Along(Rect bounds, double start, double end) => Orientation == Orientation.Vertical
+        ? new Rect(0, bounds.Height - end, bounds.Width, end - start)
+        : new Rect(start, 0, end - start, bounds.Height);
+
+    /// <summary>The corners of a span: rounded at the quiet end when <paramref name="starts"/>, at the loud end when <paramref name="ends"/>.</summary>
+    private CornerRadius Corners(bool starts, bool ends) => Orientation == Orientation.Vertical
+        ? new CornerRadius(ends ? CornerRadius.TopLeft : 0, ends ? CornerRadius.TopRight : 0,
+            starts ? CornerRadius.BottomRight : 0, starts ? CornerRadius.BottomLeft : 0)
+        : new CornerRadius(starts ? CornerRadius.TopLeft : 0, ends ? CornerRadius.TopRight : 0,
+            ends ? CornerRadius.BottomRight : 0, starts ? CornerRadius.BottomLeft : 0);
+
     public override void Render(DrawingContext context)
     {
         Rect bounds = new(Bounds.Size);
@@ -150,9 +182,10 @@ public sealed class LevelMeter : Control
             return;
         }
 
+        double length = Length(bounds);
         int cells = (int)Math.Clamp(Math.Round(Segments), 2, 64);
         double gap = Math.Clamp(SegmentGap, 0, 8);
-        double cell = (bounds.Width - gap * (cells - 1)) / cells;
+        double cell = (length - gap * (cells - 1)) / cells;
         if (cell < 1)
         {
             // Too narrow to draw a ladder in: one bar reads better than a smear.
@@ -166,16 +199,16 @@ public sealed class LevelMeter : Control
         // Cells are laid out on whole pixels. Left to the fractional positions
         // the arithmetic gives, the first and last cell came out a fraction
         // narrower than the rest and read as clipped.
-        double slot = (bounds.Width + gap) / cells;
+        double slot = (length + gap) / cells;
         for (int i = 0; i < cells; i++)
         {
-            double left = Math.Round(i * slot);
-            double right = Math.Min(bounds.Width, Math.Round((i + 1) * slot - gap));
-            if (right <= left) right = Math.Min(bounds.Width, left + 1);
+            double start = Math.Round(i * slot);
+            double end = Math.Min(length, Math.Round((i + 1) * slot - gap));
+            if (end <= start) end = Math.Min(length, start + 1);
             // A cell's colour is its own place on the scale, so the ladder shows
             // its green, warning and top zones whether or not they are lit.
             IBrush? brush = i < on ? ZoneAt((i + 1.0) / cells) : Track;
-            Draw(context, brush, new Rect(left, 0, right - left, bounds.Height));
+            Draw(context, brush, Along(bounds, start, end));
         }
     }
 
@@ -193,25 +226,25 @@ public sealed class LevelMeter : Control
     private void Bar(DrawingContext context, Rect bounds, double level, double warn, double hot)
     {
         Draw(context, Track, bounds, CornerRadius);
-        double end = bounds.Width * level;
-        double first = Math.Round(bounds.Width * warn);
-        double second = Math.Round(bounds.Width * hot);
+        double length = Length(bounds);
+        double end = length * level;
+        double first = Math.Round(length * warn);
+        double second = Math.Round(length * hot);
         DrawSpan(context, bounds, 0, Math.Min(end, first), Fill, end);
         DrawSpan(context, bounds, first, Math.Min(end, second), Warning ?? Fill, end);
         DrawSpan(context, bounds, second, end, Hot ?? Fill, end);
     }
 
     /// <summary>
-    /// Paint the part of the bar between two pixel positions, rounded at the
-    /// left only if it starts the bar and at the right only if it ends it.
+    /// Paint the part of the bar between two positions along the scale,
+    /// rounded at the quiet end only if it starts the bar and at the loud end
+    /// only if it ends it.
     /// </summary>
-    private void DrawSpan(DrawingContext context, Rect bounds, double left, double right, IBrush? brush, double end)
+    private void DrawSpan(DrawingContext context, Rect bounds, double start, double stop, IBrush? brush, double end)
     {
-        if (right <= left) return;
-        bool starts = left <= 0, ends = right >= end - 1e-9;
-        Draw(context, brush, new Rect(left, 0, right - left, bounds.Height),
-            new CornerRadius(starts ? CornerRadius.TopLeft : 0, ends ? CornerRadius.TopRight : 0,
-                ends ? CornerRadius.BottomRight : 0, starts ? CornerRadius.BottomLeft : 0));
+        if (stop <= start) return;
+        bool starts = start <= 0, ends = stop >= end - 1e-9;
+        Draw(context, brush, Along(bounds, start, stop), Corners(starts, ends));
     }
 
     private void Draw(DrawingContext context, IBrush? brush, Rect rect) =>
