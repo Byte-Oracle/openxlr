@@ -60,9 +60,11 @@ written from public protocol research, and one user's quick test covered
 detection, gain, mute, headphone volume and the monitor balance. The
 Wave:1 uses the Wave:3's backend and is in beta too: an owner's
 diagnostics showed the microphone recognised and every control read
-correctly, and changing them from OpenXLR is not confirmed yet; if
-you own one, collect diagnostics before and after changing a
-control and open an issue ([hardware support](hardware-support.md)).
+correctly, and a second run confirmed the gain, mute and headphone
+volume set from OpenXLR on the microphone itself. ClipGuard and the
+mic/PC mix are not confirmed yet; if you own one, change them, leave
+them changed, collect diagnostics and open an issue
+([hardware support](hardware-support.md)).
 
 If you only want hardware control and no mixer, turn off "Enable software
 mixer" in Options, AUDIO ([section 3.8](#hardware-only)). The daemon restarts in hardware-control mode

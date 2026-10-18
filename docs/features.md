@@ -37,11 +37,11 @@ names the sources, the bytes they dispute and what an owner checks.
 Wave:1: the same controls as the Wave:3, from the same backend under the
 Wave:1's product id, in beta. An owner's diagnostics showed the
 microphone answering the Wave:3's block, firmware line and desktop
-volume mirror; the setters await that owner's second run. A block of
-another length is still refused before writing anything.
-The daemon drives it after every other supported device. The owner's
-second archive, taken after changing each control from the UI, is what
-moves the setters to tested.
+volume mirror, and a second run showed the gain, mute and headphone
+volume set from the UI taking effect on the microphone. ClipGuard and
+the mic/PC mix still await an archive collected with them changed. A
+block of another length is still refused before writing anything.
+The daemon drives it after every other supported device.
 
 Hardware EQ is not mapped on the Wave FX devices. The Pro's ducking, mix
 maximizer, channel booster and remaining hardware mix matrix are also

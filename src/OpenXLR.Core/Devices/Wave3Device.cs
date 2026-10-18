@@ -144,9 +144,17 @@ public class Wave3Device : IAudioDevice
     private readonly Func<DateTime> _now;
 
     // The gain last read while the dial was on gain, when every source reads
-    // the word at 0 as the gain; null until the dial has been there once
-    // since the connect.
+    // the word at 0 as the gain, or last written by this class and read back
+    // from the block with the dial elsewhere; null until one of the two has
+    // happened since the connect. _gainWritten says which.
     private int? _gainDb;
+    private bool _gainWritten;
+
+    // The gain word this class last wrote, kept until the dial is on gain or
+    // the device reconnects. A block that reads it back with the dial
+    // elsewhere shows the firmware took the write (a Wave:1 owner's archive
+    // did), where wave3-research says a host write is ignored.
+    private short? _gainWord;
 
     // The ALSA card kept in step with the block, -1 without one; the values
     // the card was last given or last read at, null until the first poll
@@ -249,6 +257,8 @@ public class Wave3Device : IAudioDevice
         {
             _usb.Close();
             _gainDb = null;   // a replug may change what the dial was on
+            _gainWritten = false;
+            _gainWord = null;
             _card = -1;
             _mirrored = null;
             Firmware = null;
@@ -308,14 +318,27 @@ public class Wave3Device : IAudioDevice
     /// While the dial is on headphones or the mix, OW reads the word as the
     /// gain still and W3R as the dial's own value, so the gain last read on
     /// gain is reported instead; until the dial has been on gain once since
-    /// the connect there is nothing better than the word as OW takes it.
+    /// the connect there is nothing better than the word as OW takes it. A
+    /// gain this class wrote while the dial was elsewhere is reported once
+    /// the block reads the word back, which shows the firmware took it; a
+    /// firmware that drops a host write reads back the dial's value instead.
     /// </summary>
     public DeviceState ReadState()
     {
         lock (_lock)
         {
             byte[] c = ReadConfigLocked();
-            if (DialOnGain(c)) _gainDb = GainFromWord(c);
+            if (DialOnGain(c))
+            {
+                _gainDb = GainFromWord(c);
+                _gainWritten = false;
+                _gainWord = null;
+            }
+            else if (_gainWord is short written && BinaryPrimitives.ReadInt16LittleEndian(c.AsSpan(OffGain)) == written)
+            {
+                _gainDb = GainFromWord(c);
+                _gainWritten = true;
+            }
             if (_card >= 0) MirrorLocked(c);
             return Decode(c, _gainDb);
         }
@@ -375,14 +398,15 @@ public class Wave3Device : IAudioDevice
 
     /// <summary>
     /// The block's three controls in the card's units. The gain follows the
-    /// word only where <see cref="ReadState"/> trusts it, and otherwise
+    /// word where the dial is on gain, otherwise the gain <see cref="ReadState"/>
+    /// settled on (read on gain, or written and read back), and otherwise
     /// stays at what the card was given.
     /// </summary>
     internal AlsaValues ToAlsa(ReadOnlySpan<byte> c, AlsaValues seen)
     {
         int gain = DialOnGain(c) || (_gainDb is null && seen.Gain < 0)
             ? (int)Math.Round(Math.Clamp(FromQ88(c[OffGain..]), GainMinDb, GainMaxDb) * 2, MidpointRounding.AwayFromZero)
-            : seen.Gain >= 0 ? seen.Gain : _gainDb!.Value * 2;
+            : _gainDb is int known ? known * 2 : seen.Gain;
         int hp = (int)Math.Round((Math.Clamp(FromQ88(c[OffHpVol..]), HpMinDb, HpMaxDb) - HpMinDb) * 2, MidpointRounding.AwayFromZero);
         return new(gain, c[OffMute] != 0, hp);
     }
@@ -460,7 +484,14 @@ public class Wave3Device : IAudioDevice
     }
 
     public void SetGainDb(int db)
-        => Modify(c => BinaryPrimitives.WriteInt16LittleEndian(c.AsSpan(OffGain), (short)(Math.Clamp(db, GainMinDb, GainMaxDb) * 256)));
+    {
+        short word = (short)(Math.Clamp(db, GainMinDb, GainMaxDb) * 256);
+        lock (_lock)
+        {
+            Modify(c => BinaryPrimitives.WriteInt16LittleEndian(c.AsSpan(OffGain), word));
+            _gainWord = word;
+        }
+    }
 
     public void SetMute(bool on) => Modify(c => c[OffMute] = on ? (byte)1 : (byte)0);
 
@@ -530,7 +561,9 @@ public class Wave3Device : IAudioDevice
                     + (_mirrorError is string error ? $" last error: {error}" : "");
             blocks["firmware"] = Firmware ?? "not read";
             blocks["gain"] = _gainDb is int g
-                ? $"{g} dB, last read with the dial on gain"
+                ? _gainWritten
+                    ? $"{g} dB, written from OpenXLR with the dial elsewhere and read back from the block"
+                    : $"{g} dB, last read with the dial on gain"
                 : "not read with the dial on gain yet; the word at 0 is reported as is";
         }
         return blocks;
