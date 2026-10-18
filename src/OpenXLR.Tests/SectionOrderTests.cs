@@ -174,4 +174,71 @@ public sealed class SectionOrderTests
         Assert.Equal(OpenXLR.UI.Skinning.SkinFormat.MaxLayoutNodes, capped.Slots.Count);
         Assert.Equal(OpenXLR.UI.Skinning.SkinLayoutRegions.All.Count, capped.Shown.Count);
     }
+
+    /// <summary>
+    /// The mixes picked for a skin's banks: kept per skin and layout version,
+    /// beside the arrangements and apart from them, read back safely from a
+    /// hand-edited file, and bounded like the rest.
+    /// </summary>
+    [Fact]
+    public void ASkinsBankChoiceRoundTripsAndAnythingBrokenReadsAsNone()
+    {
+        string home = Directory.CreateTempSubdirectory("openxlr-banks-").FullName;
+        string? previous = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", home);
+            string file = Path.Combine(home, "openxlr", "ui.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            File.WriteAllText(file, """{"skinBankSelections":null}""");
+            Assert.Empty(UiSettings.Load().SkinBankSelections);
+
+            File.WriteAllText(file, """
+                {"skinBankSelections":[
+                  null,
+                  {"skin":"","version":1,"banks":["monitor"]},
+                  {"skin":"broadcast","version":1,"banks":null},
+                  {"skin":"wide","version":1,"banks":["monitor","Stream","monitor",null,"chat","mix one","aux","extra","more"]},
+                  {"skin":"broadcast","version":1,"banks":["stream","monitor"]}
+                ]}
+                """);
+            UiSettings loaded = UiSettings.Load();
+            Assert.Equal(["wide", "broadcast"], loaded.SkinBankSelections.Select(e => e.Skin));
+            Assert.Equal(["monitor", "chat", "aux", "extra"], loaded.SkinBanksFor("wide", 1));
+            Assert.Equal(["stream", "monitor"], loaded.SkinBanksFor("broadcast", 1));
+            Assert.Null(loaded.SkinBanksFor("broadcast", 2));
+
+            UiSettings changed = loaded.WithSkinBanks("broadcast", 1, ["chat", "stream"])
+                .WithSkinArrangement("broadcast", 1, new Dictionary<string, string> { ["main:0"] = "submixer" }, null);
+            Assert.Null(changed.Save());
+            Assert.Contains("\"skinBankSelections\"", File.ReadAllText(file), StringComparison.Ordinal);
+            UiSettings again = UiSettings.Load();
+            Assert.Equal(["chat", "stream"], again.SkinBanksFor("broadcast", 1));
+            // Resetting the sections forgets the arrangement, not the banks.
+            UiSettings reset = SectionArrangement.Resolve("broadcast", OpenXLR.UI.Skinning.SkinLayoutDefaults.Classic, again).Reset(again);
+            Assert.Null(reset.SkinArrangementFor("broadcast", 1));
+            Assert.Equal(["chat", "stream"], reset.SkinBanksFor("broadcast", 1));
+            // An empty choice is no entry at all.
+            Assert.Null(again.WithSkinBanks("broadcast", 1, []).SkinBanksFor("broadcast", 1));
+            Assert.Null(again.WithSkinBanks("broadcast", 1, null).SkinBanksFor("broadcast", 1));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previous);
+            Directory.Delete(home, true);
+        }
+    }
+
+    [Fact]
+    public void OnlyTheMostRecentBankChoicesAreKept()
+    {
+        var settings = new UiSettings();
+        for (int i = 0; i < UiSettings.MaxSkinArrangements + 3; i++) settings = settings.WithSkinBanks("skin" + i, 1, ["monitor"]);
+        Assert.Equal(UiSettings.MaxSkinArrangements, settings.SkinBankSelections.Count);
+        Assert.Null(settings.SkinBanksFor("skin0", 1));
+        settings = settings.WithSkinBanks("skin3", 1, ["stream"]);
+        Assert.Equal("skin3", settings.SkinBankSelections[^1].Skin);
+        Assert.Equal(OpenXLR.UI.Skinning.SkinFormat.MaxVisibleBanks,
+            settings.WithSkinBanks("many", 1, ["a", "b", "c", "d", "e", "f"]).SkinBanksFor("many", 1)!.Count);
+    }
 }

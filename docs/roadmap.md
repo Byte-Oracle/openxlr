@@ -139,8 +139,13 @@ few releases, and they get to settle in users' hands first.
   scrolls sideways. The user's Arrange moves are swaps over the tree's
   places, by pointer, arrow keys or a menu, kept per skin with the hidden
   sections the user showed; Reset returns to the skin's own places, and a
-  skin without a layout keeps the saved order it always had.
-  [skins.md](skins.md#layout)
+  skin without a layout keeps the saved order it always had. A skin can
+  also pick application-owned templates: INPUTS as an input rack and the
+  submixer as mix banks, with fixed strip templates whose parts it orders
+  or hides, upright and reversed faders, upright meters, label styles and
+  a master card or strip. Each bank's picker lists every mix, the choice
+  is kept per skin in `ui.json`, and a bank never changes the mixer's
+  order. [skins.md](skins.md#layout)
 - [ ] Inputs from more than one attached Wave interface at once. The
   daemon drives one interface today; a second one is reachable only as a
   capture source.

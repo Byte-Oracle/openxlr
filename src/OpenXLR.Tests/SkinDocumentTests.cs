@@ -398,6 +398,16 @@ public sealed class SkinDocumentTests
         Says($"from {Number(SkinFormat.MinLayoutTrackSize)} to {Number(SkinFormat.MaxLayoutTrackSize)}");
         Says($"from {Number(SkinFormat.MinRegionSize)} to {Number(SkinFormat.MaxRegionSize)}");
         Says($"at least\n{Number(SkinLayoutDefaults.RowSectionMinWidth)} pixels wide");
+        Says($"from {SkinFormat.MinVisibleBanks} to {SkinFormat.MaxVisibleBanks}; {SkinSubmixerOptions.DefaultVisibleBanks} when it is missing");
+        Says($"at most {SkinFormat.MaxSelectionDefaults} mix ids, each 1 to {SkinFormat.MaxMixIdLength} lowercase letters, digits, hyphens and underscores");
+        // Said in words: three strip widths for an input row or a row of a send list.
+        Assert.Equal(3, SkinLayoutDefaults.RowStrips);
+        Says("an input rack is three times `Ox.Mixer.StripWidth` wide");
+        Says("a send list needs three strip widths");
+        Says($"{Number(SkinLayoutDefaults.RowStrips * (double)SkinTokens.Find("Ox.Mixer.StripWidth")!.Default! + SkinLayoutDefaults.CardPadding)} pixels with the default tokens");
+        Says($"raises\n`Ox.Mixer.StripWidth` to {Number(SkinTokens.TouchMinimums["Ox.Mixer.StripWidth"])}");
+        Says("`skinBankSelections`");
+        Says("is the channel's own meter, before its send");
         Says($"The {OpenXLR.UI.UiSettings.MaxSkinArrangements}\n  most recent skins are kept");
         foreach (string word in new[] { "`\"vertical\"`", "`\"horizontal\"`", "`\"stack\"`", "`\"grid\"`", "`\"dock\"`", "`\"region\"`",
                      "`\"auto\"`", "`{ \"star\": n }`", "`{ \"size\": n }`", "`row`", "`column`", "`rowSpan`", "`columnSpan`",
@@ -410,10 +420,19 @@ public sealed class SkinDocumentTests
         // Each table lists exactly the ids the reader knows, in order.
         string[] Table(string header) => [.. layout[layout.IndexOf(header, StringComparison.Ordinal)..].Split('\n').Skip(2)
             .TakeWhile(line => line.StartsWith('|'))
-            .Select(line => System.Text.RegularExpressions.Regex.Match(line, @"^\| `([a-z-]+)` \|").Groups[1].Value)];
+            .Select(line => System.Text.RegularExpressions.Regex.Match(line, @"^\| `([A-Za-z.-]+)` \|").Groups[1].Value)];
         Assert.Equal(SkinLayoutRegions.All, Table("| Region | What it is |"));
         Assert.Equal(SkinHeaderActions.All, Table("| Action | What it is |"));
         Assert.Equal(["visibility", "width", "height", "actions", "overflow"], Table("| Option | Region | What it is |"));
+        Assert.Equal(["template", "strip", "orientation", "visibleBanks", "selectionDefaults", "master"], Table("| Option | Template | What it is |"));
+        Assert.Equal(["template", "partsOrder", "hidden", "label", "meter", "fader"], Table("| Strip option | What it is |"));
+        Assert.Equal(SkinStripParts.InputRow.Concat(SkinStripParts.Send).Distinct(), Table("| Part | What it is |"));
+        Assert.Equal(["label.style", "meter.orientation", "meter.placement", "fader.orientation", "fader.direction"], Table("| Value | What it is |"));
+        foreach (string name in SkinLayoutTemplates.Inputs.Concat(SkinLayoutTemplates.Submixer).Concat(SkinLayoutTemplates.InputStrips)
+                     .Concat(SkinLayoutTemplates.BankStrips).Concat(SkinLayoutTemplates.Masters)
+                     .Concat(["text", "icon-and-text", "icon", "below-label", "beside-label", "beside-fader", "normal", "reversed"]))
+            Says($"`\"{name}\"`");
+        Assert.True(missing.Count == 0, "docs/skins.md, Layout, no longer states: " + string.Join("; ", missing));
 
         // The examples are whole skins, read as an installed one is: one grid, one dock.
         var read = new List<SkinLayout>();
@@ -427,7 +446,7 @@ public sealed class SkinDocumentTests
             Assert.True(result.Ok, string.Join("\n", result.Errors));
             read.Add(Assert.IsType<SkinLayout>(result.Package!.Layout));
         }
-        Assert.Equal(2, read.Count);
+        Assert.Equal(3, read.Count);
         SkinLayoutGrid grid = Assert.IsType<SkinLayoutGrid>(read[0].Main);
         Assert.True(read[0].PlacesHeader);
         Assert.Contains(grid.Containers(), c => c is SkinLayoutStack);
@@ -436,6 +455,11 @@ public sealed class SkinDocumentTests
         Assert.IsType<SkinLayoutDock>(read[1].Main);
         Assert.Equal(SkinRegionVisibility.Hidden, read[1].OptionsFor(SkinLayoutRegions.Applications).Visibility);
         Assert.NotNull(read[1].OptionsFor(SkinLayoutRegions.Inputs).Width);
+        // The third: an input rack beside two banks.
+        Assert.True(read[2].Inputs.IsRack);
+        Assert.True(read[2].Submixer.IsBanks);
+        Assert.Equal(SkinSubmixerOptions.DefaultVisibleBanks, read[2].Submixer.VisibleBanks);
+        Assert.Equal(SkinLayoutTemplates.MasterStrip, read[2].Submixer.Master.Template);
     }
 
     [Fact]
@@ -455,7 +479,9 @@ public sealed class SkinDocumentTests
         string[] Names(JsonElement properties) => [.. properties.EnumerateObject().Select(p => p.Name)];
 
         // Closed objects: a property the reader refuses is one the schema refuses.
-        foreach (string name in new[] { "desktopLayout", "layoutRegions", "layoutSectionOptions", "layoutHeaderOptions" })
+        foreach (string name in new[] { "desktopLayout", "layoutRegions", "layoutSectionOptions", "layoutHeaderOptions",
+                     "layoutInputsOptions", "layoutSubmixerOptions", "layoutInputStrip", "layoutBankStrip", "layoutMaster",
+                     "layoutLabel", "layoutMeter", "layoutFader" })
             Assert.False(Definition(name).GetProperty("additionalProperties").GetBoolean(),
                 $"{name} would accept a property the layout reader refuses.");
         // A node is closed where it is used, so a grid's child may carry its cell and a dock's child its edge.
@@ -522,8 +548,62 @@ public sealed class SkinDocumentTests
         Assert.Equal(SkinLayoutRegions.All, Strings(Properties("layoutRegion").GetProperty("region").GetProperty("enum")));
         Assert.Equal(SkinLayoutRegions.All, Names(Properties("layoutRegions")));
         Assert.Equal("#/$defs/layoutHeaderOptions", Properties("layoutRegions").GetProperty("header").GetProperty("$ref").GetString());
-        Assert.All(SkinLayoutRegions.Sections, r => Assert.Equal("#/$defs/layoutSectionOptions",
+        Assert.All(new[] { "headphones", "monitor", "applications" }, r => Assert.Equal("#/$defs/layoutSectionOptions",
             Properties("layoutRegions").GetProperty(r).GetProperty("$ref").GetString()));
+        Assert.Equal("#/$defs/layoutInputsOptions", Properties("layoutRegions").GetProperty("inputs").GetProperty("$ref").GetString());
+        Assert.Equal("#/$defs/layoutSubmixerOptions", Properties("layoutRegions").GetProperty("submixer").GetProperty("$ref").GetString());
+
+        // INPUTS and the submixer take every section option and their templates' own.
+        JsonElement inputs = Properties("layoutInputsOptions");
+        Assert.Equal(["visibility", "width", "height", "template", "strip"], Names(inputs));
+        Assert.Equal(SkinLayoutTemplates.Inputs, Strings(inputs.GetProperty("template").GetProperty("enum")));
+        Assert.Equal("#/$defs/layoutInputStrip", inputs.GetProperty("strip").GetProperty("$ref").GetString());
+        JsonElement submixer = Properties("layoutSubmixerOptions");
+        Assert.Equal(["visibility", "width", "height", "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master"],
+            Names(submixer));
+        Assert.Equal(SkinLayoutTemplates.Submixer, Strings(submixer.GetProperty("template").GetProperty("enum")));
+        Assert.Equal(["horizontal", "vertical"], Strings(submixer.GetProperty("orientation").GetProperty("enum")));
+        Assert.Equal((SkinFormat.MinVisibleBanks, SkinFormat.MaxVisibleBanks, SkinSubmixerOptions.DefaultVisibleBanks),
+            (submixer.GetProperty("visibleBanks").GetProperty("minimum").GetInt32(), submixer.GetProperty("visibleBanks").GetProperty("maximum").GetInt32(),
+             submixer.GetProperty("visibleBanks").GetProperty("default").GetInt32()));
+        JsonElement defaults = submixer.GetProperty("selectionDefaults");
+        Assert.Equal(SkinFormat.MaxSelectionDefaults, defaults.GetProperty("maxItems").GetInt32());
+        Assert.True(defaults.GetProperty("uniqueItems").GetBoolean());
+        Assert.Equal($"^[a-z0-9_-]{{1,{SkinFormat.MaxMixIdLength}}}$", defaults.GetProperty("items").GetProperty("pattern").GetString());
+        // An option of another template is refused there as the reader refuses it.
+        Assert.Equal("input-rack", Definition("layoutInputsOptions").GetProperty("if").GetProperty("properties").GetProperty("template").GetProperty("const").GetString());
+        Assert.Equal(["strip"], Strings(Definition("layoutInputsOptions").GetProperty("else").GetProperty("not").GetProperty("required")));
+        Assert.Equal("mix-banks", Definition("layoutSubmixerOptions").GetProperty("if").GetProperty("properties").GetProperty("template").GetProperty("const").GetString());
+        Assert.Equal(["orientation", "visibleBanks", "selectionDefaults", "strip", "master"],
+            Definition("layoutSubmixerOptions").GetProperty("else").GetProperty("not").GetProperty("anyOf").EnumerateArray()
+                .Select(b => Strings(b.GetProperty("required")).Single()));
+
+        foreach ((string strip, IReadOnlyList<string> templates, IReadOnlyList<string> parts, string[] stripOptions) in new[]
+                 {
+                     ("layoutInputStrip", SkinLayoutTemplates.InputStrips, SkinStripParts.InputRow, new[] { "template", "partsOrder", "hidden", "label", "meter" }),
+                     ("layoutBankStrip", SkinLayoutTemplates.BankStrips, SkinStripParts.Send, new[] { "template", "partsOrder", "hidden", "label", "meter", "fader" }),
+                 })
+        {
+            JsonElement fields = Properties(strip);
+            Assert.Equal(stripOptions, Names(fields));
+            Assert.Equal(templates, Strings(fields.GetProperty("template").GetProperty("enum")));
+            Assert.Equal(parts, Strings(fields.GetProperty("partsOrder").GetProperty("items").GetProperty("enum")));
+            Assert.Equal(parts.Count, fields.GetProperty("partsOrder").GetProperty("maxItems").GetInt32());
+            // identity cannot be hidden.
+            Assert.Equal(parts.Skip(1), Strings(fields.GetProperty("hidden").GetProperty("items").GetProperty("enum")));
+            Assert.Equal(parts.Count - 1, fields.GetProperty("hidden").GetProperty("maxItems").GetInt32());
+        }
+        Assert.Equal(["template", "label", "meter", "fader"], Names(Properties("layoutMaster")));
+        Assert.Equal(SkinLayoutTemplates.Masters, Strings(Properties("layoutMaster").GetProperty("template").GetProperty("enum")));
+        Assert.Equal(["text", "icon-and-text", "icon"], Strings(Properties("layoutLabel").GetProperty("style").GetProperty("enum")));
+        Assert.Equal(Enum.GetValues<SkinLabelStyle>().Length, Properties("layoutLabel").GetProperty("style").GetProperty("enum").GetArrayLength());
+        Assert.Equal(["below-label", "beside-label", "beside-fader"], Strings(Properties("layoutMeter").GetProperty("placement").GetProperty("enum")));
+        Assert.Equal(Enum.GetValues<SkinMeterPlacement>().Length, Properties("layoutMeter").GetProperty("placement").GetProperty("enum").GetArrayLength());
+        Assert.Equal(["normal", "reversed"], Strings(Properties("layoutFader").GetProperty("direction").GetProperty("enum")));
+        Assert.Equal(Enum.GetNames<SkinFaderDirection>().Select(n => n.ToLowerInvariant()),
+            Strings(Properties("layoutFader").GetProperty("direction").GetProperty("enum")));
+        foreach (string def in new[] { "layoutMeter", "layoutFader" })
+            Assert.Equal(["horizontal", "vertical"], Strings(Properties(def).GetProperty("orientation").GetProperty("enum")));
 
         JsonElement options = Properties("layoutSectionOptions");
         Assert.Equal(["visibility", "width", "height"], Names(options));

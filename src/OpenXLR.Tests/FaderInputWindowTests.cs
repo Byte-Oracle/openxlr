@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
+using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
@@ -76,6 +77,117 @@ internal static class FaderInputWindowTests
             }
         }
         finally { SkinService.Apply(saved); }
+        CheckOrientations();
+    }
+
+    /// <summary>
+    /// The faders a skin's strip templates draw: upright, and reversed in
+    /// either orientation, in the flat appearance and in the console one. The
+    /// top of the range sits where the direction says, the keyboard and the
+    /// framework's drag move the way the fader runs, and the fine drag
+    /// travels a tenth as far the same way.
+    /// </summary>
+    internal static void CheckOrientations()
+    {
+        SkinEntry saved = SkinService.Current;
+        var window = new Window { Width = 400, Height = 420 };
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 40, Margin = new Thickness(40) };
+        Slider Make(Orientation orientation, bool reversed)
+        {
+            var slider = new Slider
+            {
+                Minimum = 0, Maximum = 1, Orientation = orientation, IsDirectionReversed = reversed,
+                Width = orientation == Orientation.Horizontal ? 200 : double.NaN, Height = orientation == Orientation.Vertical ? 200 : double.NaN,
+                VerticalAlignment = VerticalAlignment.Top,
+            };
+            FaderInput.SetStep(slider, 0.01);
+            row.Children.Add(slider);
+            return slider;
+        }
+        Slider upright = Make(Orientation.Vertical, false);
+        Slider uprightReversed = Make(Orientation.Vertical, true);
+        Slider flatReversed = Make(Orientation.Horizontal, true);
+        window.Content = row;
+        try
+        {
+            window.Show();
+            foreach (string id in new[] { SkinPackage.DefaultId, "opendeck" })
+            {
+                SkinService.Apply(SkinCatalog.Find(id)!);
+                WindowLayoutTests.Layout(window, 400, 420);
+                using var input = new XPointer();
+                input.Focus(window.TryGetPlatformHandle()!.Handle);
+                foreach ((Slider slider, int dx, int dy, bool increases) in new[]
+                         {
+                             (upright, 0, -60, true), (uprightReversed, 0, -60, false), (flatReversed, 60, 0, false),
+                         })
+                {
+                    string what = $"{slider.Orientation}{(slider.IsDirectionReversed ? " reversed" : "")} in {id}";
+                    var thumb = slider.GetVisualDescendants().OfType<Thumb>().Single();
+                    Assert.True(thumb.IsEffectivelyVisible, $"no cap on the {what} fader");
+                    // The top of the range is at the top or the right, or opposite when reversed.
+                    slider.Value = 1;
+                    Pump();
+                    Point top = thumb.TranslatePoint(new Point(thumb.Bounds.Width / 2, thumb.Bounds.Height / 2), slider)!.Value;
+                    bool atStart = slider.Orientation == Orientation.Vertical ? top.Y < slider.Bounds.Height / 2 : top.X < slider.Bounds.Width / 2;
+                    Assert.True(atStart == (slider.Orientation == Orientation.Vertical ? !slider.IsDirectionReversed : slider.IsDirectionReversed),
+                        $"the {what} fader's maximum is at {top}");
+
+                    slider.Focus();
+                    slider.Value = .5;
+                    Pump();
+                    input.Key(slider.Orientation == Orientation.Vertical ? 0xff52UL : 0xff53UL); // Up or Right
+                    Pump();
+                    Assert.Equal(increases ? .51 : .49, slider.Value, 10);
+
+                    double fine = DragBy(slider, input, true, dx, dy);
+                    double normal = DragBy(slider, input, false, dx, dy);
+                    if (increases)
+                    {
+                        Assert.InRange(fine, .51, .59);
+                        Assert.True(normal - .5 > (fine - .5) * 5, $"{what}: normal {normal}, fine {fine}.");
+                    }
+                    else
+                    {
+                        Assert.InRange(fine, .41, .49);
+                        Assert.True(.5 - normal > (.5 - fine) * 5, $"{what}: normal {normal}, fine {fine}.");
+                    }
+                    Assert.Equal(Math.Round(fine * 100), fine * 100, 8);
+                }
+            }
+        }
+        finally
+        {
+            window.Close();
+            SkinService.Apply(saved);
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    /// <summary>A drag from the cap's centre by the given distance, with Shift held for a fine one.</summary>
+    private static double DragBy(Slider slider, XPointer input, bool fine, int dx, int dy)
+    {
+        slider.Value = .5;
+        Pump();
+        var thumb = slider.GetVisualDescendants().OfType<Thumb>().Single();
+        PixelPoint point = thumb.PointToScreen(new Point(thumb.Bounds.Width / 2, thumb.Bounds.Height / 2));
+        input.MoveTo(point.X, point.Y);
+        if (fine) input.SetKey(0xffe1, true); // Shift
+        try
+        {
+            Pump();
+            input.SetButton(true);
+            Pump();
+            input.MoveTo(point.X + dx, point.Y + dy);
+            Pump();
+        }
+        finally
+        {
+            input.SetButton(false);
+            input.SetKey(0xffe1, false);
+            Pump();
+        }
+        return slider.Value;
     }
 
     private static double Drag(Slider slider, XPointer input, bool fine, Action<Slider>? cancel = null)

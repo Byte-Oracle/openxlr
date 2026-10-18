@@ -36,6 +36,14 @@ public static class SkinLayoutReader
     private static readonly string[] Kinds = [Stack, Grid, Dock, Region];
     private static readonly string[] Edges = ["top", "bottom", "left", "right", "fill"];
     private static readonly string[] SectionOptions = ["visibility", "width", "height"];
+    private static readonly string[] InputsOptions = [.. SectionOptions, "template", "strip"];
+    private static readonly string[] SubmixerOptions =
+        [.. SectionOptions, "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master"];
+    private static readonly string[] BankOnlyOptions = ["orientation", "visibleBanks", "selectionDefaults", "strip", "master"];
+    private static readonly string[] Orientations = ["horizontal", "vertical"];
+    private static readonly string[] Placements = ["below-label", "beside-label", "beside-fader"];
+    private static readonly string[] Directions = ["normal", "reversed"];
+    private static readonly string[] LabelStyles = ["text", "icon-and-text", "icon"];
     private static readonly string[] HeaderOptions = ["actions", "overflow"];
 
     /// <summary>What the reader has seen so far in one tree: nodes, container ids and placed regions.</summary>
@@ -100,6 +108,8 @@ public static class SkinLayoutReader
 
         var regions = new Dictionary<string, SkinRegionOptions>(StringComparer.Ordinal);
         SkinHeaderOptions header = SkinHeaderOptions.Default;
+        SkinInputsOptions inputs = SkinInputsOptions.Default;
+        SkinSubmixerOptions submixer = SkinSubmixerOptions.Default;
         if (fields.TryGetValue("regions", out JsonElement regionsElement))
         {
             string regionsPath = path + ".regions";
@@ -110,10 +120,16 @@ public static class SkinLayoutReader
                     throw new LayoutException(at,
                         $"\"{Printable(id)}\" is not a region this OpenXLR has; use one of {Quoted(SkinLayoutRegions.All)}.");
                 if (id == SkinLayoutRegions.Header) header = ReadHeader(value, at);
-                else regions[id] = ReadSection(value, at, id);
+                else
+                {
+                    Dictionary<string, JsonElement> section = Fields(value, at, $"the options of \"{id}\"");
+                    regions[id] = ReadSection(section, at, id);
+                    if (id == SkinLayoutRegions.Inputs) inputs = ReadInputs(section, at);
+                    if (id == SkinLayoutRegions.Submixer) submixer = ReadSubmixer(section, at);
+                }
             }
         }
-        return new SkinLayout(version, main) { Regions = regions, Header = header };
+        return new SkinLayout(version, main) { Regions = regions, Header = header, Inputs = inputs, Submixer = submixer };
     }
 
     /// <summary>
@@ -340,10 +356,14 @@ public static class SkinLayoutReader
         return id;
     }
 
-    private static SkinRegionOptions ReadSection(JsonElement element, string path, string region)
+    private static SkinRegionOptions ReadSection(Dictionary<string, JsonElement> fields, string path, string region)
     {
-        Dictionary<string, JsonElement> fields = Fields(element, path, $"the options of \"{region}\"");
-        Only(fields, path, $"\"{region}\"", SectionOptions);
+        Only(fields, path, $"\"{region}\"", region switch
+        {
+            SkinLayoutRegions.Inputs => InputsOptions,
+            SkinLayoutRegions.Submixer => SubmixerOptions,
+            _ => SectionOptions,
+        });
         var options = SkinRegionOptions.Default;
         if (fields.TryGetValue("visibility", out JsonElement visibility))
             options = options with
@@ -361,6 +381,222 @@ public static class SkinLayoutReader
         if (fields.TryGetValue("height", out JsonElement height))
             options = options with { Height = Number(height, path + ".height", SkinFormat.MinRegionSize, SkinFormat.MaxRegionSize) };
         return options;
+    }
+
+    /// <summary>INPUTS' template, and an input rack's strip.</summary>
+    private static SkinInputsOptions ReadInputs(Dictionary<string, JsonElement> fields, string path)
+    {
+        string template = fields.TryGetValue("template", out JsonElement element)
+            ? Name(element, path + ".template", SkinLayoutTemplates.Inputs, "an INPUTS template")
+            : SkinLayoutTemplates.HardwarePanel;
+        if (template != SkinLayoutTemplates.InputRack)
+        {
+            if (fields.ContainsKey("strip"))
+                throw new LayoutException(path + ".strip",
+                    $"\"strip\" belongs to the \"{SkinLayoutTemplates.InputRack}\" template; set \"template\": \"{SkinLayoutTemplates.InputRack}\" or leave it out.");
+            return SkinInputsOptions.Default;
+        }
+        SkinStripOptions strip = fields.TryGetValue("strip", out JsonElement stripElement)
+            ? ReadStrip(stripElement, path + ".strip", SkinLayoutTemplates.InputStrips, SkinStripParts.InputRow, fader: false)
+            : SkinStripOptions.InputRowDefault;
+        return new SkinInputsOptions(template, strip);
+    }
+
+    /// <summary>The submixer's template, and the banks, strips and masters of one drawn by mix.</summary>
+    private static SkinSubmixerOptions ReadSubmixer(Dictionary<string, JsonElement> fields, string path)
+    {
+        string template = fields.TryGetValue("template", out JsonElement element)
+            ? Name(element, path + ".template", SkinLayoutTemplates.Submixer, "a submixer template")
+            : SkinLayoutTemplates.ChannelTiles;
+        if (template != SkinLayoutTemplates.MixBanks)
+        {
+            if (BankOnlyOptions.FirstOrDefault(fields.ContainsKey) is { } bankOnly)
+                throw new LayoutException($"{path}.{bankOnly}",
+                    $"\"{bankOnly}\" belongs to the \"{SkinLayoutTemplates.MixBanks}\" template; set \"template\": \"{SkinLayoutTemplates.MixBanks}\" or leave it out.");
+            return SkinSubmixerOptions.Default;
+        }
+        SkinLayoutOrientation orientation = fields.TryGetValue("orientation", out JsonElement orientationElement)
+            ? Orientation(orientationElement, path + ".orientation")
+            : SkinLayoutOrientation.Horizontal;
+        int banks = fields.TryGetValue("visibleBanks", out JsonElement banksElement)
+            ? Whole(banksElement, path + ".visibleBanks", SkinFormat.MinVisibleBanks, SkinFormat.MaxVisibleBanks,
+                "a submixer shows 1 to 4 banks, and every mix stays reachable through each bank's picker")
+            : SkinSubmixerOptions.DefaultVisibleBanks;
+        IReadOnlyList<string> defaults = fields.TryGetValue("selectionDefaults", out JsonElement defaultsElement)
+            ? ReadSelectionDefaults(defaultsElement, path + ".selectionDefaults")
+            : [];
+        SkinStripOptions strip = fields.TryGetValue("strip", out JsonElement stripElement)
+            ? ReadStrip(stripElement, path + ".strip", SkinLayoutTemplates.BankStrips, SkinStripParts.Send, fader: true)
+            : SkinStripOptions.BankDefault;
+        SkinMasterOptions master = fields.TryGetValue("master", out JsonElement masterElement)
+            ? ReadMaster(masterElement, path + ".master")
+            : SkinMasterOptions.Default;
+        return new SkinSubmixerOptions(template, orientation, banks, defaults, strip, master);
+    }
+
+    /// <summary>
+    /// A strip: its template, the order of its parts, the parts it leaves out,
+    /// its label, its meter and, for a send strip, its fader. A part named in
+    /// neither list keeps its default place after the ordered ones.
+    /// </summary>
+    private static SkinStripOptions ReadStrip(JsonElement element, string path, IReadOnlyList<string> templates,
+        IReadOnlyList<string> parts, bool fader)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, "\"strip\"");
+        Only(fields, path, "\"strip\"", fader
+            ? ["template", "partsOrder", "hidden", "label", "meter", "fader"]
+            : ["template", "partsOrder", "hidden", "label", "meter"]);
+        string template = fields.TryGetValue("template", out JsonElement templateElement)
+            ? Name(templateElement, path + ".template", templates, "a strip template")
+            : templates[0];
+        // A vertical strip stands its fader and meter upright unless told otherwise; every other strip lies them flat.
+        bool upright = template == SkinLayoutTemplates.VerticalStrip;
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        List<string> Parts(string name)
+        {
+            var list = new List<string>();
+            if (!fields.TryGetValue(name, out JsonElement array)) return list;
+            string at = $"{path}.{name}";
+            if (array.ValueKind != JsonValueKind.Array)
+                throw new LayoutException(at, $"expected an array of part names: {Quoted(parts)}.");
+            if (array.GetArrayLength() > parts.Count)
+                throw new LayoutException(at, $"this strip has {parts.Count} parts, so \"{name}\" lists at most {parts.Count}.");
+            int index = 0;
+            foreach (JsonElement item in array.EnumerateArray())
+            {
+                string itemPath = $"{at}[{index++}]";
+                string? part = item.ValueKind == JsonValueKind.String ? item.GetString() : null;
+                if (part is null || !parts.Contains(part, StringComparer.Ordinal))
+                    throw new LayoutException(itemPath,
+                        $"{(part is null ? "this" : $"\"{Printable(part)}\"")} is not a part of this strip; use one of {Quoted(parts)}.");
+                if (!seen.Add(part))
+                    throw new LayoutException(itemPath,
+                        $"\"{part}\" is listed twice; a part appears once across \"partsOrder\" and \"hidden\".");
+                if (name == "hidden" && part == SkinStripParts.Identity)
+                    throw new LayoutException(itemPath, "a strip always shows whose it is, so \"identity\" cannot be hidden.");
+                list.Add(part);
+            }
+            return list;
+        }
+        List<string> ordered = Parts("partsOrder");
+        List<string> hidden = Parts("hidden");
+        string[] order = [.. ordered, .. parts.Where(p => !ordered.Contains(p, StringComparer.Ordinal))];
+        SkinLabelStyle label = fields.TryGetValue("label", out JsonElement labelElement)
+            ? ReadLabel(labelElement, path + ".label")
+            : SkinLabelStyle.Text;
+        SkinMeterOptions meter = fields.TryGetValue("meter", out JsonElement meterElement)
+            ? ReadMeter(meterElement, path + ".meter", upright)
+            : upright ? new SkinMeterOptions(SkinLayoutOrientation.Vertical, SkinMeterPlacement.BesideFader) : SkinMeterOptions.Default;
+        SkinFaderOptions faderOptions = fields.TryGetValue("fader", out JsonElement faderElement)
+            ? ReadFader(faderElement, path + ".fader", upright)
+            : upright ? new SkinFaderOptions(SkinLayoutOrientation.Vertical) : SkinFaderOptions.Default;
+        return new SkinStripOptions(template, order, hidden, label, meter, faderOptions);
+    }
+
+    private static SkinMasterOptions ReadMaster(JsonElement element, string path)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, "\"master\"");
+        Only(fields, path, "\"master\"", "template", "label", "meter", "fader");
+        string template = fields.TryGetValue("template", out JsonElement templateElement)
+            ? Name(templateElement, path + ".template", SkinLayoutTemplates.Masters, "a master template")
+            : SkinLayoutTemplates.MasterCard;
+        bool upright = template == SkinLayoutTemplates.MasterStrip;
+        SkinLabelStyle label = fields.TryGetValue("label", out JsonElement labelElement)
+            ? ReadLabel(labelElement, path + ".label")
+            : SkinLabelStyle.Text;
+        SkinMeterOptions meter = fields.TryGetValue("meter", out JsonElement meterElement)
+            ? ReadMeter(meterElement, path + ".meter", upright)
+            : upright ? new SkinMeterOptions(SkinLayoutOrientation.Vertical, SkinMeterPlacement.BesideFader) : SkinMeterOptions.Default;
+        SkinFaderOptions fader = fields.TryGetValue("fader", out JsonElement faderElement)
+            ? ReadFader(faderElement, path + ".fader", upright)
+            : upright ? new SkinFaderOptions(SkinLayoutOrientation.Vertical) : SkinFaderOptions.Default;
+        return new SkinMasterOptions(template, label, meter, fader);
+    }
+
+    private static SkinLabelStyle ReadLabel(JsonElement element, string path)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, "\"label\"");
+        Only(fields, path, "\"label\"", "style");
+        if (!fields.TryGetValue("style", out JsonElement style)) return SkinLabelStyle.Text;
+        return Name(style, path + ".style", LabelStyles, "a label style") switch
+        {
+            "icon-and-text" => SkinLabelStyle.IconAndText,
+            "icon" => SkinLabelStyle.Icon,
+            _ => SkinLabelStyle.Text,
+        };
+    }
+
+    /// <summary>A meter's orientation and placement; what it leaves out follows the strip's own default.</summary>
+    private static SkinMeterOptions ReadMeter(JsonElement element, string path, bool upright)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, "\"meter\"");
+        Only(fields, path, "\"meter\"", "orientation", "placement");
+        SkinLayoutOrientation orientation = fields.TryGetValue("orientation", out JsonElement o)
+            ? Orientation(o, path + ".orientation")
+            : upright ? SkinLayoutOrientation.Vertical : SkinLayoutOrientation.Horizontal;
+        SkinMeterPlacement placement = fields.TryGetValue("placement", out JsonElement p)
+            ? Name(p, path + ".placement", Placements, "a meter placement") switch
+            {
+                "beside-label" => SkinMeterPlacement.BesideLabel,
+                "beside-fader" => SkinMeterPlacement.BesideFader,
+                _ => SkinMeterPlacement.BelowLabel,
+            }
+            : upright ? SkinMeterPlacement.BesideFader : SkinMeterPlacement.BelowLabel;
+        return new SkinMeterOptions(orientation, placement);
+    }
+
+    private static SkinFaderOptions ReadFader(JsonElement element, string path, bool upright)
+    {
+        Dictionary<string, JsonElement> fields = Fields(element, path, "\"fader\"");
+        Only(fields, path, "\"fader\"", "orientation", "direction");
+        SkinLayoutOrientation orientation = fields.TryGetValue("orientation", out JsonElement o)
+            ? Orientation(o, path + ".orientation")
+            : upright ? SkinLayoutOrientation.Vertical : SkinLayoutOrientation.Horizontal;
+        SkinFaderDirection direction = fields.TryGetValue("direction", out JsonElement d)
+            && Name(d, path + ".direction", Directions, "a fader direction") == "reversed"
+            ? SkinFaderDirection.Reversed : SkinFaderDirection.Normal;
+        return new SkinFaderOptions(orientation, direction);
+    }
+
+    /// <summary>The mix ids the banks start on: short, plain, unique. Whether a mix has the id is for the window to find out.</summary>
+    private static IReadOnlyList<string> ReadSelectionDefaults(JsonElement element, string path)
+    {
+        if (element.ValueKind != JsonValueKind.Array)
+            throw new LayoutException(path, "expected an array of mix ids such as \"monitor\" and \"stream\".");
+        if (element.GetArrayLength() > SkinFormat.MaxSelectionDefaults)
+            throw new LayoutException(path, $"lists at most {SkinFormat.MaxSelectionDefaults} mix ids.");
+        var ids = new List<string>();
+        int index = 0;
+        foreach (JsonElement item in element.EnumerateArray())
+        {
+            string itemPath = $"{path}[{index++}]";
+            string? id = item.ValueKind == JsonValueKind.String ? item.GetString() : null;
+            if (!ValidMixId(id))
+                throw new LayoutException(itemPath,
+                    $"expected a mix id of 1 to {SkinFormat.MaxMixIdLength} lowercase letters, digits, hyphens and underscores.");
+            if (ids.Contains(id!, StringComparer.Ordinal))
+                throw new LayoutException(itemPath, $"\"{id}\" is listed twice; each mix starts in one bank.");
+            ids.Add(id!);
+        }
+        return ids;
+    }
+
+    /// <summary>True for a mix id as <c>selectionDefaults</c> and a saved bank choice may hold it.</summary>
+    public static bool ValidMixId(string? id) =>
+        id is { Length: > 0 and <= SkinFormat.MaxMixIdLength }
+        && id.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '_');
+
+    private static SkinLayoutOrientation Orientation(JsonElement element, string path) =>
+        Name(element, path, Orientations, "an orientation") == "vertical" ? SkinLayoutOrientation.Vertical : SkinLayoutOrientation.Horizontal;
+
+    /// <summary>A string from a fixed list; anything else names the list.</summary>
+    private static string Name(JsonElement element, string path, IReadOnlyList<string> names, string what)
+    {
+        string? name = element.ValueKind == JsonValueKind.String ? element.GetString() : null;
+        if (name is null || !names.Contains(name, StringComparer.Ordinal))
+            throw new LayoutException(path,
+                $"{(name is null ? "expected" : $"\"{Printable(name)}\" is not {what} this OpenXLR has; use")} {Quoted(names, "or")}.");
+        return name;
     }
 
     private static SkinHeaderOptions ReadHeader(JsonElement element, string path)

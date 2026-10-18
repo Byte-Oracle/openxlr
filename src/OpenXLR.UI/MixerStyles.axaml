@@ -41,11 +41,31 @@
     <Style Selector="Slider">
       <Setter Property="MinHeight" Value="{DynamicResource Ox.Mixer.SliderMinHeight}"/>
     </Style>
+    <!-- An upright fader is as long as the strip token says and as wide as a
+         flat one is tall; the height minimum belongs to the flat ones. -->
+    <Style Selector="Slider:vertical">
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="MinWidth" Value="{DynamicResource Ox.Mixer.SliderMinHeight}"/>
+      <Setter Property="Height" Value="{DynamicResource Ox.Mixer.VerticalFaderLength}"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
     <!-- Fluent's horizontal template reserves two spacer rows around its
-         track. Enlarged targets span those rows instead of being clipped. -->
-    <Style Selector="Window.large-targets Slider /template/ Track#PART_Track">
+         track, and its vertical one two spacer columns. Enlarged targets span
+         those instead of being clipped. -->
+    <Style Selector="Window.large-targets Slider:horizontal /template/ Track#PART_Track">
       <Setter Property="Grid.Row" Value="0"/>
       <Setter Property="Grid.RowSpan" Value="3"/>
+    </Style>
+    <Style Selector="Window.large-targets Slider:vertical /template/ Track#PART_Track">
+      <Setter Property="Grid.Column" Value="0"/>
+      <Setter Property="Grid.ColumnSpan" Value="3"/>
+    </Style>
+    <!-- The strips of an input rack and of the mix banks. -->
+    <Style Selector="Border.strip">
+      <Setter Property="Padding" Value="6"/>
+    </Style>
+    <Style Selector="Border.strip.upright">
+      <Setter Property="Width" Value="{DynamicResource Ox.Mixer.StripWidth}"/>
     </Style>
     <Style Selector="Slider /template/ Thumb">
       <Setter Property="MinHeight" Value="{DynamicResource Ox.Mixer.ControlMinSize}"/>

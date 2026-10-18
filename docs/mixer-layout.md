@@ -56,7 +56,10 @@ order of the header's actions come from the skin's optional `layout`
 including the hidden sections they show again, are window preferences in
 `ui.json`.
 Choosing a skin never sends a layout command, and a channel or mix order
-set here never moves a section.
+set here never moves a section. Under a skin that draws the submixer as
+mix banks, the mix each bank shows is a window preference in `ui.json`
+too. Picking one never changes the order kept here, and the banks list
+the channels in that order.
 
 ## Appearance
 

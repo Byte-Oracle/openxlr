@@ -57,6 +57,16 @@ public sealed record UiSettings
     public const int MaxSkinArrangements = 32;
 
     /// <summary>
+    /// The mixes the user picked for the banks of a skin whose submixer is
+    /// drawn by mix, one entry per skin id and layout version, the first
+    /// bank's mix first. A skin's <c>selectionDefaults</c> apply only while
+    /// it has no entry here. Choosing a bank's mix is a window preference:
+    /// it never changes the mixer's order or sends a command. At most
+    /// <see cref="MaxSkinArrangements"/> are kept, the most recent last.
+    /// </summary>
+    public IReadOnlyList<SkinBankSelection> SkinBankSelections { get; init; } = [];
+
+    /// <summary>
     /// The skin layouts, by skin id and layout version, whose collapsed
     /// sections have been folded once. A skin's <c>collapsed</c> is the
     /// start state the first time the window wears it; after that the
@@ -146,6 +156,7 @@ public sealed record UiSettings
             SectionOrder = settings.SectionOrder ?? [],
             SkinArrangements = NormalizeSkinArrangements(settings.SkinArrangements),
             SkinLayoutsSeen = NormalizeSeen(settings.SkinLayoutsSeen),
+            SkinBankSelections = NormalizeBankSelections(settings.SkinBankSelections),
             // The per-skin section orders of an unreleased build, which the
             // arrangements replaced. They are not read, and go at the next save.
             UnknownKeys = WithoutObsoleteKeys(settings.UnknownKeys),
@@ -184,6 +195,43 @@ public sealed record UiSettings
                 Shown = [.. shown ?? []],
             });
         return this with { SkinArrangements = NormalizeSkinArrangements(entries) };
+    }
+
+    /// <summary>The mixes the user picked for this skin's banks, or null when the user has picked none.</summary>
+    public IReadOnlyList<string>? SkinBanksFor(string skin, int version) =>
+        SkinBankSelections.LastOrDefault(e => e.Skin == skin && e.Version == version)?.Banks;
+
+    /// <summary>
+    /// These settings with the banks of one skin and layout version replaced,
+    /// or forgotten when <paramref name="banks"/> is null or empty. The entry
+    /// moves to the end, and the oldest go once there are more than
+    /// <see cref="MaxSkinArrangements"/>.
+    /// </summary>
+    public UiSettings WithSkinBanks(string skin, int version, IReadOnlyList<string>? banks)
+    {
+        List<SkinBankSelection> entries = [.. SkinBankSelections.Where(e => e.Skin != skin || e.Version != version)];
+        if (banks is { Count: > 0 }) entries.Add(new SkinBankSelection { Skin = skin, Version = version, Banks = [.. banks] });
+        return this with { SkinBankSelections = NormalizeBankSelections(entries) };
+    }
+
+    /// <summary>
+    /// The bank choices made safe to use: entries with no skin, repeats of
+    /// one skin and version (the last wins), and ids that are not a mix id
+    /// go; each entry keeps at most as many mixes as a skin may show banks.
+    /// </summary>
+    private static IReadOnlyList<SkinBankSelection> NormalizeBankSelections(IReadOnlyList<SkinBankSelection?>? entries)
+    {
+        if (entries is null) return [];
+        var kept = new List<SkinBankSelection>();
+        foreach (SkinBankSelection? entry in entries)
+        {
+            if (entry is not { Skin.Length: > 0 }) continue;
+            kept.RemoveAll(e => e.Skin == entry.Skin && e.Version == entry.Version);
+            string[] banks = [.. (entry.Banks ?? []).Where(Skinning.SkinLayoutReader.ValidMixId).Distinct(StringComparer.Ordinal)
+                .Take(Skinning.SkinFormat.MaxVisibleBanks)];
+            if (banks.Length > 0) kept.Add(entry with { Banks = banks });
+        }
+        return kept.Count <= MaxSkinArrangements ? kept : kept[^MaxSkinArrangements..];
     }
 
     /// <summary>True when the skin layout's collapsed sections were already folded once.</summary>
@@ -261,6 +309,18 @@ public sealed record SkinArrangement
     public int Version { get; init; }
     public IReadOnlyDictionary<string, string> Slots { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
     public IReadOnlyList<string> Shown { get; init; } = [];
+}
+
+/// <summary>
+/// The mixes the user picked for one skin's banks: the skin's id, the layout
+/// version, and the mix ids in bank order. An id whose mix is gone is
+/// skipped when the banks are filled, so the bank moves on to the next mix.
+/// </summary>
+public sealed record SkinBankSelection
+{
+    public string Skin { get; init; } = "";
+    public int Version { get; init; }
+    public IReadOnlyList<string> Banks { get; init; } = [];
 }
 
 /// <summary>A skin's layout by skin id and layout version.</summary>

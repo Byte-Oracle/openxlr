@@ -100,6 +100,7 @@ public static class SkinTokens
         ["Ox.Mixer.InsertControlMinSize"] = TouchTarget,
         ["Ox.Mixer.ChannelWidth"] = 180,
         ["Ox.Mixer.MixWidth"] = 280,
+        ["Ox.Mixer.StripWidth"] = 96,
     };
 
     /// <summary>Corner radii and border widths are bounded so a skin cannot swallow a control.</summary>
@@ -167,6 +168,9 @@ public static class SkinTokens
         Brush("Ox.Meter.Track", "#14161b"),
         Radius("Ox.Meter.CornerRadius", 2),
         Number("Ox.Meter.Height", 4, 2, 24),
+        // An upright meter's thickness, where a strip template stands its meter
+        // up; its length is the length of what it stands beside.
+        Number("Ox.Meter.VerticalWidth", 4, 2, 24),
         // Read by the segmented meter only; the continuous one ignores them.
         Number("Ox.Meter.Segments", 16, 2, 64),
         Number("Ox.Meter.SegmentGap", 2, 0, 8),
@@ -337,6 +341,13 @@ public static class SkinTokens
         Number("Ox.Mixer.InsertControlMinSize", 24, 16, 64),
         Number("Ox.Mixer.ChannelWidth", 132, 132, 400),
         Number("Ox.Mixer.MixWidth", 232, 232, 500),
+        // The strip templates of a skin's layout: an upright strip in a mix
+        // bank, the length of an upright fader, and the gap between banks. An
+        // input rack and a submixer of banks reckon their narrowest width
+        // from the strip width.
+        Number("Ox.Mixer.StripWidth", 76, 56, 200),
+        Number("Ox.Mixer.VerticalFaderLength", 160, 80, 480),
+        Number("Ox.Mixer.BankSpacing", 12, 0, 64),
     ];
 
     private static readonly Dictionary<string, SkinToken> ByName =

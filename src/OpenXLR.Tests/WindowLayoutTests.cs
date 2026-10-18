@@ -714,10 +714,26 @@ public sealed class WindowLayoutTests
         Assert.True(child.Bounds.Width > 0, $"{child.GetType().Name} has no width.");
         var origin = child.TranslatePoint(default, ancestor)!.Value;
         Size box = ancestor is TopLevel top ? top.ClientSize : ancestor.Bounds.Size;
-        Assert.InRange(origin.X, -0.1, box.Width);
-        Assert.InRange(origin.X + child.Bounds.Width, 0, box.Width + 0.1);
+        string what = Describe(child);
+        Assert.True(origin.X >= -0.1 && origin.X <= box.Width, $"{what} starts at x={origin.X:0.#}, outside {ancestor.GetType().Name} {box.Width:0.#} wide.");
+        Assert.True(origin.X + child.Bounds.Width <= box.Width + 0.1,
+            $"{what} ends at x={origin.X + child.Bounds.Width:0.#}, past the {box.Width:0.#} of its {ancestor.GetType().Name}.");
         if (ReferenceEquals(child.Parent, ancestor))
-            Assert.InRange(origin.Y + child.Bounds.Height, 0, box.Height + 0.1);
+            Assert.True(origin.Y + child.Bounds.Height >= 0 && origin.Y + child.Bounds.Height <= box.Height + 0.1,
+                $"{what} ends at y={origin.Y + child.Bounds.Height:0.#}, past the {box.Height:0.#} of its {ancestor.GetType().Name}.");
+    }
+
+    /// <summary>A control named for a failure: its type, name, text and size, plus the named ancestors above it.</summary>
+    internal static string Describe(Control child)
+    {
+        string text = child switch
+        {
+            TextBlock t => $" \"{t.Text}\"",
+            ContentControl { Content: string s } => $" \"{s}\"",
+            _ => "",
+        };
+        string path = string.Join(" < ", child.GetVisualAncestors().OfType<Control>().Where(a => a.Name is not null).Take(4).Select(a => a.Name));
+        return $"{child.GetType().Name}{(child.Name is null ? "" : $" {child.Name}")}{text} ({child.Bounds.Width:0.#}x{child.Bounds.Height:0.#}, under {path})";
     }
 
     internal static void AssertNoOverlap(IReadOnlyList<Control> controls)

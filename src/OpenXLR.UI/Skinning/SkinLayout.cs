@@ -106,6 +106,212 @@ public static class SkinHeaderActions
     public static bool Exists(string id) => All.Contains(id, StringComparer.Ordinal);
 }
 
+/// <summary>
+/// The templates a region or a strip can take. Each one is drawn by markup
+/// the application owns; a skin names it and never supplies it.
+/// </summary>
+public static class SkinLayoutTemplates
+{
+    /// <summary>INPUTS as it has always been: the gain, the switches and the inserts in one panel.</summary>
+    public const string HardwarePanel = "hardware-panel";
+    /// <summary>INPUTS as one strip per input channel, each with its own parts.</summary>
+    public const string InputRack = "input-rack";
+    /// <summary>The submixer as it has always been: one tile per channel, the mix masters under them.</summary>
+    public const string ChannelTiles = "channel-tiles";
+    /// <summary>The submixer by mix: banks, each showing every channel's send into the mix its picker chose.</summary>
+    public const string MixBanks = "mix-banks";
+    /// <summary>An input rack's strip: one row of parts for one input channel.</summary>
+    public const string InputRow = "input-row";
+    /// <summary>A bank's strip: the parts of one send stacked in a column, the strips side by side.</summary>
+    public const string VerticalStrip = "vertical-strip";
+    /// <summary>A bank's strip: the parts of one send in a row, the rows one above the other.</summary>
+    public const string SendList = "send-list";
+    /// <summary>A bank's master as the mix tile the window has always drawn.</summary>
+    public const string MasterCard = "master-card";
+    /// <summary>A bank's master drawn like one more strip at the end of the bank.</summary>
+    public const string MasterStrip = "master-strip";
+
+    /// <summary>What <c>regions.inputs.template</c> may name; the first is the default.</summary>
+    public static IReadOnlyList<string> Inputs { get; } = [HardwarePanel, InputRack];
+
+    /// <summary>What <c>regions.submixer.template</c> may name; the first is the default.</summary>
+    public static IReadOnlyList<string> Submixer { get; } = [ChannelTiles, MixBanks];
+
+    /// <summary>What an input rack's <c>strip.template</c> may name.</summary>
+    public static IReadOnlyList<string> InputStrips { get; } = [InputRow];
+
+    /// <summary>What a bank's <c>strip.template</c> may name; the first is the default.</summary>
+    public static IReadOnlyList<string> BankStrips { get; } = [VerticalStrip, SendList];
+
+    /// <summary>What a bank's <c>master.template</c> may name; the first is the default.</summary>
+    public static IReadOnlyList<string> Masters { get; } = [MasterCard, MasterStrip];
+}
+
+/// <summary>
+/// The named parts of a strip. A skin orders them and may leave some out;
+/// it cannot add one, and a part only ever shows the control the template
+/// gives it.
+/// </summary>
+public static class SkinStripParts
+{
+    /// <summary>The channel's icon and name. Never hidden: a strip always says whose it is.</summary>
+    public const string Identity = "identity";
+    /// <summary>The channel's own level meter, left and right.</summary>
+    public const string Meter = "meter";
+    /// <summary>The input's hardware gain, where the interface has one.</summary>
+    public const string Gain = "gain";
+    /// <summary>The input's hardware switches: mute, low cut, phantom power and the rest the interface has.</summary>
+    public const string HardwareControls = "hardware-controls";
+    /// <summary>The input's plugin chain: its button and the chain at a glance.</summary>
+    public const string Effects = "effects";
+    /// <summary>The send's level into the bank's mix.</summary>
+    public const string Fader = "fader";
+    /// <summary>That level as a number.</summary>
+    public const string Value = "value";
+    /// <summary>The send's mute in the bank's mix.</summary>
+    public const string Mute = "mute";
+
+    /// <summary>An input row's parts, in their default order.</summary>
+    public static IReadOnlyList<string> InputRow { get; } = [Identity, Meter, Gain, HardwareControls, Effects];
+
+    /// <summary>A send strip's parts, in their default order.</summary>
+    public static IReadOnlyList<string> Send { get; } = [Identity, Meter, Fader, Value, Mute];
+}
+
+/// <summary>How a strip names its channel.</summary>
+public enum SkinLabelStyle
+{
+    /// <summary>The name alone.</summary>
+    Text,
+    /// <summary>The icon chosen in the layout editor, then the name.</summary>
+    IconAndText,
+    /// <summary>The icon alone, or the name when the channel has no icon. A screen reader still hears the whole name.</summary>
+    Icon,
+}
+
+/// <summary>Where a strip's meter goes.</summary>
+public enum SkinMeterPlacement
+{
+    /// <summary>A part of its own, where <c>partsOrder</c> puts it; by default straight under the name.</summary>
+    BelowLabel,
+    /// <summary>Beside the name, in the name's place.</summary>
+    BesideLabel,
+    /// <summary>Beside the fader, or the gain on an input row, in that part's place.</summary>
+    BesideFader,
+}
+
+/// <summary>Which end of a fader is the top of its range.</summary>
+public enum SkinFaderDirection
+{
+    /// <summary>The maximum at the top or at the right, as every fader has always been.</summary>
+    Normal,
+    /// <summary>The maximum at the bottom or at the left.</summary>
+    Reversed,
+}
+
+/// <summary>A strip's meter: which way it runs and where it sits.</summary>
+public sealed record SkinMeterOptions(
+    SkinLayoutOrientation Orientation = SkinLayoutOrientation.Horizontal,
+    SkinMeterPlacement Placement = SkinMeterPlacement.BelowLabel)
+{
+    public static SkinMeterOptions Default { get; } = new();
+
+    internal string Description() => $"{Orientation}/{Placement}";
+}
+
+/// <summary>A strip's fader: which way it runs and which end is the top.</summary>
+public sealed record SkinFaderOptions(
+    SkinLayoutOrientation Orientation = SkinLayoutOrientation.Horizontal,
+    SkinFaderDirection Direction = SkinFaderDirection.Normal)
+{
+    public static SkinFaderOptions Default { get; } = new();
+
+    internal string Description() => $"{Orientation}/{Direction}";
+}
+
+/// <summary>
+/// One strip template and how it is drawn: the order of its parts, the parts
+/// left out, the label, the meter and the fader. <see cref="Order"/> is
+/// complete: the parts the skin ordered, then the rest in their default order.
+/// </summary>
+public sealed record SkinStripOptions(
+    string Template,
+    IReadOnlyList<string> Order,
+    IReadOnlyList<string> Hidden,
+    SkinLabelStyle Label,
+    SkinMeterOptions Meter,
+    SkinFaderOptions Fader)
+{
+    /// <summary>An input row with every part in its default order.</summary>
+    public static SkinStripOptions InputRowDefault { get; } = new(SkinLayoutTemplates.InputRow, SkinStripParts.InputRow, [],
+        SkinLabelStyle.Text, SkinMeterOptions.Default, SkinFaderOptions.Default);
+
+    /// <summary>A vertical send strip with every part in its default order and its fader and meter upright.</summary>
+    public static SkinStripOptions BankDefault { get; } = new(SkinLayoutTemplates.VerticalStrip, SkinStripParts.Send, [],
+        SkinLabelStyle.Text, new SkinMeterOptions(SkinLayoutOrientation.Vertical, SkinMeterPlacement.BesideFader),
+        new SkinFaderOptions(SkinLayoutOrientation.Vertical));
+
+    /// <summary>The parts the strip draws, in the order it draws them.</summary>
+    public IReadOnlyList<string> Shown => [.. Order.Where(p => !Hidden.Contains(p, StringComparer.Ordinal))];
+
+    internal string Description() =>
+        $"{Template}[{string.Join(',', Shown)}]{Label}:{Meter.Description()}:{Fader.Description()}";
+}
+
+/// <summary>A bank's master: its template and how its label, meter and fader are drawn.</summary>
+public sealed record SkinMasterOptions(
+    string Template,
+    SkinLabelStyle Label,
+    SkinMeterOptions Meter,
+    SkinFaderOptions Fader)
+{
+    public static SkinMasterOptions Default { get; } = new(SkinLayoutTemplates.MasterCard, SkinLabelStyle.Text,
+        SkinMeterOptions.Default, SkinFaderOptions.Default);
+
+    internal string Description() => $"{Template}:{Label}:{Meter.Description()}:{Fader.Description()}";
+}
+
+/// <summary>INPUTS: the panel the window has always drawn, or a rack of input strips.</summary>
+public sealed record SkinInputsOptions(string Template, SkinStripOptions Strip)
+{
+    public static SkinInputsOptions Default { get; } = new(SkinLayoutTemplates.HardwarePanel, SkinStripOptions.InputRowDefault);
+
+    public bool IsRack => Template == SkinLayoutTemplates.InputRack;
+
+    internal string Description() => IsRack ? $"{Template}({Strip.Description()})" : Template;
+}
+
+/// <summary>
+/// The submixer: the channel tiles the window has always drawn, or mix
+/// banks. A bank always has a picker that lists every mix; the skin only
+/// says how many banks show, which way they run, which mixes they start on
+/// and how their strips and masters are drawn.
+/// </summary>
+/// <param name="SelectionDefaults">
+/// Mix ids as mixer.json names them, which the banks show first when the
+/// user has chosen none. An id with no mix behind it is skipped.
+/// </param>
+public sealed record SkinSubmixerOptions(
+    string Template,
+    SkinLayoutOrientation Orientation,
+    int VisibleBanks,
+    IReadOnlyList<string> SelectionDefaults,
+    SkinStripOptions Strip,
+    SkinMasterOptions Master)
+{
+    /// <summary>How many banks show when a skin with banks does not say.</summary>
+    public const int DefaultVisibleBanks = 2;
+
+    public static SkinSubmixerOptions Default { get; } = new(SkinLayoutTemplates.ChannelTiles, SkinLayoutOrientation.Horizontal,
+        DefaultVisibleBanks, [], SkinStripOptions.BankDefault, SkinMasterOptions.Default);
+
+    public bool IsBanks => Template == SkinLayoutTemplates.MixBanks;
+
+    internal string Description() => IsBanks
+        ? $"{Template}({Orientation},{VisibleBanks},{string.Join(',', SelectionDefaults)},{Strip.Description()},{Master.Description()})"
+        : Template;
+}
+
 /// <summary>A node of the layout tree: a region or a container.</summary>
 public abstract record SkinLayoutNode
 {
@@ -281,6 +487,12 @@ public sealed record SkinLayout(int Version, SkinLayoutContainer Main)
     /// <summary>The header's action order and overflow.</summary>
     public SkinHeaderOptions Header { get; init; } = SkinHeaderOptions.Default;
 
+    /// <summary>The template INPUTS is drawn with, and its strips.</summary>
+    public SkinInputsOptions Inputs { get; init; } = SkinInputsOptions.Default;
+
+    /// <summary>The template the submixer is drawn with, its banks, strips and masters.</summary>
+    public SkinSubmixerOptions Submixer { get; init; } = SkinSubmixerOptions.Default;
+
     /// <summary>True when the tree places the header itself rather than leaving it above the tree.</summary>
     public bool PlacesHeader => Main.Regions().Contains(SkinLayoutRegions.Header, StringComparer.Ordinal);
 
@@ -299,6 +511,7 @@ public sealed record SkinLayout(int Version, SkinLayoutContainer Main)
                 .Append(options.Height?.ToString(CultureInfo.InvariantCulture));
         }
         text.Append(" header=").Append(string.Join(',', Header.Row)).Append('|').Append(string.Join(',', Header.Overflow));
+        text.Append(" inputs=").Append(Inputs.Description()).Append(" submixer=").Append(Submixer.Description());
         return text.ToString();
     }
 }
