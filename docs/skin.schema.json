@@ -602,6 +602,10 @@
           "description": "the width of a mix master tile"
         }
       }
+    },
+    "layout": {
+      "$ref": "#/$defs/desktopLayout",
+      "description": "The order and direction of the main window's sections. Taken whole or not at all."
     }
   },
   "$defs": {
@@ -842,6 +846,87 @@
           "maximum": 1000
         }
       ]
+    },
+    "desktopLayout": {
+      "type": "object",
+      "description": "The skin's desktop layout. It has its own version, separate from the file's schema.",
+      "additionalProperties": false,
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version": {
+          "const": 1,
+          "description": "The layout format this block is written for."
+        },
+        "main": {
+          "$ref": "#/$defs/layoutStack",
+          "description": "The window's sections. Without it the sections keep the classic arrangement."
+        }
+      }
+    },
+    "layoutStack": {
+      "type": "object",
+      "description": "A stack of the five sections, each placed once.",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "orientation",
+        "children"
+      ],
+      "properties": {
+        "kind": {
+          "const": "stack"
+        },
+        "orientation": {
+          "enum": [
+            "vertical",
+            "horizontal"
+          ],
+          "description": "vertical is one above the other, the classic window; horizontal is one row."
+        },
+        "spacing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 64,
+          "default": 8,
+          "description": "The gap between sections in pixels."
+        },
+        "children": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/layoutRegion"
+          },
+          "description": "The sections in the order they appear, each region once."
+        }
+      }
+    },
+    "layoutRegion": {
+      "type": "object",
+      "description": "One of the window's sections.",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "region"
+      ],
+      "properties": {
+        "kind": {
+          "const": "region"
+        },
+        "region": {
+          "enum": [
+            "inputs",
+            "headphones",
+            "monitor",
+            "applications",
+            "submixer"
+          ],
+          "description": "Which section goes here."
+        }
+      }
     }
   }
 }

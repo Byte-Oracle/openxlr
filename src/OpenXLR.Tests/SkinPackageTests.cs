@@ -605,6 +605,54 @@ public sealed class SkinPackageTests : IDisposable
         Assert.Empty(broken.Package.Tokens);
     }
 
+    /// <summary>
+    /// An installed skin carries its layout through the catalogue to the
+    /// service the window reads. A refused layout reaches the same error list
+    /// Options shows for a bad token, with its JSON path, and costs the skin
+    /// nothing else.
+    /// </summary>
+    [Fact]
+    public void AnInstalledLayoutReachesTheServiceAndARefusedOneIsReportedThere()
+    {
+        const string Regions = """
+            [{"kind":"region","region":"monitor"},{"kind":"region","region":"inputs"},
+             {"kind":"region","region":"headphones"},{"kind":"region","region":"applications"},
+             {"kind":"region","region":"submixer"}]
+            """;
+        Skin("home", "wide", """{"schema":1,"tokens":{"Ox.Text.Primary":"#111111"},"layout":{"version":1,"main":"""
+            + """{"kind":"stack","orientation":"horizontal","children":""" + Regions + "}}}");
+        Skin("home", "misplaced", """{"schema":1,"tokens":{"Ox.Text.Primary":"#222222"},"layout":{"version":1,"main":"""
+            + """{"kind":"stack","orientation":"horizontal","children":""" + Regions.Replace("\"headphones\"", "\"phones\"") + "}}}");
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_root, "home"));
+        Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(_root, "none"));
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(_root, "config"));
+
+        SkinEntry wide = SkinCatalog.Find("wide")!;
+        Assert.Empty(wide.Errors);
+        Assert.Equal(SkinLayoutOrientation.Horizontal, wide.Package.Layout!.Main.Orientation);
+        Assert.Equal("monitor", wide.Package.Layout.Main.Children[0].Id);
+
+        SkinEntry misplaced = SkinCatalog.Find("misplaced")!;
+        Assert.Null(misplaced.Package.Layout);
+        Assert.Equal(Color.Parse("#222222"), ((SkinSolid)misplaced.Package.Tokens["Ox.Text.Primary"]).Color);
+        Assert.StartsWith("layout.main.children[2].region: ", Assert.Single(misplaced.Errors), StringComparison.Ordinal);
+
+        try
+        {
+            SkinService.Apply(wide);
+            Assert.Same(wide.Package.Layout, SkinService.Layout);
+            IReadOnlyList<string> errors = SkinService.Apply(misplaced);
+            Assert.Null(SkinService.Layout);
+            Assert.Equal(misplaced.Errors, errors);
+            Assert.Equal(misplaced.Errors, SkinService.Errors);
+        }
+        finally
+        {
+            SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
+        }
+        Assert.Null(SkinService.Layout);
+    }
+
     [Fact]
     public void AnUnknownIdFallsBackToTheDefault()
     {

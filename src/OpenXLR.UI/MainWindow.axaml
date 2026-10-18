@@ -186,7 +186,11 @@
     <TextBlock Name="ArrangementNote" Classes="note" TextWrapping="Wrap" IsVisible="False" Margin="0,0,0,8"
                Text="{loc:Text Key=DragAHandleOntoAnotherSectionOr}"/>
 
-    <!-- the five sections, in the order saved in ui.json -->
+    <!-- the five sections, in the order saved in ui.json. A skin's layout may
+         set their order and run them in a row; the row scrolls on its own so
+         the header above keeps the window's width. In the column this
+         scroller never scrolls and the page's own does. -->
+    <vm:SectionScroller Name="SectionScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled">
     <StackPanel Name="SectionCards" Spacing="8">
     <!-- device controls -->
     <Border Classes="card" IsVisible="{Binding ShowDetailedSections}">
@@ -694,6 +698,7 @@
       </Expander>
     </Border>
     </StackPanel>
+    </vm:SectionScroller>
   </StackPanel>
   </ScrollViewer>
 </Window>

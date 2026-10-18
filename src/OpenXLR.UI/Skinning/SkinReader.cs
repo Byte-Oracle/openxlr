@@ -28,7 +28,9 @@ public sealed record SkinReadResult(SkinPackage? Package, IReadOnlyList<string> 
 /// - every token name is one this version has, and every value has that
 ///   token's type and stays inside its bounds;
 /// - an image is a plain relative path inside the skin's own folder, with no
-///   parent segment, no root, no symbolic link leaving the folder and no URL.
+///   parent segment, no root, no symbolic link leaving the folder and no URL;
+/// - an optional layout block passes <see cref="SkinLayoutReader"/> whole, or
+///   is dropped whole.
 ///
 /// A value that fails is reported and dropped; the token keeps its default,
 /// which is what makes a partial skin an overlay on the shipped appearance
@@ -106,7 +108,16 @@ public static class SkinReader
                 else ReadControls(controlElement, controls, errors);
             }
 
-            var package = new SkinPackage(id, name, description, author, schema, origin, directory, tokens, controls);
+            // The layout is optional and taken whole: a block with any fault
+            // is reported and dropped, and the colours and controls above it
+            // still apply.
+            SkinLayout? layout = null;
+            if (root.EnumerateObject().Count(p => p.Name == "layout") > 1)
+                errors.Add($"layout: is given twice. {SkinLayoutReader.Consequence}");
+            else if (root.TryGetProperty("layout", out JsonElement layoutElement))
+                layout = SkinLayoutReader.Read(layoutElement, errors);
+
+            var package = new SkinPackage(id, name, description, author, schema, origin, directory, tokens, controls, layout);
             return new SkinReadResult(package, errors);
         }
     }

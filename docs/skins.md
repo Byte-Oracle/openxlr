@@ -2,8 +2,9 @@
 
 A skin changes how the OpenXLR window looks. It is a folder with a
 `skin.json` in it and, optionally, a few images beside it. It sets named
-appearance values; it carries no markup, no script and no code, and it
-cannot reach a file outside its own folder.
+appearance values and, if it wants, the order and direction of the
+window's sections ([Layout](#layout)); it carries no markup, no script and
+no code, and it cannot reach a file outside its own folder.
 
 OpenXLR ships thirteen appearances, all compiled into the application, so
 every package has them and there is nothing to install:
@@ -47,7 +48,8 @@ The choice is saved in
 `~/.config/openxlr/ui.json` as `"skin": "<id>"` and nowhere else: it is not
 part of the mixer layout, the daemon's preferences or a profile, and
 changing it never touches audio. Windows that are already open repaint;
-nothing is rebuilt and nothing is restarted.
+nothing is rebuilt and nothing is restarted. A skin with a layout moves the
+sections that are already there; their controls are the same ones.
 If the terminal cannot read `ui.json`, it uses the default appearance.
 A malformed document, including duplicate keys or a value other than a
 JSON object, is left untouched when saving a terminal skin choice. Repair
@@ -265,6 +267,7 @@ name.
 | `author` | no | shown under the picker as "By ..." |
 | `controls` | no | one of OpenXLR's own appearances per control, see [Controls](#controls) |
 | `tokens` | yes | the appearance values, see [The tokens](#the-tokens) |
+| `layout` | no | the order and direction of the window's sections, see [Layout](#layout) |
 
 `name`, `description` and `author` are cut at 400 characters, and control
 characters in them are dropped.
@@ -299,6 +302,10 @@ Every token the file does not mention keeps the default. A partial skin is
 an overlay, not a half-painted window, which is also what makes a skin
 written for a later OpenXLR usable here as far as this version
 understands it.
+
+The `layout` block is the one exception: it is taken whole or not at all.
+A fault anywhere in it drops the whole block, and only the block, as
+[Layout](#layout) describes.
 
 Unknown fields at the top level of the file are ignored without comment,
 which is what lets `$schema` sit there. Unknown names inside `tokens` and
@@ -716,14 +723,145 @@ Images are paintable wherever a brush is: a faceplate behind the window, a
 texture on a card, a metal face on a key. They are not available to the
 six flat indicator colours.
 
+## Layout
+
+A skin can also say how the main window arranges its five sections: the
+order they come in, and whether they run down the window, as they always
+have, or across it in one row. That is the optional `layout` object,
+beside `tokens` and `controls`. A complete skin that puts the submixer
+first and runs the sections in a row:
+
+```json
+{
+  "schema": 1,
+  "id": "side-by-side",
+  "name": "Side by side",
+  "tokens": {
+    "Ox.Card.Background": "#1d2027"
+  },
+  "layout": {
+    "version": 1,
+    "main": {
+      "kind": "stack",
+      "orientation": "horizontal",
+      "spacing": 12,
+      "children": [
+        { "kind": "region", "region": "submixer" },
+        { "kind": "region", "region": "inputs" },
+        { "kind": "region", "region": "monitor" },
+        { "kind": "region", "region": "headphones" },
+        { "kind": "region", "region": "applications" }
+      ]
+    }
+  }
+}
+```
+
+The block has a version of its own, `"version": 1`, separate from the
+file's `schema`. A newer layout can then come along without making the
+rest of the skin unreadable to an older OpenXLR.
+
+| Field | Required | What it is |
+|---|---|---|
+| `version` | yes | the layout format this block is written for, `1` |
+| `main` | no | the window's sections, a stack. Without it the sections keep the classic arrangement |
+
+`main` is a stack:
+
+| Field | Required | What it is |
+|---|---|---|
+| `kind` | yes | `"stack"` |
+| `orientation` | yes | `"vertical"` puts the sections one above the other, the classic window. `"horizontal"` puts them side by side in one row |
+| `spacing` | no | the gap between sections in pixels, from 0 to 64; 8, the classic gap, when it is missing |
+| `children` | yes | the sections in the order they appear, each a region |
+
+Each child is a region:
+
+| Field | Required | What it is |
+|---|---|---|
+| `kind` | yes | `"region"` |
+| `region` | yes | which section goes here, by the ids below |
+
+| Region | The section |
+|---|---|
+| `inputs` | INPUTS: the gain, the input switches and the microphone inserts |
+| `headphones` | HEADPHONES: the headphone levels and the direct monitor blend |
+| `monitor` | MONITOR: the output picker and its volume |
+| `applications` | APPLICATIONS: the running applications and their channels |
+| `submixer` | SUBMIXER: the channel strips and the mix masters |
+
+`main` places each of the five regions exactly once. The header with
+Options, Profiles and Arrange is not a region: it stays at the top of the
+window whatever the skin says, so the way back is always reachable. A
+section the window sets aside, such as INPUTS, HEADPHONES and
+APPLICATIONS in the mini view, or MONITOR without the software mixer,
+stays hidden wherever the skin puts it.
+
+In a horizontal row each section is at least 600 pixels wide, and the
+sections share the window's width when it has more. When the row is wider
+than the window it scrolls sideways under the header, which keeps the
+window's width. Each section is as tall as its own contents and the row
+lines them up along the top, so a collapsed section is just its header
+and does not stretch to the height of the one beside it.
+
+### How a layout is read
+
+A layout is taken whole or not at all. Any of these drops the whole
+`layout` block:
+
+- `version` is missing, is not a whole number, or is not `1`. A newer
+  version says to update OpenXLR;
+- a property the object does not have, or one it needs and lacks;
+- the same key twice in one object;
+- a `kind` other than `stack` and `region`, or a stack inside `main`.
+  Layout version 1 has one container;
+- an `orientation` other than `vertical` and `horizontal`;
+- a `spacing` that is not a finite number from 0 to 64;
+- a region id this OpenXLR does not have, a region placed twice, or one
+  left out;
+- more than 16 children in a container.
+
+The complaint names where in the file the fault is, for example
+`layout.main.children[2].region`, and appears in Options under the picker
+with the others. The skin's tokens and controls still apply; the window
+wears its colours in the classic arrangement.
+
+Anything that reads skins only for their colours ignores `layout`: the
+terminal mixer, the Omarchy bar plugin and the Stream Deck plugin. An older
+OpenXLR window ignores it as well, since it skips top-level fields it does
+not know, and wears the skin in the classic arrangement.
+
+### Your own arrangement
+
+Arrange moves sections under any skin. Where it keeps your moves depends
+on the skin:
+
+- A skin without a layout, Material and every shipped skin included, uses
+  the order you arranged, kept in `ui.json` as `sectionOrder`, exactly as
+  before skins had layouts.
+- A skin with a layout starts from its own order and direction. The moves
+  you make are kept for that skin and its layout version in `ui.json` under
+  `skinSectionOrders`, and never change `sectionOrder`. **Reset sections**
+  returns to the skin's own order and forgets only that skin's moves.
+- Switching back to a skin without a layout brings your `sectionOrder`
+  back, and switching to the layout skin again brings back the moves you
+  made under it.
+
+The direction and the spacing always come from the skin. If a skin update
+changes its layout, the window ignores saved moves that name a region the
+skin no longer places, and any region the moves leave out follows in the
+skin's order. OpenXLR never rewrites a skin. Collapsed sections stay
+collapsed whichever skin is worn, as before.
+
 ## What a skin cannot do
 
 - It cannot carry markup, a template, a style or code. It picks from the
-  appearances listed under Controls and tints them. There is no way for a
-  skin to add a control, move one, resize the window, or change what a
-  control does.
-- It cannot change the layout, the mixer, the routing or anything the
-  daemon owns. It sets the values in this document and nothing else.
+  appearances listed under Controls and tints them. Apart from the order
+  and direction of the five sections under [Layout](#layout), there is no
+  way for a skin to add a control, move one, resize the window, or change
+  what a control does.
+- It cannot change the mixer layout, the mixer, the routing or anything
+  the daemon owns. It sets the values in this document and nothing else.
 - It cannot reach outside its own folder, and it cannot make a network
   request or load a font file.
 - It cannot skin a plugin's own editor. Those windows belong to the

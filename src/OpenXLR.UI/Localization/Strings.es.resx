@@ -1513,6 +1513,9 @@ Al guardar, se sustituirá por la escena actual.</value>
   <data name="PutTheFiveSectionsBackInTheir" xml:space="preserve">
     <value>Devolver las cinco secciones a su orden original</value>
   </data>
+  <data name="PutTheSectionsBackInTheSkinsOrder" xml:space="preserve">
+    <value>Devolver las cinco secciones al orden que define este tema</value>
+  </data>
   <data name="QuitApp" xml:space="preserve">
     <value>Salir de la aplicación</value>
   </data>

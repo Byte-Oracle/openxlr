@@ -1511,6 +1511,9 @@ Speichern ersetzt es durch die aktuelle Szene.</value>
   <data name="PutTheFiveSectionsBackInTheir" xml:space="preserve">
     <value>Die fünf Abschnitte in ihre ursprüngliche Reihenfolge zurücksetzen</value>
   </data>
+  <data name="PutTheSectionsBackInTheSkinsOrder" xml:space="preserve">
+    <value>Die fünf Abschnitte in die Reihenfolge zurücksetzen, die dieser Skin vorgibt</value>
+  </data>
   <data name="QuitApp" xml:space="preserve">
     <value>App beenden</value>
   </data>

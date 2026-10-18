@@ -80,10 +80,20 @@ internal static class WindowOrderTests
 
         string config = Directory.CreateTempSubdirectory("openxlr-order-").FullName;
         string? oldConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        string? oldDataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        string? oldDataDirs = Environment.GetEnvironmentVariable("XDG_DATA_DIRS");
         Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", config);
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(config, "data"));
+        Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(config, "none"));
         MainWindow? main = null;
         try
         {
+            // A skin that runs the sections in a row, in their usual order.
+            string row = Path.Combine(config, "data", "openxlr", "skins", "in-a-row");
+            Directory.CreateDirectory(row);
+            File.WriteAllText(Path.Combine(row, "skin.json"), "{\"schema\":1,\"tokens\":{},\"layout\":{\"version\":1,\"main\":"
+                + "{\"kind\":\"stack\",\"orientation\":\"horizontal\",\"children\":["
+                + string.Join(",", SkinLayoutRegions.All.Select(r => $"{{\"kind\":\"region\",\"region\":\"{r}\"}}")) + "]}}}");
             new UiSettings { CollapsedSections = Sections, CheckForUpdates = false }.Save();
             main = Open();
             using var quit = new CancellationTokenSource();
@@ -98,6 +108,8 @@ internal static class WindowOrderTests
             SkinService.Choose(SkinPackage.DefaultId, out _);
             Dispatcher.UIThread.RunJobs();
             Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", oldConfig);
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", oldDataHome);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", oldDataDirs);
             Task.Run(async () => await server.DisposeAsync()).GetAwaiter().GetResult();
             Directory.Delete(config, true);
         }
@@ -277,6 +289,28 @@ internal static class WindowOrderTests
             Click(Ui(() => main!.FindControl<Button>("ResetSectionsButton")!));
             Wait(() => Ui(() => Order().SequenceEqual(Sections)));
             Assert.Equal(Sections, Ui(() => UiSettings.Load().SectionOrder));
+
+            // In a row, a drop lands left or right of the section under the
+            // pointer whichever half it is in from top to bottom: here the
+            // left quarter of INPUTS, low down, which in a column would land
+            // after it. The move is kept for that skin and not as sectionOrder.
+            Ui(() => { Assert.Empty(SkinService.Apply(SkinCatalog.Find("in-a-row")!)); return true; });
+            Wait(() => Ui(() => Equals(Handle("InputsTile").Content, "↔")));
+            Move(Center(Handle("HeadphonesTile"))); pointer.SetButton(true); Thread.Sleep(60);
+            Move(Ui(() =>
+            {
+                var card = (Border)main!.FindControl<Expander>("InputsTile")!.Parent!;
+                return card.PointToScreen(new Point(card.Bounds.Width * .25, card.Bounds.Height * .75));
+            }));
+            Wait(() => Ui(() => Equals(Handle("InputsTile").Content, "←")));
+            pointer.SetButton(false); Thread.Sleep(150);
+            Wait(() => Ui(() => Order()[0] == "HeadphonesTile"));
+            Assert.Equal(Sections, Ui(() => UiSettings.Load().SectionOrder));
+            Assert.Equal(["headphones", "inputs", "monitor", "applications", "submixer"],
+                Ui(() => UiSettings.Load().SkinSectionOrderFor("in-a-row", 1)!.Order));
+            Ui(() => { Assert.Empty(SkinService.Apply(new SkinEntry(SkinPackage.Default, []))); return true; });
+            Wait(() => Ui(() => Order().SequenceEqual(Sections)));
+            Assert.Equal("↕", Ui(() => Handle("InputsTile").Content));
 
             void Move(PixelPoint point) { pointer.MoveTo(point.X, point.Y); Thread.Sleep(80); }
             void Click(Control control) { Move(Center(control)); pointer.Click(); Thread.Sleep(100); }
