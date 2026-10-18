@@ -433,9 +433,6 @@ public sealed partial class SkinWindowTests
                 Assert.Equal(mixes, vm.Mixes);
                 Assert.Equal(sends, vm.Channels.SelectMany(c => c.Sends));
             }
-            // Broadcast folds APPLICATIONS the first time it is worn, and a fold
-            // outlasts the skin; the parts after this one start unfolded.
-            main.FindControl<Expander>("ApplicationsTile")!.IsExpanded = true;
             // Banks straight to the matrix and back: one presentation at a time, the same objects.
             Assert.Empty(SkinService.Apply(banks));
             Pump(main);

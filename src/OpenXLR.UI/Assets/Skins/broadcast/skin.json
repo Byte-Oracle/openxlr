@@ -129,20 +129,17 @@
           "columns": [{ "star": 1 }, { "size": 360 }],
           "rows": ["auto", "auto"],
           "children": [
+            { "kind": "region", "region": "headphones", "row": 0, "column": 0 },
             { "kind": "region", "region": "monitor", "row": 0, "column": 1 },
             { "kind": "region", "region": "submixer", "row": 1, "column": 0, "columnSpan": 2 }
           ]
         },
         { "kind": "region", "region": "inputs" },
-        { "kind": "region", "region": "applications" },
-        { "kind": "region", "region": "headphones" }
+        { "kind": "region", "region": "applications" }
       ]
     },
     "regions": {
-      "header": {
-        "actions": ["profiles", "flow", "arrange"],
-        "overflow": ["restart-daemon", "about"]
-      },
+      "header": { "actions": ["profiles", "flow", "arrange", "restart-daemon", "version", "about"] },
       "monitor": { "template": "output-toolbar" },
       "submixer": {
         "template": "mix-matrix",
@@ -165,8 +162,7 @@
         "popOut": { "default": "docked" }
       },
       "inputs": { "visibility": "hidden" },
-      "applications": { "template": "application-list", "visibility": "collapsed" },
-      "headphones": { "visibility": "collapsed" }
+      "applications": { "template": "application-list" }
     }
   }
 }
