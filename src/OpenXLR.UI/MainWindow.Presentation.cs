@@ -11,21 +11,26 @@ namespace OpenXLR.UI;
 
 /// <summary>
 /// The templates a skin's layout picks for INPUTS and the submixer: the
-/// hardware panel or an input rack, the channel tiles or mix banks. The rack
-/// and the banks are projections over the window's own view models, made
-/// while they show and dropped when they stop; switching between templates
-/// moves no audio, sends no command and replaces no channel, mix or send.
+/// hardware panel or an input rack, the channel tiles, mix banks or a mix
+/// matrix. The rack, the banks and the matrix are projections over the
+/// window's own view models, made while they show and dropped when they
+/// stop; switching between templates moves no audio, sends no command and
+/// replaces no channel, mix or send.
 /// </summary>
 public partial class MainWindow
 {
     private InputRackViewModel? _rack;
     private MixerPresentationViewModel? _banks;
+    private MixMatrixViewModel? _matrix;
 
     /// <summary>The input rack shown now, or null while INPUTS is the hardware panel.</summary>
     internal InputRackViewModel? InputRackModel => _rack;
 
-    /// <summary>The mix banks shown now, or null while the submixer is the channel tiles.</summary>
+    /// <summary>The mix banks shown now, or null while the submixer is the channel tiles or a matrix.</summary>
     internal MixerPresentationViewModel? MixBanks => _banks;
+
+    /// <summary>The mix matrix shown now, or null while the submixer is the channel tiles or banks.</summary>
+    internal MixMatrixViewModel? MixMatrix => _matrix;
 
     /// <summary>
     /// Put on the templates <paramref name="arrangement"/>'s layout picks,
@@ -73,7 +78,21 @@ public partial class MainWindow
             // One handle per channel: the rack's while it shows, otherwise the first bank's.
             _banks.OwnsHandles = !rack || arrangement.Hidden.Contains(SkinLayoutRegions.Inputs);
         }
-        MixerPanel.Show(_banks);
+
+        bool matrix = layout?.Submixer.IsMatrix == true && model is not null;
+        if (_matrix is not null && (!matrix || !ReferenceEquals(_matrix.Main, model))) DropMatrix();
+        if (matrix)
+        {
+            if (_matrix is null)
+            {
+                _matrix = new MixMatrixViewModel(model!);
+                _matrix.ShapeChanged += OnBanksShapeChanged;
+            }
+            _matrix.Configure(layout!.Submixer.Matrix);
+            // One handle per channel: the rack's while it shows, otherwise the row head's.
+            _matrix.OwnsHandles = !rack || arrangement.Hidden.Contains(SkinLayoutRegions.Inputs);
+        }
+        MixerPanel.Show(_banks, _matrix);
         _mixerWindow?.FitPresentation();
 
         // MONITOR and APPLICATIONS: the same controls and the same
@@ -119,12 +138,23 @@ public partial class MainWindow
     {
         double Token(string key, double fallback) => this.TryFindResource(key, out object? value) && value is double d ? d : fallback;
         var sizes = new RegionSizes(Token("Ox.Mixer.StripWidth", 76), Token("Ox.Mixer.MixWidth", 232),
-            Token("Ox.Mixer.BankSpacing", 12), _banks?.Banks.Count ?? 1, _banks?.VisibleChannels ?? 0);
+            Token("Ox.Mixer.BankSpacing", 12), _banks?.Banks.Count ?? 1, _banks?.VisibleChannels ?? 0,
+            Token("Ox.Matrix.CellWidth", 168), Token("Ox.Matrix.NameWidth", 112), _matrix?.Columns.Count ?? 0);
         return SkinLayoutDefaults.RegionMinWidth(region, _arrangement?.Layout, sizes);
+    }
+
+    private void DropMatrix()
+    {
+        if (_matrix is null) return;
+        MixerPanel.Show(_banks);
+        _matrix.ShapeChanged -= OnBanksShapeChanged;
+        _matrix.Dispose();
+        _matrix = null;
     }
 
     private void DisposePresentations()
     {
+        DropMatrix();
         if (_rack is not null) { InputRack.DataContext = null; _rack.Dispose(); _rack = null; }
         if (_banks is not null)
         {

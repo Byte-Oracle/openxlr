@@ -17,8 +17,8 @@ namespace OpenXLR.UI.Layout;
 /// later spec lists it.
 ///
 /// Parts follow one another along <see cref="StripSpec.Flow"/>. In a column
-/// each part takes the column's width; in a row the fader, and a flat meter,
-/// share what the other parts leave. A meter placed beside another part
+/// each part takes the column's width; in a row the fader, the gain, a matrix
+/// column's master and a flat meter share what the other parts leave. A meter placed beside another part
 /// stands to that part's right, in its place.
 /// </summary>
 public sealed class StripPanel : Panel
@@ -103,6 +103,7 @@ public sealed class StripPanel : Panel
         Spec is { Flow: Orientation.Horizontal } spec
         && (GetPart(part) == Skinning.SkinStripParts.Fader && spec.FaderOrientation == Orientation.Horizontal
             || GetPart(part) == Skinning.SkinStripParts.Gain
+            || GetPart(part) == Skinning.SkinMatrixParts.Master
             || GetPart(part) == Skinning.SkinStripParts.Meter && spec.MeterOrientation == Orientation.Horizontal);
 
     protected override Size MeasureOverride(Size availableSize)

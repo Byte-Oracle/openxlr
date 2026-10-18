@@ -9,7 +9,7 @@ namespace OpenXLR.UI.Layout;
 
 /// <summary>
 /// Picks one of the application's compiled templates for a strip, a bank's
-/// master or an input row by an explicit key, which is how a skin's template
+/// master, an input row or a matrix row head by an explicit key, which is how a skin's template
 /// name reaches markup the application owns. Avalonia has no
 /// DataTemplateSelector; this is the small lookup in its place.
 ///
@@ -33,13 +33,17 @@ public sealed class StripTemplateSelector : IDataTemplate
     {
         BankCellViewModel cell => cell.Bank.Presentation.Options.Strip.Template,
         BankMasterViewModel master => master.Bank.Presentation.Options.Master.Template,
-        InputStripViewModel strip => strip.Kind switch
-        {
-            InputStripKind.Xlr1 => "xlr1",
-            InputStripKind.Xlr2 => "xlr2",
-            InputStripKind.AuxIn => "aux",
-            _ => "channel",
-        },
+        InputStripViewModel strip => KindKey(strip.Kind),
+        MatrixRowViewModel row => KindKey(row.Kind),
         _ => null,
+    };
+
+    /// <summary>The key of an input strip's or a matrix row head's template: what the channel is.</summary>
+    private static string KindKey(InputStripKind kind) => kind switch
+    {
+        InputStripKind.Xlr1 => "xlr1",
+        InputStripKind.Xlr2 => "xlr2",
+        InputStripKind.AuxIn => "aux",
+        _ => "channel",
     };
 }

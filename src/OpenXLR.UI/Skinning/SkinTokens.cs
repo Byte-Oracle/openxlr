@@ -101,6 +101,9 @@ public static class SkinTokens
         ["Ox.Mixer.ChannelWidth"] = 180,
         ["Ox.Mixer.MixWidth"] = 280,
         ["Ox.Mixer.StripWidth"] = 96,
+        ["Ox.Matrix.NameWidth"] = 132,
+        ["Ox.Matrix.CellWidth"] = 200,
+        ["Ox.Matrix.RowHeight"] = 52,
     };
 
     /// <summary>Corner radii and border widths are bounded so a skin cannot swallow a control.</summary>
@@ -348,6 +351,19 @@ public static class SkinTokens
         Number("Ox.Mixer.StripWidth", 76, 56, 200),
         Number("Ox.Mixer.VerticalFaderLength", 160, 80, 480),
         Number("Ox.Mixer.BankSpacing", 12, 0, 64),
+
+        // The mix matrix: the name column of a row head, the width of a cell
+        // and of a row head's source controls, and the height of a row. Every
+        // cell is the same size, so the columns line up down the matrix and the
+        // rows across it. Touch sizing raises the three to TouchMinimums.
+        Number("Ox.Matrix.NameWidth", 112, 56, 400),
+        Number("Ox.Matrix.CellWidth", 168, 120, 400),
+        Number("Ox.Matrix.RowHeight", 40, 28, 120),
+        // A muted send's cell: its background, and the lettering of its mute.
+        // The background is translucent by default, so the cell's own surface
+        // shows through as a red tint.
+        Brush("Ox.Matrix.MutedBackground", "#40a03434"),
+        Brush("Ox.Matrix.MutedForeground", "#f6dede"),
     ];
 
     private static readonly Dictionary<string, SkinToken> ByName =

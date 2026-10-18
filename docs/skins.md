@@ -23,12 +23,14 @@ every package has them and there is nothing to install:
   Latte, Everforest, Gruvbox, Kanagawa, Matte Black, Nord, Osaka Jade,
   Ristretto, Rose Pine and Tokyo Night. Rose Pine and Catppuccin Latte
   are the light ones.
-- **Broadcast**, the one that also rearranges the window: INPUTS as a rack
-  of strips down the left, the submixer beside it as two banks of upright
-  faders starting on Monitor A and Stream, MONITOR as a toolbar under them,
-  the applications as a list under the rack and HEADPHONES folded along the
-  bottom, on a dark console palette. It is the reference for writing a
-  layout skin; see [Layout](#layout).
+- **Broadcast**, the one that also rearranges the window: the submixer as
+  a mix matrix across the window, a row per channel and a column per mix,
+  with each channel's send into each mix where its row crosses the mix's
+  column. MONITOR is a toolbar at the top right, INPUTS is hidden because
+  the matrix's row heads carry the input gain, mute and plugins, and
+  APPLICATIONS and HEADPHONES are folded under the matrix, on a dark neutral
+  palette. It is the reference for writing a layout skin; see
+  [Layout](#layout).
 
 Pick one in Options under APPEARANCE. The terminal mixer reads the same
 folders and the same saved choice, on its own Options tab, so an appearance
@@ -686,7 +688,8 @@ skin that only recolours the cards leaves buttons exactly as they are.
 These size the main mixer's controls and strips. Options offers two
 sizings, saved in `ui.json` as `"touchControls"`: Standard wears the values
 below, and Touch raises the five control minimums to 44 units, a channel
-strip to 180, a mix tile to 280 and an upright strip to 96. A skin value
+strip to 180, a mix tile to 280, an upright strip to 96, and a mix
+matrix's name column, cell and row to 132, 200 and 52. A skin value
 larger than that is kept in both. While Touch is on, or while a skin sets
 `Ox.Mixer.ControlMinSize`, a slider is also made at least as tall as the
 control minimum and the `Ox.Fader.Thumb.Height` cap, so an enlarged cap
@@ -705,6 +708,21 @@ their sizes.
 | `Ox.Mixer.StripWidth` | number | 76 | 56 to 200 | the width of an upright strip in a mix bank, the name column of a send list, and the unit an input rack and mix banks reckon their narrowest width in |
 | `Ox.Mixer.VerticalFaderLength` | number | 160 | 80 to 480 | the length of an upright fader |
 | `Ox.Mixer.BankSpacing` | number | 12 | 0 to 64 | the gap between mix banks |
+
+### Mix matrix
+
+These draw the `"mix-matrix"` template (see [The mix matrix](#the-mix-matrix)).
+Every cell is the same size, so the columns line up down the matrix and the
+rows across it; a row head is a name column and one cell's width of source
+controls.
+
+| Token | Kind | Default | Range | What it paints |
+|---|---|---|---|---|
+| `Ox.Matrix.NameWidth` | number | 112 | 56 to 400 | the width of a row head's name column |
+| `Ox.Matrix.CellWidth` | number | 168 | 120 to 400 | the width of a cell, of a column head and of a row head's source controls |
+| `Ox.Matrix.RowHeight` | number | 40 | 28 to 120 | the height of a row: its head and every cell in it |
+| `Ox.Matrix.MutedBackground` | brush | #40a03434 | | the background of a cell whose send is muted, when the matrix tints muted cells. Translucent by default, so the cell's own surface shows through as a red tint |
+| `Ox.Matrix.MutedForeground` | brush | #f6dede | | the lettering of a muted send's mute in a tinted cell |
 
 ## Images
 
@@ -752,16 +770,15 @@ appearances and a layout that uses the templates below, in
 [docs/examples/skins/broadcast](examples/skins/broadcast/skin.json). Its
 arrangement is inspired by Wave Link's; Broadcast has no connection to
 Elgato and is not endorsed by it. Its tree is a vertical
-stack of two things. The first is a dock: on its left a column holding
-INPUTS as an `"input-rack"` with the application list under it, as wide as
-the rack needs, so it widens with Touch sizing and folds away in the mini
-view; filling the rest, a column holding the submixer as two `"mix-banks"`
-of upright strips with master strips, and MONITOR's `"output-toolbar"`
-under them. The second is HEADPHONES across the whole width,
-`"collapsed"` at first, so the hardware headphone levels stay apart from
-the software mixes. The tree leaves the header out, so the header stays
-across the top of the window when the tree scrolls sideways in a narrow
-window.
+stack. First comes a grid of two columns, the second 360 pixels wide.
+MONITOR's `"output-toolbar"` sits in its top right cell, the top left cell
+stays empty, and the submixer, a `"mix-matrix"`, spans both columns under
+them.
+Then come INPUTS, `"hidden"` since the matrix's row heads carry the input
+gain, mute and plugins, the applications as a `"collapsed"`
+`"application-list"`, and HEADPHONES, `"collapsed"`, each across the whole
+width. The tree leaves the header out, so the header stays across the top
+of the window. Showing INPUTS from Arrange mode puts it under the matrix.
 
 A complete skin that puts the header across the top, INPUTS beside the
 submixer, the headphones and the monitor under INPUTS, and the
@@ -1017,17 +1034,18 @@ send fader stays a send fader.
 
 | Option | Template | What it is |
 |---|---|---|
-| `template` | `inputs`, `monitor`, `applications`, `submixer` | which template draws the section. INPUTS takes `"hardware-panel"`, the INPUTS panel as it has always been and the default, or `"input-rack"`. MONITOR takes `"output-panel"`, the default, or `"output-toolbar"`. APPLICATIONS takes `"application-chips"`, the default, or `"application-list"`. The submixer takes `"channel-tiles"`, the channel tiles and mix masters as they have always been and the default, or `"mix-banks"` |
+| `template` | `inputs`, `monitor`, `applications`, `submixer` | which template draws the section. INPUTS takes `"hardware-panel"`, the INPUTS panel as it has always been and the default, or `"input-rack"`. MONITOR takes `"output-panel"`, the default, or `"output-toolbar"`. APPLICATIONS takes `"application-chips"`, the default, or `"application-list"`. The submixer takes `"channel-tiles"`, the channel tiles and mix masters as they have always been and the default, `"mix-banks"` or `"mix-matrix"` |
 | `strip` | `"input-rack"`, `"mix-banks"` | how one strip of the rack or of a bank is drawn, below |
 | `orientation` | `"mix-banks"` | `"horizontal"`, the default, puts the banks side by side; `"vertical"` one above the other |
 | `visibleBanks` | `"mix-banks"` | how many banks show, from 1 to 4; 2 when it is missing |
 | `selectionDefaults` | `"mix-banks"` | the mixes the banks start on, by the id `mixer.json` gives them, such as `"monitor"` and `"stream"`: at most 16 mix ids, each 1 to 64 lowercase letters, digits, hyphens and underscores |
 | `master` | `"mix-banks"` | how each bank's master is drawn, below |
+| `matrix` | `"mix-matrix"` | how the matrix's row heads, column heads and cells are drawn; see [The mix matrix](#the-mix-matrix) |
 | `popOut` | `submixer`, any template | where the submixer starts out: `{ "default": "docked" }`, the default, or `{ "default": "detached" }`. See [The mixer's own window](#the-mixers-own-window) |
 
 An option that belongs to another template, such as `strip` with
-`"hardware-panel"` or `visibleBanks` without `"mix-banks"`, drops the
-layout like any other fault. MONITOR and APPLICATIONS take `template` and
+`"hardware-panel"`, `visibleBanks` without `"mix-banks"` or `matrix`
+without `"mix-matrix"`, drops the layout like any other fault. MONITOR and APPLICATIONS take `template` and
 the options every section has, nothing else; HEADPHONES has no template.
 
 MONITOR's toolbar is one compact row, meant for a footer or a slot beside
@@ -1163,12 +1181,17 @@ templates keep their 600 pixels. The others need less:
   with a master strip, the master beside it;
   a send list needs three strip widths; a master card needs
   `Ox.Mixer.MixWidth`. More strips than fit scroll sideways inside the
-  bank.
+  bank;
+- a mix matrix needs its row heads, `Ox.Matrix.NameWidth` and
+  `Ox.Matrix.CellWidth`, and one column beside them, plus the card's
+  padding: 476 pixels with the default tokens. More columns than fit scroll
+  sideways inside the card.
 
 None asks for more than the classic 600 pixels, and Touch sizing raises
 `Ox.Mixer.StripWidth` to 96, which widens them all. A popped out mixer window
-holding banks is as wide as the banks need, and scrolls sideways when it
-is narrower.
+holding banks is as wide as the banks need, and one holding a matrix as
+wide as the whole matrix, every column beside the row heads; either scrolls
+sideways when the window is narrower.
 
 #### A complete example
 
@@ -1247,6 +1270,121 @@ while the rack shows, otherwise on the first bank's strip, never once per
 bank. A drop still sends the new channel order to the daemon and the
 strips move when it has saved it, as the channel tiles do. Mixes are
 reordered in the layout editor while the submixer shows banks.
+
+#### The mix matrix
+
+A `"mix-matrix"` draws the submixer as one table. Each row is a channel and
+each column a mix, both in the mixer's order, and where a row crosses a
+column is a cell holding that channel's send into that mix: its mute and a
+short fader, the channel's meter running under the fader as its track.
+There is nothing to pick. The matrix always shows every channel and every
+mix the view shows, so the compact view has one row and the mini view one
+row and one column. A channel with no send into a mix, or one the view
+does not draw, has an empty cell.
+
+Each row starts with the channel's head: its icon and name, then the same
+controls the INPUTS panel shows for the channel, under the same rules. XLR 1
+and XLR 2 have their hardware gain, with the meter under it, their mute,
+which waits while phantom power settles, and the button that opens their
+plugin chain. The gain lock still disables the gain. Aux In has its level
+and level lock. An application or capture channel has its name and its
+meter only. XLR 2 has a row only on an interface with two XLR inputs.
+
+Each column has a head: the mix's icon and name, an outputs line, a thin
+line in the mix's own colour when the layout editor gave it one, and a row
+of controls with the mix's master level, its mute and the button that opens
+its plugin chain. The outputs line says how many outputs ticked in MONITOR
+hear the mix, alone or summed with the other monitor mix. When none does it
+says what the mix is: a monitor mix with no output, a virtual microphone or
+the USB Aux port.
+
+A muted send's cell is tinted with `Ox.Matrix.MutedBackground` and its mute
+lettered in `Ox.Matrix.MutedForeground`, or, with `"muted": "dim"`, faded
+to `Ox.Control.DisabledOpacity`. The thumb of every fader keeps the
+`controls.fader` appearance. The meter is the channel's own, before its
+send, and a screen reader hears it by the channel's name; the fader is
+named for the channel and the mix.
+
+`matrix` takes these, all optional:
+
+| Matrix option | What it is |
+|---|---|
+| `rowHead` | `{ "parts": [...], "hidden": [...], "label": { "style": ... } }`, how a row head is drawn |
+| `columnHead` | `{ "parts": [...], "hidden": [...], "label": { "style": ... } }`, how a column head is drawn |
+| `cell` | `{ "parts": [...], "hidden": [...], "muted": ... }`, how a cell is drawn. `"muted"` is `"tint"`, the default, or `"dim"` |
+| `meter` | `"under-fader"`, the default, the channel's meter drawn as the track of every fader in its row; or `"none"`, plain faders. With `"none"` a row head's `meter` part still shows the meter unless it is hidden |
+
+`parts` lists part names in the order they are drawn; parts it leaves out
+follow in their default order. `hidden` lists parts left out, and a part
+appears once across the two lists. A row head's parts, in their default
+order, are `identity`, `meter`, `gain`, `mute` and `effects`. A column
+head's are `identity`, `master`, `mute`, `effects` and `outputs`. A cell's
+are `mute`, `fader` and `value`.
+
+| Matrix part | Where | What it is |
+|---|---|---|
+| `identity` | row head, column head | the channel's or the mix's icon and name. It cannot be hidden. In a row head it is the name column, on the left unless `parts` puts it last |
+| `meter` | row head | the channel's meter as a part of its own. Under the faders it is the gain's track instead, so a channel with gain draws it there |
+| `gain` | row head | the input's hardware gain, or Aux In's level and level lock |
+| `mute` | row head, column head, cell | the input's hardware mute, the mix's mute, or the send's mute in the column's mix |
+| `effects` | row head, column head | the button that opens the input's or the mix's plugin chain |
+| `master` | column head | the mix's master level as a short fader |
+| `outputs` | column head | the outputs line |
+| `fader` | cell | the send's level as a short fader. It cannot be hidden |
+| `value` | cell | that level as a number |
+
+A column head's `identity` and `outputs` are its lines, in their order; its
+`master`, `mute` and `effects` share one row of controls, in their order,
+under the lines, or above them when `parts` names one of them first.
+
+In Arrange mode a channel's handle is on its row head while the input rack
+is not shown, and a mix's on its column head, once each, since every mix
+appears once. A drop sends the new order to the daemon and the rows or
+columns move when it has saved it, as with the tiles. Focus runs through
+the column heads, then row by row, each row's head first.
+
+A complete skin with a matrix under the header and the other sections
+below it:
+
+```json
+{
+  "schema": 1,
+  "id": "matrix-desk",
+  "name": "Matrix desk",
+  "tokens": {
+    "Ox.Matrix.CellWidth": 180,
+    "Ox.Matrix.MutedBackground": "#55c0392b"
+  },
+  "controls": { "fader": "console" },
+  "layout": {
+    "version": 1,
+    "main": {
+      "kind": "stack",
+      "id": "desk",
+      "orientation": "vertical",
+      "children": [
+        { "kind": "region", "region": "submixer" },
+        { "kind": "region", "region": "monitor" },
+        { "kind": "region", "region": "inputs" },
+        { "kind": "region", "region": "headphones" },
+        { "kind": "region", "region": "applications" }
+      ]
+    },
+    "regions": {
+      "submixer": {
+        "template": "mix-matrix",
+        "matrix": {
+          "rowHead": { "parts": ["identity", "mute", "gain"], "label": { "style": "icon-and-text" } },
+          "columnHead": { "parts": ["identity", "outputs", "mute", "master"], "hidden": ["effects"] },
+          "cell": { "parts": ["mute", "fader", "value"], "muted": "tint" },
+          "meter": "under-fader"
+        }
+      },
+      "inputs": { "visibility": "collapsed" }
+    }
+  }
+}
+```
 
 ### The mixer's own window
 
@@ -1400,6 +1538,12 @@ A layout is taken whole or not at all. Any of these drops the whole
   from 1 to 4; or `selectionDefaults` that is not an array of at most 16
   mix ids, each 1 to 64 lowercase letters, digits, hyphens and
   underscores, with none listed twice;
+- in `matrix`, a property it does not have, a part a row head, column head
+  or cell does not have, a part listed twice across `parts` and `hidden` or
+  more names in either than the list has parts, `identity` hidden in a head
+  or `fader` hidden in a cell, a label style other than the three, a
+  `muted` other than `"tint"` and `"dim"`, or a `meter` other than
+  `"under-fader"` and `"none"`;
 - a `popOut` that is not an object, lacks its `default`, has another
   property, or has a `default` other than `"docked"` and `"detached"`.
 

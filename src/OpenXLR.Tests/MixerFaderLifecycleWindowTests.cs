@@ -27,6 +27,7 @@ internal static class MixerFaderLifecycleWindowTests
         Assert.True(check.IsCompleted, "Retired fader check hung.");
         check.GetAwaiter().GetResult();
         CheckDragAcrossSwitch();
+        CheckMatrixDragAcrossSwitch();
     }
 
     /// <summary>Wait for a task on the UI thread, running its jobs meanwhile.</summary>
@@ -152,6 +153,128 @@ internal static class MixerFaderLifecycleWindowTests
         finally
         {
             SliderSync.Forget("outvol");
+            main?.Quit();
+            Dispatcher.UIThread.RunJobs();
+            SkinService.Apply(worn);
+            Await(server.DisposeAsync().AsTask().ContinueWith(_ => true));
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", dataHome);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", dataDirs);
+            Directory.Delete(data, true);
+        }
+    }
+
+    /// <summary>
+    /// A matrix cell's fader held down with the real pointer while a switch
+    /// to the channel tiles takes the matrix away: before the switch the drag
+    /// sends the send's level, the switch takes the pointer back, and however
+    /// the pointer moves until it is released nothing more reaches the daemon.
+    /// The send keeps the level the drag had reached.
+    /// </summary>
+    private static void CheckMatrixDragAcrossSwitch()
+    {
+        string data = Directory.CreateTempSubdirectory("openxlr-matrix-drag-").FullName;
+        string? dataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        string? dataDirs = Environment.GetEnvironmentVariable("XDG_DATA_DIRS");
+        SkinEntry worn = SkinService.Current;
+        var commands = new ConcurrentQueue<string>();
+        SocketTestServer server = Await(SocketTestServer.Start(async (socket, stop) =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                JsonNode command = await SocketTestServer.Receive(socket, stop);
+                string cmd = command["cmd"]!.GetValue<string>();
+                if (cmd is "setOutputVolume" or "setLevel" or "setMixVolume" or "setChannelMuted" or "setMixMuted" or "setLayoutOrder" or "setMonitorOutputs")
+                    commands.Enqueue(cmd);
+                if (command["requestId"] is { } requestId)
+                    await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>() }, stop);
+            }
+        }));
+        MainWindow? main = null;
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", data);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(data, "none"));
+            string folder = Path.Combine(data, "openxlr", "skins", "drag-matrix");
+            Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder, "skin.json"), """
+                {"schema":1,"name":"Drag matrix","tokens":{"Ox.Matrix.CellWidth":240},"layout":{"version":1,"regions":{"submixer":{"template":"mix-matrix"}}}}
+                """);
+            SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
+            var client = new DaemonClient(server.Url);
+            main = new MainWindow(client);
+            var vm = (MainViewModel)main.DataContext!;
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (!vm.DaemonConnected && DateTime.UtcNow < deadline)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(5);
+            }
+            Assert.True(vm.DaemonConnected);
+            typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vm, [JsonNode.Parse("""
+                {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor"},{"id":"stream","name":"Stream"}],
+                 "channels":[{"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.2}}]}
+                """)]);
+            main.Show();
+            Assert.Empty(SkinService.Apply(SkinCatalog.Find("drag-matrix")!));
+            WindowLayoutTests.Layout(main, 1040, 900);
+            main.Activate();
+            Assert.NotNull(main.MixMatrix);
+            IPointer? pressed = null;
+            main.AddHandler(InputElement.PointerPressedEvent, (_, e) => pressed = e.Pointer, RoutingStrategies.Tunnel, handledEventsToo: true);
+            SendViewModel send = vm.Channels.Single().Sends.Single(s => s.MixId == "stream");
+            Slider slider = main.GetVisualDescendants().OfType<Slider>().Single(s => s.IsEffectivelyVisible
+                && s.DataContext is OpenXLR.UI.Layout.MatrixCellViewModel { Mix.Id: "stream" });
+            slider.BringIntoView();
+            FaderInputWindowTests.Pump();
+            using var input = new XPointer();
+            input.Focus(main.TryGetPlatformHandle()!.Handle);
+            var thumb = slider.GetVisualDescendants().OfType<Thumb>().Single();
+            PixelPoint point = thumb.PointToScreen(new Point(thumb.Bounds.Width / 2, thumb.Bounds.Height / 2));
+            double start = send.Level;
+            double dragged;
+            try
+            {
+                input.MoveTo(point.X, point.Y);
+                FaderInputWindowTests.Pump();
+                input.SetButton(true);
+                FaderInputWindowTests.Pump();
+                input.MoveTo(point.X + 40, point.Y);
+                FaderInputWindowTests.Pump();
+                dragged = send.Level;
+                Assert.True(dragged > start + 0.05, $"the drag did not move the send from {start}: {dragged}");
+                Assert.Equal(dragged, slider.Value);
+                Assert.NotNull(pressed);
+                Assert.NotNull(pressed!.Captured);
+                SliderSync.FlushPending();
+                Assert.Null(Await(client.SetLayoutOrderAsync([], [])));
+                Assert.Contains("setLevel", commands);
+                commands.Clear();
+
+                Assert.Empty(SkinService.Apply(new SkinEntry(SkinPackage.Default, [])));
+                FaderInputWindowTests.Pump();
+                Assert.Null(main.MixMatrix);
+                Assert.Null(pressed.Captured);
+                // Still held, wherever it moves: the send goes no further.
+                foreach (int dx in new[] { 60, 90, 20 })
+                {
+                    input.MoveTo(point.X + dx, point.Y);
+                    FaderInputWindowTests.Pump();
+                    Assert.Equal(dragged, send.Level);
+                }
+            }
+            finally
+            {
+                input.SetButton(false);
+                FaderInputWindowTests.Pump();
+            }
+            Assert.Equal(dragged, send.Level);
+            SliderSync.FlushPending();
+            Assert.Null(Await(client.SetLayoutOrderAsync([], [])));
+            Assert.Equal(["setLayoutOrder"], commands.ToArray());
+        }
+        finally
+        {
+            SliderSync.Forget("lvl:music:stream");
             main?.Quit();
             Dispatcher.UIThread.RunJobs();
             SkinService.Apply(worn);

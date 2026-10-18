@@ -2244,4 +2244,19 @@ Select the interface OpenXLR drives</value>
   <data name="ResetSkinArrangementHint" xml:space="preserve">
     <value>Put the sections back where this skin puts them, start its banks on their default mixes and forget where you put the submixer</value>
   </data>
+  <data name="LayoutPartMatrix" xml:space="preserve">
+    <value>a mix matrix</value>
+  </data>
+  <data name="MatrixOneOutput" xml:space="preserve">
+    <value>1 output</value>
+  </data>
+  <data name="MatrixOutputs" xml:space="preserve">
+    <value>{0} outputs</value>
+  </data>
+  <data name="MatrixNoOutput" xml:space="preserve">
+    <value>No output</value>
+  </data>
+  <data name="MatrixEffects" xml:space="preserve">
+    <value>FX</value>
+  </data>
 </root>

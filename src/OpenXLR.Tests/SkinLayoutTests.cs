@@ -521,7 +521,9 @@ public sealed class SkinLayoutTests
         Assert.Same(SkinInputsOptions.Default, SkinLayoutDefaults.Classic.Inputs);
         Assert.Same(SkinSubmixerOptions.Default, SkinLayoutDefaults.Classic.Submixer);
         Assert.Equal([SkinLayoutTemplates.HardwarePanel, SkinLayoutTemplates.InputRack], SkinLayoutTemplates.Inputs);
-        Assert.Equal([SkinLayoutTemplates.ChannelTiles, SkinLayoutTemplates.MixBanks], SkinLayoutTemplates.Submixer);
+        Assert.Equal([SkinLayoutTemplates.ChannelTiles, SkinLayoutTemplates.MixBanks, SkinLayoutTemplates.MixMatrix], SkinLayoutTemplates.Submixer);
+        Assert.False(layout.Submixer.IsMatrix);
+        Assert.Same(SkinMatrixOptions.Default, layout.Submixer.Matrix);
         Assert.Equal(["identity", "meter", "gain", "hardware-controls", "effects"], SkinStripParts.InputRow);
         Assert.Equal(["identity", "meter", "fader", "value", "mute"], SkinStripParts.Send);
     }
@@ -848,5 +850,151 @@ public sealed class SkinLayoutTests
         Assert.Equal(560, SkinLayoutDefaults.MonitorStackWidth);
         Assert.True(SkinLayoutDefaults.MonitorStackWidth < SkinLayoutDefaults.RowSectionMinWidth - SkinLayoutDefaults.CardPadding);
         Assert.True(SkinLayoutDefaults.RegionMinWidth("monitor", compact, sizes) - SkinLayoutDefaults.CardPadding < SkinLayoutDefaults.MonitorStackWidth);
+    }
+    // ---- the mix matrix ----
+
+    private static string Matrix(string options = "") =>
+        Regions("\"submixer\":{\"template\":\"mix-matrix\"" + (options.Length > 0 ? "," + options : "") + "}");
+
+    [Fact]
+    public void AMatrixReadsItsHeadsCellsMutedStyleAndMeter()
+    {
+        SkinLayout layout = Taken(Matrix("""
+            "matrix":{"rowHead":{"parts":["identity","mute","gain"],"hidden":["effects"],"label":{"style":"icon-and-text"}},
+                      "columnHead":{"parts":["outputs","identity"],"hidden":["master"],"label":{"style":"icon"}},
+                      "cell":{"parts":["fader","mute"],"hidden":["value"],"muted":"dim"},
+                      "meter":"none"}
+            """));
+        SkinSubmixerOptions submixer = layout.Submixer;
+        Assert.True(submixer.IsMatrix);
+        Assert.False(submixer.IsBanks);
+        SkinMatrixOptions matrix = submixer.Matrix;
+        Assert.Equal(["identity", "mute", "gain", "meter", "effects"], matrix.RowHead.Order);
+        Assert.Equal(["identity", "mute", "gain", "meter"], matrix.RowHead.Shown);
+        Assert.Equal(SkinLabelStyle.IconAndText, matrix.RowHead.Label);
+        Assert.Equal(["outputs", "identity", "master", "mute", "effects"], matrix.ColumnHead.Order);
+        Assert.Equal(["outputs", "identity", "mute", "effects"], matrix.ColumnHead.Shown);
+        Assert.Equal(SkinLabelStyle.Icon, matrix.ColumnHead.Label);
+        Assert.Equal(["fader", "mute"], matrix.Cell.Shown);
+        Assert.False(matrix.Cell.Shows("value"));
+        Assert.Equal(SkinMatrixMuted.Dim, matrix.Muted);
+        Assert.Equal(SkinMatrixMeter.None, matrix.Meter);
+
+        // A matrix with nothing else said: every part in its default order, muted cells tinted, the meter under the faders.
+        SkinSubmixerOptions plain = Taken(Matrix()).Submixer;
+        Assert.True(plain.IsMatrix);
+        Assert.Same(SkinMatrixOptions.Default, plain.Matrix);
+        Assert.Equal(SkinMatrixParts.RowHead, plain.Matrix.RowHead.Shown);
+        Assert.Equal(SkinMatrixParts.ColumnHead, plain.Matrix.ColumnHead.Shown);
+        Assert.Equal(SkinMatrixParts.Cell, plain.Matrix.Cell.Shown);
+        Assert.Equal(SkinMatrixMuted.Tint, plain.Matrix.Muted);
+        Assert.Equal(SkinMatrixMeter.UnderFader, plain.Matrix.Meter);
+        // An empty block, or empty lists, keep the defaults too.
+        Assert.Equal(SkinMatrixOptions.Default.Description(),
+            Taken(Matrix("\"matrix\":{\"rowHead\":{},\"columnHead\":{\"parts\":[]},\"cell\":{\"hidden\":[]}}")).Submixer.Matrix.Description());
+        Assert.Equal(["identity", "meter", "gain", "mute", "effects"], SkinMatrixParts.RowHead);
+        Assert.Equal(["identity", "master", "mute", "effects", "outputs"], SkinMatrixParts.ColumnHead);
+        Assert.Equal(["mute", "fader", "value"], SkinMatrixParts.Cell);
+    }
+
+    [Fact]
+    public void TheMatrixIsInTheLayoutDescription()
+    {
+        string Described(string body) => Taken(Regions(body)).Description();
+        string matrix = Described("\"submixer\":{\"template\":\"mix-matrix\"}");
+        Assert.NotEqual(SkinLayoutDefaults.Classic.Description(), matrix);
+        Assert.NotEqual(Described("\"submixer\":{\"template\":\"mix-banks\"}"), matrix);
+        foreach (string change in new[]
+                 {
+                     "\"rowHead\":{\"parts\":[\"mute\"]}", "\"rowHead\":{\"hidden\":[\"meter\"]}", "\"rowHead\":{\"label\":{\"style\":\"icon\"}}",
+                     "\"columnHead\":{\"parts\":[\"outputs\"]}", "\"columnHead\":{\"hidden\":[\"effects\"]}",
+                     "\"cell\":{\"hidden\":[\"value\"]}", "\"cell\":{\"muted\":\"dim\"}", "\"meter\":\"none\"",
+                 })
+            Assert.NotEqual(matrix, Described("\"submixer\":{\"template\":\"mix-matrix\",\"matrix\":{" + change + "}}"));
+        // The same matrix written two ways describes alike.
+        Assert.Equal(matrix, Described("\"submixer\":{\"template\":\"mix-matrix\",\"matrix\":{\"cell\":{\"muted\":\"tint\"},\"meter\":\"under-fader\"}}"));
+    }
+
+    [Fact]
+    public void TheOptionsOfBanksAndOfAMatrixAreRefusedOnTheOtherTemplate()
+    {
+        foreach (string option in new[] { "orientation", "visibleBanks", "selectionDefaults", "strip", "master" })
+            Assert.Contains("mix-banks", Refused(Matrix("\"" + option + "\":{}"), "layout.regions.submixer." + option), StringComparison.Ordinal);
+        foreach (string template in new[] { "mix-banks", "channel-tiles" })
+            Assert.Contains("mix-matrix", Refused(Regions("\"submixer\":{\"template\":\"" + template + "\",\"matrix\":{}}"),
+                "layout.regions.submixer.matrix"), StringComparison.Ordinal);
+        Refused(Regions("\"submixer\":{\"matrix\":{}}"), "layout.regions.submixer.matrix");
+        Refused(Regions("\"inputs\":{\"matrix\":{}}"), "layout.regions.inputs.matrix");
+        // A matrix may still say where the submixer starts out.
+        Assert.Equal(SkinMixerPlacement.Detached, Taken(Matrix("\"popOut\":{\"default\":\"detached\"}")).PopOut);
+    }
+
+    [Fact]
+    public void AMatrixTakesOnlyItsOwnPartsNamesAndValues()
+    {
+        Refused(Matrix("\"matrix\":[]"), "layout.regions.submixer.matrix");
+        Refused(Matrix("\"matrix\":{\"rows\":{}}"), "layout.regions.submixer.matrix.rows");
+        Refused(Matrix("\"matrix\":{\"rowHead\":{\"muted\":\"dim\"}}"), "layout.regions.submixer.matrix.rowHead.muted");
+        Refused(Matrix("\"matrix\":{\"cell\":{\"label\":{}}}"), "layout.regions.submixer.matrix.cell.label");
+        Refused(Matrix("\"matrix\":{\"rowHead\":{\"partsOrder\":[]}}"), "layout.regions.submixer.matrix.rowHead.partsOrder");
+        Refused(Matrix("\"matrix\":{\"rowHead\":{\"parts\":[\"fader\"]}}"), "layout.regions.submixer.matrix.rowHead.parts[0]");
+        Refused(Matrix("\"matrix\":{\"rowHead\":{\"parts\":[\"hardware-controls\"]}}"), "layout.regions.submixer.matrix.rowHead.parts[0]");
+        Refused(Matrix("\"matrix\":{\"columnHead\":{\"parts\":[\"gain\"]}}"), "layout.regions.submixer.matrix.columnHead.parts[0]");
+        Refused(Matrix("\"matrix\":{\"cell\":{\"parts\":[\"identity\"]}}"), "layout.regions.submixer.matrix.cell.parts[0]");
+        Refused(Matrix("\"matrix\":{\"cell\":{\"parts\":[\"mute\",3]}}"), "layout.regions.submixer.matrix.cell.parts[1]");
+        Refused(Matrix("\"matrix\":{\"cell\":{\"parts\":\"mute\"}}"), "layout.regions.submixer.matrix.cell.parts");
+        Refused(Matrix("\"matrix\":{\"cell\":{\"parts\":[\"mute\"],\"hidden\":[\"mute\"]}}"), "layout.regions.submixer.matrix.cell.hidden[0]");
+        Refused(Matrix("\"matrix\":{\"rowHead\":{\"label\":{\"style\":\"bold\"}}}"), "layout.regions.submixer.matrix.rowHead.label.style");
+        Refused(Matrix("\"matrix\":{\"cell\":{\"muted\":\"red\"}}"), "layout.regions.submixer.matrix.cell.muted");
+        Refused(Matrix("\"matrix\":{\"cell\":{\"muted\":true}}"), "layout.regions.submixer.matrix.cell.muted");
+        Refused(Matrix("\"matrix\":{\"meter\":\"beside-fader\"}"), "layout.regions.submixer.matrix.meter");
+        Refused(Matrix("\"matrix\":{\"meter\":{}}"), "layout.regions.submixer.matrix.meter");
+        Refused(Matrix("\"matrix\":{\"meter\":\"none\",\"meter\":\"none\"}"), "layout.regions.submixer.matrix.meter");
+        // Never more entries than the list has parts.
+        Assert.Contains("at most 3", Refused(Matrix("\"matrix\":{\"cell\":{\"parts\":[\"mute\",\"fader\",\"value\",\"mute\"]}}"),
+            "layout.regions.submixer.matrix.cell.parts"), StringComparison.Ordinal);
+        Refused(Matrix("\"matrix\":{\"rowHead\":{\"hidden\":[\"meter\",\"gain\",\"mute\",\"effects\",\"identity\",\"meter\"]}}"),
+            "layout.regions.submixer.matrix.rowHead.hidden");
+    }
+
+    [Fact]
+    public void AHeadAlwaysSaysWhoseItIsAndACellAlwaysShowsItsLevel()
+    {
+        Assert.Contains("identity", Refused(Matrix("\"matrix\":{\"rowHead\":{\"hidden\":[\"identity\"]}}"),
+            "layout.regions.submixer.matrix.rowHead.hidden[0]"), StringComparison.Ordinal);
+        Assert.Contains("identity", Refused(Matrix("\"matrix\":{\"columnHead\":{\"hidden\":[\"master\",\"identity\"]}}"),
+            "layout.regions.submixer.matrix.columnHead.hidden[1]"), StringComparison.Ordinal);
+        Assert.Contains("fader", Refused(Matrix("\"matrix\":{\"cell\":{\"hidden\":[\"fader\"]}}"),
+            "layout.regions.submixer.matrix.cell.hidden[0]"), StringComparison.Ordinal);
+        // Everything else may go: a bare row head, a bare column head, a cell that is only its fader.
+        SkinMatrixOptions bare = Taken(Matrix("""
+            "matrix":{"rowHead":{"hidden":["meter","gain","mute","effects"]},"columnHead":{"hidden":["master","mute","effects","outputs"]},
+                      "cell":{"hidden":["mute","value"]}}
+            """)).Submixer.Matrix;
+        Assert.Equal(["identity"], bare.RowHead.Shown);
+        Assert.Equal(["identity"], bare.ColumnHead.Shown);
+        Assert.Equal(["fader"], bare.Cell.Shown);
+    }
+
+    [Fact]
+    public void AMatrixNeedsItsRowHeadsAndOneColumnAndNeverMoreThanAClassicSection()
+    {
+        var sizes = new RegionSizes(StripWidth: 76, MixWidth: 232, BankSpacing: 12, Banks: 1, VisibleChannels: 6,
+            MatrixCellWidth: 168, MatrixNameWidth: 112, MatrixColumns: 6);
+        SkinLayout matrix = Taken(Matrix());
+        double one = 112 + 168 + 168 + SkinLayoutDefaults.MatrixSpacing;
+        Assert.Equal(one + SkinLayoutDefaults.CardPadding, SkinLayoutDefaults.RegionMinWidth("submixer", matrix, sizes));
+        Assert.Equal(one, SkinLayoutDefaults.MatrixWidth(sizes, 1));
+        // The whole matrix, as its own window draws it: every column beside the row heads.
+        Assert.Equal(112 + 168 + 6 * (168 + SkinLayoutDefaults.MatrixSpacing), SkinLayoutDefaults.MatrixWidth(sizes, 6));
+        // With no mix to show, the row heads alone.
+        Assert.Equal(112 + 168 + SkinLayoutDefaults.CardPadding,
+            SkinLayoutDefaults.RegionMinWidth("submixer", matrix, sizes with { MatrixColumns = 0 }));
+        // Touch sizing's wider cells, and never past the classic width.
+        Assert.Equal(132 + 200 + 200 + SkinLayoutDefaults.MatrixSpacing + SkinLayoutDefaults.CardPadding,
+            SkinLayoutDefaults.RegionMinWidth("submixer", matrix, sizes with { MatrixCellWidth = 200, MatrixNameWidth = 132 }));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth,
+            SkinLayoutDefaults.RegionMinWidth("submixer", matrix, sizes with { MatrixCellWidth = 400, MatrixNameWidth = 400 }));
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("inputs", matrix, sizes));
     }
 }

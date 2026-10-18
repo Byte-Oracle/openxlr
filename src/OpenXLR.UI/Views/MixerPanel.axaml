@@ -4,14 +4,16 @@
              xmlns:vm="using:OpenXLR.UI"
              xmlns:skin="using:OpenXLR.UI.Skinning"
              xmlns:layout="using:OpenXLR.UI.Layout"
+             xmlns:views="using:OpenXLR.UI.Views"
              x:Class="OpenXLR.UI.Views.MixerPanel">
 
   <!-- The submixer's one panel, which Pop out moves between the main window
        and its own window. It holds whichever presentation the skin chose:
        the channel tiles, written in MainWindow.axaml and handed in as Tiles,
-       or the mix banks below. Both draw the same channel, mix and send
-       objects; switching between them builds nothing but the banks. Every
-       colour, size and radius here is an Ox.* token. -->
+       the mix banks below, or the mix matrix (MixMatrixView). All three draw
+       the same channel, mix and send objects; switching between them builds
+       nothing but the banks or the matrix. Every colour, size and radius here
+       is an Ox.* token. -->
 
   <UserControl.Resources>
     <!-- A bank's cell, by the skin's strip template. -->
@@ -305,6 +307,8 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+      <!-- the mix matrix: a row per channel, a column per mix -->
+      <views:MixMatrixView Name="MatrixView" IsVisible="False"/>
     </Panel>
   </DockPanel>
 </UserControl>

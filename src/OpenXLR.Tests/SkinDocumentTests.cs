@@ -406,6 +406,15 @@ public sealed class SkinDocumentTests
         Says("a send list needs three strip widths");
         Says($"{Number(SkinLayoutDefaults.RowStrips * (double)SkinTokens.Find("Ox.Mixer.StripWidth")!.Default! + SkinLayoutDefaults.CardPadding)} pixels with the default tokens");
         Says($"raises\n`Ox.Mixer.StripWidth` to {Number(SkinTokens.TouchMinimums["Ox.Mixer.StripWidth"])}");
+        // The matrix: its narrowest width with the default tokens, its values and its rules.
+        double cellWidth = (double)SkinTokens.Find("Ox.Matrix.CellWidth")!.Default!;
+        double nameWidth = (double)SkinTokens.Find("Ox.Matrix.NameWidth")!.Default!;
+        Assert.Equal(1, SkinLayoutDefaults.MatrixMinimumColumns);
+        Says($"padding: {Number(nameWidth + cellWidth + cellWidth + SkinLayoutDefaults.MatrixSpacing + SkinLayoutDefaults.CardPadding)} pixels with the default tokens");
+        Says("`\"tint\"`, the default, or `\"dim\"`");
+        Says("`\"under-fader\"`, the default");
+        Says("`fader` hidden in a cell");
+        Says("`identity` hidden in a head");
         Says("`skinBankSelections`");
         Says("`mixerDocked`");
         Says("`skinPopOutsApplied`");
@@ -427,13 +436,16 @@ public sealed class SkinDocumentTests
         Assert.Equal(SkinLayoutRegions.All, Table("| Region | What it is |"));
         Assert.Equal(SkinHeaderActions.All, Table("| Action | What it is |"));
         Assert.Equal(["visibility", "width", "height", "actions", "overflow"], Table("| Option | Region | What it is |"));
-        Assert.Equal(["template", "strip", "orientation", "visibleBanks", "selectionDefaults", "master", "popOut"], Table("| Option | Template | What it is |"));
+        Assert.Equal(["template", "strip", "orientation", "visibleBanks", "selectionDefaults", "master", "matrix", "popOut"], Table("| Option | Template | What it is |"));
+        Assert.Equal(["rowHead", "columnHead", "cell", "meter"], Table("| Matrix option | What it is |"));
+        Assert.Equal(SkinMatrixParts.RowHead.Concat(SkinMatrixParts.ColumnHead).Concat(SkinMatrixParts.Cell).Distinct(),
+            Table("| Matrix part | Where | What it is |"));
         Assert.Equal(["template", "partsOrder", "hidden", "label", "meter", "fader"], Table("| Strip option | What it is |"));
         Assert.Equal(SkinStripParts.InputRow.Concat(SkinStripParts.Send).Distinct(), Table("| Part | What it is |"));
         Assert.Equal(["label.style", "meter.orientation", "meter.placement", "fader.orientation", "fader.direction"], Table("| Value | What it is |"));
         foreach (string name in SkinLayoutTemplates.Inputs.Concat(SkinLayoutTemplates.Submixer).Concat(SkinLayoutTemplates.InputStrips)
                      .Concat(SkinLayoutTemplates.Monitor).Concat(SkinLayoutTemplates.Applications).Concat(SkinPopOutDefaults.All)
-                     .Concat(SkinLayoutTemplates.BankStrips).Concat(SkinLayoutTemplates.Masters)
+                     .Concat(SkinLayoutTemplates.BankStrips).Concat(SkinLayoutTemplates.Masters).Concat(["tint", "dim", "under-fader", "none"])
                      .Concat(["text", "icon-and-text", "icon", "below-label", "beside-label", "beside-fader", "normal", "reversed"]))
             Says($"`\"{name}\"`");
         Assert.True(missing.Count == 0, "docs/skins.md, Layout, no longer states: " + string.Join("; ", missing));
@@ -450,7 +462,7 @@ public sealed class SkinDocumentTests
             Assert.True(result.Ok, string.Join("\n", result.Errors));
             read.Add(Assert.IsType<SkinLayout>(result.Package!.Layout));
         }
-        Assert.Equal(4, read.Count);
+        Assert.Equal(5, read.Count);
         SkinLayoutGrid grid = Assert.IsType<SkinLayoutGrid>(read[0].Main);
         Assert.True(read[0].PlacesHeader);
         Assert.Contains(grid.Containers(), c => c is SkinLayoutStack);
@@ -464,10 +476,15 @@ public sealed class SkinDocumentTests
         Assert.True(read[2].Submixer.IsBanks);
         Assert.Equal(SkinSubmixerOptions.DefaultVisibleBanks, read[2].Submixer.VisibleBanks);
         Assert.Equal(SkinLayoutTemplates.MasterStrip, read[2].Submixer.Master.Template);
-        // The fourth: the toolbar and the list in a side column, the submixer in its own window.
-        Assert.Equal(SkinLayoutTemplates.OutputToolbar, read[3].Monitor);
-        Assert.Equal(SkinLayoutTemplates.ApplicationList, read[3].Applications);
-        Assert.Equal(SkinMixerPlacement.Detached, read[3].PopOut);
+        // The fourth: a matrix with its own heads and cells.
+        Assert.True(read[3].Submixer.IsMatrix);
+        Assert.Equal(["identity", "mute", "gain", "meter", "effects"], read[3].Submixer.Matrix.RowHead.Shown);
+        Assert.DoesNotContain("effects", read[3].Submixer.Matrix.ColumnHead.Shown);
+        Assert.Equal(SkinMatrixMuted.Tint, read[3].Submixer.Matrix.Muted);
+        // The fifth: the toolbar and the list in a side column, the submixer in its own window.
+        Assert.Equal(SkinLayoutTemplates.OutputToolbar, read[4].Monitor);
+        Assert.Equal(SkinLayoutTemplates.ApplicationList, read[4].Applications);
+        Assert.Equal(SkinMixerPlacement.Detached, read[4].PopOut);
     }
 
     [Fact]
@@ -489,6 +506,7 @@ public sealed class SkinDocumentTests
         // Closed objects: a property the reader refuses is one the schema refuses.
         foreach (string name in new[] { "desktopLayout", "layoutRegions", "layoutSectionOptions", "layoutHeaderOptions",
                      "layoutInputsOptions", "layoutSubmixerOptions", "layoutMonitorOptions", "layoutApplicationsOptions", "layoutPopOut", "layoutInputStrip", "layoutBankStrip", "layoutMaster",
+                     "layoutMatrix", "layoutMatrixRowHead", "layoutMatrixColumnHead", "layoutMatrixCell",
                      "layoutLabel", "layoutMeter", "layoutFader" })
             Assert.False(Definition(name).GetProperty("additionalProperties").GetBoolean(),
                 $"{name} would accept a property the layout reader refuses.");
@@ -581,8 +599,33 @@ public sealed class SkinDocumentTests
         Assert.Equal(SkinLayoutTemplates.Inputs, Strings(inputs.GetProperty("template").GetProperty("enum")));
         Assert.Equal("#/$defs/layoutInputStrip", inputs.GetProperty("strip").GetProperty("$ref").GetString());
         JsonElement submixer = Properties("layoutSubmixerOptions");
-        Assert.Equal(["visibility", "width", "height", "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master", "popOut"],
+        Assert.Equal(["visibility", "width", "height", "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master", "matrix", "popOut"],
             Names(submixer));
+        Assert.Equal("#/$defs/layoutMatrix", submixer.GetProperty("matrix").GetProperty("$ref").GetString());
+        // matrix is refused without mix-matrix, as the reader refuses it.
+        JsonElement matrixRule = Assert.Single(Definition("layoutSubmixerOptions").GetProperty("allOf").EnumerateArray());
+        Assert.Equal("mix-matrix", matrixRule.GetProperty("if").GetProperty("properties").GetProperty("template").GetProperty("const").GetString());
+        Assert.Equal(["matrix"], Strings(matrixRule.GetProperty("else").GetProperty("not").GetProperty("required")));
+        Assert.Equal(["rowHead", "columnHead", "cell", "meter"], Names(Properties("layoutMatrix")));
+        Assert.Equal(["under-fader", "none"], Strings(Properties("layoutMatrix").GetProperty("meter").GetProperty("enum")));
+        Assert.Equal(Enum.GetValues<SkinMatrixMeter>().Length, Properties("layoutMatrix").GetProperty("meter").GetProperty("enum").GetArrayLength());
+        foreach ((string def, IReadOnlyList<string> parts, string kept, string last) in new[]
+                 {
+                     ("layoutMatrixRowHead", SkinMatrixParts.RowHead, SkinMatrixParts.HeadKept, "label"),
+                     ("layoutMatrixColumnHead", SkinMatrixParts.ColumnHead, SkinMatrixParts.HeadKept, "label"),
+                     ("layoutMatrixCell", SkinMatrixParts.Cell, SkinMatrixParts.CellKept, "muted"),
+                 })
+        {
+            JsonElement fields = Properties(def);
+            Assert.Equal(["parts", "hidden", last], Names(fields));
+            Assert.Equal(parts, Strings(fields.GetProperty("parts").GetProperty("items").GetProperty("enum")));
+            Assert.Equal(parts.Count, fields.GetProperty("parts").GetProperty("maxItems").GetInt32());
+            Assert.Equal(parts.Where(p => p != kept), Strings(fields.GetProperty("hidden").GetProperty("items").GetProperty("enum")));
+            Assert.Equal(parts.Count - 1, fields.GetProperty("hidden").GetProperty("maxItems").GetInt32());
+        }
+        Assert.Equal(["tint", "dim"], Strings(Properties("layoutMatrixCell").GetProperty("muted").GetProperty("enum")));
+        Assert.Equal(Enum.GetNames<SkinMatrixMuted>().Select(n => n.ToLowerInvariant()),
+            Strings(Properties("layoutMatrixCell").GetProperty("muted").GetProperty("enum")));
         Assert.Equal("#/$defs/layoutPopOut", submixer.GetProperty("popOut").GetProperty("$ref").GetString());
         Assert.Equal(SkinLayoutTemplates.Submixer, Strings(submixer.GetProperty("template").GetProperty("enum")));
         Assert.Equal(["horizontal", "vertical"], Strings(submixer.GetProperty("orientation").GetProperty("enum")));
@@ -680,8 +723,13 @@ public sealed class SkinDocumentTests
         Assert.True(entry.Errors.Count == 0, string.Join("\n", entry.Errors));
         Assert.Equal("Broadcast", entry.Name);
         SkinLayout layout = Assert.IsType<SkinLayout>(entry.Package.Layout);
-        Assert.True(layout.Inputs.IsRack);
-        Assert.True(layout.Submixer.IsBanks);
+        // The matrix under the header, the toolbar at its top right, INPUTS hidden and recoverable.
+        Assert.True(layout.Submixer.IsMatrix);
+        Assert.False(layout.Inputs.IsRack);
+        Assert.Equal(SkinRegionVisibility.Hidden, layout.OptionsFor(SkinLayoutRegions.Inputs).Visibility);
+        Assert.Equal(SkinLayoutTemplates.OutputToolbar, layout.Monitor);
+        Assert.Equal(SkinRegionVisibility.Collapsed, layout.OptionsFor(SkinLayoutRegions.Headphones).Visibility);
+        Assert.False(layout.PlacesHeader);
         Assert.Equal(layout.Description(), SkinCatalog.BuiltIn().Single(e => e.Id == "broadcast").Package.Layout!.Description());
         Assert.Contains("examples/skins/broadcast", Section(Document, "Layout", "What a skin cannot do"), StringComparison.Ordinal);
         Assert.Contains("**Broadcast**", Document, StringComparison.Ordinal);

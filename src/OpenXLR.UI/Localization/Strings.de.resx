@@ -2244,4 +2244,19 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="ResetSkinArrangementHint" xml:space="preserve">
     <value>Die Abschnitte dorthin zurücksetzen, wo dieser Skin sie platziert, seine Bänke mit ihren Standard-Mixes beginnen lassen und vergessen, wo du den Submixer hingestellt hast</value>
   </data>
+  <data name="LayoutPartMatrix" xml:space="preserve">
+    <value>eine Mix-Matrix</value>
+  </data>
+  <data name="MatrixOneOutput" xml:space="preserve">
+    <value>1 Ausgang</value>
+  </data>
+  <data name="MatrixOutputs" xml:space="preserve">
+    <value>{0} Ausgänge</value>
+  </data>
+  <data name="MatrixNoOutput" xml:space="preserve">
+    <value>Kein Ausgang</value>
+  </data>
+  <data name="MatrixEffects" xml:space="preserve">
+    <value>FX</value>
+  </data>
 </root>

@@ -304,8 +304,9 @@ public sealed partial class SkinWindowTests
     /// while the window is connected to a daemon: the banks hand out the same
     /// channel, mix and send objects the tiles drew, a colour-only skin in
     /// between leaves the banks as they are, and nothing goes to the daemon,
-    /// no level, no mute and no layout order. The shipped Broadcast skin,
-    /// switched to Material and back, keeps to the same rules.
+    /// no level, no mute and no layout order. The shipped Broadcast skin's
+    /// mix matrix, switched to Material and back and to banks and back,
+    /// keeps to the same rules.
     /// </summary>
     private static void ASwitchToMixBanksKeepsEveryViewModelAndSendsNothing(MainWindow main)
     {
@@ -400,32 +401,57 @@ public sealed partial class SkinWindowTests
             SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
             Pump(main);
 
-            // Broadcast to Material and back, twice: its rack and two banks on
-            // Monitor A and Stream hand out the same objects, and send nothing.
+            // Broadcast to Material and back, twice: its matrix hands out the
+            // same mixes and sends, every cell the channel's own, and sends nothing.
             SkinEntry broadcast = Assert.Single(SkinCatalog.BuiltIn(), e => e.Id == "broadcast");
             foreach (int round in new[] { 1, 2 })
             {
                 Assert.Empty(SkinService.Apply(broadcast));
                 Pump(main);
                 Layout(main, 1040, 900);
-                Assert.NotNull(panel.Banks);
-                Assert.NotNull(main.InputRackModel);
-                Assert.Equal(["monitor", "stream"], panel.Banks!.Selection);
-                foreach (var bank in panel.Banks.Banks)
-                {
-                    Assert.Contains(bank.Mix!, mixes);
-                    foreach (var cell in bank.Cells) Assert.Contains(cell.Send!, sends);
-                }
+                Assert.Null(panel.Banks);
+                Assert.Null(main.InputRackModel);
+                Assert.NotNull(panel.Matrix);
+                Assert.Same(main.MixMatrix, panel.Matrix);
+                Assert.True(panel.MatrixItems.IsEffectivelyVisible);
+                Assert.Equal(mixes, panel.Matrix!.Columns.Select(c => c.Mix));
+                Assert.Equal(channels, panel.Matrix.Rows.Select(r => r.Channel));
+                foreach (var row in panel.Matrix.Rows)
+                    foreach (var cell in row.Cells) Assert.Same(row.Channel.Sends.Single(s => s.MixId == cell.Mix.Id), cell.Send);
+                // Colours alone leave the matrix as it is.
+                var matrix = panel.Matrix;
+                SkinService.ChooseControlSizing(SkinService.TouchControls, out _);
+                Pump(main);
+                Assert.Same(matrix, panel.Matrix);
                 Capture(main, $"layout-broadcast-{round}");
                 Assert.Empty(SkinService.Apply(new SkinEntry(SkinPackage.Default, [])));
                 Pump(main);
                 Layout(main, 1040, 900);
-                Assert.Null(panel.Banks);
-                Assert.Null(main.InputRackModel);
+                Assert.Null(panel.Matrix);
+                Assert.False(panel.MatrixItems.IsVisible);
                 Assert.Equal(channels, vm.Channels);
                 Assert.Equal(mixes, vm.Mixes);
                 Assert.Equal(sends, vm.Channels.SelectMany(c => c.Sends));
             }
+            // Broadcast folds APPLICATIONS the first time it is worn, and a fold
+            // outlasts the skin; the parts after this one start unfolded.
+            main.FindControl<Expander>("ApplicationsTile")!.IsExpanded = true;
+            // Banks straight to the matrix and back: one presentation at a time, the same objects.
+            Assert.Empty(SkinService.Apply(banks));
+            Pump(main);
+            Assert.Empty(SkinService.Apply(broadcast));
+            Pump(main);
+            Layout(main, 1040, 900);
+            Assert.Null(panel.Banks);
+            Assert.NotNull(panel.Matrix);
+            Assert.False(panel.BankItems.IsVisible);
+            Assert.Empty(SkinService.Apply(banks));
+            Pump(main);
+            Layout(main, 1040, 900);
+            Assert.Null(panel.Matrix);
+            Assert.NotNull(panel.Banks);
+            SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
+            Pump(main);
 
             Assert.Equal(channels, vm.Channels);
             Assert.Equal(mixes, vm.Mixes);

@@ -489,8 +489,10 @@ public sealed class TuiSkinTests : IDisposable
         Theme flat = Theme.FromJson(stripped.ToJsonString(), "broadcast", "broadcast");
         Assert.Equal("Broadcast", theme.Name);
         Assert.NotEqual(Theme.Material.Window, theme.Window);
+        // Console faders for the round blue cap; flat lamps and keys, as on the dark neutral desk it copies.
         Assert.True(theme.ConsoleFaders);
-        Assert.True(theme.LampLeds);
+        Assert.False(theme.LampLeds);
+        Assert.False(theme.CapKeys);
         Assert.False(theme.Light);
         foreach (System.Reflection.PropertyInfo property in typeof(Theme).GetProperties(
                      System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))

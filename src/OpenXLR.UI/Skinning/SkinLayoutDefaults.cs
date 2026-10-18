@@ -42,6 +42,24 @@ public static class SkinLayoutDefaults
     /// <summary>How many strip widths an input row, or a row of a send list, needs for its name, fader, value and mute.</summary>
     public const int RowStrips = 3;
 
+    /// <summary>The gap between the cells of a mix matrix, across and down, and between the row heads and the first column.</summary>
+    public const double MatrixSpacing = 4;
+
+    /// <summary>
+    /// How many columns a mix matrix asks room for in its narrowest width,
+    /// beside its row heads. More columns than fit scroll sideways inside the
+    /// card rather than widening the window.
+    /// </summary>
+    public const int MatrixMinimumColumns = 1;
+
+    /// <summary>
+    /// The width a whole mix matrix takes: its row heads, a name column and
+    /// the source controls one cell wide, then every column with the gap
+    /// before it. A matrix in its own window is drawn this wide.
+    /// </summary>
+    public static double MatrixWidth(RegionSizes sizes, int columns) =>
+        sizes.MatrixNameWidth + sizes.MatrixCellWidth + Math.Max(0, columns) * (sizes.MatrixCellWidth + MatrixSpacing);
+
     /// <summary>
     /// Below this width MONITOR's controls stand in two rows, the output
     /// picker above the volume, so the device name and a usable fader both
@@ -60,7 +78,9 @@ public static class SkinLayoutDefaults
     /// line holds a lamp, a name that shortens and a picker; a submixer of banks
     /// needs each bank's strips, up to <see cref="BankMinimumStrips"/>, or the
     /// master card's width, side by side or one above the other, with the gap
-    /// between banks. Neither ever asks for more than the classic width.
+    /// between banks; a mix matrix needs its row heads and
+    /// <see cref="MatrixMinimumColumns"/> column beside them, since the rest
+    /// scroll inside its card. None ever asks for more than the classic width.
     /// </summary>
     /// <param name="sizes">The token values in force and the counts the window shows now.</param>
     public static double RegionMinWidth(string region, SkinLayout? layout, RegionSizes sizes)
@@ -70,6 +90,9 @@ public static class SkinLayoutDefaults
             || region == SkinLayoutRegions.Monitor && layout.Monitor == SkinLayoutTemplates.OutputToolbar
             || region == SkinLayoutRegions.Applications && layout.Applications == SkinLayoutTemplates.ApplicationList)
             return Math.Min(RowSectionMinWidth, RowStrips * sizes.StripWidth + CardPadding);
+        if (region == SkinLayoutRegions.Submixer && layout.Submixer.IsMatrix)
+            return Math.Min(RowSectionMinWidth,
+                MatrixWidth(sizes, Math.Min(MatrixMinimumColumns, sizes.MatrixColumns)) + CardPadding);
         if (region != SkinLayoutRegions.Submixer || !layout.Submixer.IsBanks) return RowSectionMinWidth;
         SkinSubmixerOptions banks = layout.Submixer;
         bool masterStrip = banks.Master.Template == SkinLayoutTemplates.MasterStrip;
@@ -104,4 +127,8 @@ public static class SkinLayoutDefaults
 /// <param name="BankSpacing"><c>Ox.Mixer.BankSpacing</c>.</param>
 /// <param name="Banks">How many banks the submixer shows.</param>
 /// <param name="VisibleChannels">How many channels a bank shows a strip for.</param>
-public readonly record struct RegionSizes(double StripWidth, double MixWidth, double BankSpacing, int Banks, int VisibleChannels);
+/// <param name="MatrixCellWidth"><c>Ox.Matrix.CellWidth</c>.</param>
+/// <param name="MatrixNameWidth"><c>Ox.Matrix.NameWidth</c>.</param>
+/// <param name="MatrixColumns">How many columns a mix matrix shows: the mixes the view shows.</param>
+public readonly record struct RegionSizes(double StripWidth, double MixWidth, double BankSpacing, int Banks, int VisibleChannels,
+    double MatrixCellWidth = 168, double MatrixNameWidth = 112, int MatrixColumns = 0);
