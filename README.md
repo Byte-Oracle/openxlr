@@ -48,7 +48,7 @@ the author's own hardware.
 | Wave XLR MK.2 | 0fd9:00b6 | gain, mute, phantom power, DSP, ClipGuard, compressor, headphone volume, crossfade; verified on hardware by a community tester |
 | XLR Dock MK.2 (Stream Deck+ module) | 0fd9:00c7 | same exposed controls as the Wave XLR MK.2, verified on hardware |
 | Wave:3 (beta) | 0fd9:0070 | gain, mute, headphone volume and monitor balance worked in one user's quick test; ClipGuard and the desktop volume sync are untested |
-| Wave:1 (beta) | 0fd9:006e | detection, the config block, the firmware line and the desktop volume mirror verified from an owner's diagnostics on 0.1.60; the setters await that owner's second run |
+| Wave:1 (beta) | 0fd9:006e | detection, the config block, the firmware line, the desktop volume mirror and the gain, mute and headphone volume writes verified from an owner's two diagnostics runs on 0.1.60; ClipGuard and the mic/PC mix are read, their writes not yet seen |
 
 The UI shows the controls OpenXLR exposes for the connected device, and a picker
 in the header switches between several attached interfaces. The
@@ -397,8 +397,9 @@ XLR MK.2 backends were verified on hardware by community testers. The
 Wave:3 and Wave:1 are in beta: nobody on the project owns one, their
 backends are written from public protocol research, and owners have
 confirmed detection and the controls' readings, the Wave:3 in one quick
-test and the Wave:1 through a diagnostics archive. See the device table
-and docs/hardware-support.md for what is still open.
+test and the Wave:1 through two diagnostics archives that also cover
+its gain, mute and headphone volume writes. See the device table and
+docs/hardware-support.md for what is still open.
 
 The code is written by the two maintainers, with AI tooling (Anthropic's
 Claude and OpenAI's Codex) assisting with protocol capture analysis, UI

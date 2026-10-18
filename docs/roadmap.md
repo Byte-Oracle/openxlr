@@ -342,11 +342,12 @@ while fixes to existing hosts remain part of normal maintenance.
   added after a user reported the microphone unrecognized. No public
   source has probed one. An owner's diagnostics on 0.1.60 showed the
   unit answering the Wave:3's block, the firmware line and the desktop
-  volume mirror, so the reading side is verified; the setters move to
-  tested with that owner's second archive, taken after changing each
-  control from the UI ([hardware-support.md](hardware-support.md)). The
-  backend still refuses a block of another length before writing
-  anything, and it comes last in the registry's order.
+  volume mirror, and a second archive showed the gain, mute and
+  headphone volume written from the UI taking effect; ClipGuard and
+  the mic/PC mix wait for an archive collected with them changed
+  ([hardware-support.md](hardware-support.md)). The backend still
+  refuses a block of another length before writing anything, and it
+  comes last in the registry's order.
 
 ## How a change lands
 

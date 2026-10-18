@@ -272,7 +272,7 @@ grid would swallow the Stream Deck's five-unit crossfade ticks.
 
 | Control | State | Notes |
 |---|---|---|
-| Gain 0 to 40 dB | tested briefly | Q8.8 word at 0. openwave reads and writes it there; wave3-research logged the same word following the dial in each of its modes and says host writes are ignored. The backend trusts the word while the dial is on gain, where both agree, remembers it, and reports that while the dial is elsewhere; until the dial has been on gain once since the connect, it reports the word as openwave does |
+| Gain 0 to 40 dB | tested briefly | Q8.8 word at 0. openwave reads and writes it there; wave3-research logged the same word following the dial in each of its modes and says host writes are ignored. The backend trusts the word while the dial is on gain, where both agree, remembers it, and reports that while the dial is elsewhere; until the dial has been on gain once since the connect, it reports the word as openwave does. A gain it wrote with the dial elsewhere counts once the block reads the word back, which a Wave:1 owner's archive showed the firmware doing; a firmware that drops the write reads back the dial's word and changes nothing |
 | Mute | tested briefly | byte 4; the capacitive mute pad toggles the same byte in wave3-research's log |
 | ClipGuard | coded | byte 5; taken as hardware, so the software limiter is not offered |
 | Headphone volume -60 to 0 dB | tested briefly | signed Q8.8 word at 7, written truncated toward zero as openwave does ("matching the firmware setter's int()"). openwave lets the word go down to -128 dB; the kernel's control and wave3-research's class range stop at -60, and so does the backend |
@@ -350,18 +350,34 @@ Capture Volume 22 for those 11 dB, capture on and PCM Playback Volume
 120, so the daemon had written the desktop volume mirror and it agreed
 with the block. One difference from every Wave:3 log: bytes 2 and 3
 read 0x00EC where a Wave:3 reads zero. The backend retransmits them as
-read. That archive covered no write, so every setter below stays coded
-until the owner's second archive.
+read.
+
+The same owner's second archive, taken after every control in the UI
+had been tried, covered the writes. The gain word held 5 dB where the
+first archive had 11, with the dial still on headphones, so only
+OpenXLR can have written it, and it was still there after the daemon
+had restarted in between: the firmware takes a host write to the gain,
+where wave3-research says a Wave:3 ignores one. The owner saw the
+microphone's LED turn red on Mute and the white LED follow the
+headphone slider. ClipGuard and the mix were back at their defaults
+when the archive was collected, so it shows nothing about them.
+
+That archive also showed the desktop volume mirror lagging a gain
+written from the UI: the card still held the first archive's 22 after
+the block had moved to 5 dB. Since then the backend takes a gain word
+it wrote and reads back with the dial elsewhere as the gain, reports
+it and gives it to the card; a firmware that drops the write reads
+back the dial's own word and nothing changes.
 
 | Control | State | Notes |
 |---|---|---|
-| Gain 0 to 40 dB | read on hardware | the Wave:3's word; an owner's block read 11 dB where the kernel's capture control read 22, two steps per dB as on the Wave:3; the setter awaits the second archive |
-| Mute | read on hardware | byte 4 read 0 on an owner's unit; on the Wave:1 the dial is pressed to mute, so the press should show in the block as the pad does on the Wave:3, which the second archive checks |
-| ClipGuard | read on hardware | byte 5, read as on; the setter awaits the second archive |
-| Headphone volume -60 to 0 dB | read on hardware | the Wave:3's word, read as 0 dB with the kernel's playback control at 120; the setter awaits the second archive |
-| Direct monitor balance, as the crossfade | read on hardware | the Wave:3's word, read as 0; the review calls it the mic/PC mix |
+| Gain 0 to 40 dB | verified on hardware | the Wave:3's word; an owner's block read 11 dB where the kernel's capture control read 22, two steps per dB as on the Wave:3, and a 5 dB set from the UI with the dial on headphones was in the block afterwards and survived a daemon restart |
+| Mute | verified on hardware | byte 4; set from the UI, the owner saw the microphone's LED turn red. On the Wave:1 the dial is pressed to mute, and the press showing in the block is not confirmed yet |
+| ClipGuard | read on hardware | byte 5, read as on; the setter awaits an archive collected with it changed |
+| Headphone volume -60 to 0 dB | verified on hardware | the Wave:3's word, read as 0 dB with the kernel's playback control at 120; moved from the UI, the owner saw the white LED follow the slider |
+| Direct monitor balance, as the crossfade | read on hardware | the Wave:3's word, read as 0; the review calls it the mic/PC mix; the setter awaits an archive collected with it changed |
 | Headphone mute | read on hardware | byte 9, as on the Wave:3, read as unmuted on an owner's unit |
-| Dial target | read on hardware | byte 12 read 2 (headphones) on an owner's unit, the review's default; the review gives the dial two targets, so 3 (monitor mix) should never appear |
+| Dial target | read on hardware | byte 12 read 2 (headphones) on an owner's unit, the review's default; the review gives the dial two targets, so 3 (monitor mix) should never appear. The target is set in Wave Link, not on the microphone, and OpenXLR does not write byte 12, so the gain word has not been read with the dial on gain on a Wave:1 |
 | Low cut, gain lock | software | the submixer's and the daemon's, as on the Wave:3 |
 | Desktop volume controls, firmware version | verified on hardware | the Wave:3's mirror and device info offsets; an owner's dump showed firmware 1.2.2 and the card's three controls in step with the block |
 
@@ -369,12 +385,14 @@ The daemon prefers the Wave:1 after everything else, the Wave:3 included:
 it is driven when alone on the bus, picked from the header, or through
 `OPENXLR_DEVICE=006e`. The node-name fragment is `Wave_1`.
 
-The second archive moves the setters to tested, with the steps under
-"Help confirm a control" below: switch the dial to gain once, so the
-gain word is read in that mode, then change the gain, the mute, the
-headphone volume and the mix one at a time from the UI and collect
-diagnostics again. The dump's `config` line shows which bytes moved,
-`dial` what the dial was on, and `alsa` whether the card followed.
+What is left for an owner, with the steps under "Help confirm a
+control" below: change ClipGuard and the mic/PC mix from the UI, leave
+them changed, collect diagnostics, and say whether ClipGuard caught a
+loud input and the mix changed what the headphones carry. The dump's
+`config` line shows which bytes moved and `alsa` whether the card
+followed. The gain word read with the dial on gain needs Wave Link to
+switch the dial first, so it stays open until an owner who has done
+that reports.
 
 ## Every device gets
 

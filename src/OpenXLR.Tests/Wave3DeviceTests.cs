@@ -19,6 +19,8 @@ public sealed class Wave3DeviceTests
         /// <summary>How many bytes the fake answers for the config block.</summary>
         public int ConfigAnswer { get; set; } = 16;
         public byte[]? DevInfo { get; set; }
+        /// <summary>A firmware that keeps its own gain word whatever the host writes (wave3-research's reading).</summary>
+        public bool DropsGainWrites { get; set; }
         public List<byte[]> Writes { get; } = [];
         public List<(byte Type, byte Request, ushort Value)> Transfers { get; } = [];
         public bool IsOpen { get; private set; }
@@ -59,7 +61,9 @@ public sealed class Wave3DeviceTests
             Assert.Equal(0x05, r);
             Assert.Equal(0, v);
             Assert.Equal(16, len);
+            short gainWord = BinaryPrimitives.ReadInt16LittleEndian(Config);
             data.AsSpan(0, len).CopyTo(Config);
+            if (DropsGainWrites) BinaryPrimitives.WriteInt16LittleEndian(Config, gainWord);
             Writes.Add(data.AsSpan(0, len).ToArray());
             return len;
         }
@@ -213,19 +217,60 @@ public sealed class Wave3DeviceTests
     }
 
     [Fact]
-    public void AGainWriteDoesNotPretendToHaveBeenTaken()
+    public void AGainWriteTheFirmwareDropsIsNotPretendedToHaveBeenTaken()
     {
         // wave3-research says host writes to the gain are ignored and only the
-        // dial moves it; openwave writes it. The write goes out, and what is
-        // reported stays what was last read with the dial on gain.
+        // dial moves it. The write goes out, the block reads back the dial's
+        // own word, and what is reported stays what was last read on gain.
+        (Wave3Device dev, FakeUsb usb) = Mic(Block(gainDb: 20));
+        usb.DropsGainWrites = true;
+        Assert.Equal(20, dev.ReadState().GainDb);
+        usb.Config[12] = Wave3Device.DialHeadphones;
+        dev.SetGainDb(35);
+        Assert.Equal(35 * 256, BinaryPrimitives.ReadInt16LittleEndian(usb.Writes[^1]));
+        Assert.Equal(20 * 256, Word(usb, 0));
+        Assert.Equal(20, dev.ReadState().GainDb);
+        Assert.StartsWith("20 dB, last read with the dial on gain", dev.DumpBlocks()["gain"]);
+    }
+
+    [Fact]
+    public void AGainWriteTheFirmwareKeepsIsReportedWithTheDialElsewhere()
+    {
+        // A Wave:1 owner's archive showed the opposite of wave3-research's
+        // reading: a gain written from the UI with the dial on headphones
+        // was in the block afterwards and stayed across a daemon restart.
+        // The word read back is the proof, and from then on it is the gain.
         (Wave3Device dev, FakeUsb usb) = Mic(Block(gainDb: 20));
         Assert.Equal(20, dev.ReadState().GainDb);
         usb.Config[12] = Wave3Device.DialHeadphones;
         dev.SetGainDb(35);
         Assert.Equal(35 * 256, Word(usb, 0));
-        Assert.Equal(20, dev.ReadState().GainDb);
-        usb.Config[12] = Wave3Device.DialGain;
         Assert.Equal(35, dev.ReadState().GainDb);
+        Assert.StartsWith("35 dB, written from OpenXLR", dev.DumpBlocks()["gain"]);
+
+        // The dial, on headphones, moves the word on wave3-research's
+        // reading; the gain it took stays reported.
+        BinaryPrimitives.WriteInt16LittleEndian(usb.Config.AsSpan(0), -6 * 256);
+        Assert.Equal(35, dev.ReadState().GainDb);
+
+        // Back on gain the word is the gain again, whatever was written.
+        usb.Config[12] = Wave3Device.DialGain;
+        BinaryPrimitives.WriteInt16LittleEndian(usb.Config.AsSpan(0), 12 * 256);
+        Assert.Equal(12, dev.ReadState().GainDb);
+        Assert.StartsWith("12 dB, last read with the dial on gain", dev.DumpBlocks()["gain"]);
+    }
+
+    [Fact]
+    public void AReconnectForgetsTheGainWritten()
+    {
+        (Wave3Device dev, FakeUsb usb) = Mic(Block(gainDb: 20, dial: Wave3Device.DialHeadphones));
+        dev.SetGainDb(35);
+        Assert.Equal(35, dev.ReadState().GainDb);
+        dev.Disconnect();
+        usb.Config = Block(gainDb: 35, dial: Wave3Device.DialHeadphones);
+        dev.Connect();
+        Assert.Equal(35, dev.ReadState().GainDb);
+        Assert.StartsWith("not read with the dial on gain yet", dev.DumpBlocks()["gain"]);
     }
 
     [Theory]
@@ -705,6 +750,49 @@ public sealed class Wave3DeviceTests
         BinaryPrimitives.WriteInt16LittleEndian(usb.Config.AsSpan(0), 75 * 256);   // the dial's value, in one reading
         dev.ReadState();
         Assert.Empty(card.Sets);
+    }
+
+    [Fact]
+    public void AGainWrittenFromOpenXlrReachesTheCardWithTheDialElsewhere()
+    {
+        (Wave3Device dev, FakeUsb usb, FakeCard card, _) = Mirrored();
+        dev.ReadState();
+        card.Sets.Clear();
+        usb.Config[12] = Wave3Device.DialHeadphones;
+        dev.SetGainDb(5);
+        dev.ReadState();
+        Assert.Equal([("Mic Capture Volume", "10")], card.Sets);
+        Assert.StartsWith("card=3 given=gain=10 capture=on hp=95", dev.DumpBlocks()["alsa"]);
+
+        // A firmware that drops the write leaves the card at what it was given.
+        card.Sets.Clear();
+        usb.DropsGainWrites = true;
+        dev.SetGainDb(30);
+        dev.ReadState();
+        Assert.Empty(card.Sets);
+        Assert.StartsWith("card=3 given=gain=10", dev.DumpBlocks()["alsa"]);
+    }
+
+    [Fact]
+    public void AWave1OwnersGainWriteReachesTheCard()
+    {
+        // The owner's two archives: the dial on headphones from the start,
+        // 11 dB read as the word and given to the card as 22, then 5 dB set
+        // from the UI. The card followed the first and must follow the second.
+        (Wave3Device dev, FakeUsb usb, FakeCard card, _) = Mirrored(Block(gainDb: 11, hpDb: 0, dial: Wave3Device.DialHeadphones));
+        Assert.Equal(11, dev.ReadState().GainDb);
+        Assert.Contains(("Mic Capture Volume", "22"), card.Sets);
+        card.Sets.Clear();
+
+        dev.SetGainDb(5);
+        Assert.Equal(5, dev.ReadState().GainDb);
+        Assert.Equal([("Mic Capture Volume", "10")], card.Sets);
+        Assert.StartsWith("card=3 given=gain=10 capture=on hp=120", dev.DumpBlocks()["alsa"]);
+
+        card.Sets.Clear();
+        dev.ReadState();
+        Assert.Empty(card.Sets);
+        Assert.Single(usb.Writes);
     }
 
     [Fact]
