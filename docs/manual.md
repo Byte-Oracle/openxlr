@@ -1503,12 +1503,16 @@ MONITOR hear it (or what kind of mix it is when none does), a thin line in
 the mix's colour when you gave it one in the layout editor, and its mute,
 master level and **FX**, which opens the mix's plugin chain.
 
-MONITOR is a toolbar at the top right with the output picker and the
-volume. INPUTS is hidden, since the row heads carry the input gain, mute
-and plugins; **Arrange** lists it with a button that shows it again, under
-the matrix. APPLICATIONS and HEADPHONES sit under the matrix, folded the
-first time you wear the skin. When the matrix is wider than the window it
-scrolls sideways inside its card, the row heads with it. In Arrange mode a
+HEADPHONES and MONITOR share the row above the matrix: the headphone
+levels and the direct monitor blend on the left, the output picker and its
+volume in a toolbar on the right. INPUTS is hidden, since the row heads
+carry the input gain, mute and plugins; **Arrange** lists it with a button
+that shows it again, under the matrix. APPLICATIONS sits under the matrix.
+Nothing starts folded, and every header action stays in the header row.
+When the matrix is wider than the window it scrolls sideways inside its
+card, the row heads with it; a window narrower than about 1000 pixels
+scrolls the whole page sideways instead, since HEADPHONES and MONITOR
+share a row. In Arrange mode a
 channel's handle is on its row head and a mix's on its column head; a drop
 saves the new order as it does with the tiles. The compact view shows the
 chosen channel's row, and the mini view that row's cell in the chosen mix.

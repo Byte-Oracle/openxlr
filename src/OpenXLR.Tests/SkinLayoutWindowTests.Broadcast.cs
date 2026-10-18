@@ -18,10 +18,10 @@ namespace OpenXLR.Tests;
 
 /// <summary>
 /// The shipped Broadcast skin on a real window, the way a user meets it: the
-/// header across the top, MONITOR's toolbar at the top right under it, the
-/// submixer as a mix matrix across the window, a row per channel and a
-/// column per mix, INPUTS hidden until Arrange mode shows it, and
-/// APPLICATIONS and HEADPHONES folded under the matrix. At 640, 1040 and 2560
+/// header across the top, HEADPHONES and MONITOR's toolbar side by side under
+/// it, the submixer as a mix matrix across the window, a row per channel and
+/// a column per mix, INPUTS hidden until Arrange mode shows it, APPLICATIONS
+/// under the matrix, nothing folded and every header action in the row. At 640, 1040 and 2560
 /// pixels, in Standard and Touch sizing, with six mixes, an interface
 /// without XLR 2, a capture channel that is not connected and a 40 character
 /// name, nothing is clipped or overlaps and every channel has a cell in
@@ -97,10 +97,10 @@ internal static partial class SkinLayoutWindowTests
             Wear("broadcast");
             Layout(window, 1040, 900);
             Assert.Equal("broadcast", SkinService.Current.Id);
-            // HEADPHONES and APPLICATIONS are folded the first time, and only then.
-            Assert.False(headphones.IsExpanded);
-            Assert.False(applications.IsExpanded);
-            Assert.True(UiSettings.Load().HasSeenSkinLayout("broadcast", 1));
+            // Nothing is folded, the first time or later, so there is no first fold to record.
+            Assert.True(headphones.IsExpanded);
+            Assert.True(applications.IsExpanded);
+            Assert.False(UiSettings.Load().HasSeenSkinLayout("broadcast", 1));
 
             // The header stays above the tree, across the window.
             var header = window.FindControl<Border>("HeaderCard")!;
@@ -113,11 +113,13 @@ internal static partial class SkinLayoutWindowTests
             Assert.Same(desk, grid.Parent);
             Assert.Same(grid, Card("MonitorTile").Parent);
             Assert.Same(grid, Card("SubmixerTile").Parent);
-            Assert.Same(desk, Card("HeadphonesTile").Parent);
-            Assert.Equal(["ProfilesButton", "FlowButton", "ArrangeButton", "HeaderVersion", "HeaderOverflow"],
+            Assert.Same(grid, Card("HeadphonesTile").Parent);
+            Assert.Same(desk, Card("ApplicationsTile").Parent);
+            // Every action in the row, in the skin's order, and no overflow menu.
+            Assert.Equal(["ProfilesButton", "FlowButton", "ArrangeButton", "RestartDaemonButton", "HeaderVersion", "AboutButton", "HeaderOverflow"],
                 window.FindControl<WrapPanel>("HeaderActions")!.Children.Select(c => c.Name));
-            Assert.Equal(["RestartDaemonButton", "AboutButton"],
-                window.FindControl<StackPanel>("HeaderOverflowItems")!.Children.Select(c => c.Name));
+            Assert.Empty(window.FindControl<StackPanel>("HeaderOverflowItems")!.Children);
+            Assert.False(window.FindControl<DropDownButton>("HeaderOverflow")!.IsVisible);
 
             // The matrix, not banks and no rack: INPUTS is hidden, the row heads carry its controls.
             Assert.False(Card("InputsTile").IsVisible);
@@ -132,8 +134,6 @@ internal static partial class SkinLayoutWindowTests
             Assert.Equal(Localizer.Text("MatrixNoOutput"), matrix.Columns[1].OutputsText);
             Assert.Equal(Localizer.Text("VirtualMicrophone"), matrix.Columns[2].OutputsText);
 
-            headphones.IsExpanded = true;
-            applications.IsExpanded = true;
             foreach (bool enlarged in new[] { false, true })
             {
                 SkinService.ApplyControlSizing(enlarged);
@@ -260,7 +260,7 @@ internal static partial class SkinLayoutWindowTests
             Wear("broadcast");
             Layout(window, 1040, 900);
             Assert.NotNull(window.MixMatrix);
-            // Not folded again on a second wearing.
+            // Still open on a second wearing.
             Assert.True(headphones.IsExpanded);
             Assert.True(applications.IsExpanded);
             Assert.Equal(expanders, Usual.Select(name => window.FindControl<Expander>(name)!));
@@ -306,21 +306,22 @@ internal static partial class SkinLayoutWindowTests
         foreach (Border card in cards) AssertControlsInside(card, scroll);
         AssertInside(window.FindControl<Grid>("WindowHeader")!, window);
 
-        // The toolbar at the top right, the matrix under it across the whole width.
+        // HEADPHONES at the top left, the toolbar at the top right, the matrix under them across the whole width.
+        Assert.Equal(0, At("HeadphonesTile").X, 0.5);
+        Assert.Equal(0, At("HeadphonesTile").Y, 0.5);
+        Assert.True(Right("HeadphonesTile") <= At("MonitorTile").X + 0.5, $"HEADPHONES reaches {Right("HeadphonesTile")}, the toolbar starts at {At("MonitorTile").X} {where}");
+        Assert.True(Right("HeadphonesTile") > desk.Bounds.Width / 3, $"HEADPHONES ends at {Right("HeadphonesTile")} {where}");
         Assert.Equal(0, At("MonitorTile").Y, 0.5);
         Assert.Equal(desk.Bounds.Width, Right("MonitorTile"), 0.5);
         Assert.True(At("MonitorTile").X > desk.Bounds.Width / 3, $"the toolbar starts at {At("MonitorTile").X} {where}");
         Assert.Equal(0, At("SubmixerTile").X, 0.5);
         Assert.Equal(desk.Bounds.Width, Card("SubmixerTile").Bounds.Width, 0.5);
         Assert.True(At("SubmixerTile").Y >= Bottom("MonitorTile") - 0.5, where);
-        // APPLICATIONS and HEADPHONES under the matrix, across the whole width.
-        foreach (string tile in new[] { "ApplicationsTile", "HeadphonesTile" })
-        {
-            Assert.Equal(0, At(tile).X, 0.5);
-            Assert.Equal(desk.Bounds.Width, Card(tile).Bounds.Width, 0.5);
-        }
+        Assert.True(At("SubmixerTile").Y >= Bottom("HeadphonesTile") - 0.5, where);
+        // APPLICATIONS under the matrix, across the whole width.
+        Assert.Equal(0, At("ApplicationsTile").X, 0.5);
+        Assert.Equal(desk.Bounds.Width, Card("ApplicationsTile").Bounds.Width, 0.5);
         Assert.True(At("ApplicationsTile").Y >= Bottom("SubmixerTile") - 0.5, where);
-        Assert.True(At("HeadphonesTile").Y >= Bottom("ApplicationsTile") - 0.5, where);
 
         // The toolbar's controls inside it, the picker above the volume in its narrow column.
         var picker = window.FindControl<DropDownButton>("MonitorDestination")!;
@@ -343,8 +344,18 @@ internal static partial class SkinLayoutWindowTests
         Assert.Equal(model.ActiveApps.Count, lines.Length);
         foreach (Border line in lines) AssertInside(line, Card("ApplicationsTile"));
 
-        // The tree fits the window; a matrix wider than its card scrolls inside the card.
-        Assert.True(scroll.Extent.Width <= scroll.Viewport.Width + 1, $"the tree is {scroll.Extent.Width} wide in {scroll.Viewport.Width} {where}");
+        // HEADPHONES beside the toolbar need a window about 1000 wide; the tree fits a
+        // wider window, a matrix wider than its card scrolls inside the card, and a
+        // narrower window scrolls the tree sideways under a header that keeps its width.
+        bool fits = window.Bounds.Width >= SkinLayoutDefaults.RowSectionMinWidth + 12 + 360 + 32;
+        Assert.Equal(fits ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto, scroll.HorizontalScrollBarVisibility);
+        if (fits)
+            Assert.True(scroll.Extent.Width <= scroll.Viewport.Width + 1, $"the tree is {scroll.Extent.Width} wide in {scroll.Viewport.Width} {where}");
+        else
+        {
+            Assert.True(scroll.Extent.Width > scroll.Viewport.Width + 1, $"the tree does not scroll {where}");
+            Assert.InRange(header.Bounds.Width, window.Bounds.Width - 72, window.Bounds.Width - 16);
+        }
     }
 
     /// <summary>

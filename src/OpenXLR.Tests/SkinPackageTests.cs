@@ -144,7 +144,8 @@ public sealed class SkinPackageTests : IDisposable
     /// Broadcast is the one shipped skin with a layout, and the reference an
     /// author copies: its whole layout is taken, with the input rack, two
     /// banks of upright strips starting on Monitor A and Stream, MONITOR's
-    /// toolbar, the application list and HEADPHONES folded at first. Its meter
+    /// toolbar, HEADPHONES beside it, the application list, every header action in
+    /// the row and nothing folded. Its meter
     /// colours are flat, so both palette exporters can carry it.
     /// </summary>
     [Fact]
@@ -161,17 +162,19 @@ public sealed class SkinPackageTests : IDisposable
         SkinLayout layout = Assert.IsType<SkinLayout>(broadcast.Package.Layout);
         // The header stays above the tree, across the window.
         Assert.False(layout.PlacesHeader);
-        // A column: a grid with MONITOR in its top right cell and the matrix across both columns
-        // under it, then INPUTS, APPLICATIONS and HEADPHONES across the window.
+        // A column: a grid with HEADPHONES in its top left cell, MONITOR in its top right cell and
+        // the matrix across both columns under them, then INPUTS and APPLICATIONS across the window.
         SkinLayoutStack desk = Assert.IsType<SkinLayoutStack>(layout.Main);
         Assert.Equal(SkinLayoutOrientation.Vertical, desk.Orientation);
         SkinLayoutGrid mixes = Assert.IsType<SkinLayoutGrid>(desk.Children[0].Node);
         Assert.Equal([new SkinLayoutTrack(SkinTrackUnit.Star, 1), new SkinLayoutTrack(SkinTrackUnit.Pixel, 360)], mixes.Columns);
+        SkinLayoutChild headphones = mixes.Children.Single(c => c.Node == new SkinLayoutRegion(SkinLayoutRegions.Headphones));
+        Assert.Equal((0, 0), (headphones.Row, headphones.Column));
         SkinLayoutChild monitor = mixes.Children.Single(c => c.Node == new SkinLayoutRegion(SkinLayoutRegions.Monitor));
         Assert.Equal((0, 1), (monitor.Row, monitor.Column));
         SkinLayoutChild submixer = mixes.Children.Single(c => c.Node == new SkinLayoutRegion(SkinLayoutRegions.Submixer));
         Assert.Equal((1, 0, 2), (submixer.Row, submixer.Column, submixer.ColumnSpan));
-        Assert.Equal([SkinLayoutRegions.Inputs, SkinLayoutRegions.Applications, SkinLayoutRegions.Headphones],
+        Assert.Equal([SkinLayoutRegions.Inputs, SkinLayoutRegions.Applications],
             desk.Children.Skip(1).Select(c => ((SkinLayoutRegion)c.Node).Id));
         Assert.Equal(SkinLayoutTemplates.HardwarePanel, layout.Inputs.Template);
         Assert.Equal(SkinRegionVisibility.Hidden, layout.OptionsFor(SkinLayoutRegions.Inputs).Visibility);
@@ -186,10 +189,10 @@ public sealed class SkinPackageTests : IDisposable
         Assert.Equal(SkinLayoutTemplates.OutputToolbar, layout.Monitor);
         Assert.Equal(SkinLayoutTemplates.ApplicationList, layout.Applications);
         Assert.Equal(SkinMixerPlacement.Docked, layout.PopOut);
-        Assert.Equal(SkinRegionVisibility.Collapsed, layout.OptionsFor(SkinLayoutRegions.Headphones).Visibility);
-        Assert.Equal(SkinRegionVisibility.Collapsed, layout.OptionsFor(SkinLayoutRegions.Applications).Visibility);
-        Assert.Equal(["profiles", "flow", "arrange"], layout.Header.Row.Take(3));
-        Assert.Equal(["restart-daemon", "about"], layout.Header.Overflow);
+        Assert.Equal(SkinRegionVisibility.Visible, layout.OptionsFor(SkinLayoutRegions.Headphones).Visibility);
+        Assert.Equal(SkinRegionVisibility.Visible, layout.OptionsFor(SkinLayoutRegions.Applications).Visibility);
+        Assert.Equal(["profiles", "flow", "arrange", "restart-daemon", "version", "about"], layout.Header.Row);
+        Assert.Empty(layout.Header.Overflow);
 
         Assert.Equal("console", broadcast.Package.Controls["fader"]);
         foreach (string zone in new[] { "Ox.Meter.Fill", "Ox.Meter.Warning", "Ox.Meter.Hot", "Ox.Meter.Track" })

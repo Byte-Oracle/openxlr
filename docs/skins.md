@@ -26,9 +26,9 @@ every package has them and there is nothing to install:
 - **Broadcast**, the one that also rearranges the window: the submixer as
   a mix matrix across the window, a row per channel and a column per mix,
   with each channel's send into each mix where its row crosses the mix's
-  column. MONITOR is a toolbar at the top right, INPUTS is hidden because
-  the matrix's row heads carry the input gain, mute and plugins, and
-  APPLICATIONS and HEADPHONES are folded under the matrix, on a dark neutral
+  column. HEADPHONES and MONITOR's toolbar share the row above it, INPUTS
+  is hidden because the matrix's row heads carry the input gain, mute and
+  plugins, and APPLICATIONS is under the matrix, on a dark neutral
   palette. It is the reference for writing a layout skin; see
   [Layout](#layout).
 
@@ -771,14 +771,17 @@ appearances and a layout that uses the templates below, in
 arrangement is inspired by Wave Link's; Broadcast has no connection to
 Elgato and is not endorsed by it. Its tree is a vertical
 stack. First comes a grid of two columns, the second 360 pixels wide.
-MONITOR's `"output-toolbar"` sits in its top right cell, the top left cell
-stays empty, and the submixer, a `"mix-matrix"`, spans both columns under
-them.
+HEADPHONES fills its top left cell, MONITOR's `"output-toolbar"` sits in
+its top right cell, and the submixer, a `"mix-matrix"`, spans both columns
+under them.
 Then come INPUTS, `"hidden"` since the matrix's row heads carry the input
-gain, mute and plugins, the applications as a `"collapsed"`
-`"application-list"`, and HEADPHONES, `"collapsed"`, each across the whole
-width. The tree leaves the header out, so the header stays across the top
-of the window. Showing INPUTS from Arrange mode puts it under the matrix.
+gain, mute and plugins, and the applications as an `"application-list"`,
+each across the whole width. Nothing starts folded. The tree leaves the
+header out, so the header stays across the top of the window, with every
+action in its row and none in the overflow menu. Showing INPUTS from
+Arrange mode puts it under the matrix. HEADPHONES beside the toolbar asks
+for about 1000 pixels, so a narrower window scrolls the tree sideways, as
+[Sizes](#sizes) says.
 
 A complete skin that puts the header across the top, INPUTS beside the
 submixer, the headphones and the monitor under INPUTS, and the

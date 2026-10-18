@@ -723,12 +723,14 @@ public sealed class SkinDocumentTests
         Assert.True(entry.Errors.Count == 0, string.Join("\n", entry.Errors));
         Assert.Equal("Broadcast", entry.Name);
         SkinLayout layout = Assert.IsType<SkinLayout>(entry.Package.Layout);
-        // The matrix under the header, the toolbar at its top right, INPUTS hidden and recoverable.
+        // The matrix under the header, HEADPHONES and the toolbar above it, INPUTS hidden and recoverable.
         Assert.True(layout.Submixer.IsMatrix);
         Assert.False(layout.Inputs.IsRack);
         Assert.Equal(SkinRegionVisibility.Hidden, layout.OptionsFor(SkinLayoutRegions.Inputs).Visibility);
         Assert.Equal(SkinLayoutTemplates.OutputToolbar, layout.Monitor);
-        Assert.Equal(SkinRegionVisibility.Collapsed, layout.OptionsFor(SkinLayoutRegions.Headphones).Visibility);
+        Assert.Equal(SkinRegionVisibility.Visible, layout.OptionsFor(SkinLayoutRegions.Headphones).Visibility);
+        Assert.Equal(SkinRegionVisibility.Visible, layout.OptionsFor(SkinLayoutRegions.Applications).Visibility);
+        Assert.Empty(layout.Header.Overflow);
         Assert.False(layout.PlacesHeader);
         Assert.Equal(layout.Description(), SkinCatalog.BuiltIn().Single(e => e.Id == "broadcast").Package.Layout!.Description());
         Assert.Contains("examples/skins/broadcast", Section(Document, "Layout", "What a skin cannot do"), StringComparison.Ordinal);

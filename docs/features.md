@@ -190,8 +190,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   A skin orders and hides the parts of the heads and cells. See
   [The mix matrix](skins.md#the-mix-matrix)
 - The Broadcast skin, shipped with the application: the submixer as a mix
-  matrix across the window, MONITOR as a toolbar at the top right, INPUTS
-  hidden until Arrange mode shows it, and APPLICATIONS and HEADPHONES folded
+  matrix across the window, HEADPHONES and MONITOR's toolbar side by side
+  above it, INPUTS hidden until Arrange mode shows it, and APPLICATIONS
   under the matrix, on a dark neutral palette. It is the complete example
   of a layout skin, and a copy to start from is in `docs/examples/skins`.
   See [Broadcast](manual.md#broadcast)
