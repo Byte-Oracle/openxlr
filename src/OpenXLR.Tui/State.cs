@@ -13,11 +13,18 @@ internal sealed record AppearanceEntry
     public string? Colour { get; init; }
     public bool Hidden { get; init; }
 
+    /// <summary>The built-in icon the daemon chose for the item's kind.</summary>
+    public string DefaultIcon { get; init; } = string.Empty;
+
     /// <summary>The colour to draw the name in, or null for the theme's.</summary>
     public Rgb? Accent => Rgb.TryParse(Colour);
 
-    /// <summary>The name with the icon in front of it, when there is one.</summary>
-    public string Label(string name) => Icon.Length > 0 ? $"{Icon} {name}" : name;
+    /// <summary>
+    /// The name with the icon in front of it, when there is one. A terminal
+    /// draws text, so a named icon is drawn as its text character; a skin's
+    /// own icon name falls back to the built-in icon of that name or the default.
+    /// </summary>
+    public string Label(string name) => LayoutIcons.TextFor(Icon, DefaultIcon) is { Length: > 0 } icon ? $"{icon} {name}" : name;
 }
 
 /// <summary>One mix master: a monitor mix, a virtual microphone or the Aux port.</summary>

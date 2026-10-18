@@ -27,7 +27,7 @@
                     ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
             <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
               <StackPanel layout:StripPanel.Part="identity" Spacing="2">
-                <TextBlock Text="{Binding Channel.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                <vm:LayoutIconBlock Icon="{Binding Channel.Appearance.Icon}" Fallback="{Binding Channel.Appearance.DefaultIcon}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
                            HorizontalAlignment="Center" IsVisible="{Binding ShowsIcon}"
                            AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
                 <TextBlock Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
@@ -69,7 +69,7 @@
             <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
               <!-- a fixed column, so the rows' faders line up; the name shortens to fit it -->
               <DockPanel layout:StripPanel.Part="identity" VerticalAlignment="Center" Width="{DynamicResource Ox.Mixer.StripWidth}">
-                <TextBlock DockPanel.Dock="Left" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                <vm:LayoutIconBlock DockPanel.Dock="Left" Icon="{Binding Channel.Appearance.Icon}" Fallback="{Binding Channel.Appearance.DefaultIcon}" Classes="strip"
                            Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" Margin="0,0,4,0"
                            VerticalAlignment="Center" IsVisible="{Binding ShowsIcon}"
                            AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
@@ -111,15 +111,15 @@
           <StackPanel Spacing="6">
             <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
               <Grid layout:StripPanel.Part="identity" ColumnDefinitions="Auto,*" ColumnSpacing="6">
-                <TextBlock Text="{Binding Mix.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
+                <vm:LayoutIconBlock Icon="{Binding Mix.Appearance.Icon}" Fallback="{Binding Mix.Appearance.DefaultIcon}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
                            AutomationProperties.Name="{Binding Mix.Name}" ToolTip.Tip="{Binding Mix.Name}">
-                  <TextBlock.IsVisible>
+                  <vm:LayoutIconBlock.IsVisible>
                     <MultiBinding Converter="{x:Static BoolConverters.And}">
                       <Binding Path="Spec.WantsIcon"/>
                       <Binding Path="Mix.Appearance.HasIcon"/>
                     </MultiBinding>
-                  </TextBlock.IsVisible>
-                </TextBlock>
+                  </vm:LayoutIconBlock.IsVisible>
+                </vm:LayoutIconBlock>
                 <TextBlock Grid.Column="1" Text="{Binding Mix.Name}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
                            TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Mix.Name}">
                   <TextBlock.IsVisible>
@@ -193,15 +193,15 @@
           <StackPanel Spacing="6">
             <layout:StripPanel Spec="{Binding Spec}" Spacing="6">
               <StackPanel layout:StripPanel.Part="identity" Spacing="2">
-                <TextBlock Text="{Binding Mix.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
+                <vm:LayoutIconBlock Icon="{Binding Mix.Appearance.Icon}" Fallback="{Binding Mix.Appearance.DefaultIcon}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
                            HorizontalAlignment="Center" AutomationProperties.Name="{Binding Mix.Name}" ToolTip.Tip="{Binding Mix.Name}">
-                  <TextBlock.IsVisible>
+                  <vm:LayoutIconBlock.IsVisible>
                     <MultiBinding Converter="{x:Static BoolConverters.And}">
                       <Binding Path="Spec.WantsIcon"/>
                       <Binding Path="Mix.Appearance.HasIcon"/>
                     </MultiBinding>
-                  </TextBlock.IsVisible>
-                </TextBlock>
+                  </vm:LayoutIconBlock.IsVisible>
+                </vm:LayoutIconBlock>
                 <TextBlock Text="{Binding Mix.Name}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
                            TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" ToolTip.Tip="{Binding Mix.Name}">
                   <TextBlock.IsVisible>

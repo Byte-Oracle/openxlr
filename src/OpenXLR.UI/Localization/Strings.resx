@@ -2259,4 +2259,28 @@ Select the interface OpenXLR drives</value>
   <data name="MatrixEffects" xml:space="preserve">
     <value>FX</value>
   </data>
+  <data name="IconDefaultNamed" xml:space="preserve">
+    <value>Default ({0})</value>
+  </data>
+  <data name="IconNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="IconTextHeading" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="NewChannelIcon" xml:space="preserve">
+    <value>Icon for the new channel</value>
+  </data>
+  <data name="NewMixIcon" xml:space="preserve">
+    <value>Icon for the new mix</value>
+  </data>
+  <data name="HeadphoneOutputs" xml:space="preserve">
+    <value>Headphone outputs</value>
+  </data>
+  <data name="Phones1Appearance" xml:space="preserve">
+    <value>Phones 1 icon and colour</value>
+  </data>
+  <data name="Phones2Appearance" xml:space="preserve">
+    <value>Phones 2 icon and colour</value>
+  </data>
 </root>

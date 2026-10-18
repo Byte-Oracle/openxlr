@@ -372,14 +372,21 @@ public sealed class DaemonClient : IAsyncDisposable
         => EditLayoutAsync(new() { ["cmd"] = "setMainOutput", ["device"] = device });
     public Task<string?> RouteFocusedAppAsync(string channel)
         => EditLayoutAsync(new() { ["cmd"] = "routeFocusedApp", ["channel"] = channel });
-    public Task<string?> CreateChannelAsync(string name)
-        => EditLayoutAsync(new() { ["cmd"] = "createChannel", ["name"] = name });
+    /// <param name="icon">The new channel's icon; empty or null leaves the default by kind.</param>
+    public Task<string?> CreateChannelAsync(string name, string? icon = null)
+        => EditLayoutAsync(WithIcon(new() { ["cmd"] = "createChannel", ["name"] = name }, icon));
     public Task<string?> RenameChannelAsync(string channel, string name)
         => EditLayoutAsync(new() { ["cmd"] = "renameChannel", ["channel"] = channel, ["name"] = name });
     public Task<string?> DeleteChannelAsync(string channel)
         => EditLayoutAsync(new() { ["cmd"] = "deleteChannel", ["channel"] = channel });
-    public Task<string?> CreateMixAsync(string name, string kind = "virtualMic")
-        => EditLayoutAsync(new() { ["cmd"] = "createMix", ["name"] = name, ["kind"] = kind });
+    public Task<string?> CreateMixAsync(string name, string kind = "virtualMic", string? icon = null)
+        => EditLayoutAsync(WithIcon(new() { ["cmd"] = "createMix", ["name"] = name, ["kind"] = kind }, icon));
+
+    private static Dictionary<string, object> WithIcon(Dictionary<string, object> command, string? icon)
+    {
+        if (!string.IsNullOrEmpty(icon)) command["icon"] = icon;
+        return command;
+    }
     public Task<string?> RenameMixAsync(string mix, string name)
         => EditLayoutAsync(new() { ["cmd"] = "renameMix", ["mix"] = mix, ["name"] = name });
     public Task<string?> DeleteMixAsync(string mix)
@@ -398,6 +405,10 @@ public sealed class DaemonClient : IAsyncDisposable
     public Task<string?> SetLayoutAppearanceAsync(string id, bool mix, string icon, string? colour, bool hidden)
         => EditLayoutAsync(new() { ["cmd"] = "setLayoutAppearance", [mix ? "mix" : "channel"] = id,
             ["appearance"] = new { icon, colour, hidden } });
+    /// <param name="output"><c>phones1</c> or <c>phones2</c>.</param>
+    public Task<string?> SetOutputAppearanceAsync(string output, string icon, string? colour)
+        => EditLayoutAsync(new() { ["cmd"] = "setLayoutAppearance", ["output"] = output,
+            ["appearance"] = new { icon, colour, hidden = false } });
 
     /// <summary>
     /// Send a layout command and wait for its commandResult. The daemon

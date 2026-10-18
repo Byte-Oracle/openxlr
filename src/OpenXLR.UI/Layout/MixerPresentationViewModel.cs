@@ -411,6 +411,9 @@ public sealed class BankMasterViewModel(MixBankViewModel bank, MixViewModel mix)
     /// <summary>The mix, the same object the mixer holds: its level, mute and chain are bound to it.</summary>
     public MixViewModel Mix { get; } = mix;
 
+    /// <summary>The item's appearance, where the <c>layoutAccent</c> style looks for the colour the user chose.</summary>
+    public LayoutAppearanceViewModel Appearance => Mix.Appearance;
+
     public StripSpec Spec => Bank.Presentation.MasterSpec;
 }
 
@@ -437,6 +440,9 @@ public sealed class BankCellViewModel : ViewModelBase
     public MixBankViewModel Bank { get; }
 
     public ChannelViewModel Channel { get; }
+
+    /// <summary>The item's appearance, where the <c>layoutAccent</c> style looks for the colour the user chose.</summary>
+    public LayoutAppearanceViewModel Appearance => Channel.Appearance;
 
     /// <summary>The channel's send into the bank's mix, or null while the channel has none yet.</summary>
     public SendViewModel? Send => _send;

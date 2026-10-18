@@ -962,6 +962,13 @@ function keySvg(on, muteLike, known, glyphName, badge, label, offColor = null, a
   let face;
   if (appearance.icon) {
     face = `<text x="72" y="${capY + 15}" text-anchor="middle" font-family="sans-serif" font-size="48" fill="${tint ?? ink}">${escXml(appearance.icon)}</text>`;
+  } else if (appearance.path) {
+    // A built-in icon sits in the button cap the target's own glyph would use.
+    face = `
+      <circle cx="72" cy="${capY}" r="38" fill="none" stroke="#000" stroke-opacity="0.4" stroke-width="6"/>
+      <circle cx="72" cy="${capY}" r="34" fill="${skinPalette.colours["Ox.Card.Background"]}" stroke="${skinPalette.colours["Ox.Text.Muted"]}" stroke-width="4"/>
+      ${accent ? `<circle cx="72" cy="${capY}" r="37" fill="none" stroke="${accent}" stroke-width="6" opacity="0.6" filter="url(#bloom)"/>` : ""}
+      <g transform="translate(72 ${capY}) scale(2.1) translate(-12 -12)"><path d="${appearance.path}" fill="${tint ?? ink}"/></g>`;
   } else if (glyphName) {
     const glyph = GLYPHS[glyphName].replaceAll("currentColor", ink);
     face = `
@@ -1038,7 +1045,7 @@ function dialIcon(t) {
   return "data:image/svg+xml;base64," + Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">${appearance.icon
       ? `<text x="12" y="19" text-anchor="middle" font-family="sans-serif" font-size="21" fill="${ink}">${escXml(appearance.icon)}</text>`
-      : inner(name)}</svg>`
+      : appearance.path ? `<path d="${appearance.path}" fill="${ink}"/>` : inner(name)}</svg>`
   ).toString("base64");
 }
 
@@ -1177,7 +1184,7 @@ function refresh(context) {
     const glyphName = hasIcon ? iconChoice : glyphFor(t);
     const offColor = isInsertTarget(t) ? skinPalette.colours["Ox.Led.Alert"] : null;   // bypassed = red, as in the UI
     // A glyph picked on the key itself wins over the channel's icon.
-    const appearance = { ...targetAppearance(mixer(), t), ...(hasIcon ? { icon: "" } : {}) };
+    const appearance = { ...targetAppearance(mixer(), t), ...(hasIcon ? { icon: "", path: null } : {}) };
     send({ event: "setImage", context,
            payload: { image: keySvg(v === true, isMuteLike(t), v !== null && daemonUp, glyphName, badge, label, offColor, appearance) } });
   } else if (inst.action === "com.emaspa.openxlr.dial") {

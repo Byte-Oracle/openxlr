@@ -77,9 +77,11 @@ public static class CommandValidation
             case "createMix":
                 if (cmd.Kind is not (null or "virtualMic" or "monitor"))
                     return "createMix: kind must be virtualMic or monitor";
-                return BadName(cmd.Name) ? "createMix: name must contain 1 to 60 printable characters" : null;
+                if (BadName(cmd.Name)) return "createMix: name must contain 1 to 60 printable characters";
+                return BadIcon(cmd.Icon) ? IconError("createMix") : null;
             case "createChannel":
-                return BadName(cmd.Name) ? $"{cmd.Cmd}: name must contain 1 to 60 printable characters" : null;
+                if (BadName(cmd.Name)) return $"{cmd.Cmd}: name must contain 1 to 60 printable characters";
+                return BadIcon(cmd.Icon) ? IconError("createChannel") : null;
             case "renameChannel":
             case "deleteChannel":
                 if (cmd.Channel is null) return $"{cmd.Cmd}: need 'channel'";
@@ -109,13 +111,17 @@ public static class CommandValidation
             case "cycleExclusiveGroup":
                 return ExclusiveGroupsModel.ValidId(cmd.Group) ? null : $"{cmd.Cmd}: need a valid 'group'";
             case "setLayoutAppearance":
-                if ((cmd.Channel is null) == (cmd.Mix is null)) return "setLayoutAppearance: need exactly one of 'channel' and 'mix'";
+                if (new[] { cmd.Channel, cmd.Mix, cmd.Output }.Count(t => t is not null) != 1)
+                    return "setLayoutAppearance: need exactly one of 'channel', 'mix' and 'output'";
+                if (cmd.Output is not null && !LayoutAppearance.Outputs.Contains(cmd.Output))
+                    return $"setLayoutAppearance: unknown output '{Short(cmd.Output)}'; use phones1 or phones2";
                 if (cmd.Channel is not null && (TooLong(cmd.Channel, 36) || !layout.HasChannel(cmd.Channel)))
                     return $"setLayoutAppearance: unknown channel '{Short(cmd.Channel)}'";
                 if (cmd.Mix is not null && (TooLong(cmd.Mix, 36) || !layout.HasMix(cmd.Mix)))
                     return $"setLayoutAppearance: unknown mix '{Short(cmd.Mix)}'";
                 if (!LayoutAppearance.IsValid(cmd.Appearance))
-                    return "setLayoutAppearance: need 'appearance' with an empty or listed icon and a null or #RRGGBB colour";
+                    return "setLayoutAppearance: need 'appearance' with an empty, listed or named icon and a null or #RRGGBB colour";
+                if (cmd.Output is not null && cmd.Appearance!.Hidden) return "setLayoutAppearance: an output cannot be hidden";
                 return cmd.Mix is not null && cmd.Appearance!.Hidden ? "setLayoutAppearance: a mix cannot be hidden" : null;
             case "setLevel":
             case "setChannelMuted":
@@ -281,6 +287,10 @@ public static class CommandValidation
     private static bool TooLong(string? s, int max) => s is not null && s.Length > max;
     private static bool BadName(string? name)
         => name is null || name.Length > 60 || string.IsNullOrWhiteSpace(name) || name.Any(char.IsControl);
+    /// <summary>An absent icon takes the default; a present one has the shape setLayoutAppearance accepts.</summary>
+    private static bool BadIcon(string? icon) => icon is not null && !LayoutIcons.IsValidChoice(icon);
+    private static string IconError(string command)
+        => $"{command}: icon must be empty, \"none\", a listed glyph or an icon name of lower-case letters, digits and hyphens";
     private static string Short(string s) => s.Length <= 40 ? s : s[..40] + "...";
     private static string Tail(string uri) => uri[(uri.LastIndexOfAny(['#', '/']) + 1)..];
 

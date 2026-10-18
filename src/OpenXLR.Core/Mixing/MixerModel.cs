@@ -142,6 +142,10 @@ public sealed record MixerState
     public required IReadOnlyList<ChannelStatus> Channels { get; init; }
     public IReadOnlyList<ExclusiveGroupDefinition> ExclusiveGroups { get; init; } = [];
 
+    /// <summary>The headphone outputs' icon and colour, by output id (<c>phones1</c>, <c>phones2</c>).</summary>
+    public IReadOnlyDictionary<string, LayoutAppearanceState> OutputAppearance { get; init; } =
+        new Dictionary<string, LayoutAppearanceState>();
+
     /// <summary>First selected monitor output, or null (legacy single view).</summary>
     public string? MonitorOutput { get; init; }
 

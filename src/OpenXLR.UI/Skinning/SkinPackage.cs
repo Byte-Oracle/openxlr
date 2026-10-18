@@ -76,6 +76,13 @@ public sealed record SkinPackage(
     /// <summary>The id of the appearance the application ships and falls back to.</summary>
     public const string DefaultId = "default";
 
+    /// <summary>
+    /// The skin's own icons, name to SVG path data, each checked by
+    /// <see cref="LayoutIcons.IsValidPath"/>. A name of the built-in set
+    /// replaces that icon's drawing while the skin is worn.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Icons { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
     /// <summary>The built-in appearance: no overlay at all, so every token keeps its default.</summary>
     public static SkinPackage Default { get; } = new(
         // The id stays "default" forever: it is what ui.json holds and what
@@ -121,6 +128,12 @@ public static class SkinFormat
 
     /// <summary>How many gradient stops one token may declare.</summary>
     public const int MaxGradientStops = 16;
+
+    /// <summary>How many icons one skin may define.</summary>
+    public const int MaxIcons = 64;
+
+    /// <summary>The longest path data one skin icon may carry.</summary>
+    public const int MaxIconPathLength = 4096;
 
     /// <summary>The longest id, name, description or author a package may carry.</summary>
     public const int MaxTextLength = 400;

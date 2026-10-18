@@ -54,7 +54,7 @@
                           Content="↕" Tag="{Binding Channel}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
                           ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
-                  <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                  <vm:LayoutIconBlock Grid.Column="1" Icon="{Binding Channel.Appearance.Icon}" Fallback="{Binding Channel.Appearance.DefaultIcon}" Classes="strip"
                              Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" VerticalAlignment="Center"
                              IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
                   <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
@@ -103,7 +103,7 @@
                           Content="↕" Tag="{Binding Channel}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
                           ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
-                  <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                  <vm:LayoutIconBlock Grid.Column="1" Icon="{Binding Channel.Appearance.Icon}" Fallback="{Binding Channel.Appearance.DefaultIcon}" Classes="strip"
                              Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" VerticalAlignment="Center"
                              IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
                   <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
@@ -152,7 +152,7 @@
                           Content="↕" Tag="{Binding Channel}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
                           ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
-                  <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                  <vm:LayoutIconBlock Grid.Column="1" Icon="{Binding Channel.Appearance.Icon}" Fallback="{Binding Channel.Appearance.DefaultIcon}" Classes="strip"
                              Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" VerticalAlignment="Center"
                              IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
                   <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
@@ -194,7 +194,7 @@
                           Content="↕" Tag="{Binding Channel}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
                           ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
-                  <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Channel.Appearance.Icon}" Classes="strip"
+                  <vm:LayoutIconBlock Grid.Column="1" Icon="{Binding Channel.Appearance.Icon}" Fallback="{Binding Channel.Appearance.DefaultIcon}" Classes="strip"
                              Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" VerticalAlignment="Center"
                              IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
                   <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
@@ -264,7 +264,7 @@
                   </layout:StripPanel>
                   <layout:StripPanel Spec="{Binding TextSpec}" Spacing="1">
                     <Grid layout:StripPanel.Part="identity" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
-                      <TextBlock Text="{Binding Mix.Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
+                      <vm:LayoutIconBlock Icon="{Binding Mix.Appearance.Icon}" Fallback="{Binding Mix.Appearance.DefaultIcon}" Classes="strip" Classes.layoutAccent="{Binding Mix.Appearance.HasColour}"
                                  VerticalAlignment="Center" IsVisible="{Binding ShowsIcon}"
                                  AutomationProperties.Name="{Binding Mix.Name}" ToolTip.Tip="{Binding Mix.Name}"/>
                       <TextBlock Grid.Column="1" Text="{Binding Mix.Name}" Classes="strip" VerticalAlignment="Center"

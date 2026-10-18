@@ -467,13 +467,26 @@
         </StackPanel></Expander.Header>
       <StackPanel Classes="dev" Spacing="4">
         <Grid ColumnDefinitions="90,*,64,20,90,*,64">
-          <TextBlock Text="{loc:Text Key=Phones1}" Classes="h" VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=FrontJack}"/>
+          <Grid Name="Phones1Label" ColumnDefinitions="Auto,*" VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=FrontJack}"
+                DataContext="{Binding Phones1Appearance}" x:DataType="vm:LayoutAppearanceViewModel">
+            <vm:LayoutIconBlock Icon="{Binding Icon}" Fallback="{Binding DefaultIcon}" Classes="h" Classes.layoutAccent="{Binding HasColour}"
+                                IsVisible="{Binding HasIcon}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{loc:Text Key=Phones1}" Classes="h" Classes.layoutAccent="{Binding HasColour}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+          </Grid>
           <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="100"
                   Value="{Binding HpPercent, Mode=TwoWay}"/>
           <TextBlock Grid.Column="2" Text="{Binding HpText}" Classes="val" VerticalAlignment="Center"
                      HorizontalAlignment="Right"/>
-          <TextBlock Grid.Column="4" Text="{loc:Text Key=Phones2}" Classes="h" VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=RearJack}"
-                     IsVisible="{Binding HasHp2}"/>
+          <Panel Grid.Column="4" IsVisible="{Binding HasHp2}" VerticalAlignment="Center">
+            <Grid Name="Phones2Label" ColumnDefinitions="Auto,*" ToolTip.Tip="{loc:Text Key=RearJack}"
+                  DataContext="{Binding Phones2Appearance}" x:DataType="vm:LayoutAppearanceViewModel">
+              <vm:LayoutIconBlock Icon="{Binding Icon}" Fallback="{Binding DefaultIcon}" Classes="h" Classes.layoutAccent="{Binding HasColour}"
+                                  IsVisible="{Binding HasIcon}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="{loc:Text Key=Phones2}" Classes="h" Classes.layoutAccent="{Binding HasColour}"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            </Grid>
+          </Panel>
           <Slider vm:FaderInput.Step="1" Grid.Column="5" Minimum="0" Maximum="100"
                   Value="{Binding Hp2Percent, Mode=TwoWay}" IsVisible="{Binding HasHp2}"/>
           <TextBlock Grid.Column="6" Text="{Binding Hp2Text}" Classes="val" VerticalAlignment="Center"
@@ -669,7 +682,7 @@
                           HorizontalAlignment="Left" AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=MoveItem}}"
                           ToolTip.Tip="{loc:Text Key=DragOntoAnotherMixYouAddedArrow}"/>
                   <Grid ColumnDefinitions="Auto,*,Auto">
-                    <TextBlock Text="{Binding Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
+                    <vm:LayoutIconBlock Icon="{Binding Appearance.Icon}" Fallback="{Binding Appearance.DefaultIcon}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
                                IsVisible="{Binding Appearance.HasIcon}" Margin="0,0,6,0"/>
                     <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
                                TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" Margin="0,0,8,0"/>
@@ -744,7 +757,7 @@
                     <Button Classes="ghost reorderHandle" Classes.fixedPlace="{Binding !IsEditable}" Content="↔" Tag="{Binding}"
                             HorizontalAlignment="Left" AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=MoveItem}}"
                             ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
-                    <TextBlock Text="{Binding Appearance.Icon}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
+                    <vm:LayoutIconBlock Icon="{Binding Appearance.Icon}" Fallback="{Binding Appearance.DefaultIcon}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
                                HorizontalAlignment="Center" IsVisible="{Binding Appearance.HasIcon}"/>
                     <TextBlock Text="{Binding Name}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
                                TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>

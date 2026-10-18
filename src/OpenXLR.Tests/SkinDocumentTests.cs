@@ -739,4 +739,45 @@ public sealed class SkinDocumentTests
         Assert.Contains("~/.local/share/openxlr/skins/", readme, StringComparison.Ordinal);
         Assert.Contains("examples/skins/broadcast/skin.json", readme, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The icons section as the reader takes it: the limits, the name rule,
+    /// every built-in name, an example that reads without complaint, and a
+    /// schema with the same bounds.
+    /// </summary>
+    [Fact]
+    public void TheIconsSectionAndSchemaStateWhatTheReaderTakes()
+    {
+        string document = Document;
+        int start = document.IndexOf("\n## Icons\n", StringComparison.Ordinal);
+        Assert.True(start >= 0, "docs/skins.md has no Icons section.");
+        string section = document[start..document.IndexOf("\n## ", start + 4, StringComparison.Ordinal)];
+        var missing = new List<string>();
+        void Says(string text)
+        {
+            if (!section.Contains(text, StringComparison.Ordinal)) missing.Add(text);
+        }
+        Says($"at most {SkinFormat.MaxIcons} icons");
+        Says($"at most {SkinFormat.MaxIconPathLength} characters");
+        Says($"up to {OpenXLR.UI.LayoutIcons.MaxNameLength - 1} lower-case letters");
+        Says("nonzero");
+        foreach (var icon in OpenXLR.UI.LayoutIcons.BuiltIn) Says($"`{icon.Name}`");
+        Assert.True(missing.Count == 0, "the Icons section no longer states: " + string.Join("; ", missing));
+
+        int open = section.IndexOf("```json\n", StringComparison.Ordinal) + 8;
+        string example = section[open..section.IndexOf("```", open, StringComparison.Ordinal)];
+        SkinReadResult read = SkinReader.Read("icons", "{\"schema\":1,\"tokens\":{}," + example + "}", SkinOrigin.BuiltIn, null);
+        Assert.Empty(read.Errors);
+        Assert.Equal(2, read.Package!.Icons.Count);
+
+        using JsonDocument schema = JsonDocument.Parse(File.ReadAllText(Path.Combine(Root, "docs", "skin.schema.json")));
+        JsonElement icons = schema.RootElement.GetProperty("properties").GetProperty("icons");
+        Assert.Equal(SkinFormat.MaxIcons, icons.GetProperty("maxProperties").GetInt32());
+        Assert.Equal($"^[a-z][a-z0-9-]{{0,{OpenXLR.UI.LayoutIcons.MaxNameLength - 1}}}$",
+            icons.GetProperty("propertyNames").GetProperty("pattern").GetString());
+        Assert.Equal("none", icons.GetProperty("propertyNames").GetProperty("not").GetProperty("const").GetString());
+        JsonElement path = icons.GetProperty("additionalProperties").GetProperty("properties").GetProperty("path");
+        Assert.Equal(SkinFormat.MaxIconPathLength, path.GetProperty("maxLength").GetInt32());
+        Assert.Contains("icon", document.Split("\n## What a skin cannot do")[1], StringComparison.Ordinal);
+    }
 }

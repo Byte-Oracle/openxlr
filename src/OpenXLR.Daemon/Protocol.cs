@@ -47,6 +47,12 @@ public sealed record Command
     [JsonPropertyName("channels")] public List<string>? Channels { get; init; }
     [JsonPropertyName("mixes")] public List<string>? Mixes { get; init; }
 
+    /// <summary>setLayoutAppearance: a headphone output, <c>phones1</c> or <c>phones2</c>, instead of a channel or mix.</summary>
+    [JsonPropertyName("output")] public string? Output { get; init; }
+
+    /// <summary>createChannel and createMix: the new item's icon, as setLayoutAppearance takes it.</summary>
+    [JsonPropertyName("icon")] public string? Icon { get; init; }
+
     /// <summary>setLayoutAppearance: the channel's or mix's icon, colour and hidden flag.</summary>
     [JsonPropertyName("appearance")] public LayoutAppearance? Appearance { get; init; }
 

@@ -281,6 +281,7 @@ name.
 | `controls` | no | one of OpenXLR's own appearances per control, see [Controls](#controls) |
 | `tokens` | yes | the appearance values, see [The tokens](#the-tokens) |
 | `layout` | no | where the header and the window's sections go, see [Layout](#layout) |
+| `icons` | no | the skin's own channel and mix icons as path data, see [Icons](#icons) |
 
 `name`, `description` and `author` are cut at 400 characters, and control
 characters in them are dropped.
@@ -310,7 +311,8 @@ Anything else is a complaint about one value: it is reported, that value
 is dropped, and the rest of the file still applies. A token name this
 version does not have, a control or an appearance it does not have, a
 value of the wrong type, a number outside its bounds, an unreadable or
-oversized image: each of those costs you that one value and nothing else.
+oversized image, an icon whose path is not plain path data: each of those
+costs you that one value and nothing else.
 Every token the file does not mention keeps the default. A partial skin is
 an overlay, not a half-painted window, which is also what makes a skin
 written for a later OpenXLR usable here as far as this version
@@ -756,6 +758,54 @@ token keeps its default.
 Images are paintable wherever a brush is: a faceplate behind the window, a
 texture on a card, a metal face on a key. They are not available to the
 six flat indicator colours.
+
+## Icons
+
+Every channel and mix wears an icon from the set OpenXLR ships, chosen in
+the layout editor ([mixer-layout.md](mixer-layout.md#appearance)). The
+icon is layout data, so it stays the same whichever skin is worn, and each
+template draws it where it shows the item's name. A skin can add icons of
+its own and redraw a built-in one with an optional `icons` object:
+
+```json
+"icons": {
+  "mic": { "path": "M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1 -6 0v-6a3 3 0 0 1 3 -3z M7 20h10v2h-10z" },
+  "on-air": { "path": "M2 6h20v12h-20z M5 9v6h3v-6z" }
+}
+```
+
+A name is a lower-case letter followed by up to 31 lower-case letters,
+digits or hyphens, and `none` is reserved for "no icon". A name from the
+built-in set replaces that icon's drawing while the skin is worn; any other
+name adds an icon, which the layout editor's picker lists after the
+built-in set. The built-in names are `mic`, `headset`, `speaker`, `jack`,
+`music`, `game`, `browser`, `chat`, `people`, `broadcast`, `camera`,
+`bell`, `star`, `globe`, `cog`, `film`, `voice`, `podcast`, `record`,
+`apps`, `burst` and `monitor`.
+
+`path` is SVG path data in a 24 by 24 box with the origin at the top
+left, filled with the text colour of the name beside it, or with the
+item's own colour when the user chose one. It is filled under SVG's
+default nonzero rule, so a hole is drawn in the opposite direction to the
+shape around it. Only the commands M, L, H, V, C, S, Q, T, A and Z, in
+either case, with plain numbers are accepted, and the data starts with a
+move. There is no stroke, no fill of its own and no reference to anything
+outside the string.
+
+The rules an `icons` object is held to:
+
+- a skin may define at most 64 icons; the rest are reported and ignored;
+- a path is at most 4096 characters;
+- an entry is an object with a `path` string. Other fields are reported
+  and ignored;
+- a name given twice is reported and neither entry is used.
+
+A bad entry is reported in Options and that one icon is dropped; an item
+that names it wears the built-in icon of that name, or its default. Skin
+icons reach only the window. The terminal mixer and the Stream Deck
+plugin draw the built-in icon of the same name if there is one, and the
+item's default otherwise, so a layout that names a skin's icon still reads
+on every client.
 
 ## Layout
 
@@ -1613,6 +1663,9 @@ sets where a section starts the first time, recorded in `ui.json` under
   the daemon owns. It sets the values in this document and nothing else.
 - It cannot reach outside its own folder, and it cannot make a network
   request or load a font file.
+- It cannot choose which icon a channel or mix wears. That is the user's
+  choice in the layout editor; a skin can only redraw an icon or add one
+  to the choices, as path data, never as a file.
 - It cannot skin a plugin's own editor. Those windows belong to the
   plugin, are drawn by the plugin's own toolkit, and OpenXLR only hosts
   them. The generated controls OpenXLR draws for a plugin do follow the

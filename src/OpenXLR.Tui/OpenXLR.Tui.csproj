@@ -20,6 +20,7 @@
     <Compile Include="../OpenXLR.Core/OpenXlrPaths.cs" Link="OpenXlrPaths.cs" />
     <Compile Include="../OpenXLR.Core/ProcessRunner.cs" Link="ProcessRunner.cs" />
     <Compile Include="../OpenXLR.Core/AppearanceModes.cs" Link="AppearanceModes.cs" />
+    <Compile Include="../OpenXLR.Core/Mixing/LayoutIcons.cs" Link="LayoutIcons.cs" />
   </ItemGroup>
 
   <ItemGroup>
