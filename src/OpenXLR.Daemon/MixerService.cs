@@ -487,11 +487,15 @@ public sealed class MixerService : IHostedService, IDisposable
                 ScheduleSave();
                 Changed?.Invoke();
             }
-            // A combine leg that appeared after its cell was applied
-            // sits at PipeWire's defaults, full level and unmuted,
-            // until the stored fader is pushed onto it.
+            // A combine leg that appeared after its cell was applied, or
+            // that the session manager gave a remembered level after
+            // OpenXLR set it, plays at the wrong level until the stored
+            // fader is pushed onto it.
             stop.ThrowIfCancellationRequested();
-            _mixer.EnsureCellLevels();
+            _mixer.EnsureCellLevels(out IReadOnlyList<string> heldSends);
+            if (heldSends.Count > 0)
+                _log.LogInformation("put {n} send(s) back on their faders ({cells}); something outside OpenXLR had changed them",
+                    heldSends.Count, string.Join(", ", heldSends));
             stop.ThrowIfCancellationRequested();
             bool changed = _mixer.SyncStreams();
             changed |= _mixer.EnforceDefaults(stop);

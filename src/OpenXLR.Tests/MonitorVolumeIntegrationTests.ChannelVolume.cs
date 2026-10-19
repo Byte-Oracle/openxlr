@@ -140,6 +140,7 @@ public sealed partial class MonitorVolumeIntegrationTests
                 Dictionary<string, (double Volume, bool Muted)> legs = [];
                 bool settled = SpinWait.SpinUntil(() =>
                 {
+                    mixer.EnsureCellLevels();   // the daemon's sweep
                     legs = Legs();
                     return level.Keys.All(cell => legs.ContainsKey(cell) && Near(legs[cell].Volume, Math.Pow(GainOf(cell), 3)));
                 }, TimeSpan.FromSeconds(3));

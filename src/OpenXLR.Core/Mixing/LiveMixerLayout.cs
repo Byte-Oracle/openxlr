@@ -449,8 +449,9 @@ public sealed partial class Mixer
     /// scan reports the matching sinks, a moment after the load returns. Wait
     /// for the named ones, then refresh the leg table. False when the
     /// deadline passed with a leg still missing: a leg that appears later
-    /// would carry PipeWire's defaults (full level, unmuted) instead of the
-    /// stored fader, so callers treat that as a failed edit.
+    /// would carry the session manager's level for a new stream (full level,
+    /// unmuted, when it remembers nothing) instead of the stored fader, so
+    /// callers treat that as a failed edit.
     /// </summary>
     private bool WaitForLegsLocked(IReadOnlyList<uint> modules, IEnumerable<string> sinkNames)
     {

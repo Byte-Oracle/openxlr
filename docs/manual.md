@@ -2400,6 +2400,13 @@ own; on every other OpenXLR sink the volume is not a control, so turning
 it down only cuts audio. The daemon puts those other sinks back to full
 volume on its sweep and logs when it had to.
 
+Each send is an internal stream of its channel, and the session manager
+can set a remembered level on a new one too. That can be full level, or
+the level and mute of another send on the same channel. WirePlumber 0.4,
+the version in Ubuntu 24.04, does this to every new stream, sometimes
+after OpenXLR has already set it. The sweep puts each send back on its
+fader within a second and logs which sends it moved.
+
 <a name="reporting"></a>
 ### 5.10 Reporting a problem
 
