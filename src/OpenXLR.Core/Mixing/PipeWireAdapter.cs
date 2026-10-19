@@ -29,6 +29,25 @@ public sealed class PipeWireAdapter
     private readonly WineSession _wine;
     private readonly Action<string>? _note;
     private PipeWireGraph? _graph;
+    // Cancelled at the daemon's stop deadline: a helper still running then
+    // is killed and none is started after it, so an audio server that has
+    // stopped answering cannot hold the stop past the service manager's
+    // timeout. Default (never cancelled) outside a stop.
+    private CancellationToken _stopDeadline;
+
+    /// <summary>
+    /// End every helper this adapter runs once <paramref name="deadline"/> is
+    /// cancelled: one in flight is killed, later ones are not started and
+    /// fail at once. Set when the daemon begins to stop.
+    /// </summary>
+    internal void EndHelpersAt(CancellationToken deadline) => _stopDeadline = deadline;
+
+    /// <summary>
+    /// How many of its modules the last <see cref="TearDown"/> left loaded
+    /// because the stop deadline passed. The next start removes them with
+    /// <see cref="UnloadStaleModules"/>.
+    /// </summary>
+    public int ModulesLeft { get; private set; }
 
     /// <summary>
     /// Latency compensation is on: an LV2 insert that declares a latency port
@@ -1829,11 +1848,14 @@ public sealed class PipeWireAdapter
         _loopbacks.Clear();
         _filters.Clear();
 
+        int left = 0;
         for (int i = _modules.Count - 1; i >= 0; i--)
         {
             try { Run("pactl", "unload-module", _modules[i].ToString()); }
+            catch (Exception) when (_stopDeadline.IsCancellationRequested) { left++; }
             catch (Exception) { /* already unloaded */ }
         }
+        ModulesLeft = left;
         _modules.Clear();
         try { wine.Wait(WineSession.Deadline + TimeSpan.FromSeconds(1)); }
         catch (Exception) { /* EndWine swallows its own failures; this is the join */ }
@@ -1879,16 +1901,17 @@ public sealed class PipeWireAdapter
 
     private byte[] RunBytes(string exe, params string[] args)
     {
-        try { return RunBytesCore(exe, args); }
+        try { return RunBytesCore(exe, args, _stopDeadline); }
         finally { _progress?.Invoke(); }
     }
 
-    private static byte[] RunBytesCore(string exe, params string[] args)
+    private static byte[] RunBytesCore(string exe, string[] args, CancellationToken stopDeadline)
     {
         // Bounded: 5 s, 64 MiB of output (a large graph dump is 2 MB), the
         // process tree killed past either, so a runaway helper never grows
         // the daemon's heap.
-        ProcessResult r = ProcessRunner.Run(exe, args);
+        ProcessResult r = ProcessRunner.Run(exe, args, cancel: stopDeadline);
+        if (r.Cancelled) throw StoppedHelper(exe, args);
         if (r.TimedOut)
             throw new InvalidOperationException($"{exe} {string.Join(' ', args)} timed out after {ProcessRunner.DefaultTimeout.TotalSeconds:0} seconds");
         if (r.Truncated)
@@ -1902,17 +1925,21 @@ public sealed class PipeWireAdapter
 
     internal string Run(string exe, params string[] args)
     {
-        try { return RunCore(exe, args); }
+        try { return RunCore(exe, args, _stopDeadline); }
         finally { _progress?.Invoke(); }
     }
 
-    private static string RunCore(string exe, params string[] args)
+    private static InvalidOperationException StoppedHelper(string exe, string[] args)
+        => new($"{exe} {string.Join(' ', args)} not finished: the daemon's stop deadline passed");
+
+    private static string RunCore(string exe, string[] args, CancellationToken stopDeadline)
     {
         // pactl's human-readable output is parsed ("Sink Input #", "Owner
         // Module:") and pactl is localised; a German desktop would break
         // every fader. The runner puts every helper in the C locale and
         // bounds its time and output.
-        ProcessResult r = ProcessRunner.Run(exe, args);
+        ProcessResult r = ProcessRunner.Run(exe, args, cancel: stopDeadline);
+        if (r.Cancelled) throw StoppedHelper(exe, args);
         if (r.TimedOut)
             throw new InvalidOperationException($"{exe} {string.Join(' ', args)} timed out after {ProcessRunner.DefaultTimeout.TotalSeconds:0} seconds");
         if (r.Truncated)

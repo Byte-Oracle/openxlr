@@ -2215,6 +2215,17 @@ OpenXLR refuses a malformed reply before reading any setting from it and
 discards the helper; the next connection starts a fresh process instead of
 reusing a broken protocol stream.
 
+A stop or restart finishes inside the unit's 45 second stop timeout even
+when the audio server or an interface has stopped answering. Once the
+daemon begins to stop it opens no interface again, and it gives the audio
+server 15 seconds to remove the mixer's sinks. Past that it ends the
+`pactl` call still running, skips the rest, and writes one line to the
+journal ("stop: the audio server took longer than 15 s") with the number
+of OpenXLR modules it left loaded. It saves your settings before any of
+this. The next start removes the leftover modules before it builds the
+mixer, so you have nothing to clean up. Until then the leftover OpenXLR
+devices can still show in the system sound settings.
+
 <a name="open-files"></a>
 ### 5.8 Channels or mixes vanish after adding one
 

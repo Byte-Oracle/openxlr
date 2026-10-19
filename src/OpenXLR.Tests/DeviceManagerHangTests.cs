@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenXLR.Core;
 using OpenXLR.Core.Devices;
@@ -149,6 +150,48 @@ public sealed class DeviceManagerHangTests
             manager.SweepOnce();
             Assert.Equal(noted.Note, manager.Snapshot().Device!.Note);
             Assert.Null(manager.Warning);   // a note is not a warning: the unit works
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", prev);
+            try { Directory.Delete(dir, recursive: true); } catch (IOException) { }
+        }
+    }
+
+    private sealed class StoppingLifetime : IHostApplicationLifetime, IDisposable
+    {
+        private readonly CancellationTokenSource _stopping = new();
+        public CancellationToken ApplicationStarted => CancellationToken.None;
+        public CancellationToken ApplicationStopping => _stopping.Token;
+        public CancellationToken ApplicationStopped => CancellationToken.None;
+        public void StopApplication() => _stopping.Cancel();
+        public void Dispose() => _stopping.Dispose();
+    }
+
+    [Fact]
+    public void OnceTheHostBeginsToStopNoUnitIsOpenedAgain()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "openxlr-stopping-" + Guid.NewGuid().ToString("N"));
+        string? prev = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", dir);
+        try
+        {
+            using var lifetime = new StoppingLifetime();
+            var device = new FlakyDevice();
+            var manager = new DeviceManager(NullLogger<DeviceManager>.Instance, new ConfigurationBuilder().Build(), () => [device], lifetime);
+            manager.SweepOnce();
+            Assert.Equal(1, device.Connects);
+            device.Disconnect();                 // the unit went away for a moment
+            manager.SweepOnce();
+            Assert.Equal(2, device.Connects);    // and is opened again while the daemon runs
+
+            lifetime.StopApplication();
+            manager.SweepOnce();
+            Assert.True(manager.Snapshot().Connected);   // a connected unit is still polled
+            device.Disconnect();
+            manager.SweepOnce(); manager.SweepOnce();
+            Assert.Equal(2, device.Connects);    // but none is opened during the stop
+            Assert.False(manager.Snapshot().Connected);
         }
         finally
         {

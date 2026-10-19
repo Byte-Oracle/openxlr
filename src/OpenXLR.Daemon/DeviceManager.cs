@@ -68,11 +68,23 @@ public sealed class DeviceManager : BackgroundService
     // hardware-control mode the stock layout (UCM split) stays in place.
     private readonly bool _submixer;
 
-    public DeviceManager(ILogger<DeviceManager> log, IConfiguration config) : this(log, config, DeviceRegistry.DetectAll) { }
+    public DeviceManager(ILogger<DeviceManager> log, IConfiguration config, IHostApplicationLifetime? lifetime = null)
+        : this(log, config, DeviceRegistry.DetectAll, lifetime) { }
+
+    // Set when the host begins to stop. The loop runs on until this service's
+    // own turn to stop, after the mixer's teardown; opening a unit meanwhile
+    // (an eight second deadline, then reads that time out on a wedged one)
+    // only spends the stop timeout.
+    private volatile bool _noNewConnections;
+
+    /// <summary>Keep polling a connected unit, but open none from now on.</summary>
+    internal void StopConnecting() => _noNewConnections = true;
 
     /// <summary>The detection source is injectable so the reconnect and set-aside logic can be driven by a fake device.</summary>
-    internal DeviceManager(ILogger<DeviceManager> log, IConfiguration config, Func<IReadOnlyList<IAudioDevice>> detect)
+    internal DeviceManager(ILogger<DeviceManager> log, IConfiguration config, Func<IReadOnlyList<IAudioDevice>> detect,
+        IHostApplicationLifetime? lifetime = null)
     {
+        lifetime?.ApplicationStopping.Register(StopConnecting);
         _detect = detect;
         _log = log;
         string? want = Environment.GetEnvironmentVariable("OPENXLR_DEVICE");
@@ -446,7 +458,7 @@ public sealed class DeviceManager : BackgroundService
                 }
             }
             if (_device is { Connected: true }) return;
-            if (Environment.TickCount64 < _reconnectNotBefore) return;
+            if (_noNewConnections || Environment.TickCount64 < _reconnectNotBefore) return;
             List<IAudioDevice> usable = [.. all.Where(d => !_hung.IsSetAside(d.Info.InstanceId))];
             // The chosen unit first. While it is away and other units are
             // attached, none of them is taken over: one may be driven as an
