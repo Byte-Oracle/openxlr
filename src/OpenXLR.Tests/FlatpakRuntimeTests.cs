@@ -7,6 +7,23 @@ namespace OpenXLR.Tests;
 public sealed class FlatpakRuntimeTests
 {
     [Fact]
+    public void FlatpakNeverHandsItsWindowToTheNativeInstallation()
+    {
+        string? previous = Environment.GetEnvironmentVariable("FLATPAK_ID");
+        try
+        {
+            Environment.SetEnvironmentVariable("FLATPAK_ID", null);
+            string native = OpenXLR.UI.SingleInstance.DefaultPath;
+            Environment.SetEnvironmentVariable("FLATPAK_ID", OpenXLR.UI.FlatpakEnvironment.AppId);
+            Assert.NotEqual(native, OpenXLR.UI.SingleInstance.DefaultPath);
+            Assert.Equal(Path.GetDirectoryName(native), Path.GetDirectoryName(OpenXLR.UI.SingleInstance.DefaultPath));
+            Assert.False(OpenXLR.UI.StartupIntegration.SetWindowAtLogin(true));
+            Assert.False(OpenXLR.UI.StartupIntegration.SetDaemonAtLogin(true));
+        }
+        finally { Environment.SetEnvironmentVariable("FLATPAK_ID", previous); }
+    }
+
+    [Fact]
     public void SessionRulesKeepExistingUserFiles()
     {
         string root = Path.Combine(Path.GetTempPath(), "openxlr-rules-" + Guid.NewGuid());
