@@ -11,7 +11,7 @@ internal sealed class MixerView : View
     public override string Title => "Mixer";
 
     public override string Keys =>
-        "Up/Down channel  Left/Right mix  Space mute  -/+ [/] level  Home masters  End last  r rename  n/N new  M monitor  c capture  d delete";
+        "Up/Down channel  Left/Right mix  Space mute  -/+ [/] level  </> ,/. channel volume  Home masters  End last  r rename  n/N new  M monitor  c capture  d delete";
 
     public override void Draw(Screen screen, Rect area, App app)
     {
@@ -91,8 +91,11 @@ internal sealed class MixerView : View
         double value = selectedChannel?.Level(selectedMix.Id) ?? selectedMix.Volume;
         bool muted = selectedChannel is null ? selectedMix.Muted
             : HardwareMute(selectedChannel, state) is { } control ? state.Flag(control) : selectedChannel.IsMuted(selectedMix.Id);
+        // A channel volume scales every send of the channel, so it is shown
+        // with the send it scales.
+        string volume = selectedChannel?.Volume is double v ? $"   channel volume {Widgets.Percent(v)}" : "";
         screen.TextPad(area.X + 1, area.Bottom - 1,
-            $" {focus}   {Widgets.Percent(value)}   {(muted ? "MUTED" : "ON")}", area.Width - 2,
+            $" {focus}   {Widgets.Percent(value)}   {(muted ? "MUTED" : "ON")}{volume}", area.Width - 2,
             theme.TextPrimary, theme.Selection, bold: true);
     }
 
@@ -288,6 +291,10 @@ internal sealed class MixerView : View
                 case '-' or '_': Step(app, mix, channel, -0.05); return true;
                 case ']': Step(app, mix, channel, 0.01); return true;
                 case '[': Step(app, mix, channel, -0.01); return true;
+                case '>': ChannelEntry.StepVolume(app, channel, 0.05); return true;
+                case '<': ChannelEntry.StepVolume(app, channel, -0.05); return true;
+                case '.': ChannelEntry.StepVolume(app, channel, 0.01); return true;
+                case ',': ChannelEntry.StepVolume(app, channel, -0.01); return true;
 
                 case 'n': NewChannel(app); return true;
                 case 'N': app.Ask("New virtual microphone", string.Empty,

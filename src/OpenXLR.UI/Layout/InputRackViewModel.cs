@@ -31,8 +31,8 @@ public enum InputStripKind
 /// controls the INPUTS panel has always shown for it, bound to the same
 /// <see cref="MainViewModel"/> properties, so every capability, lock and
 /// phantom settling rule there applies here unchanged. An application or
-/// capture channel has only what it has: its name and its meter. Nothing
-/// here holds a value of its own.
+/// capture channel has only what it has: its name, its meter and the
+/// channel's own volume. Nothing here holds a value of its own.
 /// </summary>
 public sealed class InputRackViewModel : IDisposable
 {
@@ -70,8 +70,16 @@ public sealed class InputRackViewModel : IDisposable
     {
         InputStripKind.Xlr1 or InputStripKind.Xlr2 => SkinStripParts.InputRow,
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
-        _ => [SkinStripParts.Identity, SkinStripParts.Meter],
+        // An application or capture channel's gain is its channel volume.
+        _ => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
     };
+
+    /// <summary>
+    /// Whether this kind's gain part is the channel volume rather than the
+    /// interface's gain: an application or capture channel. It is drawn only
+    /// once the daemon reports a volume for the channel.
+    /// </summary>
+    public static bool IsChannelVolumeKind(InputStripKind kind) => kind is InputStripKind.Application or InputStripKind.Capture;
 
     /// <summary>What a channel is, as the rack draws it.</summary>
     public static InputStripKind KindOf(ChannelViewModel channel) => channel switch
@@ -155,7 +163,8 @@ public sealed class InputStripViewModel : ViewModelBase
     public StripSpec Spec { get; private set; }
 
     private StripSpec CreateSpec() => StripSpec.From(_rack.Options, Orientation.Vertical,
-        [.. InputRackViewModel.PartsOf(Kind).Where(p => !(Main.GenericMicrophone && Kind == InputStripKind.Xlr1 && p == SkinStripParts.Gain))],
+        [.. InputRackViewModel.PartsOf(Kind).Where(p => !(Main.GenericMicrophone && Kind == InputStripKind.Xlr1 && p == SkinStripParts.Gain)
+            && !(InputRackViewModel.IsChannelVolumeKind(Kind) && p == SkinStripParts.Gain && !Channel.HasVolume))],
         SkinStripParts.Gain);
 
     internal void RefreshSpec()
@@ -207,6 +216,7 @@ public sealed class InputStripViewModel : ViewModelBase
             case nameof(ChannelViewModel.DisplayVisible): Raise(nameof(Shown)); break;
             case nameof(ChannelViewModel.IsEditable): Raise(nameof(HandleHidden)); break;
             case nameof(ChannelViewModel.Name): Raise(nameof(LeftLevelName)); Raise(nameof(RightLevelName)); break;
+            case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
             case nameof(ChannelViewModel.IsHardware) or nameof(ChannelViewModel.CaptureSource):
                 if (!_detached && InputRackViewModel.KindOf(Channel) != Kind) _rack.Sync();
                 break;

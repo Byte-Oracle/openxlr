@@ -343,6 +343,9 @@ public sealed class DaemonClient : IAsyncDisposable
         => SendAsync(new Dictionary<string, object>
         { ["cmd"] = "setChannelMuted", ["channel"] = channel, ["mix"] = mix, ["value"] = muted });
 
+    public Task SetChannelVolumeAsync(string channel, double value)
+        => SendAsync(new Dictionary<string, object> { ["cmd"] = "setChannelVolume", ["channel"] = channel, ["value"] = value });
+
     public Task SetMixVolumeAsync(string mix, double value)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "setMixVolume", ["mix"] = mix, ["value"] = value });
 

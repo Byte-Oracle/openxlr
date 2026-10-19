@@ -38,6 +38,7 @@ internal static class SavedMixerValidation
             MixVolumes = Levels(settings.MixVolumes, "mixVolumes", notes),
             MixMuted = Entries(settings.MixMuted, "mixMuted", notes),
             Levels = Levels(settings.Levels, "levels", notes),
+            ChannelVolumes = Levels(settings.ChannelVolumes, "channelVolumes", notes),
             ChannelMuted = Entries(settings.ChannelMuted, "channelMuted", notes),
             MonitorOutputs = Entries(settings.MonitorOutputs, "monitorOutputs", notes),
             MonitorFeeds = Mapping(settings.MonitorFeeds, "monitorFeeds", notes),
@@ -52,6 +53,7 @@ internal static class SavedMixerValidation
     {
         Levels(scene.MixVolumes, "mixVolumes");
         Levels(scene.Levels, "levels");
+        if (scene.ChannelVolumes is not null) Levels(scene.ChannelVolumes, "channelVolumes");
         Names(scene.MixMuted, "mixMuted");
         Names(scene.ChannelMuted, "channelMuted");
         if (scene.MonitorOutputs is not null) Names(scene.MonitorOutputs, "monitorOutputs");

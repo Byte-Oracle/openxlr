@@ -251,6 +251,12 @@ public sealed partial record ChannelStatus(string Id, string Name,
 
     /// <summary>The driven unit's input stage this channel carries, or null.</summary>
     public UnitInputStatus? UnitInput { get; init; }
+
+    /// <summary>
+    /// The channel's own volume (0..1), which scales every send it makes; null
+    /// for a hardware input, whose level is the interface's gain.
+    /// </summary>
+    public double? Volume { get; init; }
 }
 
 

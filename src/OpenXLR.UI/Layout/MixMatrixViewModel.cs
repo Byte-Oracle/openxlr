@@ -117,7 +117,8 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
     {
         InputStripKind.Xlr1 or InputStripKind.Xlr2 => SkinMatrixParts.RowHead,
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
-        _ => [SkinStripParts.Identity, SkinStripParts.Meter],
+        // An application or capture channel's gain is its channel volume.
+        _ => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
     };
 
     /// <summary>True while the matrix draws a row for the channel: the view shows it, and XLR 2 needs an interface with two inputs.</summary>
@@ -433,7 +434,8 @@ public sealed class MatrixRowViewModel : ViewModelBase
         SkinMatrixPartOptions head = Matrix.Options.RowHead;
         IReadOnlyCollection<string> available = MixMatrixViewModel.RowPartsOf(Kind);
         string[] parts = [.. head.Shown.Where(p => p != SkinStripParts.Identity && available.Contains(p)
-            && !(Main.GenericMicrophone && Kind == InputStripKind.Xlr1 && p is SkinStripParts.Gain or SkinStripParts.Mute))];
+            && !(Main.GenericMicrophone && Kind == InputStripKind.Xlr1 && p is SkinStripParts.Gain or SkinStripParts.Mute)
+            && !(InputRackViewModel.IsChannelVolumeKind(Kind) && p == SkinStripParts.Gain && !Channel.HasVolume))];
         // Without hardware gain the standalone meter remains visible, even
         // when the skin normally draws it under the gain fader.
         if (Matrix.MeterUnderFader && parts.Contains(SkinStripParts.Gain)) parts = [.. parts.Where(p => p != SkinStripParts.Meter)];
@@ -530,6 +532,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
                 Raise(nameof(RightLevelName));
                 foreach (MatrixCellViewModel cell in Cells) cell.RefreshNames();
                 break;
+            case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
         }
     }
 

@@ -1257,6 +1257,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MixVolumes = new Dictionary<string, double>(_mixVolume),
                 MixMuted = [.. _mixMuted],
                 Levels = new Dictionary<string, double>(_levels),
+                ChannelVolumes = ExportChannelVolumesLocked(),
                 ChannelMuted = [.. _muted],
                 MonitorOutputs = SavedMonitorOutputsLocked(),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
@@ -1327,6 +1328,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
             foreach ((string cell, double lvl) in s.Levels)
                 if (_cells.Contains(cell)) _levels[cell] = Math.Clamp(lvl, 0, 1);
+            RecallChannelVolumesLocked(s.ChannelVolumes, s.Levels.Keys);
             RecallMutes(_muted, _cells, s.Levels.Keys, s.ChannelMuted);
             NormalizeExclusiveGroupsLocked();
 
@@ -1418,6 +1420,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MixVolumes = new Dictionary<string, double>(_mixVolume),
                 MixMuted = [.. _mixMuted],
                 Levels = new Dictionary<string, double>(_levels),
+                ChannelVolumes = ExportChannelVolumesLocked(),
                 ChannelMuted = [.. _muted],
                 MonitorOutputs = SavedMonitorOutputsLocked(),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
@@ -1450,6 +1453,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
             foreach ((string cell, double lvl) in s.Levels)
                 if (_cells.Contains(cell)) _levels[cell] = Math.Clamp(lvl, 0, 1);
+            RecallChannelVolumesLocked(s.ChannelVolumes, s.Levels.Keys);
             RecallMutes(_muted, _cells, s.Levels.Keys, s.ChannelMuted);
             // A profile carries mutes, not groups: one that opens two members
             // of a group closes that group.
@@ -2394,6 +2398,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     BindingConnected = BindingConnectedLocked(c),
                     BindingWarning = BindingWarningLocked(c),
                     UnitInput = UnitInputLocked(c.Id),
+                    Volume = ChannelVolumeStatusLocked(c),
                 })],
                 RenamedSinceStart = _renamedSinceBuild,
                 MonitorOutput = _monitorOutputs.FirstOrDefault(),
@@ -2425,12 +2430,13 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         _ => "auxPort",
     };
 
-    /// <summary>Channel send, including the master only when the mix has no desktop master.</summary>
+    /// <summary>Channel send, with the channel volume, and the master only when the mix has no desktop master.</summary>
     private void ApplyCellLocked(string channelId, string mixId)
     {
         string cell = Cell(channelId, mixId);
         bool monitor = MonitorMixLocked(mixId) is not null;
-        double level = _levels.GetValueOrDefault(cell, 0.0) * (monitor ? 1 : _mixVolume.GetValueOrDefault(mixId, 1.0));
+        double level = SendGain(_levels.GetValueOrDefault(cell, 0.0), ChannelVolumeLocked(channelId),
+            monitor ? 1 : _mixVolume.GetValueOrDefault(mixId, 1.0));
         bool waiting = !_muted.Contains(cell) && ExclusivePeerPendingLocked(channelId);
         bool muted = waiting || _muted.Contains(cell) || (!monitor && _mixMuted.Contains(mixId));
         if (_hardwareMicMonitor && monitor && channelId == "xlr1" && MonitorFeed.Includes(JackFeedLocked(), mixId))
@@ -2584,6 +2590,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         _streams.Clear();
         _cells.Clear();
         _levels.Clear();
+        _channelVolume.Clear();
         _muted.Clear();
         _mixVolume.Clear();
         _mixMuted.Clear();

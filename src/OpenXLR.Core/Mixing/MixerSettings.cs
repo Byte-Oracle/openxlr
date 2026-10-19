@@ -53,6 +53,9 @@ public sealed record MixerSettings
     /// <summary>"channel|mix" to level.</summary>
     public Dictionary<string, double> Levels { get; init; } = [];
 
+    /// <summary>Application or capture channel id to its channel volume; a channel absent here is at full volume.</summary>
+    public Dictionary<string, double> ChannelVolumes { get; init; } = [];
+
     /// <summary>"channel|mix" entries that are muted.</summary>
     public List<string> ChannelMuted { get; init; } = [];
 

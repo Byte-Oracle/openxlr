@@ -1142,8 +1142,10 @@ panel's own controls, so a switch the interface does not have stays
 hidden, the gain lock still disables both gains, a mute still waits while
 phantom power settles, and XLR 2 shows only on an interface with two XLR
 inputs. An application or capture channel has no hardware gain and no
-chain of its own, so its strip has only its name and its meter whatever
-the skin orders.
+chain of its own; its `gain` part is the channel's own volume, which
+scales every send it makes, so its strip has its name, its meter and that
+volume whatever the skin orders. A daemon that reports no volume for the
+channel leaves the strip at its name and its meter.
 
 Mix banks draw the submixer by mix instead of by channel. Each bank
 shows one mix: the send of every channel into that mix, then the mix's
@@ -1194,7 +1196,7 @@ An input row's parts, in their default order, are `identity`, `meter`,
 |---|---|
 | `identity` | the channel's icon and name. It cannot be hidden |
 | `meter` | the channel's own level meter, left and right |
-| `gain` | the input's hardware gain, or Aux In's level |
+| `gain` | the input's hardware gain, Aux In's level, or an application or capture channel's own volume |
 | `hardware-controls` | the input's switches, or Aux In's level lock |
 | `effects` | the input's plugin chain: its button and the chain at a glance |
 | `fader` | the send's level into the bank's mix |
@@ -1203,7 +1205,7 @@ An input row's parts, in their default order, are `identity`, `meter`,
 
 Each list holds no more names than the strip has parts, and a part
 appears once across `partsOrder` and `hidden`. A part a channel does not
-have is skipped, so ordering `gain` first changes nothing on an
+have is skipped, so ordering `hardware-controls` first changes nothing on an
 application channel.
 
 `master` takes `template`, `label`, `meter` and `fader`. Its template is
@@ -1360,8 +1362,9 @@ controls the INPUTS panel shows for the channel, under the same rules. XLR 1
 and XLR 2 have their hardware gain, with the meter under it, their mute,
 which waits while phantom power settles, and the button that opens their
 plugin chain. The gain lock still disables the gain. Aux In has its level
-and level lock. An application or capture channel has its name and its
-meter only. XLR 2 has a row only on an interface with two XLR inputs.
+and level lock. An application or capture channel has its own volume,
+which scales every send in its row, with its meter under it, the way XLR 1
+has its gain. XLR 2 has a row only on an interface with two XLR inputs.
 
 Each column has a head: the mix's icon and name, an outputs line, a thin
 line in the mix's own colour when the layout editor gave it one, and a row
@@ -1398,7 +1401,7 @@ are `mute`, `fader` and `value`.
 |---|---|---|
 | `identity` | row head, column head | the channel's or the mix's icon and name. It cannot be hidden. In a row head it is the name column, on the left unless `parts` puts it last |
 | `meter` | row head | the channel's meter as a part of its own. Under the faders it is the gain's track instead, so a channel with gain draws it there |
-| `gain` | row head | the input's hardware gain, or Aux In's level and level lock |
+| `gain` | row head | the input's hardware gain, Aux In's level and level lock, or an application or capture channel's own volume |
 | `mute` | row head, column head, cell | the input's hardware mute, the mix's mute, or the send's mute in the column's mix |
 | `effects` | row head, column head | the button that opens the input's or the mix's plugin chain |
 | `master` | column head | the mix's master level as a short fader |

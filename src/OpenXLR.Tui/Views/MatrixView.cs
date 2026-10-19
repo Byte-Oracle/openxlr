@@ -16,7 +16,7 @@ internal sealed class MatrixView : View
 
     public override string Title => "Matrix";
 
-    public override string Keys => "Up/Down channel  Left/Right mix  Space mute  -/+ [/] level";
+    public override string Keys => "Up/Down channel  Left/Right mix  Space mute  -/+ [/] level  </> ,/. channel volume";
 
     public override void Draw(Screen screen, Rect area, App app)
     {
@@ -121,8 +121,14 @@ internal sealed class MatrixView : View
             if (pitch > step) screen.Fill(area.X, line + step, area.Width, 1, theme.Card);
 
             Rgb nameColour = channel.Hardware ? theme.TextPrimary : theme.TextDetail;
+            // An application or capture channel's own volume stands between
+            // its name and its meter, since it scales every cell in the row.
+            int volumeWidth = channel.Volume is null ? 0 : 5;
             screen.Text(x0, nameLine, channel.Name, nameColour, rowBack, bold: selectedRow,
-                maxWidth: meterX - x0 - 1);
+                maxWidth: meterX - x0 - 1 - volumeWidth);
+            if (channel.Volume is double volume)
+                screen.Text(meterX - volumeWidth, nameLine, Widgets.Percent(volume).PadLeft(4),
+                    theme.TextDetail, rowBack);
             MeterReading level = app.Link.StereoMeter("ch", channel.Id);
             if (!roomy) Widgets.Meter(screen, meterX, line, meterWidth, level.Level, theme, rowBack);
             else if (channel.Mono)
@@ -205,6 +211,10 @@ internal sealed class MatrixView : View
             case '-' or '_': Step(app, mix, channel, -0.05); return true;
             case ']': Step(app, mix, channel, 0.01); return true;
             case '[': Step(app, mix, channel, -0.01); return true;
+            case '>': ChannelEntry.StepVolume(app, channel, 0.05); return true;
+            case '<': ChannelEntry.StepVolume(app, channel, -0.05); return true;
+            case '.': ChannelEntry.StepVolume(app, channel, 0.01); return true;
+            case ',': ChannelEntry.StepVolume(app, channel, -0.01); return true;
         }
         return false;
     }

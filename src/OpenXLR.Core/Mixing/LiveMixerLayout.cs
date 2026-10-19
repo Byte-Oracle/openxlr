@@ -84,6 +84,7 @@ public sealed partial class Mixer
             {
                 _config = _config with { Channels = [.. _config.Channels, channel] };
                 _combineModules[id] = module;
+                _channelVolume.Remove(id);   // a new channel starts at full volume
                 foreach (MixDefinition mix in _config.Mixes)
                 {
                     string cell = Cell(id, mix.Id);
@@ -197,6 +198,7 @@ public sealed partial class Mixer
             RemoveCaptureFeedLocked(id);
             _inserts.Remove(id);
             _insertErrors.Remove(id);
+            _channelVolume.Remove(id);
             if (_combineModules.Remove(id, out uint module))
             {
                 try { _pw.UnloadModule(module); }

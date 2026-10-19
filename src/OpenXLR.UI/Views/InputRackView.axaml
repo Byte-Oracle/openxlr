@@ -215,7 +215,7 @@
         </Border>
       </DataTemplate>
 
-      <!-- an application or capture channel: its name and its meter, which is all it has here -->
+      <!-- an application or capture channel: its name, its meter and its own volume -->
       <DataTemplate x:Key="channel" x:DataType="layout:InputStripViewModel">
         <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}" Classes.revealed="{Binding Channel.Revealed}">
           <DockPanel>
@@ -237,6 +237,14 @@
               <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1">
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="gain" Classes="dev">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                  <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Channel.Volume, Mode=TwoWay}"
+                          AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                          ToolTip.Tip="{loc:Text Key=ChannelVolumeTip}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Channel.VolumeText}" Classes="val" VerticalAlignment="Center"/>
+                </Grid>
               </StackPanel>
             </layout:StripPanel>
           </DockPanel>

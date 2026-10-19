@@ -665,6 +665,16 @@ function dialValue(target, inst) {
              scroll: mix === "all" ? "All mixes" : mixName(mixer(), mix),
              pct: pct(v), text: muted ? "MUTED" : `${pct(v)}%`, muted };
   }
+  if (target.startsWith("chvol:")) {
+    const chId = target.slice(6), ch = chOf(chId);
+    if (typeof ch?.volume !== "number") return null;
+    const v = dialNow(target, ch.volume);
+    // The channel is silent when every one of its sends is muted.
+    const levels = Object.keys(ch.levels ?? {});
+    const muted = levels.length > 0 && levels.every((m) => ch.mutedIn?.includes(m));
+    return { label: `${channelName(mixer(), chId)} volume`, pct: pct(v),
+             text: muted ? "MUTED" : `${pct(v)}%`, muted };
+  }
   if (target.startsWith("mixvol:")) {
     const id = target.slice(7), mix = mixOf(id);
     if (!mix) return null;
@@ -800,6 +810,11 @@ function onDialRotate(context, inst, ticks) {
       const value = level(dialNow(key, levels[m]), 0, 1);
       dialTurn(key, value, () => cmd({ cmd: "setLevel", channel: ch, mix: m, value }));
     }
+  } else if (t.startsWith("chvol:")) {
+    const ch = t.slice(6), volume = chOf(ch)?.volume;
+    if (typeof volume !== "number") return;
+    const value = level(dialNow(t, volume), 0, 1);
+    dialTurn(t, value, () => cmd({ cmd: "setChannelVolume", channel: ch, value }));
   } else if (t.startsWith("mixvol:")) {
     const mix = t.slice(7), state = mixOf(mix);
     if (state?.volume == null) return;
@@ -850,8 +865,10 @@ function onDialPress(context, inst) {
     const [, ch, id] = t.split("|");
     const ins = resolveInsert(ch, id, metaOf(inst, t));
     if (ins) cmd({ cmd: "setInsertBypass", channel: ch, insertId: ins.id, value: !ins.bypass });
-  } else if (t.startsWith("send:")) {
-    const [, ch, mix] = t.split(":");
+  } else if (t.startsWith("send:") || t.startsWith("chvol:")) {
+    // A channel volume dial mutes the channel the way an all-mixes send dial does.
+    const [, ch, sendMix] = t.split(":");
+    const mix = t.startsWith("chvol:") ? "all" : sendMix;
     const c = chOf(ch);
     if (!c) return;
     if (mix === "all") {
@@ -1062,7 +1079,7 @@ function dialIcon(t) {
   const inner = (name) => GLYPHS[name]
     ? `<g transform="scale(0.1667)">${GLYPHS[name].replaceAll("currentColor", ink)}</g>` : "";
   let name = "knob";
-  if (t?.startsWith("send:")) name = "fader";
+  if (t?.startsWith("send:") || t?.startsWith("chvol:")) name = "fader";
   else if (t?.startsWith("mixvol:")) name = "speaker";
   else if (t === "outputVolume" || t?.startsWith("output:")) name = "speaker";
   else if (t === "gain" || t === "gain2") name = "mic";
@@ -1090,7 +1107,7 @@ function needleSvg(pct, maxPct = 100) {
 // The meter key feeding a dial target's level bar.
 function meterKeyFor(t) {
   if (!t) return null;
-  if (t.startsWith("send:")) return `ch:${t.split(":")[1]}`;
+  if (t.startsWith("send:") || t.startsWith("chvol:")) return `ch:${t.split(":")[1]}`;
   if (t.startsWith("mixvol:")) return `mix:${t.slice(7)}`;
   if (t === "gain") return "ch:xlr1";
   if (t === "gain2") return "ch:xlr2";

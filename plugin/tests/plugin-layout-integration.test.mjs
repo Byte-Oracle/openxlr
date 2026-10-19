@@ -336,6 +336,38 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     daemon.receive(state);
     host.receive({event:"dialDown",context:"monitor-dial"});
     assert.deepEqual(daemon.messages.at(-1), {cmd:"setMixMuted",mix:"monitor2",value:false});
+
+    // A channel volume dial is offered for a channel the daemon reports a
+    // volume for, turns that volume, and its press mutes the channel in every
+    // mix the way an all-mixes send dial does.
+    host.receive({event:"sendToPlugin",context:"qa",payload:{request:"layout"}});
+    assert.ok(!host.messages.at(-1).payload.levelGroups.some(g => g.id === "layout-channel-volumes"));
+    state.mixer.channels[0].volume = 0.6;
+    state.mixer.channels[0].mutedIn = [];
+    daemon.receive(state);
+    host.receive({event:"sendToPlugin",context:"qa",payload:{request:"layout"}});
+    assert.deepEqual(host.messages.at(-1).payload.levelGroups.find(g => g.id === "layout-channel-volumes").items,
+      [{target:"chvol:system", label:`${state.mixer.channels[0].name} volume`}]);
+    dialTarget("chvol-dial", "chvol:system");
+    assert.equal(feedbackOf("chvol-dial").value, "60%");
+    host.receive({event:"dialRotate",context:"chvol-dial",payload:{ticks:-10}});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setChannelVolume",channel:"system",value:0.5});
+    assert.equal(feedbackOf("chvol-dial").value, "50%");
+    host.receive({event:"dialDown",context:"chvol-dial"});
+    assert.deepEqual(daemon.messages.slice(-2), [
+      {cmd:"setChannelMuted",channel:"system",mix:"monitor",value:true},
+      {cmd:"setChannelMuted",channel:"system",mix:"monitor2",value:true}]);
+    state.mixer.channels[0].mutedIn = ["monitor", "monitor2"];
+    daemon.receive(state);
+    assert.equal(feedbackOf("chvol-dial").value, "MUTED");
+    // A daemon that reports no volume for the channel leaves the dial unset.
+    delete state.mixer.channels[0].volume;
+    state.mixer.channels[0].mutedIn = [];
+    daemon.receive(state);
+    const before = daemon.messages.length;
+    await new Promise(resolve => setTimeout(resolve, 900));   // let the turn above cool
+    host.receive({event:"dialRotate",context:"chvol-dial",payload:{ticks:1}});
+    assert.equal(daemon.messages.length, before);
     // Persisted settings can carry old or malformed icon values.
     for (const icon of ["constructor", "__proto__", "toString", "<svg/>", "", 12, true, {}, [], {toString:null,valueOf:null}, null]) {
       assert.doesNotThrow(() => host.receive({event:"willAppear",context:"icon-settings",action:"com.emaspa.openxlr.toggle",payload:{settings:{target:"mixmute:monitor",icon}}}));

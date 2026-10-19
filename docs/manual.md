@@ -119,6 +119,17 @@ SUBMIXER card shows them as a grid, channels down, mixes across. Each
 mix also has a **master** level and mute. A typical setup keeps Music
 loud in Monitor A and lower in Stream, and out of Chat entirely.
 
+<a name="channel-volume"></a>
+An application or capture channel also has a **volume** of its own. It
+turns every send of the channel up or down together, so Game can get
+quieter everywhere without changing how its sends sit against each
+other. At 50% each send is 50% of what its own fader says. The mutes stay
+per send. Every application and capture channel starts at 100%, and so
+does each one in a profile saved before channel volumes existed. XLR 1,
+XLR 2 and Aux In have no channel volume. Their level is the interface's
+gain or the Aux In level, which the window shows in the same place. The
+channel's meter shows what plays into the channel, before its volume.
+
 ### Submixer categories
 
 The SUBMIXER separates **INPUT CHANNELS**, the channel strips and their sends,
@@ -138,7 +149,7 @@ lands in Voice Chat. An app you move to another channel is remembered
 ([section 3.3](#apps)).
 
 **Profiles** are named scenes: the interface's hardware settings plus
-the whole submixer (sends, masters, monitor outputs, aux state, insert
+the whole submixer (sends, channel volumes, masters, monitor outputs, aux state, insert
 chains). They are saved per interface. Application routing and the
 system default devices are not part of a profile, so recalling one
 does not rewire the desktop.
@@ -175,7 +186,8 @@ button and never takes the click meant for it.
 ### Precise fader adjustments
 
 Mixer and device faders move in their displayed units: one percentage point
-for sends, mix masters and monitor volume, one unit for hardware controls.
+for sends, channel volumes, mix masters and monitor volume, one unit for
+hardware controls.
 Focus a fader and use the arrow keys for one step, or Page Up and Page Down
 for ten. Hold Shift before dragging for one tenth of the normal sensitivity,
 so a short fader can still reach an exact value. Release the pointer to end
@@ -1271,7 +1283,10 @@ virtual microphone after saving a profile, and recalling that profile
 leaves the new one as it is: its sends stay closed, the way a new
 channel or mix starts, instead of opening at full level because an
 older profile had nothing to say about them. Save the profile again to
-take the new sends into it.
+take the new sends into it. The same goes for a channel's
+[volume](#channel-volume): a channel the profile does not know keeps its
+volume, and a channel it knows but saved before channel volumes existed
+goes back to 100%.
 
 **Restoring settings on connect.** For the original Wave XLR and first
 XLR Dock, OpenXLR restores the last settings it observed. This policy
@@ -1454,8 +1469,9 @@ wherever the skin puts the header, so the way back is always there.
 A skin can also draw INPUTS as a rack, one strip per channel, and the
 SUBMIXER as mix banks ([Templates](skins.md#templates)). The rack holds
 the INPUTS panel's own controls: an XLR input's gain, switches and plugin
-chain, Aux In's level and lock, and the name and meter of every other
-channel. What your interface does not have stays hidden, as in the panel.
+chain, Aux In's level and lock, and the name, meter and
+[volume](#channel-volume) of every other channel. What your interface does
+not have stays hidden, as in the panel.
 
 Each mix bank shows one mix: every channel's send into it and the mix's
 master. The picker at the top of a bank lists every mix that is not
@@ -1596,7 +1612,8 @@ The head at the start of each row carries the channel's icon and name and
 what INPUTS would show for it. XLR 1 and XLR 2 have their mute, their gain
 with the meter under it, and **FX**, which opens their plugin chain; the
 gain lock and phantom power's settling time still apply. Aux In has its
-level and **Lock**. An application or capture channel has its meter only.
+level and **Lock**. An application or capture channel has its
+[volume](#channel-volume), with its meter under it.
 XLR 2 has a row only on an interface with two XLR inputs. The head at the
 top of each column carries the mix's icon and name, how many outputs ticked in
 MONITOR hear it (or what kind of mix it is when none does), a thin line in
@@ -2015,14 +2032,16 @@ heard.
 
 **Dial** (an encoder) changes a level: the monitor output volume, a
 gain, a headphone volume, the aux level, the crossfade, a mix master, a
-channel's send into one mix or into all mixes, a desktop output's volume
+channel's send into one mix or into all mixes, an application or capture
+channel's [volume](#channel-volume), a desktop output's volume
 (the system default or a named output, up to 150%), or one control of an
 insert. The touch strip shows a knob, a level meter, the value and a
 mute overlay. The title sits beside the icon without overlapping it, and a
 title too long for its space scrolls. A dial without a usable target shows
 OpenXLR as its title, with "set up" or "offline" as the value, until it is
 configured. Pressing the dial mutes (or, for a gain, mutes the input;
-for the crossfade, recentres). A dial can hold several targets, cycled
+for the crossfade, recentres; for a channel volume, mutes or unmutes the
+channel in every mix, as a dial on its sends in all mixes does). A dial can hold several targets, cycled
 by tap or press as chosen in its settings. A turn leads: the strip
 follows the dial at once and each tick steps from the value shown, while
 the daemon hears the first tick immediately and a fast turn as a short
@@ -2533,8 +2552,11 @@ send is toggled. With a generic microphone as XLR 1 there is no hardware
 mute, so the XLR 1 key mutes its send into the chosen mix like any other
 channel's. Up and down choose a channel, starting with the
 masters. Left and right choose the destination mix. The line above the
-key hints names the exact send or master under the cursor. Monitor masters
-can reach 150%; other masters and channel sends stop at 100%.
+key hints names the exact send or master under the cursor, and the
+channel's own [volume](#channel-volume) when the channel has one. Monitor
+masters can reach 150%; other masters, channel volumes and channel sends
+stop at 100%. The Matrix section shows an application or capture channel's
+volume beside its name.
 
 Above the strips, the selected mix has a stereo meter, a large held RMS
 reading and fifteen seconds of level history. Meters read -60 to 0 dBFS
@@ -2579,6 +2601,7 @@ Controls below the visible hardware cards appear as the selection moves.
 | Mixer | Home, End | choose the masters or the last channel |
 | Mixer | Space | mute or unmute the selected master or send |
 | Mixer | `-`, `+`, `[`, `]` | lower or raise the level by five points, or by one point |
+| Mixer, Matrix | `<`, `>`, `,`, `.` | lower or raise the selected application or capture channel's volume by five points, or by one point |
 | Mixer | `M` | add a monitor mix |
 | Mixer | `r`, `n`, `N`, `c`, `d` | rename, add an application channel, add a virtual microphone, add a capture input, or delete |
 | Mixer | Ctrl+Left/Right | move the selected channel or user mix one strip along, past hidden ones to the next strip shown |
