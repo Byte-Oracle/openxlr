@@ -53,10 +53,10 @@ by side; paging never leaves part of a neighbouring strip visible.
 
 The bracketed key mutes that send or master. An XLR strip also has a
 `Mic on` or `Mic muted` button for its hardware mute, which affects every
-destination. Those are separate controls. In generic microphone mode,
-where XLR 1 takes a PipeWire source and no Elgato unit is driven, the
-button reads `Generic mic` and stays disabled, because the daemon has no
-hardware mute to set; the bracketed send mutes still work. The tooltip
+destination. Those are separate controls. While XLR 1 takes another
+PipeWire source, the button reads `Generic mic` and stays disabled, because
+the interface's hardware mute no longer acts on that strip; the bracketed
+send mutes still work. The tooltip
 then starts with `Generic mic:`, the source's description and its port,
 and `not linked` while the route into XLR 1 is missing. A fader sends its value on
 release; focused faders also take the arrow keys in one-percentage-point

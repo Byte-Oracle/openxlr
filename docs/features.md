@@ -247,22 +247,29 @@ steps. Shift-drag reduces pointer sensitivity tenfold for short faders.
 Device controls step in their displayed units; plugin parameter steps are
 unchanged.
 
-### Generic primary microphone
+### Another microphone on XLR 1 or XLR 2
 
-Options can bind XLR 1 to any external PipeWire capture source and one of its
-mono ports, without an Elgato interface. The existing sends, software DSP,
-inserts, Sound Check and meters process that microphone. A missing source
-stays selected and silent until it returns. The picker names each port by
-its channel position and leaves out the sources of supported interfaces,
-which automatic mode drives instead. A Wave XLR Pro monitor output moves to
-an ordinary output for the length of generic mode. Source and port changes keep
-channel nodes and application routing, and start monitoring muted.
-Generic mode releases Elgato USB control, hides hardware-only controls and
-keeps separate mixer-only profiles. The saved source is machine wiring,
-independent of profile recall. Automatic mode resumes Elgato control.
-The terminal mixer names the source in its header and picks it from its
+XLR 1 and XLR 2 can each be bound to one mono port of any external PipeWire
+capture source; Options binds XLR 1 and the API either strip. The existing
+sends, software DSP, inserts, Sound Check and meters process that
+microphone. A missing source stays selected and silent until it returns. The
+picker names each port by its channel position and leaves out the sources of
+supported interfaces, which the header's interface picker drives instead.
+Source and port changes keep channel nodes and application routing, and
+start that strip's monitoring muted. The binding is machine wiring,
+independent of profile recall.
+
+The Elgato interface stays driven whatever the strips take: headphones,
+the dial, output selectors, USB Aux, additional interfaces, recall on
+connect and the gain lock keep working, and the other strips keep its
+audio. Its microphone can stay in the mixer as a capture channel, which
+then carries the interface's first input, and on a Wave XLR Pro the
+zero-latency path to the jacks follows that channel. With no interface
+connected, profiles live under `generic` and hold the mixer scene only.
+The terminal mixer names XLR 1's source in its header and picks it from its
 Options tab. Stream Deck keys and the Omarchy bar keep XLR 1's sends and
-send mutes working, and their hardware controls say Generic mic.
+send mutes working, and their hardware controls say Generic mic until they
+learn which channel carries the interface's input.
 
 ### External capture channels
 

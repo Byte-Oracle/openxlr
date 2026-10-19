@@ -62,6 +62,18 @@ those outputs by the first two names above. If the first name that matches
 anything matches two cards, it changes neither card's profile and lists no
 outputs for either.
 
+XLR 1 and XLR 2 can each be bound to another capture source instead
+([input bindings](api.md#input-bindings)). A bound strip takes one port of
+that source, named exactly, and no step above applies to it. The rules above
+still find the node for Aux In and for a strip left on the interface, and
+the units stay driven whatever the strips take. Their outputs, controls,
+recall and additional roles do not change. The primary's microphone input 1
+then belongs to the first capture channel on its own node at its first port,
+the same channel **Add input channel** below makes for microphone 1, and
+that channel takes the unit's controls and, on a Wave XLR Pro, the direct
+microphone path to the jacks. Until such a channel exists, the input is not
+in the mixer.
+
 ## Additional interfaces
 
 Options, INTERFACE, **Additional interfaces** lists every attached unit, and

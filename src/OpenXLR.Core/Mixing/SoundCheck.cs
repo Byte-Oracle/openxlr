@@ -57,12 +57,15 @@ public sealed partial class Mixer
             if (_soundCheckChannel is not null && _soundCheckChannel != channel)
                 throw new InvalidOperationException("Stop Sound Check on the other microphone first.");
             // Each strip records from its own source: the interface's pair or
-            // the port the strip is bound to.
-            if (!_built || !_stripSources.TryGetValue(channel, out string? device) || !_inputFeeds.ContainsKey(channel))
-                throw new InvalidOperationException("The microphone is not connected.");
+            // the port the strip is bound to. The refusal is the strip's own
+            // bindingConnected, with its bindingWarning when it has one.
+            ChannelDefinition input = _config.Channels.Single(c => c.Id == channel);
+            if (!_built || !BindingConnectedLocked(input) || !_stripSources.TryGetValue(channel, out string? device))
+                throw new InvalidOperationException(BindingWarningLocked(input) is { } why
+                    ? $"The microphone is not connected. {input.Name}: {why}"
+                    : "The microphone is not connected.");
             if (action == "record" && _soundCheck is null)
             {
-                ChannelDefinition input = _config.Channels.Single(c => c.Id == channel);
                 FilterHandle filter = _pw.CreateSoundCheck(channel, out int rate);
                 PortLink? feed = null;
                 try

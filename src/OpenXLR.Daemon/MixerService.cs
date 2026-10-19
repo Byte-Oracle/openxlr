@@ -67,11 +67,7 @@ public sealed class MixerService : IHostedService, IDisposable
         _lifetime = lifetime;
         EditorPolicy = editorPolicy ?? new NativeEditorPolicy();
         _pipeWire = new PipeWireAdapter(_progress.Mark, note => _log.LogInformation("{msg}", note));
-        _mixer = new(_pipeWire)
-        {
-            InputNote = note => _log.LogWarning("hardware input: {note}", note),
-            IsSupportedUnitNode = node => devices.SupportedUnitFor(node) is not null,
-        };
+        _mixer = new(_pipeWire) { InputNote = note => _log.LogWarning("hardware input: {note}", note) };
         _saves = new SettingsSaver(
             () => _mixer.ExportSettings().Save(),
             error =>
@@ -116,11 +112,11 @@ public sealed class MixerService : IHostedService, IDisposable
 
     private void SyncOutputSelectors()
     {
-        if (!_devices.HardwareEnabled || _devices.ActiveCapabilities?.OutputRouting is not true)
+        if (_devices.ActiveCapabilities?.OutputRouting is not true)
         {
             // A saved Pro jack is not evidence of a live hardware mic path.
-            // Keep software monitoring while USB control is absent, and
-            // re-arm the Aux stream when the interface can be driven again.
+            // Keep software monitoring while no Pro is driven, and re-arm the
+            // Aux stream when one is again.
             _mixer.SetHardwareMicMonitor(false);
             _prevAuxDesired = false;
             return;
@@ -153,18 +149,20 @@ public sealed class MixerService : IHostedService, IDisposable
         // stream while USB return pair 2/3 is a member, which Wave Link on
         // Windows may have cleared, so it is asserted whenever a jack is the
         // monitor output. The mic's zero-latency hardware path follows the
-        // XLR 1 -> Monitor send's mute, but only while every monitor output is
-        // a Pro jack: with another device in the set the software send has
-        // to carry the mic there, and the hardware path would double it.
+        // Monitor send's mute of the channel that carries the Pro's input 1:
+        // XLR 1 on the interface, or the capture channel kept for the Pro's
+        // microphone while XLR 1 is bound to another source, and off while
+        // no channel carries it. Only while every monitor output is a Pro
+        // jack: with another device in the set the software send has to
+        // carry the mic there, and the hardware path would double it.
         bool anyJack = suffixes.Contains("hp1") || suffixes.Contains("hp2") || suffixes.Contains("lineout");
         bool jacksOnly = anyJack && _mixer.MonitorOutputs.All(o => o.Contains('#'));
         // With a summed feed (A+B) the mic rides the hardware path as soon as
         // any of the summed mixes carries it.
         string jackFeed = _mixer.JackMonitorMix ?? "monitor";
-        // The mixer refuses the path while XLR 1 is in an exclusive group or
-        // under Sound Check.
-        bool micDirect = _mixer.SetHardwareMicMonitor(jacksOnly && _mixer.IsMonitorOnlyFeed(jackFeed)
-            && OpenXLR.Core.Mixing.MonitorFeed.Parts(jackFeed).Any(m => !_mixer.IsChannelMutedIn("xlr1", m)));
+        // The mixer refuses the path while that channel is in an exclusive
+        // group or under Sound Check, and reads its mutes under its own lock.
+        bool micDirect = _mixer.SetHardwareMicMonitor(jacksOnly && _mixer.IsMonitorOnlyFeed(jackFeed), whenHeardIn: jackFeed);
         if (anyJack && _devices.EnsureHeadphoneMix(monitorReturn: true, micDirect: micDirect) && _mixer.Built)
             _mixer.BounceMonitorHardwareOutput();
     }
@@ -468,18 +466,18 @@ public sealed class MixerService : IHostedService, IDisposable
                 {
                     // setPrimaryInput is the earlier form, with channel "xlr1".
                     string strip = cmd.Cmd == "setPrimaryInput" ? "xlr1" : cmd.Channel!;
-                    // A supported unit's node is no source for a strip yet:
-                    // XLR 1 bound to a source releases every unit, its card
-                    // would go back to the profile it had and the node could
-                    // vanish under the strip.
+                    // A supported unit's node is not a source for a strip yet.
+                    // Driving a unit can switch its card profile and rename
+                    // the node under the strip, and its controls are not
+                    // shown on the strip; both arrive with driven source units.
                     if (cmd.Source is not null && _devices.SupportedUnitFor(cmd.Source) is { } unit)
                         return cmd.Cmd == "setPrimaryInput"
                             ? $"setPrimaryInput: {cmd.Source} belongs to the {unit.Name}, which OpenXLR supports. Choose Automatic Elgato interface and pick that unit as the primary interface instead."
                             : $"setInputBinding: {cmd.Source} belongs to the {unit.Name}, which OpenXLR supports. Pick that unit as the primary interface instead.";
                     _saves.RunSaved(() => _mixer.SetInputBinding(strip, cmd.Source is null ? null
                         : new SourceBinding(cmd.Source, 0, cmd.CaptureMonoChannel ?? 0), settings => settings.Save()));
-                    _devices.SetHardwareEnabled(_mixer.InputBinding("xlr1") is null);
-                    UpdateInputDeviceHint();
+                    // The interface stays driven whatever the strips take; the
+                    // Pro's direct path follows the channel carrying input 1.
                     SyncOutputSelectors();
                     Changed?.Invoke();
                     return null;
@@ -519,13 +517,16 @@ public sealed class MixerService : IHostedService, IDisposable
                             default: _mixer.SetLayoutOrder(cmd.Channels!, cmd.Mixes!, save); break;
                         }
                     });
-                    if (cmd.Cmd is "setExclusiveGroup" or "deleteExclusiveGroup")
-                        SyncOutputSelectors();   // grouping XLR 1 takes it off the Pro's hardware mic path
+                    // Grouping the channel that carries the Pro's input 1 takes
+                    // it off the hardware mic path; a capture channel made,
+                    // removed or moved can change which channel carries it.
+                    if (cmd.Cmd is "setExclusiveGroup" or "deleteExclusiveGroup" or "createCaptureChannel" or "deleteChannel" or "setLayoutOrder")
+                        SyncOutputSelectors();
                     Changed?.Invoke();
                     return null;
                 case "cycleExclusiveGroup":
                     _mixer.CycleExclusiveGroup(cmd.Group!);
-                    SyncOutputSelectors();   // the XLR 1 mute may move the Pro's hardware mic path
+                    SyncOutputSelectors();   // the input 1 channel's mute may move the Pro's hardware mic path
                     break;
                 case "setLevel":
                     if (cmd.Channel is null || cmd.Mix is null) return "setLevel: need 'channel' and 'mix'";
@@ -534,7 +535,7 @@ public sealed class MixerService : IHostedService, IDisposable
                 case "setChannelMuted":
                     if (cmd.Channel is null || cmd.Mix is null) return "setChannelMuted: need 'channel' and 'mix'";
                     _mixer.SetChannelMuted(cmd.Channel, cmd.Mix, cmd.Value.GetBoolean());
-                    SyncOutputSelectors();   // the XLR 1 mute may move the Pro's hardware mic path
+                    SyncOutputSelectors();   // the input 1 channel's mute may move the Pro's hardware mic path
                     break;
                 case "setChannelVolume":
                     if (cmd.Channel is null) return "setChannelVolume: need 'channel'";
@@ -608,7 +609,7 @@ public sealed class MixerService : IHostedService, IDisposable
                     break;
                 case "soundCheck":
                     _mixer.SoundCheck(cmd.Channel!, cmd.Action!);   // both checked by CommandValidation
-                    SyncOutputSelectors();   // a loop on XLR 1 takes the Pro's hardware mic path off
+                    SyncOutputSelectors();   // a loop on the input 1 channel takes the Pro's hardware mic path off
                     Changed?.Invoke();
                     return null;   // a session is never saved
                 case "setInserts":

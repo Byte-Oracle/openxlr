@@ -225,6 +225,58 @@ public sealed class ExclusiveGroupTests
         Assert.True(f.Mixer.SetHardwareMicMonitor(true));
     }
 
+    /// <summary>
+    /// The path follows the channel that carries the Pro's input 1. While XLR 1
+    /// is bound to another source, that is the capture channel on the unit's
+    /// node at port 1, whose send is the one silenced, and an exclusive group
+    /// or a mute takes it off the path as it would XLR 1. With no channel
+    /// carrying the input, the path stays off.
+    /// </summary>
+    [Fact]
+    public void TheProHardwareMonitorPathFollowsTheChannelCarryingInput1()
+    {
+        const string unit = "alsa_input.usb-Elgato_Systems_Elgato_Wave_XLR_Pro_SER-00.pro-input-0";
+        using var f = new Sends(new ChannelDefinition("promic", "Pro mic") { CaptureSource = unit, CapturePair = 0, CaptureMonoChannel = 0 });
+        typeof(Mixer).GetField("_inputDevice", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(f.Mixer, unit);
+        f.Mixer.SetChannelMuted("xlr1", "monitor", false);
+        f.Mixer.SetChannelMuted("promic", "monitor", false);
+        Assert.Equal("xlr1", f.Mixer.HardwareMicChannel);
+        f.Clear();
+        Assert.True(f.Mixer.SetHardwareMicMonitor(true, whenHeardIn: "monitor"));
+        Assert.Equal(["set-sink-input-mute 10 1"], f.Mutes);
+
+        // XLR 1 on a webcam: the capture channel carries input 1, and the
+        // binding change turns the path off until the daemon asks again.
+        f.Clear();
+        f.Mixer.SetInputBinding("xlr1", new("webcam"));
+        Assert.Equal("promic", f.Mixer.HardwareMicChannel);
+        Assert.Contains("set-sink-input-mute 10 1", f.Mutes);   // the console rule, not the path
+        Assert.DoesNotContain("set-sink-input-mute 20 1", f.Mutes);
+        f.Clear();
+        Assert.True(f.Mixer.SetHardwareMicMonitor(true, whenHeardIn: "monitor"));
+        Assert.Equal(["set-sink-input-mute 20 1"], f.Mutes);
+        f.Mixer.SetChannelMuted("xlr1", "monitor", false);
+        Assert.Contains("set-sink-input-mute 10 0", f.Mutes);   // XLR 1's send is its own now
+
+        // A muted or grouped carrier leaves the path.
+        f.Mixer.SetChannelMuted("promic", "monitor", true);
+        Assert.False(f.Mixer.SetHardwareMicMonitor(true, whenHeardIn: "monitor"));
+        f.Mixer.SetChannelMuted("promic", "monitor", false);
+        f.Clear();
+        f.Mixer.SetExclusiveGroup(null, "Microphones", ["xlr1", "promic"], _ => null);
+        Assert.False(f.Mixer.SetHardwareMicMonitor(true));
+        f.Mixer.DeleteExclusiveGroup("microphones", _ => null);
+        Assert.True(f.Mixer.SetHardwareMicMonitor(true));
+        f.Mixer.SetChannelMuted("promic", "monitor", false);   // the group closed it; open it again under the path
+
+        // The unit's node gone: nothing carries input 1, so the path is off.
+        typeof(Mixer).GetField("_inputDevice", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(f.Mixer, null);
+        Assert.Null(f.Mixer.HardwareMicChannel);
+        f.Clear();
+        Assert.False(f.Mixer.SetHardwareMicMonitor(true));
+        Assert.Equal(["set-sink-input-mute 20 0"], f.Mutes);   // the capture channel's send is restored
+    }
+
     private sealed class Sends : IDisposable
     {
         private readonly string _dir = Directory.CreateTempSubdirectory("openxlr-exclusive-").FullName;
@@ -237,7 +289,7 @@ public sealed class ExclusiveGroupTests
 
         // Two channels (xlr1, xlr2) by two mixes (monitor, stream), every send
         // muted at unity. Leg indexes are channel * 10 + mix: 10, 11, 20, 21.
-        public Sends()
+        public Sends(ChannelDefinition? second = null)
         {
             ExecutableScript.Write(Path.Combine(_dir, "pactl"), """
                 dir=${0%/*}
@@ -257,15 +309,16 @@ public sealed class ExclusiveGroupTests
             typeof(Mixer).GetField("_built", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(Mixer, true);
             typeof(Mixer).GetField("_config", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(Mixer, new MixerConfig
             {
-                Channels = [new("xlr1", "Mic 1"), new("xlr2", "Mic 2")],
+                Channels = [new("xlr1", "Mic 1") { InputPair = 0 }, second ?? new("xlr2", "Mic 2") { InputPair = 1 }],
                 Mixes = [new("monitor", "Monitor", MixKind.Monitor), new("stream", "Stream", MixKind.VirtualMic)],
             });
+            string[] ids = ["xlr1", second?.Id ?? "xlr2"];
             foreach (int ch in new[] { 1, 2 })
             {
-                Field<Dictionary<string, uint>>("_combineModules")["xlr" + ch] = (uint)ch;
+                Field<Dictionary<string, uint>>("_combineModules")[ids[ch - 1]] = (uint)ch;
                 foreach (int m in new[] { 0, 1 })
                 {
-                    string cell = $"xlr{ch}|{(m == 0 ? "monitor" : "stream")}";
+                    string cell = $"{ids[ch - 1]}|{(m == 0 ? "monitor" : "stream")}";
                     Field<HashSet<string>>("_cells").Add(cell);
                     Field<HashSet<string>>("_muted").Add(cell);
                     Field<Dictionary<string, double>>("_levels")[cell] = 1;

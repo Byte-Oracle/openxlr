@@ -76,35 +76,33 @@ public sealed class WebSocketHub
     internal StateMessage Snapshot()
     {
         StateMessage state = _devices.Snapshot();
-        string? deviceId = _devices.HardwareEnabled ? state.Device?.UsbId : GenericProfileId;
+        string deviceId = ProfileNamespace(state);
         IReadOnlyList<string> profiles = [];
         string? recall = null;
         string? profileWarning = null;
-        if (deviceId is not null)
+        try
         {
-            try
-            {
-                profiles = OpenXLR.Core.ProfileStore.List(deviceId);
-                recall = OpenXLR.Core.ProfileStore.RecallOnConnect(deviceId);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // A broken profile directory or recall marker must not take
-                // the device and mixer controls away from connected clients.
-                profileWarning = $"Profiles could not be read: {ex.Message}";
-            }
+            profiles = OpenXLR.Core.ProfileStore.List(deviceId);
+            // Recall on connect belongs to a unit; nothing arrives in generic.
+            recall = deviceId == GenericProfileId ? null : OpenXLR.Core.ProfileStore.RecallOnConnect(deviceId);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A broken profile directory or recall marker must not take
+            // the device and mixer controls away from connected clients.
+            profileWarning = $"Profiles could not be read: {ex.Message}";
         }
         return state with
         {
             DaemonVersion = OpenXLR.Daemon.DaemonVersion.Current,
             Warning = string.Join(" ", new[] { _devices.Warning, _waveInterfaces?.Warning, _mixer.InputWarning, _mixer.PersistenceWarning, profileWarning }.Where(w => w is not null)) is { Length: > 0 } w ? w : null,
-            ActiveProfile = deviceId is not null && _activeProfile.TryGetValue(deviceId, out string? ap) ? ap : null,
+            ActiveProfile = _activeProfile.TryGetValue(deviceId, out string? ap) ? ap : null,
             Mixer = _mixer.Snapshot(),
             Devices = _mixer.Devices(),
             Profiles = profiles,
             RecallOnConnect = recall,
-            Detected = !_devices.HardwareEnabled ? [] : [.. _devices.Detected().Select(d => new DetectedDevice(d.UsbId, d.Name, d.Active))],
-            WaveInterfaces = _devices.HardwareEnabled ? _waveInterfaces?.Snapshot() : [],
+            Detected = [.. _devices.Detected().Select(d => new DetectedDevice(d.UsbId, d.Name, d.Active))],
+            WaveInterfaces = _waveInterfaces?.Snapshot(),
         };
     }
 
@@ -350,7 +348,7 @@ public sealed class WebSocketHub
             case "setInputBinding":
             case "setPrimaryInput":
             case "setInserts":
-                // Profile recall and microphone-mode changes share this gate.
+                // Profile recall and input binding changes share this gate.
                 // A folder cannot be removed between checking its users and
                 // creating an insert from it on another client.
                 lock (_installGate) error = _mixer.Apply(cmd);
@@ -466,7 +464,7 @@ public sealed class WebSocketHub
         {
             lock (_installGate)
             {
-                if (_devices.HardwareEnabled) return "generic microphone mode ended before profile recall";
+                if (ActiveDeviceId() != GenericProfileId) return "an interface connected before profile recall";
                 OpenXLR.Core.Profile? generic = OpenXLR.Core.ProfileStore.Load(devId, name);
                 string? error = generic is null ? $"no profile named '{name}'"
                     : generic.Mixer is null ? "the profile has no mixer scene" : _mixer.ApplyScene(generic.Mixer);
@@ -509,8 +507,9 @@ public sealed class WebSocketHub
     /// <summary>Choose (or with an empty name clear) the profile recalled on connect.</summary>
     private string? HandleRecallOnConnect(Command cmd)
     {
-        if (!_devices.HardwareEnabled) return "Generic microphone mode restores the saved mixer settings at startup; interface recall is disabled.";
-        if (ActiveDeviceId() is not string devId) return "setRecallOnConnect: no device connected";
+        string devId = ActiveDeviceId();
+        if (devId == GenericProfileId)
+            return "setRecallOnConnect: recall on connect needs a connected interface. With none connected, the mixer starts with its saved settings.";
         try
         {
             if (string.IsNullOrWhiteSpace(cmd.Name))
@@ -591,9 +590,15 @@ public sealed class WebSocketHub
         catch (Exception ex) { _log.LogWarning("recall on connect: {msg}", ex.Message); return null; }
     }
 
-    private const string GenericProfileId = "generic";
-    /// <summary>The profile namespace: the active USB model, generic mode, or null while disconnected.</summary>
-    private string? ActiveDeviceId() => !_devices.HardwareEnabled ? GenericProfileId : _devices.Snapshot().Device?.UsbId;
+    internal const string GenericProfileId = "generic";
+
+    /// <summary>
+    /// The profile namespace: the connected unit's USB model, else
+    /// <c>generic</c>, whatever the strips are bound to.
+    /// </summary>
+    private string ActiveDeviceId() => ProfileNamespace(_devices.Snapshot());
+
+    private static string ProfileNamespace(StateMessage device) => device.Device?.UsbId ?? GenericProfileId;
 
     /// <summary>
     /// Run one install step, then read the catalogues again and say what
@@ -666,19 +671,22 @@ public sealed class WebSocketHub
     {
         string? name = OpenXLR.Core.ProfileStore.SanitizeName(cmd.Name);
         if (name is null) return $"{cmd.Cmd}: missing or invalid 'name'";
-        if (ActiveDeviceId() is not string devId) return $"{cmd.Cmd}: no device connected";
+        string devId = ActiveDeviceId();
         try
         {
             switch (cmd.Cmd)
             {
                 case "saveProfile":
                     OpenXLR.Core.MixerScene? scene = _mixer.ExportScene();
-                    if (devId == GenericProfileId && scene is null)
-                        return "saveProfile: the mixer must be running to save a generic microphone profile";
+                    // With no interface connected a profile is the mixer scene
+                    // alone, so it needs a running mixer.
+                    bool generic = devId == GenericProfileId;
+                    if (generic && scene is null)
+                        return "saveProfile: with no interface connected a profile holds only the mixer, which is not running";
                     OpenXLR.Core.ProfileStore.Save(devId, name, new OpenXLR.Core.Profile
                     {
-                        Device = _devices.Snapshot().State,
-                        AdditionalDevices = _waveInterfaces?.CaptureProfile() is { Count: > 0 } additional ? additional : null,
+                        Device = generic ? null : _devices.Snapshot().State,
+                        AdditionalDevices = !generic && _waveInterfaces?.CaptureProfile() is { Count: > 0 } additional ? additional : null,
                         Mixer = scene,
                     });
                     _activeProfile[devId] = name;

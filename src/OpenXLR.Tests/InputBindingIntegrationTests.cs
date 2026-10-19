@@ -149,7 +149,7 @@ public sealed partial class MonitorVolumeIntegrationTests
     }
 
     [MonitorPipeWireFact]
-    public async Task SupportedUnitNodesAreRefusedAndProJacksMoveAsideInGenericMode()
+    public async Task SupportedUnitNodesAreRefusedAndTheProKeepsItsJacksWhileXlr1IsBound()
     {
         const string proSink = "alsa_output.usb-Elgato_Elgato_Wave_XLR_Pro_PROSER-00.pro-output-0";
         const string proSource = "alsa_input.usb-Elgato_Elgato_Wave_XLR_Pro_PROSER-00.pro-input-0";
@@ -181,7 +181,6 @@ public sealed partial class MonitorVolumeIntegrationTests
             string? refused = mixer.Apply(new() { Cmd = "setPrimaryInput", Source = proSource });
             Assert.Contains("Elgato Wave XLR Pro", refused);
             Assert.Contains("Automatic", refused);
-            Assert.True(devices.HardwareEnabled);
             Assert.Null(mixer.Snapshot()!.PrimaryInput);
             Assert.Contains("Elgato Wave XLR Pro", mixer.Apply(new() { Cmd = "setInputBinding", Channel = "xlr2", Source = proSource }));
             Assert.Null(mixer.Snapshot()!.Channels.Single(c => c.Id == "xlr2").Binding.Source);
@@ -189,65 +188,27 @@ public sealed partial class MonitorVolumeIntegrationTests
             Assert.Null(mixer.Apply(new() { Cmd = "setMonitorOutputs", Devices = [jack] }));
             Assert.Null(mixer.Apply(new() { Cmd = "setMonitorFeed", Device = jack, Mix = "monitor+monitor2" }));
 
-            // The default output is the unit's own sink: never a replacement, and
-            // test sinks are not hardware, so the monitor goes silent and says so.
-            pw.SetDefaultSink(proSink);
-            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput", Source = "generic_cam" }));
-            Assert.False(devices.HardwareEnabled);
-            Assert.Empty(mixer.Snapshot()!.MonitorOutputs);
-            Assert.Contains("monitor is silent", mixer.InputWarning);
-            Assert.Equal([jack], MixerSettings.Load()!.MonitorOutputs);
-            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput" }));
-            Assert.Equal([jack], mixer.Snapshot()!.MonitorOutputs);
-            Assert.DoesNotContain("Wave XLR Pro outputs", mixer.InputWarning ?? "");
-
-            // An ordinary default output takes the jack's place, for the whole
-            // generic session and across a restart, and the jack comes back with
-            // its feed in automatic mode.
+            // XLR 1 on a webcam leaves the unit driven and its jack where it
+            // was, whatever the default output is: nothing is set aside.
             pw.SetDefaultSink(speakers);
             Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput", Source = "generic_cam", CaptureMonoChannel = 1 }));
-            Assert.Equal([speakers], mixer.Snapshot()!.MonitorOutputs);
-            Assert.Contains("Desk speakers", mixer.InputWarning);
-            PrimaryWait(() => IncomingRouteLinks(speakers).Length >= 2);
-            MixerSettings saved = MixerSettings.Load()!;
-            Assert.Equal([jack], saved.MonitorOutputs);
-            Assert.Equal("monitor+monitor2", saved.MonitorFeeds[jack]);
-            await mixer.StopAsync(CancellationToken.None);
-            mixer.Dispose();
-            using var restartedDevices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => [pro]);
-            restartedDevices.SweepOnce();
-            mixer = new MixerService(NullLogger<MixerService>.Instance, config, restartedDevices);
-            await mixer.StartAsync(CancellationToken.None);
-            Assert.False(restartedDevices.HardwareEnabled);
-            Assert.Equal([speakers], mixer.Snapshot()!.MonitorOutputs);
-            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput" }));
+            for (int i = 0; i < 3; i++) { devices.SweepOnce(); mixer.SweepOnce(); }
+            Assert.True(pro.Connected);
+            Assert.True(devices.Snapshot().Connected);
             Assert.Equal([jack], mixer.Snapshot()!.MonitorOutputs);
             Assert.Equal("monitor+monitor2", mixer.Snapshot()!.MonitorFeeds[jack]);
+            Assert.Empty(IncomingRouteLinks(speakers));
+            Assert.Null(mixer.InputWarning);
             Assert.Equal([jack], MixerSettings.Load()!.MonitorOutputs);
-
-            // With another output beside the jack the monitor stays there, and
-            // the saved order is kept: the first output is the one follow mode uses.
-            Assert.Null(mixer.Apply(new() { Cmd = "setMonitorOutputs", Devices = [speakers, jack] }));
-            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput", Source = "generic_cam" }));
-            Assert.Equal([speakers], mixer.Snapshot()!.MonitorOutputs);
-            Assert.Contains("other selected outputs", mixer.InputWarning);
-            Assert.Equal([speakers, jack], MixerSettings.Load()!.MonitorOutputs);
             Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput" }));
-            Assert.Equal([speakers, jack], mixer.Snapshot()!.MonitorOutputs);
-
-            // An output the user picks in generic mode is theirs, so automatic mode keeps it beside the jack.
-            Assert.Null(mixer.Apply(new() { Cmd = "setMonitorOutputs", Devices = [jack] }));
-            Assert.Null(mixer.Apply(new() { Cmd = "setInputBinding", Channel = "xlr1", Source = "generic_cam" }));
-            Assert.Equal([speakers], mixer.Snapshot()!.MonitorOutputs);
-            Assert.Null(mixer.Apply(new() { Cmd = "setMonitorOutputs", Devices = [speakers] }));
-            Assert.DoesNotContain("Wave XLR Pro outputs", mixer.InputWarning ?? "");
-            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput" }));
-            Assert.Equal([jack, speakers], mixer.Snapshot()!.MonitorOutputs);
+            Assert.Equal([jack], mixer.Snapshot()!.MonitorOutputs);
+            Assert.True(pro.Connected);
         }
         finally
         {
             if (mixer.Built) await mixer.StopAsync(CancellationToken.None);
             mixer.Dispose();
+            devices.SuspendSession();
             pw.TearDown();
             File.Delete(MixerSettings.DefaultPath);
         }
@@ -321,7 +282,7 @@ public sealed partial class MonitorVolumeIntegrationTests
     }
 
     [MonitorPipeWireFact]
-    public async Task GenericCommandsPersistAcrossRestartAndProfilesContainOnlyTheMixer()
+    public async Task BindingCommandsPersistAcrossRestartAndGenericProfilesContainOnlyTheMixer()
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["mixer"] = "true" }).Build();
         using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => []);
@@ -332,7 +293,6 @@ public sealed partial class MonitorVolumeIntegrationTests
         try
         {
             Assert.True((await hub.ExecuteForApiAsync("""{"cmd":"setPrimaryInput","source":"unplugged.mic","captureMonoChannel":2}""")).Ok);
-            Assert.False(devices.HardwareEnabled);
             Assert.Equal(new SourceBinding("unplugged.mic", 0, 2), MixerSettings.Load()!.InputBindings!["xlr1"]);
             Assert.True((await hub.ExecuteForApiAsync("""{"cmd":"setInputBinding","channel":"xlr2","source":"unplugged.mic","captureMonoChannel":3}""")).Ok);
             Assert.False((await hub.ExecuteForApiAsync("""{"cmd":"setInputBinding","channel":"aux","source":"unplugged.mic"}""")).Ok);
@@ -349,6 +309,7 @@ public sealed partial class MonitorVolumeIntegrationTests
             Assert.Equal(new("unplugged.mic", 2), mixer.Snapshot()!.PrimaryInput);
             Assert.Equal(new ChannelBinding("source", "unplugged.mic", 0, 3), mixer.Snapshot()!.Channels.Single(c => c.Id == "xlr2").Binding);
             Assert.False((await hub.ExecuteForApiAsync("""{"cmd":"set","control":"phantom","value":true}""")).Ok);
+            // With no interface connected the profiles are generic, and recall on connect belongs to a unit.
             Assert.False((await hub.ExecuteForApiAsync("""{"cmd":"setRecallOnConnect","name":"Generic test"}""")).Ok);
             await mixer.StopAsync(CancellationToken.None);
             using var restoredDevices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => []);
@@ -356,12 +317,10 @@ public sealed partial class MonitorVolumeIntegrationTests
             await restored.StartAsync(CancellationToken.None);
             try
             {
-                Assert.False(restoredDevices.HardwareEnabled);
                 Assert.Equal(new("unplugged.mic", 2), restored.Snapshot()!.PrimaryInput);
                 Assert.Equal(new ChannelBinding("source", "unplugged.mic", 0, 3), restored.Snapshot()!.Channels.Single(c => c.Id == "xlr2").Binding);
                 Assert.Null(restored.Apply(new() { Cmd = "setInputBinding", Channel = "xlr1" }));
-                // Only XLR 1 on a source releases the units; XLR 2 keeps its binding.
-                Assert.True(restoredDevices.HardwareEnabled);
+                // Each strip keeps its own binding.
                 Assert.False(MixerSettings.Load()!.InputBindings!.ContainsKey("xlr1"));
                 Assert.True(MixerSettings.Load()!.InputBindings!.ContainsKey("xlr2"));
             }
@@ -384,7 +343,6 @@ public sealed partial class MonitorVolumeIntegrationTests
         try
         {
             new DaemonSettings { Submixer = true }.Save();
-            Assert.Null(new MixerSettings { PrimaryInput = new("unplugged.microphone") }.Save());
             var scene = new MixerScene { MixVolumes = new() { ["monitor"] = .42 } };
             ProfileStore.Save("generic", "Existing", new Profile { Mixer = scene });
             var config = new ConfigurationBuilder().Build();
@@ -392,7 +350,7 @@ public sealed partial class MonitorVolumeIntegrationTests
             using var mixer = new MixerService(NullLogger<MixerService>.Instance, config, devices);
             using var lifetime = new PrimaryTestLifetime();
             var hub = new WebSocketHub(devices, mixer, NullLogger<WebSocketHub>.Instance, lifetime);
-            Assert.False(devices.HardwareEnabled);
+            Assert.False(devices.Snapshot().Connected);   // no interface: the generic profiles
             Assert.False(mixer.Built);
             Assert.False((await hub.ExecuteForApiAsync("""{"cmd":"saveProfile","name":"Existing"}""")).Ok);
             Assert.Equal(.42, ProfileStore.Load("generic", "Existing")!.Mixer!.MixVolumes["monitor"]);

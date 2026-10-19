@@ -167,29 +167,32 @@ public sealed class WaveInterfaceTests : IDisposable
         manager.SuspendSession();
     }
 
+    /// <summary>
+    /// A saved strip binding is machine wiring for the mixer only: the
+    /// primary and an additional unit are both driven beside it, and their
+    /// controls answer.
+    /// </summary>
     [Fact]
-    public async Task GenericModeReleasesAdditionalUnitsWithoutForgettingTheirChoices()
+    public async Task ABindingKeepsThePrimaryAndAdditionalUnitsDriven()
     {
+        new DaemonSettings { Submixer = true }.Save();
+        Assert.Null(new MixerSettings { InputBindings = new() { ["xlr1"] = new("webcam", 0, 0) } }.Save());
         using var a = new FakeDevice("unitA"); using var b = new FakeDevice("unitB");
         using var primary = Manager(() => [a, b]); primary.SweepOnce();
         using var interfaces = new WaveInterfaces(primary, NullLogger<DeviceManager>.Instance, Configuration, () => [a.Fork(), b.Fork()]);
         await interfaces.StartAsync(CancellationToken.None);
         try
         {
+            Assert.True(a.Connected);
             Wait(() => interfaces.Snapshot().Count == 2);
             Assert.Null(interfaces.SetEnabled(b.Info.InstanceId, true));
             Wait(() => interfaces.Snapshot().Any(s => s.Id == b.Info.InstanceId && s.Connected));
-            primary.SetHardwareEnabled(false);
-            Assert.False(a.Connected);
-            Assert.False(b.Connected);
-            Assert.Empty(interfaces.CaptureProfile());
-            Assert.NotNull(interfaces.Apply(b.Info.InstanceId, "gain", JsonSerializer.SerializeToElement(52)));
-            Assert.NotNull(interfaces.SetEnabled(b.Info.InstanceId, true));
-            Assert.Contains(interfaces.Snapshot(), s => s.Id == b.Info.InstanceId && s.Enabled);
-            primary.SetHardwareEnabled(true);
-            primary.SweepOnce();
-            Wait(() => interfaces.Snapshot().Any(s => s.Id == b.Info.InstanceId && s.Connected));
+            Assert.Null(interfaces.Apply(b.Info.InstanceId, "gain", JsonSerializer.SerializeToElement(52)));
+            Assert.Equal(52, b.Gain);
+            Assert.Equal(52, interfaces.CaptureProfile()[b.Info.InstanceId].GainDb);
+            for (int i = 0; i < 5; i++) primary.SweepOnce();
             Assert.True(a.Connected);
+            Assert.Contains(interfaces.Snapshot(), s => s.Id == b.Info.InstanceId && s.Connected);
         }
         finally { await interfaces.StopAsync(CancellationToken.None); primary.SuspendSession(); }
     }
