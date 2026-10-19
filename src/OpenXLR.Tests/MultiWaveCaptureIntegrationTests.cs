@@ -191,6 +191,7 @@ public sealed partial class MonitorVolumeIntegrationTests
         }
         finally
         {
+            pw.TearDown();
             Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previous);
             Directory.Delete(dir, recursive: true);
         }
