@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenXLR.Daemon;
 
@@ -73,6 +74,43 @@ public sealed class StateBroadcastQueueTests
             stop.Cancel();
             await pump.WaitAsync(TimeSpan.FromSeconds(5));
         }
+    }
+
+    [Fact]
+    public async Task ARepeatedFailureCarriesItsTraceOnceAndRecoveryIsSaid()
+    {
+        using var stop = new CancellationTokenSource();
+        var log = new RecordingLogger<StateBroadcastQueueTests>();
+        var calls = new[] { new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
+            new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
+            new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
+            new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+        int call = 0;
+        var queue = new StateBroadcastQueue(() =>
+        {
+            int n = Interlocked.Increment(ref call) - 1;
+            calls[n].SetResult();
+            if (n < 3) throw new InvalidOperationException("read config block: Operation timed out");
+        }, log);
+        Task pump = queue.RunAsync(stop.Token);
+        try
+        {
+            foreach (var reached in calls)
+            {
+                queue.Signal();
+                await reached.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            Assert.True(SpinWait.SpinUntil(() => log.Entries.Any(e => e.Level == LogLevel.Information), TimeSpan.FromSeconds(5)));
+        }
+        finally
+        {
+            stop.Cancel();
+            await pump.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        var warning = Assert.Single(log.Entries, e => e.Level == LogLevel.Warning);
+        Assert.NotNull(warning.Exception);
+        Assert.Equal(2, log.Entries.Count(e => e.Level == LogLevel.Debug && e.Exception is null));
+        Assert.Contains("recovered", Assert.Single(log.Entries, e => e.Level == LogLevel.Information).Message);
     }
 
     [Fact]

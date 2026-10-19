@@ -94,7 +94,8 @@ public sealed class WaveInterfaces : BackgroundService
     public IReadOnlyList<WaveInterfaceState> Snapshot()
     {
         var available = Volatile.Read(ref _available);
-        string? primary = _primary.ActiveInfo?.InstanceId;
+        // Part of every state message: nothing here waits for a device lock.
+        string? primary = _primary.PublishedInfo?.InstanceId;
         HashSet<string> enabled;
         lock (_preferencesGate) enabled = [.. _enabled];
         var states = available.Select(device =>
