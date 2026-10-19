@@ -36,6 +36,17 @@ const DEVICE_TOGGLES = {
 };
 // Targets whose ON state means "muted" (shown red instead of lit green).
 const MUTE_LIKE = new Set(["mute", "mute2"]);
+// Targets only an Elgato unit can act on: its USB controls, the software gain
+// lock that guards its gain, and the USB Aux port. In generic microphone mode
+// the daemon drives no unit and refuses or ignores all of them.
+const HARDWARE_TARGETS = new Set([
+  ...Object.keys(DEVICE_TOGGLES).filter((t) => t !== "softClipGuard"),
+  "gain", "gain2", "hp", "hp2", "auxLevel", "crossfade", "auxPort",
+]);
+const DIAL_NAMES = {
+  gain: "XLR 1 gain", gain2: "XLR 2 gain", hp: "Phones 1", hp2: "Phones 2",
+  auxLevel: "Aux In level", crossfade: "Mic ↔ PC",
+};
 
 // ---------- daemon connection ----------
 let daemon = null;
@@ -363,6 +374,20 @@ function outputDevices() {
 // ---------- state readers ----------
 const dev = () => daemonState?.state ?? null;
 const mixer = () => daemonState?.mixer ?? null;
+// Generic microphone mode: XLR 1 takes one port of a PipeWire source the user
+// picked, and no Elgato unit is driven. The mixer keys keep working; the
+// hardware keys say why they do nothing instead of looking unsupported.
+const genericMic = () => {
+  const input = mixer()?.primaryInput;
+  return input && typeof input.source === "string" && input.source ? input : null;
+};
+const genericBlocked = (target) => !!target && HARDWARE_TARGETS.has(target) && genericMic() !== null;
+// "Generic mic" over the key's own name, kept to what fits on one line.
+function genericTitle(target) {
+  const lines = (DIAL_NAMES[target] ?? defaultTitle(target)).split("\n");
+  const joined = lines.join(" ");
+  return `Generic mic\n${joined.length <= 11 ? joined : lines.at(-1)}`;
+}
 const mixOf = (id) => mixer()?.mixes?.find((x) => x.id === id);
 const chOf = (id) => mixer()?.channels?.find((x) => x.id === id);
 // The device's highest gain (40 dB on the Wave:3); 80 from a daemon that does not say.
@@ -398,7 +423,7 @@ function deviceTargetSupported(target) {
 // A toggle target's current boolean, or null when unknown. Insert targets
 // need the key's saved meta for id fallback, so they take the instance.
 function toggleValue(target, inst) {
-  if (!target) return null;
+  if (!target || genericBlocked(target)) return null;
   const output = outputKey(target);
   if (output) {
     if (!mixer()) return null;
@@ -819,6 +844,7 @@ function onDialRotate(context, inst, ticks) {
 function onDialPress(context, inst) {
   const t = activeTarget(inst);
   if (!t) return;
+  if (genericBlocked(t)) { send({ event: "showAlert", context }); return; }
   if (t.startsWith("insparam|")) {
     // the press is the insert's bypass, like a dial's mute
     const [, ch, id] = t.split("|");
@@ -1176,7 +1202,8 @@ function refresh(context) {
     const v = toggleValue(t, inst);
     const badge = t === "softLowCut" ? (mixer()?.lowCutHz ? String(mixer().lowCutHz) : "OFF") : "";
     const label = emptyTitle.has(context)
-      ? (daemonUp ? (isInsertTarget(t) || isProfileTarget(t) ? toggleLabel(t, inst) : defaultTitle(t)) : "offline") : "";
+      ? (!daemonUp ? "offline" : genericBlocked(t) ? genericTitle(t)
+        : isInsertTarget(t) || isProfileTarget(t) ? toggleLabel(t, inst) : defaultTitle(t)) : "";
     // The user can pick a glyph per key (a monitor output may be headphones
     // rather than speakers); "auto" or unset keeps the target's default.
     const iconChoice = inst.settings.icon;
@@ -1188,6 +1215,12 @@ function refresh(context) {
     send({ event: "setImage", context,
            payload: { image: keySvg(v === true, isMuteLike(t), v !== null && daemonUp, glyphName, badge, label, offColor, appearance) } });
   } else if (inst.action === "com.emaspa.openxlr.dial") {
+    if (genericBlocked(t)) {
+      send({ event: "setFeedback", context, payload: {
+        title: marqueeTitle(context, DIAL_NAMES[t], "Generic mic"), value: "n/a",
+        unit: { enabled: false }, icon: dialIcon(t), needle: needleSvg(0), muteOverlay: { enabled: false } } });
+      return;
+    }
     const d = dialValue(t, inst);
     const isDb = t === "gain" || t === "gain2";
     send({ event: "setFeedback", context, payload: d

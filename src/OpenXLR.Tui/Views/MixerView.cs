@@ -60,7 +60,7 @@ internal sealed class MixerView : View
             string kind = channel.Hardware ? "INPUT" : channel.CaptureSource is not null ? "CAPTURE" : "APP";
             // An XLR strip is the interface, so its key is the input's own mute;
             // its send into the chosen mix shows as a word where the level goes.
-            string? hardwareMute = HardwareMute(channel);
+            string? hardwareMute = HardwareMute(channel, state);
             bool keyMuted = hardwareMute is null ? channel.IsMuted(selectedMix.Id) : state.Flag(hardwareMute);
             DrawStrip(screen, strip, app, channel.Appearance.Label(channel.Name), kind, channel.Level(selectedMix.Id), 1,
                 keyMuted, app.Link.StereoMeter("ch", channel.Id), _row == index + 1, false,
@@ -86,7 +86,7 @@ internal sealed class MixerView : View
             : $"{selectedChannel.Name} > {selectedMix.Name}";
         double value = selectedChannel?.Level(selectedMix.Id) ?? selectedMix.Volume;
         bool muted = selectedChannel is null ? selectedMix.Muted
-            : HardwareMute(selectedChannel) is { } control ? state.Flag(control) : selectedChannel.IsMuted(selectedMix.Id);
+            : HardwareMute(selectedChannel, state) is { } control ? state.Flag(control) : selectedChannel.IsMuted(selectedMix.Id);
         screen.TextPad(area.X + 1, area.Bottom - 1,
             $" {focus}   {Widgets.Percent(value)}   {(muted ? "MUTED" : "ON")}", area.Width - 2,
             theme.TextPrimary, theme.Selection, bold: true);
@@ -118,9 +118,13 @@ internal sealed class MixerView : View
             maxWidth: bank.Width - 4);
     }
 
-    /// <summary>The device control behind an XLR input's mute, or null for any other channel.</summary>
-    private static string? HardwareMute(ChannelEntry channel) =>
-        channel.Id == "xlr1" ? "mute" : channel.Id == "xlr2" ? "mute2" : null;
+    /// <summary>
+    /// The device control behind an XLR input's mute, or null for any other
+    /// channel. A generic microphone has no hardware mute the daemon accepts,
+    /// so its strip's key is the send mute like every other channel's.
+    /// </summary>
+    private static string? HardwareMute(ChannelEntry channel, Snapshot state) =>
+        state.Generic ? null : channel.Id == "xlr1" ? "mute" : channel.Id == "xlr2" ? "mute2" : null;
 
     private static void DrawStrip(Screen screen, Rect area, App app, string name, string kind,
         double value, double ceiling, bool muted, MeterReading meter, bool focused, bool master,
@@ -266,7 +270,7 @@ internal sealed class MixerView : View
             {
                 case ' ':
                     if (channel is null) app.Link.Send("setMixMuted", body => { body["mix"] = mix.Id; body["value"] = !mix.Muted; });
-                    else if (HardwareMute(channel) is { } control)
+                    else if (HardwareMute(channel, state) is { } control)
                         app.Link.Send("set", body => { body["control"] = control; body["value"] = !state.Flag(control); });
                     else app.Link.Send("setChannelMuted", body =>
                     {

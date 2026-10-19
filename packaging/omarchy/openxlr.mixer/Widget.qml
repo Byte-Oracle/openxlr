@@ -98,7 +98,8 @@ Item {
         feeds.forEach(function (feed) {
             lines.push(Mixer.outputName(daemon.snapshot, feed.output) + ": " + feed.name);
         });
-        return ["OpenXLR"].concat(lines, ["Click for sends and masters"]).join("\n");
+        var generic = Mixer.genericLabel(daemon.snapshot);
+        return ["OpenXLR"].concat(generic ? [generic] : [], lines, ["Click for sends and masters"]).join("\n");
     }
 
     DaemonLink {

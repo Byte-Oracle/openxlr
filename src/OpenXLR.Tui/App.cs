@@ -263,9 +263,18 @@ internal sealed class App
         int bottom = screen.Height - 2;
         // Each input is its gain line, its bar and a blank row, so one
         // input's bar does not run into the next input's name.
-        screen.Text(3, bottom - 10, "INTERFACE", theme.TextMuted, theme.Card);
         Snapshot? state = Link.State;
-        if (state is not null && state.Connected)
+        if (state?.Mixer.PrimaryInput is { Source.Length: > 0 } input)
+        {
+            // Generic mode has no gain to read; the source, its port and the
+            // XLR 1 meter are what there is to see.
+            screen.Text(3, bottom - 10, "GENERIC MIC", theme.TextMuted, theme.Card);
+            screen.Text(3, bottom - 8, state.SourceName(input.Source), theme.TextDetail, theme.Card, maxWidth: 12);
+            Widgets.Meter(screen, 3, bottom - 7, 11, Link.Meter("ch", "xlr1"), theme, theme.Card);
+            screen.Text(3, bottom - 5, state.Mixer.PrimaryInputConnected ? $"port {input.Channel + 1}" : "not linked",
+                state.Mixer.PrimaryInputConnected ? theme.TextDetail : theme.TextWarning, theme.Card, maxWidth: 12);
+        }
+        else if (state is not null && state.Connected)
         {
             int inputs = Math.Min(2, Math.Max(1, state.Count("xlrInputs")));
             for (int i = 0; i < inputs; i++)
@@ -277,6 +286,7 @@ internal sealed class App
             }
         }
         else screen.Text(3, bottom - 8, "Offline", theme.TextMuted, theme.Card);
+        if (state?.Generic != true) screen.Text(3, bottom - 10, "INTERFACE", theme.TextMuted, theme.Card);
         screen.Text(3, bottom - 2, "SKIN", theme.TextMuted, theme.Card);
         screen.Text(3, bottom - 1, theme.Name, theme.TextDetail, theme.Card, maxWidth: 12);
     }
@@ -288,11 +298,15 @@ internal sealed class App
         screen.Fill(0, 0, screen.Width, 1, theme.Card);
 
         screen.Text(1, 0, "OpenXLR", theme.TextPrimary, theme.Card, bold: true);
-        string device = state?.Device is { } descriptor && state.Connected
-            ? $"{descriptor.Vendor} {descriptor.Model}"
-            : state is null ? "waiting for the daemon" : "no interface";
-        Widgets.Lamp(screen, 10, 0, state?.Connected == true, theme, theme.Card,
-            alert: state is not null && !state.Connected);
+        // A generic microphone is the input, not a missing interface: name it,
+        // and light the lamp while its route into XLR 1 is up.
+        string device = state?.GenericLabel is { } generic
+            ? $"Generic mic: {generic}"
+            : state?.Device is { } descriptor && state.Connected
+                ? $"{descriptor.Vendor} {descriptor.Model}"
+                : state is null ? "waiting for the daemon" : "no interface";
+        bool live = state is not null && (state.Generic ? state.Mixer.PrimaryInputConnected : state.Connected);
+        Widgets.Lamp(screen, 10, 0, live, theme, theme.Card, alert: state is not null && !live);
         string right = state?.DaemonVersion is { Length: > 0 } version ? $"v{version}" : Link.Status;
         int rightX = Math.Max(12, screen.Width - right.Length - 2);
         screen.Text(12, 0, device, theme.TextDetail, theme.Card, maxWidth: Math.Max(0, rightX - 14));
@@ -389,6 +403,7 @@ internal sealed class App
             "Profiles  Enter load; s overwrite; r recall; d delete.",
             "          Save settings as creates a profile. Arrows set recall.",
             "Options   Enter use skin; R reload skins; arrows move.",
+            "          Primary microphone: pick a source and port, Enter on Apply.",
             "Lists     Up/Down or PgUp/PgDn move; Enter or Space acts.",
             "Confirm   Enter accepts; Escape cancels. Deletion needs yes.",
             "Meters    RMS -60 to 0 dBFS; hold 1 s, fall 18 dB/s.",

@@ -198,6 +198,7 @@ Options has a tip for step 2: enforcing `OpenXLR Chat` as the system
 default input ([section 3.7](#default-devices)) makes every voice app pick it up without
 configuration.
 
+<a name="generic-microphone"></a>
 #### Use another microphone as XLR 1
 
 In Options, AUDIO, choose **Choose primary microphone...**. Pick the capture
@@ -238,6 +239,11 @@ The port field is only required for a generic source; Automatic can be saved
 with it empty.
 Disabling the software mixer restores hardware-only control. The selected
 generic source is remembered and used again when the software mixer is enabled.
+
+The [terminal mixer](#terminal) makes the same choice on its
+Options tab. On the [Stream Deck](#stream-deck) and the
+[Omarchy bar](#omarchy), XLR 1's sends and send mutes keep working; the
+hardware keys and the bar's mic button show Generic mic instead.
 
 <a name="monitor"></a>
 ### 3.2 Choose what you hear and how loud
@@ -1927,7 +1933,16 @@ every member muted the key shows an alert, because there is nothing to
 hand over; unmute a member first.
 The key's LED is green for an engaged feature, red for a mute, and grey
 when the daemon is offline or the target does not exist on the
-connected interface. A key's icon can be chosen in its settings, and a
+connected interface.
+With a [generic microphone as XLR 1](#generic-microphone)
+OpenXLR drives no Elgato unit. Keys and dials for hardware controls go
+grey and show Generic mic over their name: mute, gain, phantom, the
+processing toggles, headphones, the crossfade, the output selectors, the
+aux level and lock, the gain lock and the Aux port. A press only flashes
+an alert. To mute the microphone, use a send mute key for XLR 1 in each mix
+you want it out of, or press a dial set to XLR 1 in all mixes, which mutes
+every send at once. The sends, the software low cut and ClipGuard and the
+inserts keep working. A key's icon can be chosen in its settings, and a
 title typed there replaces the built-in label. An icon name the plugin does
 not know shows the target's default icon. A key or dial whose target is a
 channel or a mix with an icon or colour from the layout editor
@@ -2446,7 +2461,9 @@ meters and a mute key. On the two XLR strips the key is the input's own
 mute, the same control as Mute on the Inputs page, since those strips are
 the interface; when an XLR send into the chosen mix is muted, the word
 muted stands where its percentage would be, and the matrix is where that
-send is toggled. Up and down choose a channel, starting with the
+send is toggled. With a generic microphone as XLR 1 there is no hardware
+mute, so the XLR 1 key mutes its send into the chosen mix like any other
+channel's. Up and down choose a channel, starting with the
 masters. Left and right choose the destination mix. The line above the
 key hints names the exact send or master under the cursor. Monitor masters
 can reach 150%; other masters and channel sends stop at 100%.
@@ -2476,7 +2493,7 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 | 5 Apps | every known application and its channel assignment, including the desktop's own routing |
 | 6 Inserts | the chain on each input and mix, its order, bypass and status; add a plugin from the catalogue, narrowed by typing, of those that fit the chain's width; open a plugin's native editor or edit its generated controls when the editor is blocked or refused |
 | 7 Profiles | load, save over, save as, delete and recall on connect; interface selection and recorded device defaults |
-| 8 Options | the skin picker, connection status, daemon version and fresh state request |
+| 8 Options | the primary microphone picker, the skin picker, connection status, daemon version and fresh state request |
 
 The bottom line shows the current section's keys, with help and quit at
 its right end when there is room.
@@ -2514,11 +2531,28 @@ Controls below the visible hardware cards appear as the selection moves.
 | Insert controls | `-`, `+`, `[`, `]`, Home, End | lower or raise a number, take a fine step, or set the minimum or maximum; Ctrl+Left/Right also takes a fine step |
 | Profiles, on a profile | Enter, `s`, `r`, `d` | load, overwrite, recall on connect, or delete |
 | Options | Enter, `R` | use a skin or reload the skin list |
+| Options, primary microphone | Left/Right, Enter | choose a source or a port, then apply it |
 | Text prompts | Enter, Escape | accept or cancel |
 
 Anything that cannot be undone, such as deleting a channel or resetting
 the device, asks you to type `yes` first. To create a profile, select
 Save settings as and press Enter.
+
+Options starts with the primary microphone, the choice the window makes
+in [Use another microphone as XLR 1](#generic-microphone).
+Source lists Automatic Elgato interface and every capture source the
+daemon accepts, leaving out OpenXLR's own nodes and monitor taps. Port is
+the microphone's port, numbered from 1; Automatic takes none. Neither
+changes anything until you press Enter on Apply, and the row says not
+applied until then. A saved source that is unplugged stays listed as
+missing. In generic microphone mode the header reads Generic mic with the
+source's description and port instead of no interface, and its lamp is
+lit while the route into XLR 1 exists. A wide terminal's rail shows the
+source, the XLR 1 meter and the port, or not linked. On Inputs, XLR 1's
+hardware rows say not on a generic mic and its gain says set on the mic;
+Source and Route rows name the microphone and say whether it is linked.
+The software low cut and ClipGuard keep working, and the gain lock, which
+guards a hardware gain, does not.
 
 On an insert, `e` first asks the daemon for the plugin's own editor. If
 compatibility rules block it or the daemon refuses to open it, the terminal
@@ -2579,6 +2613,10 @@ Click it for
 the mixer, and use the arrows to choose the mix whose sends you are editing.
 The bracketed mute key affects that send or master; each XLR strip's
 separate mic button affects its hardware mute in every destination.
+With a [generic microphone as XLR 1](#generic-microphone)
+the tooltip names the source and its port, and the mic button reads
+Generic mic and stays disabled, since there is no hardware mute; the
+bracketed send mutes keep working.
 
 Each bank shows whole strips. Use its lower arrows and range indicator to
 reach the remaining channels or masters. The header uses friendly output

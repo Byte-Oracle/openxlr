@@ -43,6 +43,20 @@ function outputName(snapshot, output) {
         ? device.description.trim() : output;
 }
 
+// Generic microphone mode: XLR 1 takes one port of a PipeWire source and the
+// daemon drives no Elgato unit, so there is no hardware mute to send.
+function genericInput(snapshot) {
+    var input = snapshot && snapshot.mixer ? snapshot.mixer.primaryInput : null;
+    return input && typeof input.source === "string" && input.source ? input : null;
+}
+function genericLabel(snapshot) {
+    var input = genericInput(snapshot);
+    if (!input) return "";
+    var port = typeof input.channel === "number" && isFinite(input.channel) ? input.channel + 1 : 1;
+    var linked = snapshot.mixer.primaryInputConnected === true;
+    return "Generic mic: " + outputName(snapshot, input.source) + ", port " + port + (linked ? "" : ", not linked");
+}
+
 function pair(levels, key, isMono) {
     var raw = levels[key];
     if (!Array.isArray(raw) || raw.length === 0) return [0, 0];

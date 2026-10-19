@@ -124,6 +124,16 @@ internal sealed record DeviceEntry
     public bool IsSink => Kind == 0;
 }
 
+/// <summary>
+/// The capture source and its zero-based mono port feeding XLR 1 in generic
+/// microphone mode. The daemon leaves the field out in automatic mode.
+/// </summary>
+internal sealed record PrimaryInputEntry
+{
+    public string Source { get; init; } = string.Empty;
+    public int Channel { get; init; }
+}
+
 /// <summary>An interface attached to the machine, whether or not it is the active one.</summary>
 internal sealed record DetectedDevice
 {
@@ -175,6 +185,12 @@ internal sealed record MixerSnapshot
     public List<StreamEntry> Streams { get; init; } = [];
     public Dictionary<string, List<InsertEntry>> Inserts { get; init; } = [];
     public string? LayoutWarning { get; init; }
+
+    /// <summary>The generic microphone binding, or null while XLR 1 follows the Elgato interface.</summary>
+    public PrimaryInputEntry? PrimaryInput { get; init; }
+
+    /// <summary>True when the generic microphone's route into XLR 1 exists.</summary>
+    public bool PrimaryInputConnected { get; init; }
 }
 
 /// <summary>
@@ -209,6 +225,39 @@ internal sealed record Snapshot
         try { return JsonSerializer.Deserialize<Snapshot>(json, Options); }
         catch (JsonException) { return null; }
     }
+
+    /// <summary>
+    /// True in generic microphone mode: XLR 1 is fed by a PipeWire source the
+    /// user picked and the daemon drives no Elgato unit, so <see cref="Connected"/>
+    /// is false and there are no capabilities, while the mixer runs as usual.
+    /// </summary>
+    [JsonIgnore]
+    public bool Generic => Mixer.PrimaryInput is { Source.Length: > 0 };
+
+    /// <summary>The generic microphone as a person reads it: its description and its port, numbered from 1.</summary>
+    [JsonIgnore]
+    public string? GenericLabel => Mixer.PrimaryInput is { Source.Length: > 0 } input
+        ? $"{SourceName(input.Source)}, port {input.Channel + 1}"
+        : null;
+
+    /// <summary>A source's description from the device list, or its node name when it is not listed.</summary>
+    public string SourceName(string source) =>
+        Devices.FirstOrDefault(device => !device.IsSink && device.Name == source) is { Description.Length: > 0 } listed
+            ? listed.Description
+            : source;
+
+    /// <summary>
+    /// The capture sources XLR 1 can take, as the window lists them: every
+    /// source but OpenXLR's own nodes, and none the daemon would refuse
+    /// (an OpenXLR name, a monitor tap, a control character, over 256 characters).
+    /// </summary>
+    [JsonIgnore]
+    public List<DeviceEntry> PrimaryInputChoices =>
+        [.. Devices.Where(device => !device.IsSink && !device.IsOwn && Selectable(device.Name))];
+
+    private static bool Selectable(string name) =>
+        name.Length is > 0 and <= 256 && !string.IsNullOrWhiteSpace(name) && !name.Any(char.IsControl)
+        && !name.StartsWith("OpenXLR", StringComparison.Ordinal) && !name.EndsWith(".monitor", StringComparison.Ordinal);
 
     public bool Can(string capability) =>
         Capabilities.TryGetValue(capability, out JsonElement value) && value.ValueKind == JsonValueKind.True;
