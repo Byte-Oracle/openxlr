@@ -55,7 +55,7 @@ public sealed partial class MainViewModel : ViewModelBase
             if (up) DaemonRestart.ConnectionRestored();
             if (!up)
             {
-                DeviceConnected = false; Raise(nameof(InputConnected)); Status = Localizer.Text("StatusDaemonNotRunning");
+                DeviceConnected = false; RefreshBindings(); Status = Localizer.Text("StatusDaemonNotRunning");
                 ResetWaveInterfaces();
                 Inserts.ResetForNewConnection(); Inserts2.ResetForNewConnection();
                 Inserts.SoundCheck.Reset(); Inserts2.SoundCheck.Reset();
@@ -86,6 +86,7 @@ public sealed partial class MainViewModel : ViewModelBase
         : Localizer.Text("SubmixerIsOffTurnItOnInOptions");
 
     private bool _deviceConnected;
+    /// <summary>The primary interface is driven; the header's LED says this and nothing else.</summary>
     public bool DeviceConnected { get => _deviceConnected; private set { if (Set(ref _deviceConnected, value)) Raise(nameof(StatusLine)); } }
 
     private string _deviceName = "none";
@@ -95,19 +96,8 @@ public sealed partial class MainViewModel : ViewModelBase
     public string Status { get => _status; private set { if (Set(ref _status, value)) Raise(nameof(StatusLine)); } }
 
     public string StatusLine => !DaemonConnected ? Localizer.Text("DaemonNotRunning")
-        : GenericMicrophone ? PrimaryInputDescription
         : DeviceConnected ? DeviceName
         : Localizer.Text("NoDevice");
-
-    private bool _genericMicrophone;
-    public bool GenericMicrophone { get => _genericMicrophone; private set => Set(ref _genericMicrophone, value); }
-    public bool InputConnected => DaemonConnected && (GenericMicrophone ? _primaryInputConnected : DeviceConnected);
-    private bool _primaryInputConnected;
-    public string? PrimaryInputSource { get; private set; }
-    public int PrimaryInputChannel { get; private set; }
-    public string PrimaryInputDescription => GenericMicrophone
-        ? Localizer.Format("GenericMicrophoneSelected", Inputs.FirstOrDefault(i => i.Name == PrimaryInputSource)?.Description ?? PrimaryInputSource!, PrimaryInputChannel + 1)
-        : Localizer.Text("PrimaryInputAutomatic");
 
     // --- hardware controls ---
 
@@ -165,6 +155,10 @@ public sealed partial class MainViewModel : ViewModelBase
     private bool _capAuxInput = true;
     public bool CapAuxInput { get => _capAuxInput; set => Set(ref _capAuxInput, value); }
 
+    private bool _unitXlrJacks = true;
+    /// <summary>The interface's inputs are XLR jacks; false on a Wave:3 or Wave:1, whose input is its built-in capsule.</summary>
+    public bool UnitXlrJacks { get => _unitXlrJacks; set => Set(ref _unitXlrJacks, value); }
+
     private bool _capOutputRouting = true;
     public bool CapOutputRouting { get => _capOutputRouting; set => Set(ref _capOutputRouting, value); }
 
@@ -218,7 +212,10 @@ public sealed partial class MainViewModel : ViewModelBase
     }
 
     private bool _showSoftClipGuard;
-    public bool ShowSoftClipGuard { get => _showSoftClipGuard; private set => Set(ref _showSoftClipGuard, value); }
+    public bool ShowSoftClipGuard { get => _showSoftClipGuard; private set { if (Set(ref _showSoftClipGuard, value)) Raise(nameof(ShowSoftwareControls)); } }
+
+    /// <summary>XLR 1's software low cut or ClipGuard applies, so the INPUTS panel has a row for them.</summary>
+    public bool ShowSoftwareControls => _showSoftLowCut || _showSoftClipGuard;
 
     private bool _softClipGuardAvailable = true;
     public bool SoftClipGuardAvailable
@@ -267,7 +264,7 @@ public sealed partial class MainViewModel : ViewModelBase
     public string SoftLowCutText => _softLowCutHz == 0 ? Localizer.Text("LowCutOff") : Localizer.Format("LowCutFrequency", _softLowCutHz);
 
     private bool _showSoftLowCut;
-    public bool ShowSoftLowCut { get => _showSoftLowCut; private set => Set(ref _showSoftLowCut, value); }
+    public bool ShowSoftLowCut { get => _showSoftLowCut; private set { if (Set(ref _showSoftLowCut, value)) Raise(nameof(ShowSoftwareControls)); } }
 
     public bool SoftLowCutOn => _softLowCutHz > 0;
 
@@ -631,8 +628,8 @@ public sealed partial class MainViewModel : ViewModelBase
 
     // --- layout editing: the daemon answers after the new layout is saved ---
 
-    public Task<string?> CreateCaptureChannel(string name, string source, int pair)
-        => Edit(_client.CreateCaptureChannelAsync(name, source, pair));
+    public Task<string?> CreateCaptureChannel(string name, string source, int pair, int? monoChannel = null)
+        => Edit(_client.CreateCaptureChannelAsync(name, source, pair, monoChannel));
     public Task<string?> CreateChannel(string name, string? icon = null) => Edit(_client.CreateChannelAsync(name, icon));
     public Task<string?> RenameChannel(string id, string name) => Edit(_client.RenameChannelAsync(id, name));
     public Task<string?> DeleteChannel(string id) => Edit(_client.DeleteChannelAsync(id));
@@ -727,11 +724,6 @@ public sealed partial class MainViewModel : ViewModelBase
             DaemonConnected = true;
             DaemonVersion = node["daemonVersion"]?.GetValue<string>();
             DeviceConnected = node["connected"]?.GetValue<bool>() ?? false;
-            PrimaryInputSource = node["mixer"]?["primaryInput"]?["source"]?.GetValue<string>();
-            PrimaryInputChannel = node["mixer"]?["primaryInput"]?["channel"]?.GetValue<int>() ?? 0;
-            GenericMicrophone = PrimaryInputSource is not null;
-            _primaryInputConnected = node["mixer"]?["primaryInputConnected"]?.GetValue<bool>() ?? false;
-            Raise(nameof(InputConnected));
             if (node["device"] is JsonNode dev)
             {
                 DeviceName = $"{dev["vendor"]?.GetValue<string>()} {dev["model"]?.GetValue<string>()}".Trim();
@@ -757,18 +749,11 @@ public sealed partial class MainViewModel : ViewModelBase
                 CapCrossfade = Cap("crossfade");
                 CapLowImpedance = Cap("lowImpedance");
                 CapAuxInput = Cap("auxInput");
+                UnitXlrJacks = caps["xlrJacks"]?.GetValue<bool>() ?? true;
                 CapOutputRouting = Cap("outputRouting");
                 CapPhysicalControls = Cap("physicalControls");
                 CapRetainsSettings = caps["retainsSettings"]?.GetValue<bool>() ?? true;
                 CapBuiltInDefaults = caps["builtInDefaults"]?.GetValue<bool>() ?? false;
-            }
-
-            if (GenericMicrophone)
-            {
-                HasXlr2 = HasHp2 = false;
-                CapLowCut = CapExpander = CapVoiceTune = CapPhantom = CapClipGuard = CapCompressor = false;
-                CapCrossfade = CapLowImpedance = CapAuxInput = CapOutputRouting = false;
-                CapRetainsSettings = true;
             }
 
             if (node["state"] is JsonNode s)
@@ -815,15 +800,19 @@ public sealed partial class MainViewModel : ViewModelBase
             ApplyWaveInterfaces(node["waveInterfaces"]);
             ApplyMixer(node["mixer"]);
             ApplyStreams(node["mixer"]);
-            ShowSoftLowCut = (DeviceConnected || GenericMicrophone) && !CapLowCut && HasMixer;
-            ShowSoftClipGuard = (DeviceConnected || GenericMicrophone) && !CapClipGuard && HasMixer;
+            // The daemon says whether XLR 1's signal has a hardware low cut and
+            // ClipGuard in front of it; an older daemon leaves the window to
+            // work it out from the interface's capabilities.
+            JsonNode? mixerNode = node["mixer"];
+            ShowSoftLowCut = HasMixer && (mixerNode?["softLowCutApplicable"]?.GetValue<bool>() ?? (DeviceConnected && !CapLowCut));
+            ShowSoftClipGuard = HasMixer && (mixerNode?["softClipGuardApplicable"]?.GetValue<bool>() ?? (DeviceConnected && !CapClipGuard));
             ShowGainLock = DeviceConnected && !CapPhysicalControls;
             ShowResetDefaults = DeviceConnected && (!CapRetainsSettings || CapBuiltInDefaults);
             Raise(nameof(ResetDescription));
             Raise(nameof(ShowInterfaceCard));
-            Raise(nameof(PrimaryInputDescription));
+            RefreshBindings();
             Raise(nameof(StatusLine));
-            Status = InputConnected ? Localizer.Text("StatusReady") : Localizer.Text("StatusNoDevice");
+            Status = DeviceConnected ? Localizer.Text("StatusReady") : Localizer.Text("StatusNoDevice");
         }
         finally { _applying = false; }
         StateApplied?.Invoke();
@@ -833,7 +822,7 @@ public sealed partial class MainViewModel : ViewModelBase
     public ObservableCollection<DetectedDeviceItem> DetectedDevices { get; } = [];
 
     private bool _hasMultipleDevices;
-    public bool HasMultipleDevices { get => _hasMultipleDevices; set => Set(ref _hasMultipleDevices, value); }
+    public bool HasMultipleDevices { get => _hasMultipleDevices; set { if (Set(ref _hasMultipleDevices, value)) Raise(nameof(ShowDeviceStatus)); } }
 
     private string _activeDeviceName = "";
     public string ActiveDeviceName { get => _activeDeviceName; set => Set(ref _activeDeviceName, value); }
@@ -1168,7 +1157,7 @@ public sealed partial class MainViewModel : ViewModelBase
             // the same rule below, once the channels have synced.
             foreach (MixViewModel mv in Mixes.Where(mv => mv.IsAuxPort))
             {
-                mv.AuxPortAvailable = !GenericMicrophone && (!DeviceConnected || CapOutputRouting);
+                mv.AuxPortAvailable = !DeviceConnected || CapOutputRouting;
                 mv.Visible = mv.AuxPortAvailable || auxAudible;
             }
 
@@ -1200,6 +1189,7 @@ public sealed partial class MainViewModel : ViewModelBase
                     send.Visible = !DeviceConnected || CapOutputRouting || auxAudible;
             }
             RefreshChannelPresentation();
+            RefreshBindings();
         }
     }
 
@@ -1589,11 +1579,20 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
 
     private string _name;
     /// <summary>Display name; the daemon renames application channels live.</summary>
-    public string Name { get => _name; set => Set(ref _name, value); }
+    public string Name { get => _name; set { if (Set(ref _name, value)) Raise(nameof(BindingChipName)); } }
 
     private bool _isHardware;
     /// <summary>A hardware input (XLR 1, XLR 2, Aux In): structural, not editable.</summary>
-    public bool IsHardware { get => _isHardware; set { if (Set(ref _isHardware, value)) { Raise(nameof(IsEditable)); Raise(nameof(IsApplication)); } } }
+    public bool IsHardware
+    {
+        get => _isHardware;
+        set
+        {
+            if (!Set(ref _isHardware, value)) return;
+            Raise(nameof(IsEditable)); Raise(nameof(IsApplication)); Raise(nameof(IsBindable));
+            Raise(nameof(IsSourceBound)); Raise(nameof(IsUnitBound));
+        }
+    }
     public bool IsEditable => !IsHardware;
     private string? _captureSource;
     public string? CaptureSource { get => _captureSource; set { if (Set(ref _captureSource, value)) Raise(nameof(IsApplication)); } }
@@ -1602,6 +1601,65 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
 
     /// <summary>False when the active device has no jack behind this channel.</summary>
     public bool Present { get; private set; } = true;
+
+    private ChannelBinding? _binding;
+    /// <summary>What feeds the channel, as the daemon reports it; null from a daemon that predates input bindings.</summary>
+    public ChannelBinding? Binding
+    {
+        get => _binding;
+        private set
+        {
+            if (!Set(ref _binding, value)) return;
+            Raise(nameof(IsSourceBound));
+            Raise(nameof(IsUnitBound));
+        }
+    }
+
+    private bool _bindingConnected = true;
+    /// <summary>The channel's feed exists: the interface's pair is linked, or the bound source is.</summary>
+    public bool BindingConnected { get => _bindingConnected; private set { if (Set(ref _bindingConnected, value)) Raise(nameof(BindingTip)); } }
+
+    private string? _bindingWarning;
+    /// <summary>Why the channel's source is silent, or null.</summary>
+    public string? BindingWarning
+    {
+        get => _bindingWarning;
+        private set { if (Set(ref _bindingWarning, value)) { Raise(nameof(HasBindingWarning)); Raise(nameof(BindingTip)); } }
+    }
+    public bool HasBindingWarning => !string.IsNullOrEmpty(_bindingWarning);
+
+    private UnitInputInfo? _unitInput;
+    /// <summary>Which input stage of which driven unit this channel carries, as the daemon reports it, or null.</summary>
+    public UnitInputInfo? UnitInput { get => _unitInput; private set => Set(ref _unitInput, value); }
+
+    /// <summary>XLR 1 or XLR 2: a hardware strip that can be bound to another capture source.</summary>
+    public bool IsBindable => IsHardware && Id is "xlr1" or "xlr2";
+
+    /// <summary>A hardware strip fed by another capture source rather than the interface.</summary>
+    public bool IsSourceBound => IsHardware && _binding?.Kind == "source";
+
+    /// <summary>A hardware strip on the interface's own capture pair, which is also what an older daemon means.</summary>
+    public bool IsUnitBound => IsHardware && (_binding is null || _binding.Kind == "unit");
+
+    private int _shownUnitInput;
+    /// <summary>
+    /// The primary unit's input (1 or 2) whose controls the window draws on
+    /// this channel, or 0. Set by <see cref="MainViewModel"/> from
+    /// <see cref="UnitInput"/>, with the strips on the interface standing in
+    /// while no unit reports one.
+    /// </summary>
+    public int ShownUnitInput { get => _shownUnitInput; internal set => Set(ref _shownUnitInput, value); }
+
+    private string _bindingLabel = "";
+    /// <summary>The chip's text: the interface's jack, or the bound source's description.</summary>
+    public string BindingLabel { get => _bindingLabel; internal set { if (Set(ref _bindingLabel, value)) { Raise(nameof(BindingTip)); Raise(nameof(BindingChipName)); } } }
+
+    /// <summary>The chip's tooltip: what feeds the strip, and why it is silent when it is.</summary>
+    public string BindingTip => HasBindingWarning ? $"{_bindingLabel}\n{_bindingWarning}" : _bindingLabel;
+
+    /// <summary>The chip's name for a screen reader: whose input, what it is, and that it opens the picker.</summary>
+    public string BindingChipName => Localizer.Format("InputBindingChipName", Name, _bindingLabel);
+
     private string _captureLabel = "";
     public string CaptureLabel { get => _captureLabel; set => Set(ref _captureLabel, value); }
 
@@ -1690,6 +1748,10 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         if (n["name"]?.GetValue<string>() is { Length: > 0 } name) Name = name;
         IsHardware = n["hardware"]?.GetValue<bool>() ?? false;
         Present = n["present"]?.GetValue<bool>() ?? true;
+        Binding = ChannelBinding.From(n["binding"]);
+        BindingConnected = n["bindingConnected"]?.GetValue<bool>() ?? true;
+        BindingWarning = n["bindingWarning"] is JsonValue warning && warning.TryGetValue(out string? text) && text.Length > 0 ? text : null;
+        UnitInput = UnitInputInfo.From(n["unitInput"]);
         CaptureSource = n["captureSource"]?.GetValue<string>();
         CaptureConnected = n["captureConnected"]?.GetValue<bool>() ?? false;
         int capturePair = (n["capturePair"]?.GetValue<int>() ?? 0) + 1;

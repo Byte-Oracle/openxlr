@@ -180,7 +180,8 @@ public sealed class SkinPackageTests : IDisposable
         Assert.Equal(SkinRegionVisibility.Hidden, layout.OptionsFor(SkinLayoutRegions.Inputs).Visibility);
         Assert.True(layout.Submixer.IsMatrix);
         SkinMatrixOptions matrix = layout.Submixer.Matrix;
-        Assert.Equal(["identity", "mute", "gain", "meter", "effects"], matrix.RowHead.Shown);
+        // The binding, which the skin does not order, follows; a matrix draws it under the name.
+        Assert.Equal(["identity", "mute", "gain", "meter", "effects", "binding"], matrix.RowHead.Shown);
         Assert.Equal(["identity", "outputs", "mute", "master", "effects"], matrix.ColumnHead.Shown);
         Assert.Equal(["mute", "fader"], matrix.Cell.Shown);
         Assert.Equal(SkinLabelStyle.IconAndText, matrix.RowHead.Label);

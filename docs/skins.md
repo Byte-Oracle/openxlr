@@ -794,7 +794,7 @@ A name is a lower-case letter followed by up to 31 lower-case letters,
 digits or hyphens, and `none` is reserved for "no icon". A name from the
 built-in set replaces that icon's drawing while the skin is worn; any other
 name adds an icon, which the layout editor's picker lists after the
-built-in set. The built-in names are `mic`, `headset`, `speaker`, `jack`,
+built-in set. The built-in names are `mic`, `microphone`, `headset`, `speaker`, `jack`,
 `music`, `game`, `browser`, `chat`, `people`, `broadcast`, `camera`,
 `bell`, `star`, `globe`, `cog`, `film`, `voice`, `podcast`, `record`,
 `apps`, `burst` and `monitor`.
@@ -1188,13 +1188,14 @@ send after its fader.
 | `meter` | `{ "orientation": ..., "placement": ... }`, below |
 | `fader` | `{ "orientation": ..., "direction": ... }`, below. Bank strips only, since an input row's gain is the interface's and lies flat |
 
-An input row's parts, in their default order, are `identity`, `meter`,
-`gain`, `hardware-controls` and `effects`. A bank strip's are `identity`,
-`meter`, `fader`, `value` and `mute`.
+An input row's parts, in their default order, are `identity`, `binding`,
+`meter`, `gain`, `hardware-controls` and `effects`. A bank strip's are
+`identity`, `meter`, `fader`, `value` and `mute`.
 
 | Part | What it is |
 |---|---|
 | `identity` | the channel's icon and name. It cannot be hidden |
+| `binding` | XLR 1's or XLR 2's input binding: a chip naming the interface's jack or the capture source that feeds the strip, with a light that is on while the feed is linked and, under it, why the strip is silent. Clicking it opens the binding dialog |
 | `meter` | the channel's own level meter, left and right |
 | `gain` | the input's hardware gain, Aux In's level, or an application or capture channel's own volume |
 | `hardware-controls` | the input's switches, or Aux In's level lock |
@@ -1207,6 +1208,15 @@ Each list holds no more names than the strip has parts, and a part
 appears once across `partsOrder` and `hidden`. A part a channel does not
 have is skipped, so ordering `hardware-controls` first changes nothing on an
 application channel.
+
+The interface's gain and switches are drawn on the strip that carries the
+interface's microphone. That is XLR 1 or XLR 2 while the strip takes the
+interface's jack. While the strip is bound to another source, it is a
+capture channel on the interface's own node at that jack's port, whose
+`gain` part then shows the interface's gain above the channel's own volume
+and whose `hardware-controls` part shows the switches. A strip bound to
+another source has no `gain`, and XLR 1's `hardware-controls` keeps only its
+software low cut and ClipGuard. Only XLR 1 and XLR 2 have a `binding` part.
 
 `master` takes `template`, `label`, `meter` and `fader`. Its template is
 `"master-card"`, the mix tile the channel tiles have always shown, under
@@ -1312,7 +1322,7 @@ sections below:
         "template": "input-rack",
         "strip": {
           "template": "input-row",
-          "partsOrder": ["identity", "meter", "gain", "hardware-controls", "effects"],
+          "partsOrder": ["identity", "binding", "meter", "gain", "hardware-controls", "effects"],
           "label": { "style": "icon-and-text" },
           "meter": { "orientation": "horizontal", "placement": "below-label" }
         }
@@ -1393,16 +1403,17 @@ named for the channel and the mix.
 `parts` lists part names in the order they are drawn; parts it leaves out
 follow in their default order. `hidden` lists parts left out, and a part
 appears once across the two lists. A row head's parts, in their default
-order, are `identity`, `meter`, `gain`, `mute` and `effects`. A column
-head's are `identity`, `master`, `mute`, `effects` and `outputs`. A cell's
-are `mute`, `fader` and `value`.
+order, are `identity`, `binding`, `meter`, `gain`, `mute` and `effects`. A
+column head's are `identity`, `master`, `mute`, `effects` and `outputs`. A
+cell's are `mute`, `fader` and `value`.
 
 | Matrix part | Where | What it is |
 |---|---|---|
 | `identity` | row head, column head | the channel's or the mix's icon and name. It cannot be hidden. In a row head it is the name column, on the left unless `parts` puts it last |
+| `binding` | row head | XLR 1's or XLR 2's input binding as a line under the name in the name column, wherever `parts` puts it: a light that is on while the feed is linked and the interface's jack or the source's name. The name and this line are one target that opens the binding dialog, and its tooltip says why the strip is silent |
 | `meter` | row head | the channel's meter as a part of its own. Under the faders it is the gain's track instead, so a channel with gain draws it there |
-| `gain` | row head | the input's hardware gain, Aux In's level and level lock, or an application or capture channel's own volume |
-| `mute` | row head, column head, cell | the input's hardware mute, the mix's mute, or the send's mute in the column's mix |
+| `gain` | row head | the input's hardware gain, Aux In's level and level lock, or an application or capture channel's own volume. A capture channel carrying the interface's microphone shows the interface's gain instead |
+| `mute` | row head, column head, cell | the input's hardware mute, the mix's mute, or the send's mute in the column's mix. A capture channel carrying the interface's microphone has the interface's mute |
 | `effects` | row head, column head | the button that opens the input's or the mix's plugin chain |
 | `master` | column head | the mix's master level as a short fader |
 | `outputs` | column head | the outputs line |

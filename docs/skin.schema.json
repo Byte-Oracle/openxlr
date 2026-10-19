@@ -1505,10 +1505,11 @@
         "partsOrder": {
           "type": "array",
           "uniqueItems": true,
-          "maxItems": 5,
+          "maxItems": 6,
           "items": {
             "enum": [
               "identity",
+              "binding",
               "meter",
               "gain",
               "hardware-controls",
@@ -1520,9 +1521,10 @@
         "hidden": {
           "type": "array",
           "uniqueItems": true,
-          "maxItems": 4,
+          "maxItems": 5,
           "items": {
             "enum": [
+              "binding",
               "meter",
               "gain",
               "hardware-controls",
@@ -1648,10 +1650,11 @@
         "parts": {
           "type": "array",
           "uniqueItems": true,
-          "maxItems": 5,
+          "maxItems": 6,
           "items": {
             "enum": [
               "identity",
+              "binding",
               "meter",
               "gain",
               "mute",
@@ -1663,9 +1666,10 @@
         "hidden": {
           "type": "array",
           "uniqueItems": true,
-          "maxItems": 4,
+          "maxItems": 5,
           "items": {
             "enum": [
+              "binding",
               "meter",
               "gain",
               "mute",

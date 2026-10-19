@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenXLR.UI"
+             xmlns:skin="using:OpenXLR.UI.Skinning"
+             x:Class="OpenXLR.UI.Views.BindingChip"
+             x:DataType="vm:ChannelViewModel">
+
+  <!-- A hardware strip's input binding: what feeds XLR 1 or XLR 2, the
+       interface's jack or another capture source, with the LED lit while
+       that feed is linked. Clicking it opens the binding dialog. It holds no
+       appearance of its own: the face is the badge colour and the lettering
+       the body text's, on an ordinary button's corners. -->
+  <UserControl.Styles>
+    <Style Selector="Button.bindingChip">
+      <Setter Property="Background" Value="{DynamicResource Ox.Badge.Background}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="6,1"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="{DynamicResource Ox.Mixer.SmallControlMinSize}"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Button Name="Chip" Classes="bindingChip" Click="OnChip"
+          AutomationProperties.Name="{Binding BindingChipName}" ToolTip.Tip="{Binding BindingTip}">
+    <!-- a grid, not a horizontal stack: the source's name gets what the LED leaves and trims -->
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+      <skin:StatusLed IsOn="{Binding BindingConnected}" VerticalAlignment="Center"
+                      AutomationProperties.AccessibilityView="Raw"/>
+      <TextBlock Name="ChipText" Grid.Column="1" Text="{Binding BindingLabel}" Classes="body" FontSize="11"
+                 VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+    </Grid>
+  </Button>
+</UserControl>

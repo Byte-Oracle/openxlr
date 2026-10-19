@@ -119,6 +119,7 @@ public sealed class Wave3DeviceTests
             Crossfade = true,
             PhysicalControls = true,
             XlrInputs = 1,
+            XlrJacks = false,
             HpOutputs = 1,
             GainMaxDb = 40,
             RetainsSettings = true,

@@ -225,6 +225,7 @@ public class Wave3Device : IAudioDevice
         // a dial it cannot bind.
         PhysicalControls = true,
         XlrInputs = 1,   // the capsule feeds the one input strip
+        XlrJacks = false,   // a capsule, not a jack
         HpOutputs = 1,
         GainMaxDb = GainMaxDb,
         // Whether the unit keeps its settings over a power cycle is stated

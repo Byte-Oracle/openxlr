@@ -2295,4 +2295,82 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="Phones2Appearance" xml:space="preserve">
     <value>Symbol und Farbe von Kopfhörer 2</value>
   </data>
+  <data name="InputBindings" xml:space="preserve">
+    <value>Eingangszuordnung</value>
+  </data>
+  <data name="InputBindingsHint" xml:space="preserve">
+    <value>Was XLR 1 und XLR 2 speist. Das Interface bleibt angesteuert, egal was seine Kanäle nutzen, und seine Regler folgen dem Kanal, der sein Mikrofon trägt.</value>
+  </data>
+  <data name="InputBindingChipName" xml:space="preserve">
+    <value>Eingang von {0}: {1}</value>
+  </data>
+  <data name="InputBindingTitle" xml:space="preserve">
+    <value>Eingang für {0}</value>
+  </data>
+  <data name="InputBindingHint" xml:space="preserve">
+    <value>Wähle, was {0} speist: die Buchse des Interfaces oder einen Port einer anderen Aufnahmequelle. Das Interface bleibt angesteuert, und seine Regler wandern auf den Kanal, der sein Mikrofon trägt. {0} ist nach einer Änderung in den Monitor-Mixen stumm. Von OpenXLR unterstützte Interfaces stehen nicht in der Liste.</value>
+  </data>
+  <data name="InputBindingInterfaceJack" xml:space="preserve">
+    <value>Interface-Buchse (XLR {0})</value>
+  </data>
+  <data name="InputBindingSourceMissing" xml:space="preserve">
+    <value>{0} (nicht verbunden)</value>
+  </data>
+  <data name="InputBindingSourceName" xml:space="preserve">
+    <value>Quelle für {0}</value>
+  </data>
+  <data name="InputBindingSourcePort" xml:space="preserve">
+    <value>{0}, Port {1}</value>
+  </data>
+  <data name="InputBindingPort" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="InputBindingPortName" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="KeepInterfaceMicrophone" xml:space="preserve">
+    <value>Mikrofon des Interfaces als Aufnahmekanal behalten</value>
+  </data>
+  <data name="InputBindingBluetoothHint" xml:space="preserve">
+    <value>Ein Bluetooth-Headset wechselt in sein Headset-Profil, solange es diesen Kanal speist, und gibt so lange mit geringerer Qualität wieder, bis der Kanal eine andere Quelle nimmt.</value>
+  </data>
+  <data name="InputBindingKeepFailed" xml:space="preserve">
+    <value>{0} ist zugeordnet, aber der Aufnahmekanal für das Mikrofon des Interfaces konnte nicht angelegt werden: {1}</value>
+  </data>
+  <data name="UnitInputGain" xml:space="preserve">
+    <value>Gain</value>
+  </data>
+  <data name="TheInterface" xml:space="preserve">
+    <value>Interface</value>
+  </data>
+  <data name="UnitInputPlaysOn" xml:space="preserve">
+    <value>{0}, Eingang {1}: spielt auf {2}</value>
+  </data>
+  <data name="UnitInputNotInMixer" xml:space="preserve">
+    <value>{0}, Eingang {1}: nicht im Mixer</value>
+  </data>
+  <data name="CrossfadeMicPlaysOn" xml:space="preserve">
+    <value>Mischt das eigene Mikrofon des Interfaces bei, das auf {0} spielt.</value>
+  </data>
+  <data name="CrossfadeMicNotInMixer" xml:space="preserve">
+    <value>Mischt das eigene Mikrofon des Interfaces bei, das nicht im Mixer ist.</value>
+  </data>
+  <data name="NoInterface" xml:space="preserve">
+    <value>Kein Interface.</value>
+  </data>
+  <data name="StripInputLabel" xml:space="preserve">
+    <value>Eingang {0}</value>
+  </data>
+  <data name="ChooseMicrophoneForStrip" xml:space="preserve">
+    <value>Mikrofon für {0} wählen</value>
+  </data>
+  <data name="UnitCapsule" xml:space="preserve">
+    <value>Eingebautes Mikrofon</value>
+  </data>
+  <data name="InputBindingUnitCapsule" xml:space="preserve">
+    <value>Eingebautes Mikrofon ({0})</value>
+  </data>
+  <data name="Mic1Gain" xml:space="preserve">
+    <value>Mic-1-Gain</value>
+  </data>
 </root>

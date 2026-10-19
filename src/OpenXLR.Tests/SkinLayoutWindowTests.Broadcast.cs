@@ -175,6 +175,42 @@ internal static partial class SkinLayoutWindowTests
                 }
             }
             SkinService.ApplyControlSizing(false);
+
+            // XLR 1 bound to a webcam: the daemon names it Mic 1, its row keeps
+            // its name, its binding line and its chain, and loses the interface's
+            // gain and mute, which no channel carries here.
+            const string Webcam = "alsa_input.usb-046d_Logi_4K_Stream_Edition_C971DF30-03.analog-stereo";
+            string bound = mixer.Replace("""{"id":"xlr1","name":"XLR 1","hardware":true,""",
+                "{\"id\":\"xlr1\",\"name\":\"Mic 1\",\"hardware\":true,\"binding\":{\"kind\":\"source\",\"source\":\"" + Webcam
+                + "\",\"pair\":0,\"monoChannel\":0},\"bindingConnected\":true,", StringComparison.Ordinal)
+                .Replace("""{"monitor":0.8,"stream":0.6},"appearance":{"defaultIcon":"mic"}""",
+                    """{"monitor":0.8,"stream":0.6},"appearance":{"defaultIcon":"microphone"}""", StringComparison.Ordinal);
+            Assert.NotEqual(mixer, bound);
+            typeof(MainViewModel).GetMethod("ApplyDevices", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [JsonNode.Parse("""
+                [{"kind":0,"name":"speakers","description":"Desk speakers with a long description from the driver"},
+                 {"kind":0,"name":"headset","description":"USB headset"},
+                 {"kind":1,"name":"WEBCAM","description":"Logi 4K Stream Edition","channels":2,"positions":["FL","FR"]}]
+                """.Replace("WEBCAM", Webcam)), JsonNode.Parse(bound)]);
+            apply.Invoke(model, [JsonNode.Parse(bound)]);
+            foreach (bool enlarged in new[] { false, true })
+            {
+                SkinService.ApplyControlSizing(enlarged);
+                foreach (double width in new[] { 640d, 1040, 2560 })
+                {
+                    Layout(window, width, 1400);
+                    string where = $"bound {(enlarged ? "touch" : "standard")} at {width}";
+                    CheckBroadcastAt(window, model, where);
+                    Border head = RowHead(window, "xlr1");
+                    Assert.Contains(head.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text == "Mic 1");
+                    Assert.DoesNotContain(head.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
+                    Assert.DoesNotContain(head.GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible && t.Classes.Contains("matrixMute"));
+                    Assert.Single(head.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Classes.Contains("matrixEffects"));
+                    Assert.Equal("microphone", head.GetVisualDescendants().OfType<LayoutIconBlock>().Single().Shown);
+                    if (!enlarged) Capture(window, $"skin-broadcast-bound-{width}");
+                }
+            }
+            SkinService.ApplyControlSizing(false);
+            apply.Invoke(model, [JsonNode.Parse(mixer)]);
             Layout(window, 1040, 1400);
 
             // A muted send's cell is tinted, its mute lettered in the muted colour; the others are not.
@@ -201,7 +237,8 @@ internal static partial class SkinLayoutWindowTests
             Slider camVolume = Assert.Single(cam.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
             Assert.Equal(0.75, camVolume.Value);
             Assert.Equal("Capture card volume", AutomationProperties.GetName(camVolume));
-            Assert.True(cam.GetVisualDescendants().OfType<MeterFader>().Single().Meters.IsEffectivelyVisible);
+            // The interface's gain is not drawn: this channel does not carry the interface's microphone.
+            Assert.True(cam.GetVisualDescendants().OfType<MeterFader>().Single(f => f.IsEffectivelyVisible).Meters.IsEffectivelyVisible);
             Assert.False(Part(cam, SkinStripParts.Meter).IsEffectivelyVisible);
             camVolume.Value = 0.3;
             Assert.Equal(0.3, model.Channels.Single(c => c.Id == "cam").Volume);
@@ -418,6 +455,10 @@ internal static partial class SkinLayoutWindowTests
         // Every mix but one hidden in the layout editor.
         Assert.Equal(BroadcastMixes.Count(id => model.Mixes.Single(m => m.Id == id).DisplayVisible), matrix.Columns.Count);
         CheckMatrixCells(window, matrix, where);
+
+        // XLR 1's binding line stands under its name inside the name column, at every size.
+        if (matrix.Rows.Any(r => r.Channel.Id == "xlr1"))
+            InputBindingWindowTests.CheckBindingLine(RowHead(window, "xlr1"), model.Channels.Single(c => c.Id == "xlr1").BindingLabel);
 
         // The 40 character name shortens inside its row head rather than running out of it.
         Border board = RowHead(window, "board");

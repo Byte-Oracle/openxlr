@@ -2301,10 +2301,82 @@ Select the interface OpenXLR drives</value>
   <data name="Phones2Appearance" xml:space="preserve">
     <value>Phones 2 icon and colour</value>
   </data>
-  <data name="ChoosePrimaryMicrophone" xml:space="preserve"><value>Choose primary microphone...</value></data>
-  <data name="PrimaryInputAutomatic" xml:space="preserve"><value>Automatic Elgato interface</value></data>
-  <data name="GenericMicrophoneSelected" xml:space="preserve"><value>Primary microphone: {0}, port {1}</value></data>
-  <data name="PrimaryMicrophoneHint" xml:space="preserve"><value>Choose a PipeWire capture source for XLR 1. Generic mode releases Elgato USB control and keeps software effects, inserts and Sound Check. Monitoring starts muted after a change. Choose Automatic to return to the Elgato interface. Interfaces OpenXLR supports are not listed. To use one, choose Automatic and pick it as the primary interface.</value></data>
-  <data name="PrimaryMicrophonePort" xml:space="preserve"><value>Microphone port</value></data>
-  <data name="PrimaryMicrophonePortName" xml:space="preserve"><value>{0} ({1})</value></data>
+  <data name="InputBindings" xml:space="preserve">
+    <value>Input bindings</value>
+  </data>
+  <data name="InputBindingsHint" xml:space="preserve">
+    <value>What feeds XLR 1 and XLR 2. The interface stays driven whatever its strips take, and its controls follow the channel that carries its microphone.</value>
+  </data>
+  <data name="InputBindingChipName" xml:space="preserve">
+    <value>{0} input: {1}</value>
+  </data>
+  <data name="InputBindingTitle" xml:space="preserve">
+    <value>Input for {0}</value>
+  </data>
+  <data name="InputBindingHint" xml:space="preserve">
+    <value>Choose what feeds {0}: the interface's jack, or one port of another capture source. The interface stays driven, and its controls move to the channel that carries its microphone. {0} starts muted in the monitor mixes after a change. Interfaces OpenXLR supports are not listed.</value>
+  </data>
+  <data name="InputBindingInterfaceJack" xml:space="preserve">
+    <value>Interface jack (XLR {0})</value>
+  </data>
+  <data name="InputBindingSourceMissing" xml:space="preserve">
+    <value>{0} (not connected)</value>
+  </data>
+  <data name="InputBindingSourceName" xml:space="preserve">
+    <value>Source for {0}</value>
+  </data>
+  <data name="InputBindingSourcePort" xml:space="preserve">
+    <value>{0}, port {1}</value>
+  </data>
+  <data name="InputBindingPort" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="InputBindingPortName" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="KeepInterfaceMicrophone" xml:space="preserve">
+    <value>Keep the interface's microphone as a capture channel</value>
+  </data>
+  <data name="InputBindingBluetoothHint" xml:space="preserve">
+    <value>A Bluetooth headset switches to its headset profile while it feeds this strip, which lowers its playback quality until the strip takes another source.</value>
+  </data>
+  <data name="InputBindingKeepFailed" xml:space="preserve">
+    <value>{0} is bound, but the capture channel for the interface's microphone could not be added: {1}</value>
+  </data>
+  <data name="UnitInputGain" xml:space="preserve">
+    <value>Gain</value>
+  </data>
+  <data name="TheInterface" xml:space="preserve">
+    <value>Interface</value>
+  </data>
+  <data name="UnitInputPlaysOn" xml:space="preserve">
+    <value>{0}, input {1}: plays on {2}</value>
+  </data>
+  <data name="UnitInputNotInMixer" xml:space="preserve">
+    <value>{0}, input {1}: not in the mixer</value>
+  </data>
+  <data name="CrossfadeMicPlaysOn" xml:space="preserve">
+    <value>Blends the interface's own microphone, which plays on {0}.</value>
+  </data>
+  <data name="CrossfadeMicNotInMixer" xml:space="preserve">
+    <value>Blends the interface's own microphone, which is not in the mixer.</value>
+  </data>
+  <data name="NoInterface" xml:space="preserve">
+    <value>No interface.</value>
+  </data>
+  <data name="StripInputLabel" xml:space="preserve">
+    <value>{0} input</value>
+  </data>
+  <data name="ChooseMicrophoneForStrip" xml:space="preserve">
+    <value>Choose a microphone for {0}</value>
+  </data>
+  <data name="UnitCapsule" xml:space="preserve">
+    <value>Built-in microphone</value>
+  </data>
+  <data name="InputBindingUnitCapsule" xml:space="preserve">
+    <value>Built-in microphone ({0})</value>
+  </data>
+  <data name="Mic1Gain" xml:space="preserve">
+    <value>Mic 1 gain</value>
+  </data>
 </root>

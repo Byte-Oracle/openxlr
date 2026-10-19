@@ -354,10 +354,11 @@ public sealed class DaemonClient : IAsyncDisposable
 
     // --- layout editing: each call resolves to null on success or the daemon's error ---
 
-    public Task<string?> SetPrimaryInputAsync(string? source, int channel = 0)
+    /// <summary>Bind XLR 1 or XLR 2 to one port of a capture source, or back to the interface with a null source.</summary>
+    public Task<string?> SetInputBindingAsync(string channel, string? source, int port = 0)
     {
-        var payload = new Dictionary<string, object> { ["cmd"] = "setPrimaryInput", ["source"] = source! };
-        if (source is not null) payload["captureMonoChannel"] = channel;
+        var payload = new Dictionary<string, object> { ["cmd"] = "setInputBinding", ["channel"] = channel, ["source"] = source! };
+        if (source is not null) payload["captureMonoChannel"] = port;
         return EditLayoutAsync(payload);
     }
 

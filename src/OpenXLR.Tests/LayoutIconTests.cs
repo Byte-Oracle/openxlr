@@ -35,7 +35,7 @@ public sealed class LayoutIconTests
             Assert.InRange(icon.Path.Length, 1, 1499);
             Assert.True(CoreIcons.IsValidPath(icon.Path), icon.Name);
         }
-        foreach (string id in new[] { "mic", "headset", "speaker", "jack", "music", "game", "browser", "chat", "people",
+        foreach (string id in new[] { "mic", "microphone", "headset", "speaker", "jack", "music", "game", "browser", "chat", "people",
                      "broadcast", "camera", "bell", "star", "globe", "cog", "film", "voice", "podcast", "record", "apps", "burst", "monitor" })
             Assert.NotNull(CoreIcons.Find(id));
         Assert.All(CoreIcons.Glyphs, glyph => Assert.False(CoreIcons.IsName(glyph)));
@@ -102,6 +102,13 @@ public sealed class LayoutIconTests
         Assert.Equal("camera", CoreDefaults.ForChannel("desk-camera", false, "alsa_input.usb-cam"));
         Assert.Equal("apps", CoreDefaults.ForChannel("podcast", false, null));
         Assert.Equal("mic", CoreDefaults.ForChannel("xlr3", true, null));
+        // A microphone strip: the XLR microphone on a real jack, the handheld one on a capsule
+        // or another source, the headset on a Bluetooth headset's source; Aux In stays a jack.
+        Assert.Equal("microphone", CoreDefaults.ForChannel("xlr1", true, null, xlrJack: false));
+        Assert.Equal("microphone", CoreDefaults.ForChannel("xlr1", true, null, "alsa_input.usb-046d_Logi_4K_Stream_Edition-03.analog-stereo"));
+        Assert.Equal("headset", CoreDefaults.ForChannel("xlr2", true, null, "bluez_input.12_34_56_78_9A_BC.1"));
+        Assert.Equal("jack", CoreDefaults.ForChannel("aux", true, null, xlrJack: false));
+        Assert.Equal("camera", CoreDefaults.ForChannel("cam", false, "bluez_input.12_34_56_78_9A_BC.1"));
         Assert.Equal("podcast", CoreDefaults.ForMix("recording", "virtualMic"));
         Assert.Equal("headset", CoreDefaults.ForMix("headphones", "monitor"));
         Assert.All(state.Channels.Select(c => c.Appearance.DefaultIcon).Concat(state.Mixes.Select(m => m.Appearance.DefaultIcon)),

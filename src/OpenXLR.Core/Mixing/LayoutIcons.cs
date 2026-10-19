@@ -23,9 +23,19 @@ public sealed record LayoutIconDefinition(string Name, string Text, string Path)
 /// </summary>
 public static class LayoutDefaultIcons
 {
-    /// <summary>A hardware input, a capture input, a shipped application channel, or any other application channel.</summary>
-    public static string ForChannel(string id, bool hardware, string? captureSource) =>
-        hardware ? (id == "aux" ? "jack" : "mic")
+    /// <summary>
+    /// A hardware input, a capture input, a shipped application channel, or
+    /// any other application channel. A microphone strip wears the XLR
+    /// microphone on a real XLR jack, the handheld microphone on a USB
+    /// microphone's capsule or another source, and the headset on a
+    /// Bluetooth headset's source.
+    /// </summary>
+    /// <param name="boundSource">The source a hardware strip is bound to instead of the interface, or null.</param>
+    /// <param name="xlrJack">False while the interface's input is a capsule rather than an XLR jack.</param>
+    public static string ForChannel(string id, bool hardware, string? captureSource, string? boundSource = null, bool xlrJack = true) =>
+        hardware ? (id == "aux" ? "jack"
+            : boundSource is not null ? (boundSource.StartsWith("bluez_input.", StringComparison.Ordinal) ? "headset" : "microphone")
+            : xlrJack ? "mic" : "microphone")
         : captureSource is not null ? "camera"
         : id switch
         {
@@ -76,6 +86,7 @@ public static class LayoutIcons
     public static IReadOnlyList<LayoutIconDefinition> BuiltIn { get; } =
     [
         new("mic", "●", "M12 2h0a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3h0a3 3 0 0 1 -3 -3v-5a3 3 0 0 1 3 -3z M19 10A7 7 0 0 1 5 10L7 10A5 5 0 0 0 17 10z M11 16.5h2v3.5h-2z M8 20h8a1 1 0 0 1 1 1v0a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1v0a1 1 0 0 1 1 -1z"),
+        new("microphone", "●", "M10.5 7a4.5 4.5 0 1 1 9 0a4.5 4.5 0 1 1 -9 0z M12.2 7a2.8 2.8 0 1 0 5.6 0a2.8 2.8 0 1 0 -5.6 0z M13.27 11.56L11.33 9.84L3.53 18.64L5.47 20.36z"),
         new("headset", "◉", "M3 13A9 9 0 0 1 21 13L19 13A7 7 0 0 0 5 13z M4 12h2a2 2 0 0 1 2 2v5a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2v-5a2 2 0 0 1 2 -2z M18 12h2a2 2 0 0 1 2 2v5a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2v-5a2 2 0 0 1 2 -2z"),
         new("speaker", "▶", "M2 9L6 9L11 4L11 20L6 15L2 15z M14.21 8.17A5 5 0 0 1 14.21 15.83L13.06 14.45A3.2 3.2 0 0 0 13.06 9.55z M17.11 4.72A9.5 9.5 0 0 1 17.11 19.28L15.95 17.9A7.7 7.7 0 0 0 15.95 6.1z"),
         new("jack", "◎", "M2.5 12a9.5 9.5 0 1 1 19 0a9.5 9.5 0 1 1 -19 0zM5 12a7 7 0 1 0 14 0a7 7 0 1 0 -14 0z M8.5 12a3.5 3.5 0 1 1 7 0a3.5 3.5 0 1 1 -7 0z"),

@@ -57,6 +57,38 @@ public sealed partial class Mixer
 
     private string? _drivenUnit;   // the primary unit's instance id while one is driven
     private bool _attached;        // a supported unit is attached, driven or not
+    private bool _unitXlrJacks = true;   // the last driven unit's inputs are XLR jacks, not a capsule
+
+    /// <summary>
+    /// The name a microphone strip goes by while it is not fed by a real XLR
+    /// jack: bound to another source, or on a USB microphone's capsule.
+    /// Fixed, as "XLR 1" and "XLR 2" are; the ids stay xlr1 and xlr2.
+    /// </summary>
+    public static string MicName(string strip) => strip == "xlr2" ? "Mic 2" : "Mic 1";
+
+    /// <summary>
+    /// The name the state reports for a channel. XLR 1 and XLR 2 keep their
+    /// names only while a real XLR jack feeds them; a strip bound to another
+    /// source, or on a Wave:3's or Wave:1's capsule, is Mic 1 or Mic 2.
+    /// </summary>
+    private string ChannelNameLocked(ChannelDefinition channel)
+        => channel.InputPair is not null && channel.Id is "xlr1" or "xlr2"
+            && (_bindings.ContainsKey(channel.Id) || !_unitXlrJacks) ? MicName(channel.Id) : channel.Name;
+
+    /// <summary>
+    /// Whether the driven unit's inputs are XLR jacks, from its capabilities;
+    /// null while no unit is driven keeps the last answer of this run. True
+    /// when it changed what the state reports.
+    /// </summary>
+    public bool SetUnitXlrJacks(bool? xlrJacks)
+    {
+        lock (_gate)
+        {
+            if (xlrJacks is not bool value || value == _unitXlrJacks) return false;
+            _unitXlrJacks = value;
+            return true;
+        }
+    }
 
     /// <summary>The hardware strips that can take a source: XLR 1 and XLR 2. Aux In stays on the interface.</summary>
     public static bool IsBindableStrip(string? channel) => channel is "xlr1" or "xlr2";
@@ -269,7 +301,7 @@ public sealed partial class Mixer
         List<string> parts = [];
         if (_inputWarning is not null) parts.Add(_inputWarning);
         foreach (ChannelDefinition channel in _config.Channels)
-            if (_stripWarnings.TryGetValue(channel.Id, out string? warning)) parts.Add($"{channel.Name}: {warning}");
+            if (_stripWarnings.TryGetValue(channel.Id, out string? warning)) parts.Add($"{ChannelNameLocked(channel)}: {warning}");
         return parts.Count == 0 ? null : string.Join(" ", parts);
     }
 

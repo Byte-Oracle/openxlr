@@ -51,7 +51,7 @@ public sealed partial class MonitorVolumeIntegrationTests
             PrimaryWait(() => { disconnected |= mixer.EnsureInputFeeds(); return !mixer.Snapshot().PrimaryInputConnected; });
             Assert.True(disconnected); // The sweep must push the disconnected state even without USB events.
             PrimarySound(0); // The available Wave_XLR source must never take its place.
-            Assert.StartsWith("XLR 1: ", mixer.InputWarning!);
+            Assert.StartsWith("Mic 1: ", mixer.InputWarning!);   // a bound strip is Mic 1
             Assert.Contains("not connected", mixer.Snapshot().Channels.Single(c => c.Id == "xlr1").BindingWarning);
             pw.CreateVirtualMic("primary_source", "primary_signal.monitor", "Microphone returned");
             PrimaryWait(() => { mixer.EnsureInputFeeds(); return mixer.Snapshot().PrimaryInputConnected; });
@@ -96,7 +96,7 @@ public sealed partial class MonitorVolumeIntegrationTests
         PrimaryWait(() => pw.ListDevices().Count(d => d.Name == "primary_ambiguous_source") == 2);
         PrimaryWait(() => { mixer.EnsureInputFeeds(); return !Strip(mixer, "xlr2").BindingConnected; });
         Assert.Contains("More than one source", Strip(mixer, "xlr2").BindingWarning);
-        Assert.Contains("XLR 2: More than one source", mixer.InputWarning!);
+        Assert.Contains("Mic 2: More than one source", mixer.InputWarning!);
         Assert.Empty(IncomingRouteLinks("OpenXLR_ch_xlr2"));
         // The other strip never noticed.
         Assert.True(Strip(mixer, "xlr1").BindingConnected);
@@ -463,7 +463,7 @@ public sealed partial class MonitorVolumeIntegrationTests
             unit = LoadBindUnitNode(pw);
             PrimaryWait(() => { mixer.EnsureInputFeeds(); return Strip(mixer, "xlr2").BindingConnected && !Strip(mixer, "xlr1").BindingConnected; });
             Assert.Contains("not connected", Strip(mixer, "xlr1").BindingWarning);
-            Assert.Contains("XLR 1: bind_source is not connected", mixer.InputWarning);
+            Assert.Contains("Mic 1: bind_source is not connected", mixer.InputWarning);
             Assert.Null(Strip(mixer, "xlr2").BindingWarning);
             // The unit's node never takes the bound strip's place.
             Assert.Empty(IncomingRouteLinks("OpenXLR_ch_xlr1"));

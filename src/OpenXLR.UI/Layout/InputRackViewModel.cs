@@ -13,15 +13,15 @@ namespace OpenXLR.UI.Layout;
 /// <summary>What an input strip stands for, which decides the parts it has and the template that draws it.</summary>
 public enum InputStripKind
 {
-    /// <summary>The first XLR input: hardware gain, switches and its plugin chain.</summary>
+    /// <summary>The first XLR input: its binding, hardware gain, switches and its plugin chain.</summary>
     Xlr1,
-    /// <summary>The second XLR input, on an interface with two.</summary>
+    /// <summary>The second XLR input, on an interface with two or bound to a source.</summary>
     Xlr2,
     /// <summary>The USB Aux and Line In stage: its level and level lock.</summary>
     AuxIn,
     /// <summary>A channel applications play into: its name and meter.</summary>
     Application,
-    /// <summary>A channel bound to another capture device: its name and meter.</summary>
+    /// <summary>A channel bound to another capture device: its name and meter, and the interface's controls when it carries the interface's microphone.</summary>
     Capture,
 }
 
@@ -30,9 +30,13 @@ public enum InputStripKind
 /// strip for an XLR input or the Aux In stage stands for the hardware
 /// controls the INPUTS panel has always shown for it, bound to the same
 /// <see cref="MainViewModel"/> properties, so every capability, lock and
-/// phantom settling rule there applies here unchanged. An application or
-/// capture channel has only what it has: its name, its meter and the
-/// channel's own volume. Nothing here holds a value of its own.
+/// phantom settling rule there applies here unchanged. The interface's
+/// input controls go on the channel that carries the interface's microphone
+/// (<see cref="ChannelViewModel.ShownUnitInput"/>): its XLR strip, or a
+/// capture channel on the unit's own node while the strip is bound to
+/// another source. An application or capture channel otherwise has only
+/// what it has: its name, its meter and the channel's own volume. Nothing
+/// here holds a value of its own.
 /// </summary>
 public sealed class InputRackViewModel : IDisposable
 {
@@ -65,12 +69,18 @@ public sealed class InputRackViewModel : IDisposable
         Sync();
     }
 
-    /// <summary>The parts a strip of this kind has, in no particular order.</summary>
+    /// <summary>
+    /// The parts a strip of this kind can have, in no particular order. A
+    /// strip draws the gain and the switches only while it carries the
+    /// interface's microphone; see <see cref="InputStripViewModel.Spec"/>.
+    /// </summary>
     public static IReadOnlyCollection<string> PartsOf(InputStripKind kind) => kind switch
     {
         InputStripKind.Xlr1 or InputStripKind.Xlr2 => SkinStripParts.InputRow,
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
-        // An application or capture channel's gain is its channel volume.
+        // A capture channel carrying the interface's microphone also has its switches.
+        InputStripKind.Capture => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
+        // An application channel's gain is its channel volume.
         _ => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
     };
 
@@ -95,8 +105,9 @@ public sealed class InputRackViewModel : IDisposable
 
     private void OnMainChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.GenericMicrophone))
-            foreach (InputStripViewModel strip in Strips) strip.RefreshSpec();
+        // XLR 1's software low cut and ClipGuard keep its switches part while it is bound elsewhere.
+        if (e.PropertyName is nameof(MainViewModel.ShowSoftLowCut) or nameof(MainViewModel.ShowSoftClipGuard))
+            foreach (InputStripViewModel strip in Strips.Where(s => s.Kind == InputStripKind.Xlr1)) strip.RefreshSpec();
     }
 
     /// <summary>
@@ -146,7 +157,7 @@ public sealed class InputStripViewModel : ViewModelBase
         Spec = CreateSpec();
         channel.PropertyChanged += OnChannelChanged;
         channel.Appearance.PropertyChanged += OnAppearanceChanged;
-        if (kind == InputStripKind.Xlr2) rack.Main.PropertyChanged += OnMainChanged;
+        rack.Main.PropertyChanged += OnMainChanged;
     }
 
     public ChannelViewModel Channel { get; }
@@ -163,9 +174,32 @@ public sealed class InputStripViewModel : ViewModelBase
     public StripSpec Spec { get; private set; }
 
     private StripSpec CreateSpec() => StripSpec.From(_rack.Options, Orientation.Vertical,
-        [.. InputRackViewModel.PartsOf(Kind).Where(p => !(Main.GenericMicrophone && Kind == InputStripKind.Xlr1 && p == SkinStripParts.Gain)
-            && !(InputRackViewModel.IsChannelVolumeKind(Kind) && p == SkinStripParts.Gain && !Channel.HasVolume))],
-        SkinStripParts.Gain);
+        [.. InputRackViewModel.PartsOf(Kind).Where(Available)], SkinStripParts.Gain);
+
+    /// <summary>
+    /// Whether this channel has the part now. The gain and the switches belong
+    /// to the interface's input, so a strip bound to another source has
+    /// neither, except XLR 1's software low cut and ClipGuard, and a capture
+    /// channel carrying the interface's microphone has both. A channel's own
+    /// volume shows once the daemon reports one.
+    /// </summary>
+    private bool Available(string part) => (Kind, part) switch
+    {
+        (InputStripKind.Xlr1, SkinStripParts.HardwareControls) => CarriesUnit || Main.ShowSoftLowCut || Main.ShowSoftClipGuard,
+        (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain) => CarriesUnit,
+        (InputStripKind.Xlr2 or InputStripKind.Capture, SkinStripParts.HardwareControls) => CarriesUnit,
+        (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || Channel.HasVolume,
+        _ => true,
+    };
+
+    /// <summary>The interface's input this strip carries, whose controls it draws, or null.</summary>
+    public UnitInputViewModel? Unit => Channel.ShownUnitInput is 1 or 2 ? Main.UnitInputOf(Channel.ShownUnitInput) : null;
+
+    /// <summary>The strip draws the interface's gain and switches.</summary>
+    public bool CarriesUnit => Unit is not null;
+
+    /// <summary>A capture channel carrying the interface's microphone draws its own volume beside the interface's gain.</summary>
+    public bool ShowsVolume => Channel.HasVolume;
 
     internal void RefreshSpec()
     {
@@ -194,9 +228,10 @@ public sealed class InputStripViewModel : ViewModelBase
 
     /// <summary>
     /// True while the view draws the channel. The second XLR input also needs
-    /// an interface with two, which is the rule the INPUTS panel shows it by.
+    /// an interface with two, which is the rule the INPUTS panel shows it by,
+    /// or a source of its own.
     /// </summary>
-    public bool Shown => Channel.DisplayVisible && (Kind != InputStripKind.Xlr2 || _rack.Main.HasXlr2);
+    public bool Shown => Channel.DisplayVisible && (Kind != InputStripKind.Xlr2 || _rack.Main.HasXlr2 || Channel.IsSourceBound);
 
     /// <summary>True when the strip shows no Arrange handle: the channel keeps its place.</summary>
     public bool HandleHidden => !Channel.IsEditable;
@@ -216,7 +251,11 @@ public sealed class InputStripViewModel : ViewModelBase
             case nameof(ChannelViewModel.DisplayVisible): Raise(nameof(Shown)); break;
             case nameof(ChannelViewModel.IsEditable): Raise(nameof(HandleHidden)); break;
             case nameof(ChannelViewModel.Name): Raise(nameof(LeftLevelName)); Raise(nameof(RightLevelName)); break;
-            case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
+            case nameof(ChannelViewModel.HasVolume): RefreshSpec(); Raise(nameof(ShowsVolume)); break;
+            case nameof(ChannelViewModel.ShownUnitInput):
+                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); RefreshSpec();
+                break;
+            case nameof(ChannelViewModel.IsSourceBound): Raise(nameof(Shown)); break;
             case nameof(ChannelViewModel.IsHardware) or nameof(ChannelViewModel.CaptureSource):
                 if (!_detached && InputRackViewModel.KindOf(Channel) != Kind) _rack.Sync();
                 break;
@@ -225,7 +264,7 @@ public sealed class InputStripViewModel : ViewModelBase
 
     private void OnMainChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(MainViewModel.HasXlr2)) Raise(nameof(Shown));
+        if (e.PropertyName is nameof(MainViewModel.HasXlr2) && Kind == InputStripKind.Xlr2) Raise(nameof(Shown));
     }
 
     private void OnAppearanceChanged(object? sender, PropertyChangedEventArgs e)
@@ -240,6 +279,6 @@ public sealed class InputStripViewModel : ViewModelBase
         _detached = true;
         Channel.PropertyChanged -= OnChannelChanged;
         Channel.Appearance.PropertyChanged -= OnAppearanceChanged;
-        if (Kind == InputStripKind.Xlr2) _rack.Main.PropertyChanged -= OnMainChanged;
+        _rack.Main.PropertyChanged -= OnMainChanged;
     }
 }

@@ -57,6 +57,7 @@ public sealed partial class SkinWindowTests
             ThePluginBypassKeyIsLegibleInBothAppearances();
             TheOptionsColumnsCarryABalancedShareOfTheCards(options);
             TheWindowActuallyRepaintsWhenTheSkinChanges(main);
+            ASkinCanLeaveTheBindingOut();
             AppearanceModeWindowTests.Check(main, options, flow);
             TouchControlsWindowTests.Check(main, options, flow);
         });

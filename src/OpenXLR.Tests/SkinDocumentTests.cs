@@ -478,7 +478,7 @@ public sealed class SkinDocumentTests
         Assert.Equal(SkinLayoutTemplates.MasterStrip, read[2].Submixer.Master.Template);
         // The fourth: a matrix with its own heads and cells.
         Assert.True(read[3].Submixer.IsMatrix);
-        Assert.Equal(["identity", "mute", "gain", "meter", "effects"], read[3].Submixer.Matrix.RowHead.Shown);
+        Assert.Equal(["identity", "mute", "gain", "binding", "meter", "effects"], read[3].Submixer.Matrix.RowHead.Shown);
         Assert.DoesNotContain("effects", read[3].Submixer.Matrix.ColumnHead.Shown);
         Assert.Equal(SkinMatrixMuted.Tint, read[3].Submixer.Matrix.Muted);
         // The fifth: the toolbar and the list in a side column, the submixer in its own window.

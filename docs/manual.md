@@ -215,77 +215,124 @@ default input ([section 3.7](#default-devices)) makes every voice app pick it up
 configuration.
 
 <a name="generic-microphone"></a>
-#### Use another microphone as XLR 1
+#### Use another microphone on XLR 1 or XLR 2
 
-In Options, AUDIO, choose **Choose primary microphone...**. Pick the capture
-source and its microphone port, then Save. Ports are numbered from 1 and
-named by the channel PipeWire reports, such as "1 (MONO)" for a mono USB
-microphone, "2 (FR)" for the right side of a webcam or "3 (AUX2)" on a
+XLR 1 and XLR 2 take the interface's own inputs by default. Either strip
+can take one port of another capture source instead, such as a USB
+microphone, a webcam or another interface's input. The binding dialog opens
+from three places:
+
+- The chip under the strip's name, in INPUTS and in an input rack, or the
+  name and the line under it in a mix matrix row.
+- Options, AUDIO, **Input bindings**, which has a row with the same chip
+  for XLR 1 and XLR 2.
+- The header, while no interface is attached and XLR 1 waits for one:
+  **No interface.** is followed by a link, **Choose a microphone for XLR 1**.
+
+The dialog lists the interface's own input first, **Interface jack (XLR 1)**,
+or **Built-in microphone** on a Wave:3 or Wave:1. Every capture source
+follows except OpenXLR's own nodes and those of the interfaces OpenXLR
+supports. Pick the source and its port, then Save. Ports are numbered from 1
+and named by the channel PipeWire reports, such as "1 (MONO)" for a mono
+USB microphone, "2 (FR)" for the right side of a webcam or "3 (AUX2)" on a
 multichannel interface. The list stops at the source's channel count, and a
 new source starts at port 1, which is usually right for a USB microphone; a
-multichannel interface may put the microphone on another port. When PipeWire
-does not report the layout, the ports are plain numbers from 1 to 64.
-OpenXLR takes one mono port and feeds both sides of XLR 1. You keep its
-sends, software low cut, software ClipGuard, insert chain and Sound Check.
-Set preamp gain and phantom power on the microphone or its own interface;
-OpenXLR does not invent USB controls for other brands.
+multichannel interface may put the microphone on another port. When
+PipeWire does not report the layout, the ports are plain numbers from 1 to
+64. OpenXLR takes one mono port and feeds both sides of the strip. The
+strip keeps its sends, its insert chain and Sound Check, and XLR 1 keeps
+its software low cut and ClipGuard. Set preamp gain and phantom power on the
+microphone or its own interface; OpenXLR does not invent USB controls for
+other brands. A Bluetooth headset is offered too, with one line of warning:
+while it feeds the strip it stays in its headset profile, which lowers its
+playback quality until the strip takes another source.
 
-The interface stays driven while XLR 1 takes another microphone. Its
+The chip says what feeds the strip: the interface's jack, the built-in
+microphone of a Wave:3 or Wave:1, or the source's description, with the
+port when the source has more than one. Its light is on while the strip is
+linked to that feed. When the source is missing or ambiguous, the light is
+off and a line under the chip says why.
+
+A strip fed by another source is named Mic 1 or Mic 2 and wears the
+microphone icon, or the headset for a Bluetooth headset. Back on the
+interface's jack it is XLR 1 or XLR 2 again, with the XLR microphone icon.
+A Wave:3 or Wave:1 has no XLR jack: its input is the microphone's own
+capsule, so its strip is Mic 1 on the unit too. The ids stay `xlr1` and
+`xlr2`, so profiles, skins, the layout file and Stream Deck keys keep
+working, and an icon you chose in the layout editor stays.
+
+When the strip being replaced has a connected interface behind it, the
+dialog offers **Keep the interface's microphone as a capture channel**,
+ticked. Save then binds the strip and adds a capture channel on the
+interface's own input at that jack's port, named after the interface. If
+adding the channel fails, the strip stays bound and the dialog says so.
+Untick it and the interface's own microphone drops out of the mixer, as if
+its cable were unplugged. Returning the strip to the interface later leaves
+that capture channel in place; remove it in the layout editor if you no
+longer want it.
+
+The interface stays driven while a strip takes another microphone. Its
 headphone outputs, its dial and mute button, the Wave XLR Pro's outputs and
 USB Aux, additional interfaces, recall on connect and the gain lock work as
-before, and XLR 2 and Aux In keep the interface's audio. The interface's
-own microphone drops out of the mixer, as if its cable were unplugged from
-XLR 1. To keep it in the mixer, add the interface's capture
-source as a capture channel ([Additional capture inputs](#capture-inputs),
-pair 1, or **Add input channel** with microphone 1 under Options,
-INTERFACE, **Additional interfaces**). That channel then carries the
-interface's first input. On a Wave XLR Pro the zero-latency path to the
-headphone jacks follows it, the way it follows XLR 1 otherwise: while the
-jacks are the only monitor output and the channel is unmuted in their mix,
-the jacks hear the microphone directly and the channel's software send is
-held back. With no such channel the path is off, and the new XLR 1
-microphone reaches the jacks through the software mix, a few milliseconds
-later.
+before, and a strip still on the interface and Aux In keep its audio. The
+interface's gain, mute, phantom power and hardware effects belong to its
+microphone, so they follow it: in an input rack and a mix matrix they are on
+the capture channel that carries it, where they sat on XLR 1 before. In the
+classic INPUTS panel they move under XLR 1's own controls with a heading
+such as "Wave XLR Pro, input 1: plays on Pro mic". With no channel carrying
+the interface's microphone, the heading says it is not in the mixer and the
+controls fold away; the arrow beside the heading opens them, so a hot preamp
+can still be turned down. The Mic/PC blend in HEADPHONES keeps mixing the
+interface's own microphone into its jack, and a line under it says where
+that microphone plays. The light in the header means the interface's
+connection and nothing else.
 
-For now the window, the terminal mixer, the Stream Deck and the Omarchy bar
-do not show the interface's gain, phantom power, hardware effects and
-headphone controls while XLR 1 is bound to another source. The interface's
-own dial and buttons keep working, and the [API](api.md) reaches every
-control.
+On a Wave XLR Pro the zero-latency path to the headphone jacks follows the
+channel that carries the Pro's first input: while the jacks are the only
+monitor output and that channel is unmuted in their mix, the jacks hear the
+microphone directly and the channel's software send is held back. With no
+such channel the path is off, and a microphone bound to XLR 1 reaches the
+jacks through the software mix, a few milliseconds later.
 
-The picker leaves out the capture sources of every attached interface
+For now the terminal mixer, the Stream Deck and the Omarchy bar do not show
+the interface's gain, phantom power, hardware effects and headphone
+controls while XLR 1 is bound to another source. The interface's own dial
+and buttons keep working, and the [API](api.md) reaches every control.
+
+The dialog leaves out the capture sources of every attached interface
 OpenXLR supports, whether it drives that unit or not, and the daemon refuses
-them too: XLR 1 would not show that unit's controls, and driving the unit
-can switch its card profile and rename the source under XLR 1. To use a
-supported unit as the microphone, choose **Automatic Elgato interface** and
-pick the unit as the primary interface instead.
+them too: the strip would not show that unit's controls, and driving the
+unit can switch its card profile and rename the source under the strip. To
+use a supported unit as the microphone, pick it as the primary interface in
+the header, or add its microphone as a capture channel from Options,
+INTERFACE, **Additional interfaces**.
 
-Changing the source or port mutes XLR 1 in all monitor mixes; the other
-strips keep their mutes. Unmute XLR 1 in the desired monitor mix
-deliberately when you want to hear it. If the source is unplugged or its selected port is missing, XLR 1 stays
-silent and a warning names the problem. It reconnects to the same source
-when that source returns, without borrowing another microphone. Changing
-the binding ends Sound Check and discards its sample, and Sound Check on a
-silent XLR 1 says why it cannot record.
-If two sources have the selected name, OpenXLR disconnects XLR 1 and reports
-the ambiguity. Rename or remove the duplicate so the name identifies one
-microphone before its route resumes.
+Changing a strip's source or port mutes that strip in all monitor mixes;
+the other strips keep their mutes. Unmute it in the desired monitor mix
+deliberately when you want to hear it. If the source is unplugged or its
+selected port is missing, the strip stays silent and the chip says why. It
+reconnects to the same source when that source returns, without borrowing
+another microphone. Changing the binding ends Sound Check on that strip and
+discards its sample, and Sound Check on a silent strip says why it cannot
+record. If two sources have the selected name, OpenXLR disconnects the
+strip and reports the ambiguity. Rename or remove the duplicate so the name
+identifies one microphone before its route resumes. Two strips may take the
+same source, even the same port.
 
 The choice lives in `mixer.json` and survives restart, and profiles never
 change it. Profiles belong to the connected interface as always. While no
-interface is connected, whatever XLR 1 takes, they are kept apart under
+interface is connected, whatever the strips take, they are kept apart under
 `generic` and hold only the mixer. Saving one needs the software mixer to be
 running, so an empty scene cannot replace a saved profile while it is off,
 and recall on connect is unavailable, since startup already restores the
 saved mixer state. Profiles saved under `generic` by an earlier build while
 an interface was attached show up again whenever none is connected.
-Choose **Automatic Elgato interface** in the same picker to return XLR 1 to
-the interface. The port list is only used for another source; it is disabled
-while Automatic is selected. Disabling the software mixer leaves the
-interface as it is and remembers the source for when the mixer is enabled
-again.
+Choose **Interface jack (XLR 1)** in the same dialog to return the strip to
+the interface; the port list is only used for another source. Disabling the
+software mixer leaves the interface as it is and remembers the bindings for
+when the mixer is enabled again.
 
-The [terminal mixer](#terminal) makes the same choice on its
+The [terminal mixer](#terminal) makes the same choice for XLR 1 on its
 Options tab. On the [Stream Deck](#stream-deck) and the
 [Omarchy bar](#omarchy), XLR 1's sends and send mutes keep working; the
 hardware keys and the bar's mic button show Generic mic instead.
@@ -2426,6 +2473,15 @@ it to see the exact source name. An offline input stays silent and reconnects
 with its saved faders when the same source returns. A different source or
 pair needs a new capture channel. Profile recall changes its sends, not its
 source binding. Application routing never targets capture inputs.
+
+A capture channel on the primary interface's own source, at the first port
+or pair for its first microphone or the third port or second pair for its
+second, carries that microphone while XLR 1 or XLR 2 is bound to another
+source ([Use another microphone on XLR 1 or XLR 2](#generic-microphone)).
+The interface's gain, mute and switches are then drawn on it in an input
+rack and a mix matrix, and in INPUTS under a heading that names it. Its own
+volume stays beside them. When the XLR strip takes the interface again, the
+strip has them back and the capture channel keeps only its volume.
 
 Several Wave interfaces can supply capture audio at once. The header picker
 chooses the primary interface, whose controls the main window shows and whose
