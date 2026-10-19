@@ -395,11 +395,12 @@ while it is on, and it clears itself on a daemon restart.
 Developed and used daily by the author with a Wave XLR Pro, an XLR
 Dock, an XLR Dock MK.2 and a Stream Deck + XL. The Wave XLR and Wave
 XLR MK.2 backends were verified on hardware by community testers. The
-Wave:3 and Wave:1 are in beta: nobody on the project owns one, their
-backends are written from public protocol research, and owners have
-confirmed detection and the controls' readings, the Wave:3 in one quick
-test and the Wave:1 through two diagnostics archives that also cover
-its gain, mute and headphone volume writes. See the device table and
+Wave:3 and Wave:1 are in beta: their backends are written from public
+protocol research. On the maintainer's Wave:3 every control writes and
+reads back, and the checks that need someone at the microphone are
+still open. A Wave:1 owner confirmed detection, the readings and the
+gain, mute and headphone volume writes through two diagnostics
+archives. See the device table and
 docs/hardware-support.md for what is still open.
 
 The code is written by the two maintainers, with AI tooling (Anthropic's

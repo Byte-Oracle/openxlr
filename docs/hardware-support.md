@@ -12,8 +12,8 @@ the checks that still need an owner.
 | Wave XLR | `0fd9:007d` | core controls verified on hardware by community testers on two units (0.1.13) |
 | Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester |
 | XLR Dock MK.2 | `0fd9:00c7` | MK.2 backend with bank detection; exposed controls verified on the original 0x0103 unit |
-| Wave:3 | `0fd9:0070` | beta: coded from public protocol research; detection, gain, mute, headphone volume and the monitor balance worked in one user's quick test |
-| Wave:1 | `0fd9:006e` | beta: the Wave:3's backend under the Wave:1's id; an owner's diagnostics on 0.1.60 showed the Wave:3's block, firmware line and desktop volume mirror, the setters are not yet confirmed |
+| Wave:3 | `0fd9:0070` | beta: coded from public protocol research; on the maintainer's unit every control writes and reads back, the gain and the desktop volume controls are verified, and the checks that need someone at the microphone are open |
+| Wave:1 | `0fd9:006e` | beta: the Wave:3's backend under the Wave:1's id; an owner's two archives showed the Wave:3's block, firmware line and desktop volume mirror, and the gain, mute and headphone volume writes taking effect; ClipGuard and the mix are not yet confirmed |
 
 ## USB access
 
@@ -220,23 +220,30 @@ Hardware EQ is not mapped. Blocks 0x0002 and 0x0006 exist and are not decoded.
 ## Wave:3 (0fd9:0070), beta
 
 The USB condenser microphone with a headphone jack, not an XLR
-interface. Nobody on the project owns one. The backend,
-`src/OpenXLR.Core/Devices/Wave3Device.cs`, takes every protocol fact
-from three public sources and names the source on each line. One user
-ran a quick test on their own unit before 0.1.49: OpenXLR found the
-microphone, and gain, mute, headphone volume and the monitor balance
-answered from the window. That is what "tested briefly" means in the
-table below. Nothing was measured, the test came before the desktop
-volume sync and the firmware line were added, and every other control
-is coded only, so the Wave:3 is in beta until an owner runs the full
-checklist at the end of this page.
+interface. The backend, `src/OpenXLR.Core/Devices/Wave3Device.cs`,
+takes every protocol fact from three public sources and names the
+source on each line. One user ran a quick test on their own unit before
+0.1.49: OpenXLR found the microphone, and gain, mute, headphone volume
+and the monitor balance answered from the window.
+
+The maintainer has had a unit since 2026-10-19 (firmware 1.2.4, API
+5.4) and ran the checks that need nobody at the microphone, with the
+daemon driving it as an additional interface beside a Wave XLR Pro.
+Each write was read back twice, in the daemon's state and in the raw
+config block read over USB with the daemon released. "Written and read
+back" in the table below means the byte changed, held after the daemon
+let go, and the kernel's card followed. Nobody has yet watched its LED
+ring, turned its dial or listened on its headphones, and a replug is
+still owed, so the Wave:3 stays in beta until those steps of the
+checklist at the end of this page are done.
 
 - [rikkichy/openwave](https://github.com/rikkichy/openwave/blob/main/docs/protocol.md):
   an implementation that runs on the hardware and has users. Where it
   and a schema reading differ, it wins.
 - [LukasParke/wave3-research](https://github.com/LukasParke/wave3-research):
-  live probing of one unit (firmware 0.3.7, API 5.3) from Linux, with
-  descriptor and PipeWire dumps.
+  live probing of one unit (API 5.3) from Linux, with descriptor and
+  PipeWire dumps. Its "firmware 0.3.7" is bytes 6 to 8 of the device
+  info block, which read `00 03 07` on two units with different firmware.
 - [zhgmx/LibreWave](https://github.com/zhgmx/LibreWave/blob/main/docs/protocol-evidence.md):
   a 16-byte `/config` schema recovered from Wave Link for API 5.3 and
   5.4, not run on hardware by that project.
@@ -272,19 +279,19 @@ grid would swallow the Stream Deck's five-unit crossfade ticks.
 
 | Control | State | Notes |
 |---|---|---|
-| Gain 0 to 40 dB | tested briefly | Q8.8 word at 0. openwave reads and writes it there; wave3-research logged the same word following the dial in each of its modes and says host writes are ignored. The backend trusts the word while the dial is on gain, where both agree, remembers it, and reports that while the dial is elsewhere; until the dial has been on gain once since the connect, it reports the word as openwave does. A gain it wrote with the dial elsewhere counts once the block reads the word back, which a Wave:1 owner's archive showed the firmware doing; a firmware that drops the write reads back the dial's word and changes nothing |
-| Mute | tested briefly | byte 4; the capacitive mute pad toggles the same byte in wave3-research's log |
-| ClipGuard | coded | byte 5; taken as hardware, so the software limiter is not offered |
-| Headphone volume -60 to 0 dB | tested briefly | signed Q8.8 word at 7, written truncated toward zero as openwave does ("matching the firmware setter's int()"). openwave lets the word go down to -128 dB; the kernel's control and wave3-research's class range stop at -60, and so does the backend |
+| Gain 0 to 40 dB | verified on hardware | Q8.8 word at 0. On the maintainer's unit a gain written with the dial on headphones read back in the block (30 dB as `1E 00`), and going from 40 to 20 dB lowered the recorded noise floor by 20 to 22 dB. openwave reads and writes it there; wave3-research logged the same word following the dial in each of its modes and says host writes are ignored, which neither firmware 1.2.4 nor a Wave:1 bears out. The backend trusts the word while the dial is on gain, where both agree, remembers it, and reports that while the dial is elsewhere; until the dial has been on gain once since the connect, it reports the word as openwave does. A gain it wrote with the dial elsewhere counts once the block reads the word back, which a Wave:1 owner's archive showed the firmware doing; a firmware that drops the write reads back the dial's word and changes nothing |
+| Mute | written and read back | byte 4, with the card's 'Mic Capture Switch' following; the capacitive mute pad toggles the same byte in wave3-research's log. The pad and the ring are not yet checked |
+| ClipGuard | written and read back | byte 5; taken as hardware, so the software limiter is not offered. Whether it audibly catches a loud signal is not yet checked |
+| Headphone volume -60 to 0 dB | written and read back | signed Q8.8 word at 7 (-30 dB as `00 E2`, -12.5 dB as `80 F3`), with the card's 'PCM Playback Volume' following, written truncated toward zero as openwave does ("matching the firmware setter's int()"). openwave lets the word go down to -128 dB; the kernel's control and wave3-research's class range stop at -60, and so does the backend |
 | Direct monitor balance, as the crossfade | verified on hardware | Q8.8 percent at 10, half a percent per crossfade unit, shown as the Mic and PC crossfade (0 to 200). The word runs the other way from the crossfade: 0 percent is the computer alone and 100 the microphone alone. None of the sources states the direction; an owner settled it by ear on 2026-10-18, when the straight mapping put all computer audio at the slider's microphone end, and the backend mirrors the scales since |
 | Headphone mute | read | byte 9, in the state as `hpMute`. wave3-research saw the firmware assert it when the level reaches its floor; a level written above the floor releases it, so the jack cannot stay silent with nothing in OpenXLR to release it. No control sets it |
 | Low cut | software | the submixer's high-pass, by design; byte 6 is carried as read |
 | Gain lock | software | the daemon's own lock, kept off the window because of the dial, as on every device with one; byte 15 is carried as read |
 | Dial target | read | byte 12: 1 gain, 2 headphones, 3 monitor mix; named in the diagnostics dump, with where the reported gain came from |
 | Mute ring colour, LED brightness | unmapped | wave3-research's bytes 10, 11, 13 and 15; carried as read where no setter owns them |
-| Desktop volume controls | coded | the kernel's 'Mic Capture Volume', 'Mic Capture Switch' and 'PCM Playback Volume' kept in step with the block, as openwave does on the hardware; see below |
-| Firmware version | read | bytes 21 to 23 of the device info block, openwave's offsets; shown in Options under INTERFACE and in the state's `device.firmware` |
-| Device info block (0x000A) | read | 64 bytes, the length openwave requires before it drives a unit (wave3-research read 51); the diagnostics exporter masks the serial wherever it lands |
+| Desktop volume controls | verified on hardware | the kernel's 'Mic Capture Volume', 'Mic Capture Switch' and 'PCM Playback Volume' kept in step with the block, as openwave does on the hardware; a change to the sink volume or the source mute in the desktop reached the block within a second. See below |
+| Firmware version | read | bytes 21 to 23 of the device info block, openwave's offsets; shown in Options under INTERFACE and in the state's `device.firmware`. Two units read 1.2.2 and 1.2.4 there while bytes 6 to 8 read `00 03 07` on both, and bytes 0 and 1 read 5.3 and 5.4, LibreWave's two API versions. Not yet compared with the version Wave Link shows |
+| Device info block (0x000A) | read | 64 bytes on two units, the length openwave requires before it drives a unit (wave3-research read 51); the diagnostics exporter masks the serial wherever it lands |
 
 The microphone's ALSA card carries the three controls that a desktop's
 sound settings and WirePlumber's restore at login act on. The kernel
@@ -294,9 +301,14 @@ card in step with it, as openwave does. When the block changes (the dial,
 the mute pad, a write from OpenXLR), the next poll writes the new value
 to the card. Every half second the backend also reads the card's mute
 and headphone level, and writes a change something else made there into
-the block. The gain only goes from the block to the card, because
-wave3-research found the firmware ignores a gain written through the
-class control; a card gain that differs from the block is a stale cache.
+the block. The gain only goes from the block to the card.
+wave3-research found its unit ignoring a gain written through the class
+control. Firmware 1.2.4 does not: with OpenXLR stopped, a change to any
+of the three controls, the gain included, shows in the block and in the
+sound, so a desktop's gain change reaches the backend through the block
+either way. A card gain that differs from the block is a stale cache.
+The half-second readback is what keeps the block in step on firmware
+that does not carry the controls over by itself.
 Without its card the microphone is still driven, Options says the
 desktop's controls are not kept in step, and the diagnostics dump gives
 the reason on its `alsa` line.
@@ -322,7 +334,10 @@ string into an underscore, and that is the fragment the daemon looks
 for. No capture-hold WirePlumber rule ships for it. openwave applies its
 own rule to the Wave:3 alongside the Wave XLR, but the ordering bug the
 XLR Dock and the original Wave XLR have has not been reported on a
-Wave:3 and its dump shows no shared node group. An owner who records
+Wave:3. The maintainer's unit runs at full speed behind a hub and its
+kernel logs the XLR Dock's `bad transfer trb length` warning, yet with
+playback running on its sink before capture opened it recorded every
+time, in three trials. An owner who records
 silence after a playback stream opened first would need a copy of
 `52-openxlr-mk1-capture-hold.conf` matching `Elgato_Wave_3_`.
 
@@ -348,16 +363,16 @@ mute off at 9, mix 0 at 10 and the dial on headphones at 12, the
 Wave:1's default according to the review. The kernel's card held Mic
 Capture Volume 22 for those 11 dB, capture on and PCM Playback Volume
 120, so the daemon had written the desktop volume mirror and it agreed
-with the block. One difference from every Wave:3 log: bytes 2 and 3
-read 0x00EC where a Wave:3 reads zero. The backend retransmits them as
-read.
+with the block. Bytes 2 and 3 read 0x00EC, as they do on both Wave:3
+units checked since. The backend retransmits them as read.
 
 The same owner's second archive, taken after every control in the UI
 had been tried, covered the writes. The gain word held 5 dB where the
 first archive had 11, with the dial still on headphones, so only
 OpenXLR can have written it, and it was still there after the daemon
 had restarted in between: the firmware takes a host write to the gain,
-where wave3-research says a Wave:3 ignores one. The owner saw the
+as firmware 1.2.4 on a Wave:3 does, where wave3-research says a Wave:3
+ignores one. The owner saw the
 microphone's LED turn red on Mute and the white LED follow the
 headphone slider. ClipGuard and the mix were back at their defaults
 when the archive was collected, so it shows nothing about them.
