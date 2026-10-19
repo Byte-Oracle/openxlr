@@ -13,7 +13,8 @@
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/emaspa)
 
 OpenXLR is a Wave Link replacement for Linux. It controls Elgato XLR
-interfaces over reverse-engineered USB protocols and adds a PipeWire
+interfaces and the Wave:3 and Wave:1 USB microphones over
+reverse-engineered USB protocols and adds a PipeWire
 submixer with per-application channels, virtual microphones, LV2, CLAP
 and VST3 plugin inserts, multi-output monitoring, a dedicated mix for a
 second computer on the USB Aux port, and an OpenDeck plugin for Stream
@@ -48,7 +49,7 @@ the author's own hardware.
 | Wave XLR | 0fd9:007d | gain, mute, headphone volume and low impedance verified by community testers; phantom power implemented, awaiting an OpenXLR hardware check |
 | Wave XLR MK.2 | 0fd9:00b6 | gain, mute, phantom power, DSP, ClipGuard, compressor, headphone volume, crossfade; verified on hardware by a community tester |
 | XLR Dock MK.2 (Stream Deck+ module) | 0fd9:00c7 | same exposed controls as the Wave XLR MK.2, verified on hardware |
-| Wave:3 (beta) | 0fd9:0070 | gain, mute, headphone volume and monitor balance worked in one user's quick test; ClipGuard and the desktop volume sync are untested |
+| Wave:3 (beta) | 0fd9:0070 | gain, monitor balance and the desktop volume controls verified on hardware; mute, ClipGuard and headphone volume written and read back on the maintainer's unit; the mute pad, the LED ring and a replug are not yet checked |
 | Wave:1 (beta) | 0fd9:006e | detection, the config block, the firmware line, the desktop volume mirror and the gain, mute and headphone volume writes verified from an owner's two diagnostics runs on 0.1.60; ClipGuard and the mic/PC mix are read, their writes not yet seen |
 
 The UI shows the controls OpenXLR exposes for the connected device, and a picker
