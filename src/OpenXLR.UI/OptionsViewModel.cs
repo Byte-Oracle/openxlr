@@ -263,6 +263,7 @@ public sealed class OptionsViewModel : ViewModelBase
         set
         {
             if (_startDaemonAtLogin == value) return;
+            if (FlatpakEnvironment.IsFlatpak) { ConfigureFlatpakStartup(value, _openWindowAtLogin); return; }
             if (!StartupIntegration.SetDaemonAtLogin(value))
             {
                 StartupError = value
@@ -287,6 +288,7 @@ public sealed class OptionsViewModel : ViewModelBase
         set
         {
             if (_openWindowAtLogin == value) return;
+            if (FlatpakEnvironment.IsFlatpak) { ConfigureFlatpakStartup(_startDaemonAtLogin, value); return; }
             if (!StartupIntegration.SetWindowAtLogin(value))
             {
                 StartupError = Localizer.Text("CouldNotUpdateAutostart") + " " + Localizer.Text("StartupDoctorHint");
@@ -318,6 +320,39 @@ public sealed class OptionsViewModel : ViewModelBase
 
     private string? _startupError;
     public string? StartupError { get => _startupError; private set => Set(ref _startupError, value); }
+
+    private bool _startupBusy;
+    public bool CanConfigureStartup => !_startupBusy;
+    public bool IsFlatpak => FlatpakEnvironment.IsFlatpak;
+    public string FlatpakSetup => Localizer.Text("FlatpakSetup");
+
+    private async void ConfigureFlatpakStartup(bool audio, bool window)
+    {
+        if (_startupBusy) return;
+        _startupBusy = true;
+        Raise(nameof(CanConfigureStartup));
+        try
+        {
+            await FlatpakBackground.ConfigureAsync(audio, window);
+            _startDaemonAtLogin = audio;
+            _openWindowAtLogin = window;
+            StartupError = null;
+            Persist();
+        }
+        catch (Exception ex) { StartupError = ex.Message; }
+        finally
+        {
+            _startupBusy = false;
+            Raise(nameof(CanConfigureStartup));
+            // Publish the attempted values before restoring the accepted
+            // state, so a rejected two-way checkbox is actually reset.
+            bool actualAudio = _startDaemonAtLogin, actualWindow = _openWindowAtLogin;
+            _startDaemonAtLogin = audio; _openWindowAtLogin = window;
+            Raise(nameof(StartDaemonAtLogin)); Raise(nameof(OpenWindowAtLogin));
+            _startDaemonAtLogin = actualAudio; _openWindowAtLogin = actualWindow;
+            Raise(nameof(StartDaemonAtLogin)); Raise(nameof(OpenWindowAtLogin)); Raise(nameof(StartupHint));
+        }
+    }
 
     /// <summary>What the startup repair did, in words, or null when it did nothing worth saying.</summary>
     internal static string? RepairNote(StartupIntegration.AutostartRepair repair) => repair switch

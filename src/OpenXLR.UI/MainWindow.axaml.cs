@@ -60,6 +60,23 @@ public partial class MainWindow : Window
         {
             if (_automaticUpdateCheckStarted) return;
             _automaticUpdateCheckStarted = true;
+            if (FlatpakEnvironment.IsFlatpak && !System.IO.File.Exists(OpenXlrPaths.ConfigFile("flatpak-notice")))
+            {
+                string setupError = FlatpakSetup.Prepare();
+                string setup = Localizer.Text("FlatpakSetup") + setupError;
+                if (await Dialogs.ConfirmAsync(this, "OpenXLR Flatpak", setup, Localizer.Text("Close")))
+                {
+                    try
+                    {
+                        var settings = UiSettings.Load();
+                        await FlatpakBackground.ConfigureAsync(settings.StartDaemonAtLogin, settings.OpenWindowAtLogin, _lifetime.Token);
+                        if (setupError.Length == 0) OpenXlrPaths.WriteAtomic(OpenXlrPaths.ConfigFile("flatpak-notice"), "1\n");
+                    }
+                    catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { /* show again next time */ }
+                    catch (Exception ex)
+                    { await Dialogs.ConfirmAsync(this, "OpenXLR Flatpak", ex.Message, Localizer.Text("Close")); }
+                }
+            }
             await _vm.Updates.CheckAsync(manual: false, cancellation: _lifetime.Token);
         };
 
@@ -75,7 +92,8 @@ public partial class MainWindow : Window
         // learns whether a host exists after the constructor returns. So the
         // option does what it says and the manual says what happens on a
         // desktop with no tray.
-        StartsHidden = UiSettings.Load().StartMinimized;
+        StartsHidden = UiSettings.Load().StartMinimized || (FlatpakEnvironment.IsFlatpak
+            && Environment.GetCommandLineArgs().Contains("--background", StringComparer.Ordinal));
 
         Closing += (_, e) =>
         {

@@ -718,7 +718,7 @@ public static class StartupIntegration
     /// applied, so Options reports it instead of saving a preference the
     /// system does not have.
     /// </summary>
-    public static bool SetDaemonAtLogin(bool enabled) => SetDaemonAtLogin(enabled, PackagedUnit);
+    public static bool SetDaemonAtLogin(bool enabled) => !FlatpakEnvironment.IsFlatpak && SetDaemonAtLogin(enabled, PackagedUnit);
 
     internal static bool SetDaemonAtLogin(bool enabled, string? packagedUnit)
     {
@@ -779,6 +779,7 @@ public static class StartupIntegration
     /// </summary>
     public static bool SetWindowAtLogin(bool enabled)
     {
+        if (FlatpakEnvironment.IsFlatpak) return false;
         if (!SetWindowAtLogin(enabled, UiBinary)) return false;
         RememberAutostartExecutable(enabled ? UiBinary : null);
         return true;
@@ -1024,7 +1025,9 @@ public static class StartupIntegration
     /// effect. False when systemd does not manage it (source builds run by
     /// hand), so the caller can tell the user to restart it themselves.
     /// </summary>
-    public static bool RestartDaemon() => Systemctl("restart", "openxlr-daemon.service");
+    public static bool RestartDaemon() => FlatpakEnvironment.IsFlatpak
+        ? FlatpakSession.Current?.Restart() == true
+        : Systemctl("restart", "openxlr-daemon.service");
 
     private static bool Systemctl(params string[] args)
     {

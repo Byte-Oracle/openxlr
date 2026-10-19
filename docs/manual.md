@@ -1,5 +1,7 @@
 # OpenXLR manual
 
+The experimental Flatpak has its own [startup and hardware setup](flatpak.md).
+
 This manual follows `main`. A released package can lag behind it; read the
 manual at that release's tag for matching behaviour. The app's Manual links
 open this page on GitHub `main`.

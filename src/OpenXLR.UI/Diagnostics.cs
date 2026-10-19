@@ -82,7 +82,12 @@ public static class Diagnostics
             await WriteCmd(Clean, work, "sources.txt", "pactl", "list", "short", "sources");
             await WriteCmd(Clean, work, "modules.txt", "pactl", "list", "short", "modules");
             await WriteCmd(Clean, work, "lsusb.txt", "lsusb");
-            await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
+            if (FlatpakEnvironment.IsFlatpak)
+            {
+                CopyRedactedIfExists(Clean, Path.Combine(UiSettings.ConfigDir, "logs"), "daemon.log", work);
+                CopyRedactedIfExists(Clean, Path.Combine(UiSettings.ConfigDir, "logs"), "daemon.log.old", work);
+            }
+            else await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
                 "--since", "2 hours ago", "--no-pager");
 
             // Configs may include remembered application identities and device
