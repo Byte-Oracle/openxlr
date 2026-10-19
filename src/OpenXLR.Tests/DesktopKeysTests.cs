@@ -36,7 +36,19 @@ public sealed class DesktopKeysTests
         Assert.Equal(window ? new[] { "openxlr" } : new[] { "openxlr", "--background" }, backend.Command);
     }
 
-    private sealed class BackgroundBackend(DesktopBus bus, bool grant) : IPathMethodHandler
+    [DesktopBusFact]
+    public async Task BackgroundRefusalDoesNotHideAnAcceptedAutostartEntry()
+    {
+        await using var environment = await PrivateBus.Start();
+        using var desktop = new DBusConnection(environment.Address);
+        await desktop.ConnectAsync(); await desktop.RequestNameAsync(DesktopBus.Portal);
+        desktop.AddMethodHandler(new BackgroundBackend(new DesktopBus(desktop), grant: false, grantAutostart: true));
+        using var client = new DBusConnection(environment.Address);
+        await client.ConnectAsync();
+        Assert.False(await FlatpakBackground.ConfigureAsync(new DesktopBus(client), true, false, CancellationToken.None));
+    }
+
+    private sealed class BackgroundBackend(DesktopBus bus, bool grant, bool? grantAutostart = null) : IPathMethodHandler
     {
         public string Path => "/";
         public bool HandlesChildPaths => true;
@@ -56,7 +68,7 @@ public sealed class DesktopKeysTests
             using var signal = bus.Connection.GetMessageWriter();
             signal.WriteSignalHeader(destination: sender, path: path, @interface: "org.freedesktop.portal.Request", member: "Response", signature: "ua{sv}");
             signal.WriteUInt32(0);
-            signal.WriteDictionary(new Dictionary<string, VariantValue> { ["background"] = grant, ["autostart"] = grant && Autostart });
+            signal.WriteDictionary(new Dictionary<string, VariantValue> { ["background"] = grant, ["autostart"] = grantAutostart ?? (grant && Autostart) });
             bus.Connection.TrySendMessage(signal.CreateMessage());
             return ValueTask.CompletedTask;
         }

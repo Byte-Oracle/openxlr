@@ -11,7 +11,9 @@ installation's login options before enabling Flatpak login startup.
 The login settings use the desktop background portal. Start audio in the
 background launches in the tray. Start the OpenXLR app shows the window,
 unless Tray only is selected under On launch. A refused request is reported
-without saving it. Desktop settings can revoke permission later.
+without saving it. If autostart is granted but background activity is not,
+the login choice is saved with a warning so the entry can still be disabled.
+Desktop settings can revoke permission later.
 
 Restart daemon restarts the child without touching host services. Failed
 children are retried with a delay; a busy API port or owned daemon lock

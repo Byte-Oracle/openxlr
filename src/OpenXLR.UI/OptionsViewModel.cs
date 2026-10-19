@@ -333,10 +333,10 @@ public sealed class OptionsViewModel : ViewModelBase
         Raise(nameof(CanConfigureStartup));
         try
         {
-            await FlatpakBackground.ConfigureAsync(audio, window);
+            bool background = await FlatpakBackground.ConfigureAsync(audio, window);
             _startDaemonAtLogin = audio;
             _openWindowAtLogin = window;
-            StartupError = null;
+            StartupError = background ? null : Localizer.Text("FlatpakBackgroundUnavailable");
             Persist();
         }
         catch (Exception ex) { StartupError = ex.Message; }

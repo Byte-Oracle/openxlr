@@ -71,7 +71,7 @@ public partial class MainWindow : Window
                     {
                         var settings = UiSettings.Load();
                         if (!await FlatpakBackground.ConfigureAsync(settings.StartDaemonAtLogin, settings.OpenWindowAtLogin, _lifetime.Token))
-                            throw new InvalidOperationException(Localizer.Text("FlatpakBackgroundRefused"));
+                            throw new InvalidOperationException(Localizer.Text("FlatpakBackgroundUnavailable"));
                         if (setupError.Length == 0) OpenXlrPaths.WriteAtomic(OpenXlrPaths.ConfigFile("flatpak-notice"), "1\n");
                     }
                     catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { /* show again next time */ }

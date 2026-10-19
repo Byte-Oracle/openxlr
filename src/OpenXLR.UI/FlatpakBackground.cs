@@ -32,7 +32,7 @@ internal static class FlatpakBackground
                 ["dbus-activatable"] = false,
             });
         }, cancel, Interface);
-        if (!result.TryGetValue("background", out var background) || (enabled && !background.GetBool())
+        if (!result.TryGetValue("background", out var background)
             || !result.TryGetValue("autostart", out var autostart) || autostart.GetBool() != enabled)
             throw new InvalidOperationException(Localization.Localizer.Text("FlatpakBackgroundRefused"));
         return background.GetBool();

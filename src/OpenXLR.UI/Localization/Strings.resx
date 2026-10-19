@@ -2389,7 +2389,7 @@ Select the interface OpenXLR drives</value>
     <value>Mic 1 gain</value>
   </data>
   <data name="FlatpakBackgroundReason" xml:space="preserve"><value>Keep the audio mixer running and restore it at login.</value></data>
-  <data name="FlatpakBackgroundRefused" xml:space="preserve"><value>The desktop did not grant the requested background and autostart permissions.</value></data>
+  <data name="FlatpakBackgroundRefused" xml:space="preserve"><value>Could not confirm the requested login startup preference with the desktop.</value></data>
   <data name="FlatpakSetup" xml:space="preserve"><value>Flatpak keeps audio running while OpenXLR is in the tray. Quit also stops its audio daemon. Do not run a packaged OpenXLR daemon at the same time.
 
 USB controls require the host udev rule. Run outside the sandbox:
@@ -2398,4 +2398,5 @@ sudo udevadm control --reload-rules
 Then reconnect the interface. The user WirePlumber rules take effect at the next login.
 
 The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins from Flathub's LinuxAudio extensions; host plugins and the Windows bridge are not included. See docs/flatpak.md for setup and limitations.</value></data>
+  <data name="FlatpakBackgroundUnavailable" xml:space="preserve"><value>The desktop did not allow background activity. OpenXLR may stop when hidden.</value></data>
 </root>
