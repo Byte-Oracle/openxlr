@@ -469,7 +469,10 @@ WebSocket API, so they reflect changes made in the UI or on the
 hardware.
 
 Dials render a touch panel: a knob with a needle, a level meter, the
-value readout, and a mute overlay. Every send, channel volume, mix master, gain,
+value readout, and a mute overlay. The meter's colours sit along the bar,
+green into yellow at the skin's warning level and into red at its hot
+level, and only the bar's length moves with the sound, so the strip never
+flashes from one colour to another. Every send, channel volume, mix master, gain,
 headphone volume, the crossfade and each desktop output's volume (up to
 150%, pressing toggles its mute) is a dial target, and one dial can
 hold several targets cycled by tap or press. A turn leads locally: the

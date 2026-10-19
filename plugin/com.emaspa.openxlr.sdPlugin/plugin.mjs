@@ -1125,15 +1125,25 @@ function meterKeyFor(t) {
   return "mix:monitor";   // outputVolume, hp, hp2, crossfade
 }
 
+// The colours sit along the bar, as in the window: green up to the warning
+// level, yellow up to the hot level, red above, blended over a few pixels at
+// each edge. Only the bar's length follows the level, so the whole strip never
+// switches colour from one tick to the next.
+const METER_W = 130, METER_BLEND = 0.04;
 function meterSvg(level) {
-  const w = Math.round(Math.max(0, Math.min(1, level)) * 130);
-  const colour = level >= skinPalette.colours["Ox.Meter.HotLevel"] ? skinPalette.colours["Ox.Meter.Hot"]
-    : level >= skinPalette.colours["Ox.Meter.WarningLevel"] ? skinPalette.colours["Ox.Meter.Warning"]
-    : skinPalette.colours["Ox.Meter.Fill"];
+  const w = Math.round(Math.max(0, Math.min(1, level)) * METER_W);
+  const c = skinPalette.colours;
+  const warn = Math.max(0, Math.min(1, c["Ox.Meter.WarningLevel"]));
+  const hot = Math.max(warn, Math.min(1, c["Ox.Meter.HotLevel"]));
+  const stop = (at, colour) => `<stop offset="${Math.max(0, Math.min(1, at)).toFixed(3)}" stop-color="${colour}"/>`;
+  const stops = [stop(0, c["Ox.Meter.Fill"]), stop(warn - METER_BLEND, c["Ox.Meter.Fill"]),
+    stop(warn + METER_BLEND, c["Ox.Meter.Warning"]), stop(Math.max(warn + METER_BLEND, hot - METER_BLEND), c["Ox.Meter.Warning"]),
+    stop(hot + METER_BLEND, c["Ox.Meter.Hot"]), stop(1, c["Ox.Meter.Hot"])].join("");
   return "data:image/svg+xml;base64," + Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="130" height="6" viewBox="0 0 130 6">
-      <rect width="130" height="6" rx="3" fill="${skinPalette.colours["Ox.Meter.Track"]}"/>
-      ${w > 0 ? `<rect width="${w}" height="6" rx="3" fill="${colour}"/>` : ""}
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${METER_W}" height="6" viewBox="0 0 ${METER_W} 6">
+      <defs><linearGradient id="level" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${METER_W}" y2="0">${stops}</linearGradient></defs>
+      <rect width="${METER_W}" height="6" rx="3" fill="${c["Ox.Meter.Track"]}"/>
+      ${w > 0 ? `<rect width="${w}" height="6" rx="3" fill="url(#level)"/>` : ""}
     </svg>`).toString("base64");
 }
 
@@ -1148,8 +1158,7 @@ function refreshMeters() {
     if (!key || !(key in meterLevels)) continue;
     const lr = meterLevels[key];
     const level = Math.max(lr[0] ?? 0, lr[1] ?? 0);
-    const zone = level >= skinPalette.colours["Ox.Meter.HotLevel"] ? 2 : level >= skinPalette.colours["Ox.Meter.WarningLevel"] ? 1 : 0;
-    const bucket = Math.round(level * 65) * 3 + zone;
+    const bucket = Math.round(level * 65);
     if (lastMeter.get(context) === bucket) continue;
     lastMeter.set(context, bucket);
     send({ event: "setFeedback", context, payload: { meter: meterSvg(level) } });
