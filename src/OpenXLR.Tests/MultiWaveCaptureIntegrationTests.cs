@@ -225,7 +225,7 @@ public sealed partial class MonitorVolumeIntegrationTests
 
     private static (string From, string To)[] GraphLinksInto(string node)
     {
-        using var graph = JsonDocument.Parse(ProcessRunner.Run("pw-dump", []).Stdout);
+        using var graph = PipeWireSnapshot.Parse(ProcessRunner.Run("pw-dump", []).Stdout);
         return [.. PipeWireAdapter.ParseGraphLinks(graph.RootElement.EnumerateArray())
             .Where(link => link.To.StartsWith(node + ":", StringComparison.Ordinal))];
     }

@@ -43,7 +43,7 @@ public sealed class FilterStateIntegrationTests
                                     p.wait()
                     """, filter.SinkName, filter.SourceName], TimeSpan.FromSeconds(20));
                 Assert.True(result.Ok, result.StdoutText + result.Stderr);
-                using var graph = JsonDocument.Parse(ProcessRunner.Run("pw-dump", [], TimeSpan.FromSeconds(5)).StdoutText);
+                using var graph = PipeWireSnapshot.Parse(ProcessRunner.Run("pw-dump", [], TimeSpan.FromSeconds(5)).Stdout);
                 foreach (string name in new[] { filter.SinkName, filter.SourceName })
                 {
                     var node = graph.RootElement.EnumerateArray().Single(n =>
