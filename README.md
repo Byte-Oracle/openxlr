@@ -30,7 +30,8 @@ Changes merged after a release are available from source until the next release.
 
 Elgato ships no Linux software. These devices expose class-compliant USB
 audio; OpenXLR also supplies device-specific configuration, including
-WirePlumber rules that keep XLR Dock and original Wave XLR capture alive.
+WirePlumber rules that keep XLR Dock, original Wave XLR and Wave:3
+capture alive.
 Controls beyond standard USB audio use device-specific protocols, decoded
 from Wave Link USB captures and prior open-source protocol work. OpenXLR
 uses those mappings alongside ALSA controls where available.

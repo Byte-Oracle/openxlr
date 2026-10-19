@@ -84,13 +84,14 @@ Replug the interface after reloading the rules.
 
 ## 4. WirePlumber rules
 
-XLR Dock and original Wave XLR owners need one more file. The Linux
-kernel starves the dock's capture endpoint whenever playback to it starts
-before capture, and the mic then records pure silence (Windows schedules
-the same duplex fine; the kernel also logs "bad transfer trb length"
-warnings from the dock's malformed feedback endpoint). The original Wave
-XLR (MK.1) has the same ordering bug over its full-speed USB link.
-WirePlumber rules keep both capture sources always active, so playback
+XLR Dock, original Wave XLR and Wave:3 owners need one more file. The
+Linux kernel starves the dock's capture endpoint whenever playback to it
+starts before capture, and the mic then records pure silence (Windows
+schedules the same duplex fine; the kernel also logs "bad transfer trb
+length" warnings from the dock's malformed feedback endpoint). The
+original Wave XLR (MK.1) has the same ordering bug over its full-speed
+USB link, and so does a Wave:3 on some USB ports and controllers.
+WirePlumber rules keep these capture sources always active, so playback
 can never come first:
 
 ```sh
@@ -98,12 +99,13 @@ mkdir -p ~/.config/wireplumber/wireplumber.conf.d
 cp packaging/50-xlr-dock-capture-hold.conf ~/.config/wireplumber/wireplumber.conf.d/
 cp packaging/51-openxlr-pro-raw-names.conf ~/.config/wireplumber/wireplumber.conf.d/
 cp packaging/52-openxlr-mk1-capture-hold.conf ~/.config/wireplumber/wireplumber.conf.d/
+cp packaging/53-openxlr-wave3-capture-hold.conf ~/.config/wireplumber/wireplumber.conf.d/
 systemctl --user restart wireplumber
 ```
 
 The raw-name rule gives the Pro's multichannel nodes readable descriptions
 in desktop audio settings. It does not change their routing identities.
-Each of the three files matches only its target hardware, so they can be
+Each of the four files matches only its target hardware, so they can be
 installed together on any supported setup, which is what the packages do.
 These `.conf` rules use WirePlumber 0.5 syntax.
 
@@ -232,6 +234,7 @@ sudo cmp -s packaging/70-openxlr.rules /etc/udev/rules.d/70-openxlr.rules && sud
 cmp -s packaging/50-xlr-dock-capture-hold.conf ~/.config/wireplumber/wireplumber.conf.d/50-xlr-dock-capture-hold.conf && rm -- ~/.config/wireplumber/wireplumber.conf.d/50-xlr-dock-capture-hold.conf
 cmp -s packaging/51-openxlr-pro-raw-names.conf ~/.config/wireplumber/wireplumber.conf.d/51-openxlr-pro-raw-names.conf && rm -- ~/.config/wireplumber/wireplumber.conf.d/51-openxlr-pro-raw-names.conf
 cmp -s packaging/52-openxlr-mk1-capture-hold.conf ~/.config/wireplumber/wireplumber.conf.d/52-openxlr-mk1-capture-hold.conf && rm -- ~/.config/wireplumber/wireplumber.conf.d/52-openxlr-mk1-capture-hold.conf
+cmp -s packaging/53-openxlr-wave3-capture-hold.conf ~/.config/wireplumber/wireplumber.conf.d/53-openxlr-wave3-capture-hold.conf && rm -- ~/.config/wireplumber/wireplumber.conf.d/53-openxlr-wave3-capture-hold.conf
 cmp -s packaging/pipewire-pulse-openxlr.conf ~/.config/systemd/user/pipewire-pulse.service.d/openxlr.conf && rm -- ~/.config/systemd/user/pipewire-pulse.service.d/openxlr.conf
 sudo udevadm control --reload-rules
 systemctl --user daemon-reload

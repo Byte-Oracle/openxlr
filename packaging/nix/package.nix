@@ -90,6 +90,7 @@ buildDotnetModule {
     install -Dm644 packaging/50-xlr-dock-capture-hold.conf \
       packaging/51-openxlr-pro-raw-names.conf \
       packaging/52-openxlr-mk1-capture-hold.conf \
+      packaging/53-openxlr-wave3-capture-hold.conf \
       -t $out/share/wireplumber/wireplumber.conf.d
     install -Dm644 packaging/pipewire-pulse-openxlr.conf \
       $out/lib/systemd/user/pipewire-pulse.service.d/openxlr.conf
