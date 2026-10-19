@@ -2101,6 +2101,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private readonly Dictionary<string, StreamAssignment> _apps = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<int, StreamAssignment> _streams = [];
 
+    // Each application's icon. Its desktop entries are read outside the
+    // mixer lock; inside it, lookups only read what was already read.
+    private readonly ApplicationIconResolver _icons = new();
+
     /// <summary>
     /// Look for application streams and route new ones to their channel. Called
     /// on a timer by the daemon. Returns true when anything changed. Streams the
@@ -2111,6 +2115,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         if (!_built) return false;
         var (live, clients) = _pw.ListApplications();
         bool changed = false;
+        _icons.Refresh();
+        Dictionary<string, string> icons = LiveIcons(live, clients);
 
         lock (_gate)
         {
@@ -2208,22 +2214,43 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             }
 
             // Reconcile flags; remembered apps stay listed when gone entirely.
+            // An app keeps the icon it was last seen with once it stops.
             foreach ((string identity, StreamAssignment app) in _apps.ToList())
             {
                 bool activeNow = liveIdentities.Contains(identity);
                 bool runningNow = activeNow || runningIdentities.Contains(identity);
-                if (app.Active != activeNow || app.Running != runningNow)
+                string? icon = icons.GetValueOrDefault(identity) ?? app.Icon
+                    ?? _icons.Resolve(ApplicationIconHints.Remembered(identity, app.Label))?.Icon;
+                if (app.Active != activeNow || app.Running != runningNow || app.Icon != icon)
                 {
                     _apps[identity] = app with
                     {
                         Active = activeNow, Running = runningNow,
                         Id = activeNow ? app.Id : 0, Serial = activeNow ? app.Serial : 0,
+                        Icon = icon,
                     };
                     changed = true;
                 }
             }
         }
         return changed;
+    }
+
+    /// <summary>
+    /// The best icon each live identity's streams and clients lead to: an
+    /// application can register several clients, and one of them may carry a
+    /// published icon name or an application id the others lack.
+    /// </summary>
+    private Dictionary<string, string> LiveIcons(IReadOnlyList<AudioStream> live, IReadOnlyList<AudioStream> clients)
+    {
+        var best = new Dictionary<string, IconMatch>(StringComparer.OrdinalIgnoreCase);
+        foreach (AudioStream s in live.Concat(clients))
+        {
+            if (_icons.Resolve(ApplicationIconHints.From(s)) is not { } match) continue;
+            string identity = s.Identity;
+            if (!best.TryGetValue(identity, out IconMatch? held) || match.Source < held.Source) best[identity] = match;
+        }
+        return best.ToDictionary(p => p.Key, p => p.Value.Icon, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>

@@ -71,6 +71,7 @@ public sealed class WindowLayoutTests
                     vm.Apps.Add(app);
                     vm.ActiveApps.Add(app);
                 }
+                ApplicationIconWindowTests.Assign(vm.Apps);
                 main.DataContext = null;
                 main.DataContext = vm;
                 main.Show();
@@ -84,6 +85,7 @@ public sealed class WindowLayoutTests
                     Layout(main, width, 900);
                     Assert.Equal(width, main.ClientSize.Width);
                     MainWindowLabelTests.Check(main);
+                    ApplicationIconWindowTests.Check(main, $"at {width}");
                     if (width == 640) MainWindowLabelTests.CheckLongDeviceLabels(main);
                     if (width == 640)
                     {

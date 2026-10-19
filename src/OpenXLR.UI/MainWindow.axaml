@@ -21,7 +21,8 @@
     <!-- APPLICATIONS' two templates. A chip per application, wrapping across
          the section, is the classic one; a line per application, the name
          shortening beside its channel picker, fits a narrow column. Both bind
-         the same application objects, and the picker is the only control. -->
+         the same application objects, show the application's icon before its
+         name, and the picker is the only control. -->
     <ItemsPanelTemplate x:Key="ApplicationChipsPanel"><WrapPanel/></ItemsPanelTemplate>
     <ItemsPanelTemplate x:Key="ApplicationListPanel"><StackPanel Spacing="4"/></ItemsPanelTemplate>
     <DataTemplate x:Key="ApplicationChip" x:DataType="vm:AppStreamViewModel">
@@ -30,6 +31,7 @@
           <skin:StatusLed IsOn="{Binding Active}"
                           AutomationProperties.Name="{loc:Text Key=StreamState}"
                           ToolTip.Tip="{Binding StatusText}"/>
+          <views:ApplicationIconView Icon="{Binding Icon}" Label="{Binding Label}"/>
           <TextBlock Text="{Binding Label}" Classes="body" VerticalAlignment="Center"/>
           <ComboBox Name="ApplicationChannel" ItemsSource="{Binding Channels}" MinWidth="110"
                     SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
@@ -39,13 +41,14 @@
     </DataTemplate>
     <DataTemplate x:Key="ApplicationLine" x:DataType="vm:AppStreamViewModel">
       <Border Classes="tile" Name="ApplicationLine" Padding="8,4">
-        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
           <skin:StatusLed IsOn="{Binding Active}" VerticalAlignment="Center"
                           AutomationProperties.Name="{loc:Text Key=StreamState}"
                           ToolTip.Tip="{Binding StatusText}"/>
-          <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="body" VerticalAlignment="Center"
+          <views:ApplicationIconView Grid.Column="1" Icon="{Binding Icon}" Label="{Binding Label}"/>
+          <TextBlock Grid.Column="2" Text="{Binding Label}" Classes="body" VerticalAlignment="Center"
                      TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}"/>
-          <ComboBox Grid.Column="2" Name="ApplicationChannel" ItemsSource="{Binding Channels}" MinWidth="110" MaxWidth="160"
+          <ComboBox Grid.Column="3" Name="ApplicationChannel" ItemsSource="{Binding Channels}" MinWidth="110" MaxWidth="160"
                     SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
                     AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=ApplicationChannelName}}">
             <ComboBox.ItemTemplate>

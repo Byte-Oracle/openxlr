@@ -1659,7 +1659,12 @@ public sealed class PipeWireAdapter
             if (Listed(DesktopServiceBinaries, binary) || Listed(DesktopServiceBinaries, appName)) continue;
             if (appName is not null && appName.Contains("OpenXLR", StringComparison.Ordinal)) continue;
 
-            found.Add(new AudioStream(0, appName, binary, null) { ProcessId = ProcessId(props) });
+            found.Add(new AudioStream(0, appName, binary, null)
+            {
+                ProcessId = ProcessId(props),
+                IconName = Text(props, "application.icon_name"),
+                AppId = Text(props, "pipewire.access.portal.app_id") ?? Text(props, "application.id"),
+            });
         }
         return found;
     }
@@ -1733,7 +1738,15 @@ public sealed class PipeWireAdapter
                 o.GetProperty("id").GetInt32(),
                 AppProperty("application.name"),
                 binary,
-                Str(props, "media.name")) { Serial = serial, ProcessId = ProcessId(client) is > 0 and var pid ? pid : ProcessId(props) });
+                Str(props, "media.name"))
+            {
+                Serial = serial,
+                ProcessId = ProcessId(client) is > 0 and var pid ? pid : ProcessId(props),
+                IconName = AppProperty("application.icon_name"),
+                // The portal's id is set by PipeWire on the client and cannot
+                // be forged by a sandboxed application, so it comes first.
+                AppId = Str(client, "pipewire.access.portal.app_id") ?? AppProperty("application.id"),
+            });
         }
         return found;
 
@@ -1742,6 +1755,11 @@ public sealed class PipeWireAdapter
                v.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(v.GetString())
                 ? v.GetString() : null;
     }
+
+    private static string? Text(JsonElement props, string key)
+        => props.ValueKind == JsonValueKind.Object && props.TryGetProperty(key, out JsonElement v) &&
+           v.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(v.GetString())
+            ? v.GetString() : null;
 
     private static int ProcessId(JsonElement props)
     {

@@ -669,6 +669,21 @@ whichever button variant is chosen.
 A control token a skin does not set keeps the framework's own value, so a
 skin that only recolours the cards leaves buttons exactly as they are.
 
+### Application icons
+
+Each application in APPLICATIONS shows its icon before its name, found in
+the desktop's icon theme. An application the theme has no icon for gets a
+badge of the same size with the first letter of its name, so the rows stay
+lined up.
+
+| Token | Kind | Default | Range | What it paints |
+|---|---|---|---|---|
+| `Ox.AppIcon.Size` | number | 18 | 12 to 48 | the square an application's icon is drawn in |
+| `Ox.AppIcon.Background` | brush | #353a47 |  | the badge drawn instead of an icon the desktop does not have |
+| `Ox.AppIcon.Foreground` | brush | #b9bfcc |  | the application's initial on that badge |
+| `Ox.AppIcon.CornerRadius` | radius | 4 | 0 to 48 | that badge's corners |
+| `Ox.AppIcon.FontSize` | number | 11 | 6 to 32 | the size of that initial |
+
 ### Audio flow window
 
 | Token | Kind | Default | Range | What it paints |

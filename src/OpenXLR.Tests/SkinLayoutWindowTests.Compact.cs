@@ -137,7 +137,8 @@ internal static partial class SkinLayoutWindowTests
                         Control[] parts = [.. ((Grid)line.Child!).Children.Where(c => c.IsVisible)];
                         AssertNoOverlap(parts);
                         foreach (Control part in parts) AssertInside(part, line);
-                        Assert.True(parts[1].Bounds.Width > 20, $"a name is {parts[1].Bounds.Width} wide {where}");
+                        TextBlock name = parts.OfType<TextBlock>().Single();
+                        Assert.True(name.Bounds.Width > 20, $"a name is {name.Bounds.Width} wide {where}");
                     }
                     Capture(window, $"skin-layout-compact-{skin}-{width}");
                 }

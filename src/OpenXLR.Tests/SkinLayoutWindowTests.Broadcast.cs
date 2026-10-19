@@ -71,6 +71,7 @@ internal static partial class SkinLayoutWindowTests
                 model.Apps.Add(app);
                 model.ActiveApps.Add(app);
             }
+            ApplicationIconWindowTests.Assign(model.Apps);
             // A Wave XLR Pro's view of the inputs: one XLR input, so XLR 2 is
             // not there, and the daemon says so of its channel too.
             model.HasXlr2 = false;
@@ -414,6 +415,7 @@ internal static partial class SkinLayoutWindowTests
         Border[] lines = ApplicationLines(window);
         Assert.Equal(model.ActiveApps.Count, lines.Length);
         foreach (Border line in lines) AssertInside(line, Card("ApplicationsTile"));
+        ApplicationIconWindowTests.Check(window, where);
 
         // HEADPHONES beside the toolbar need a window about 1000 wide; the tree fits a
         // wider window, a matrix wider than its card scrolls inside the card, and a

@@ -406,6 +406,13 @@ restores the split profile when it stops.
 - Electron apps report "Chromium" as their application name; they are
   identified by their process binary instead, so Discord appears as
   Discord
+- Every app in APPLICATIONS shows its icon. The daemon takes the icon
+  name the app publishes to PipeWire, or finds the app's desktop entry by
+  its Flatpak or application id, its process binary or its name, in the
+  XDG data directories, the Flatpak exports and Snap's. The window looks
+  the name up in the desktop's icon theme, then hicolor and the pixmaps
+  directory, and draws a PNG or SVG at its drawn size. An app with no icon
+  shows its initial on a badge the skin sizes and colours
 - A Manage dialog shows the full registry, and an installed-application
   picker pre-assigns channels from `.desktop` entries
 - An app can be set to "Not managed": the mixer hands its streams back to

@@ -17,6 +17,8 @@
 , pulseaudio
 , xdg-utils
 , glib
+, gdk-pixbuf
+, librsvg
 , python3
 , sourceCommit ? null
 , dirtySource ? false
@@ -67,12 +69,19 @@ buildDotnetModule {
     libx11
     libice
     libsm
+    # The window draws SVG application icons through GdkPixbuf, which it
+    # loads by name, so the library and the GLib it calls are on the path.
+    glib
+    gdk-pixbuf
   ];
 
   # The daemon shells out to amixer, parec, pw-cli, pw-loopback and gdbus
   # (focused-application routing); the UI opens links with xdg-open.
   makeWrapperArgs = [
     "--prefix PATH : ${lib.makeBinPath [ alsa-utils pipewire pulseaudio xdg-utils glib ]}"
+    # GdkPixbuf finds its SVG loader only through a loaders cache; librsvg's
+    # lists its own loader beside GdkPixbuf's, as wrapGAppsHook would set it.
+    "--set GDK_PIXBUF_MODULE_FILE ${librsvg.out}/${gdk-pixbuf.binaryDir}/loaders.cache"
   ];
 
   # The bin/ wrappers are created during fixup, so the friendly names

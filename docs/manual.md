@@ -411,6 +411,15 @@ PipeWire as an audio client; a green light means it is playing. Manage sits
 beside the APPLICATIONS heading, like Edit layout beside SUBMIXER. The app
 controls wrap onto further rows when the window is narrower.
 
+Each app shows its icon before its name, the one your desktop's launcher
+shows for it. The window looks it up in your icon theme, then in hicolor
+and `/usr/share/pixmaps`, and Flatpak and Snap apps get theirs too. An app
+with no icon gets the first letter of its name on a badge of the same size,
+so the names stay lined up. An app keeps its icon in the list after it
+quits. SVG icons need GdkPixbuf and its librsvg loader, which GTK desktops
+already have. Without them the window uses a PNG of the same icon if the
+theme has one, and the letter if not.
+
 Opening the window or receiving an updated app list only displays the current
 routing. A remembered routing change is sent when you choose a different
 channel. When the mixer stops supplying an app list, both the APPLICATIONS
