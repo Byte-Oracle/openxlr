@@ -115,7 +115,7 @@ public sealed partial class MonitorVolumeIntegrationTests
 
     private static uint[] IncomingRouteLinks(string node)
     {
-        using JsonDocument graph = JsonDocument.Parse(ProcessRunner.Run("pw-dump", []).Stdout);
+        using JsonDocument graph = PipeWireSnapshot.Parse(ProcessRunner.Run("pw-dump", []).Stdout);
         JsonElement target = graph.RootElement.EnumerateArray().FirstOrDefault(item =>
             item.GetProperty("type").GetString() == "PipeWire:Interface:Node"
             && item.GetProperty("info").GetProperty("props").TryGetProperty("node.name", out var name)

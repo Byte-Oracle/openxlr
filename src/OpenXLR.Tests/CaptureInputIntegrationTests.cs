@@ -66,7 +66,7 @@ public sealed partial class MonitorVolumeIntegrationTests
 
         int Links()
         {
-            using var graph = System.Text.Json.JsonDocument.Parse(ProcessRunner.Run("pw-dump", []).Stdout);
+            using var graph = PipeWireSnapshot.Parse(ProcessRunner.Run("pw-dump", []).Stdout);
             int node = graph.RootElement.EnumerateArray().Single(item =>
                 item.GetProperty("type").GetString() == "PipeWire:Interface:Node"
                 && item.GetProperty("info").GetProperty("props").TryGetProperty("node.name", out var name)
