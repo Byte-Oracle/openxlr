@@ -2283,8 +2283,12 @@ configuration files and version information. Plugin evidence includes the
 catalogue, effective bridge setup and latest native scan results. The home path, host name
 and the serial numbers of attached USB devices are redacted, in the
 text files and inside the hex dump of the vendor blocks (the XLR Dock
-stores its serial in one); review the archive anyway before attaching
-it to a public issue. Nothing is uploaded automatically. An archive is
+stores its serial in one). Your login name is redacted where it names
+your account: in `pactl info`, in the `user@host` part of each client in
+`wpctl status`, in PipeWire's user and core names in the graph dump, and
+in paths under `/home`, `/media`, `/run/media` and `/mnt`. Files inside
+the archive carry no owner name or id. Review the archive anyway before
+attaching it to a public issue. Nothing is uploaded automatically. An archive is
 created as a new private file; an existing file or symbolic link at its
 path is refused without overwriting its contents. A collection that
 fails part way removes its incomplete archive.
