@@ -17,8 +17,8 @@ Restart daemon restarts the child without touching host services. Failed
 children are retried with a delay; a busy API port or owned daemon lock
 ends the attempt. A parent-process wait also stops the daemon if the
 window crashes. The tray uses the app's D-Bus namespace, including when
-the desktop tray host restarts. There is no systemd watchdog. Private `logs/daemon.log`
-under the app's configuration directory has one rotated copy. Collect
+the desktop tray host restarts. There is no systemd watchdog. Private `daemon.log`
+under `$XDG_STATE_HOME/openxlr` has one rotated copy. Collect
 diagnostics includes both instead of the journal.
 
 ## Host setup

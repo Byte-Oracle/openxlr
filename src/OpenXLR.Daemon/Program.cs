@@ -34,7 +34,7 @@ builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = Tim
 if (OpenXLR.Core.FlatpakEnvironment.IsFlatpak)
 {
     builder.Logging.ClearProviders();
-    builder.Logging.AddProvider(new FlatpakLog(Path.Combine(OpenXLR.Core.OpenXlrPaths.ConfigDir, "logs", "daemon.log")));
+    builder.Logging.AddProvider(new FlatpakLog(Path.Combine(OpenXLR.Core.OpenXlrPaths.StateDir, "daemon.log")));
     builder.Services.AddHostedService<FlatpakParentLifetime>();
 }
 

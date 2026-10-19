@@ -26,7 +26,7 @@ internal sealed class FlatpakLog(string path) : ILoggerProvider
                 var options = new FileStreamOptions
                 {
                     Mode = FileMode.Append, Access = FileAccess.Write, Share = FileShare.Read,
-                                    };
+                };
                 if (!OperatingSystem.IsWindows()) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
                 using var file = new FileStream(path, options);
                 using var writer = new StreamWriter(file);

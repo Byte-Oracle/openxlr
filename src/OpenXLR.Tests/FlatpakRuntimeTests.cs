@@ -7,6 +7,21 @@ namespace OpenXLR.Tests;
 public sealed class FlatpakRuntimeTests
 {
     [Fact]
+    public void LogsUseTheStateDirectoryInsteadOfThePreferenceDirectory()
+    {
+        string? previous = Environment.GetEnvironmentVariable("XDG_STATE_HOME");
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_STATE_HOME", "/tmp/openxlr-test-state");
+            Assert.Equal("/tmp/openxlr-test-state/openxlr", OpenXLR.Core.OpenXlrPaths.StateDir);
+            Environment.SetEnvironmentVariable("XDG_STATE_HOME", "");
+            Assert.Equal(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "state", "openxlr"),
+                OpenXLR.Core.OpenXlrPaths.StateDir);
+        }
+        finally { Environment.SetEnvironmentVariable("XDG_STATE_HOME", previous); }
+    }
+
+    [Fact]
     public async Task OwnerExitAndDaemonCancellationAreDifferent()
     {
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();

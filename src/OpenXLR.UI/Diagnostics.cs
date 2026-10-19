@@ -84,8 +84,8 @@ public static class Diagnostics
             await WriteCmd(Clean, work, "lsusb.txt", "lsusb");
             if (FlatpakEnvironment.IsFlatpak)
             {
-                CopyRedactedIfExists(Clean, Path.Combine(UiSettings.ConfigDir, "logs"), "daemon.log", work, 1152 * 1024);
-                CopyRedactedIfExists(Clean, Path.Combine(UiSettings.ConfigDir, "logs"), "daemon.log.old", work, 1152 * 1024);
+                CopyRedactedIfExists(Clean, OpenXlrPaths.StateDir, "daemon.log", work, 1152 * 1024);
+                CopyRedactedIfExists(Clean, OpenXlrPaths.StateDir, "daemon.log.old", work, 1152 * 1024);
             }
             else await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
                 "--since", "2 hours ago", "--no-pager");
