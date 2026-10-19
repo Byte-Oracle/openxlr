@@ -84,6 +84,53 @@ public sealed class DeviceSwitchTests
         });
     }
 
+    [Fact]
+    public void GenericMicrophoneModeReleasesUsbAndResumesTheChosenDevice()
+    {
+        WithConfigDir(() =>
+        {
+            var wave = new CountingDevice(WaveXlr);
+            using var manager = new DeviceManager(NullLogger<DeviceManager>.Instance,
+                new ConfigurationBuilder().Build(), () => [wave]);
+            manager.SweepOnce();
+            manager.SetHardwareEnabled(false);
+            Assert.False(wave.Connected);
+            Assert.Equal(1, wave.Disposals);
+            Assert.False(manager.HardwareEnabled);
+            for (int i = 0; i < 10; i++) manager.SweepOnce();
+            Assert.False(manager.Snapshot().Connected);
+            Assert.NotNull(manager.SetActiveDevice("0fd9:007d"));
+            using var gain = JsonDocument.Parse("45");
+            Assert.NotNull(manager.Apply("gain", gain.RootElement));
+            Assert.Equal(30, wave.GainDb);
+            manager.SetHardwareEnabled(true);
+            manager.SweepOnce();
+            Assert.True(wave.Connected);
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SavedGenericInputPausesUsbOnlyWhileTheSoftwareMixerIsEnabled(bool mixerEnabled)
+    {
+        WithConfigDir(() =>
+        {
+            new DaemonSettings { Submixer = mixerEnabled }.Save();
+            Assert.Null(new OpenXLR.Core.Mixing.MixerSettings
+                { PrimaryInput = new("unplugged.microphone", 1) }.Save());
+            var wave = new CountingDevice(WaveXlr);
+            using var manager = new DeviceManager(NullLogger<DeviceManager>.Instance,
+                new ConfigurationBuilder().Build(), () => [wave]);
+            manager.SweepOnce();
+            Assert.Equal(!mixerEnabled, manager.HardwareEnabled);
+            Assert.Equal(!mixerEnabled, wave.Connected);
+            Assert.Equal(0, wave.Disposals);
+            Assert.Equal(new("unplugged.microphone", 1), OpenXLR.Core.Mixing.MixerSettings.Load()!.PrimaryInput);
+            manager.SuspendSession();
+        });
+    }
+
     private static void WithConfigDir(Action body)
     {
         string dir = Directory.CreateTempSubdirectory("openxlr-switch-").FullName;

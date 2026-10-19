@@ -198,6 +198,47 @@ Options has a tip for step 2: enforcing `OpenXLR Chat` as the system
 default input ([section 3.7](#default-devices)) makes every voice app pick it up without
 configuration.
 
+#### Use another microphone as XLR 1
+
+In Options, AUDIO, choose **Choose primary microphone...**. Pick the capture
+source and its microphone port, numbered from 1, then Save. The first port
+is usually right for a USB microphone; a multichannel interface may put the
+microphone on another port. OpenXLR takes one mono port and feeds both sides
+of XLR 1. You keep its sends, software low cut, software ClipGuard, insert
+chain and Sound Check. Set preamp gain and phantom power on the microphone
+or its own interface; OpenXLR does not invent USB controls for other brands.
+
+This enables generic microphone mode. Elgato USB control is released,
+including additional interfaces, and the window hides hardware gain,
+phantom, hardware effects, headphone controls and the other structural
+hardware inputs. Pick an ordinary PipeWire playback device under MONITOR;
+Elgato-specific output selectors and USB Aux routing are unavailable.
+The channel and mix nodes are kept, so application routes stay intact.
+
+Changing the source or port mutes the hardware channels in all monitor mixes.
+Unmute XLR 1 in the desired monitor mix deliberately when you want to hear
+it. If the source is unplugged or its selected port is missing, XLR 1 stays
+silent and a warning names the problem. It reconnects to the same source
+when that source returns, without borrowing another microphone. Changing
+the binding ends Sound Check and discards its sample.
+If two sources have the selected name, OpenXLR disconnects XLR 1 and reports
+the ambiguity. Rename or remove the duplicate so the name identifies one
+microphone before its route resumes.
+
+The choice lives in `mixer.json` and survives restart. Generic mode has its
+own mixer-only profiles; they never change the source selection. Interface
+recall on connect is unavailable, since startup already restores the saved
+mixer state. Saving a generic profile requires the software mixer to be
+running, so an empty scene cannot replace a saved profile while it is off.
+Choose **Automatic Elgato interface** in the same picker to
+resume USB control and the interface's normal input routing.
+Automatic input keeps software monitoring while no connected interface can
+provide the Pro's direct hardware path, even if a Pro output remains saved.
+The port field is only required for a generic source; Automatic can be saved
+with it empty.
+Disabling the software mixer restores hardware-only control. The selected
+generic source is remembered and used again when the software mixer is enabled.
+
 <a name="monitor"></a>
 ### 3.2 Choose what you hear and how loud
 
