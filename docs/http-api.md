@@ -180,9 +180,11 @@ to the interface. The reply follows the saved change. Read each channel's
 `binding`, `bindingConnected`, `bindingWarning` and `unitInput` from
 `/api/v1/mixer` or `/api/v1/state`. `setPrimaryInput` with the same fields
 and no `channel` is the earlier form for XLR 1, and `mixer.primaryInput` and
-`mixer.primaryInputConnected` still report XLR 1. See
-[input bindings](api.md#input-bindings) for USB control, missing-source and
-profile behaviour.
+`mixer.primaryInputConnected` still report XLR 1. A binding never stops
+the daemon driving the interface. See [input bindings](api.md#input-bindings)
+for the interface, missing-source and profile behaviour. While no interface
+is connected, `GET /api/v1/profiles` lists the `generic` profiles, which hold
+the mixer scene only.
 
 Capture channels use the same command endpoint:
 `{"cmd":"createCaptureChannel","name":"Headset mic","source":"alsa_input.usb-headset","capturePair":0}`.

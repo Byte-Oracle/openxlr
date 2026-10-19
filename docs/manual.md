@@ -230,56 +230,60 @@ sends, software low cut, software ClipGuard, insert chain and Sound Check.
 Set preamp gain and phantom power on the microphone or its own interface;
 OpenXLR does not invent USB controls for other brands.
 
+The interface stays driven while XLR 1 takes another microphone. Its
+headphone outputs, its dial and mute button, the Wave XLR Pro's outputs and
+USB Aux, additional interfaces, recall on connect and the gain lock work as
+before, and XLR 2 and Aux In keep the interface's audio. The interface's
+own microphone drops out of the mixer, as if its cable were unplugged from
+XLR 1. To keep it in the mixer, add the interface's capture
+source as a capture channel ([Additional capture inputs](#capture-inputs),
+pair 1, or **Add input channel** with microphone 1 under Options,
+INTERFACE, **Additional interfaces**). That channel then carries the
+interface's first input. On a Wave XLR Pro the zero-latency path to the
+headphone jacks follows it, the way it follows XLR 1 otherwise: while the
+jacks are the only monitor output and the channel is unmuted in their mix,
+the jacks hear the microphone directly and the channel's software send is
+held back. With no such channel the path is off, and the new XLR 1
+microphone reaches the jacks through the software mix, a few milliseconds
+later.
+
+For now the window, the terminal mixer, the Stream Deck and the Omarchy bar
+do not show the interface's gain, phantom power, hardware effects and
+headphone controls while XLR 1 is bound to another source. The interface's
+own dial and buttons keep working, and the [API](api.md) reaches every
+control.
+
 The picker leaves out the capture sources of every attached interface
 OpenXLR supports, whether it drives that unit or not, and the daemon refuses
-them too. Generic mode releases those units, and a released unit's card can
-switch back to its own profile and rename its nodes, which would leave XLR 1
-silent with no hardware controls. To use a supported unit as the
-microphone, choose **Automatic Elgato interface** and pick the unit as the
-primary interface instead.
-
-This enables generic microphone mode. Elgato USB control is released,
-including additional interfaces, and the window hides hardware gain,
-phantom, hardware effects and headphone controls. XLR 2 and Aux In keep
-their strips when the interface had them, and stay silent if the released
-interface no longer offers its capture node. Pick an ordinary PipeWire playback device under MONITOR;
-Elgato-specific output selectors and USB Aux routing are unavailable.
-The channel and mix nodes are kept, so application routes stay intact.
-
-The Wave XLR Pro's headphone and Line Out outputs play through the unit, so
-they stop working in generic mode. If the monitor was on one of them,
-OpenXLR moves it to the system default output, or to the first hardware
-output when the default is one of OpenXLR's own devices or belongs to a
-supported interface, and a warning names where it went. If another output
-was selected next to the Pro's, the monitor stays there instead. If nothing
-suitable exists, the monitor is silent and the warning asks you to pick an
-output. The Pro outputs stay saved. Returning to automatic mode selects them
-again with their feeds and drops the output OpenXLR picked in their place.
-An output you chose yourself during generic mode is kept.
+them too: XLR 1 would not show that unit's controls, and driving the unit
+can switch its card profile and rename the source under XLR 1. To use a
+supported unit as the microphone, choose **Automatic Elgato interface** and
+pick the unit as the primary interface instead.
 
 Changing the source or port mutes XLR 1 in all monitor mixes; the other
 strips keep their mutes. Unmute XLR 1 in the desired monitor mix
 deliberately when you want to hear it. If the source is unplugged or its selected port is missing, XLR 1 stays
 silent and a warning names the problem. It reconnects to the same source
 when that source returns, without borrowing another microphone. Changing
-the binding ends Sound Check and discards its sample.
+the binding ends Sound Check and discards its sample, and Sound Check on a
+silent XLR 1 says why it cannot record.
 If two sources have the selected name, OpenXLR disconnects XLR 1 and reports
 the ambiguity. Rename or remove the duplicate so the name identifies one
 microphone before its route resumes.
 
-The choice lives in `mixer.json` and survives restart. Generic mode has its
-own mixer-only profiles; they never change the source selection. Interface
-recall on connect is unavailable, since startup already restores the saved
-mixer state. Saving a generic profile requires the software mixer to be
-running, so an empty scene cannot replace a saved profile while it is off.
-Choose **Automatic Elgato interface** in the same picker to
-resume USB control and the interface's normal input routing.
-Automatic input keeps software monitoring while no connected interface can
-provide the Pro's direct hardware path, even if a Pro output remains saved.
-The port list is only used for a generic source; it is disabled while
-Automatic is selected.
-Disabling the software mixer restores hardware-only control. The selected
-generic source is remembered and used again when the software mixer is enabled.
+The choice lives in `mixer.json` and survives restart, and profiles never
+change it. Profiles belong to the connected interface as always. While no
+interface is connected, whatever XLR 1 takes, they are kept apart under
+`generic` and hold only the mixer. Saving one needs the software mixer to be
+running, so an empty scene cannot replace a saved profile while it is off,
+and recall on connect is unavailable, since startup already restores the
+saved mixer state. Profiles saved under `generic` by an earlier build while
+an interface was attached show up again whenever none is connected.
+Choose **Automatic Elgato interface** in the same picker to return XLR 1 to
+the interface. The port list is only used for another source; it is disabled
+while Automatic is selected. Disabling the software mixer leaves the
+interface as it is and remembers the source for when the mixer is enabled
+again.
 
 The [terminal mixer](#terminal) makes the same choice on its
 Options tab. On the [Stream Deck](#stream-deck) and the
@@ -2014,12 +2018,13 @@ hand over; unmute a member first.
 The key's LED is green for an engaged feature, red for a mute, and grey
 when the daemon is offline or the target does not exist on the
 connected interface.
-With a [generic microphone as XLR 1](#generic-microphone)
-OpenXLR drives no Elgato unit. Keys and dials for hardware controls go
-grey and show Generic mic over their name: mute, gain, phantom, the
+With [another microphone as XLR 1](#generic-microphone)
+keys and dials for hardware controls go grey and show Generic mic over
+their name: mute, gain, phantom, the
 processing toggles, headphones, the crossfade, the output selectors, the
 aux level and lock, the gain lock and the Aux port. A press only flashes
-an alert. To mute the microphone, use a send mute key for XLR 1 in each mix
+an alert. The interface stays driven, and its own dial and buttons keep
+working. To mute the microphone, use a send mute key for XLR 1 in each mix
 you want it out of, or press a dial set to XLR 1 in all mixes, which mutes
 every send at once. The sends, the software low cut and ClipGuard and the
 inserts keep working. A key's icon can be chosen in its settings, and a
@@ -2548,9 +2553,9 @@ meters and a mute key. On the two XLR strips the key is the input's own
 mute, the same control as Mute on the Inputs page, since those strips are
 the interface; when an XLR send into the chosen mix is muted, the word
 muted stands where its percentage would be, and the matrix is where that
-send is toggled. With a generic microphone as XLR 1 there is no hardware
-mute, so the XLR 1 key mutes its send into the chosen mix like any other
-channel's. Up and down choose a channel, starting with the
+send is toggled. With another microphone as XLR 1 the interface's mute
+no longer acts on that strip, so the XLR 1 key mutes its send into the
+chosen mix like any other channel's. Up and down choose a channel, starting with the
 masters. Left and right choose the destination mix. The line above the
 key hints names the exact send or master under the cursor, and the
 channel's own [volume](#channel-volume) when the channel has one. Monitor
@@ -2636,7 +2641,7 @@ daemon accepts, leaving out OpenXLR's own nodes and monitor taps. Port is
 the microphone's port, numbered from 1; Automatic takes none. Neither
 changes anything until you press Enter on Apply, and the row says not
 applied until then. A saved source that is unplugged stays listed as
-missing. In generic microphone mode the header reads Generic mic with the
+missing. While XLR 1 takes another source the header reads Generic mic with the
 source's description and port instead of no interface, and its lamp is
 lit while the route into XLR 1 exists. A wide terminal's rail shows the
 source, the XLR 1 meter and the port, or not linked. On Inputs, XLR 1's
@@ -2704,10 +2709,10 @@ Click it for
 the mixer, and use the arrows to choose the mix whose sends you are editing.
 The bracketed mute key affects that send or master; each XLR strip's
 separate mic button affects its hardware mute in every destination.
-With a [generic microphone as XLR 1](#generic-microphone)
+With [another microphone as XLR 1](#generic-microphone)
 the tooltip names the source and its port, and the mic button reads
-Generic mic and stays disabled, since there is no hardware mute; the
-bracketed send mutes keep working.
+Generic mic and stays disabled, since the interface's mute no longer acts
+on that strip; the bracketed send mutes keep working.
 
 Each bank shows whole strips. Use its lower arrows and range indicator to
 reach the remaining channels or masters. The header uses friendly output

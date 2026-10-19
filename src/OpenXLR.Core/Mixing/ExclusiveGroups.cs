@@ -122,17 +122,17 @@ public sealed partial class Mixer
     {
         MixerConfig previous = _config;
         var previousMuted = new HashSet<string>(_muted);
-        bool previousHardwareMic = _hardwareMicMonitor;
+        string? previousHardwareMic = _hardwareMicChannel;
         _config = _config with { ExclusiveGroups = groups };
         NormalizeExclusiveGroupsLocked();
-        if (GroupForChannelLocked("xlr1") is not null) _hardwareMicMonitor = false;
+        if (_hardwareMicChannel is { } mic && GroupForChannelLocked(mic) is not null) _hardwareMicChannel = null;
         try { PersistLocked(persist); }
         catch
         {
             _config = previous;
             _muted.Clear();
             _muted.UnionWith(previousMuted);
-            _hardwareMicMonitor = previousHardwareMic;
+            _hardwareMicChannel = previousHardwareMic;
             throw;
         }
         ReapplyCellsLocked([.. _config.Mixes.Select(m => m.Id)]);

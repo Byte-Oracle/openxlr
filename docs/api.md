@@ -73,7 +73,7 @@ Messages from the daemon, each a JSON object with a `type` field:
 
 | Type | When | Content |
 |---|---|---|
-| `state` | on connect and on every change | `daemonVersion`, device state, capabilities, mixer state, the device list, the app registry, profile names, `activeProfile` (the profile last recalled or saved for the active device; not cleared by later manual changes), `recallOnConnect` (the profile recalled when the device connects, or null), `warning` (one sentence the user should see, or null: mixer settings that cannot be written to disk, which the daemon keeps retrying with backoff, a device set aside after three hung USB transfers in one run, hardware input strips left silent because the capture node's name matches two units or because several interfaces are attached and none is driven, a hardware strip bound to a source that is missing, named twice, lacks the selected port or is not linked yet, one sentence per strip with the strip's name in front, a Wave XLR Pro output set aside in generic microphone mode, or additional interface choices that could not be read or saved). In the mixer state, each channel carries `hardware` (true for the fixed input channels), `captureSource` (exact external source name or null), `capturePair` (zero-based pair), `captureMonoChannel` (the one zero-based source port fed to both sides, or null for a pair), `captureConnected` (its capture route exists), `binding`, `bindingConnected`, `bindingWarning` and `unitInput` (see [input bindings](#input-bindings)), `present` (whether a client should draw the strip, see [input bindings](#input-bindings); `xlr2` and `aux` are absent on every model but the Wave XLR Pro), `exclusiveGroup` (the id of the exclusive group the channel is in, or null), and `volume` (the channel's own volume, 0 to 1, which `setChannelVolume` sets; null for a hardware input). An absent channel stays in the list and keeps its levels, so a client leaves it out of its strips rather than forgetting it. A capture channel is editable but cannot receive application assignments; `renamedSinceStart` says a user mix was renamed since the daemon started (its PipeWire device keeps the old name until a restart), and `layoutWarning` is a sentence for the layout editor when pipewire-pulse nears its open-file limit, or null. Every channel and mix also carries `appearance {icon, colour, hidden, defaultIcon}`: the first three as `setLayoutAppearance` set them (`icon` empty, `colour` null and `hidden` false by default), and `defaultIcon`, read-only, the built-in icon name the daemon chose for the item's kind, never empty (see [mixer-layout.md](mixer-layout.md#appearance) for the rule). A client draws `icon` when it is a text glyph or a name it can draw, nothing when it is `none`, and `defaultIcon` otherwise, which covers an empty `icon` and a name only a skin defines. The built-in names, their text characters and their path data are in `plugin/com.emaspa.openxlr.sdPlugin/icons.json`, generated from `src/OpenXLR.Core/Mixing/LayoutIcons.cs`. A client draws a hidden channel's sends and applications as usual and only leaves out its strip; for a hidden mix it leaves out the mix's master and the sends into it from its full mixer, and keeps the mix in output and monitor feed choices. The mixer state's `outputAppearance` maps the headphone outputs `phones1` and `phones2` to `{icon, colour, hidden, defaultIcon}` in the same form, `hidden` always false and `defaultIcon` `headset`; a model with one headphone output still carries both entries. Each mix carries `id`, `name`, `volume`, `muted`, `editable` (true for a user mix, which `renameMix`, `deleteMix` and `setLayoutOrder` take; false for Monitor A, Monitor B and Aux) and `kind` (`monitor`, `virtualMic` or `auxPort`; a monitor mix the user added is `monitor` and editable), which gives a client the mix's volume ceiling; `outputVolume` is the first selected output's volume, 0 to 1.5, or null with no output selected. In `devices`, every entry that is a sink carries `volume` (desktop scale, 1.0 = 100%) and `muted`; sources and the Wave XLR Pro pseudo-outputs omit both. A source carries `channels` and `positions` when PipeWire reports them, and any entry can carry `drivenUnit` (see below). A state is pushed whenever a sink's volume or mute changes |
+| `state` | on connect and on every change | `daemonVersion`, device state, capabilities, mixer state, the device list, the app registry, profile names, `activeProfile` (the profile last recalled or saved for the active device; not cleared by later manual changes), `recallOnConnect` (the profile recalled when the device connects, or null), `warning` (one sentence the user should see, or null: mixer settings that cannot be written to disk, which the daemon keeps retrying with backoff, a device set aside after three hung USB transfers in one run, hardware input strips left silent because the capture node's name matches two units or because several interfaces are attached and none is driven, a hardware strip bound to a source that is missing, named twice, lacks the selected port or is not linked yet, one sentence per strip with the strip's name in front, or additional interface choices that could not be read or saved). In the mixer state, each channel carries `hardware` (true for the fixed input channels), `captureSource` (exact external source name or null), `capturePair` (zero-based pair), `captureMonoChannel` (the one zero-based source port fed to both sides, or null for a pair), `captureConnected` (its capture route exists), `binding`, `bindingConnected`, `bindingWarning` and `unitInput` (see [input bindings](#input-bindings)), `present` (whether a client should draw the strip, see [input bindings](#input-bindings); `xlr2` and `aux` are absent on every model but the Wave XLR Pro), `exclusiveGroup` (the id of the exclusive group the channel is in, or null), and `volume` (the channel's own volume, 0 to 1, which `setChannelVolume` sets; null for a hardware input). An absent channel stays in the list and keeps its levels, so a client leaves it out of its strips rather than forgetting it. A capture channel is editable but cannot receive application assignments; `renamedSinceStart` says a user mix was renamed since the daemon started (its PipeWire device keeps the old name until a restart), and `layoutWarning` is a sentence for the layout editor when pipewire-pulse nears its open-file limit, or null. Every channel and mix also carries `appearance {icon, colour, hidden, defaultIcon}`: the first three as `setLayoutAppearance` set them (`icon` empty, `colour` null and `hidden` false by default), and `defaultIcon`, read-only, the built-in icon name the daemon chose for the item's kind, never empty (see [mixer-layout.md](mixer-layout.md#appearance) for the rule). A client draws `icon` when it is a text glyph or a name it can draw, nothing when it is `none`, and `defaultIcon` otherwise, which covers an empty `icon` and a name only a skin defines. The built-in names, their text characters and their path data are in `plugin/com.emaspa.openxlr.sdPlugin/icons.json`, generated from `src/OpenXLR.Core/Mixing/LayoutIcons.cs`. A client draws a hidden channel's sends and applications as usual and only leaves out its strip; for a hidden mix it leaves out the mix's master and the sends into it from its full mixer, and keeps the mix in output and monitor feed choices. The mixer state's `outputAppearance` maps the headphone outputs `phones1` and `phones2` to `{icon, colour, hidden, defaultIcon}` in the same form, `hidden` always false and `defaultIcon` `headset`; a model with one headphone output still carries both entries. Each mix carries `id`, `name`, `volume`, `muted`, `editable` (true for a user mix, which `renameMix`, `deleteMix` and `setLayoutOrder` take; false for Monitor A, Monitor B and Aux) and `kind` (`monitor`, `virtualMic` or `auxPort`; a monitor mix the user added is `monitor` and editable), which gives a client the mix's volume ceiling; `outputVolume` is the first selected output's volume, 0 to 1.5, or null with no output selected. In `devices`, every entry that is a sink carries `volume` (desktop scale, 1.0 = 100%) and `muted`; sources and the Wave XLR Pro pseudo-outputs omit both. A source carries `channels` and `positions` when PipeWire reports them, and any entry can carry `drivenUnit` (see below). A state is pushed whenever a sink's volume or mute changes |
 | `diagnostics` | in answer to `getDiagnostics` | `blocks`, mapping vendor block names to hex strings or read errors. An XLR Dock adds `paths`, the card number and the path each of its gain, mute and headphone controls takes (`Alsa` through the card's mixer, `Block` through the dock's config block when the card lacks the control, `None` when the USB handle is closed too, so the control is unavailable), and `alsa`, the values read through the card. `usbFault` carries the last USB fault of this run and `error` a dump that failed |
 | `meters` | 15 Hz while the mixer is built | live stereo levels per channel and mix |
 | `plugins` | in answer to `listPlugins` | the installed LV2, CLAP and VST3 plugins with their controls, within the message size limit above and always including the plugins the saved chains use; `supported` is false, with `unsupportedFeatures` listed, for a plugin that needs a host feature the PipeWire chain lacks. `audioIns` and `audioOuts` are the plugin's own port counts, or for VST3 its main buses' default width; a VST3 entry also carries `widths`, the chain widths in channels (1 and 2 are the ones the host carries) its main buses accepted when the helper asked the way the host asks at load, so a plugin that reports 2 and lists 1 in `widths` can be inserted on a mono input. An entry without `widths` (LV2, CLAP, or a description an older helper wrote) fits a mono input with one port each way and a stereo mix with two or more |
@@ -144,7 +144,7 @@ count disagrees with `channels`. Any entry can carry `drivenUnit`: the
 instance id of the attached supported interface whose ALSA card publishes
 the node, or the model id (`vvvv:pppp`) when two attached units of one model
 cannot be told apart by their node names. It names every attached supported
-unit, driven or not, and stays set in generic microphone mode. Over the
+unit, driven or not. Over the
 WebSocket a field whose value is null is left
 out of the message; the HTTP state reply writes it as `null`.
 
@@ -223,16 +223,26 @@ that final acknowledgement (or an `error` without a request id):
 | `assignApp` | `identity`, `channel`, `label?` | route an app (creates a registry entry if unseen); `channel: "ignore"` stops managing it, its streams go back to the system default output and stay wherever the desktop routes them |
 | `assignStream` | `streamId`, `channel` | route one live stream by its PipeWire id; also remembered for the app; `ignore` works here too |
 | `forgetApp` | `identity` | drop an app and its remembered channel |
-| `setInputBinding` | `channel`, `source?`, `captureMonoChannel?` | bind a hardware strip to one port of a PipeWire capture source by exact node name. `channel` is `xlr1` or `xlr2`; Aux In stays on the interface. With `source` null or absent the strip returns to the interface's capture pair and takes no port. With a source, `capturePair` must be 0 and `captureMonoChannel` is the zero-based port, 0 to 63, default 0. OpenXLR nodes, monitor taps, control characters and names over 256 characters are refused, and so is a node of an attached supported interface (a `devices` entry with `drivenUnit`). The source may be offline. Saved before the acknowledgement, rolled back on a failed save. The strip's monitor sends start muted after a change; no other strip changes. Channel ids, software processing and inserts stay as they are. See [input bindings](#input-bindings) |
+| `setInputBinding` | `channel`, `source?`, `captureMonoChannel?` | bind a hardware strip to one port of a PipeWire capture source by exact node name. `channel` is `xlr1` or `xlr2`; Aux In stays on the interface. With `source` null or absent the strip returns to the interface's capture pair and takes no port. With a source, `capturePair` must be 0 and `captureMonoChannel` is the zero-based port, 0 to 63, default 0. OpenXLR nodes, monitor taps, control characters and names over 256 characters are refused, and so, for now, is a node of an attached supported interface (a `devices` entry with `drivenUnit`). The source may be offline. Saved before the acknowledgement, rolled back on a failed save. The strip's monitor sends start muted after a change; no other strip changes. Channel ids, software processing and inserts stay as they are. See [input bindings](#input-bindings) |
 | `setPrimaryInput` | `source?`, `captureMonoChannel?` | the earlier form of `setInputBinding` with `channel: "xlr1"`, kept for the clients that still send it. A supported interface's node is refused with a message saying to pick that unit under automatic mode instead |
 | `setEnforcedDefaults` | `sink`, `source` | system defaults to hold; `sink: "@monitor"` follows the first selected monitor output |
 | `setActiveDevice` | `device` | switch to another attached interface: one unit by its instance id from `detected`, or the first unit of a model by `vvvv:pppp` |
 | `setWaveInterfaceEnabled` | `device`, `value` | drive an attached unit, by its instance id from `waveInterfaces`, as an additional interface (`true`) or stop driving it (`false`); at most four. Refused for a unit that is not attached, and for a Wave XLR Pro whose capture node name another attached unit shares. Enabling creates no mixer channel; disabling an attached unit deletes the capture channels whose source is one of its own nodes, as `deleteChannel` does, found by its `captureHint` and, when not empty, its `captureModelHint`; nothing is deleted while `captureHint` is a model name another attached unit shares. See [additional interface state](#additional-interface-state) |
 | `setWaveControl` | `device`, `control`, `value` | the `set` command for one unit by instance id: an additional interface, or the primary when `device` is the primary's id. Same control names, capabilities, gain lock and phantom settling as `set`; an error for a unit that is not driven |
-| `saveProfile` / `loadProfile` / `deleteProfile` | `name` | named scenes, scoped to the active device; loading restores saved gain even while locked and leaves the lock enabled |
-| `setRecallOnConnect` | `name` | the profile recalled whenever the active device connects fresh (daemon start, replug, switch to it); empty clears it. With none chosen, a device whose capabilities say `retainsSettings: false` gets the last settings the daemon saw on it instead |
+| `saveProfile` / `loadProfile` / `deleteProfile` | `name` | named scenes, scoped to the connected interface, or to `generic` while none is connected (see below); loading restores saved gain even while locked and leaves the lock enabled |
+| `setRecallOnConnect` | `name` | the profile recalled whenever the active device connects fresh (daemon start, replug, switch to it); empty clears it. With none chosen, a device whose capabilities say `retainsSettings: false` gets the last settings the daemon saw on it instead. Refused while no interface is connected |
 | `resetDevice` | none | write the recorded defaults back to a device using connect-time restoration and forget its last settings (an error until the daemon has seen the device connect after a power cycle once); on the Wave XLR Pro, which keeps its own settings, write OpenXLR's baseline instead: gain 30 dB on both inputs, every processing stage and phantom off, headphones and aux level at half, the crossfade fully on PC, routing untouched, refused while the gain lock is on. The capabilities say `builtInDefaults` when a model has a baseline |
 | `getDiagnostics` | none | vendor block dump for bug reports |
+
+Profiles live in one directory per connected interface model. While no
+interface is connected they live in `generic`, whatever the strips are bound
+to, and `profiles` lists that directory; the list switches with the
+connection as it switches between two units. A `generic` profile holds the
+mixer scene only, so `saveProfile` there needs a running mixer and is
+refused otherwise, leaving any existing profile untouched. `loadProfile`
+there applies the scene. `setRecallOnConnect` is refused, since nothing
+arrives to recall it on; the mixer starts with its saved settings instead.
+A profile never changes an input binding.
 
 Profile files have an 8 MiB save and load limit. The recall marker is at
 most 1 KiB and contains a profile name, not a path. Special files are refused
@@ -501,8 +511,9 @@ route is removed even if it was connected, and it resumes once the name
 identifies one source. Changing a strip's binding mutes that strip in the
 monitor mixes, and ends Sound Check when the session runs on that strip.
 Sound Check records the strip's own source and port; a change to the other
-strip's binding leaves a session alone. A strip whose source is not
-connected refuses `record` with "The microphone is not connected."
+strip's binding leaves a session alone. A strip whose `bindingConnected`
+is false refuses `record` with "The microphone is not connected.", followed
+by the strip's name and its `bindingWarning` when it has one.
 
 Each channel in the mixer state carries:
 
@@ -543,45 +554,46 @@ answer of this daemon run. Before any unit has connected in this run, XLR 1
 is present and XLR 2 and Aux In are present only while a supported unit is
 attached, so a desk with no Elgato unit gets one strip.
 
-#### While XLR 1 is bound to a source
+#### The interface while a strip is bound
 
-Binding XLR 1 to a source still turns on generic microphone mode: the
-daemon stops driving every Elgato unit. Binding XLR 2 alone does not.
-`setInputBinding` and `setPrimaryInput` refuse a node of an attached
-supported interface, whether the daemon drives that unit or not, because
-a released unit's card can return to its own profile and rename the node,
-which would leave the strip silent. The `devices` entries of such nodes
-carry `drivenUnit`. A binding saved before this check is still restored as
-saved.
+A binding never changes whether a unit is driven. The primary interface and
+any additional ones stay driven whatever XLR 1 and XLR 2 take: `connected`,
+`device`, `capabilities`, `state`, `detected` and `waveInterfaces` describe
+them as always, `set`, `setWaveControl`, `setActiveDevice` and
+`setWaveInterfaceEnabled` work, recall on connect and the gain lock are
+unchanged, and the Wave XLR Pro keeps its pseudo-outputs in `devices`, its
+output selectors, the Aux mix on its USB Aux port and its monitor routes.
+Aux In and a strip still on the interface keep their audio.
 
-The Wave XLR Pro pseudo-outputs (`...#hp1`, `...#hp2`, `...#lineout`) play
-through the unit, so generic mode sets them aside. When a request or a
-restore selects one, `monitorOutputs` lists the other selected outputs; when
-none is left, the system default sink takes their place. When the default
-is an OpenXLR node or a node of a supported interface, the first other sink
-with `isPhysical` does. With no candidate the monitor is silent. The state's
-`warning` says which case applies. The saved settings and profiles
-keep the pseudo-outputs and their `monitorFeeds`, and returning XLR 1 to the
-interface selects them again. The output picked in their place is then dropped,
-unless a client sent `setMonitorOutputs` without a pseudo-output during
-generic mode, in which case that choice is kept beside them. Saved settings
-and profiles replace the whole selection. The Aux mix is not sent to the
-USB Aux port, and the Pro's direct microphone path is off.
+The unit's input-stage controls belong to the channel whose `unitInput`
+names them (see above). The Wave XLR Pro's direct microphone path
+(`hpMixMicDirect`, the zero-latency path from its first input to its jacks)
+follows the same channel: XLR 1 while it takes the interface, or the capture
+channel on the Pro's own node at its first port while XLR 1 is bound
+elsewhere. The daemon turns the path on while every monitor output is a Pro
+jack and that channel is unmuted in the mix feeding them, and mutes that
+channel's monitor send in the graph meanwhile so the microphone is not
+heard twice; it never uses the path while that channel is in an exclusive
+group or under Sound Check. With no channel carrying the Pro's first input
+the path is off, and a bound XLR 1 reaches the jacks through the software
+mix.
 
-`connected`, `device`, `capabilities` and `state` still describe USB hardware,
-so generic mode reports no connected Elgato interface and every `unitInput`
-is null. `detected` and `waveInterfaces` are empty while USB control is
-paused. Additional-interface choices are retained for when XLR 1 returns to
-the interface. USB control commands and interface recall are unavailable in
-generic mode. XLR 2 and Aux In on the interface follow the `present` rule
-above and stay silent when the released unit's node is gone.
-Disabling the software mixer resumes hardware-only control and keeps the
-saved bindings for when the mixer is enabled again.
-Save/load/delete profile commands use the separate
-`generic` profile directory and affect only the mixer scene. Startup restores
-`mixer.json`; switching or recalling a profile never replaces a binding.
-Saving a generic profile requires a running mixer. If it is not ready or
-failed to start, the command is refused and any existing profile stays untouched.
+`softLowCutApplicable` and `softClipGuardApplicable` follow XLR 1's own
+binding: the software low cut and ClipGuard act on a bound XLR 1 whatever
+unit is driven, and a unit coming or going leaves that strip's chain alone.
+A software ClipGuard left on behind a unit's hardware one goes off when
+XLR 1 is bound to a source and the plugin it needs is missing, as it does
+when the unit changes.
+
+`setInputBinding` and `setPrimaryInput` still refuse a node of an attached
+supported interface, whether the daemon drives that unit or not: the strip
+would not show the unit's controls, and driving the unit later can switch
+its card profile and rename the node under the strip. The `devices` entries
+of such nodes carry `drivenUnit`. A binding saved before this check is still
+restored as saved.
+
+Disabling the software mixer keeps the saved bindings for when the mixer is
+enabled again.
 
 ### Additional interface state
 
@@ -601,7 +613,10 @@ model as udev spells it, then `_`, the serial and `-` when the unit has a
 serial. `captureModelHint` is the model fragment alone, to try when the hint
 finds no node, and empty while another attached unit could answer to it.
 Clients match both verbatim, without trimming. The selection rules for the
-hardware strips are in [multiple Wave interfaces](wave-interfaces.md).
+hardware strips are in [multiple Wave interfaces](wave-interfaces.md). An
+input binding on XLR 1 or XLR 2 changes none of this: every unit listed here
+is driven or not by its own choice, and a capture channel on an additional
+unit's node keeps working while a strip is bound.
 
 ## Configuration files
 
@@ -619,8 +634,8 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
   file written before `inputBindings` existed carries XLR 1's source as
   `primaryInput`; the daemon reads it as XLR 1's binding and the next save
   writes `inputBindings` instead. Written by the daemon.
-- `profiles/<vid-pid>/<name>.json`: the named scenes, one file each; generic
-  microphone mode uses `profiles/generic/` and saves mixer scenes only
+- `profiles/<vid-pid>/<name>.json`: the named scenes, one file each; while
+  no interface is connected, `profiles/generic/` holds mixer scenes only
 - `profiles/<vid-pid>/recall-on-connect`: the name of the profile
   recalled when that device connects, when one is chosen
 - `devices/<vid-pid>/last-state.json`: for a device using connect-time

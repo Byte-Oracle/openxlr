@@ -75,11 +75,6 @@ public sealed partial class Mixer
     private PrimaryInputBinding? PrimaryInputLocked()
         => _bindings.TryGetValue("xlr1", out SourceBinding? b) ? new(b.Source, b.Port) : null;
 
-    // While XLR 1 is bound to a source the daemon releases the Elgato units
-    // (generic microphone mode): their jacks and the Aux return are set
-    // aside and the Pro's direct microphone path is off.
-    private bool GenericModeLocked => _bindings.ContainsKey("xlr1");
-
     /// <summary>
     /// Bind every strip as <paramref name="bindings"/> says, the strips it
     /// leaves out to the interface. Used at start and by saved settings.
@@ -114,42 +109,41 @@ public sealed partial class Mixer
             }
             if (!_built) { AssignBindingLocked(channel, binding); return; }
             var previousMutes = new HashSet<string>(_muted);
-            bool previousHardwareMonitor = _hardwareMicMonitor;
-            List<string> previousOutputs = [.. _monitorOutputs], previousChoice = [.. _monitorChoice];
-            (string? previousFallback, string? previousWarning) = (_monitorFallback, _monitorWarning);
-            bool modeChanged = channel == "xlr1" && (previous is null) != (binding is null);
+            string? previousHardwareMic = _hardwareMicChannel;
+            bool previousClipGuard = _softClipGuard;
             try
             {
                 if (_soundCheck is not null && _soundCheckChannel == channel) StopSoundCheckLocked(restore: false);
+                bool clipGuardApplied = SoftClipGuardApplicableLocked;
                 AssignBindingLocked(channel, binding);
-                if (channel == "xlr1") SetHardwareMicMonitor(false);
+                // A software ClipGuard left on behind the unit's hardware one
+                // starts to apply once XLR 1 takes a source. Without its
+                // plugin it goes off, as when the unit changes, rather than
+                // failing the binding.
+                if (!clipGuardApplied && SoftClipGuardApplicableLocked && _softClipGuard
+                    && !_pw.GetSoftwareClipGuardAvailability().Available)
+                    _softClipGuard = false;
+                // The Pro's direct path follows the channel that carries the
+                // unit's input 1. When the binding moves that input to another
+                // channel, or out of the mixer, the path is off until the
+                // daemon has looked at the new channel's sends.
+                if (_hardwareMicChannel is not null && _hardwareMicChannel != DirectPathChannelLocked())
+                    SetHardwareMicChannelLocked(null);
                 MuteInputMonitorsLocked(channel);
                 WireInputFeedsLocked([channel]);
-                if (modeChanged)
-                {
-                    WireAuxRouteLocked();
-                    ApplyModeOutputsLocked();
-                }
                 if (save is not null) PersistLocked(save);
             }
             catch (Exception change)
             {
                 AssignBindingLocked(channel, previous);
+                _softClipGuard = previousClipGuard;
                 _muted.Clear();
                 _muted.UnionWith(previousMutes);
                 try
                 {
-                    SetHardwareMicMonitor(previousHardwareMonitor);
+                    SetHardwareMicChannelLocked(previousHardwareMic);
                     ReapplyMixesLocked(_config.Mixes);
                     WireInputFeedsLocked([channel]);
-                    if (modeChanged)
-                    {
-                        WireAuxRouteLocked();
-                        _monitorChoice.Clear();
-                        SetMonitorOutputsLocked(previousOutputs);
-                        _monitorChoice.AddRange(previousChoice);
-                        (_monitorFallback, _monitorWarning) = (previousFallback, previousWarning);
-                    }
                 }
                 catch (Exception rollback)
                 {
@@ -221,7 +215,12 @@ public sealed partial class Mixer
     /// the third for input 2) or on its pair.
     /// </summary>
     private string? UnitInputChannelLocked(int input)
-        => _drivenUnit is null ? null : UnitInputChannel(_config.Channels, _bindings, _inputDevice, _deviceXlrInputs ?? 1, input);
+        => _drivenUnit is null ? null : CarrierOfLocked(input);
+
+    // The same rule without asking whether a unit is driven: the Pro's
+    // direct path only runs while the daemon drives one.
+    private string? CarrierOfLocked(int input)
+        => UnitInputChannel(_config.Channels, _bindings, _inputDevice, _deviceXlrInputs ?? 1, input);
 
     /// <inheritdoc cref="UnitInputChannelLocked"/>
     internal static string? UnitInputChannel(IReadOnlyList<ChannelDefinition> channels,
@@ -262,8 +261,8 @@ public sealed partial class Mixer
         => (channel.InputPair is not null ? _stripWarnings : _captureWarnings).GetValueOrDefault(channel.Id);
 
     /// <summary>
-    /// The unit-level sentence, one per silent bound strip with the strip's
-    /// name in front, then the monitor's, for clients that show one line.
+    /// The unit-level sentence, then one per silent bound strip with the
+    /// strip's name in front, for clients that show one line.
     /// </summary>
     private string? InputWarningLocked()
     {
@@ -271,7 +270,6 @@ public sealed partial class Mixer
         if (_inputWarning is not null) parts.Add(_inputWarning);
         foreach (ChannelDefinition channel in _config.Channels)
             if (_stripWarnings.TryGetValue(channel.Id, out string? warning)) parts.Add($"{channel.Name}: {warning}");
-        if (_monitorWarning is not null) parts.Add(_monitorWarning);
         return parts.Count == 0 ? null : string.Join(" ", parts);
     }
 
@@ -324,110 +322,5 @@ public sealed partial class Mixer
             return new PortLink([]);
         }
         return route;
-    }
-
-    // The Wave XLR Pro's jacks ("...#hp1", "...#hp2", "...#lineout") play
-    // through the unit OpenXLR drives, and generic mode drives none: its card
-    // goes back to the profile it had, which can rename the raw sink, and
-    // nothing asserts the output selectors. While generic mode lasts the
-    // jacks are set aside here, never forgotten: the saved settings and
-    // profiles keep them, and automatic mode selects them again.
-    // The selection, in its order, that last named a jack in generic mode;
-    // empty while no jack is set aside. The order matters: the first output
-    // is the one the follow mode of the default output resolves to.
-    private readonly List<string> _monitorChoice = [];
-    private string? _monitorFallback;    // the output picked in their place, until the user picks one
-    private string? _monitorWarning;
-
-    /// <summary>
-    /// A sink that belongs to an attached supported interface. The daemon
-    /// sets it; generic mode releases those units, so their sinks are never
-    /// picked as the replacement monitor output.
-    /// </summary>
-    public Func<string, bool>? IsSupportedUnitNode { get; set; }
-
-    private static bool IsJack(string output)
-        => output.Contains('#') && !output.EndsWith("#usbaux", StringComparison.Ordinal);
-
-    /// <summary>A jack set aside by generic mode, whose feed is kept for its return.</summary>
-    private bool IsSetAsideLocked(string output) => IsJack(output) && _monitorChoice.Contains(output);
-
-    /// <summary>
-    /// The monitor outputs as the user chose them, in order: the set-aside
-    /// jacks where they were, the outputs still selected, then the outputs
-    /// added in generic mode, without the one picked in the jacks' place.
-    /// </summary>
-    private List<string> SavedMonitorOutputsLocked()
-        => _monitorChoice.Count == 0 ? [.. _monitorOutputs]
-            : [.. _monitorChoice.Where(o => IsJack(o) || _monitorOutputs.Contains(o)),
-               .. _monitorOutputs.Where(o => o != _monitorFallback && !_monitorChoice.Contains(o))];
-
-    /// <summary>
-    /// Saved settings and profiles carry the whole choice, jacks included, so
-    /// they replace what generic mode set aside instead of adding to it.
-    /// </summary>
-    private void ReplaceMonitorChoiceLocked(IReadOnlyList<string> outputs)
-    {
-        _monitorChoice.Clear();
-        (_monitorFallback, _monitorWarning) = (null, null);
-        SetMonitorOutputsLocked(outputs);
-    }
-
-    /// <summary>Set the jacks aside on entering generic mode, or select them again on leaving it.</summary>
-    private void ApplyModeOutputsLocked()
-    {
-        if (GenericModeLocked)
-        {
-            SetMonitorOutputsLocked([.. _monitorOutputs]);
-            return;
-        }
-        List<string> restored = SavedMonitorOutputsLocked();
-        bool parked = _monitorChoice.Count > 0;
-        _monitorChoice.Clear();
-        _monitorFallback = null;
-        _monitorWarning = null;
-        if (parked) SetMonitorOutputsLocked(restored);
-    }
-
-    /// <summary>
-    /// The outputs to route in generic mode: a request naming a jack sets it
-    /// aside, and when nothing else is left the system default output takes
-    /// its place, or the first hardware output when the default is one of
-    /// OpenXLR's own sinks or a supported interface's. Outside generic mode,
-    /// or with no jack in the request, the request is returned unchanged.
-    /// </summary>
-    private IReadOnlyList<string> DivertJacksLocked(IReadOnlyList<string> requested)
-    {
-        if (!GenericModeLocked) return requested;
-        List<string> jacks = [.. requested.Where(IsJack).Distinct()];
-        if (jacks.Count == 0) return requested;
-        _monitorChoice.Clear();
-        _monitorChoice.AddRange(requested.Distinct());
-        List<string> plain = [.. requested.Where(o => !o.Contains('#')).Distinct()];
-        _monitorFallback = null;
-        if (plain.Count > 0)
-        {
-            _monitorWarning = "The Wave XLR Pro outputs are unavailable in generic microphone mode, so the monitor plays on the other selected outputs until automatic mode returns.";
-            return plain;
-        }
-        if (FallbackOutputLocked(jacks) is { } fallback)
-        {
-            _monitorFallback = fallback.Name;
-            _monitorWarning = $"The Wave XLR Pro outputs are unavailable in generic microphone mode, so the monitor plays on {fallback.Description} until automatic mode returns.";
-            return [fallback.Name];
-        }
-        _monitorWarning = "The Wave XLR Pro outputs are unavailable in generic microphone mode and no other output was found, so the monitor is silent. Pick an output under MONITOR.";
-        return [];
-    }
-
-    private AudioNode? FallbackOutputLocked(IReadOnlyList<string> jacks)
-    {
-        var raw = jacks.Select(StripMarker).ToHashSet(StringComparer.Ordinal);
-        List<AudioNode> sinks = [.. _pw.ListDevices().Where(d => d.Kind == AudioNodeKind.Sink && !d.IsOwn
-            && !d.Name.Contains('#') && !raw.Contains(d.Name) && IsSupportedUnitNode?.Invoke(d.Name) is not true)];
-        string? current;
-        try { current = _pw.GetDefaultSink(); }
-        catch (Exception ex) when (ex is InvalidOperationException or TimeoutException) { current = null; }
-        return sinks.FirstOrDefault(d => d.Name == current) ?? sinks.FirstOrDefault(d => d.IsPhysical);
     }
 }

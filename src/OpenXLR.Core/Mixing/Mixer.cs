@@ -24,9 +24,11 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private readonly Dictionary<string, double> _levels = [];   // "channel|mix" -> level
     private readonly HashSet<string> _muted = [];               // "channel|mix"
     // While the Pro's hardware mic path feeds the headphone jacks, the
-    // software XLR 1 -> Monitor send is silenced in the graph (not in the
-    // saved mix) so the mic is not heard twice with a few ms between them.
-    private bool _hardwareMicMonitor;
+    // software Monitor send of the channel that carries the Pro's input 1
+    // (XLR 1, or a capture channel on the unit's node while XLR 1 is bound
+    // elsewhere) is silenced in the graph, not in the saved mix, so the mic
+    // is not heard twice with a few ms between them. Null while it is off.
+    private string? _hardwareMicChannel;
     private readonly HashSet<string> _cells = [];               // cells that exist
     private readonly Dictionary<string, double> _mixVolume = [];
     private readonly HashSet<string> _mixMuted = [];
@@ -529,7 +531,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         if (_auxRoute is not null) { _pw.Unlink(_auxRoute); _auxRoute = null; }
         _auxTargetSink = null;
-        if (!_auxPortEnabled || !_hardwareOutputRouting || GenericModeLocked) return;
+        if (!_auxPortEnabled || !_hardwareOutputRouting) return;
         MixDefinition? aux = _config.Mixes.FirstOrDefault(m => m.Kind == MixKind.AuxPort);
         if (aux is null) return;
         // The raw sink is hidden from pickers, so derive it from any Pro
@@ -819,9 +821,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private bool _lowCutApplicable = true;
 
     /// <summary>
-    /// Whether the soft low cut may engage: false while the active device has
-    /// a hardware low cut (stacking both would double-filter). The stored
-    /// frequency survives, so switching back re-engages it.
+    /// Whether the soft low cut may engage on a strip that takes the
+    /// interface: false while the active device has a hardware low cut
+    /// (stacking both would double-filter). A strip bound to a source has no
+    /// hardware stage in front of it and keeps the soft one either way, so
+    /// only an XLR 1 on the interface is rewired. The stored frequency
+    /// survives, so switching back re-engages it.
     /// </summary>
     public void SetLowCutApplicable(bool applicable)
     {
@@ -829,8 +834,20 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             if (_lowCutApplicable == applicable) return;
             _lowCutApplicable = applicable;
-            if (_built && _lowCutHz > 0) WireInputFeedsLocked();
+            if (_built && _lowCutHz > 0) RewireSoftDspStripLocked();
         }
+    }
+
+    /// <summary>
+    /// The strip the software low cut and ClipGuard sit on (pair 0), when it
+    /// takes the interface: the one whose filters follow the unit's
+    /// capabilities. A bound XLR 1 is left alone, so a unit coming or going
+    /// never interrupts it.
+    /// </summary>
+    private void RewireSoftDspStripLocked()
+    {
+        if (_config.Channels.FirstOrDefault(c => c.InputPair == 0) is { } strip && !_bindings.ContainsKey(strip.Id))
+            WireInputFeedsLocked([strip.Id]);
     }
 
     // Software ClipGuard: a post-ADC hard limiter at -3 dB in the mic filter
@@ -847,7 +864,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             if (_softClipGuard == on) return;
-            if (on && (_bindings.ContainsKey("xlr1") || _clipGuardApplicable))
+            if (on && SoftClipGuardApplicableLocked)
             {
                 DspFeatureAvailability support = _pw.GetSoftwareClipGuardAvailability();
                 if (!support.Available) throw new InvalidOperationException(support.Error);
@@ -869,18 +886,30 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         }
     }
 
-    /// <summary>False while the active device has the hardware ClipGuard.</summary>
+    /// <summary>
+    /// False while the active device has the hardware ClipGuard. Like the low
+    /// cut, it changes nothing for an XLR 1 bound to a source, which keeps
+    /// the software ClipGuard whatever unit is driven.
+    /// </summary>
     public void SetClipGuardApplicable(bool applicable)
     {
         lock (_gate)
         {
             if (_clipGuardApplicable == applicable) return;
+            bool before = SoftClipGuardApplicableLocked;
             _clipGuardApplicable = applicable;
+            if (before == SoftClipGuardApplicableLocked) return;
             if (applicable && _softClipGuard && !_pw.GetSoftwareClipGuardAvailability().Available)
                 _softClipGuard = false;
-            if (_built && _softClipGuard) WireInputFeedsLocked();
+            if (_built && _softClipGuard) RewireSoftDspStripLocked();
         }
     }
+
+    // The software low cut and ClipGuard apply to XLR 1 while nothing in front
+    // of it does the same in hardware: a source binding, or a unit without
+    // the control.
+    private bool SoftLowCutApplicableLocked => _bindings.ContainsKey("xlr1") || _lowCutApplicable;
+    private bool SoftClipGuardApplicableLocked => _bindings.ContainsKey("xlr1") || _clipGuardApplicable;
 
     /// <summary>
     /// Set the software low cut for the first XLR channel: a host-side
@@ -1232,11 +1261,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
     /// <summary>Every sink and source the user can pick, real or virtual.</summary>
     public IReadOnlyList<AudioNode> ListDevices()
-    {
-        bool routing;
-        lock (_gate) routing = !GenericModeLocked && _hardwareOutputRouting;
-        return _pw.ListDevices(routing, _inputHints);
-    }
+        => _pw.ListDevices(_hardwareOutputRouting, _inputHints);
 
     /// <summary>Close and reopen an output device's stream (see adapter).</summary>
     public void BounceOutput(string sinkName) => _pw.BounceSink(sinkName);
@@ -1259,7 +1284,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 Levels = new Dictionary<string, double>(_levels),
                 ChannelVolumes = ExportChannelVolumesLocked(),
                 ChannelMuted = [.. _muted],
-                MonitorOutputs = SavedMonitorOutputsLocked(),
+                MonitorOutputs = [.. _monitorOutputs],
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
                 KnownApps = [.. _apps.Values.Select(a => new SavedApp(a.Identity, a.Label, a.ChannelId))],
@@ -1357,7 +1382,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 : s.MonitorOutput is not null ? [s.MonitorOutput] : [];
             _monitorFeeds.Clear();
             foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
-            ReplaceMonitorChoiceLocked(savedOutputs);
+            SetMonitorOutputsLocked(savedOutputs);
             _enforcedSink = s.EnforcedDefaultSink;
             _enforcedSource = s.EnforcedDefaultSource;
 
@@ -1422,7 +1447,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 Levels = new Dictionary<string, double>(_levels),
                 ChannelVolumes = ExportChannelVolumesLocked(),
                 ChannelMuted = [.. _muted],
-                MonitorOutputs = SavedMonitorOutputsLocked(),
+                MonitorOutputs = [.. _monitorOutputs],
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AuxPortEnabled = _auxPortEnabled,
                 OutputVolume = _outputVolume,
@@ -1470,7 +1495,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
             }
             if (s.MonitorOutputs is not null)
-                ReplaceMonitorChoiceLocked(s.MonitorOutputs);
+                SetMonitorOutputsLocked(s.MonitorOutputs);
             else if (s.MonitorFeeds is not null)
                 SetMonitorOutputsLocked([.. _monitorOutputs]);   // relink with the recalled feeds
             _auxPortEnabled = s.AuxPortEnabled;
@@ -1756,32 +1781,54 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     }
 
     /// <summary>
-    /// The Pro's hardware mic path is carrying XLR 1 to the headphone jacks
-    /// (or not); the software send for that cell is muted in the graph
-    /// while it does, and restored when it stops. Returns whether the path
-    /// is used: never while XLR 1 is in an exclusive group, because the
-    /// group mutes its members through their sends, and the device's direct
-    /// path would keep the microphone in the jacks after the group closed it.
-    /// Never while XLR 1 is under Sound Check either: the direct path carries
-    /// the live microphone, and the jacks must hear the loop the send carries.
+    /// The channel the Pro's hardware mic path follows: the one that carries
+    /// the unit's input 1 (see <see cref="UnitInputChannel"/>), or null when
+    /// no channel does and the capsule is not in the mixer.
     /// </summary>
-    public bool SetHardwareMicMonitor(bool on)
+    public string? HardwareMicChannel { get { lock (_gate) return DirectPathChannelLocked(); } }
+
+    private string? DirectPathChannelLocked() => CarrierOfLocked(1);
+
+    /// <summary>
+    /// The Pro's hardware mic path is carrying its input 1 to the headphone
+    /// jacks (or not); the software monitor send of the channel that carries
+    /// that input is muted in the graph while it does, and restored when it
+    /// stops. With <paramref name="whenHeardIn"/>, the path is used only while
+    /// that channel's send is unmuted in one of the feed's mixes, read under
+    /// the same lock. Returns whether the path is used: never while no
+    /// channel carries the input, never while that channel is in an
+    /// exclusive group, because the group mutes its members through their
+    /// sends, and the device's direct path would keep the microphone in the
+    /// jacks after the group closed it. Never while it is under Sound Check
+    /// either: the direct path carries the live microphone, and the jacks
+    /// must hear the loop the send carries.
+    /// </summary>
+    public bool SetHardwareMicMonitor(bool on, string? whenHeardIn = null)
     {
         lock (_gate)
         {
-            on &= !_bindings.ContainsKey("xlr1") && GroupForChannelLocked("xlr1") is null && _soundCheckChannel != "xlr1";
-            if (_hardwareMicMonitor == on) return on;
-            _hardwareMicMonitor = on;
-            RefreshHardwareMicCellsLocked();
+            string? channel = DirectPathChannelLocked();
+            on &= channel is not null && GroupForChannelLocked(channel) is null && _soundCheckChannel != channel
+                && (whenHeardIn is null || MonitorFeed.Parts(whenHeardIn).Any(m => !_muted.Contains(Cell(channel, m))));
+            SetHardwareMicChannelLocked(on ? channel : null);
             return on;
         }
     }
 
-    private void RefreshHardwareMicCellsLocked()
+    private void SetHardwareMicChannelLocked(string? channel)
     {
-        if (!_built) return;
+        if (_hardwareMicChannel == channel) return;
+        string? previous = _hardwareMicChannel;
+        _hardwareMicChannel = channel;
+        RefreshHardwareMicCellsLocked(previous);
+        RefreshHardwareMicCellsLocked(channel);
+    }
+
+    private void RefreshHardwareMicCellsLocked(string? channel)
+    {
+        if (!_built || channel is null) return;
         foreach (MixDefinition mix in _config.Mixes.Where(m => m.Kind == MixKind.Monitor))
-            if (_cells.Contains(Cell("xlr1", mix.Id))) ApplyCellLocked("xlr1", mix.Id);
+            if (_cells.Contains(Cell(channel, mix.Id))) ApplyCellLocked(channel, mix.Id);
     }
 
     /// <summary>
@@ -1824,16 +1871,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             if (!_built) return;
-            // A choice made in generic mode is the user's own: it is kept when
-            // automatic mode brings the set-aside jacks back.
-            if (GenericModeLocked && !sinkNames.Any(IsJack)) (_monitorFallback, _monitorWarning) = (null, null);
             SetMonitorOutputsLocked(sinkNames);
         }
     }
 
     private void SetMonitorOutputsLocked(IReadOnlyList<string> sinkNames)
     {
-        sinkNames = DivertJacksLocked(sinkNames);
         string? previousSink = ResolveDefaultSink(FollowMonitorOutput, _monitorOutputs);
         foreach (PortLink route in _monitorRoutes.Values) _pw.Unlink(route);
         _monitorRoutes.Clear();
@@ -1857,7 +1900,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         else _outputVolumeDue.Keep(FollowerOutputsLocked());
         // Feeds only make sense for selected outputs; drop the rest so a
         // stale choice never resurfaces when the output is ticked again.
-        foreach (string stale in _monitorFeeds.Keys.Where(o => !_monitorOutputs.Contains(o) && !IsSetAsideLocked(o)).ToList())
+        foreach (string stale in _monitorFeeds.Keys.Where(o => !_monitorOutputs.Contains(o)).ToList())
             _monitorFeeds.Remove(stale);
         // Several physical jacks on the same return pair cannot carry distinct
         // feeds. Keep every published member consistent with the audible one.
@@ -1868,7 +1911,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             foreach (string output in group) _monitorFeeds[output] = feed;
         }
         _incompleteMonitorRoutes.Clear();
-        RefreshHardwareMicCellsLocked();
+        RefreshHardwareMicCellsLocked(_hardwareMicChannel);
         foreach ((string key, string target) in MonitorRouteTargetsLocked())
         {
             PortLink? route = RouteFeedLocked(target);
@@ -2379,8 +2422,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             {
                 PrimaryInputConnected = _stripSources.ContainsKey("xlr1") && _inputFeeds.ContainsKey("xlr1"),
                 PrimaryInput = PrimaryInputLocked(),
-                SoftLowCutApplicable = _bindings.ContainsKey("xlr1") || _lowCutApplicable,
-                SoftClipGuardApplicable = _bindings.ContainsKey("xlr1") || _clipGuardApplicable,
+                SoftLowCutApplicable = SoftLowCutApplicableLocked,
+                SoftClipGuardApplicable = SoftClipGuardApplicableLocked,
                 ExclusiveGroups = ExclusiveGroupsModel.Copy(_config.ExclusiveGroups),
                 Mixes = [.. _config.Mixes.Select(m => new MixStatus(
                     m.Id, m.Name,
@@ -2439,7 +2482,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             monitor ? 1 : _mixVolume.GetValueOrDefault(mixId, 1.0));
         bool waiting = !_muted.Contains(cell) && ExclusivePeerPendingLocked(channelId);
         bool muted = waiting || _muted.Contains(cell) || (!monitor && _mixMuted.Contains(mixId));
-        if (_hardwareMicMonitor && monitor && channelId == "xlr1" && MonitorFeed.Includes(JackFeedLocked(), mixId))
+        if (_hardwareMicChannel == channelId && monitor && MonitorFeed.Includes(JackFeedLocked(), mixId))
             muted = true;   // the hardware direct path carries it to the jacks
 
         if (!_legIndex.TryGetValue(cell, out int idx))

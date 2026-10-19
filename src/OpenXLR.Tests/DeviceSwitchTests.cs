@@ -84,60 +84,49 @@ public sealed class DeviceSwitchTests
         });
     }
 
-    [Fact]
-    public void GenericMicrophoneModeReleasesUsbAndResumesTheChosenDevice()
+    /// <summary>
+    /// A strip bound to a source never stops the unit being driven: with the
+    /// software mixer on, a binding on either strip leaves the unit open
+    /// through every sweep, its controls answering and the picker working.
+    /// </summary>
+    [Theory]
+    [InlineData("xlr1")]
+    [InlineData("xlr2")]
+    public void ABindingOnEitherStripNeverReleasesUsb(string strip)
     {
         WithConfigDir(() =>
         {
+            new DaemonSettings { Submixer = true }.Save();
+            Assert.Null(new OpenXLR.Core.Mixing.MixerSettings
+                { InputBindings = new() { [strip] = new("unplugged.microphone", 0, 1) } }.Save());
             var wave = new CountingDevice(WaveXlr);
+            var dock = new CountingDevice(XlrDock);
             using var manager = new DeviceManager(NullLogger<DeviceManager>.Instance,
-                new ConfigurationBuilder().Build(), () => [wave]);
-            manager.SweepOnce();
-            manager.SetHardwareEnabled(false);
-            Assert.False(wave.Connected);
-            Assert.Equal(1, wave.Disposals);
-            Assert.False(manager.HardwareEnabled);
+                new ConfigurationBuilder().Build(), () => [wave, dock]);
             for (int i = 0; i < 10; i++) manager.SweepOnce();
-            Assert.False(manager.Snapshot().Connected);
-            Assert.NotNull(manager.SetActiveDevice("0fd9:007d"));
-            using var gain = JsonDocument.Parse("45");
-            Assert.NotNull(manager.Apply("gain", gain.RootElement));
-            Assert.Equal(30, wave.GainDb);
-            manager.SetHardwareEnabled(true);
-            manager.SweepOnce();
             Assert.True(wave.Connected);
-        });
-    }
-
-    [Fact]
-    public void GenericMicrophoneModeStillRecognisesTheNodesOfAttachedUnits()
-    {
-        WithConfigDir(() =>
-        {
-            var attached = new List<IAudioDevice>();
-            using var manager = new DeviceManager(NullLogger<DeviceManager>.Instance,
-                new ConfigurationBuilder().Build(), () => [.. attached]);
-            manager.SetHardwareEnabled(false);
-            int pushes = 0;
-            manager.StateChanged += _ => pushes++;
-            const string node = "alsa_input.usb-Elgato_Systems_Elgato_Wave_XLR_SER1-00.mono-fallback";
+            Assert.Equal(0, wave.Disposals);
+            Assert.True(manager.Snapshot().Connected);
+            manager.MarkRestored();
+            using var gain = JsonDocument.Parse("45");
+            Assert.Null(manager.Apply("gain", gain.RootElement));
+            Assert.Equal(45, wave.GainDb);
+            Assert.Null(manager.SetActiveDevice("0fd9:00a6"));
             manager.SweepOnce();
-            Assert.Null(manager.SupportedUnitFor(node));
-            // A unit plugged in while released is listed, never opened, and clients hear of it.
-            var wave = new CountingDevice(WaveXlr with { Location = new UsbLocation(1, 4, "1-4", "SER1") });
-            attached.Add(wave);
-            Assert.True(SpinWait.SpinUntil(() => { manager.SweepOnce(); return manager.SupportedUnitFor(node) is not null; }, TimeSpan.FromSeconds(5)));
-            Assert.Equal((wave.Info.InstanceId, "Elgato Wave XLR"), manager.SupportedUnitFor(node));
-            Assert.False(wave.Connected);
-            Assert.Equal(1, pushes);
-            Assert.Null(manager.SupportedUnitFor("alsa_input.usb-046d_Webcam-02.analog-stereo"));
+            Assert.True(dock.Connected);
+            manager.SuspendSession();
         });
     }
 
+    /// <summary>
+    /// The earlier primaryInput field is read as XLR 1's binding, and like
+    /// any binding it leaves USB control alone whether or not the software
+    /// mixer runs.
+    /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void SavedGenericInputPausesUsbOnlyWhileTheSoftwareMixerIsEnabled(bool mixerEnabled)
+    public void ASavedPrimaryInputKeepsUsbControlWithOrWithoutTheMixer(bool mixerEnabled)
     {
         WithConfigDir(() =>
         {
@@ -148,30 +137,38 @@ public sealed class DeviceSwitchTests
             using var manager = new DeviceManager(NullLogger<DeviceManager>.Instance,
                 new ConfigurationBuilder().Build(), () => [wave]);
             manager.SweepOnce();
-            Assert.Equal(!mixerEnabled, manager.HardwareEnabled);
-            Assert.Equal(!mixerEnabled, wave.Connected);
+            Assert.True(wave.Connected);
             Assert.Equal(0, wave.Disposals);
-            // The earlier primaryInput field is read as XLR 1's binding.
             Assert.Equal(new OpenXLR.Core.Mixing.SourceBinding("unplugged.microphone", 0, 1),
                 OpenXLR.Core.Mixing.MixerSettings.Load()!.InputBindings!["xlr1"]);
             manager.SuspendSession();
         });
     }
 
+    /// <summary>
+    /// The nodes of every attached unit are recognised, the driven one and
+    /// one plugged in later beside it, from the detection each sweep does.
+    /// </summary>
     [Fact]
-    public void AnXlr2BindingKeepsUsbControl()
+    public void TheNodesOfAttachedUnitsAreRecognisedWhileOneIsDriven()
     {
         WithConfigDir(() =>
         {
-            new DaemonSettings { Submixer = true }.Save();
-            Assert.Null(new OpenXLR.Core.Mixing.MixerSettings
-                { InputBindings = new() { ["xlr2"] = new("unplugged.microphone", 0, 1) } }.Save());
-            var wave = new CountingDevice(WaveXlr);
+            var dock = new CountingDevice(XlrDock with { Location = new UsbLocation(1, 3, "1-3", "DOCK1") });
+            var attached = new List<IAudioDevice> { dock };
             using var manager = new DeviceManager(NullLogger<DeviceManager>.Instance,
-                new ConfigurationBuilder().Build(), () => [wave]);
+                new ConfigurationBuilder().Build(), () => [.. attached]);
+            const string node = "alsa_input.usb-Elgato_Systems_Elgato_Wave_XLR_SER1-00.mono-fallback";
             manager.SweepOnce();
-            Assert.True(manager.HardwareEnabled);
-            Assert.True(wave.Connected);
+            Assert.True(dock.Connected);
+            Assert.Null(manager.SupportedUnitFor(node));
+            var wave = new CountingDevice(WaveXlr with { Location = new UsbLocation(1, 4, "1-4", "SER1") });
+            attached.Add(wave);
+            manager.SweepOnce();
+            Assert.Equal((wave.Info.InstanceId, "Elgato Wave XLR"), manager.SupportedUnitFor(node));
+            Assert.True(dock.Connected);
+            Assert.False(wave.Connected);   // the picker chose nothing, so the first unit stays the primary
+            Assert.Null(manager.SupportedUnitFor("alsa_input.usb-046d_Webcam-02.analog-stereo"));
             manager.SuspendSession();
         });
     }
