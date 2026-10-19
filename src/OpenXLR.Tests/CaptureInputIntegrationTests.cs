@@ -46,7 +46,7 @@ public sealed partial class MonitorVolumeIntegrationTests
             try
             {
                 Environment.SetEnvironmentVariable("PATH", directory + Path.PathSeparator + path);
-                if (primary) mixer.SetPrimaryInput(new("test_source_partial"));
+                if (primary) mixer.SetInputBinding("xlr1", new("test_source_partial"));
                 else mixer.CreateCaptureChannel("Partial", "test_source_partial", 0, _ => null);
             }
             finally { Environment.SetEnvironmentVariable("PATH", path); }

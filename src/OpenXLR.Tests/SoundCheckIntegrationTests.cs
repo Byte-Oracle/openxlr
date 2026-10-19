@@ -124,7 +124,7 @@ public sealed class SoundCheckIntegrationTests
     }
 
     internal static ProcessResult CaptureSound(double expected, TimeSpan? deadline = null,
-        IReadOnlyDictionary<string, string>? environment = null)
+        IReadOnlyDictionary<string, string>? environment = null, string target = "soundcheck_output")
     {
         TimeSpan duration = deadline ?? TimeSpan.FromSeconds(5);
         return ProcessRunner.Run("python3", ["-c", """
@@ -132,7 +132,7 @@ public sealed class SoundCheckIntegrationTests
             args = ['--format=f32', '--rate=48000', '--channels=2']
             if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
             with tempfile.TemporaryFile() as capture:
-                p = subprocess.Popen(['pw-cat', '--record', *args, '--target', 'soundcheck_output', '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
+                p = subprocess.Popen(['pw-cat', '--record', *args, '--target', sys.argv[3], '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
                 try:
                     expected = float(sys.argv[1])
                     deadline = time.monotonic() + float(sys.argv[2])
@@ -159,7 +159,7 @@ public sealed class SoundCheckIntegrationTests
                     if p.poll() is None: p.kill()
                     p.wait()
             """, expected.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            duration.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)],
+            duration.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture), target],
             duration + TimeSpan.FromSeconds(5), environment: environment);
     }
 }

@@ -10,15 +10,13 @@ namespace OpenXLR.Tests;
 /// </summary>
 public sealed class ChannelPresenceTests
 {
+    private static Dictionary<string, bool> Present(Mixer mixer)
+        => mixer.Snapshot().Channels.ToDictionary(c => c.Id, c => c.Present);
+
     [Fact]
     public void AChannelTheDeviceCannotFeedIsReportedAbsent()
     {
         using var mixer = new Mixer();
-
-        // Without a device there is nothing to go on, so every strip shows,
-        // which is what the window has always done before one is connected.
-        Assert.All(mixer.Snapshot().Channels, channel => Assert.True(channel.Present));
-
         Assert.True(mixer.SetInputJacks(1, false));
         Dictionary<string, ChannelStatus> single = mixer.Snapshot().Channels.ToDictionary(c => c.Id);
         Assert.True(single["xlr1"].Present);
@@ -36,12 +34,63 @@ public sealed class ChannelPresenceTests
     }
 
     [Fact]
+    public void BeforeAnyUnitConnectsOnlyXlr1ShowsUnlessAUnitIsAttached()
+    {
+        using var mixer = new Mixer();
+        // A desk with no Elgato unit gets one strip, not three.
+        Dictionary<string, bool> bare = Present(mixer);
+        Assert.True(bare["xlr1"]);
+        Assert.False(bare["xlr2"]);
+        Assert.False(bare["aux"]);
+        Assert.True(bare["game"]);
+        // A Pro attached but not driven yet (boot, a failed claim) keeps its strips.
+        Assert.True(mixer.SetAttached(true));
+        Assert.False(mixer.SetAttached(true));
+        Assert.All(Present(mixer).Values, Assert.True);
+        Assert.True(mixer.SetAttached(false));
+        Assert.False(Present(mixer)["aux"]);
+    }
+
+    [Fact]
+    public void WithNoUnitConnectedTheLastAnswerOfThisRunIsKept()
+    {
+        using var mixer = new Mixer();
+        mixer.SetAttached(true);
+        Assert.True(mixer.SetInputJacks(2, true));
+        // Unplugged: the Pro's strips stay for its return.
+        Assert.True(mixer.SetInputJacks(null, null));
+        mixer.SetAttached(false);
+        Assert.All(Present(mixer).Values, Assert.True);
+        // A one-jack unit came and went: its answer is the one kept now.
+        mixer.SetInputJacks(1, false);
+        mixer.SetInputJacks(null, null);
+        mixer.SetAttached(true);
+        Dictionary<string, bool> kept = Present(mixer);
+        Assert.False(kept["xlr2"]);
+        Assert.False(kept["aux"]);
+    }
+
+    [Fact]
+    public void AStripBoundToASourceIsAlwaysPresent()
+    {
+        using var mixer = new Mixer();
+        mixer.SetInputJacks(1, false);
+        Assert.False(Present(mixer)["xlr2"]);
+        mixer.SetInputBinding("xlr2", new("alsa_input.usb-cam", 0, 1));
+        Assert.True(Present(mixer)["xlr2"]);
+        mixer.SetInputJacks(null, null);
+        Assert.True(Present(mixer)["xlr2"]);
+        mixer.SetInputBinding("xlr2", null);
+        Assert.False(Present(mixer)["xlr2"]);
+    }
+
+    [Fact]
     public void OnlyAChangedAnswerAsksForABroadcast()
     {
         using var mixer = new Mixer();
         Assert.True(mixer.SetInputJacks(1, false));
         Assert.False(mixer.SetInputJacks(1, false));
         Assert.True(mixer.SetInputJacks(null, null));
-        Assert.All(mixer.Snapshot().Channels, channel => Assert.True(channel.Present));
+        Assert.False(mixer.SetInputJacks(null, null));
     }
 }

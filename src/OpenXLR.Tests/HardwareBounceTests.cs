@@ -51,10 +51,14 @@ public sealed partial class MonitorVolumeIntegrationTests
             using var registry = pw.WatchGraph();
             using var mixer = new Mixer(pw);
             WaitForRecovery(() => pw.FindNodeId(output) is not null);
+            // Routes made before the ports exist link nothing, and only the
+            // daemon's sweep would retry them.
+            WaitForInputPorts(output, 12);
             mixer.SetInputDeviceHint(output, hardwareOutputRouting: true);
             mixer.Build(new MixerConfig { Channels = [], Mixes =
                 [new("monitor", "Monitor", MixKind.Monitor), new("aux", "Aux", MixKind.AuxPort)] });
             pw.CreateNullSink("test_bounce_new_output", "New monitor output");
+            WaitForInputPorts("test_bounce_new_output", 2);
             mixer.SetMonitorOutputs([output + "#hp1"]);
             WaitForRecovery(() => IncomingRouteLinks(output).Length == 4);
             ExecutableScript.Write(Path.Combine(directory, "pactl"), $$"""

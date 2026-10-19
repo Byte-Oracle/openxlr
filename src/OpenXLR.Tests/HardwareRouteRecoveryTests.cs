@@ -48,6 +48,7 @@ public sealed partial class MonitorVolumeIntegrationTests
         {
             module = LoadAuxOutput();
             WaitForRecovery(() => pw.FindNodeId(output) is not null);
+            WaitForInputPorts(output, 12);
             mixer.SetInputDeviceHint(output, hardwareOutputRouting: true);
             mixer.Build(new MixerConfig { Channels = [], Mixes = [new("aux", "Aux", MixKind.AuxPort)] });
             WaitForRecovery(() => IncomingRouteLinks(output).Length == 2);
@@ -81,7 +82,13 @@ public sealed partial class MonitorVolumeIntegrationTests
         }
     }
 
-    private static void RejectNextRouteLink(string fromPrefix, string target, Action action)
+    /// <summary>
+    /// Run <paramref name="action"/> while pw-link refuses the next link from
+    /// a port starting with <paramref name="fromPrefix"/> into
+    /// <paramref name="target"/>, or with <paramref name="everyLinkInto"/>
+    /// every such link into a port starting with <paramref name="target"/>.
+    /// </summary>
+    private static void RejectNextRouteLink(string fromPrefix, string target, Action action, bool everyLinkInto = false)
     {
         string directory = Directory.CreateTempSubdirectory("openxlr-rejected-route-").FullName;
         string? path = Environment.GetEnvironmentVariable("PATH");
@@ -96,7 +103,10 @@ public sealed partial class MonitorVolumeIntegrationTests
                 import os, pathlib, sys
                 args = sys.argv[1:]
                 rejected = pathlib.Path({{JsonSerializer.Serialize(rejected)}})
-                if len(args) == 2 and args[0].startswith({{JsonSerializer.Serialize(fromPrefix)}}) and args[1] == {{JsonSerializer.Serialize(target)}} and not rejected.exists():
+                every = {{(everyLinkInto ? "True" : "False")}}
+                target = {{JsonSerializer.Serialize(target)}}
+                into = len(args) == 2 and (args[1].startswith(target) if every else args[1] == target)
+                if into and args[0].startswith({{JsonSerializer.Serialize(fromPrefix)}}) and (every or not rejected.exists()):
                     rejected.touch()
                     sys.exit(1)
                 os.execv({{JsonSerializer.Serialize(realLink)}}, ['pw-link', *args])
@@ -136,6 +146,15 @@ public sealed partial class MonitorVolumeIntegrationTests
         for (int i = 0; i < 3; i++) Assert.False(ensure());
         Assert.Equal(before, IncomingRouteLinks(target));
     }
+
+    /// <summary>
+    /// Wait until a sink has all its playback ports. The node is listed
+    /// first and the session manager adds its ports afterwards, so a route
+    /// made in between finds nothing to link.
+    /// </summary>
+    private static void WaitForInputPorts(string node, int count)
+        => WaitForRecovery(() => ProcessRunner.Run("pw-link", ["-i"]).StdoutText.Split('\n')
+            .Count(line => line.Trim().StartsWith(node + ":", StringComparison.Ordinal)) == count);
 
     private static void WaitForRecovery(Func<bool> condition)
         => Assert.True(SpinWait.SpinUntil(condition, TimeSpan.FromSeconds(5)));

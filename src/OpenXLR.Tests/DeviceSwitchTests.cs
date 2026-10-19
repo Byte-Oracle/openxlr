@@ -151,7 +151,27 @@ public sealed class DeviceSwitchTests
             Assert.Equal(!mixerEnabled, manager.HardwareEnabled);
             Assert.Equal(!mixerEnabled, wave.Connected);
             Assert.Equal(0, wave.Disposals);
-            Assert.Equal(new("unplugged.microphone", 1), OpenXLR.Core.Mixing.MixerSettings.Load()!.PrimaryInput);
+            // The earlier primaryInput field is read as XLR 1's binding.
+            Assert.Equal(new OpenXLR.Core.Mixing.SourceBinding("unplugged.microphone", 0, 1),
+                OpenXLR.Core.Mixing.MixerSettings.Load()!.InputBindings!["xlr1"]);
+            manager.SuspendSession();
+        });
+    }
+
+    [Fact]
+    public void AnXlr2BindingKeepsUsbControl()
+    {
+        WithConfigDir(() =>
+        {
+            new DaemonSettings { Submixer = true }.Save();
+            Assert.Null(new OpenXLR.Core.Mixing.MixerSettings
+                { InputBindings = new() { ["xlr2"] = new("unplugged.microphone", 0, 1) } }.Save());
+            var wave = new CountingDevice(WaveXlr);
+            using var manager = new DeviceManager(NullLogger<DeviceManager>.Instance,
+                new ConfigurationBuilder().Build(), () => [wave]);
+            manager.SweepOnce();
+            Assert.True(manager.HardwareEnabled);
+            Assert.True(wave.Connected);
             manager.SuspendSession();
         });
     }

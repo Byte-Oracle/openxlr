@@ -170,13 +170,16 @@ monitor output as the system playback device. The response state retains
 that value; see [the command contract](api.md) for resolution and volume
 synchronization.
 
-The primary microphone can use any external capture source through
-`{"cmd":"setPrimaryInput","source":"alsa_input.usb-headset","captureMonoChannel":0}`.
-`{"cmd":"setPrimaryInput","source":null}` restores automatic Elgato control.
-The reply follows the saved change. Read `mixer.primaryInput` and
-`mixer.primaryInputConnected` from `/api/v1/mixer` or `/api/v1/state`.
-See [generic primary microphone](api.md#generic-primary-microphone) for
-USB control, missing-source and profile behaviour.
+XLR 1 and XLR 2 can each take one port of any external capture source:
+`{"cmd":"setInputBinding","channel":"xlr2","source":"alsa_input.usb-headset","captureMonoChannel":0}`.
+`{"cmd":"setInputBinding","channel":"xlr2","source":null}` returns the strip
+to the interface. The reply follows the saved change. Read each channel's
+`binding`, `bindingConnected`, `bindingWarning` and `unitInput` from
+`/api/v1/mixer` or `/api/v1/state`. `setPrimaryInput` with the same fields
+and no `channel` is the earlier form for XLR 1, and `mixer.primaryInput` and
+`mixer.primaryInputConnected` still report XLR 1. See
+[input bindings](api.md#input-bindings) for USB control, missing-source and
+profile behaviour.
 
 Capture channels use the same command endpoint:
 `{"cmd":"createCaptureChannel","name":"Headset mic","source":"alsa_input.usb-headset","capturePair":0}`.

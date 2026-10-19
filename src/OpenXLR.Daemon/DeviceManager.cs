@@ -76,7 +76,8 @@ public sealed class DeviceManager : BackgroundService
         bool launchDefault = config.GetValue("mixer", false) ||
                              Environment.GetEnvironmentVariable("OPENXLR_BUILD_MIXER") == "1";
         _submixer = OpenXLR.Core.DaemonSettings.SubmixerEnabled(launchDefault);
-        _hardwareEnabled = !_submixer || OpenXLR.Core.Mixing.MixerSettings.Load()?.PrimaryInput is null;
+        // Generic microphone mode: XLR 1 bound to a source releases the units.
+        _hardwareEnabled = !_submixer || OpenXLR.Core.Mixing.MixerSettings.Load()?.InputBindings?.ContainsKey("xlr1") is not true;
     }
 
     /// <summary>Every supported interface currently attached, for client pickers.</summary>

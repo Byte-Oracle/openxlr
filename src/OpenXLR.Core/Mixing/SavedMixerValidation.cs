@@ -28,11 +28,10 @@ internal static class SavedMixerValidation
     {
         var notes = new List<string>();
         dropped = notes;
-        PrimaryInputBinding? primary = settings.PrimaryInput;
-        if (primary is not null && !primary.IsValid) { notes.Add("primaryInput: invalid binding"); primary = null; }
         return settings with
         {
-            PrimaryInput = primary,
+            InputBindings = InputBindings(settings, notes),
+            PrimaryInput = null,
             UserChannels = settings.UserChannels is null ? null : Entries(settings.UserChannels, "userChannels", notes),
             UserMixes = settings.UserMixes is null ? null : UserMixes(settings.UserMixes, notes),
             ExclusiveGroups = Groups(settings.ExclusiveGroups, notes),
@@ -66,6 +65,31 @@ internal static class SavedMixerValidation
     private const string TooMany = "too many entries";
 
     // Lenient pass for the settings file.
+
+    /// <summary>
+    /// The strips bound to a source. A file written before the per-strip
+    /// bindings carries XLR 1's source as <c>primaryInput</c>; it is read
+    /// as XLR 1's binding when <c>inputBindings</c> is absent, and dropped
+    /// otherwise, so the next save writes only the new field.
+    /// </summary>
+    private static Dictionary<string, SourceBinding>? InputBindings(MixerSettings settings, List<string> notes)
+    {
+        if (settings.InputBindings is null)
+        {
+            if (settings.PrimaryInput is not { } primary) return null;
+            if (primary.IsValid) return new() { ["xlr1"] = new SourceBinding(primary.Source, 0, primary.Channel) };
+            notes.Add("primaryInput: invalid binding");
+            return null;
+        }
+        var kept = new Dictionary<string, SourceBinding>();
+        foreach ((string strip, SourceBinding? binding) in settings.InputBindings)
+        {
+            if (!Mixer.IsBindableStrip(strip)) notes.Add($"inputBindings: {strip} takes no binding");
+            else if (binding is null || !binding.IsValid) notes.Add($"inputBindings: invalid binding for {strip}");
+            else kept[strip] = binding;
+        }
+        return kept.Count == 0 ? null : kept;
+    }
 
     private static List<T> Entries<T>(List<T>? entries, string field, List<string> notes) where T : class
     {

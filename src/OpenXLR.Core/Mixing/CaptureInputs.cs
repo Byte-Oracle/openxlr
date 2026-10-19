@@ -32,7 +32,12 @@ public sealed partial class Mixer
     {
         bool changed = false;
         var channels = _config.Channels.Where(c => c.CaptureSource is not null).ToArray();
-        if (channels.Length == 0) return false;
+        if (channels.Length == 0)
+        {
+            bool cleared = _captureWarnings.Count > 0;
+            _captureWarnings.Clear();
+            return cleared;
+        }
         var available = _pw.ListDevices().Where(d => d.Kind == AudioNodeKind.Source && !d.IsOwn)
             .Select(d => d.Name).ToHashSet(StringComparer.Ordinal);
         foreach (ChannelDefinition channel in channels)
@@ -44,17 +49,38 @@ public sealed partial class Mixer
                 RemoveCaptureFeedLocked(channel.Id);
                 changed = true;
             }
-            if (!available.Contains(channel.CaptureSource!)) continue;
+            if (!available.Contains(channel.CaptureSource!))
+            {
+                changed |= NoteCaptureLocked(channel.Id, $"{channel.CaptureSource} is not connected. The channel stays silent until it returns.");
+                continue;
+            }
             // External sources need not use the hardware driver's capture_
             // prefix. Direction and the exact node name identify their ports.
             PortLink feed = _pw.LinkNodes(channel.CaptureSource!, "", channel.SinkName, "playback",
                 fromPairOffset: channel.CapturePair, fromChannel: channel.CaptureMonoChannel);
             // Capture channels have stereo sinks; mono sources also need a
             // link to each side. Do not retain a partial route as healthy.
-            if (feed.Pairs.Count < 2) { _pw.Unlink(feed); continue; }
+            if (feed.Pairs.Count < 2)
+            {
+                _pw.Unlink(feed);
+                changed |= NoteCaptureLocked(channel.Id, $"{channel.CaptureSource} could not be linked to the channel; retrying.");
+                continue;
+            }
             _captureFeeds[channel.Id] = feed;
+            NoteCaptureLocked(channel.Id, null);
             changed = true;
         }
+        foreach (string gone in _captureWarnings.Keys.Where(id => !channels.Any(c => c.Id == id)).ToList())
+            changed |= NoteCaptureLocked(gone, null);
         return changed;
+    }
+
+    /// <summary>Set or clear why a capture channel is silent. True when it changed.</summary>
+    private bool NoteCaptureLocked(string id, string? warning)
+    {
+        if (_captureWarnings.GetValueOrDefault(id) == warning) return false;
+        if (warning is null) _captureWarnings.Remove(id);
+        else _captureWarnings[id] = warning;
+        return true;
     }
 }

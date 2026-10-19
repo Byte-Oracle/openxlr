@@ -85,7 +85,11 @@ the Pro's Line In and USB Aux input). Only the Wave XLR Pro has the
 second jack and the aux stage, so on every other model the window, the
 terminal mixer and the Omarchy bar leave those two strips out rather than
 offering a fader that reaches nothing. The channels keep their levels, so
-plugging a Pro back in brings them back as they were. The rest carry
+plugging a Pro back in brings them back as they were. While no interface is
+connected the strips stay as the last one left them. Until one has
+connected since the daemon started, XLR 2 and Aux In show only while a
+supported interface is attached, so a desk without an Elgato interface
+shows XLR 1 alone. The rest carry
 application
 groups: Game, Music, Browser, System, Voice Chat and SFX by default, and
 whatever you add, rename or remove in the layout editor
@@ -224,8 +228,9 @@ primary interface instead.
 
 This enables generic microphone mode. Elgato USB control is released,
 including additional interfaces, and the window hides hardware gain,
-phantom, hardware effects, headphone controls and the other structural
-hardware inputs. Pick an ordinary PipeWire playback device under MONITOR;
+phantom, hardware effects and headphone controls. XLR 2 and Aux In keep
+their strips when the interface had them, and stay silent if the released
+interface no longer offers its capture node. Pick an ordinary PipeWire playback device under MONITOR;
 Elgato-specific output selectors and USB Aux routing are unavailable.
 The channel and mix nodes are kept, so application routes stay intact.
 
@@ -240,9 +245,9 @@ output. The Pro outputs stay saved. Returning to automatic mode selects them
 again with their feeds and drops the output OpenXLR picked in their place.
 An output you chose yourself during generic mode is kept.
 
-Changing the source or port mutes the hardware channels in all monitor mixes.
-Unmute XLR 1 in the desired monitor mix deliberately when you want to hear
-it. If the source is unplugged or its selected port is missing, XLR 1 stays
+Changing the source or port mutes XLR 1 in all monitor mixes; the other
+strips keep their mutes. Unmute XLR 1 in the desired monitor mix
+deliberately when you want to hear it. If the source is unplugged or its selected port is missing, XLR 1 stays
 silent and a warning names the problem. It reconnects to the same source
 when that source returns, without borrowing another microphone. Changing
 the binding ends Sound Check and discards its sample.
