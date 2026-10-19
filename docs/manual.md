@@ -2101,6 +2101,9 @@ installs WirePlumber rules that keep these capture sources always active
 `53-openxlr-wave3-capture-hold.conf`). On a source install copy them
 from `packaging/` into `~/.config/wireplumber/wireplumber.conf.d/` and
 restart WirePlumber.
+OpenXLR links the interface's capture before it routes any mix into the
+interface. Programs that play straight to the interface can still start
+playback first, which is why the rules matter.
 
 A second cause, when the microphone is silent only after a reboot: the
 dock forgets its gain at every power cycle and comes back at the gain its
