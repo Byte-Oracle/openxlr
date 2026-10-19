@@ -281,6 +281,48 @@ public sealed class InputBindingModelTests
     }
 
     [Fact]
+    public async Task AStripCarryingAnAdditionalUnitsInputDrawsThatUnitsControls()
+    {
+        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        var model = new MainViewModel(client);
+        using var rack = new InputRackViewModel(model);
+        using var matrix = new MixMatrixViewModel(model);
+        Apply(model, InputBindingWindowTests.DrivenState(withMix: false));
+        ChannelViewModel xlr2 = model.Channels.Single(c => c.Id == "xlr2");
+        WaveInterfaceViewModel wave3 = model.WaveInterfaces.Single(w => !w.Active);
+        // XLR 2 on the Wave:3: its controls come from the Wave:3's entry, not the primary's.
+        Assert.Same(wave3.Input1, xlr2.ExtraUnitInput);
+        Assert.Equal(0, xlr2.ShownUnitInput);
+        Assert.Equal(25, xlr2.ExtraUnitInput!.GainDb);
+        Assert.Equal(40, xlr2.ExtraUnitInput.GainMaxDb);
+        Assert.True(xlr2.ExtraUnitInput.HasClipGuard);
+        Assert.False(xlr2.ExtraUnitInput.HasPhantom);
+        Assert.Equal([wave3.Input1], wave3.Inputs);
+        Assert.Same(wave3.Inputs, wave3.Inputs);   // one list while the count stays, so a state push draws nothing again
+        InputStripViewModel strip = rack.Strips.Single(s => s.Channel.Id == "xlr2");
+        Assert.Same(xlr2.ExtraUnitInput, strip.ExtraUnit);
+        Assert.Null(strip.Unit);
+        Assert.Contains(SkinStripParts.Gain, strip.Spec.Parts);
+        Assert.Contains(SkinStripParts.HardwareControls, strip.Spec.Parts);
+        MatrixRowViewModel row = matrix.Rows.Single(r => r.Channel.Id == "xlr2");
+        Assert.True(row.CarriesExtraUnit);
+        Assert.Contains(SkinStripParts.Gain, row.Spec.Parts);
+        Assert.Contains(SkinStripParts.Mute, row.Spec.Parts);
+        // The Pro's own second input stays on the capture channel kept for it.
+        Assert.Equal(2, model.Channels.Single(c => c.Id == "promic2").ShownUnitInput);
+
+        // The unit no longer driven: the binding stays, the controls go.
+        Apply(model, InputBindingWindowTests.DrivenState(enabled: false, withMix: false));
+        Assert.Null(xlr2.ExtraUnitInput);
+        Assert.True(xlr2.IsSourceBound);
+        Assert.Equal("0fd9:0070@00000000000000c3", xlr2.Binding!.Unit);
+        Assert.DoesNotContain(SkinStripParts.Gain, strip.Spec.Parts);
+        Assert.DoesNotContain(SkinStripParts.HardwareControls, strip.Spec.Parts);
+        Assert.False(row.CarriesExtraUnit);
+        Assert.DoesNotContain(SkinStripParts.Mute, row.Spec.Parts);
+    }
+
+    [Fact]
     public async Task ADaemonWithoutBindingsKeepsTheStripsOnTheInterface()
     {
         await using var client = new DaemonClient("ws://127.0.0.1:1/ws");

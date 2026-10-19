@@ -251,7 +251,7 @@ internal static partial class SkinLayoutWindowTests
             // XLR 1's head has its gain over its meter, its mute and its chain.
             Border xlr1 = RowHead(window, "xlr1");
             Assert.Single(xlr1.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
-            Assert.True(xlr1.GetVisualDescendants().OfType<MeterFader>().Single().Meters.IsEffectivelyVisible);
+            Assert.True(xlr1.GetVisualDescendants().OfType<MeterFader>().Single(f => f.IsEffectivelyVisible).Meters.IsEffectivelyVisible);
             Assert.Single(xlr1.GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible && t.Classes.Contains("matrixMute"));
             Assert.Single(xlr1.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Classes.Contains("matrixEffects"));
             // XLR 2 has no row, comes back when the interface has it, and goes again.

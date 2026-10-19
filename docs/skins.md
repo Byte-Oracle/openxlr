@@ -1216,7 +1216,13 @@ capture channel on the interface's own node at that jack's port, whose
 `gain` part then shows the interface's gain above the channel's own volume
 and whose `hardware-controls` part shows the switches. A strip bound to
 another source has no `gain`, and XLR 1's `hardware-controls` keeps only its
-software low cut and ClipGuard. Only XLR 1 and XLR 2 have a `binding` part.
+software low cut and ClipGuard, unless the source is an additional
+interface the daemon drives: then the strip's `gain` part shows that
+interface's gain and its `hardware-controls` part that interface's
+switches, as a capture channel on that interface's node does. A matrix row
+head draws such an interface's gain and mute in its `gain` and `mute`
+parts. Hiding a part hides the additional interface's control with it.
+Only XLR 1 and XLR 2 have a `binding` part.
 
 `master` takes `template`, `label`, `meter` and `fader`. Its template is
 `"master-card"`, the mix tile the channel tiles have always shown, under

@@ -906,12 +906,6 @@
   <data name="InterfaceConnection" xml:space="preserve">
     <value>Conexión de interfaz</value>
   </data>
-  <data name="InterfaceGain" xml:space="preserve">
-    <value>Ganancia</value>
-  </data>
-  <data name="InterfaceGainInput2" xml:space="preserve">
-    <value>Ganancia, entrada 2</value>
-  </data>
   <data name="InterfaceInputChannelName" xml:space="preserve">
     <value>{0} entrada {1}</value>
   </data>
@@ -2311,7 +2305,7 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>Entrada de {0}</value>
   </data>
   <data name="InputBindingHint" xml:space="preserve">
-    <value>Elige qué alimenta {0}: el conector de la interfaz o un puerto de otra fuente de captura. La interfaz sigue controlada y sus controles pasan al canal que lleva su micrófono. {0} queda silenciado en las mezclas de monitor tras un cambio. Las interfaces que OpenXLR admite no aparecen en la lista.</value>
+    <value>Elige qué alimenta {0}: el conector de la interfaz o un puerto de otra fuente de captura. La interfaz sigue controlada y sus controles pasan al canal que lleva su micrófono. {0} queda silenciado en las mezclas de monitor tras un cambio. También puede alimentarlo el micrófono de otra interfaz Elgato, con los controles de esa interfaz en el canal mientras OpenXLR la controla.</value>
   </data>
   <data name="InputBindingInterfaceJack" xml:space="preserve">
     <value>Conector de la interfaz (XLR {0})</value>
@@ -2339,6 +2333,18 @@ Selecciona la interfaz que controla OpenXLR</value>
   </data>
   <data name="InputBindingKeepFailed" xml:space="preserve">
     <value>{0} está asignado, pero no se pudo añadir el canal de captura del micrófono de la interfaz: {1}</value>
+  </data>
+  <data name="AlsoDriveThisInterface" xml:space="preserve">
+    <value>Controlar también esta interfaz</value>
+  </data>
+  <data name="InputBindingDriveFailed" xml:space="preserve">
+    <value>{0} está asignado, pero no se pudo controlar {1} como interfaz adicional: {2}</value>
+  </data>
+  <data name="UnitGainName" xml:space="preserve">
+    <value>Ganancia de {0}</value>
+  </data>
+  <data name="UnitGainInput2Name" xml:space="preserve">
+    <value>Ganancia de {0}, entrada 2</value>
   </data>
   <data name="UnitInputGain" xml:space="preserve">
     <value>Ganancia</value>

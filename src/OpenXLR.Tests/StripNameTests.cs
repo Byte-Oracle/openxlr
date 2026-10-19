@@ -103,6 +103,34 @@ public sealed class StripNameTests : IDisposable
         devices.SuspendSession();
     }
 
+    /// <summary>
+    /// A strip bound to another supported unit is named by what feeds it, as
+    /// the unit's own strips are: one of an XLR Dock's or a Wave XLR's jacks
+    /// keeps the strip's XLR name and icon, a Wave:3's capsule is Mic 1 or
+    /// Mic 2. The answer is kept by model through an unplug in this run.
+    /// </summary>
+    [Fact]
+    public void AStripBoundToAnotherUnitsJackKeepsItsXlrName()
+    {
+        const string dock = "0fd9:00a6@00000000000000d0", wave3 = "0fd9:0070@00000000000000e0";
+        using var mixer = new Mixer();
+        mixer.SetDrivenUnit("0fd9:00b4@00000000000000f0");
+        mixer.SetInputBinding("xlr1", new("alsa_input.usb-Elgato_Systems_Elgato_XLR_Dock_D-00.analog-stereo", 0, 0) { Unit = dock });
+        mixer.SetInputBinding("xlr2", new("alsa_input.usb-Elgato_Systems_Elgato_Wave_3_W-00.mono-fallback", 0, 0) { Unit = wave3 });
+        // Before the daemon has said what the units are, a bound strip is a Mic.
+        Assert.Equal(("Mic 1", "microphone"), Strip(mixer, "xlr1"));
+        Assert.True(mixer.SetAttachedUnits([new(dock, [], 1, XlrJacks: true, Driven: false), new(wave3, [], 1, XlrJacks: false, Driven: false)]));
+        Assert.Equal(("XLR 1", "mic"), Strip(mixer, "xlr1"));
+        Assert.Equal(("Mic 2", "microphone"), Strip(mixer, "xlr2"));
+        // Unplugged: the model's answer stays for the run.
+        Assert.True(mixer.SetAttachedUnits([]));
+        Assert.Equal(("XLR 1", "mic"), Strip(mixer, "xlr1"));
+        // The same jack bound to the other strip is XLR 2.
+        mixer.SetInputBinding("xlr1", null);
+        mixer.SetInputBinding("xlr2", new("alsa_input.usb-Elgato_Systems_Elgato_XLR_Dock_D-00.analog-stereo", 0, 0) { Unit = dock });
+        Assert.Equal(("XLR 2", "mic"), Strip(mixer, "xlr2"));
+    }
+
     private sealed class Unit(string model, DeviceCapabilities capabilities) : IAudioDevice
     {
         public DeviceInfo Info { get; } = new("Elgato", model, 0x0fd9, 0x0070);

@@ -223,6 +223,16 @@ public sealed class MixerService : IHostedService, IDisposable
     public IReadOnlyList<AudioNode>? Devices()
         => _mixer.Built ? [.. _mixer.ListDevices().Select(node => _devices.SupportedUnitFor(node.Name) is { } unit ? node with { DrivenUnit = unit.Id } : node)] : null;
 
+    /// <summary>
+    /// The attached units next to the primary one: a strip or capture channel
+    /// on a driven additional unit carries that unit's controls, and a strip
+    /// bound to one of its XLR jacks keeps the jack's name.
+    /// </summary>
+    public void SetAttachedUnits(IReadOnlyList<AttachedUnit> units)
+    {
+        if (_mixer.SetAttachedUnits(units)) Changed?.Invoke();
+    }
+
     /// <summary>Live stereo levels, or null when the mixer is off.</summary>
     public IReadOnlyDictionary<string, double[]>? Meters() => _mixer.Built ? _mixer.ReadMeters() : null;
 
@@ -601,16 +611,14 @@ public sealed class MixerService : IHostedService, IDisposable
                 {
                     // setPrimaryInput is the earlier form, with channel "xlr1".
                     string strip = cmd.Cmd == "setPrimaryInput" ? "xlr1" : cmd.Channel!;
-                    // A supported unit's node is not a source for a strip yet.
-                    // Driving a unit can switch its card profile and rename
-                    // the node under the strip, and its controls are not
-                    // shown on the strip; both arrive with driven source units.
-                    if (cmd.Source is not null && _devices.SupportedUnitFor(cmd.Source) is { } unit)
-                        return cmd.Cmd == "setPrimaryInput"
-                            ? $"setPrimaryInput: {cmd.Source} belongs to the {unit.Name}, which OpenXLR supports. Choose Automatic Elgato interface and pick that unit as the primary interface instead."
-                            : $"setInputBinding: {cmd.Source} belongs to the {unit.Name}, which OpenXLR supports. Pick that unit as the primary interface instead.";
+                    // A supported unit's node is a source like any other, and
+                    // the binding remembers the unit: its node is renamed when
+                    // the unit is driven or its card profile switches, and the
+                    // strip follows the unit's card to the new name. A strip
+                    // bound to a driven additional unit carries its controls.
                     _saves.RunSaved(() => _mixer.SetInputBinding(strip, cmd.Source is null ? null
-                        : new SourceBinding(cmd.Source, 0, cmd.CaptureMonoChannel ?? 0), settings => settings.Save()));
+                        : new SourceBinding(cmd.Source, 0, cmd.CaptureMonoChannel ?? 0) { Unit = _devices.SupportedUnitFor(cmd.Source)?.Id },
+                        settings => settings.Save()));
                     // The interface stays driven whatever the strips take; the
                     // Pro's direct path follows the channel carrying input 1.
                     SyncOutputSelectors();

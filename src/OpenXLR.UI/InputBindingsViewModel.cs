@@ -14,7 +14,7 @@ namespace OpenXLR.UI;
 /// hardware strip on the driven interface's capture pair; <c>source</c>, an
 /// exact capture node; <c>apps</c>, an application channel.
 /// </summary>
-public sealed record ChannelBinding(string Kind, string? Source = null, int Pair = 0, int? MonoChannel = null)
+public sealed record ChannelBinding(string Kind, string? Source = null, int Pair = 0, int? MonoChannel = null, string? Unit = null)
 {
     /// <summary>The zero-based port a source binding takes.</summary>
     public int Port => MonoChannel ?? 0;
@@ -25,7 +25,8 @@ public sealed record ChannelBinding(string Kind, string? Source = null, int Pair
         return new ChannelBinding(name,
             value["source"] is JsonValue source && source.TryGetValue(out string? s) ? s : null,
             value["pair"] is JsonValue pair && pair.TryGetValue(out int p) ? p : 0,
-            value["monoChannel"] is JsonValue mono && mono.TryGetValue(out int m) ? m : null);
+            value["monoChannel"] is JsonValue mono && mono.TryGetValue(out int m) ? m : null,
+            value["unit"] is JsonValue unit && unit.TryGetValue(out string? u) ? u : null);
     }
 }
 
@@ -298,6 +299,10 @@ public sealed partial class MainViewModel
         foreach (ChannelViewModel channel in Channels)
         {
             channel.ShownUnitInput = ReferenceEquals(channel, carrier1) ? 1 : ReferenceEquals(channel, carrier2) ? 2 : 0;
+            // An additional unit's input, while the daemon drives that unit.
+            channel.ExtraUnitInput = channel.UnitInput is { Primary: false } extra
+                && WaveInterfaces.FirstOrDefault(w => w.Id == extra.Unit && !w.Active && w.Connected) is { } unit
+                    ? unit.InputOf(extra.Input) : null;
             channel.BindingLabel = BindingLabelOf(channel);
         }
         Xlr1InputLabel = Localizer.Format("StripInputLabel", Xlr1Strip?.Name ?? "XLR 1");
@@ -346,7 +351,12 @@ public sealed partial class MainViewModel
             return !UnitXlrJacks ? Localizer.Text("UnitCapsule")
                 : channel.Id == "xlr2" ? Localizer.Text("Xlr2Jack") : Localizer.Text("Xlr1Jack");
         AudioDeviceItem? device = Inputs.FirstOrDefault(i => i.Name == name);
-        string description = device?.Description is { Length: > 0 } text ? text : name;
+        // A supported unit's node renamed by a profile switch: the strip
+        // follows the unit, and so does its label.
+        if (device is null && binding.Unit is { } unitId && Inputs.Where(i => !i.IsOwn && i.DrivenUnit == unitId).ToArray() is [var renamed])
+            device = renamed;
+        string description = device?.Description is { Length: > 0 } text ? text
+            : binding.Unit is { } owner && WaveInterfaces.FirstOrDefault(w => w.Id == owner) is { Name.Length: > 0 } known ? known.Name : name;
         bool single = device?.Channels == 1 || device?.Channels is null && binding.Port == 0;
         return single ? description : Localizer.Format("InputBindingSourcePort", description, binding.Port + 1);
     }
@@ -357,4 +367,7 @@ public sealed partial class MainViewModel
     /// refusal.
     /// </summary>
     public Task<string?> SetInputBinding(string channel, string? source, int port) => _client.SetInputBindingAsync(channel, source, port);
+
+    /// <summary>Drive an attached unit as an additional interface, or stop; resolves to null or the daemon's refusal.</summary>
+    public Task<string?> SetWaveInterfaceEnabled(string unit, bool enabled) => _client.SetWaveInterfaceEnabledAsync(unit, enabled);
 }

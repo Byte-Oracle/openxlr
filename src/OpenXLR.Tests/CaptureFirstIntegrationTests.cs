@@ -90,6 +90,40 @@ public sealed partial class MonitorVolumeIntegrationTests
     }
 
     /// <summary>
+    /// A strip bound to another Elgato unit's node takes that unit's capture,
+    /// so a route into that unit's own sink waits for the strip's capture as
+    /// it does for the driven interface: the Wave:3 an additional interface
+    /// or not, while the primary is another unit.
+    /// </summary>
+    [MonitorPipeWireFact]
+    public void TheRouteIntoAUnitAStripIsBoundToWaitsForThatStripsCapture()
+    {
+        const string card = "usb-Elgato_Systems_Elgato_Wave_3_BOUNDTEST-00";
+        const string sink = "alsa_output." + card + ".analog-stereo", source = "alsa_input." + card + ".mono-fallback";
+        using var links = new LinkLog();
+        var pw = new PipeWireAdapter(); using var registry = pw.WatchGraph(); using var mixer = new Mixer(pw) { Clock = () => 0 };
+        pw.CreateNullSink(sink, "Bound Wave 3 output");
+        WaitForInputPorts(sink, 2);
+        // The primary is another unit, absent here; XLR 1 is bound to the Wave:3.
+        mixer.SetInputDeviceHint(["Wave_XLR_PRIMARYTEST-"], hardwareOutputRouting: false, modelFallback: false);
+        mixer.SetInputBindings(new Dictionary<string, SourceBinding> { ["xlr1"] = new(source, 0, 0) { Unit = "0fd9:0070@00000000000000b0" } });
+        links.Start();
+        mixer.Build(HardwareInputConfig, monitorOutputSink: sink);
+        mixer.EnsureInputFeeds();
+        mixer.EnsureMonitorRoutes();
+        Assert.Empty(GraphLinksInto(sink));
+
+        WaveSource(pw, "test_bound_wave3_parent", source);
+        WaitForRecovery(() =>
+        {
+            mixer.EnsureInputFeeds();
+            mixer.EnsureMonitorRoutes();
+            return IncomingRouteLinks(Xlr1).Length == 2 && GraphLinksInto(sink).Length == 2;
+        });
+        links.AssertCaptureFirst(source, sink);
+    }
+
+    /// <summary>
     /// Puts a pw-link in front of the real one that appends every link it
     /// made, "output input", to a file, and takes it away again on dispose.
     /// </summary>
@@ -117,12 +151,12 @@ public sealed partial class MonitorVolumeIntegrationTests
         /// <summary>Record from now on; links made by the fixture setup are left out.</summary>
         public void Start() => File.WriteAllText(Log + ".on", "");
 
-        public void AssertCaptureFirst()
+        public void AssertCaptureFirst(string source = Wave3Source, string sink = Wave3Sink)
         {
             string[] made = File.Exists(Log) ? File.ReadAllLines(Log) : [];
-            int capture = Array.FindIndex(made, l => l.StartsWith(Wave3Source + ":", StringComparison.Ordinal)
+            int capture = Array.FindIndex(made, l => l.StartsWith(source + ":", StringComparison.Ordinal)
                 && l.Contains(" " + Xlr1 + ":", StringComparison.Ordinal));
-            int playback = Array.FindIndex(made, l => l.Contains(" " + Wave3Sink + ":", StringComparison.Ordinal));
+            int playback = Array.FindIndex(made, l => l.Contains(" " + sink + ":", StringComparison.Ordinal));
             Assert.True(capture >= 0, "the capture was never linked:\n" + string.Join('\n', made));
             Assert.True(playback >= 0, "nothing was routed into the interface:\n" + string.Join('\n', made));
             Assert.True(capture < playback, "playback into the interface started before its capture:\n" + string.Join('\n', made));

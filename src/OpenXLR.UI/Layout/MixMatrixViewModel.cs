@@ -456,9 +456,9 @@ public sealed class MatrixRowViewModel : ViewModelBase
     /// </summary>
     private bool Available(string part) => (Kind, part) switch
     {
-        (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain or SkinStripParts.Mute) => CarriesUnit,
-        (InputStripKind.Capture, SkinStripParts.Mute) => CarriesUnit,
-        (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || Channel.HasVolume,
+        (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain or SkinStripParts.Mute) => CarriesUnit || CarriesExtraUnit,
+        (InputStripKind.Capture, SkinStripParts.Mute) => CarriesUnit || CarriesExtraUnit,
+        (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         _ => true,
     };
 
@@ -473,6 +473,15 @@ public sealed class MatrixRowViewModel : ViewModelBase
 
     /// <summary>The head draws the interface's gain and mute.</summary>
     public bool CarriesUnit => Unit is not null;
+
+    /// <summary>An additional interface's input this row carries, whose gain and mute its head draws, or null.</summary>
+    public WaveUnitInputViewModel? ExtraUnit => Channel.ExtraUnitInput;
+
+    /// <summary>The head draws an additional interface's gain and mute.</summary>
+    public bool CarriesExtraUnit => Channel.CarriesExtraUnit;
+
+    /// <summary>A capture or application row draws its own volume: it carries no interface's input.</summary>
+    public bool ShowsOwnVolume => !CarriesUnit && !CarriesExtraUnit;
 
     /// <summary>The head draws the strip's binding chip under the name: XLR 1 or XLR 2, unless the skin hides it.</summary>
     public bool ShowsBinding => Kind is InputStripKind.Xlr1 or InputStripKind.Xlr2
@@ -564,7 +573,10 @@ public sealed class MatrixRowViewModel : ViewModelBase
                 break;
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
             case nameof(ChannelViewModel.ShownUnitInput):
-                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); RefreshSpec();
+                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); Raise(nameof(ShowsOwnVolume)); RefreshSpec();
+                break;
+            case nameof(ChannelViewModel.ExtraUnitInput):
+                Raise(nameof(ExtraUnit)); Raise(nameof(CarriesExtraUnit)); Raise(nameof(ShowsOwnVolume)); RefreshSpec();
                 break;
         }
     }

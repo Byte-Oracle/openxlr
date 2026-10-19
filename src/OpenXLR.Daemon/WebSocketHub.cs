@@ -56,7 +56,15 @@ public sealed class WebSocketHub
             }
         };
         _mixer.Changed += _stateBroadcasts.Signal;
-        if (_waveInterfaces is not null) _waveInterfaces.Changed += _stateBroadcasts.Signal;
+        if (_waveInterfaces is not null)
+        {
+            // The mixer learns which additional units are driven before the
+            // state that says so is sent; the primary changing hands moves a
+            // unit in or out of the driven ones.
+            _waveInterfaces.Changed += () => _mixer.SetAttachedUnits(_waveInterfaces.AttachedUnits());
+            _devices.StateChanged += ignored => _mixer.SetAttachedUnits(_waveInterfaces.AttachedUnits());
+            _waveInterfaces.Changed += _stateBroadcasts.Signal;
+        }
         _ = _stateBroadcasts.RunAsync(_stopping);
         _mixer.MetersUpdated += () =>
         {

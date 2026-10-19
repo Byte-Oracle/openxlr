@@ -1656,6 +1656,22 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     /// </summary>
     public int ShownUnitInput { get => _shownUnitInput; internal set => Set(ref _shownUnitInput, value); }
 
+    private WaveUnitInputViewModel? _extraUnitInput;
+    /// <summary>
+    /// An additional unit's input whose controls the window draws on this
+    /// channel, or null: the daemon names a driven additional unit in
+    /// <see cref="UnitInput"/>, and the controls come from that unit's entry
+    /// in <c>waveInterfaces</c>.
+    /// </summary>
+    public WaveUnitInputViewModel? ExtraUnitInput
+    {
+        get => _extraUnitInput;
+        internal set { if (Set(ref _extraUnitInput, value)) Raise(nameof(CarriesExtraUnit)); }
+    }
+
+    /// <summary>The channel draws an additional unit's gain and switches.</summary>
+    public bool CarriesExtraUnit => _extraUnitInput is not null;
+
     private string _bindingLabel = "";
     /// <summary>The chip's text: the interface's jack, or the bound source's description.</summary>
     public string BindingLabel { get => _bindingLabel; internal set { if (Set(ref _bindingLabel, value)) { Raise(nameof(BindingTip)); Raise(nameof(BindingChipName)); } } }

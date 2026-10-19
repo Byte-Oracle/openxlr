@@ -256,15 +256,19 @@ binds either too. The chip names the source and lights while the strip is
 linked, and a line under it says why a strip is silent. The existing sends,
 software DSP, inserts, Sound Check and meters process that microphone. A
 missing source stays selected and silent until it returns. The dialog names
-each port by its channel position, warns about a Bluetooth headset's
-headset profile, and leaves out the sources of supported interfaces, which
-the header's interface picker drives instead. Source and port changes keep
+each port by its channel position and warns about a Bluetooth headset's
+headset profile. It also lists other Elgato interfaces' sources: choosing
+one offers to drive that interface as an additional one, and while it is
+driven its gain and switches are on the strip, the same controls the
+additional interfaces window shows. A strip bound to an Elgato interface
+follows it when its source is renamed by a card profile switch. Source and port changes keep
 channel nodes and application routing, and start that strip's monitoring
 muted. The binding is machine wiring, independent of profile recall.
 
 A strip on another source is named Mic 1 or Mic 2 and wears the
 microphone icon, or the headset for a Bluetooth headset; XLR 1 and XLR 2
-keep their names only on a real XLR jack. A Wave:3 or Wave:1 has a capsule
+keep their names only on a real XLR jack, the primary interface's or
+another one's such as an XLR Dock's. A Wave:3 or Wave:1 has a capsule
 rather than a jack, so its strip is Mic 1 too. The ids never change.
 
 The Elgato interface stays driven whatever the strips take: headphones,

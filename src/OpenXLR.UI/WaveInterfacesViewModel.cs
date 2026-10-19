@@ -221,7 +221,82 @@ public sealed class WaveInterfaceViewModel(DaemonClient client, MainViewModel ma
         finally { _applying = false; Raise(null); }
     }
 
+    private WaveUnitInputViewModel? _input1, _input2;
+
+    /// <summary>The controls of the unit's first input, for this window and for a strip that carries it.</summary>
+    public WaveUnitInputViewModel Input1 => _input1 ??= new WaveUnitInputViewModel(this, 1);
+
+    /// <summary>The controls of the unit's second input, on a unit with two.</summary>
+    public WaveUnitInputViewModel Input2 => _input2 ??= new WaveUnitInputViewModel(this, 2);
+
+    /// <summary>The controls of input 1 or 2.</summary>
+    public WaveUnitInputViewModel InputOf(int input) => input == 2 ? Input2 : Input1;
+
+    private WaveUnitInputViewModel[]? _inputs;
+    /// <summary>
+    /// One entry per input the unit has, as the additional interfaces window
+    /// lists them. The same array while the count stays, so a state push does
+    /// not draw the controls again under a moving slider.
+    /// </summary>
+    public WaveUnitInputViewModel[] Inputs
+    {
+        get
+        {
+            int count = HasSecondInput ? 2 : 1;
+            if (_inputs?.Length != count) _inputs = count == 2 ? [Input1, Input2] : [Input1];
+            return _inputs;
+        }
+    }
+
     private AudioDeviceItem[] Matching(string fragment)
         => fragment.Length == 0 ? []
             : [.. main.Inputs.Where(source => !source.IsOwn && source.Name.Contains(fragment, StringComparison.OrdinalIgnoreCase))];
+}
+
+/// <summary>
+/// One input of an additional unit: its gain and switches, read and written
+/// through the unit's own model, so the additional interfaces window and a
+/// strip that carries the input draw the same controls with the same rules
+/// (the unit connected, the gain lock, the unit's capabilities).
+/// </summary>
+public sealed class WaveUnitInputViewModel : ViewModelBase
+{
+    internal WaveUnitInputViewModel(WaveInterfaceViewModel unit, int input)
+    {
+        Unit = unit;
+        Input = input;
+        // The unit raises its own names, or every name at once after a state.
+        unit.PropertyChanged += (_, _) => Raise(null);
+    }
+
+    public WaveInterfaceViewModel Unit { get; }
+
+    /// <summary>1 or 2: the unit's first or second microphone input.</summary>
+    public int Input { get; }
+
+    private bool Second => Input == 2;
+    public bool CanControl => Unit.CanControl;
+    public bool CanAdjustGain => Unit.CanAdjustGain;
+    public bool HasGain => Unit.HasGain;
+    public bool HasMute => Unit.HasMute || Second;
+    public bool HasLowCut => Unit.HasLowCut;
+    public bool HasClipGuard => Unit.HasClipGuard;
+    public bool HasPhantom => Unit.HasPhantom;
+    public bool PhantomSettling => Unit.PhantomSettling;
+
+    /// <summary>The mute can be pressed: the unit is driven and its phantom power is not settling.</summary>
+    public bool CanMute => Unit.CanControl && !Unit.PhantomSettling;
+    public int GainMaxDb => Unit.GainMaxDb;
+    public int GainDb { get => Second ? Unit.Gain2 : Unit.Gain; set { if (Second) Unit.Gain2 = value; else Unit.Gain = value; } }
+    public string GainText => Second ? Unit.Gain2Text : Unit.GainText;
+    public bool Mute { get => Second ? Unit.Mute2 : Unit.Mute; set { if (Second) Unit.Mute2 = value; else Unit.Mute = value; } }
+    public bool LowCut { get => Second ? Unit.LowCut2 : Unit.LowCut; set { if (Second) Unit.LowCut2 = value; else Unit.LowCut = value; } }
+    public bool ClipGuard { get => Second ? Unit.ClipGuard2 : Unit.ClipGuard; set { if (Second) Unit.ClipGuard2 = value; else Unit.ClipGuard = value; } }
+    public bool Phantom { get => Second ? Unit.Phantom2 : Unit.Phantom; set { if (Second) Unit.Phantom2 = value; else Unit.Phantom = value; } }
+
+    /// <summary>The mute's label: the second input says which it is.</summary>
+    public string MuteLabel => Second ? Localizer.Text("MuteInput2") : Localizer.Text("Mute");
+
+    /// <summary>The gain slider's name for a screen reader, with the unit's name.</summary>
+    public string GainName => Second ? Localizer.Format("UnitGainInput2Name", Unit.Name) : Localizer.Format("UnitGainName", Unit.Name);
 }
