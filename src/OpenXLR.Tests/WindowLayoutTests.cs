@@ -723,7 +723,7 @@ public sealed class WindowLayoutTests
         Dispatcher.UIThread.RunJobs();
     }
 
-    /// <summary>The layout editor's appearance dialog offers the hidden flag for a channel only.</summary>
+    /// <summary>The layout editor's appearance dialog offers the hidden flag for a channel and a mix, never for an output.</summary>
     private static void CheckAppearanceDialog(MixerSetupWindow setup, List<Window> windows)
     {
         var client = new DaemonClient();
@@ -745,7 +745,10 @@ public sealed class WindowLayoutTests
             picker.SelectedIndex = 1;
             Assert.Equal("none", LayoutIconPicker.Chosen(picker));
             picker.SelectedIndex = 0;
-            Assert.Equal(item is ChannelViewModel, dialog.GetVisualDescendants().OfType<CheckBox>().Any(c => c.Name == "AppearanceHidden" && c.IsVisible));
+            CheckBox? hide = dialog.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault(c => c.Name == "AppearanceHidden" && c.IsVisible);
+            Assert.Equal(item is not string, hide is not null);
+            if (hide is not null)
+                Assert.Equal(Localizer.Text(item is MixViewModel ? "HideMix" : "HideChannelStrip"), hide.Content);
             ((TextBox)Named("AppearanceColour")).Text = "red";
             Named("AppearanceSave").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();

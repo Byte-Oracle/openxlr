@@ -148,8 +148,11 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   channel is deleted goes to System, or to the first application channel
   by id when System is gone
 - An icon and a colour for any channel or mix, and a hidden flag that
-  leaves a channel's strip out of the mixer while its audio, sends and
-  apps carry on. Icons come from a built-in vector set of 22, every item
+  leaves a channel's strip or a mix's master and column out of the mixer
+  while its audio, sends, outputs and apps carry on. Every mix can be
+  hidden, Monitor A, Monitor B, Stream, Chat and Aux included. Show hidden
+  in the SUBMIXER header draws them faded in their places, as a window
+  preference. Icons come from a built-in vector set of 22, every item
   starts with one chosen by its kind, and the icon can be picked when the
   channel or mix is added. A skin may redraw an icon or add its own as
   path data. The window, the terminal mixer and the Stream Deck keys
@@ -173,7 +176,7 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   orders their parts or leaves some out, stands faders and meters up,
   reverses faders, labels channels with icons, and draws each master as a
   card or a strip. Every bank has a picker listing
-  every mix; your pick is kept per skin, and a bank whose mix is deleted
+  every mix that is not hidden; your pick is kept per skin, and a bank whose mix is deleted
   moves to the next one. Channel and mix order stay the layout's. See
   [Templates](skins.md#templates) and [Mix banks](manual.md#mix-banks)
 - Skins can draw MONITOR as a one-row toolbar that keeps every output and

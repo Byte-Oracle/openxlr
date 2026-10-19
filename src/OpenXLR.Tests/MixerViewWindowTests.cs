@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
+using OpenXLR.UI.Localization;
 using OpenXLR.UI.Skinning;
 using static OpenXLR.Tests.WindowLayoutTests;
 
@@ -94,6 +95,62 @@ internal static class MixerViewWindowTests
             Assert.Equal(["music"], Tiles<ChannelViewModel>(window, 132).Select(t => t.Id));   // game stays hidden
             Assert.Equal(3, Tiles<MixViewModel>(window, 232).Length);
             CheckMonitorControls(window, stacked: false);
+
+            // Monitor B hidden: its master tile and every send row into it leave the classic mixer.
+            ToggleButton showHidden = window.FindControl<ToggleButton>("ShowHiddenButton")!;
+            Assert.True(showHidden.IsEffectivelyVisible);   // Game is hidden already
+            typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [JsonNode.Parse("""
+                {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor"},{"id":"monitor2","name":"Monitor B","kind":"monitor","appearance":{"hidden":true}},
+                          {"id":"chat","name":"Chat","kind":"virtualMic"}],
+                 "channels":[{"id":"music","name":"Music with a long display name","levels":{"monitor":0.5,"monitor2":0.7,"chat":0.4}},
+                             {"id":"game","name":"Game","levels":{"monitor":1,"monitor2":1,"chat":1},"appearance":{"hidden":true}}]}
+                """)]);
+            Layout(window, 1040, 900);
+            Assert.Equal(["monitor", "chat"], Tiles<MixViewModel>(window, 232).Select(m => m.Id));
+            Assert.Equal(["monitor", "chat"], Sends(window).Select(s => s.MixId));
+            Assert.Equal(0.7, model.Channels.Single(c => c.Id == "music").Sends.Single(s => s.MixId == "monitor2").Level);
+            Assert.True(showHidden.IsEffectivelyVisible);
+            AssertInside(showHidden, window);
+            Assert.Equal(Localizer.Text("ShowHiddenHint"), ToolTip.GetTip(showHidden));
+            Capture(window, "monitor-b-hidden-1040");
+
+            // Show hidden brings both back in their places, faded once, and is kept as a window preference.
+            showHidden.IsChecked = true;
+            Layout(window, 1040, 900);
+            Assert.True(model.ShowHidden);
+            Assert.True(UiSettings.Load().ShowHiddenItems);
+            double faded = (double)window.FindResource("Ox.Mixer.HiddenOpacity")!;
+            Assert.True(faded < 1);
+            Assert.Equal(["monitor", "monitor2", "chat"], Tiles<MixViewModel>(window, 232).Select(m => m.Id));
+            Assert.Equal(["music", "game"], Tiles<ChannelViewModel>(window, 132).Select(c => c.Id));
+            Border Tile(object item, double width) => window.GetVisualDescendants().OfType<Border>()
+                .Single(b => ReferenceEquals(b.DataContext, item) && b.Width == width);
+            MixViewModel monitor2 = model.Mixes.Single(m => m.Id == "monitor2");
+            ChannelViewModel music = model.Channels.Single(c => c.Id == "music"), game = model.Channels.Single(c => c.Id == "game");
+            Assert.Equal(faded, Tile(monitor2, 232).Opacity, 3);
+            Assert.Equal(1, Tile(model.Mixes[0], 232).Opacity, 3);
+            Assert.Equal(faded, Tile(game, 132).Opacity, 3);
+            Assert.Equal(1, Tile(music, 132).Opacity, 3);
+            StackPanel Row(SendViewModel send) => window.GetVisualDescendants().OfType<StackPanel>()
+                .Single(p => ReferenceEquals(p.DataContext, send) && p.Margin.Bottom == 8);
+            Assert.Equal(faded, Row(music.Sends.Single(s => s.MixId == "monitor2")).Opacity, 3);
+            Assert.Equal(1, Row(music.Sends.Single(s => s.MixId == "monitor")).Opacity, 3);
+            // Inside Game's faded strip the row into Monitor B does not fade a second time.
+            Assert.Equal(1, Row(game.Sends.Single(s => s.MixId == "monitor2")).Opacity, 3);
+            Capture(window, "monitor-b-revealed-1040");
+
+            // The popped-out mixer draws the same.
+            MixerWindow popped = window.PopOutMixer();
+            Layout(popped, 1040, 700);
+            Assert.Equal(["monitor", "monitor2", "chat"], Tiles<MixViewModel>(popped, 232).Select(m => m.Id));
+            model.ShowHidden = false;
+            Layout(popped, 1040, 700);
+            Assert.Equal(["monitor", "chat"], Tiles<MixViewModel>(popped, 232).Select(m => m.Id));
+            popped.Close();
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Layout(window, 1040, 900);
+            Assert.False(showHidden.IsChecked);
+            Assert.False(UiSettings.Load().ShowHiddenItems);
         }
         finally
         {

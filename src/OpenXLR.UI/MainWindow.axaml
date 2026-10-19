@@ -626,6 +626,17 @@
             <Button Content="{loc:Text Key=EditLayout}" Padding="8,1" FontSize="11" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center"
                     IsVisible="{Binding HasMixer}" IsEnabled="{Binding CanEditLayout}" Click="OnEditLayout"
                     ToolTip.Tip="{loc:Text Key=AddRenameReorderAndRemoveApplicationChannelsAnd}"/>
+            <!-- Shown only while something is hidden in the layout editor; a window preference. -->
+            <ToggleButton Name="ShowHiddenButton" Content="{loc:Text Key=ShowHidden}" Padding="8,1" FontSize="11"
+                          MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          IsChecked="{Binding ShowHidden, Mode=TwoWay}" ToolTip.Tip="{loc:Text Key=ShowHiddenHint}">
+              <ToggleButton.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="HasMixer"/>
+                  <Binding Path="CanShowHidden"/>
+                </MultiBinding>
+              </ToggleButton.IsVisible>
+            </ToggleButton>
           </StackPanel>
         </Expander.Header>
       <Grid>
@@ -677,7 +688,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:MixViewModel">
               <Border Classes="tile" Padding="10" Margin="0,0,8,8" Width="{DynamicResource Ox.Mixer.MixWidth}"
-                      IsVisible="{Binding DisplayVisible}">
+                      IsVisible="{Binding DisplayVisible}" Classes.revealed="{Binding Revealed}">
                 <StackPanel Spacing="6">
                   <Button Classes="ghost reorderHandle" Classes.fixedPlace="{Binding !IsEditable}" Content="↔" Tag="{Binding}"
                           HorizontalAlignment="Left" AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=MoveItem}}"
@@ -753,7 +764,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ChannelViewModel">
                 <Border Classes="tile" Padding="10" Margin="0,0,8,0" Width="{DynamicResource Ox.Mixer.ChannelWidth}"
-                        IsVisible="{Binding DisplayVisible}">
+                        IsVisible="{Binding DisplayVisible}" Classes.revealed="{Binding Revealed}">
                   <StackPanel Spacing="8">
                     <Button Classes="ghost reorderHandle" Classes.fixedPlace="{Binding !IsEditable}" Content="↔" Tag="{Binding}"
                             HorizontalAlignment="Left" AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=MoveItem}}"
@@ -770,7 +781,7 @@
                     <ItemsControl ItemsSource="{Binding Sends}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:SendViewModel">
-                          <StackPanel Margin="0,0,0,8" Spacing="1" IsVisible="{Binding DisplayVisible}">
+                          <StackPanel Margin="0,0,0,8" Spacing="1" IsVisible="{Binding DisplayVisible}" Classes.revealed="{Binding MixRevealed}">
                             <Grid ColumnDefinitions="*,Auto">
                               <TextBlock Text="{Binding MixName}" Classes="h" FontSize="11"
                                          TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MixName}" Margin="0,0,4,0"/>

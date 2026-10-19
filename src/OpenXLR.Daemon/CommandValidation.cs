@@ -138,8 +138,7 @@ public static class CommandValidation
                     return $"setLayoutAppearance: unknown mix '{Short(cmd.Mix)}'";
                 if (!LayoutAppearance.IsValid(cmd.Appearance))
                     return "setLayoutAppearance: need 'appearance' with an empty, listed or named icon and a null or #RRGGBB colour";
-                if (cmd.Output is not null && cmd.Appearance!.Hidden) return "setLayoutAppearance: an output cannot be hidden";
-                return cmd.Mix is not null && cmd.Appearance!.Hidden ? "setLayoutAppearance: a mix cannot be hidden" : null;
+                return cmd.Output is not null && cmd.Appearance!.Hidden ? "setLayoutAppearance: an output cannot be hidden" : null;
             case "setLevel":
             case "setChannelMuted":
                 if (cmd.Channel is not null && !layout.HasChannel(cmd.Channel)) return $"{cmd.Cmd}: unknown channel '{Short(cmd.Channel)}'";

@@ -104,6 +104,12 @@ public sealed record UiSettings
     /// <summary>The mix the mini view shows, by id.</summary>
     public string? CompactMix { get; init; }
     /// <summary>
+    /// Show hidden in the submixer's header: true draws the channels and
+    /// mixes hidden in the layout editor in their places, faded. A window
+    /// preference only; the layout and the profiles know nothing about it.
+    /// </summary>
+    public bool ShowHiddenItems { get; init; }
+    /// <summary>
     /// The appearance the window wears, by skin id; null is the one the
     /// application ships with. It lives here and nowhere else: the mixer
     /// layout, the daemon's preferences and the audio profiles know nothing

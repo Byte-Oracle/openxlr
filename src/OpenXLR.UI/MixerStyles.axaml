@@ -100,6 +100,10 @@
       <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
       <Setter Property="IsExpanded" Value="True"/>
     </Style>
+    <!-- a channel or mix hidden in the layout editor, drawn because Show hidden is on -->
+    <Style Selector=":is(Control).revealed">
+      <Setter Property="Opacity" Value="{DynamicResource Ox.Mixer.HiddenOpacity}"/>
+    </Style>
     <Style Selector="ToggleButton">
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>

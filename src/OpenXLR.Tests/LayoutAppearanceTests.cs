@@ -42,13 +42,17 @@ public sealed class LayoutAppearanceTests
     }
 
     [Fact]
-    public void TheCommandNamesExactlyOneKnownChannelOrMixAndHidesOnlyChannels()
+    public void TheCommandNamesExactlyOneKnownChannelOrMixAndHidesChannelsAndMixes()
     {
         using var mixer = new Mixer();
         var command = new Command { Cmd = "setLayoutAppearance", Channel = "xlr1", Appearance = new("●", null, true) };
         Assert.Null(CommandValidation.Check(command, mixer, _ => null));
         Assert.Null(CommandValidation.Check(command with { Channel = null, Mix = "monitor", Appearance = new("●") }, mixer, _ => null));
-        Assert.NotNull(CommandValidation.Check(command with { Channel = null, Mix = "monitor" }, mixer, _ => null));
+        // Every mix can be hidden, the ones that cannot be deleted included; a headphone output cannot.
+        foreach (string mix in new[] { "monitor", "monitor2", "stream", "chat", "auxout" })
+            Assert.Null(CommandValidation.Check(command with { Channel = null, Mix = mix }, mixer, _ => null));
+        Assert.NotNull(CommandValidation.Check(command with { Channel = null, Output = "phones1" }, mixer, _ => null));
+        Assert.NotNull(CommandValidation.Check(command with { Channel = null, Mix = "gone" }, mixer, _ => null));
         Assert.NotNull(CommandValidation.Check(command with { Mix = "monitor" }, mixer, _ => null));
         Assert.NotNull(CommandValidation.Check(command with { Channel = null }, mixer, _ => null));
         Assert.NotNull(CommandValidation.Check(command with { Channel = "gone" }, mixer, _ => null));
@@ -91,8 +95,18 @@ public sealed class LayoutAppearanceTests
             Assert.Equal("◆", state.Mixes.Single(m => m.Id == "stream").Appearance.Icon);
             Assert.Equal(new LayoutAppearanceState("", null, false, "music"), state.Channels.Single(c => c.Id == "music").Appearance);
 
-            Assert.Throws<InvalidOperationException>(() => mixer.SetLayoutAppearance("mix:monitor", new(Hidden: true), _ => null));
+            // A hidden mix is saved like a hidden channel, and nothing about the mix itself changes.
+            MixStatus before2 = state.Mixes.Single(m => m.Id == "monitor2");
+            mixer.SetLayoutAppearance("mix:monitor2", new(Hidden: true), settings => { saved = settings; return null; });
+            Assert.Equal(new LayoutAppearance(Hidden: true), saved!.Appearance["mix:monitor2"]);
+            Assert.Same(config, GetField(mixer, "_config"));
+            MixStatus after2 = mixer.Snapshot().Mixes.Single(m => m.Id == "monitor2");
+            Assert.True(after2.Appearance.Hidden);
+            Assert.Equal(before2 with { Appearance = after2.Appearance }, after2);
+            Assert.Equal(MixerConfig.Default().Mixes.Select(m => m.Id), mixer.Snapshot().Mixes.Select(m => m.Id));
+            Assert.Throws<InvalidOperationException>(() => mixer.SetLayoutAppearance("output:phones1", new(Hidden: true), _ => null));
             Assert.Throws<InvalidOperationException>(() => mixer.SetLayoutAppearance("channel:gone", new("●"), _ => null));
+            Assert.Throws<InvalidOperationException>(() => mixer.SetLayoutAppearance("mix:gone", new(Hidden: true), _ => null));
 
             // Back to the default leaves nothing behind in the file.
             mixer.SetLayoutAppearance("mix:stream", LayoutAppearance.Default, _ => null);
@@ -110,14 +124,45 @@ public sealed class LayoutAppearanceTests
             {
                 ["channel:music"] = new("♫", "#123456"),
                 ["channel:game"] = new("<image/>"),
-                ["mix:monitor"] = new(Hidden: true),
+                ["mix:monitor2"] = new(Hidden: true),
                 ["mix:chat"] = null!,
+                ["output:phones1"] = new(Hidden: true),
                 ["stream"] = new("●"),
             },
         };
         MixerSettings sanitized = SavedMixerValidation.Sanitize(saved, out IReadOnlyList<string> dropped);
-        Assert.Equal("channel:music", Assert.Single(sanitized.Appearance).Key);
+        Assert.Equal(["channel:music", "mix:monitor2"], sanitized.Appearance.Keys.Order(StringComparer.Ordinal));
+        Assert.True(sanitized.Appearance["mix:monitor2"].Hidden);
         Assert.Contains(dropped, note => note.StartsWith("appearance:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AHiddenMixIsRestoredFromTheFileAndItsEntryGoesWithTheMix()
+    {
+        using var mixer = new Mixer();
+        SetField(mixer, "_config", new MixerConfig
+        {
+            Channels = [new("game", "Game")],
+            Mixes = [new("monitor", "Monitor", MixKind.Monitor), new("chat", "Chat", MixKind.VirtualMic)],
+        });
+        SetField(mixer, "_built", true);
+        try
+        {
+            // What a restart reads back from mixer.json, without touching an audio graph.
+            typeof(Mixer).GetMethod("RestoreAppearanceLocked", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(mixer,
+                [new Dictionary<string, LayoutAppearance> { ["mix:chat"] = new(Hidden: true), ["mix:monitor"] = new(Hidden: true) }]);
+            Assert.True(mixer.ExportSettings().Appearance["mix:chat"].Hidden);
+            Assert.True(mixer.ExportSettings().Appearance["mix:monitor"].Hidden);
+
+            // The deletion's own save no longer carries the mix's entry; a
+            // failed save puts the mix and its entry back.
+            MixerSettings? written = null;
+            Assert.Throws<IOException>(() => mixer.DeleteMix("chat", settings => { written = settings; return "disk full"; }));
+            Assert.False(written!.Appearance.ContainsKey("mix:chat"));
+            Assert.True(written.Appearance["mix:monitor"].Hidden);
+            Assert.True(mixer.ExportSettings().Appearance["mix:chat"].Hidden);
+        }
+        finally { SetField(mixer, "_built", false); }
     }
 
     [Fact]
@@ -202,6 +247,76 @@ public sealed class LayoutAppearanceTests
         app.Handle(new KeyPress(Key.Down));
         app.Handle(new KeyPress(Key.Left, Ctrl: true));      // the first strip has nowhere to go
         Assert.Empty(sent);
+    }
+
+    [Fact]
+    public void TheTerminalLeavesAHiddenMixOutOfTheMixerTabAndMovesAMixPastIt()
+    {
+        DaemonLink link = new();
+        List<string> sent = [];
+        link.Sent += json => sent.Add(json);
+        link.Receive(TuiMixState("""{"hidden":true}""", "{}"));
+        App app = new(link, Theme.Material);
+        app.ShowTab(0);
+        Screen screen = new(160, 36);
+        app.Draw(screen);
+
+        MixerSnapshot mixer = link.State!.Mixer;
+        Assert.Equal(["monitor", "podcast", "rec", "chat"], mixer.Mixes.Select(m => m.Id));
+        Assert.Equal(["monitor", "podcast", "chat"], mixer.Masters.Select(m => m.Id));
+        Assert.Equal((-1, -1), Find(screen, "Recording"));
+        Assert.NotEqual((-1, -1), Find(screen, "Podcast"));
+        // The matrix tab still lists the hidden mix.
+        Assert.Contains(mixer.Mixes, m => m.Id == "rec" && m.Appearance.Hidden);
+
+        // On the masters row: Monitor A, Podcast, Chat. Ctrl+Left moves Chat
+        // past the hidden Recording and before Podcast, so it moves on screen.
+        app.Handle(new KeyPress(Key.Right));
+        app.Handle(new KeyPress(Key.Right));
+        app.Handle(new KeyPress(Key.Left, Ctrl: true));
+        JsonElement command = JsonDocument.Parse(Assert.Single(sent)).RootElement;
+        Assert.Equal("setLayoutOrder", command.GetProperty("cmd").GetString());
+        Assert.Equal(["chat", "podcast", "rec"], command.GetProperty("mixes").EnumerateArray().Select(e => e.GetString()));
+
+        // The selection followed to the second master, Podcast in this snapshot,
+        // which has only Monitor A before it, and Monitor A keeps its place.
+        sent.Clear();
+        app.Handle(new KeyPress(Key.Left, Ctrl: true));
+        Assert.Empty(sent);
+    }
+
+    [Fact]
+    public void TheTerminalSaysSoWhenEveryMixIsHidden()
+    {
+        DaemonLink link = new();
+        link.Receive(TuiMixState("""{"hidden":true}""", """{"hidden":true}""", everyMix: true));
+        App app = new(link, Theme.Material);
+        app.ShowTab(0);
+        Screen screen = new(160, 36);
+        app.Draw(screen);
+        Assert.Empty(link.State!.Mixer.Masters);
+        Assert.NotEqual((-1, -1), Find(screen, "Every mix is hidden"));
+    }
+
+    private static string TuiMixState(string rec, string podcast, bool everyMix = false)
+    {
+        string other = everyMix ? """{"hidden":true}""" : "{}";
+        return $$"""
+            {
+              "type": "state", "connected": true,
+              "mixer": {
+                "mixes": [
+                  { "id": "monitor", "name": "Monitor A", "volume": 1, "kind": "monitor", "editable": false, "appearance": {{other}} },
+                  { "id": "podcast", "name": "Podcast", "volume": 1, "kind": "virtualMic", "editable": true, "appearance": {{podcast}} },
+                  { "id": "rec", "name": "Recording", "volume": 1, "kind": "virtualMic", "editable": true, "appearance": {{rec}} },
+                  { "id": "chat", "name": "Chat", "volume": 1, "kind": "virtualMic", "editable": true, "appearance": {{other}} }
+                ],
+                "channels": [
+                  { "id": "music", "name": "Music", "levels": { "monitor": 1, "rec": 1, "podcast": 1, "chat": 1 }, "mutedIn": [] }
+                ]
+              }
+            }
+            """;
     }
 
     private static string TuiState(string music, string game) => $$"""

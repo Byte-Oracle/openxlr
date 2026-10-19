@@ -807,6 +807,9 @@
   <data name="HideChannelStrip" xml:space="preserve">
     <value>Ocultar este canal en el mezclador. Su audio, envíos y aplicaciones se mantienen.</value>
   </data>
+  <data name="HideMix" xml:space="preserve">
+    <value>Ocultar esta mezcla en el mezclador. Su audio, salidas, envíos y nivel se mantienen.</value>
+  </data>
   <data name="HostSideLowCutForThisDeviceIts" xml:space="preserve">
     <value>Corte de graves de este dispositivo por software (su DSP se ejecuta por software); alterna entre Desactivado, 80 Hz y 120 Hz</value>
   </data>
@@ -818,6 +821,9 @@
   </data>
   <data name="IconColourAndWhetherTheStripShows" xml:space="preserve">
     <value>Icono, color y visibilidad del canal en el mezclador</value>
+  </data>
+  <data name="IconColourAndWhetherTheMixShows" xml:space="preserve">
+    <value>Icono, color y visibilidad de la mezcla en el mezclador</value>
   </data>
   <data name="ImportEffectPreset" xml:space="preserve">
     <value>Importar preset de efecto</value>
@@ -1424,6 +1430,12 @@
   </data>
   <data name="PopOutMixerHint" xml:space="preserve">
     <value>Mover el submezclador a su propia ventana para otra pantalla.</value>
+  </data>
+  <data name="ShowHidden" xml:space="preserve">
+    <value>Mostrar ocultos</value>
+  </data>
+  <data name="ShowHiddenHint" xml:space="preserve">
+    <value>Muestra atenuados en su sitio los canales y mezclas ocultos en Editar distribución. Funcionan como siempre; la distribución no cambia.</value>
   </data>
   <data name="PreAssignAChannelToAnAppThat" xml:space="preserve">
     <value>Asigna de antemano un canal a una aplicación que aún no haya reproducido audio. Su identidad se deduce del lanzador; si se identifica de otra forma al reproducir por primera vez, aparecerá como una entrada nueva.</value>

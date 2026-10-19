@@ -625,6 +625,12 @@
           "maximum": 64,
           "description": "the gap between mix banks"
         },
+        "Ox.Mixer.HiddenOpacity": {
+          "type": "number",
+          "minimum": 0.2,
+          "maximum": 1,
+          "description": "how far a channel or mix hidden in the layout editor fades while the submixer's Show hidden draws it, 1 for no fade"
+        },
         "Ox.Matrix.NameWidth": {
           "type": "number",
           "minimum": 56,
