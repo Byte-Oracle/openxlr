@@ -22,8 +22,17 @@ namespace OpenXLR.UI;
 /// </summary>
 public static class Diagnostics
 {
-    public static async Task<string> CollectAsync(DaemonClient client)
+    public static Task<string> CollectAsync(DaemonClient client)
+        => CollectAsync(client, Environment.UserName, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+    /// <summary>
+    /// Collect into <paramref name="destination"/>, masking <paramref name="login"/>
+    /// wherever it appears as a login name (see <see cref="Redact(string, IEnumerable{string}, string?)"/>).
+    /// </summary>
+    internal static async Task<string> CollectAsync(DaemonClient client, string? login, string destination)
     {
+        string[] secrets = DefaultSecrets().ToArray();
+        string Clean(string text) => Redact(text, secrets, login);
         string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
         string work = Directory.CreateTempSubdirectory("openxlr-diag-").FullName;
         if (!OperatingSystem.IsWindows())
@@ -34,7 +43,7 @@ public static class Diagnostics
             var meta = new StringBuilder();
             meta.AppendLine($"OpenXLR diagnostics {stamp}");
             meta.AppendLine($"version: {AppVersion.Current}");
-            meta.AppendLine($"uname: {await RunAsync("uname", "-a")}");
+            meta.AppendLine($"uname: {await RunAsync(Clean, "uname", "-a")}");
             meta.AppendLine($"os-release: {TryReadFile("/etc/os-release")}");
             meta.AppendLine($"dotnet: {Environment.Version}");
             await File.WriteAllTextAsync(Path.Combine(work, "meta.txt"), meta.ToString());
@@ -49,39 +58,39 @@ public static class Diagnostics
                 exist: no plugin, scanner, bridge or Wine process is started.
                 No plugin binaries, presets, Wine registry
                 files or API token are collected. The home
-                path, the host name, the serial numbers of attached USB devices
-                (including inside PipeWire node names) and process-id fields are
-                redacted, but review the archive before attaching it to a public
-                issue.
+                path, the login name, the host name, the serial numbers of
+                attached USB devices (including inside PipeWire node names) and
+                process-id fields are redacted. Files in the archive carry no
+                owner name or id. Review the archive before attaching it to a
+                public issue.
                 """);
 
             // Daemon views: the newest state push plus a fresh vendor-block dump.
             await File.WriteAllTextAsync(Path.Combine(work, "daemon-state.json"),
-                Redact(client.LastStateJson ?? "no state received (daemon not running?)"));
+                Clean(client.LastStateJson ?? "no state received (daemon not running?)"));
             var blocks = await client.RequestDiagnosticsAsync(TimeSpan.FromSeconds(5));
             await File.WriteAllTextAsync(Path.Combine(work, "device-blocks.json"),
-                RedactHex(blocks?.ToJsonString() ?? "unavailable (daemon not running or no device)", DefaultSecrets()));
+                RedactHex(blocks?.ToJsonString() ?? "unavailable (daemon not running or no device)", secrets));
 
-            await WritePluginDataAsync(client, work, TimeSpan.FromSeconds(15));
+            await WritePluginDataAsync(client, work, TimeSpan.FromSeconds(15), login);
 
             // Audio stack.
-            await WriteCmd(work, "pw-dump.json", "pw-dump");
-            await WriteCmd(work, "pactl-info.txt", "pactl", "info");
-            await WriteCmd(work, "wpctl-status.txt", "wpctl", "status");
-            await WriteCmd(work, "sinks.txt", "pactl", "list", "short", "sinks");
-            await WriteCmd(work, "sources.txt", "pactl", "list", "short", "sources");
-            await WriteCmd(work, "modules.txt", "pactl", "list", "short", "modules");
-            await WriteCmd(work, "lsusb.txt", "lsusb");
-            await WriteCmd(work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
+            await WriteCmd(Clean, work, "pw-dump.json", "pw-dump");
+            await WriteCmd(Clean, work, "pactl-info.txt", "pactl", "info");
+            await WriteCmd(Clean, work, "wpctl-status.txt", "wpctl", "status");
+            await WriteCmd(Clean, work, "sinks.txt", "pactl", "list", "short", "sinks");
+            await WriteCmd(Clean, work, "sources.txt", "pactl", "list", "short", "sources");
+            await WriteCmd(Clean, work, "modules.txt", "pactl", "list", "short", "modules");
+            await WriteCmd(Clean, work, "lsusb.txt", "lsusb");
+            await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
                 "--since", "2 hours ago", "--no-pager");
 
             // Configs may include remembered application identities and device
             // names; redact common personal fields and disclose them above.
-            CopyRedactedIfExists(UiSettings.ConfigDir, "mixer.json", work);
-            CopyRedactedIfExists(UiSettings.ConfigDir, "ui.json", work);
+            CopyRedactedIfExists(Clean, UiSettings.ConfigDir, "mixer.json", work);
+            CopyRedactedIfExists(Clean, UiSettings.ConfigDir, "ui.json", work);
 
-            return await WriteArchiveAsync(work,
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), stamp);
+            return await WriteArchiveAsync(work, destination, stamp);
         }
         finally
         {
@@ -92,6 +101,9 @@ public static class Diagnostics
     /// <summary>
     /// Write the archive as a new private file and remove it again if the
     /// write fails. An existing file of the same name is refused untouched.
+    /// Every entry is owned by uid and gid 0 with no owner or group name:
+    /// a tar header otherwise carries the collecting account's login name,
+    /// which the text passes cannot reach.
     /// </summary>
     internal static async Task<string> WriteArchiveAsync(string work, string destination, string stamp)
     {
@@ -103,7 +115,28 @@ public static class Diagnostics
             {
                 created = true;
                 await using var gz = new GZipStream(fs, CompressionLevel.SmallestSize);
-                await TarFile.CreateFromDirectoryAsync(work, gz, includeBaseDirectory: false);
+                await using var tar = new TarWriter(gz, TarEntryFormat.Pax);
+                // Ordinal order puts every directory before the files inside it.
+                foreach (string path in Directory.EnumerateFileSystemEntries(work, "*", SearchOption.AllDirectories)
+                             .Order(StringComparer.Ordinal))
+                {
+                    string name = Path.GetRelativePath(work, path).Replace(Path.DirectorySeparatorChar, '/');
+                    bool directory = Directory.Exists(path);
+                    var entry = new PaxTarEntry(directory ? TarEntryType.Directory : TarEntryType.RegularFile,
+                        directory ? name + "/" : name)
+                    {
+                        Uid = 0,
+                        Gid = 0,
+                        UserName = "",
+                        GroupName = "",
+                        ModificationTime = File.GetLastWriteTimeUtc(path),
+                    };
+                    if (!OperatingSystem.IsWindows()) entry.Mode = File.GetUnixFileMode(path);
+                    if (directory) { await tar.WriteEntryAsync(entry); continue; }
+                    await using FileStream data = File.OpenRead(path);
+                    entry.DataStream = data;
+                    await tar.WriteEntryAsync(entry);
+                }
             }
             return outPath;
         }
@@ -118,7 +151,7 @@ public static class Diagnostics
         }
     }
 
-    internal static async Task WritePluginDataAsync(DaemonClient client, string directory, TimeSpan timeout)
+    internal static async Task WritePluginDataAsync(DaemonClient client, string directory, TimeSpan timeout, string? login = null)
     {
         // Independent reply types; all requests use the daemon's environment.
         var requests = new[]
@@ -140,12 +173,12 @@ public static class Diagnostics
             {
                 ["unavailable"] = "No reply: daemon disconnected, query timed out, or command unsupported."
             };
-            RedactJson(data, secrets);
+            RedactJson(data, secrets, login);
             if (file == "plugin-discovery.json") discovery = data;
             await File.WriteAllTextAsync(Path.Combine(directory, file), data.ToJsonString(
                 new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
         }
-        await WriteScanLogsAsync(scanLogs, discovery, directory, secrets);
+        await WriteScanLogsAsync(scanLogs, discovery, directory, secrets, login);
     }
 
     /// <summary>One string from a path of object keys, or null if it is not there or is not a string.</summary>
@@ -170,7 +203,7 @@ public static class Diagnostics
     /// that is not a plain readable file are listed in the index and skipped,
     /// so nothing the archive holds was reached by following a link out.
     /// </summary>
-    internal static async Task WriteScanLogsAsync(string? source, JsonNode? discovery, string work, string[] secrets)
+    internal static async Task WriteScanLogsAsync(string? source, JsonNode? discovery, string work, string[] secrets, string? login = null)
     {
         // The daemon's own bounds, and one more on each file, since a log is
         // read here rather than written here.
@@ -190,7 +223,7 @@ public static class Diagnostics
         index.AppendLine("bridge or Wine process is started by collecting them, and nothing is uploaded.");
         index.AppendLine("Each failed entry in plugin-discovery.json names its file in logId; an entry");
         index.AppendLine("with logNote instead is one whose output could not be saved at the time.");
-        index.AppendLine("Paths and host names are redacted here as they are elsewhere in the archive.");
+        index.AppendLine("Paths, login and host names are redacted here as they are elsewhere in the archive.");
         index.AppendLine();
 
         var collected = new HashSet<string>(StringComparer.Ordinal);
@@ -246,7 +279,7 @@ public static class Diagnostics
                     continue;
                 }
                 await File.WriteAllTextAsync(Path.Combine(destination, name),
-                    RedactSecretValues(Redact(text, secrets)));
+                    RedactSecretValues(Redact(text, secrets, login)));
                 collected.Add(Path.GetFileNameWithoutExtension(name));
                 index.AppendLine($"{name}: {had} bytes, last written {log.LastWriteTimeUtc:O}");
             }
@@ -314,24 +347,24 @@ public static class Diagnostics
         }
     }
 
-    private static void RedactJson(JsonNode node, string[] secrets)
+    private static void RedactJson(JsonNode node, string[] secrets, string? login)
     {
         if (node is JsonObject obj)
         {
             foreach (string key in obj.Select(p => p.Key).ToArray())
-                if (obj[key] is JsonValue value && value.TryGetValue<string>(out string? text)) obj[key] = Redact(text, secrets);
-                else if (obj[key] is { } child) RedactJson(child, secrets);
+                if (obj[key] is JsonValue value && value.TryGetValue<string>(out string? text)) obj[key] = Redact(text, secrets, login);
+                else if (obj[key] is { } child) RedactJson(child, secrets, login);
         }
         else if (node is JsonArray array)
             for (int i = 0; i < array.Count; i++)
-                if (array[i] is JsonValue value && value.TryGetValue<string>(out string? text)) array[i] = Redact(text, secrets);
-                else if (array[i] is { } child) RedactJson(child, secrets);
+                if (array[i] is JsonValue value && value.TryGetValue<string>(out string? text)) array[i] = Redact(text, secrets, login);
+                else if (array[i] is { } child) RedactJson(child, secrets, login);
     }
 
-    private static async Task WriteCmd(string dir, string file, string exe, params string[] args)
-        => await File.WriteAllTextAsync(Path.Combine(dir, file), await RunAsync(exe, args));
+    private static async Task WriteCmd(Func<string, string> clean, string dir, string file, string exe, params string[] args)
+        => await File.WriteAllTextAsync(Path.Combine(dir, file), await RunAsync(clean, exe, args));
 
-    private static async Task<string> RunAsync(string exe, params string[] args)
+    private static async Task<string> RunAsync(Func<string, string> clean, string exe, params string[] args)
     {
         try
         {
@@ -341,9 +374,9 @@ public static class Diagnostics
                 stdoutCap: 8 * 1024 * 1024, stderrCap: 64 * 1024, cLocale: false);
             string note = r.TimedOut ? $"\n[{exe} killed after 15 s]" : r.Truncated ? $"\n[{exe} output truncated at 8 MiB]"
                 : r.Incomplete ? $"\n[{exe} output ended before the helper closed it]" : "";
-            return Redact(r.StdoutText + r.Stderr + note);
+            return clean(r.StdoutText + r.Stderr + note);
         }
-        catch (Exception ex) { return Redact($"failed to run {exe}: {ex.Message}"); }
+        catch (Exception ex) { return clean($"failed to run {exe}: {ex.Message}"); }
     }
 
     private static string TryReadFile(string path)
@@ -353,7 +386,7 @@ public static class Diagnostics
         catch (UnauthorizedAccessException) { return "unreadable"; }
     }
 
-    internal static string Redact(string text) => Redact(text, DefaultSecrets());
+    internal static string Redact(string text) => Redact(text, DefaultSecrets(), Environment.UserName);
 
     /// <summary>
     /// Strings that identify the machine or its owner: the home path, the
@@ -390,13 +423,19 @@ public static class Diagnostics
     }
 
     /// <summary>
-    /// Replaces every secret with a placeholder, then the well-known JSON
-    /// fields. The plain user name is deliberately not on the list: a short
-    /// name such as "max" occurs inside unrelated tokens
-    /// ("clock.max-quantum") and would corrupt the graph dump; the home path
-    /// covers the places it actually appears.
+    /// Replaces every secret with a placeholder, then the login name where it
+    /// stands as one, then the well-known fields. The login name is not a
+    /// plain secret: a short name such as "max" occurs inside unrelated tokens
+    /// ("clock.max-quantum") and would corrupt the graph dump. So it is
+    /// masked only in the shapes that make it a login name: before an "@"
+    /// ("max@host", as wpctl lists every client), inside PipeWire's core name
+    /// ("pipewire-max-1585") and as the directory under /home, /media,
+    /// /run/media or /mnt. The fields that name an account or a host,
+    /// whoever's they are, are masked by their name: pactl's "User Name" and
+    /// "Host Name" lines, the user@host part of a wpctl client line and the
+    /// JSON fields below.
     /// </summary>
-    internal static string Redact(string text, IEnumerable<string> secrets)
+    internal static string Redact(string text, IEnumerable<string> secrets, string? login = null)
     {
         // Whole tokens only: a numeric USB serial once matched inside the
         // number 2147483647 in a pw-dump and left "2<redacted>", which broke
@@ -410,9 +449,24 @@ public static class Diagnostics
             text = Regex.Replace(text,
                 "(?<![A-Za-z0-9])" + Regex.Escape(value) + "(?![A-Za-z0-9])", "<redacted>");
 
+        if (!string.IsNullOrWhiteSpace(login))
+        {
+            string name = Regex.Escape(login);
+            // A login name may hold dots, dashes and underscores, so those
+            // bound it too: "a" is not found inside "data@host".
+            text = Regex.Replace(text, "(?<![A-Za-z0-9._-])" + name + "(?=@)", "<redacted>");
+            text = Regex.Replace(text, "(?<=\\bpipewire-)" + name + "(?=-[0-9]+\\b)", "<redacted>");
+            text = Regex.Replace(text, "(?<=/(?:home|var/home|media|run/media|mnt)/)" + name + "(?![A-Za-z0-9._-])", "<redacted>");
+        }
+
+        // pactl info: "User Name: max" and "Host Name: desk".
+        text = Regex.Replace(text, "(?m)^((?:User|Host) Name:[ \\t]*)[^\\r\\n]+", "$1<redacted>");
+        // wpctl status: "[1.6.9, max@desk, pid:1585]" on every client line.
+        text = Regex.Replace(text, "(\\[[^\\[\\],\\r\\n]*, )[^\\s,@\\[\\]]+@[^\\s,\\[\\]]+(?=[,\\]])", "$1<redacted>@<redacted>");
+
         return Regex.Replace(text,
             "(\"(?:device\\.serial|object\\.serial|application\\.process\\.id|" +
-            "application\\.process\\.user|application\\.process\\.host)\"\\s*:\\s*)" +
+            "application\\.process\\.user|application\\.process\\.host|user-name|host-name)\"\\s*:\\s*)" +
             "(?:\"[^\"]*\"|[0-9]+)",
             "$1\"<redacted>\"", RegexOptions.IgnoreCase);
     }
@@ -439,10 +493,10 @@ public static class Diagnostics
         return text;
     }
 
-    private static void CopyRedactedIfExists(string dir, string file, string dest)
+    private static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest)
     {
         string src = Path.Combine(dir, file);
         if (File.Exists(src))
-            File.WriteAllText(Path.Combine(dest, file), Redact(File.ReadAllText(src)));
+            File.WriteAllText(Path.Combine(dest, file), clean(File.ReadAllText(src)));
     }
 }

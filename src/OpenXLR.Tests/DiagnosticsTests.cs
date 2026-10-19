@@ -426,4 +426,141 @@ public sealed class DiagnosticsTests
         Assert.Contains("\"max\": 2147483647", redacted);
         Assert.Contains("alsa_card.usb-Foo_<redacted>-00", redacted);
     }
+
+    [Fact]
+    public async Task TheLoginNameAndHostNamesAppearNowhereInTheArchive()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        // Neither is this machine's: the fake helpers below print them, the
+        // exporter is told the first is the login name, and the second is a
+        // host name it was never told about.
+        const string login = "kestrel7";
+        const string otherHost = "studio-pc";
+        string machine = Environment.MachineName;
+        string root = Directory.CreateTempSubdirectory("diag-login-").FullName;
+        string bin = Directory.CreateDirectory(Path.Combine(root, "bin")).FullName;
+        string config = Directory.CreateDirectory(Path.Combine(root, "config")).FullName;
+        string output = Directory.CreateDirectory(Path.Combine(root, "output")).FullName;
+        string? path = Environment.GetEnvironmentVariable("PATH");
+        string? configHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        try
+        {
+            ExecutableScript.Write(Path.Combine(bin, "uname"), $"echo 'Linux {machine} 6.18.0 #1 SMP x86_64 GNU/Linux'\n");
+            ExecutableScript.Write(Path.Combine(bin, "lsusb"), "echo 'Bus 001 Device 002: ID 0fd9:0070 Elgato Systems GmbH Wave:3'\n");
+            ExecutableScript.Write(Path.Combine(bin, "pactl"), $$"""
+                if [ "$1" = info ]; then
+                  printf '%s\n' 'Server String: /run/user/1000/pulse/native' 'User Name: {{login}}' \
+                    'Host Name: {{otherHost}}' 'Server Name: PulseAudio (on PipeWire 1.6.9)' 'Default Sink: OpenXLR_mix_monitor'
+                else
+                  printf '%s\n' '1	OpenXLR_mix_monitor	PipeWire	float32le 2ch 48000Hz	RUNNING'
+                fi
+                """);
+            ExecutableScript.Write(Path.Combine(bin, "wpctl"), $$"""
+                printf '%s\n' "PipeWire 'pipewire-0' [1.6.9, {{login}}@{{otherHost}}, cookie:1920751475]" \
+                  ' └─ Clients:' \
+                  '        32. WirePlumber                         [1.6.9, {{login}}@{{machine}}, pid:1585]' \
+                  '        43. pipewire                            [1.6.9, {{login}}@{{otherHost}}, pid:1655]'
+                """);
+            ExecutableScript.Write(Path.Combine(bin, "pw-dump"), $$"""
+                cat <<'JSON'
+                [{"id":0,"type":"PipeWire:Interface:Core","info":{"user-name":"{{login}}","host-name":"{{otherHost}}","name":"pipewire-0",
+                  "props":{"core.name":"pipewire-{{login}}-1655","default.clock.max-quantum":2048} } },
+                 {"id":32,"type":"PipeWire:Interface:Client","info":{"props":{"application.process.user":"{{login}}",
+                  "application.process.host":"{{otherHost}}","core.name":"pipewire-{{login}}-1585","application.name":"WirePlumber"} } },
+                 {"id":60,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"OpenXLR_mix_monitor",
+                  "media.name":"/run/media/{{login}}/Samples/take.wav","clock.max-quantum":8192} } }]
+                JSON
+                """);
+            ExecutableScript.Write(Path.Combine(bin, "journalctl"), $$"""
+                echo 'Okt 18 11:23:43 {{machine}} openxlr-daemon[2219]: loaded /mnt/{{login}}/lv2/eq.lv2 for {{login}}@{{machine}}'
+                """);
+            Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + path);
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", config);
+
+            await using var server = await SocketTestServer.Start(async (socket, stop) =>
+            {
+                while (!stop.IsCancellationRequested)
+                {
+                    var command = await SocketTestServer.Receive(socket, stop);
+                    string cmd = command["cmd"]!.GetValue<string>();
+                    if (cmd == "auth")
+                    {
+                        await SocketTestServer.Send(socket, new { type = "state", note = $"/home/{login}/Music" }, stop);
+                        continue;
+                    }
+                    object reply = cmd switch
+                    {
+                        "listPlugins" => new { type = "plugins", plugins = Array.Empty<object>() },
+                        "getPluginSetup" => new { type = "pluginSetup", windowsDirectories = new[] { $"/run/media/{login}/VST3" } },
+                        "getPluginDiagnostics" => new { type = "pluginDiagnostics", discovery = new { scans = Array.Empty<object>() } },
+                        _ => new { type = "diagnostics", blocks = new { } },
+                    };
+                    await SocketTestServer.Send(socket, reply, stop);
+                    await SocketTestServer.Send(socket, new { type = "commandResult", requestId = command["requestId"]!.GetValue<string>() }, stop);
+                }
+            });
+            await using var client = new DaemonClient(server.Url);
+            var state = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            client.StateReceived += _ => state.TrySetResult();
+            client.Start();
+            await state.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            string archive = await Diagnostics.CollectAsync(client, login, output);
+
+            var entries = new Dictionary<string, string>();
+            await using (var file = File.OpenRead(archive))
+            await using (var gzip = new System.IO.Compression.GZipStream(file, System.IO.Compression.CompressionMode.Decompress))
+            using (var tar = new System.Formats.Tar.TarReader(gzip))
+            {
+                while (tar.GetNextEntry() is { } entry)
+                {
+                    // The account that collected the archive is not in its headers.
+                    Assert.Equal(0, entry.Uid);
+                    Assert.Equal(0, entry.Gid);
+                    var posix = Assert.IsAssignableFrom<System.Formats.Tar.PosixTarEntry>(entry);
+                    Assert.Equal("", posix.UserName);
+                    Assert.Equal("", posix.GroupName);
+                    if (entry is System.Formats.Tar.PaxTarEntry pax)
+                        Assert.DoesNotContain(pax.ExtendedAttributes, a => a.Key is "uname" or "gname" or "uid" or "gid" && a.Value is not ("" or "0"));
+                    if (entry.DataStream is { } data) entries[entry.Name] = new StreamReader(data).ReadToEnd();
+                }
+            }
+            Assert.Contains("plugin-scan-logs/index.txt", entries.Keys);
+            foreach ((string name, string text) in entries)
+            {
+                Assert.False(text.Contains(login, StringComparison.Ordinal), $"{name} still holds the login name");
+                Assert.False(text.Contains(otherHost, StringComparison.Ordinal), $"{name} still holds a host name");
+                Assert.False(System.Text.RegularExpressions.Regex.IsMatch(text, "(?<![A-Za-z0-9])" + System.Text.RegularExpressions.Regex.Escape(machine) + "(?![A-Za-z0-9])"),
+                    $"{name} still holds this machine's name");
+            }
+
+            // Only the names went; everything around them is still there to read.
+            Assert.Contains("User Name: <redacted>", entries["pactl-info.txt"]);
+            Assert.Contains("Server Name: PulseAudio (on PipeWire 1.6.9)", entries["pactl-info.txt"]);
+            Assert.Contains("WirePlumber                         [1.6.9, <redacted>@<redacted>, pid:1585]", entries["wpctl-status.txt"]);
+            Assert.Contains("loaded /mnt/<redacted>/lv2/eq.lv2 for <redacted>@<redacted>", entries["journal.txt"]);
+            Assert.Contains("/run/media/<redacted>/VST3", entries["plugin-setup.json"]);
+            using var graph = System.Text.Json.JsonDocument.Parse(entries["pw-dump.json"]);
+            Assert.Equal("pipewire-<redacted>-1655", graph.RootElement[0].GetProperty("info").GetProperty("props").GetProperty("core.name").GetString());
+            Assert.Equal("<redacted>", graph.RootElement[0].GetProperty("info").GetProperty("user-name").GetString());
+            Assert.Equal(8192, graph.RootElement[2].GetProperty("info").GetProperty("props").GetProperty("clock.max-quantum").GetInt32());
+            Assert.Contains("login name", entries["PRIVACY.txt"]);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", path);
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", configHome);
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("max", "\"default.clock.max-quantum\": 2048, \"cpu.max-align\": 32", "\"default.clock.max-quantum\": 2048, \"cpu.max-align\": 32")]
+    [InlineData("max", "the max@desk account", "the <redacted>@desk account")]
+    [InlineData("max", "timed out after max 5 seconds; /usr/share/max/x; data.max@x", "timed out after max 5 seconds; /usr/share/max/x; data.max@x")]
+    [InlineData("a", "data@host /home/ab/x pipewire-a-12 pipewire-ab-12 /media/a/disk", "data@host /home/ab/x pipewire-<redacted>-12 pipewire-ab-12 /media/<redacted>/disk")]
+    [InlineData("audio", "\"media.class\": \"Audio/Sink\", \"node.name\": \"audio-out\" /mnt/audio-lib/x", "\"media.class\": \"Audio/Sink\", \"node.name\": \"audio-out\" /mnt/audio-lib/x")]
+    [InlineData("j.doe", "j.doe@host jXdoe@host /home/j.doe/x", "<redacted>@host jXdoe@host /home/<redacted>/x")]
+    public void Redact_MasksTheLoginNameOnlyWhereItStandsAsOne(string login, string input, string expected)
+        => Assert.Equal(expected, Diagnostics.Redact(input, [], login));
 }
