@@ -188,11 +188,15 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
             _built = true;
 
-            if (monitorOutputSink is not null) SetMonitorOutputsLocked([monitorOutputSink]);
             _ = previousDefaultSource;   // defaults are governed by enforcement only
             _ = defaultSource;           // the system default never overrides an explicit input binding
+            // Capture before playback: the interface's capture is linked
+            // before any mix is routed into its sink. Elgato's full-speed
+            // units (the XLR Dock, the original Wave XLR, the Wave:3) record
+            // silence when their playback stream starts first.
             WireInputFeedsLocked();
             EnsureCaptureFeedsLocked();
+            if (monitorOutputSink is not null) SetMonitorOutputsLocked([monitorOutputSink]);
             WireAuxRouteLocked();
             foreach (MixDefinition mix in config.Mixes) WireMixChainLocked(mix);
         }
@@ -541,7 +545,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                         d.Name.Contains("Wave_XLR", StringComparison.OrdinalIgnoreCase))
             .Select(d => { int m = d.Name.IndexOf('#'); return m < 0 ? d.Name : d.Name[..m]; })
             .FirstOrDefault();
-        if (proSink is null) return;
+        if (proSink is null || HoldPlaybackLocked(proSink)) return;   // EnsureAuxRoute wires it later
         (string tapNode, string tapPrefix) = MixTapLocked(aux);
         PortLink route = _pw.RouteTapToOutput(tapNode, tapPrefix, proSink + "#usbaux");
         if (route.Pairs.Count > 0) { _auxRoute = route; _auxTargetSink = proSink; }
@@ -1919,6 +1923,75 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         }
     }
 
+    /// <summary>
+    /// How long a route into the driven interface's own sink waits for the
+    /// interface's capture to be linked first. A capture that does not come
+    /// within this time (its source is missing, or its chain cannot start)
+    /// no longer keeps the output silent.
+    /// </summary>
+    internal static readonly TimeSpan CaptureFirstGrace = TimeSpan.FromSeconds(5);
+    /// <summary>Milliseconds for <see cref="CaptureFirstGrace"/>; tests move it on.</summary>
+    internal Func<long> Clock { get; init; } = () => Environment.TickCount64;
+    private long? _playbackHeldSince;
+    private string? _playbackHoldNoted;
+
+    /// <summary>
+    /// Whether a route into <paramref name="target"/> waits for now: the
+    /// target is the driven interface's own sink, and none of the strips that
+    /// take the interface has its capture linked yet. Elgato's full-speed
+    /// units record silence for as long as capture stays open when their
+    /// playback started first (the XLR Dock, the original Wave XLR and the
+    /// Wave:3 on some ports), so the mixer never starts it first. The
+    /// strips' feeds are wired before the monitor routes in every sweep, so
+    /// the route follows as soon as the capture is up, or after
+    /// <see cref="CaptureFirstGrace"/> without it.
+    /// </summary>
+    private bool HoldPlaybackLocked(string target)
+    {
+        List<ChannelDefinition> unit = [.. _config.Channels.Where(c => c.InputPair is not null && !_bindings.ContainsKey(c.Id))];
+        if (unit.Count == 0 || unit.Any(c => _inputFeeds.ContainsKey(c.Id)))
+        {
+            _playbackHeldSince = null;
+            _playbackHoldNoted = null;
+            return false;
+        }
+        if (!IsDrivenUnitSinkLocked(target)) return false;
+        // The wait counts only while the sink is there: a unit that is
+        // unplugged has nothing to start, and when it comes back its capture
+        // gets the whole grace again.
+        string bare = target.IndexOf('#') is int marker and >= 0 ? target[..marker] : target;
+        if (!_pw.ListDevices(true, _inputHints).Any(d => d.Kind == AudioNodeKind.Sink
+                && (d.Name == bare || d.Name.StartsWith(bare + "#", StringComparison.Ordinal))))
+        {
+            _playbackHeldSince = null;
+            return false;
+        }
+        long now = Clock();
+        _playbackHeldSince ??= now;
+        if (now - _playbackHeldSince.Value < (long)CaptureFirstGrace.TotalMilliseconds) return true;
+        if (_playbackHoldNoted != target)
+        {
+            _playbackHoldNoted = target;
+            InputNote?.Invoke($"routing into {target} before the interface's capture is linked; it did not come within {CaptureFirstGrace.TotalSeconds:0} seconds");
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Whether an output is a sink of the interface the strips take: the
+    /// card of the capture source they are fed from, or before that source
+    /// is found, the card the driven unit's most specific fragment names.
+    /// </summary>
+    private bool IsDrivenUnitSinkLocked(string target)
+    {
+        int marker = target.IndexOf('#');
+        string bare = marker < 0 ? target : target[..marker];
+        if (!bare.StartsWith("alsa_output.", StringComparison.Ordinal)) return false;
+        string card = InterfaceNodes.CardKey(bare);
+        if (_inputDevice is { } source) return InterfaceNodes.CardKey(source) == card;
+        return _inputHints.Count > 0 && card.Contains(_inputHints[0], StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Outputs whose feed came up short on links; the sweep relinks them.</summary>
     private readonly HashSet<string> _incompleteMonitorRoutes = [];
 
@@ -1945,6 +2018,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         string key = OutputRouteKey(target);
         _incompleteMonitorRoutes.Remove(key);
         if (mixes.Count == 0) return null;
+        // An empty route is tried again by the next sweep (EnsureMonitorRoutes).
+        if (HoldPlaybackLocked(target)) return new PortLink([]);
         var pairs = new List<(string From, string To)>();
         try
         {

@@ -353,6 +353,17 @@ length` warning, yet with playback running on its sink before capture
 opened it recorded every time, in three trials. As on the dock, the port
 and the controller seem to decide whether the bug shows.
 
+The daemon opens capture first on every interface it drives. It links
+the interface's capture into XLR 1 before it routes any mix into the interface's own sink: at startup,
+including when `monitorOutput` in `daemon.json` or
+`OPENXLR_MONITOR_OUTPUT` names the interface, when you pick the
+interface as an output, and when the sweep rebuilds routes after a
+replug or a profile switch. When the interface's sink is there but its
+capture does not come within five seconds, the route is made anyway and
+the journal says so. The capture-hold rules are still needed, since
+applications that play straight to the interface open playback without
+asking the daemon.
+
 ## Wave:1 (0fd9:006e), beta
 
 The Wave:3's smaller sibling, a USB condenser microphone with a
