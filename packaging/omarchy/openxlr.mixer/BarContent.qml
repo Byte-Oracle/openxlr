@@ -92,9 +92,11 @@ Item {
                     return channel.id === input.modelData;
                 })
                 visible: root.link.ready && present && held
-                text: modelData === "xlr1" ? "XLR 1" : "XLR 2"
+                // The daemon's name: XLR 1 on an XLR jack, Mic 1 on a capsule or another microphone.
+                text: Mixer.channelName(root.channels, modelData)
                 level: Mixer.pair(root.link.levels, "ch:" + modelData, true)[0]
-                muted: !!(root.link.snapshot && root.link.snapshot.state || {})[Mixer.muteControl(modelData)]
+                // Dimmed only by the interface's mute, and only while this strip carries its input.
+                muted: Mixer.hardwareMuted(root.link.snapshot, modelData)
 
                 function observe(): void {
                     if (!root.link.ready) {

@@ -91,15 +91,16 @@ Item {
         if (!daemon.ready)
             return "OpenXLR: daemon not reachable. Retrying in the background.";
         var lines = inputs.map(function (input) {
-            var muted = !!((daemon.snapshot && daemon.snapshot.state) || {})[Mixer.muteControl(input.id)];
+            var muted = Mixer.hardwareMuted(daemon.snapshot, input.id);
             var meter = Mixer.pair(daemon.levels, "ch:" + input.id, true);
-            return input.name + ": " + (muted ? "muted" : Mixer.rms(meter[0]) + " dBFS RMS");
+            // A strip bound to another microphone names it, or says why it is silent.
+            var note = Mixer.bindingNote(daemon.snapshot, input);
+            return input.name + ": " + (muted ? "muted" : Mixer.rms(meter[0]) + " dBFS RMS") + (note ? ", " + note : "");
         });
         feeds.forEach(function (feed) {
             lines.push(Mixer.outputName(daemon.snapshot, feed.output) + ": " + feed.name);
         });
-        var generic = Mixer.genericLabel(daemon.snapshot);
-        return ["OpenXLR"].concat(generic ? [generic] : [], lines, ["Click for sends and masters"]).join("\n");
+        return ["OpenXLR"].concat(lines, ["Click for sends and masters"]).join("\n");
     }
 
     DaemonLink {
