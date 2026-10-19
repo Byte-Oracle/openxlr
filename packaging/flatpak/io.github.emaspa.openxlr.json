@@ -1,0 +1,274 @@
+{
+  "app-id": "io.github.emaspa.openxlr",
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "25.08",
+  "sdk": "org.freedesktop.Sdk",
+  "sdk-extensions": [
+    "org.freedesktop.Sdk.Extension.dotnet10"
+  ],
+  "command": "openxlr",
+  "separate-locales": false,
+  "build-options": {
+    "prepend-path": "/usr/lib/sdk/dotnet10/bin",
+    "append-ld-library-path": "/usr/lib/sdk/dotnet10/lib",
+    "env": {
+      "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+      "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "1"
+    }
+  },
+  "finish-args": [
+    "--require-version=1.15.11",
+    "--share=ipc",
+    "--share=network",
+    "--socket=x11",
+    "--socket=wayland",
+    "--socket=pulseaudio",
+    "--device=dri",
+    "--device=usb",
+    "--filesystem=xdg-run/pipewire-0:ro",
+    "--filesystem=xdg-run/openxlr:create",
+    "--filesystem=xdg-config/wireplumber:create",
+    "--talk-name=org.kde.StatusNotifierWatcher",
+    "--talk-name=com.canonical.AppMenu.Registrar",
+    "--talk-name=org.kde.KWin",
+    "--own-name=org.openxlr.Desktop",
+    "--env=DOTNET_ROOT=/app/lib/dotnet",
+    "--env=OPENXLR_BUILD_MIXER=1",
+    "--env=LV2_PATH=/app/lib/lv2:/app/extensions/Plugins/lv2",
+    "--env=PIPEWIRE_MODULE_DIR=/app/lib/pipewire-0.3",
+    "--env=SPA_PLUGIN_DIR=/app/lib/spa-0.2",
+    "--env=PULSE_PROP=media.category=Manager",
+    "--env=PIPEWIRE_PROPS={ media.category=Manager }"
+  ],
+  "add-extensions": {
+    "org.freedesktop.LinuxAudio.Plugins": {
+      "directory": "extensions/Plugins",
+      "version": "25.08",
+      "add-ld-path": "lib",
+      "merge-dirs": "lv2",
+      "subdirectories": true,
+      "no-autodownload": true
+    }
+  },
+  "cleanup": [
+    "/include",
+    "/lib/pkgconfig",
+    "/share/pkgconfig",
+    "*.a",
+    "*.la"
+  ],
+  "modules": [
+    {
+      "name": "zix",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Ddocs=disabled",
+        "-Dtests=disabled"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://download.drobilla.net/zix-0.6.2.tar.xz",
+          "sha256": "4bc771abf4fcf399ea969a1da6b375f0117784f8fd0e2db356a859f635f616a7"
+        }
+      ]
+    },
+    {
+      "name": "serd",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Ddocs=disabled",
+        "-Dtests=disabled"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://download.drobilla.net/serd-0.32.4.tar.xz",
+          "sha256": "cbefb569e8db686be8c69cb3866a9538c7cb055e8f24217dd6a4471effa7d349"
+        }
+      ]
+    },
+    {
+      "name": "sord",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Ddocs=disabled",
+        "-Dtests=disabled"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://download.drobilla.net/sord-0.16.20.tar.xz",
+          "sha256": "508b41d6b4f9d5902c9f5b9cf25170d9d0636f68f11bd257c1150497f754a2a4"
+        }
+      ]
+    },
+    {
+      "name": "lv2",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Ddocs=disabled",
+        "-Dtests=disabled",
+        "-Dplugins=disabled"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://lv2plug.in/spec/lv2-1.18.10.tar.xz",
+          "sha256": "78c51bcf21b54e58bb6329accbb4dae03b2ed79b520f9a01e734bd9de530953f"
+        }
+      ]
+    },
+    {
+      "name": "sratom",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Ddocs=disabled",
+        "-Dtests=disabled"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://download.drobilla.net/sratom-0.6.18.tar.xz",
+          "sha256": "4c6a6d9e0b4d6c01cc06a8849910feceb92e666cb38779c614dd2404a9931e92"
+        }
+      ]
+    },
+    {
+      "name": "lilv",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Ddocs=disabled",
+        "-Dtests=disabled",
+        "-Dbindings_py=disabled",
+        "-Dbindings_cpp=disabled"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://download.drobilla.net/lilv-0.26.2.tar.xz",
+          "sha256": "9c712f7c44ba8b1fdbf9bbaa793bbf76844be40b361c4322bdaa5c4ed36c6b89"
+        }
+      ]
+    },
+    {
+      "name": "pipewire",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Ddocs=disabled",
+        "-Dman=disabled",
+        "-Dtests=disabled",
+        "-Dexamples=disabled",
+        "-Dsession-managers=[]",
+        "-Dsystemd=disabled",
+        "-Dpipewire-alsa=disabled",
+        "-Dpipewire-jack=disabled",
+        "-Dgstreamer=disabled",
+        "-Dbluez5=disabled",
+        "-Dlibcamera=disabled",
+        "-Dlv2=enabled",
+        "-Dudev=disabled",
+        "-Dalsa=disabled"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/1.4.9/pipewire-1.4.9.tar.gz",
+          "sha256": "8066a7b220069e4c6e3b02bd2b6ea303bba66df255023c07c99323449ba8fe3c"
+        }
+      ]
+    },
+    {
+      "name": "alsa-utils",
+      "config-opts": [
+        "--disable-alsamixer",
+        "--disable-alsaconf",
+        "--disable-bat",
+        "--disable-xmlto",
+        "--disable-rst2man"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://www.alsa-project.org/files/pub/utils/alsa-utils-1.2.14.tar.bz2",
+          "sha256": "0794c74d33fed943e7c50609c13089e409312b6c403d6ae8984fc429c0960741"
+        }
+      ],
+      "make-args": [
+        "-C",
+        "amixer"
+      ],
+      "make-install-args": [
+        "-C",
+        "amixer"
+      ]
+    },
+    {
+      "name": "lua",
+      "buildsystem": "simple",
+      "build-commands": [
+        "make linux MYCFLAGS=-fPIC",
+        "make INSTALL_TOP=/app install",
+        "install -Dm644 lua.pc /app/lib/pkgconfig/lua-5.4.pc"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://www.lua.org/ftp/lua-5.4.8.tar.gz",
+          "sha256": "4f18ddae154e793e46eeab727c59ef1c0c0c2b744e7b94219710d76f530629ae"
+        },
+        {
+          "type": "file",
+          "path": "lua.pc"
+        }
+      ]
+    },
+    {
+      "name": "wireplumber",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Ddoc=disabled",
+        "-Dintrospection=disabled",
+        "-Dtests=false",
+        "-Dsystemd=disabled",
+        "-Dsystem-lua=true",
+        "-Dsystemd-user-service=false"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://gitlab.freedesktop.org/pipewire/wireplumber/-/archive/0.5.12/wireplumber-0.5.12.tar.gz",
+          "sha256": "0ce5cd48087bc5b559d7e1a947e9e0adb2a9b6f1dabd984af801f30fbba5e19c"
+        }
+      ]
+    },
+    {
+      "name": "dotnet",
+      "buildsystem": "simple",
+      "build-commands": [
+        "/usr/lib/sdk/dotnet10/bin/install.sh"
+      ]
+    },
+    {
+      "name": "openxlr",
+      "buildsystem": "simple",
+      "build-commands": [
+        "sh packaging/flatpak/build.sh"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../..",
+          "skip": [
+            ".git",
+            ".flatpak-builder",
+            "flatpak-build",
+            "src/*/bin",
+            "src/*/obj"
+          ]
+        },
+        "nuget-sources.json"
+      ]
+    }
+  ]
+}
