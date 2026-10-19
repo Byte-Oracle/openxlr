@@ -351,6 +351,10 @@ public static class SkinTokens
         Number("Ox.Mixer.StripWidth", 76, 56, 200),
         Number("Ox.Mixer.VerticalFaderLength", 160, 80, 480),
         Number("Ox.Mixer.BankSpacing", 12, 0, 64),
+        // A channel or mix hidden in the layout editor, drawn in its place
+        // while the submixer's Show hidden is on. It fades even where the
+        // skin does not fade unusable keys, since it is fully usable.
+        Number("Ox.Mixer.HiddenOpacity", 0.5, 0.2, 1),
 
         // The mix matrix: the name column of a row head, the width of a cell
         // and of a row head's source controls, and the height of a row. Every

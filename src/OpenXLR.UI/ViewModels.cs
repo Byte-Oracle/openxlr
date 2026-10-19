@@ -1450,6 +1450,10 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     private bool _displayVisible = true;
     /// <summary>The submixer draws this mix's master; see MainViewModel.RefreshChannelPresentation.</summary>
     public bool DisplayVisible { get => _displayVisible; set => Set(ref _displayVisible, value); }
+
+    private bool _revealed;
+    /// <summary>Hidden in the layout editor and drawn faded because Show hidden is on.</summary>
+    public bool Revealed { get => _revealed; set => Set(ref _revealed, value); }
     private readonly DaemonClient _client;
     private bool _applying;
 
@@ -1628,6 +1632,10 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     /// <summary>The mixer draws this channel's strip; see MainViewModel.RefreshChannelPresentation.</summary>
     public bool DisplayVisible { get => _displayVisible; set => Set(ref _displayVisible, value); }
 
+    private bool _revealed;
+    /// <summary>Hidden in the layout editor and drawn faded because Show hidden is on.</summary>
+    public bool Revealed { get => _revealed; set => Set(ref _revealed, value); }
+
     private double _meterL;
     public double MeterL { get => _meterL; set => Set(ref _meterL, Math.Min(value, 1.0)); }
     private double _meterR;
@@ -1696,6 +1704,21 @@ public sealed class SendViewModel : ViewModelBase
     private bool _displayVisible = true;
     /// <summary>The strip draws this send row; see MainViewModel.RefreshChannelPresentation.</summary>
     public bool DisplayVisible { get => _displayVisible; set => Set(ref _displayVisible, value); }
+
+    private bool _revealed;
+    /// <summary>
+    /// Its channel or its mix is hidden and drawn faded because Show hidden
+    /// is on: how a cell that stands on its own fades.
+    /// </summary>
+    public bool Revealed { get => _revealed; set => Set(ref _revealed, value); }
+
+    private bool _mixRevealed;
+    /// <summary>
+    /// Its mix is hidden and drawn faded while its channel is not: how a send
+    /// row inside the channel's own strip fades, so a faded strip does not
+    /// fade the row a second time.
+    /// </summary>
+    public bool MixRevealed { get => _mixRevealed; set => Set(ref _mixRevealed, value); }
 
     private double _level;
     public double Level

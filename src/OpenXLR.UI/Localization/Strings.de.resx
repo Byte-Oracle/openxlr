@@ -805,6 +805,9 @@
   <data name="HideChannelStrip" xml:space="preserve">
     <value>Diesen Kanalzug im Mixer ausblenden. Audio, Sends und Anwendungen bleiben unverändert.</value>
   </data>
+  <data name="HideMix" xml:space="preserve">
+    <value>Diesen Mix im Mixer ausblenden. Audio, Ausgänge, Sends und Pegel bleiben unverändert.</value>
+  </data>
   <data name="HostSideLowCutForThisDeviceIts" xml:space="preserve">
     <value>Software-Hochpass für dieses Gerät: Aus, 80 Hz, 120 Hz</value>
   </data>
@@ -816,6 +819,9 @@
   </data>
   <data name="IconColourAndWhetherTheStripShows" xml:space="preserve">
     <value>Symbol, Farbe und Sichtbarkeit des Kanalzugs im Mixer</value>
+  </data>
+  <data name="IconColourAndWhetherTheMixShows" xml:space="preserve">
+    <value>Symbol, Farbe und Sichtbarkeit des Mixes im Mixer</value>
   </data>
   <data name="ImportEffectPreset" xml:space="preserve">
     <value>Effektvoreinstellung importieren</value>
@@ -1422,6 +1428,12 @@
   </data>
   <data name="PopOutMixerHint" xml:space="preserve">
     <value>Öffnet den Submixer in einem eigenen Fenster für einen weiteren Bildschirm.</value>
+  </data>
+  <data name="ShowHidden" xml:space="preserve">
+    <value>Ausgeblendete zeigen</value>
+  </data>
+  <data name="ShowHiddenHint" xml:space="preserve">
+    <value>Zeigt die unter Layout bearbeiten ausgeblendeten Kanäle und Mixe blass an ihrem Platz. Sie funktionieren wie gewohnt; am Layout ändert sich nichts.</value>
   </data>
   <data name="PreAssignAChannelToAnAppThat" xml:space="preserve">
     <value>Weise einer noch nicht spielenden App vorab einen Kanal zu. Die Identität wird aus ihrem Starter abgeleitet. Meldet sich die App bei der ersten Wiedergabe anders, erscheint sie als neuer Eintrag.</value>

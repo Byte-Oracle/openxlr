@@ -173,6 +173,16 @@ internal sealed record MixerSnapshot
     /// </summary>
     [JsonIgnore]
     public List<ChannelEntry> Strips => _strips ??= [.. Shown.Where(channel => !channel.Appearance.Hidden)];
+
+    private List<MixEntry>? _masters;
+
+    /// <summary>
+    /// The mixes the mixer tab draws a master and sends for: every mix less
+    /// those hidden in the layout editor. The matrix still lists a hidden
+    /// mix, so its master and the sends into it stay within reach.
+    /// </summary>
+    [JsonIgnore]
+    public List<MixEntry> Masters => _masters ??= [.. Mixes.Where(mix => !mix.Appearance.Hidden)];
     public List<string> MonitorOutputs { get; init; } = [];
     public Dictionary<string, string> MonitorFeeds { get; init; } = [];
     public double? OutputVolume { get; init; }

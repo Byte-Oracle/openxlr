@@ -2,8 +2,8 @@ namespace OpenXLR.Core.Mixing;
 
 /// <summary>
 /// How a channel or a mix is drawn: an icon (see <see cref="LayoutIcons"/>),
-/// an optional colour, and for a channel whether its strip is left out of the full
-/// mixer. Presentation only: stable ids, routing order and every audio
+/// an optional colour, and whether its strip or column is left out of the
+/// full mixer. Presentation only: stable ids, routing order and every audio
 /// connection are the same whatever these hold.
 /// </summary>
 public sealed record LayoutAppearance(string Icon = "", string? Colour = null, bool Hidden = false)
@@ -31,13 +31,14 @@ public sealed record LayoutAppearance(string Icon = "", string? Colour = null, b
     /// <summary>
     /// A saved entry: a <c>channel:</c> or <c>mix:</c> key of bounded length,
     /// or <c>output:phones1</c> or <c>output:phones2</c>, and a valid value.
-    /// Only a channel can be hidden; a mix master always shows, because its
-    /// outputs and recorders depend on it, and a headphone output is hardware.
+    /// A channel or a mix can be hidden, which only leaves it out of the full
+    /// mixer: its audio, outputs and sends are the same. A headphone output is
+    /// hardware and never hidden.
     /// </summary>
     internal static bool IsValidEntry(string? key, LayoutAppearance? value) =>
         key is { Length: <= 44 } && IsValid(value) &&
         (key.StartsWith("channel:", StringComparison.Ordinal) && key.Length > 8 ||
-         key.StartsWith("mix:", StringComparison.Ordinal) && key.Length > 4 && !value!.Hidden ||
+         key.StartsWith("mix:", StringComparison.Ordinal) && key.Length > 4 ||
          key.StartsWith("output:", StringComparison.Ordinal) && Outputs.Contains(key[7..]) && !value!.Hidden);
 }
 
@@ -60,7 +61,7 @@ public sealed partial record ChannelStatus
 
 public sealed partial record MixStatus
 {
-    /// <summary>The mix's icon and colour, with its default icon.</summary>
+    /// <summary>The mix's icon, colour and hidden flag, with its default icon.</summary>
     public LayoutAppearanceState Appearance { get; init; } = LayoutAppearanceState.From(LayoutAppearance.Default, "podcast");
 }
 

@@ -1449,7 +1449,8 @@ chain, Aux In's level and lock, and the name and meter of every other
 channel. What your interface does not have stays hidden, as in the panel.
 
 Each mix bank shows one mix: every channel's send into it and the mix's
-master. The picker at the top of a bank lists every mix. Choose one to
+master. The picker at the top of a bank lists every mix that is not
+hidden. Choose one to
 show it in that bank; a mix another bank already shows trades places with
 it, so two banks never show the same mix and every mix stays reachable
 however few banks the skin shows. Your choice is remembered for that skin
@@ -1477,13 +1478,14 @@ goes when its channel is deleted, which never depends on the order.
 <a name="mixer-view"></a>
 Options, APPEARANCE, **Mixer view** chooses how the SUBMIXER card is drawn:
 
-- **Full mixer** shows every channel strip the interface can feed, less
-  the hidden ones, and every mix.
-- **Compact** shows one channel strip with all its sends. Pick the channel
-  in the box above the strips; hidden channels are in that list too, so a
-  hidden channel can still be adjusted here.
+- **Full mixer** shows every channel strip the interface can feed and
+  every mix, less the hidden ones.
+- **Compact** shows one channel strip with its sends into every mix that
+  is not hidden. Pick the channel in the box above the strips; hidden
+  channels are in that list too, so a hidden channel can still be adjusted
+  here.
 - **Mini** shows that channel's send into one mix, with that mix's master
-  below it. A second box picks the mix. INPUTS, HEADPHONES and APPLICATIONS
+  below it. A second box picks the mix, hidden mixes included. INPUTS, HEADPHONES and APPLICATIONS
   are set aside and Arrange is off, so the window fits a narrow column with
   MONITOR's output volume above the strip.
 
@@ -1498,6 +1500,16 @@ back to your choice when it returns. If `ui.json` cannot be written, the
 choice stays until the window closes and a line says why: in Options for
 the view, above the strips for the channel and the mix. None of this
 changes a level, a mute or a route.
+
+<a name="show-hidden"></a>
+**Show hidden** sits in the SUBMIXER header beside Pop out and Edit
+layout, and appears only while a channel or a mix is hidden in the layout
+editor. Switched on, it draws the hidden channels and mixes in their
+places in every layout, faded so you can tell them apart, and they work
+as usual. This applies in the separate mixer window too. It is a window
+preference saved in `ui.json` like a folded section, so the layout, the
+profiles, the terminal mixer and the Stream Deck do not change. A skin
+sets how far they fade with `Ox.Mixer.HiddenOpacity`.
 
 <a name="separate-mixer-window"></a>
 #### Separate mixer window
@@ -1777,7 +1789,20 @@ from the SUBMIXER card and its strip from the terminal mixer's Mixer
 section. Nothing about its audio changes: its sends, meter, applications
 and routing stay as they were, it stays in the layout editor, the app
 pickers and the Matrix section, and Stream Deck keys keep controlling it.
-The editor marks it "hidden in the mixer". A mix cannot be hidden.
+The editor marks it "hidden in the mixer".
+For a mix, **Hide this mix in the mixer** does the same for its master and
+its column, and works for every mix, Monitor A, Monitor B, Stream, Chat and
+Aux included. Its audio, outputs, monitor feeds, sends, volume, mute and
+plugins stay as they were. The SUBMIXER card drops its master tile and the
+send rows into it. A mix matrix drops its column head and the cell under it
+in every row, so the other columns stay lined up. Mix banks leave it out of
+their pickers. The terminal mixer leaves it out of its Mixer section and
+keeps it in Matrix. It stays in the layout editor, in each output's feed
+picker and on Stream Deck keys. If you hide
+every mix, the channels show with no sends and the matrix shows only its
+row heads until you show one again. MONITOR and HEADPHONES are not mixes
+and cannot be hidden. Untick the box to bring a channel or a mix back, or
+use [Show hidden](#show-hidden) to see it without changing the layout.
 Appearance is part of the layout, saved with it, and not part of a profile.
 
 - A new channel appears as a playback device at once and starts muted in
@@ -2547,7 +2572,7 @@ Controls below the visible hardware cards appear as the selection moves.
 | Mixer | `-`, `+`, `[`, `]` | lower or raise the level by five points, or by one point |
 | Mixer | `M` | add a monitor mix |
 | Mixer | `r`, `n`, `N`, `c`, `d` | rename, add an application channel, add a virtual microphone, add a capture input, or delete |
-| Mixer | Ctrl+Left/Right | move the selected channel or user mix one strip along; a channel steps past hidden channels to the next strip shown |
+| Mixer | Ctrl+Left/Right | move the selected channel or user mix one strip along, past hidden ones to the next strip shown |
 | Matrix | Up/Down, Left/Right, Home, End | move through the grid; Home is the masters row |
 | Matrix | Space, `-`, `+`, `[`, `]` | mute the cell, or change its level by five points or by one |
 | Lists | Up/Down, PageUp/PageDown | move between controls |

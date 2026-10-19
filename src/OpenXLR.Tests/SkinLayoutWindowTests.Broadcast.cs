@@ -277,6 +277,48 @@ internal static partial class SkinLayoutWindowTests
             Assert.Equal(BroadcastMixes, matrix.Columns.Select(c => c.Mix.Id));
             Assert.Same(matrix, window.MixMatrix);
 
+            // Monitor B hidden: its column head and its cell in every row go,
+            // and the columns left stand over their cells.
+            string monitorBHidden = mixer.Replace("""{"id":"monitor2","name":"Monitor B","kind":"monitor","appearance":{"defaultIcon":"headset"}}""",
+                """{"id":"monitor2","name":"Monitor B","kind":"monitor","appearance":{"defaultIcon":"headset","hidden":true}}""");
+            Assert.NotEqual(mixer, monitorBHidden);
+            apply.Invoke(model, [JsonNode.Parse(monitorBHidden)]);
+            string[] withoutB = [.. BroadcastMixes.Where(id => id != "monitor2")];
+            var showHidden = window.FindControl<ToggleButton>("ShowHiddenButton")!;
+            foreach (double width in new[] { 640d, 1040, 2560 })
+            {
+                Layout(window, width, 1400);
+                string where = $"Monitor B hidden at {width}";
+                Assert.Equal(withoutB, matrix.Columns.Select(c => c.Mix.Id));
+                Assert.DoesNotContain(window.GetVisualDescendants().OfType<Border>(),
+                    b => b.Name is "MatrixColumn" or "MatrixCell" && b.DataContext is MatrixColumnViewModel { Mix.Id: "monitor2" } or MatrixCellViewModel { Mix.Id: "monitor2" });
+                CheckMatrixCells(window, matrix, where);
+                CheckBroadcastAt(window, model, where);
+                Assert.True(showHidden.IsEffectivelyVisible, where);
+            }
+            Assert.Same(mixes[1], model.Mixes.Single(m => m.Id == "monitor2"));
+            Layout(window, 1040, 1400);
+            Capture(window, "skin-broadcast-monitor-b-hidden");
+
+            // Show hidden puts the column back in its place, faded, cells and all.
+            showHidden.IsChecked = true;
+            Layout(window, 1040, 1400);
+            Assert.True(model.ShowHidden);
+            Assert.Equal(BroadcastMixes, matrix.Columns.Select(c => c.Mix.Id));
+            CheckMatrixCells(window, matrix, "Monitor B shown");
+            double faded = (double)window.FindResource("Ox.Mixer.HiddenOpacity")!;
+            Assert.Equal(faded, ColumnHead(window, "monitor2").Opacity, 3);
+            Assert.Equal(faded, MatrixCell(window, "music", "monitor2").Opacity, 3);
+            Assert.Equal(1, ColumnHead(window, "monitor").Opacity, 3);
+            Assert.Equal(1, MatrixCell(window, "music", "monitor").Opacity, 3);
+            Capture(window, "skin-broadcast-monitor-b-shown");
+            showHidden.IsChecked = false;
+            apply.Invoke(model, [JsonNode.Parse(mixer)]);
+            Layout(window, 1040, 1200);
+            Assert.False(model.ShowHidden);
+            Assert.False(showHidden.IsEffectivelyVisible);
+            Assert.Equal(BroadcastMixes, matrix.Columns.Select(c => c.Mix.Id));
+
             // Detached: the matrix goes with the panel into the mixer's window and comes back.
             MixerPopOutWindowTests.CheckMatrix(window, model);
 
@@ -359,7 +401,8 @@ internal static partial class SkinLayoutWindowTests
 
         MixMatrixViewModel matrix = window.MixMatrix!;
         Assert.Equal(model.HasXlr2 ? 7 : 6, matrix.Rows.Count);
-        Assert.Equal(BroadcastMixes.Length, matrix.Columns.Count);
+        // Every mix but one hidden in the layout editor.
+        Assert.Equal(BroadcastMixes.Count(id => model.Mixes.Single(m => m.Id == id).DisplayVisible), matrix.Columns.Count);
         CheckMatrixCells(window, matrix, where);
 
         // The 40 character name shortens inside its row head rather than running out of it.

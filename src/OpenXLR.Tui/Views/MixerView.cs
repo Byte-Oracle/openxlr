@@ -17,15 +17,19 @@ internal sealed class MixerView : View
     {
         Theme theme = app.Theme;
         Snapshot? state = State(app);
-        if (state is null || state.Mixer.Mixes.Count == 0)
+        if (state is null || state.Mixer.Masters.Count == 0)
         {
+            // Every mix hidden in the layout editor leaves nothing to send
+            // into here; the matrix still lists them all.
             screen.Panel(area.X, area.Y, area.Width, area.Height, theme.Rule, theme.Card, "Mixer");
-            screen.Text(area.X + 2, area.Y + 2, state is null ? "Waiting for the daemon" : "The mixer is not built yet",
+            screen.Text(area.X + 2, area.Y + 2, state is null ? "Waiting for the daemon"
+                : state.Mixer.Mixes.Count == 0 ? "The mixer is not built yet"
+                : "Every mix is hidden in the layout editor; the Matrix tab still lists them",
                 theme.TextSecondary, theme.Card, maxWidth: area.Width - 4);
             return;
         }
 
-        List<MixEntry> mixes = state.Mixer.Mixes;
+        List<MixEntry> mixes = state.Mixer.Masters;
         List<ChannelEntry> channels = state.Mixer.Strips;
         _row = Math.Clamp(_row, 0, channels.Count);
         _column = Math.Clamp(_column, 0, mixes.Count - 1);
@@ -240,7 +244,7 @@ internal sealed class MixerView : View
     {
         Snapshot? state = State(app);
         if (state is null) return false;
-        List<MixEntry> mixes = state.Mixer.Mixes;
+        List<MixEntry> mixes = state.Mixer.Masters;
         List<ChannelEntry> channels = state.Mixer.Strips;
         if (mixes.Count == 0) return false;
 
@@ -348,8 +352,9 @@ internal sealed class MixerView : View
 
     /// <summary>
     /// Moves the selected channel or user mix in the saved order, which is
-    /// the order every client draws. A channel passes the next strip this
-    /// tab shows, so it moves on screen even with a hidden channel between.
+    /// the order every client draws. A channel or a mix passes the next
+    /// strip this tab shows, so it moves on screen even with a hidden one
+    /// between.
     /// </summary>
     private void Reorder(App app, Snapshot state, int by)
     {
@@ -371,13 +376,17 @@ internal sealed class MixerView : View
         }
         else
         {
-            MixEntry mix = state.Mixer.Mixes[_column];
+            if (_column >= state.Mixer.Masters.Count) return;
+            MixEntry mix = state.Mixer.Masters[_column];
             int at = mixes.IndexOf(mix.Id);
             if (at < 0) { app.Say("Only a user mix moves"); return; }
-            int to = Math.Clamp(at + by, 0, mixes.Count - 1);
-            if (to == at) return;
+            var drawn = state.Mixer.Masters.Select(entry => entry.Id).ToHashSet();
+            int to = at + by;
+            while (to >= 0 && to < mixes.Count && !drawn.Contains(mixes[to])) to += by;
+            if (to < 0 || to >= mixes.Count) return;
             mixes.RemoveAt(at);
             mixes.Insert(to, mix.Id);
+            _column += by;
         }
 
         app.Link.Send("setLayoutOrder", body =>

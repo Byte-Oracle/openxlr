@@ -19,7 +19,7 @@
     <!-- A bank's cell, by the skin's strip template. -->
     <layout:StripTemplateSelector x:Key="BankCells">
       <DataTemplate x:Key="vertical-strip" x:DataType="layout:BankCellViewModel">
-        <Border Classes="tile strip upright" Name="BankCell" IsVisible="{Binding Shown}" VerticalAlignment="Top">
+        <Border Classes="tile strip upright" Name="BankCell" IsVisible="{Binding Shown}" Classes.revealed="{Binding Send.Revealed}" VerticalAlignment="Top">
           <DockPanel>
             <Button DockPanel.Dock="Top" Classes="ghost reorderHandle" Classes.fixedPlace="{Binding HandleHidden}"
                     Content="↔" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"
@@ -60,7 +60,7 @@
         </Border>
       </DataTemplate>
       <DataTemplate x:Key="send-list" x:DataType="layout:BankCellViewModel">
-        <Border Classes="strip" Name="BankCell" IsVisible="{Binding Shown}" Padding="0,2">
+        <Border Classes="strip" Name="BankCell" IsVisible="{Binding Shown}" Classes.revealed="{Binding Send.Revealed}" Padding="0,2">
           <DockPanel>
             <Button DockPanel.Dock="Left" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
                     Content="↔" Tag="{Binding Channel}" Margin="0,0,4,0"
@@ -291,7 +291,7 @@
                 </ComboBox>
                 <ContentControl Name="BankMasterHost" DockPanel.Dock="{Binding MasterDock}" Content="{Binding Master}"
                                 ContentTemplate="{StaticResource BankMasters}" Margin="{Binding MasterMargin}"
-                                HorizontalContentAlignment="Stretch" VerticalAlignment="Top"/>
+                                HorizontalContentAlignment="Stretch" VerticalAlignment="Top" Classes.revealed="{Binding Mix.Revealed}"/>
                 <ScrollViewer Name="BankCells" HorizontalScrollBarVisibility="{Binding CellsScrollAcross}"
                               VerticalScrollBarVisibility="Disabled">
                   <ItemsControl ItemsSource="{Binding Cells}" ItemTemplate="{StaticResource BankCells}">

@@ -807,6 +807,9 @@
   <data name="HideChannelStrip" xml:space="preserve">
     <value>Hide this channel's strip in the mixer. Its audio, sends and apps stay as they are.</value>
   </data>
+  <data name="HideMix" xml:space="preserve">
+    <value>Hide this mix in the mixer. Its audio, outputs, sends and level stay as they are.</value>
+  </data>
   <data name="HostSideLowCutForThisDeviceIts" xml:space="preserve">
     <value>Host-side low cut for this device (its DSP lives in software); cycles Off, 80 Hz, 120 Hz</value>
   </data>
@@ -818,6 +821,9 @@
   </data>
   <data name="IconColourAndWhetherTheStripShows" xml:space="preserve">
     <value>Icon, colour and whether the strip shows in the mixer</value>
+  </data>
+  <data name="IconColourAndWhetherTheMixShows" xml:space="preserve">
+    <value>Icon, colour and whether the mix shows in the mixer</value>
   </data>
   <data name="ImportEffectPreset" xml:space="preserve">
     <value>Import effect preset</value>
@@ -1424,6 +1430,12 @@
   </data>
   <data name="PopOutMixerHint" xml:space="preserve">
     <value>Move the submixer into its own window for another display.</value>
+  </data>
+  <data name="ShowHidden" xml:space="preserve">
+    <value>Show hidden</value>
+  </data>
+  <data name="ShowHiddenHint" xml:space="preserve">
+    <value>Draw the channels and mixes hidden in Edit layout in their places, faded. They work as usual; nothing in the layout changes.</value>
   </data>
   <data name="PreAssignAChannelToAnAppThat" xml:space="preserve">
     <value>Pre-assign a channel to an app that has not played audio yet. The identity is guessed from its launcher; if the app reports differently on first play, it simply appears as a new entry.</value>

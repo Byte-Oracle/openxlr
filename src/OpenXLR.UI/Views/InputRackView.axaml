@@ -47,7 +47,7 @@
     <layout:StripTemplateSelector x:Key="InputRows">
       <!-- XLR 1: the gain with its lock, every switch the interface has, the voice tune strength and the chain -->
       <DataTemplate x:Key="xlr1" x:DataType="layout:InputStripViewModel">
-        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}">
+        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}" Classes.revealed="{Binding Channel.Revealed}">
           <DockPanel>
             <Button DockPanel.Dock="Top" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
                     Content="↕" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"
@@ -120,7 +120,7 @@
 
       <!-- XLR 2: the same, with the second input's properties, shown only on an interface with two -->
       <DataTemplate x:Key="xlr2" x:DataType="layout:InputStripViewModel">
-        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}">
+        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}" Classes.revealed="{Binding Channel.Revealed}">
           <DockPanel>
             <Button DockPanel.Dock="Top" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
                     Content="↕" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"
@@ -182,7 +182,7 @@
 
       <!-- Aux In: the USB Aux and Line In level and its lock, where the interface has the stage -->
       <DataTemplate x:Key="aux" x:DataType="layout:InputStripViewModel">
-        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}">
+        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}" Classes.revealed="{Binding Channel.Revealed}">
           <DockPanel>
             <Button DockPanel.Dock="Top" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
                     Content="↕" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"
@@ -217,7 +217,7 @@
 
       <!-- an application or capture channel: its name and its meter, which is all it has here -->
       <DataTemplate x:Key="channel" x:DataType="layout:InputStripViewModel">
-        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}">
+        <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}" Classes.revealed="{Binding Channel.Revealed}">
           <DockPanel>
             <Button DockPanel.Dock="Top" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
                     Content="↕" Tag="{Binding Channel}" HorizontalAlignment="Left" Margin="0,0,0,4"

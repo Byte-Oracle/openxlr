@@ -186,8 +186,9 @@ public partial class MixerSetupWindow : Window
             : mix is not null ? LayoutDefaultIcons.ForMix(mix.Id, mix.Kind) : "headset");
         var colour = new TextBox { Name = "AppearanceColour", Text = appearance.Colour ?? "", MaxLength = 7,
             PlaceholderText = Localizer.Text("ColourPlaceholder") };
-        var hidden = new CheckBox { Name = "AppearanceHidden", IsChecked = appearance.Hidden, IsVisible = channel is not null,
-            Content = Localizer.Text("HideChannelStrip") };
+        // A channel or a mix can be hidden, under the same rule; a headphone output is hardware and always shows.
+        var hidden = new CheckBox { Name = "AppearanceHidden", IsChecked = appearance.Hidden, IsVisible = output is null,
+            Content = mix is not null ? Localizer.Text("HideMix") : Localizer.Text("HideChannelStrip") };
         var save = new Button { Name = "AppearanceSave", Content = Localizer.Text("Save"), IsDefault = true };
         var cancel = new Button { Content = Localizer.Text("Cancel"), IsCancel = true };
         var note = new TextBlock { TextWrapping = TextWrapping.Wrap, Classes = { "hint" } };
@@ -225,7 +226,7 @@ public partial class MixerSetupWindow : Window
                 string? error = output is not null
                     ? await vm.SetOutputAppearance(output, LayoutIconPicker.Chosen(icon), chosen)
                     : await vm.SetLayoutAppearance(channel?.Id ?? mix!.Id, mix is not null,
-                        LayoutIconPicker.Chosen(icon), chosen, channel is not null && hidden.IsChecked == true);
+                        LayoutIconPicker.Chosen(icon), chosen, hidden.IsChecked == true);
                 if (error is null) dialog.Close(); else note.Text = error;
             }
             finally { save.IsEnabled = true; }

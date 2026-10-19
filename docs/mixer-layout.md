@@ -130,10 +130,31 @@ default instead: the window when it wears another skin, the terminal mixer
 and the Stream Deck plugin always, unless the name is in the built-in set.
 The terminal mixer draws each built-in icon as one text character.
 
-`colour` is `#RRGGBB`; absent or null keeps the skin's colours. `hidden` leaves a channel's strip out of the
-window's and the terminal mixer's full mixer; the channel keeps its sends,
-meter, applications and audio, and stays in the layout editor, the
-application pickers and the Stream Deck targets. A mix cannot be hidden.
+`colour` is `#RRGGBB`; absent or null keeps the skin's colours. `hidden`
+leaves a channel's strip out of the window's and the terminal mixer's full
+mixer; the channel keeps its sends, meter, applications and audio, and
+stays in the layout editor, the application pickers and the Stream Deck
+targets.
+
+A mix takes `hidden` under the same rule, Monitor A, Monitor B, Stream,
+Chat and Aux included. A hidden mix keeps its audio, its outputs and
+monitor feeds, its sends, volume, mute and plugin chain; only its master
+and its column leave the full mixer. The window's classic strips drop its
+master tile and the send rows into it. Mix banks leave it out of their
+pickers. A mix matrix drops its column head and the cell under it in
+every row, so the other columns stay lined up. The compact view draws
+every mix, so it leaves a hidden mix out too. The mini view draws the one
+mix chosen for it, hidden or not. The terminal mixer leaves
+a hidden mix out of its Mixer section and keeps it in Matrix. A hidden mix
+stays in the layout editor, in every output's feed picker and in the
+Stream Deck targets. With every mix hidden the full mixer draws the
+channels with no sends and the matrix has row heads and no columns. The
+MONITOR and HEADPHONES cards are not mixes and never hide.
+
+The window's **Show hidden**, in the SUBMIXER header, draws hidden
+channels and mixes in their places, faded to `Ox.Mixer.HiddenOpacity`
+and fully usable. It is a window preference in `ui.json`
+(`showHiddenItems`); the layout and the profiles do not change.
 The two headphone outputs are hardware, not channels: they take an icon
 and a colour, drawn before their labels in the window's HEADPHONES card,
 default to `headset` and are never hidden.

@@ -710,6 +710,7 @@ their sizes.
 | `Ox.Mixer.StripWidth` | number | 76 | 56 to 200 | the width of an upright strip in a mix bank, the name column of a send list, and the unit an input rack and mix banks reckon their narrowest width in |
 | `Ox.Mixer.VerticalFaderLength` | number | 160 | 80 to 480 | the length of an upright fader |
 | `Ox.Mixer.BankSpacing` | number | 12 | 0 to 64 | the gap between mix banks |
+| `Ox.Mixer.HiddenOpacity` | number | 0.5 | 0.2 to 1 | how far a channel or mix hidden in the layout editor fades while the submixer's Show hidden draws it, 1 for no fade |
 
 ### Mix matrix
 
@@ -1131,8 +1132,9 @@ the skin orders.
 
 Mix banks draw the submixer by mix instead of by channel. Each bank
 shows one mix: the send of every channel into that mix, then the mix's
-master. Every bank has a picker at its top that lists every mix, so Monitor
-B, Aux and the mixes you added stay reachable with two banks. The skin
+master. Every bank has a picker at its top that lists every mix not hidden
+in the layout editor, so Monitor B, Aux and the mixes you added stay
+reachable with two banks. The skin
 only says which mixes the banks start on:
 
 - A bank starts on the mix you last picked for it under this skin. Without
@@ -1332,8 +1334,11 @@ column is a cell holding that channel's send into that mix: its mute and a
 short fader, the channel's meter running under the fader as its track.
 There is nothing to pick. The matrix always shows every channel and every
 mix the view shows, so the compact view has one row and the mini view one
-row and one column. A channel with no send into a mix, or one the view
-does not draw, has an empty cell.
+row and one column. A channel or mix hidden in the layout editor has no
+row or column, and the cells under a hidden mix go with it, so the columns
+stay lined up; Show hidden draws them faded to `Ox.Mixer.HiddenOpacity`.
+A channel with no send into a mix, or one the view does not draw, has an
+empty cell.
 
 Each row starts with the channel's head: its icon and name, then the same
 controls the INPUTS panel shows for the channel, under the same rules. XLR 1

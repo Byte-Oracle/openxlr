@@ -34,6 +34,10 @@
     <Style Selector="Border.matrixCell.dimmed">
       <Setter Property="Opacity" Value="{DynamicResource Ox.Control.DisabledOpacity}"/>
     </Style>
+    <!-- after .dimmed, so a muted cell in a revealed column still reads as hidden -->
+    <Style Selector="Border.matrixCell.revealed">
+      <Setter Property="Opacity" Value="{DynamicResource Ox.Mixer.HiddenOpacity}"/>
+    </Style>
     <Style Selector="Border.matrixColumn">
       <Setter Property="Width" Value="{DynamicResource Ox.Matrix.CellWidth}"/>
     </Style>
@@ -240,7 +244,7 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="layout:MatrixColumnViewModel">
-              <Border Classes="tile matrixColumn" Name="MatrixColumn" Padding="6,6,6,4">
+              <Border Classes="tile matrixColumn" Name="MatrixColumn" Padding="6,6,6,4" Classes.revealed="{Binding Mix.Revealed}">
                 <DockPanel>
                   <!-- a thin line in the mix's own colour, where the layout editor gave it one -->
                   <Border DockPanel.Dock="Bottom" Height="2" Margin="0,4,0,0" CornerRadius="1" Name="MatrixColumnLine"
@@ -293,7 +297,8 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="layout:MatrixRowViewModel">
             <StackPanel Orientation="Horizontal" Spacing="{x:Static skin:SkinLayoutDefaults.MatrixSpacing}" Name="MatrixRow">
-              <ContentControl Content="{Binding}" ContentTemplate="{StaticResource RowHeads}" Focusable="False"/>
+              <ContentControl Content="{Binding}" ContentTemplate="{StaticResource RowHeads}" Focusable="False"
+                              Classes.revealed="{Binding Channel.Revealed}"/>
               <ItemsControl ItemsSource="{Binding Cells}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
@@ -303,7 +308,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="layout:MatrixCellViewModel">
                     <Border Classes="tile matrixCell" Name="MatrixCell" Classes.tinted="{Binding Tinted}"
-                            Classes.dimmed="{Binding Dimmed}" Classes.empty="{Binding IsEmpty}">
+                            Classes.dimmed="{Binding Dimmed}" Classes.empty="{Binding IsEmpty}" Classes.revealed="{Binding Send.Revealed}">
                       <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding HasSend}">
                         <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Send.Muted, Mode=TwoWay}"
                                       Padding="5,2" FontSize="11" VerticalAlignment="Center"

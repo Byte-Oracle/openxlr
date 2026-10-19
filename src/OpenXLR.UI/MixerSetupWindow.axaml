@@ -166,8 +166,10 @@
                                      TextTrimming="CharacterEllipsis"/>
                         </Grid>
                         <TextBlock Text="{Binding Id}" Foreground="{DynamicResource Ox.Text.Muted}" FontFamily="monospace" FontSize="10"/>
+                        <TextBlock Text="{loc:Text Key=HiddenInTheMixer}" Foreground="{DynamicResource Ox.Text.Muted}" FontSize="10"
+                                   IsVisible="{Binding Appearance.Hidden}"/>
                         <Button Content="{loc:Text Key=MixerAppearance}" Classes="small" HorizontalAlignment="Left" Margin="0,4,0,0"
-                                Click="OnAppearance" ToolTip.Tip="{loc:Text Key=IconAndColour}"/>
+                                Click="OnAppearance" ToolTip.Tip="{loc:Text Key=IconColourAndWhetherTheMixShows}"/>
                       </StackPanel>
                       <TextBlock Grid.Column="1" Text="{Binding KindLabel}" Foreground="{DynamicResource Ox.Text.Muted}" FontSize="11"
                                  VerticalAlignment="Center" IsVisible="{Binding !IsEditable}"/>
