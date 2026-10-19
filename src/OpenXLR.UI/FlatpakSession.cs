@@ -46,7 +46,9 @@ internal sealed class FlatpakSession : IDisposable
             try
             {
                 int exit = await ProcessRunner.RunOwnedAsync(binary, [], generation.Token, TimeSpan.FromSeconds(45),
-                    ["NOTIFY_SOCKET", "WATCHDOG_USEC", "WATCHDOG_PID"]).ConfigureAwait(false);
+                    ["NOTIFY_SOCKET", "WATCHDOG_USEC", "WATCHDOG_PID"],
+                    new System.Collections.Generic.Dictionary<string, string>
+                    { ["OPENXLR_PARENT_PID"] = Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture) }).ConfigureAwait(false);
                 // A host installation owns the API port or lock: do not keep
                 // claiming hardware in a retry loop against another daemon.
                 if (exit == 73 && !generation.IsCancellationRequested) return;

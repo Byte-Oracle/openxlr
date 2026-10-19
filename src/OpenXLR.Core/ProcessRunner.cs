@@ -155,12 +155,13 @@ public static class ProcessRunner
     /// The whole remaining tree is killed after the shutdown deadline.
     /// </summary>
     internal static async Task<int> RunOwnedAsync(string exe, IReadOnlyList<string> args,
-        CancellationToken stop, TimeSpan grace, IReadOnlyCollection<string>? removeEnvironment = null)
+        CancellationToken stop, TimeSpan grace, IReadOnlyCollection<string>? removeEnvironment = null,
+        IReadOnlyDictionary<string, string>? environment = null)
     {
         stop.ThrowIfCancellationRequested();
         var start = new ProcessStartInfo(exe) { UseShellExecute = false };
         foreach (string argument in args) start.ArgumentList.Add(argument);
-        ApplyEnvironment(start, null, removeEnvironment);
+        ApplyEnvironment(start, environment, removeEnvironment);
         using Process process = Process.Start(start) ?? throw new InvalidOperationException($"failed to start {exe}");
         try { await process.WaitForExitAsync(stop).ConfigureAwait(false); }
         catch (OperationCanceledException)

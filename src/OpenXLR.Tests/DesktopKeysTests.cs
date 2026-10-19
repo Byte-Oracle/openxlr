@@ -18,6 +18,7 @@ public sealed class DesktopKeysTests
     [InlineData(true, false, true)]
     [InlineData(true, true, true)]
     [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
     public async Task FlatpakAutostartUsesTheBackgroundPortal(bool audio, bool window, bool grant)
     {
         await using var environment = await PrivateBus.Start();
@@ -28,8 +29,8 @@ public sealed class DesktopKeysTests
         desktop.AddMethodHandler(backend);
         using var client = new DBusConnection(environment.Address);
         await client.ConnectAsync();
-        Task configure = FlatpakBackground.ConfigureAsync(new DesktopBus(client), audio, window, CancellationToken.None);
-        if (grant) await configure.WaitAsync(TimeSpan.FromSeconds(5));
+        Task<bool> configure = FlatpakBackground.ConfigureAsync(new DesktopBus(client), audio, window, CancellationToken.None);
+        if (grant || (!audio && !window)) Assert.Equal(grant, await configure.WaitAsync(TimeSpan.FromSeconds(5)));
         else await Assert.ThrowsAsync<InvalidOperationException>(() => configure);
         Assert.Equal(audio || window, backend.Autostart);
         Assert.Equal(window ? new[] { "openxlr" } : new[] { "openxlr", "--background" }, backend.Command);
@@ -402,7 +403,7 @@ public sealed class DesktopKeysTests
         }
     }
 
-    private sealed class PrivateBus : IAsyncDisposable
+    internal sealed class PrivateBus : IAsyncDisposable
     {
         private readonly string _directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "openxlr-keys-" + Guid.NewGuid());
         private readonly string? _oldBus = Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS");

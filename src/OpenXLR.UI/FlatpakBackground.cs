@@ -10,14 +10,14 @@ internal static class FlatpakBackground
 {
     internal const string Interface = "org.freedesktop.portal.Background";
 
-    internal static async Task ConfigureAsync(bool audio, bool window, CancellationToken cancel = default)
+    internal static async Task<bool> ConfigureAsync(bool audio, bool window, CancellationToken cancel = default)
     {
         using var connection = new DBusConnection(DesktopBus.SessionAddress());
         await connection.ConnectAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(3), cancel);
-        await ConfigureAsync(new DesktopBus(connection), audio, window, cancel);
+        return await ConfigureAsync(new DesktopBus(connection), audio, window, cancel);
     }
 
-    internal static async Task ConfigureAsync(DesktopBus bus, bool audio, bool window, CancellationToken cancel)
+    internal static async Task<bool> ConfigureAsync(DesktopBus bus, bool audio, bool window, CancellationToken cancel)
     {
         bool enabled = audio || window;
         var result = await bus.Request("RequestBackground", "sa{sv}", token => (ref MessageWriter w) =>
@@ -32,8 +32,9 @@ internal static class FlatpakBackground
                 ["dbus-activatable"] = false,
             });
         }, cancel, Interface);
-        if (!result.TryGetValue("background", out var background) || !background.GetBool()
+        if (!result.TryGetValue("background", out var background) || (enabled && !background.GetBool())
             || !result.TryGetValue("autostart", out var autostart) || autostart.GetBool() != enabled)
             throw new InvalidOperationException(Localization.Localizer.Text("FlatpakBackgroundRefused"));
+        return background.GetBool();
     }
 }

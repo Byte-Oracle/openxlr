@@ -84,8 +84,8 @@ public static class Diagnostics
             await WriteCmd(Clean, work, "lsusb.txt", "lsusb");
             if (FlatpakEnvironment.IsFlatpak)
             {
-                CopyRedactedIfExists(Clean, Path.Combine(UiSettings.ConfigDir, "logs"), "daemon.log", work);
-                CopyRedactedIfExists(Clean, Path.Combine(UiSettings.ConfigDir, "logs"), "daemon.log.old", work);
+                CopyRedactedIfExists(Clean, Path.Combine(UiSettings.ConfigDir, "logs"), "daemon.log", work, 1152 * 1024);
+                CopyRedactedIfExists(Clean, Path.Combine(UiSettings.ConfigDir, "logs"), "daemon.log.old", work, 1152 * 1024);
             }
             else await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
                 "--since", "2 hours ago", "--no-pager");
@@ -498,10 +498,16 @@ public static class Diagnostics
         return text;
     }
 
-    private static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest)
+    private static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest, int? maximum = null)
     {
         string src = Path.Combine(dir, file);
         if (File.Exists(src))
-            File.WriteAllText(Path.Combine(dest, file), clean(File.ReadAllText(src)));
+        {
+            string text;
+            try { text = maximum is { } limit ? RegularFile.ReadText(src, limit) : File.ReadAllText(src); }
+            catch (Exception ex) when (maximum is not null && (ex is IOException or UnauthorizedAccessException))
+            { text = "Log unavailable: " + ex.Message; }
+            File.WriteAllText(Path.Combine(dest, file), clean(text));
+        }
     }
 }

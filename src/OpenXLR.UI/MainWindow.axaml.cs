@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private readonly DesktopKeys _desktopKeys;
     private readonly PlasmaVolumeRange? _volumeRange;
     private TrayIcon? _tray;
+    private FlatpakTray? _flatpakTray;
     private bool _reallyExit;
     private bool _hideToTrayPending;
     private readonly CancellationTokenSource _lifetime = new();
@@ -69,7 +70,8 @@ public partial class MainWindow : Window
                     try
                     {
                         var settings = UiSettings.Load();
-                        await FlatpakBackground.ConfigureAsync(settings.StartDaemonAtLogin, settings.OpenWindowAtLogin, _lifetime.Token);
+                        if (!await FlatpakBackground.ConfigureAsync(settings.StartDaemonAtLogin, settings.OpenWindowAtLogin, _lifetime.Token))
+                            throw new InvalidOperationException(Localizer.Text("FlatpakBackgroundRefused"));
                         if (setupError.Length == 0) OpenXlrPaths.WriteAtomic(OpenXlrPaths.ConfigFile("flatpak-notice"), "1\n");
                     }
                     catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { /* show again next time */ }
@@ -212,6 +214,11 @@ public partial class MainWindow : Window
 
     private void SetupTray()
     {
+        if (FlatpakEnvironment.IsFlatpak)
+        {
+            _flatpakTray = new FlatpakTray(ShowMixer, Quit);
+            return;
+        }
         try
         {
             var menu = new NativeMenu();
@@ -246,6 +253,8 @@ public partial class MainWindow : Window
 
     private void DisposeTray()
     {
+        _flatpakTray?.Dispose();
+        _flatpakTray = null;
         if (_tray is null) return;
         if (Avalonia.Application.Current is { } app)
             TrayIcon.GetIcons(app)?.Remove(_tray);

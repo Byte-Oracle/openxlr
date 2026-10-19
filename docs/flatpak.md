@@ -3,7 +3,8 @@
 Flatpak support is experimental. Distro packages remain the recommended
 installation. The Flatpak window owns its daemon: closing to the tray keeps
 audio running; Quit stops both. Stop the packaged daemon before launching
-the Flatpak, since they use the same control port.
+the Flatpak, since they use the same control port. Disable the native
+installation's login options before enabling Flatpak login startup.
 
 ## Startup and logs
 
@@ -14,7 +15,9 @@ without saving it. Desktop settings can revoke permission later.
 
 Restart daemon restarts the child without touching host services. Failed
 children are retried with a delay; a busy API port or owned daemon lock
-ends the attempt. There is no systemd watchdog. Private `logs/daemon.log`
+ends the attempt. A parent-process wait also stops the daemon if the
+window crashes. The tray uses the app's D-Bus namespace, including when
+the desktop tray host restarts. There is no systemd watchdog. Private `logs/daemon.log`
 under the app's configuration directory has one rotated copy. Collect
 diagnostics includes both instead of the journal.
 
@@ -51,3 +54,8 @@ Host plugin folders and yabridge are not exposed. Native editors need X11
 or XWayland. The native helper retains CLAP and VST3 support for compatible
 bundles imported into the app's private storage, provided their external
 dependencies are available in the sandbox.
+
+Desktop-specific helper features, such as Plasma's shared maximum-volume
+preference, require helpers not included in the Freedesktop runtime. The
+normal mixer volume controls still work. The installation doctor does not
+yet inventory the manual Flatpak host setup; use the exact paths above.

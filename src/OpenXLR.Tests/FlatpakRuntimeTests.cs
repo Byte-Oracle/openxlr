@@ -7,6 +7,14 @@ namespace OpenXLR.Tests;
 public sealed class FlatpakRuntimeTests
 {
     [Fact]
+    public async Task OwnerExitAndDaemonCancellationAreDifferent()
+    {
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        Assert.False(await FlatpakParentLifetime.WaitForOwnerAsync(Environment.ProcessId, cancelled.Token));
+        Assert.True(await FlatpakParentLifetime.WaitForOwnerAsync(int.MaxValue, CancellationToken.None));
+    }
+
+    [Fact]
     public void FlatpakNeverHandsItsWindowToTheNativeInstallation()
     {
         string? previous = Environment.GetEnvironmentVariable("FLATPAK_ID");

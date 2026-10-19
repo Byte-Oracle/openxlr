@@ -35,6 +35,7 @@ if (OpenXLR.Core.FlatpakEnvironment.IsFlatpak)
 {
     builder.Logging.ClearProviders();
     builder.Logging.AddProvider(new FlatpakLog(Path.Combine(OpenXLR.Core.OpenXlrPaths.ConfigDir, "logs", "daemon.log")));
+    builder.Services.AddHostedService<FlatpakParentLifetime>();
 }
 
 // Start the notifier before graph construction so progressing startup work
