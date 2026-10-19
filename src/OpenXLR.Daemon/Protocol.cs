@@ -217,6 +217,11 @@ public sealed record StateMessage
     [JsonPropertyName("state")] public DeviceState? State { get; init; }
     /// <summary>Submixer state; null until the mixer graph is built.</summary>
     [JsonPropertyName("mixer")] public MixerState? Mixer { get; init; }
+    /// <summary>
+    /// True while the submixer is on but its graph is not built because the
+    /// audio server did not answer at startup; the daemon keeps retrying.
+    /// </summary>
+    [JsonPropertyName("mixerWaiting")] public bool MixerWaiting { get; init; }
 
     /// <summary>
     /// Every selectable sink and source in the graph, real or virtual, so

@@ -2134,6 +2134,15 @@ until the dock connects again.
   which sits inside the kernel's ephemeral range. The daemon waits up
   to a minute for it and otherwise exits for systemd to retry; nothing
   needs to be configured.
+- "The mixer is waiting for the audio server": the daemon started, but
+  pipewire-pulse did not answer when the daemon built the mixer. A USB
+  device that stops responding can hold pipewire-pulse up for minutes.
+  The daemon tries again every 30 seconds at most and builds the mixer as
+  soon as the server answers, so you do not have to restart anything. A
+  profile recalled on connect meanwhile gets its mixer settings once the
+  mixer is up. If the warning stays, check the audio server with
+  `pactl info` and `journalctl --user -u pipewire-pulse -b`, and look for
+  USB errors with `journalctl -k -b | grep -i usb`.
 
 <a name="missing-plugins"></a>
 ### 5.4 ClipGuard greyed out, empty plugin picker
