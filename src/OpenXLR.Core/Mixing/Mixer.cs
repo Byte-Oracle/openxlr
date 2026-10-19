@@ -564,7 +564,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private string? _inputFallbackNoted;              // the source last reported as found by a later fragment
 
     /// <summary>Why the hardware input channels are silent although a source is present, or null.</summary>
-    public string? InputWarning { get { lock (_gate) return _inputWarning; } }
+    public string? InputWarning
+    {
+        get { lock (_gate) return _monitorWarning is null ? _inputWarning : _inputWarning is null ? _monitorWarning : $"{_inputWarning} {_monitorWarning}"; }
+    }
 
     /// <summary>Receives a line when the input source was found by a later fragment rather than the unit's serial.</summary>
     public Action<string>? InputNote { get; set; }
@@ -1191,7 +1194,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MixMuted = [.. _mixMuted],
                 Levels = new Dictionary<string, double>(_levels),
                 ChannelMuted = [.. _muted],
-                MonitorOutputs = [.. _monitorOutputs],
+                MonitorOutputs = SavedMonitorOutputsLocked(),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
                 KnownApps = [.. _apps.Values.Select(a => new SavedApp(a.Identity, a.Label, a.ChannelId))],
@@ -1288,7 +1291,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 : s.MonitorOutput is not null ? [s.MonitorOutput] : [];
             _monitorFeeds.Clear();
             foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
-            SetMonitorOutputsLocked(savedOutputs);
+            ReplaceMonitorChoiceLocked(savedOutputs);
             _enforcedSink = s.EnforcedDefaultSink;
             _enforcedSource = s.EnforcedDefaultSource;
 
@@ -1352,7 +1355,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MixMuted = [.. _mixMuted],
                 Levels = new Dictionary<string, double>(_levels),
                 ChannelMuted = [.. _muted],
-                MonitorOutputs = [.. _monitorOutputs],
+                MonitorOutputs = SavedMonitorOutputsLocked(),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AuxPortEnabled = _auxPortEnabled,
                 OutputVolume = _outputVolume,
@@ -1399,7 +1402,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
             }
             if (s.MonitorOutputs is not null)
-                SetMonitorOutputsLocked(s.MonitorOutputs);
+                ReplaceMonitorChoiceLocked(s.MonitorOutputs);
             else if (s.MonitorFeeds is not null)
                 SetMonitorOutputsLocked([.. _monitorOutputs]);   // relink with the recalled feeds
             _auxPortEnabled = s.AuxPortEnabled;
@@ -1750,11 +1753,19 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// </summary>
     public void SetMonitorOutputs(IReadOnlyList<string> sinkNames)
     {
-        lock (_gate) { if (_built) SetMonitorOutputsLocked(sinkNames); }
+        lock (_gate)
+        {
+            if (!_built) return;
+            // A choice made in generic mode is the user's own: it is kept when
+            // automatic mode brings the set-aside jacks back.
+            if (_primaryInput is not null && !sinkNames.Any(IsJack)) (_monitorFallback, _monitorWarning) = (null, null);
+            SetMonitorOutputsLocked(sinkNames);
+        }
     }
 
     private void SetMonitorOutputsLocked(IReadOnlyList<string> sinkNames)
     {
+        sinkNames = DivertJacksLocked(sinkNames);
         string? previousSink = ResolveDefaultSink(FollowMonitorOutput, _monitorOutputs);
         foreach (PortLink route in _monitorRoutes.Values) _pw.Unlink(route);
         _monitorRoutes.Clear();
@@ -1778,7 +1789,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         else _outputVolumeDue.Keep(FollowerOutputsLocked());
         // Feeds only make sense for selected outputs; drop the rest so a
         // stale choice never resurfaces when the output is ticked again.
-        foreach (string stale in _monitorFeeds.Keys.Where(o => !_monitorOutputs.Contains(o)).ToList())
+        foreach (string stale in _monitorFeeds.Keys.Where(o => !_monitorOutputs.Contains(o) && !IsSetAsideLocked(o)).ToList())
             _monitorFeeds.Remove(stale);
         // Several physical jacks on the same return pair cannot carry distinct
         // feeds. Keep every published member consistent with the audible one.

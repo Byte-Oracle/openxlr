@@ -138,6 +138,109 @@ public sealed partial class MonitorVolumeIntegrationTests
     }
 
     [MonitorPipeWireFact]
+    public async Task SupportedUnitNodesAreRefusedAndProJacksMoveAsideInGenericMode()
+    {
+        const string proSink = "alsa_output.usb-Elgato_Elgato_Wave_XLR_Pro_PROSER-00.pro-output-0";
+        const string proSource = "alsa_input.usb-Elgato_Elgato_Wave_XLR_Pro_PROSER-00.pro-input-0";
+        const string jack = proSink + "#hp1", speakers = "generic_monitor_speakers";
+        var pw = new PipeWireAdapter();
+        using var registry = pw.WatchGraph();
+        pw.CreateNullSink(proSink, "Simulated Pro raw sink");
+        pw.CreateVirtualMic(proSource, proSink + ".monitor", "Simulated Pro capture");
+        pw.CreateNullSink(speakers, "Desk speakers");
+        pw.CreateNullSink("generic_cam_signal", "Webcam signal");
+        pw.CreateVirtualMic("generic_cam", "generic_cam_signal.monitor", "Webcam microphone");
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["mixer"] = "true" }).Build();
+        var pro = new Unit("Wave XLR Pro", 0x00b4, "PROSER");
+        using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => [pro]);
+        devices.SweepOnce();   // detects and drives the simulated unit
+        var mixer = new MixerService(NullLogger<MixerService>.Instance, config, devices);
+        await mixer.StartAsync(CancellationToken.None);
+        try
+        {
+            PrimaryWait(() => mixer.Devices()!.Any(d => d.Name == "generic_cam") && mixer.Devices()!.Any(d => d.Name == proSource));
+            AudioNode proNode = mixer.Devices()!.Single(d => d.Name == proSource);
+            Assert.Equal(pro.Info.InstanceId, proNode.DrivenUnit);
+            AudioNode cam = mixer.Devices()!.Single(d => d.Name == "generic_cam");
+            Assert.Null(cam.DrivenUnit);
+            Assert.True(cam.Channels > 0);
+            Assert.Equal(cam.Channels, cam.Positions?.Count);
+
+            // The driven unit's own node is refused before anything changes.
+            string? refused = mixer.Apply(new() { Cmd = "setPrimaryInput", Source = proSource });
+            Assert.Contains("Elgato Wave XLR Pro", refused);
+            Assert.Contains("Automatic", refused);
+            Assert.True(devices.HardwareEnabled);
+            Assert.Null(mixer.Snapshot()!.PrimaryInput);
+
+            Assert.Null(mixer.Apply(new() { Cmd = "setMonitorOutputs", Devices = [jack] }));
+            Assert.Null(mixer.Apply(new() { Cmd = "setMonitorFeed", Device = jack, Mix = "monitor+monitor2" }));
+
+            // The default output is the unit's own sink: never a replacement, and
+            // test sinks are not hardware, so the monitor goes silent and says so.
+            pw.SetDefaultSink(proSink);
+            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput", Source = "generic_cam" }));
+            Assert.False(devices.HardwareEnabled);
+            Assert.Empty(mixer.Snapshot()!.MonitorOutputs);
+            Assert.Contains("monitor is silent", mixer.InputWarning);
+            Assert.Equal([jack], MixerSettings.Load()!.MonitorOutputs);
+            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput" }));
+            Assert.Equal([jack], mixer.Snapshot()!.MonitorOutputs);
+            Assert.DoesNotContain("Wave XLR Pro outputs", mixer.InputWarning ?? "");
+
+            // An ordinary default output takes the jack's place, for the whole
+            // generic session and across a restart, and the jack comes back with
+            // its feed in automatic mode.
+            pw.SetDefaultSink(speakers);
+            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput", Source = "generic_cam", CaptureMonoChannel = 1 }));
+            Assert.Equal([speakers], mixer.Snapshot()!.MonitorOutputs);
+            Assert.Contains("Desk speakers", mixer.InputWarning);
+            PrimaryWait(() => IncomingRouteLinks(speakers).Length >= 2);
+            MixerSettings saved = MixerSettings.Load()!;
+            Assert.Equal([jack], saved.MonitorOutputs);
+            Assert.Equal("monitor+monitor2", saved.MonitorFeeds[jack]);
+            await mixer.StopAsync(CancellationToken.None);
+            mixer.Dispose();
+            using var restartedDevices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => [pro]);
+            restartedDevices.SweepOnce();
+            mixer = new MixerService(NullLogger<MixerService>.Instance, config, restartedDevices);
+            await mixer.StartAsync(CancellationToken.None);
+            Assert.False(restartedDevices.HardwareEnabled);
+            Assert.Equal([speakers], mixer.Snapshot()!.MonitorOutputs);
+            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput" }));
+            Assert.Equal([jack], mixer.Snapshot()!.MonitorOutputs);
+            Assert.Equal("monitor+monitor2", mixer.Snapshot()!.MonitorFeeds[jack]);
+            Assert.Equal([jack], MixerSettings.Load()!.MonitorOutputs);
+
+            // With another output beside the jack the monitor stays there, and
+            // the saved order is kept: the first output is the one follow mode uses.
+            Assert.Null(mixer.Apply(new() { Cmd = "setMonitorOutputs", Devices = [speakers, jack] }));
+            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput", Source = "generic_cam" }));
+            Assert.Equal([speakers], mixer.Snapshot()!.MonitorOutputs);
+            Assert.Contains("other selected outputs", mixer.InputWarning);
+            Assert.Equal([speakers, jack], MixerSettings.Load()!.MonitorOutputs);
+            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput" }));
+            Assert.Equal([speakers, jack], mixer.Snapshot()!.MonitorOutputs);
+
+            // An output the user picks in generic mode is theirs, so automatic mode keeps it beside the jack.
+            Assert.Null(mixer.Apply(new() { Cmd = "setMonitorOutputs", Devices = [jack] }));
+            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput", Source = "generic_cam" }));
+            Assert.Equal([speakers], mixer.Snapshot()!.MonitorOutputs);
+            Assert.Null(mixer.Apply(new() { Cmd = "setMonitorOutputs", Devices = [speakers] }));
+            Assert.DoesNotContain("Wave XLR Pro outputs", mixer.InputWarning ?? "");
+            Assert.Null(mixer.Apply(new() { Cmd = "setPrimaryInput" }));
+            Assert.Equal([jack, speakers], mixer.Snapshot()!.MonitorOutputs);
+        }
+        finally
+        {
+            if (mixer.Built) await mixer.StopAsync(CancellationToken.None);
+            mixer.Dispose();
+            pw.TearDown();
+            File.Delete(MixerSettings.DefaultPath);
+        }
+    }
+
+    [MonitorPipeWireFact]
     public void NewCaptureSourcesTriggerADeviceListPushWithoutAnOutputChange()
     {
         var pw = new PipeWireAdapter();

@@ -109,6 +109,31 @@ public sealed class DeviceSwitchTests
         });
     }
 
+    [Fact]
+    public void GenericMicrophoneModeStillRecognisesTheNodesOfAttachedUnits()
+    {
+        WithConfigDir(() =>
+        {
+            var attached = new List<IAudioDevice>();
+            using var manager = new DeviceManager(NullLogger<DeviceManager>.Instance,
+                new ConfigurationBuilder().Build(), () => [.. attached]);
+            manager.SetHardwareEnabled(false);
+            int pushes = 0;
+            manager.StateChanged += _ => pushes++;
+            const string node = "alsa_input.usb-Elgato_Systems_Elgato_Wave_XLR_SER1-00.mono-fallback";
+            manager.SweepOnce();
+            Assert.Null(manager.SupportedUnitFor(node));
+            // A unit plugged in while released is listed, never opened, and clients hear of it.
+            var wave = new CountingDevice(WaveXlr with { Location = new UsbLocation(1, 4, "1-4", "SER1") });
+            attached.Add(wave);
+            Assert.True(SpinWait.SpinUntil(() => { manager.SweepOnce(); return manager.SupportedUnitFor(node) is not null; }, TimeSpan.FromSeconds(5)));
+            Assert.Equal((wave.Info.InstanceId, "Elgato Wave XLR"), manager.SupportedUnitFor(node));
+            Assert.False(wave.Connected);
+            Assert.Equal(1, pushes);
+            Assert.Null(manager.SupportedUnitFor("alsa_input.usb-046d_Webcam-02.analog-stereo"));
+        });
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

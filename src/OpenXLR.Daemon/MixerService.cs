@@ -67,7 +67,11 @@ public sealed class MixerService : IHostedService, IDisposable
         _lifetime = lifetime;
         EditorPolicy = editorPolicy ?? new NativeEditorPolicy();
         _pipeWire = new PipeWireAdapter(_progress.Mark, note => _log.LogInformation("{msg}", note));
-        _mixer = new(_pipeWire) { InputNote = note => _log.LogWarning("hardware input: {note}", note) };
+        _mixer = new(_pipeWire)
+        {
+            InputNote = note => _log.LogWarning("hardware input: {note}", note),
+            IsSupportedUnitNode = node => devices.SupportedUnitFor(node) is not null,
+        };
         _saves = new SettingsSaver(
             () => _mixer.ExportSettings().Save(),
             error =>
@@ -185,7 +189,13 @@ public sealed class MixerService : IHostedService, IDisposable
     }
 
     /// <summary>Selectable sinks and sources, or null when the mixer is off.</summary>
-    public IReadOnlyList<AudioNode>? Devices() => _mixer.Built ? _mixer.ListDevices() : null;
+    /// <summary>
+    /// Selectable sinks and sources, or null when the mixer is off. Each
+    /// node of an attached supported interface names that unit in
+    /// <see cref="AudioNode.DrivenUnit"/>.
+    /// </summary>
+    public IReadOnlyList<AudioNode>? Devices()
+        => _mixer.Built ? [.. _mixer.ListDevices().Select(node => _devices.SupportedUnitFor(node.Name) is { } unit ? node with { DrivenUnit = unit.Id } : node)] : null;
 
     /// <summary>Live stereo levels, or null when the mixer is off.</summary>
     public IReadOnlyDictionary<string, double[]>? Meters() => _mixer.Built ? _mixer.ReadMeters() : null;
@@ -449,6 +459,11 @@ public sealed class MixerService : IHostedService, IDisposable
             switch (cmd.Cmd)
             {
                 case "setPrimaryInput":
+                    // A supported unit's node is no generic microphone: generic
+                    // mode would release the unit, its card would go back to
+                    // the profile it had and the node could vanish under XLR 1.
+                    if (cmd.Source is not null && _devices.SupportedUnitFor(cmd.Source) is { } unit)
+                        return $"setPrimaryInput: {cmd.Source} belongs to the {unit.Name}, which OpenXLR supports. Choose Automatic Elgato interface and pick that unit as the primary interface instead.";
                     _saves.RunSaved(() => _mixer.SetPrimaryInput(cmd.Source is null ? null
                         : new PrimaryInputBinding(cmd.Source, cmd.CaptureMonoChannel ?? 0), settings => settings.Save()));
                     _devices.SetHardwareEnabled(_mixer.PrimaryInput is null);

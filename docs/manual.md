@@ -201,12 +201,25 @@ configuration.
 #### Use another microphone as XLR 1
 
 In Options, AUDIO, choose **Choose primary microphone...**. Pick the capture
-source and its microphone port, numbered from 1, then Save. The first port
-is usually right for a USB microphone; a multichannel interface may put the
-microphone on another port. OpenXLR takes one mono port and feeds both sides
-of XLR 1. You keep its sends, software low cut, software ClipGuard, insert
-chain and Sound Check. Set preamp gain and phantom power on the microphone
-or its own interface; OpenXLR does not invent USB controls for other brands.
+source and its microphone port, then Save. Ports are numbered from 1 and
+named by the channel PipeWire reports, such as "1 (MONO)" for a mono USB
+microphone, "2 (FR)" for the right side of a webcam or "3 (AUX2)" on a
+multichannel interface. The list stops at the source's channel count, and a
+new source starts at port 1, which is usually right for a USB microphone; a
+multichannel interface may put the microphone on another port. When PipeWire
+does not report the layout, the ports are plain numbers from 1 to 64.
+OpenXLR takes one mono port and feeds both sides of XLR 1. You keep its
+sends, software low cut, software ClipGuard, insert chain and Sound Check.
+Set preamp gain and phantom power on the microphone or its own interface;
+OpenXLR does not invent USB controls for other brands.
+
+The picker leaves out the capture sources of every attached interface
+OpenXLR supports, whether it drives that unit or not, and the daemon refuses
+them too. Generic mode releases those units, and a released unit's card can
+switch back to its own profile and rename its nodes, which would leave XLR 1
+silent with no hardware controls. To use a supported unit as the
+microphone, choose **Automatic Elgato interface** and pick the unit as the
+primary interface instead.
 
 This enables generic microphone mode. Elgato USB control is released,
 including additional interfaces, and the window hides hardware gain,
@@ -214,6 +227,17 @@ phantom, hardware effects, headphone controls and the other structural
 hardware inputs. Pick an ordinary PipeWire playback device under MONITOR;
 Elgato-specific output selectors and USB Aux routing are unavailable.
 The channel and mix nodes are kept, so application routes stay intact.
+
+The Wave XLR Pro's headphone and Line Out outputs play through the unit, so
+they stop working in generic mode. If the monitor was on one of them,
+OpenXLR moves it to the system default output, or to the first hardware
+output when the default is one of OpenXLR's own devices or belongs to a
+supported interface, and a warning names where it went. If another output
+was selected next to the Pro's, the monitor stays there instead. If nothing
+suitable exists, the monitor is silent and the warning asks you to pick an
+output. The Pro outputs stay saved. Returning to automatic mode selects them
+again with their feeds and drops the output OpenXLR picked in their place.
+An output you chose yourself during generic mode is kept.
 
 Changing the source or port mutes the hardware channels in all monitor mixes.
 Unmute XLR 1 in the desired monitor mix deliberately when you want to hear
@@ -234,8 +258,8 @@ Choose **Automatic Elgato interface** in the same picker to
 resume USB control and the interface's normal input routing.
 Automatic input keeps software monitoring while no connected interface can
 provide the Pro's direct hardware path, even if a Pro output remains saved.
-The port field is only required for a generic source; Automatic can be saved
-with it empty.
+The port list is only used for a generic source; it is disabled while
+Automatic is selected.
 Disabling the software mixer restores hardware-only control. The selected
 generic source is remembered and used again when the software mixer is enabled.
 

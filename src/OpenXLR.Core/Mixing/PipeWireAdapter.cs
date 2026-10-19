@@ -1500,9 +1500,11 @@ public sealed class PipeWireAdapter
                             !string.IsNullOrEmpty(api.GetString());
             // Sinks carry their desktop level so keys and dials can show it.
             var level = isSink ? SinkLevel(info) : null;
+            // Sources carry their port layout so a picker can name each port.
+            (int? channels, string[]? positions) = isSource ? PortLayout(props) : (null, null);
             found.Add(new AudioNode(name, desc, isSink ? AudioNodeKind.Sink : AudioNodeKind.Source,
                 name.StartsWith("OpenXLR", StringComparison.Ordinal), physical)
-                { Volume = level?.DesktopVolume, Muted = level?.Muted });
+                { Volume = level?.DesktopVolume, Muted = level?.Muted, Channels = channels, Positions = positions });
         }
 
         // The Pro's physical outputs all share its hardware monitor bus, fed by
@@ -1536,6 +1538,33 @@ public sealed class PipeWireAdapter
             found.Remove(pro);
         }
         return found;
+    }
+
+    /// <summary>
+    /// A node's channel count and channel positions from its properties:
+    /// <c>audio.channels</c> is a number and <c>audio.position</c> a list
+    /// PipeWire writes as text ("[ FL, FR ]", or "FL,FR" from pactl). The
+    /// positions are dropped when their count disagrees with the channels.
+    /// </summary>
+    internal static (int? Channels, string[]? Positions) PortLayout(JsonElement props)
+    {
+        int? channels = props.TryGetProperty("audio.channels", out JsonElement c) && c.ValueKind == JsonValueKind.Number
+            && c.TryGetInt32(out int n) && n is > 0 and <= 64 ? n : null;
+        string[]? positions = null;
+        if (props.TryGetProperty("audio.position", out JsonElement p))
+        {
+            IEnumerable<string> names = p.ValueKind switch
+            {
+                JsonValueKind.String => (p.GetString() ?? "").Split([',', ' ', '[', ']'], StringSplitOptions.RemoveEmptyEntries),
+                JsonValueKind.Array => p.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString() ?? ""),
+                _ => [],
+            };
+            positions = [.. names.Where(name => name.Length is > 0 and <= 16 && name.All(char.IsAsciiLetterOrDigit))];
+            if (positions.Length == 0 || positions.Length > 64) positions = null;
+        }
+        channels ??= positions?.Length;
+        if (positions is not null && positions.Length != channels) positions = null;
+        return (channels, positions);
     }
 
     /// <summary>
@@ -1932,6 +1961,17 @@ public sealed record AudioNode(string Name, string Description, AudioNodeKind Ki
     public double? Volume { get; init; }
     /// <summary>A sink's mute, null for sources and pseudo-outputs.</summary>
     public bool? Muted { get; init; }
+    /// <summary>A source's channel count from <c>audio.channels</c>, null for sinks and when PipeWire does not say.</summary>
+    public int? Channels { get; init; }
+    /// <summary>A source's channel positions in port order ("MONO", "FL", "AUX2"), null for sinks and when unknown.</summary>
+    public IReadOnlyList<string>? Positions { get; init; }
+    /// <summary>
+    /// The instance id of the attached supported interface whose card
+    /// publishes this node, or null. Set by the daemon, which knows the
+    /// attached units; a model id when two attached units of one model
+    /// cannot be told apart by their node names.
+    /// </summary>
+    public string? DrivenUnit { get; init; }
 }
 
 /// <summary>One of the daemon's own sinks: its linear volume (1.0 = unity) and mute.</summary>

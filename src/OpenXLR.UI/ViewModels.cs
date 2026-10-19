@@ -957,7 +957,11 @@ public sealed partial class MainViewModel : ViewModelBase
             string desc = d["description"]?.GetValue<string>() ?? name;
             bool own = d["isOwn"]?.GetValue<bool>() ?? false;
             bool physical = d["isPhysical"]?.GetValue<bool>() ?? false;
-            var item = new AudioDeviceItem(name, desc, own, physical);
+            int? channels = d["channels"] is JsonValue c && c.TryGetValue(out int n) && n > 0 ? n : null;
+            string? positions = d["positions"] is JsonArray p && p.Count > 0
+                ? string.Join(',', p.Select(x => x is JsonValue v && v.TryGetValue(out string? s) ? s.Replace(",", "") : "")) : null;
+            string? driven = d["drivenUnit"] is JsonValue u && u.TryGetValue(out string? unit) ? unit : null;
+            var item = new AudioDeviceItem(name, desc, own, physical, channels, positions, driven);
             (IsSink(d["kind"]) ? sinks : sources).Add(item);
         }
         Replace(Outputs, sinks);
@@ -1025,7 +1029,9 @@ public sealed partial class MainViewModel : ViewModelBase
 
     private static void Replace(ObservableCollection<AudioDeviceItem> target, List<AudioDeviceItem> fresh)
     {
-        if (target.Count == fresh.Count && target.Select(x => x.Name).SequenceEqual(fresh.Select(x => x.Name)))
+        // Compared by value: a source whose ports or owning unit became known
+        // later is replaced, so a picker never offers what the daemon refuses.
+        if (target.SequenceEqual(fresh))
             return;   // unchanged, leave the collection (and any open dropdown) alone
         target.Clear();
         foreach (AudioDeviceItem d in fresh) target.Add(d);
@@ -1334,10 +1340,20 @@ public sealed record ChannelChoice(string Id, string Name)
     public override string ToString() => Name;
 }
 
-/// <summary>One selectable sink or source. Own nodes are OpenXLR's own.</summary>
-public sealed record AudioDeviceItem(string Name, string Description, bool IsOwn, bool IsPhysical = false)
+/// <summary>
+/// One selectable sink or source. Own nodes are OpenXLR's own. A source
+/// carries its channel count and its channel positions, comma-joined so the
+/// record compares by value; <paramref name="DrivenUnit"/> names the attached
+/// supported interface the node belongs to, or is null.
+/// </summary>
+public sealed record AudioDeviceItem(string Name, string Description, bool IsOwn, bool IsPhysical = false,
+    int? Channels = null, string? Positions = null, string? DrivenUnit = null)
 {
     public string Label => IsOwn ? Localizer.Format("OwnDeviceLabel", Description) : Description;
+
+    /// <summary>The position of a zero-based port ("MONO", "FR", "AUX2"), or null when unknown.</summary>
+    public string? PositionOf(int port)
+        => Positions?.Split(',') is { } names && port >= 0 && port < names.Length ? names[port] : null;
 }
 
 /// <summary>

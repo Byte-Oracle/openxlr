@@ -51,10 +51,32 @@ public partial class OptionsWindow : Window
         _desktopKeys = desktopKeys;
     }
 
+    /// <summary>One port of a capture source, numbered from 1 and named by its channel position when PipeWire gives one.</summary>
+    internal sealed record PortChoice(int Index, string Label);
+
+    /// <summary>
+    /// The ports a source offers: one per channel when PipeWire reports the
+    /// count, else the 64 the command accepts. A saved port past the count
+    /// stays listed, so opening the picker never changes the binding by itself.
+    /// </summary>
+    internal static System.Collections.Generic.List<PortChoice> PortChoices(AudioDeviceItem? device, int? keep = null)
+    {
+        int count = Math.Clamp(device?.Channels ?? 64, 1, 64);
+        var ports = Enumerable.Range(0, count).Select(i => new PortChoice(i,
+            device?.PositionOf(i) is { Length: > 0 } position
+                ? Localizer.Format("PrimaryMicrophonePortName", i + 1, position)
+                : (i + 1).ToString(System.Globalization.CultureInfo.CurrentCulture))).ToList();
+        if (keep is int saved && saved >= count && saved < 64)
+            ports.Add(new(saved, (saved + 1).ToString(System.Globalization.CultureInfo.CurrentCulture)));
+        return ports;
+    }
+
     private async void OnPrimaryMicrophone(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not OptionsViewModel vm) return;
-        var choices = vm.Main.Inputs.Where(i => !i.IsOwn)
+        // A supported interface's own nodes are left out: generic mode would
+        // release the unit and its node could vanish. The daemon refuses them.
+        var choices = vm.Main.Inputs.Where(i => !i.IsOwn && i.DrivenUnit is null)
             .Select(i => new DeviceChoice(i.Name, i.Description)).ToList();
         choices.Insert(0, new(null, Localizer.Text("PrimaryInputAutomatic")));
         if (vm.Main.PrimaryInputSource is { } missing && !choices.Any(c => c.Name == missing))
@@ -64,8 +86,17 @@ public partial class OptionsWindow : Window
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
         source.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<DeviceChoice>((choice, _) =>
             new TextBlock { Text = choice?.Label, TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis });
-        var channel = new NumericUpDown { Name = "PrimaryInputChannel", Minimum = 1, Maximum = 64,
-            Increment = 1, FormatString = "0", Value = vm.Main.PrimaryInputChannel + 1 };
+        var channel = new ComboBox { Name = "PrimaryInputChannel", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
+        channel.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PortChoice>((port, _) =>
+            new TextBlock { Text = port?.Label, TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis });
+        AudioDeviceItem? DeviceOf(DeviceChoice? choice) => choice?.Name is { } name ? vm.Main.Inputs.FirstOrDefault(i => i.Name == name) : null;
+        void ListPorts(int? keep)
+        {
+            var ports = PortChoices(DeviceOf(source.SelectedItem as DeviceChoice), keep);
+            channel.ItemsSource = ports;
+            channel.SelectedItem = ports.FirstOrDefault(p => p.Index == (keep ?? 0)) ?? ports[0];
+        }
+        ListPorts(vm.Main.PrimaryInputSource is null ? null : vm.Main.PrimaryInputChannel);
         Avalonia.Automation.AutomationProperties.SetName(source, Localizer.Text("ChoosePrimaryMicrophone"));
         Avalonia.Automation.AutomationProperties.SetName(channel, Localizer.Text("PrimaryMicrophonePort"));
         var save = new Button { Name = "ApplyPrimaryInput", Content = Localizer.Text("Save"), IsDefault = true };
@@ -92,16 +123,16 @@ public partial class OptionsWindow : Window
             bool manual = (source.SelectedItem as DeviceChoice)?.Name is not null;
             source.IsEnabled = !saving;
             channel.IsEnabled = !saving && manual;
-            save.IsEnabled = !saving && (!manual || channel.Value is decimal port
-                && port is >= 1 and <= 64 && port == decimal.Truncate(port));
+            save.IsEnabled = !saving && (!manual || channel.SelectedItem is PortChoice);
         }
-        source.SelectionChanged += (_, _) => RefreshControls();
-        channel.PropertyChanged += (_, change) => { if (change.Property == NumericUpDown.ValueProperty) RefreshControls(); };
+        // A different source starts at its first port, the usual microphone.
+        source.SelectionChanged += (_, _) => { ListPorts(null); RefreshControls(); };
+        channel.SelectionChanged += (_, _) => RefreshControls();
         RefreshControls();
         save.Click += async (_, _) =>
         {
             if (!save.IsEnabled || source.SelectedItem is not DeviceChoice choice) return;
-            int port = choice.Name is null ? 0 : (int)channel.Value!.Value - 1;
+            int port = choice.Name is null ? 0 : ((PortChoice)channel.SelectedItem!).Index;
             saving = true;
             RefreshControls();
             string? error = await vm.Client.SetPrimaryInputAsync(choice.Name, port);

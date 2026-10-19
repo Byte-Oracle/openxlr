@@ -1,3 +1,5 @@
+using OpenXLR.Core.Devices;
+
 namespace OpenXLR.Core.Mixing;
 
 /// <summary>
@@ -21,6 +23,35 @@ public static class InterfaceNodes
             start = dot + 1;
         int end = nodeName.IndexOf('.', start);
         return end < 0 ? nodeName[start..] : nodeName[start..end];
+    }
+
+    /// <summary>
+    /// The attached supported unit whose card publishes an ALSA node, as its
+    /// instance id and display name, or null for any other node. The card part
+    /// of the name (see <see cref="CardKey"/>) is matched against each unit's
+    /// fragments among the attached units, and the longest fragment wins, so a
+    /// unit's serial beats another unit's model name. Two units whose best
+    /// fragments are equal, the same model without serials, cannot be told
+    /// apart: the node is still theirs, under the model id.
+    /// </summary>
+    public static (string Id, string Name)? Owner(string nodeName, IReadOnlyList<DeviceInfo> attached)
+    {
+        if (!nodeName.StartsWith("alsa_", StringComparison.Ordinal)) return null;
+        string card = CardKey(nodeName);
+        DeviceInfo? best = null;
+        int bestLength = 0;
+        bool tie = false;
+        foreach (DeviceInfo unit in attached)
+        {
+            int length = unit.FragmentsAmong(attached)
+                .Where(f => f.Length > 0 && card.Contains(f, StringComparison.OrdinalIgnoreCase))
+                .Select(f => f.Length).DefaultIfEmpty(0).Max();
+            if (length == 0 || length < bestLength) continue;
+            tie = length == bestLength && best is not null && best.InstanceId != unit.InstanceId;
+            if (length > bestLength) { best = unit; bestLength = length; }
+        }
+        if (best is null) return null;
+        return (tie ? $"{best.VendorId:x4}:{best.ProductId:x4}" : best.InstanceId, best.DisplayName);
     }
 
     /// <summary>
