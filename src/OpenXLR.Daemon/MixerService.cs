@@ -262,7 +262,7 @@ public sealed class MixerService : IHostedService, IDisposable
             MixerSettings? saved = MixerSettings.Load(MixerSettings.DefaultPath, out string? settingsWarning);
             if (settingsWarning is not null)
                 _log.LogWarning("mixer settings: {warning}{fallback}", settingsWarning, saved is null ? "; starting with defaults" : "");
-            _mixer.SetPrimaryInput(saved?.PrimaryInput);
+            _mixer.SetInputBindings(saved?.InputBindings);
             UpdateInputDeviceHint();
             _mixer.Build(MixerConfig.FromSettings(saved), output);
 
@@ -315,11 +315,16 @@ public sealed class MixerService : IHostedService, IDisposable
     }
 
     // Channel feeds follow the actively driven interface; the node name
-    // contains the model, and the serial, as udev spells them.
-    private void UpdateInputDeviceHint() => _mixer.SetInputDeviceHint(
-        _devices.ActiveNodeNameFragments,
-        _devices.ActiveCapabilities?.OutputRouting ?? false,
-        modelFallback: _devices.AttachedCount <= 1);
+    // contains the model, and the serial, as udev spells them. True when
+    // the driven or attached units changed what clients see.
+    private bool UpdateInputDeviceHint()
+    {
+        _mixer.SetInputDeviceHint(
+            _devices.ActiveNodeNameFragments,
+            _devices.ActiveCapabilities?.OutputRouting ?? false,
+            modelFallback: _devices.AttachedCount <= 1);
+        return _mixer.SetDrivenUnit(_devices.ActiveInfo?.InstanceId) | _mixer.SetAttached(_devices.AttachedCount > 0);
+    }
 
     internal void SweepOnce()
     {
@@ -330,7 +335,7 @@ public sealed class MixerService : IHostedService, IDisposable
             stop.ThrowIfCancellationRequested();
             if (GraphLost()) return;
             stop.ThrowIfCancellationRequested();
-            UpdateInputDeviceHint();
+            if (UpdateInputDeviceHint()) Changed?.Invoke();
             stop.ThrowIfCancellationRequested();
             // Which input jacks the device actually has, so a client
             // does not offer a strip the hardware cannot feed.
@@ -458,19 +463,27 @@ public sealed class MixerService : IHostedService, IDisposable
         {
             switch (cmd.Cmd)
             {
+                case "setInputBinding":
                 case "setPrimaryInput":
-                    // A supported unit's node is no generic microphone: generic
-                    // mode would release the unit, its card would go back to
-                    // the profile it had and the node could vanish under XLR 1.
+                {
+                    // setPrimaryInput is the earlier form, with channel "xlr1".
+                    string strip = cmd.Cmd == "setPrimaryInput" ? "xlr1" : cmd.Channel!;
+                    // A supported unit's node is no source for a strip yet:
+                    // XLR 1 bound to a source releases every unit, its card
+                    // would go back to the profile it had and the node could
+                    // vanish under the strip.
                     if (cmd.Source is not null && _devices.SupportedUnitFor(cmd.Source) is { } unit)
-                        return $"setPrimaryInput: {cmd.Source} belongs to the {unit.Name}, which OpenXLR supports. Choose Automatic Elgato interface and pick that unit as the primary interface instead.";
-                    _saves.RunSaved(() => _mixer.SetPrimaryInput(cmd.Source is null ? null
-                        : new PrimaryInputBinding(cmd.Source, cmd.CaptureMonoChannel ?? 0), settings => settings.Save()));
-                    _devices.SetHardwareEnabled(_mixer.PrimaryInput is null);
+                        return cmd.Cmd == "setPrimaryInput"
+                            ? $"setPrimaryInput: {cmd.Source} belongs to the {unit.Name}, which OpenXLR supports. Choose Automatic Elgato interface and pick that unit as the primary interface instead."
+                            : $"setInputBinding: {cmd.Source} belongs to the {unit.Name}, which OpenXLR supports. Pick that unit as the primary interface instead.";
+                    _saves.RunSaved(() => _mixer.SetInputBinding(strip, cmd.Source is null ? null
+                        : new SourceBinding(cmd.Source, 0, cmd.CaptureMonoChannel ?? 0), settings => settings.Save()));
+                    _devices.SetHardwareEnabled(_mixer.InputBinding("xlr1") is null);
                     UpdateInputDeviceHint();
                     SyncOutputSelectors();
                     Changed?.Invoke();
                     return null;
+                }
                 case "createCaptureChannel":
                 case "createChannel":
                 case "renameChannel":

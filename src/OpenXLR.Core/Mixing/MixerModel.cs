@@ -138,8 +138,14 @@ public sealed record ChannelDefinition(string Id, string Name)
 /// <summary>Live mixer state pushed to clients.</summary>
 public sealed record MixerState
 {
+    /// <summary>XLR 1's source binding in the earlier shape, or null while XLR 1 takes the interface.</summary>
     public PrimaryInputBinding? PrimaryInput { get; init; }
+    /// <summary>XLR 1's feed exists, whatever it is bound to.</summary>
     public bool PrimaryInputConnected { get; init; }
+    /// <summary>XLR 1's signal has no hardware low cut in front of it: a source binding, or a unit without one.</summary>
+    public bool SoftLowCutApplicable { get; init; }
+    /// <summary>XLR 1's signal has no hardware ClipGuard in front of it: a source binding, or a unit without one.</summary>
+    public bool SoftClipGuardApplicable { get; init; }
     public required IReadOnlyList<MixStatus> Mixes { get; init; }
     public required IReadOnlyList<ChannelStatus> Channels { get; init; }
     public IReadOnlyList<ExclusiveGroupDefinition> ExclusiveGroups { get; init; } = [];
@@ -233,6 +239,18 @@ public sealed partial record ChannelStatus(string Id, string Name,
 {
     /// <summary>The single source port a capture channel takes, or null when it takes a pair.</summary>
     public int? CaptureMonoChannel { get; init; }
+
+    /// <summary>What feeds the channel: the interface's pair, an exact source, or applications.</summary>
+    public ChannelBinding Binding { get; init; } = new("apps");
+
+    /// <summary>The channel's feed exists; always true for an application channel.</summary>
+    public bool BindingConnected { get; init; } = true;
+
+    /// <summary>Why the channel's source is silent, or null.</summary>
+    public string? BindingWarning { get; init; }
+
+    /// <summary>The driven unit's input stage this channel carries, or null.</summary>
+    public UnitInputStatus? UnitInput { get; init; }
 }
 
 

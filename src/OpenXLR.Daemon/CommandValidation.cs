@@ -12,6 +12,15 @@ namespace OpenXLR.Daemon;
 /// </summary>
 public static class CommandValidation
 {
+    /// <summary>
+    /// A strip's binding: no source and no port returns it to the interface;
+    /// a source takes capturePair 0 and a mono port from 0 to 63, default 0.
+    /// </summary>
+    private static string? CheckBinding(Command cmd) => cmd.Source is null
+        ? cmd.CapturePair == 0 && cmd.CaptureMonoChannel is null ? null : $"{cmd.Cmd}: returning the strip to the interface takes no port"
+        : CaptureBinding.IsValid(cmd.Source, cmd.CapturePair, cmd.CaptureMonoChannel ?? 0) ? null
+            : $"{cmd.Cmd}: need an external source and a mono port from 0 to 63, with capturePair 0";
+
     /// <summary>The additional-interface commands: an instance id, and a boolean or a finite number.</summary>
     internal static string? CheckWave(Command cmd)
     {
@@ -70,11 +79,14 @@ public static class CommandValidation
             case "setWindowsPluginEnabled":
             case "deleteWindowsPlugin":
                 return CheckPluginPath(cmd);
+            case "setInputBinding":
+                if (cmd.Channel == "aux") return "setInputBinding: Aux In stays on the interface; bind 'xlr1' or 'xlr2'";
+                if (cmd.Channel is null || TooLong(cmd.Channel, 36) || !layout.HasBindableStrip(cmd.Channel))
+                    return "setInputBinding: need channel 'xlr1' or 'xlr2'";
+                return CheckBinding(cmd);
             case "setPrimaryInput":
-                return cmd.Source is null
-                    ? cmd.CapturePair == 0 && cmd.CaptureMonoChannel is null ? null : "setPrimaryInput: clearing the source takes no port"
-                    : CaptureBinding.IsValid(cmd.Source, cmd.CapturePair, cmd.CaptureMonoChannel ?? 0) ? null
-                        : "setPrimaryInput: need an external source and a mono port from 0 to 63, with capturePair 0";
+                // The earlier form of setInputBinding with channel "xlr1".
+                return layout.HasBindableStrip("xlr1") ? CheckBinding(cmd) : "setPrimaryInput: the layout has no XLR 1 strip";
             case "createCaptureChannel":
                 if (BadName(cmd.Name)) return "createCaptureChannel: name must contain 1 to 60 printable characters";
                 return CaptureBinding.IsValid(cmd.Source, cmd.CapturePair, cmd.CaptureMonoChannel) ? null

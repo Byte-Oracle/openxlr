@@ -18,6 +18,8 @@ public interface ILayoutInfo
     bool IsMonitorFeed(string feed);
     /// <summary>A currently selected monitor output, or the shared key of a device's pseudo-outputs.</summary>
     bool IsMonitorOutput(string device);
+    /// <summary>A hardware strip that takes an input binding: XLR 1 or XLR 2, never Aux In.</summary>
+    bool HasBindableStrip(string id) => Mixer.IsBindableStrip(id) && HasChannel(id);
     /// <summary>An insert chain key: an XLR input id or "mix:&lt;id&gt;".</summary>
     bool IsInsertKey(string key);
     /// <summary>The channels an insert chain carries: one on an XLR input, two on a mix.</summary>

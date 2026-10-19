@@ -13,7 +13,16 @@ namespace OpenXLR.Core.Mixing;
 /// </summary>
 public sealed record MixerSettings
 {
-    /// <summary>Generic primary microphone, or null for the supported interface. Machine wiring, never profile state.</summary>
+    /// <summary>
+    /// Hardware strips bound to a source, by strip id (<c>xlr1</c>, <c>xlr2</c>);
+    /// a strip left out takes the interface's pair. Machine wiring, never profile state.
+    /// </summary>
+    public Dictionary<string, SourceBinding>? InputBindings { get; init; }
+
+    /// <summary>
+    /// XLR 1's source in files written before <see cref="InputBindings"/>.
+    /// Loading moves it into <see cref="InputBindings"/>, so a save never writes it.
+    /// </summary>
     public PrimaryInputBinding? PrimaryInput { get; init; }
 
     /// <summary>Ordered application channels; null preserves the legacy defaults.</summary>

@@ -347,6 +347,7 @@ public sealed class WebSocketHub
             case "rescanPlugins":
                 await ReplyOperationAsync(await Task.Run(() => InstallPlugin(_ => new OpenXLR.Core.Mixing.InstallOutcome(true, "", []))));
                 break;
+            case "setInputBinding":
             case "setPrimaryInput":
             case "setInserts":
                 // Profile recall and microphone-mode changes share this gate.

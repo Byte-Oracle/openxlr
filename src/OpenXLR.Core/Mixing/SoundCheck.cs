@@ -56,7 +56,9 @@ public sealed partial class Mixer
             }
             if (_soundCheckChannel is not null && _soundCheckChannel != channel)
                 throw new InvalidOperationException("Stop Sound Check on the other microphone first.");
-            if (!_built || _inputDevice is null || (_primaryInput is not null && channel != "xlr1"))
+            // Each strip records from its own source: the interface's pair or
+            // the port the strip is bound to.
+            if (!_built || !_stripSources.TryGetValue(channel, out string? device) || !_inputFeeds.ContainsKey(channel))
                 throw new InvalidOperationException("The microphone is not connected.");
             if (action == "record" && _soundCheck is null)
             {
@@ -65,19 +67,19 @@ public sealed partial class Mixer
                 PortLink? feed = null;
                 try
                 {
-                    feed = RouteInputLocked(_inputDevice, filter.SinkName, input);
+                    feed = RouteInputLocked(device, filter.SinkName, input);
                     if (feed.Pairs.Count != 1) throw new InvalidOperationException("The microphone's capture port is unavailable.");
                     _soundCheck = filter;
                     _soundCheckInput = feed;
                     _soundCheckChannel = channel;
-                    _soundCheckDevice = _inputDevice;
+                    _soundCheckDevice = device;
                     _soundCheckRate = rate;
                     _soundCheckStarted = Stopwatch.GetTimestamp();
                     _soundCheckError = _soundCheckErrorChannel = null;
                     // A reused direct feed would bypass the loop, so the
                     // channel's feed is rebuilt from the helper's output.
                     if (_inputFeeds.Remove(channel, out PortLink? previous)) _pw.Unlink(previous);
-                    WireInputFeedsLocked();
+                    WireInputFeedsLocked([channel]);
                 }
                 catch (Exception failure)
                 {
@@ -125,7 +127,7 @@ public sealed partial class Mixer
         _soundCheckInput = null;
         _soundCheckChannel = _soundCheckDevice = null;
         if (channel is not null && _inputFeeds.Remove(channel, out PortLink? feed)) _pw.Unlink(feed);
-        if (restore && channel is not null && _built) WireInputFeedsLocked();
+        if (restore && channel is not null && _built) WireInputFeedsLocked([channel]);
     }
 
     /// <summary>

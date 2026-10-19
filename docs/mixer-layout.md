@@ -64,11 +64,29 @@ or its own is a window preference in `ui.json` as well, and so is the
 record of which skins' pop-out defaults have applied; neither is part of
 this file or of a profile.
 
-The optional `primaryInput` field in `mixer.json` is machine wiring:
-`{"source":"alsa_input.usb-headset","channel":0}` feeds one zero-based mono
-port to XLR 1 in generic microphone mode. Null or absent keeps automatic
-Elgato input. It does not change channel ids or order and is not exported
-into profiles. See [the API](api.md#generic-primary-microphone).
+The optional `inputBindings` field in `mixer.json` is machine wiring. It
+maps a hardware strip to the source it is bound to:
+
+```json
+{
+  "inputBindings": {
+    "xlr1": {"source": "alsa_input.usb-046d_Logi_4K_Stream_Edition_C971DF30-03.analog-stereo", "pair": 0, "monoChannel": 1},
+    "xlr2": {"source": "alsa_input.usb-headset", "pair": 0, "monoChannel": 0}
+  }
+}
+```
+
+`xlr1` and `xlr2` are the only keys; a strip left out, and Aux In always,
+takes the interface's capture pair. `source` is the exact node name,
+`pair` is 0 and `monoChannel` is the zero-based port fed to both sides of
+the strip, 0 when absent. When the daemon reads the file it drops an entry
+with another key, or with a source or port the command would refuse, and
+its log names the entry. A binding does not change channel ids or order and is not
+exported into profiles. A file written before this field existed holds
+XLR 1's source as `"primaryInput": {"source": "...", "channel": 0}`; when
+`inputBindings` is absent it is read as XLR 1's binding, and the next save
+writes `inputBindings` only. `setInputBinding` changes the field live; see
+[the API](api.md#input-bindings).
 
 ## Appearance
 
