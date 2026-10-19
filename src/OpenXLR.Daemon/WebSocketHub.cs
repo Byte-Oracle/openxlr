@@ -95,9 +95,10 @@ public sealed class WebSocketHub
         return state with
         {
             DaemonVersion = OpenXLR.Daemon.DaemonVersion.Current,
-            Warning = string.Join(" ", new[] { _devices.Warning, _waveInterfaces?.Warning, _mixer.InputWarning, _mixer.PersistenceWarning, profileWarning }.Where(w => w is not null)) is { Length: > 0 } w ? w : null,
+            Warning = string.Join(" ", new[] { _devices.Warning, _waveInterfaces?.Warning, _mixer.GraphWarning, _mixer.InputWarning, _mixer.PersistenceWarning, profileWarning }.Where(w => w is not null)) is { Length: > 0 } w ? w : null,
             ActiveProfile = _activeProfile.TryGetValue(deviceId, out string? ap) ? ap : null,
             Mixer = _mixer.Snapshot(),
+            MixerWaiting = _mixer.WaitingForAudio,
             Devices = _mixer.Devices(),
             Profiles = profiles,
             RecallOnConnect = recall,

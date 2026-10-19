@@ -45,6 +45,15 @@ public sealed class MixerService : IHostedService, IDisposable
     private readonly IHostApplicationLifetime? _lifetime;
     private int _graphMissing;
 
+    // A failed startup build is retried in the background until the audio
+    // server answers (see RetryBuildAsync). Meanwhile a recalled profile's
+    // mixer half waits in _pendingScene and the state carries a warning.
+    private Task _buildRetry = Task.CompletedTask;
+    internal Task BuildRetry => _buildRetry;
+    private readonly object _sceneGate = new();
+    private bool _waitingForAudio;
+    private OpenXLR.Core.MixerScene? _pendingScene;
+
     /// <summary>
     /// The debounced writer for the mixer settings. It stops writing as soon
     /// as the graph is on its way out, so nothing can export a torn-down
@@ -252,64 +261,154 @@ public sealed class MixerService : IHostedService, IDisposable
         // move the defaults to the card's new nodes before this service runs
         // (see StartupDefaults).
         StartupDefaults before = _startupDefaults ?? StartupDefaults.Capture();
-        string? defaultSinkBefore = before.Sink, defaultSourceBefore = before.Source;
 
         try
         {
-            _graphWatch = _pipeWire.WatchGraph(note => _log.LogInformation("{msg}", note));
-            MixerSettings? saved = MixerSettings.Load(MixerSettings.DefaultPath, out string? settingsWarning);
-            if (settingsWarning is not null)
-                _log.LogWarning("mixer settings: {warning}{fallback}", settingsWarning, saved is null ? "; starting with defaults" : "");
-            _mixer.SetInputBindings(saved?.InputBindings);
-            UpdateInputDeviceHint();
-            _mixer.Build(MixerConfig.FromSettings(saved), output);
-
-            // Restore the user's saved levels, mutes, device picks, and per-app
-            // assignments. Env vars, when set, still win for the device picks.
-            if (saved is not null)
-            {
-                _mixer.ApplySettings(saved.WithMonitorOverride(output));
-                _log.LogInformation("restored settings from {path}", MixerSettings.DefaultPath);
-            }
-            SyncOutputSelectors();
-
-            _log.LogInformation("submix graph built ({mixes} mixes, {channels} channels){route}",
-                _mixer.Config.Mixes.Count, _mixer.Config.Channels.Count,
-                output is null ? "" : $", monitor -> {output}");
-
-            // Sweep for new application streams and route them to their channel.
-            // One second is responsive enough that audio lands in the right place
-            // before a user notices, without polling the graph hard.
-            _streamSweep = new Timer(_ => SweepOnce(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-
-            // Meters refresh far more often than state; 15 Hz looks smooth
-            // without flooding clients.
-            _meterPush = new Timer(_ => MetersUpdated?.Invoke(), null,
-                TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(66));
-
-            Changed?.Invoke();
-
-            // Defend the defaults after WirePlumber's delayed auto-switch. Two
-            // passes because the switch can land seconds after node creation.
-            (string? enfSink, string? enfSource) = _mixer.EnforcedDefaults;
-            // Follow mode is resolved by the regular sweep from the current
-            // monitor selection, never pinned to a startup-time device.
-            string? wantSink = enfSink == Mixer.FollowMonitorOutput ? null : enfSink ?? defaultSinkBefore;
-            string? wantSource = enfSource ?? defaultSourceBefore;
-            _defaultDefense = DefaultDefense.RunAsync(wantSink, wantSource, args => Run("pactl", args),
-                DefaultDefense.DelaysMs, _stopping.Token, msg => _log.LogDebug("default defense: {msg}", msg));
+            BuildGraph(output, before);
         }
         catch (Exception ex)
         {
             _log.LogError("failed to build submix graph: {msg}", ex.Message);
-            // A partial graph is worse than none: half the sinks exist but no
-            // routing, and a later rebuild would double up. Remove what was made.
-            try { _mixer.TearDown(); } catch (Exception) { /* best effort */ }
+            DiscardPartialGraph();
             // No audio server is a degraded operating mode, not a deadlock.
             _checkingProgress = false;
+            // A pipewire-pulse that stalls for a while at boot (a wedged USB
+            // device can hold it) answers again later, and nothing else would
+            // ever build the graph: GraphLost only watches a built one. Keep
+            // trying in the background until it answers or the daemon stops.
+            lock (_sceneGate) _waitingForAudio = true;
+            _log.LogWarning("the mixer is waiting for the audio server; the graph build is retried with backoff, up to every {max} s (repeated failures are logged at debug level)",
+                (int)MaxBuildRetryDelay.TotalSeconds);
+            Changed?.Invoke();
+            string firstError = ex.Message;
+            _buildRetry = Task.Run(() => RetryBuildAsync(output, before, firstError));
         }
         finally { _initialized.TrySetResult(); }
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Build the graph, restore the saved settings and start the sweeps. A
+    /// failure anywhere throws with the graph possibly half made; the caller
+    /// removes it with <see cref="DiscardPartialGraph"/>.
+    /// </summary>
+    private void BuildGraph(string? output, StartupDefaults before)
+    {
+        _graphWatch ??= _pipeWire.WatchGraph(note => _log.LogInformation("{msg}", note));
+        MixerSettings? saved = MixerSettings.Load(MixerSettings.DefaultPath, out string? settingsWarning);
+        if (settingsWarning is not null)
+            _log.LogWarning("mixer settings: {warning}{fallback}", settingsWarning, saved is null ? "; starting with defaults" : "");
+        _mixer.SetInputBindings(saved?.InputBindings);
+        UpdateInputDeviceHint();
+        _mixer.Build(MixerConfig.FromSettings(saved), output);
+
+        // Restore the user's saved levels, mutes, device picks, and per-app
+        // assignments. Env vars, when set, still win for the device picks.
+        if (saved is not null)
+        {
+            _mixer.ApplySettings(saved.WithMonitorOverride(output));
+            _log.LogInformation("restored settings from {path}", MixerSettings.DefaultPath);
+        }
+        // A profile recalled while the graph was waiting for the audio
+        // server lands on top of the saved settings, as it would have at a
+        // normal start. Applied under the gate that queued it, so a recall
+        // arriving meanwhile is either queued here or applied after this.
+        lock (_sceneGate)
+        {
+            if (_pendingScene is { } scene)
+            {
+                _pendingScene = null;
+                try
+                {
+                    _mixer.ApplyScene(scene);
+                    ScheduleSave();
+                    _log.LogInformation("applied the mixer half of the profile recalled while the mixer was waiting");
+                }
+                catch (Exception ex) { _log.LogWarning("the profile recalled while the mixer was waiting could not be applied: {msg}", ex.Message); }
+            }
+            _waitingForAudio = false;
+        }
+        SyncOutputSelectors();
+
+        _log.LogInformation("submix graph built ({mixes} mixes, {channels} channels){route}",
+            _mixer.Config.Mixes.Count, _mixer.Config.Channels.Count,
+            output is null ? "" : $", monitor -> {output}");
+
+        // Sweep for new application streams and route them to their channel.
+        // One second is responsive enough that audio lands in the right place
+        // before a user notices, without polling the graph hard.
+        _streamSweep = new Timer(_ => SweepOnce(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+
+        // Meters refresh far more often than state; 15 Hz looks smooth
+        // without flooding clients.
+        _meterPush = new Timer(_ => MetersUpdated?.Invoke(), null,
+            TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(66));
+
+        Changed?.Invoke();
+
+        // Defend the defaults after WirePlumber's delayed auto-switch. Two
+        // passes because the switch can land seconds after node creation.
+        (string? enfSink, string? enfSource) = _mixer.EnforcedDefaults;
+        // Follow mode is resolved by the regular sweep from the current
+        // monitor selection, never pinned to a startup-time device.
+        string? wantSink = enfSink == Mixer.FollowMonitorOutput ? null : enfSink ?? before.Sink;
+        string? wantSource = enfSource ?? before.Source;
+        _defaultDefense = DefaultDefense.RunAsync(wantSink, wantSource, args => Run("pactl", args),
+            DefaultDefense.DelaysMs, _stopping.Token, msg => _log.LogDebug("default defense: {msg}", msg));
+    }
+
+    /// <summary>
+    /// A partial graph is worse than none: half the sinks exist but no
+    /// routing, and a later rebuild would double up. Remove what was made.
+    /// </summary>
+    private void DiscardPartialGraph()
+    {
+        // A failure after the sweeps started must not leave them running
+        // against the removed graph, or doubled by the next attempt.
+        Interlocked.Exchange(ref _streamSweep, null)?.Dispose();
+        Interlocked.Exchange(ref _meterPush, null)?.Dispose();
+        try { _mixer.TearDown(); } catch (Exception) { /* best effort; the next build clears stale modules */ }
+    }
+
+    /// <summary>The wait before the next build attempt after <paramref name="failures"/> failed ones.</summary>
+    internal static TimeSpan BuildRetryDelay(int failures)
+        => TimeSpan.FromSeconds(Math.Min(MaxBuildRetryDelay.TotalSeconds, 2 << Math.Clamp(failures - 1, 0, 4)));
+    internal static readonly TimeSpan MaxBuildRetryDelay = TimeSpan.FromSeconds(30);
+    /// <summary>Tests shorten the backoff; the daemon uses <see cref="BuildRetryDelay"/>.</summary>
+    internal Func<int, TimeSpan> RetryDelay { get; init; } = BuildRetryDelay;
+
+    private async Task RetryBuildAsync(string? output, StartupDefaults before, string lastError)
+    {
+        CancellationToken stop = _stopping.Token;
+        for (int failures = 1; ; failures++)
+        {
+            try { await Task.Delay(RetryDelay(failures), stop); }
+            catch (OperationCanceledException) { return; }
+            if (stop.IsCancellationRequested) return;
+            // Each attempt is watched like the first one: every helper it
+            // runs has a deadline and marks progress.
+            _progress.Mark();
+            _checkingProgress = true;
+            try
+            {
+                BuildGraph(output, before);
+                _log.LogInformation("the audio server answers again; submix graph built after {n} failed attempt(s)", failures);
+                return;
+            }
+            catch (Exception ex)
+            {
+                _checkingProgress = false;
+                DiscardPartialGraph();
+                lock (_sceneGate) _waitingForAudio = true;
+                if (stop.IsCancellationRequested) return;
+                if (ex.Message != lastError)
+                {
+                    lastError = ex.Message;
+                    _log.LogWarning("submix graph still not built: {msg}; retrying", ex.Message);
+                }
+                else _log.LogDebug("submix graph still not built: {msg}; retrying", ex.Message);
+            }
+        }
     }
 
     // Channel feeds follow the actively driven interface; the node name
@@ -427,6 +526,10 @@ public sealed class MixerService : IHostedService, IDisposable
     {
         // No default-device write may land after the graph is gone.
         _stopping.Cancel();
+        // A build attempt in progress finishes or fails on its helpers'
+        // deadlines; join it so the timers and the graph it may have made
+        // are the ones stopped and torn down below.
+        await _buildRetry;
         ValueTask sweep = Interlocked.Exchange(ref _streamSweep, null)?.DisposeAsync() ?? ValueTask.CompletedTask;
         ValueTask meters = Interlocked.Exchange(ref _meterPush, null)?.DisposeAsync() ?? ValueTask.CompletedTask;
         // Timer.Dispose does not join a callback already in progress. Drain
@@ -454,7 +557,7 @@ public sealed class MixerService : IHostedService, IDisposable
     /// <summary>Apply a mixer command. Returns null on success, else an error.</summary>
     public string? Apply(Command cmd)
     {
-        if (!_mixer.Built) return "mixer not built (start the daemon with --mixer)";
+        if (!_mixer.Built) return WaitingForAudio ? WaitingWarning : "mixer not built (start the daemon with --mixer)";
         string? invalid = CommandValidation.Check(cmd, _mixer, OpenXLR.Core.Mixing.PluginCatalog.Find);
         if (invalid is not null) return invalid;
         try
@@ -670,6 +773,15 @@ public sealed class MixerService : IHostedService, IDisposable
     /// <summary>Recall a profile's mixer scene. Returns null on success.</summary>
     public string? ApplyScene(OpenXLR.Core.MixerScene scene)
     {
+        lock (_sceneGate)
+        {
+            if (_waitingForAudio)
+            {
+                // Applied as soon as the graph is built; the latest recall wins.
+                _pendingScene = scene;
+                return null;
+            }
+        }
         if (!_mixer.Built) return "mixer not built (start the daemon with --mixer)";
         try { _mixer.ApplyScene(scene); }
         catch (Exception ex) { return ex.Message; }
@@ -684,6 +796,14 @@ public sealed class MixerService : IHostedService, IDisposable
 
     /// <summary>Why the hardware input channels are silent although a source is present, or null.</summary>
     public string? InputWarning => _mixer.InputWarning;
+
+    /// <summary>Whether a failed startup build is being retried.</summary>
+    public bool WaitingForAudio { get { lock (_sceneGate) return _waitingForAudio; } }
+
+    private const string WaitingWarning = "The mixer is waiting for the audio server (pipewire-pulse), which did not answer when the daemon started; it is built as soon as the server answers.";
+
+    /// <summary>Why the mixer is not built although the submixer is on, or null.</summary>
+    public string? GraphWarning => WaitingForAudio ? WaitingWarning : null;
 
     /// <summary>pipewire-pulse close to its open-file limit, or null.</summary>
     public string? ResourceWarning => Volatile.Read(ref _resourceWarning);

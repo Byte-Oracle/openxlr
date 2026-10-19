@@ -80,10 +80,15 @@ public sealed partial class MainViewModel : ViewModelBase
     private bool _daemonConnected;
     public bool DaemonConnected { get => _daemonConnected; private set { if (SetAndRaiseMismatch(ref _daemonConnected, value)) { Raise(nameof(StatusLine)); Raise(nameof(MixerPlaceholder)); Raise(nameof(CanEditLayout)); } } }
 
-    /// <summary>What the empty SUBMIXER tile says: the two reasons differ.</summary>
+    /// <summary>What the empty SUBMIXER tile says: the three reasons differ.</summary>
     public string MixerPlaceholder => !DaemonConnected
         ? Localizer.Text("DaemonNotRunningSentence")
+        : MixerWaiting ? Localizer.Text("MixerWaitingForAudioServer")
         : Localizer.Text("SubmixerIsOffTurnItOnInOptions");
+
+    private bool _mixerWaiting;
+    /// <summary>The submixer is on, but the audio server did not answer when the daemon built it.</summary>
+    public bool MixerWaiting { get => _mixerWaiting; private set { if (Set(ref _mixerWaiting, value)) Raise(nameof(MixerPlaceholder)); } }
 
     private bool _deviceConnected;
     public bool DeviceConnected { get => _deviceConnected; private set { if (Set(ref _deviceConnected, value)) Raise(nameof(StatusLine)); } }
@@ -722,6 +727,7 @@ public sealed partial class MainViewModel : ViewModelBase
     {
         _applying = true;
         DaemonWarning = node["warning"]?.GetValue<string>() ?? "";
+        MixerWaiting = node["mixerWaiting"]?.GetValue<bool>() ?? false;
         try
         {
             DaemonConnected = true;

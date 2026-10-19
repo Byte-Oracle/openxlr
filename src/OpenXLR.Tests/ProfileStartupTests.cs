@@ -435,6 +435,95 @@ public sealed class ProfileStartupTests
         }
     }
 
+    /// <summary>
+    /// pipewire-pulse stalled when the daemon started (a wedged USB device
+    /// can hold it for minutes), so the first graph build failed. The daemon
+    /// keeps trying, and the profile recalled on connect meanwhile lands
+    /// once the server answers. A pactl wrapper refuses to load modules
+    /// until the test lets the real one through.
+    /// </summary>
+    [MonitorPipeWireFact]
+    public async Task AStartupBuildRefusedByTheAudioServerIsRetriedAndTheRecalledProfileLands()
+    {
+        Assert.StartsWith("openxlr-monitor-test-", Path.GetFileName(Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR")!));
+        string dir = Directory.CreateTempSubdirectory("openxlr-retry-").FullName;
+        string? previous = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        string? path = Environment.GetEnvironmentVariable("PATH");
+        string realPactl = (path ?? "").Split(Path.PathSeparator)
+            .Select(p => Path.GetFullPath(Path.Combine(p, "pactl"))).First(File.Exists);
+        string bin = Path.Combine(dir, "bin");
+        Directory.CreateDirectory(bin);
+        string answer = Path.Combine(dir, "answer"), refusals = Path.Combine(dir, "refusals");
+        ExecutableScript.Write(Path.Combine(bin, "pactl"), $$"""
+            if [ "$1" = load-module ] && [ ! -e '{{answer}}' ]; then
+              echo refused >> '{{refusals}}'
+              echo 'Connection failure: Timeout' >&2
+              exit 1
+            fi
+            exec '{{realPactl}}' "$@"
+            """);
+        int Refusals() => File.Exists(refusals) ? File.ReadAllLines(refusals).Length : 0;
+        string[] OwnModules() => [.. Pactl(realPactl, "list", "short", "modules").Split('\n').Where(l => l.Contains("OpenXLR_", StringComparison.Ordinal))];
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(dir, "config"));
+        Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + path);
+        try
+        {
+            new DaemonSettings { Submixer = true }.Save();
+            var config = new ConfigurationBuilder().Build();
+            var dock = new Dock();
+            using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => [dock]);
+            ProfileStore.Save("0fd9:00a6", "Saved", new Profile
+            {
+                Device = new() { GainDb = 55 },
+                Mixer = new() { MixVolumes = new() { ["monitor"] = 0.25 } },
+            });
+            ProfileStore.SetRecallOnConnect("0fd9:00a6", "Saved");
+            using var lifetime = new Lifetime();
+            using var mixer = new MixerService(NullLogger<MixerService>.Instance, config, devices)
+            {
+                RetryDelay = _ => TimeSpan.FromMilliseconds(100),
+            };
+            var hub = new WebSocketHub(devices, mixer, NullLogger<WebSocketHub>.Instance, lifetime);
+            devices.SweepOnce();
+            try
+            {
+                await mixer.StartAsync(CancellationToken.None);
+                Assert.False(mixer.Built);
+                Assert.True(hub.Snapshot().MixerWaiting);
+                Assert.Contains("waiting for the audio server", hub.Snapshot().Warning);
+                // The hardware half does not wait for the audio server.
+                Assert.True(SpinWait.SpinUntil(() => dock.Gain == 55, TimeSpan.FromSeconds(10)));
+                Assert.True(SpinWait.SpinUntil(() => Refusals() >= 3, TimeSpan.FromSeconds(10)));
+                Assert.Empty(OwnModules());
+
+                File.WriteAllText(answer, "");
+                await mixer.BuildRetry.WaitAsync(TimeSpan.FromSeconds(60));
+                Assert.True(mixer.Built);
+                StateMessage state = hub.Snapshot();
+                Assert.False(state.MixerWaiting);
+                Assert.DoesNotContain("waiting for the audio server", state.Warning ?? "");
+                Assert.Equal(0.25, mixer.ExportScene()!.MixVolumes["monitor"]);
+                Assert.Equal("Saved", state.ActiveProfile);
+                Assert.NotEmpty(OwnModules());
+            }
+            finally { await mixer.StopAsync(CancellationToken.None); }
+            Assert.Empty(OwnModules());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", path);
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previous);
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    private static string Pactl(string pactl, params string[] args)
+    {
+        ProcessResult result = ProcessRunner.Run(pactl, args, TimeSpan.FromSeconds(5));
+        Assert.Equal(0, result.ExitCode);
+        return result.StdoutText;
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
