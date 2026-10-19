@@ -2202,7 +2202,10 @@ killed straight away and the daemon tries again two seconds later. A
 device that opens but answers its reads with errors is dropped and
 reopened after two seconds, and the wait doubles on each failure that
 follows, up to 32 seconds, so the log shows the retries at growing
-intervals rather than a flood.
+intervals rather than a flood. The journal says once that the device does
+not answer, and once more when it answers again; until then the warning
+under the header names the device and the error. If the warning stays,
+unplug the device and plug it back in.
 Collect diagnostics afterwards ([section 5.10](#reporting)): the archive contains the
 exact transfer, and that is what makes the report actionable.
 

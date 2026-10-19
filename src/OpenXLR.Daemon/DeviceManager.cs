@@ -17,7 +17,29 @@ public sealed class DeviceManager : BackgroundService
     private readonly object _gate = new();
     private IAudioDevice? _device;
     private DeviceState? _last;
-    private IReadOnlyList<DeviceInfo> _detected = [];
+    // Replaced, never changed in place, so the client-facing readers below
+    // can take it without the device lock.
+    private volatile IReadOnlyList<DeviceInfo> _detected = [];
+
+    /// <summary>
+    /// The device half of the state as clients see it, written under the
+    /// device lock each time it changes and read without it. The lock is held
+    /// for every USB transfer, so a reader that took it would wait out a
+    /// transfer that does not come back, and a reader that read the device
+    /// itself would turn a wedged unit into an exception per state broadcast.
+    /// </summary>
+    private sealed record Published(StateMessage Message, DeviceInfo? Info);
+    private static readonly Published NothingDriven = new(new StateMessage { Connected = false }, null);
+    private volatile Published _published = NothingDriven;
+
+    // The last state read from a unit in this run, kept past a drop so a
+    // unit that reconnects but answers no read still shows its values.
+    private DeviceState? _lastGood;
+    private string? _lastGoodId;
+    // The unit whose reads fail, until one succeeds, it leaves the bus or
+    // another unit is driven; and what clients are told meanwhile.
+    private string? _unansweredId;
+    private volatile string? _unansweredWarning;
     private readonly Func<IReadOnlyList<IAudioDevice>> _detect;
     private ushort? _preferredPid;
     private string? _preferredInstance;   // the unit chosen in the picker, by instance id
@@ -64,13 +86,13 @@ public sealed class DeviceManager : BackgroundService
     /// <summary>Every supported interface currently attached, for client pickers.</summary>
     public IReadOnlyList<(string UsbId, string Name, bool Active)> Detected()
     {
-        lock (_gate)
-        {
-            return [.. _detected.Select(d => (
-                d.InstanceId,
-                d.DisplayName + (_detected.Count(x => x.ProductId == d.ProductId) > 1 ? $" ({d.Location?.Port ?? d.InstanceId})" : ""),
-                _device is { Connected: true } && _device.Info.InstanceId == d.InstanceId))];
-        }
+        // Part of every state message, so it does not wait for the device lock.
+        IReadOnlyList<DeviceInfo> detected = _detected;
+        string? active = _published.Info?.InstanceId;
+        return [.. detected.Select(d => (
+            d.InstanceId,
+            d.DisplayName + (detected.Count(x => x.ProductId == d.ProductId) > 1 ? $" ({d.Location?.Port ?? d.InstanceId})" : ""),
+            active == d.InstanceId))];
     }
 
     /// <summary>
@@ -112,9 +134,7 @@ public sealed class DeviceManager : BackgroundService
     /// Every attached unit counts, driven or not.
     /// </summary>
     public (string Id, string Name)? SupportedUnitFor(string nodeName)
-    {
-        lock (_gate) return OpenXLR.Core.Mixing.InterfaceNodes.Owner(nodeName, _detected);
-    }
+        => OpenXLR.Core.Mixing.InterfaceNodes.Owner(nodeName, _detected);   // read for every state message, without the device lock
 
     /// <summary>How many supported interfaces the last detection found, driven or not.</summary>
     public int AttachedCount { get { lock (_gate) return _detected.Count; } }
@@ -274,22 +294,14 @@ public sealed class DeviceManager : BackgroundService
         && _drivenLocations.TryGetValue(info.InstanceId, out var before)
         && (before.Bus != now.Bus || before.Address != now.Address);
 
-    public StateMessage Snapshot()
-    {
-        lock (_gate)
-        {
-            if (_device is null || !_device.Connected)
-                return new StateMessage { Connected = false };
-            return new StateMessage
-            {
-                Connected = true,
-                Device = new DeviceDescriptor(_device.Info.Vendor, _device.Info.Model,
-                    $"{_device.Info.VendorId:x4}:{_device.Info.ProductId:x4}", _device.ConnectionNote, _device.Firmware),
-                Capabilities = _device.Capabilities,
-                State = _last ?? Stamp(_device.ReadState()),
-            };
-        }
-    }
+    /// <summary>
+    /// The device half of the state, as last read by the poll loop or after a
+    /// command. Never touches USB and never waits for a transfer in progress.
+    /// </summary>
+    public StateMessage Snapshot() => _published.Message;
+
+    /// <summary>The driven unit as clients were last shown it; read without the device lock.</summary>
+    internal DeviceInfo? PublishedInfo => _published.Info;
 
     protected override async Task ExecuteAsync(CancellationToken stop)
     {
@@ -362,13 +374,15 @@ public sealed class DeviceManager : BackgroundService
     private string? _lastUsbFault;
 
     private readonly HungTransferPolicy _hung = new();
-    private string? _setAsideWarning;
+    private volatile string? _setAsideWarning;
 
     /// <summary>
-    /// A condition about the hardware the user should see, or null: today,
-    /// a device set aside after repeated hung transfers.
+    /// A condition about the hardware the user should see, or null: a device
+    /// set aside after repeated hung transfers, or one that does not answer
+    /// reads. Read without the device lock, like <see cref="Snapshot"/>.
     /// </summary>
-    public string? Warning { get { lock (_gate) return _setAsideWarning; } }
+    public string? Warning
+        => string.Join(" ", new[] { _setAsideWarning, _unansweredWarning }.Where(w => w is not null)) is { Length: > 0 } w ? w : null;
 
     private void NoteHung(UsbHungException ex)
     {
@@ -412,6 +426,11 @@ public sealed class DeviceManager : BackgroundService
             if (_suspended) return;
             IReadOnlyList<IAudioDevice> all = _detect();
             _detected = [.. all.Select(d => d.Info)];
+            // A unit that left the bus is no longer the one not answering.
+            if (_unansweredId is { } silent && !all.Any(d => d.Info.InstanceId == silent)) ClearUnansweredLocked();
+            // The unit went away under its transport without a drop: clients
+            // stop seeing it as driven now, not when the next state is read.
+            if (_device is { Connected: false } && _published.Message.Connected) RaiseFromLocked();
             foreach (string drivenInstance in _drivenInstances)
                 if (!all.Any(d => d.Info.InstanceId == drivenInstance)) _absentInstances.Add(drivenInstance);
             // A device set aside for hanging gets a fresh start once it has
@@ -455,6 +474,7 @@ public sealed class DeviceManager : BackgroundService
             }
             _device = dev;
             _last = null;
+            if (_unansweredId is not null && _unansweredId != dev.Info.InstanceId) ClearUnansweredLocked();
             _log.LogInformation("connected {dev}", dev.Info.DisplayName);
             if (dev.ConnectionNote is string note) _log.LogWarning("{dev}: {note}", dev.Info.DisplayName, note);
             _lastLoopError = null;
@@ -692,15 +712,53 @@ public sealed class DeviceManager : BackgroundService
         lock (_gate)
         {
             if (_device is null || !_device.Connected) return;
-            DeviceState now = Stamp(_device.ReadState());
+            DeviceState now;
+            try { now = Stamp(_device.ReadState()); }
+            catch (Exception ex) when (ex is not UsbHungException)
+            {
+                NoteUnansweredLocked(_device.Info, ex.Message);
+                throw;   // dropped and reopened after a wait, as any failed poll
+            }
             _pollFailures = 0;
-            if (_last is null || now != _last)
+            bool recovered = false;
+            if (_unansweredId == _device.Info.InstanceId)
+            {
+                ClearUnansweredLocked();
+                recovered = true;
+                _log.LogInformation("{dev} answers USB reads again", _device.Info.DisplayName);
+            }
+            bool changed = _last is null || now != _last;
+            if (changed)
             {
                 _last = now;
                 NoteChangedLocked();
-                RaiseFromLocked();
             }
+            if (changed || recovered) RaiseFromLocked();
         }
+    }
+
+    /// <summary>
+    /// A poll read failed. Said once per unit until it answers again, in a
+    /// sentence, and in the state's warning; the reconnects that follow every
+    /// few seconds while the unit stays wedged add nothing to the journal.
+    /// </summary>
+    private void NoteUnansweredLocked(DeviceInfo unit, string error)
+    {
+        if (_unansweredId != unit.InstanceId)
+        {
+            _unansweredId = unit.InstanceId;
+            _log.LogWarning("{dev} does not answer USB reads ({error}). OpenXLR keeps reconnecting it and shows the last values it read; " +
+                            "if it stays this way, unplug the device and plug it back in.", unit.DisplayName, error);
+        }
+        _unansweredWarning = $"{unit.DisplayName} does not answer USB reads ({error}). The values shown are the last ones read from it " +
+                             "and OpenXLR keeps reconnecting it; if this does not clear, unplug the device and plug it back in.";
+        _lastLoopError = error;   // the device loop's own line would say the same again
+    }
+
+    private void ClearUnansweredLocked()
+    {
+        _unansweredId = null;
+        _unansweredWarning = null;
     }
 
     /// <summary>Apply a client "set" command. Returns null on success, else an error string.</summary>
@@ -982,19 +1040,35 @@ public sealed class DeviceManager : BackgroundService
 
     private void RaiseFromLocked()
     {
-        StateMessage msg = _device is { Connected: true }
-            ? new StateMessage
-            {
-                Connected = true,
-                Device = new DeviceDescriptor(_device.Info.Vendor, _device.Info.Model,
-                    $"{_device.Info.VendorId:x4}:{_device.Info.ProductId:x4}", _device.ConnectionNote, _device.Firmware),
-                Capabilities = _device.Capabilities,
-                State = _last,
-            }
-            : new StateMessage { Connected = false };
         // Fire outside the caller's expectations but we're already under _gate;
         // handlers only enqueue/serialize, they don't call back into the manager.
+        // Published first: with no handler, ?.Invoke would skip its argument.
+        StateMessage msg = PublishLocked();
         StateChanged?.Invoke(msg);
+    }
+
+    /// <summary>Make the current device state what <see cref="Snapshot"/> serves.</summary>
+    private StateMessage PublishLocked()
+    {
+        if (_device is not { Connected: true } dev)
+        {
+            _published = NothingDriven;
+            return NothingDriven.Message;
+        }
+        string id = dev.Info.InstanceId;
+        if (_last is not null) { _lastGood = _last; _lastGoodId = id; }
+        var msg = new StateMessage
+        {
+            Connected = true,
+            Device = new DeviceDescriptor(dev.Info.Vendor, dev.Info.Model,
+                $"{dev.Info.VendorId:x4}:{dev.Info.ProductId:x4}", dev.ConnectionNote, dev.Firmware),
+            Capabilities = dev.Capabilities,
+            // Reopened but not answering yet: the values it last gave, which
+            // the warning marks as such.
+            State = _last ?? (_unansweredId == id && _lastGoodId == id ? _lastGood : null),
+        };
+        _published = new Published(msg, dev.Info);
+        return msg;
     }
 
     private void Drop()
@@ -1006,7 +1080,8 @@ public sealed class DeviceManager : BackgroundService
             bool was = _device is not null;
             _device = null;
             _last = null;
-            if (was) StateChanged?.Invoke(new StateMessage { Connected = false });
+            _published = NothingDriven;
+            if (was) StateChanged?.Invoke(NothingDriven.Message);
         }
     }
 }

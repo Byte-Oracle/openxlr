@@ -16,6 +16,8 @@ internal sealed class StateBroadcastQueue(Action broadcast, ILogger log)
             AllowSynchronousContinuations = false,
         });
 
+    private string? _lastError;   // the single reader's own
+
     internal void Signal() => _changes.Writer.TryWrite(true);
 
     internal async Task RunAsync(CancellationToken stop)
@@ -25,8 +27,27 @@ internal sealed class StateBroadcastQueue(Action broadcast, ILogger log)
             await foreach (bool ignored in _changes.Reader.ReadAllAsync(stop))
             {
                 if (stop.IsCancellationRequested) break;
-                try { broadcast(); }
-                catch (Exception ex) { log.LogWarning(ex, "State broadcast failed"); }
+                try
+                {
+                    broadcast();
+                    if (_lastError is not null)
+                    {
+                        _lastError = null;
+                        log.LogInformation("State broadcasts recovered");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // A failure that repeats with every change would fill the
+                    // journal with the same stack trace. The first of each
+                    // distinct message carries it; repeats go to debug.
+                    if (ex.Message != _lastError)
+                    {
+                        _lastError = ex.Message;
+                        log.LogWarning(ex, "State broadcast failed (repeats logged at debug level)");
+                    }
+                    else log.LogDebug("State broadcast failed again: {msg}", ex.Message);
+                }
             }
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
