@@ -1185,7 +1185,7 @@ public sealed partial class MainViewModel : ViewModelBase
             SyncList(Channels, channels, c => c["id"]!.GetValue<string>(),
                 (c, vm) => { vm.SyncSends(mixIds); vm.ApplyFromDaemon(c); },
                 c => new ChannelViewModel(_client, c["id"]!.GetValue<string>(), c["name"]!.GetValue<string>(), mixIds),
-                removed => removed.SyncSends([]));
+                removed => { removed.SyncSends([]); removed.Detach(); });
             // Send rows carry the mix's name, not its id.
             foreach (ChannelViewModel c in Channels)
                 foreach (SendViewModel send in c.Sends)
@@ -1607,6 +1607,42 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
 
     public ObservableCollection<SendViewModel> Sends { get; } = [];
 
+    private bool _applyingVolume;
+    private bool _hasVolume;
+    /// <summary>
+    /// The daemon reports a channel volume for this channel: an application
+    /// or capture channel. A hardware input has none, and neither does a
+    /// channel of a daemon that predates channel volumes.
+    /// </summary>
+    public bool HasVolume { get => _hasVolume; private set => Set(ref _hasVolume, value); }
+
+    private double _volume = 1.0;
+    /// <summary>The channel's own volume, which scales every send it makes (0..1).</summary>
+    public double Volume
+    {
+        get => _volume;
+        set
+        {
+            if (Set(ref _volume, value) && !_applyingVolume && !_detached && HasVolume)
+            {
+                double v = value;
+                string key = $"chvol:{Id}";
+                SliderSync.Touch(key);
+                SliderSync.Send(key, () => _ = _client.SetChannelVolumeAsync(Id, v));
+            }
+            Raise(nameof(VolumeText));
+        }
+    }
+    public string VolumeText => $"{_volume * 100:0}%";
+
+    private bool _detached;
+    /// <summary>The channel left the mixer; its volume fader sends nothing more.</summary>
+    internal void Detach()
+    {
+        _detached = true;
+        SliderSync.Forget($"chvol:{Id}");
+    }
+
     /// <summary>Keep existing send controls in the current mix order.</summary>
     public void SyncSends(IReadOnlyList<string> mixIds)
     {
@@ -1661,6 +1697,14 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
             : n["captureMonoChannel"]?.GetValue<int>() is int port
                 ? CaptureConnected ? Localizer.Format("CaptureConnectedPort", port + 1) : Localizer.Format("CaptureOfflinePort", port + 1)
                 : CaptureConnected ? Localizer.Format("CaptureConnectedPair", capturePair) : Localizer.Format("CaptureOfflinePair", capturePair);
+        double? volume = n["volume"]?.GetValue<double>();
+        HasVolume = volume is not null && !IsHardware;
+        _applyingVolume = true;
+        try
+        {
+            if (!SliderSync.RecentlyTouched($"chvol:{Id}")) Volume = volume ?? 1.0;
+        }
+        finally { _applyingVolume = false; }
         var muted = new HashSet<string>();
         if (n["mutedIn"] is JsonArray arr)
             foreach (JsonNode? m in arr) if (m is not null) muted.Add(m.GetValue<string>());

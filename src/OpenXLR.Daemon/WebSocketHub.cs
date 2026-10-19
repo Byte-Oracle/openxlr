@@ -373,6 +373,7 @@ public sealed class WebSocketHub
             case "setLayoutAppearance":
             case "setLevel":
             case "setChannelMuted":
+            case "setChannelVolume":
             case "setMixVolume":
             case "setMixMuted":
             case "adjustOutputVolume":

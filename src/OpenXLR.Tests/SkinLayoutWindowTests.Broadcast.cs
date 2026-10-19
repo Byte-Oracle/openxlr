@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
@@ -52,10 +53,10 @@ internal static partial class SkinLayoutWindowTests
                  "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":0.8,"stream":0.6},"appearance":{"defaultIcon":"mic"}},
                              {"id":"xlr2","name":"XLR 2","hardware":true,"present":false,"appearance":{"defaultIcon":"mic"}},
                              {"id":"aux","name":"Aux In","hardware":true,"appearance":{"defaultIcon":"jack"}},
-                             {"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.4},"mutedIn":["stream"],"appearance":{"icon":"♫","defaultIcon":"music"}},
-                             {"id":"board","name":"LONGNAME","levels":{"monitor":1,"stream":1},"appearance":{"defaultIcon":"apps"}},
+                             {"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.4},"mutedIn":["stream"],"volume":0.9,"appearance":{"icon":"♫","defaultIcon":"music"}},
+                             {"id":"board","name":"LONGNAME","levels":{"monitor":1,"stream":1},"volume":1,"appearance":{"defaultIcon":"apps"}},
                              {"id":"game","name":"Game","levels":{"monitor":1,"stream":1},"appearance":{"defaultIcon":"game"}},
-                             {"id":"cam","name":"Capture card","captureSource":"alsa_input.usb-capture","captureConnected":false,"appearance":{"defaultIcon":"camera"}}],
+                             {"id":"cam","name":"Capture card","captureSource":"alsa_input.usb-capture","captureConnected":false,"volume":0.75,"appearance":{"defaultIcon":"camera"}}],
                  "monitorOutputs":["speakers"],"outputVolume":0.6,"inserts":{}}
                 """.Replace("LONGNAME", LongName);
             typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [JsonNode.Parse(mixer)]);
@@ -193,11 +194,23 @@ internal static partial class SkinLayoutWindowTests
             Layout(window, 1040, 1400);
             Assert.Contains("tinted", muted.Classes);
 
-            // A capture channel that is not connected keeps its row, with its name and meter in its head.
+            // A capture channel that is not connected keeps its row: its name,
+            // and its own volume with its meter under it, as XLR 1's gain has.
             Border cam = RowHead(window, "cam");
             Assert.True(cam.IsEffectivelyVisible);
-            Assert.Null(cam.GetVisualDescendants().OfType<Slider>().FirstOrDefault(s => s.IsEffectivelyVisible));
-            Assert.Contains(cam.GetVisualDescendants().OfType<LevelMeter>(), m => m.IsEffectivelyVisible);
+            Slider camVolume = Assert.Single(cam.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
+            Assert.Equal(0.75, camVolume.Value);
+            Assert.Equal("Capture card volume", AutomationProperties.GetName(camVolume));
+            Assert.True(cam.GetVisualDescendants().OfType<MeterFader>().Single().Meters.IsEffectivelyVisible);
+            Assert.False(Part(cam, SkinStripParts.Meter).IsEffectivelyVisible);
+            camVolume.Value = 0.3;
+            Assert.Equal(0.3, model.Channels.Single(c => c.Id == "cam").Volume);
+            // A channel the daemon reports no volume for, as an older daemon
+            // does, keeps its name and its meter only.
+            Border game = RowHead(window, "game");
+            Assert.Null(game.GetVisualDescendants().OfType<Slider>().FirstOrDefault(s => s.IsEffectivelyVisible));
+            Assert.True(Part(game, SkinStripParts.Meter).IsEffectivelyVisible);
+            Assert.Contains(game.GetVisualDescendants().OfType<LevelMeter>(), m => m.IsEffectivelyVisible);
             // XLR 1's head has its gain over its meter, its mute and its chain.
             Border xlr1 = RowHead(window, "xlr1");
             Assert.Single(xlr1.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);

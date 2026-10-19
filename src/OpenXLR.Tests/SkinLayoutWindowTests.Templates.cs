@@ -79,8 +79,8 @@ internal static partial class SkinLayoutWindowTests
                              {"id":"xlr2","name":"XLR 2","hardware":true},
                              {"id":"aux","name":"Aux In","hardware":true},
                              {"id":"music","name":"Music with a long display name","levels":{"monitor":0.5,"stream":0.4},"appearance":{"icon":"♫"}},
-                             {"id":"game","name":"Game","levels":{"monitor":1,"stream":1}},
-                             {"id":"mic2","name":"Second microphone","captureSource":"alsa_input.usb","captureConnected":true}],
+                             {"id":"game","name":"Game","levels":{"monitor":1,"stream":1},"volume":1},
+                             {"id":"mic2","name":"Second microphone","captureSource":"alsa_input.usb","captureConnected":true,"volume":0.5}],
                  "inserts":{}}
                 """)]);
             ChannelViewModel[] channels = [.. model.Channels];
@@ -181,9 +181,15 @@ internal static partial class SkinLayoutWindowTests
             Control[] focusable = Focusable(window);
             Assert.DoesNotContain(focusable, c => c.GetSelfAndVisualAncestors().Contains(effects));
             Assert.Contains(focusable, c => c.Name == "RackGain");
-            // An application channel has only its name and meter, whatever the skin orders.
+            // An application channel the daemon reports no volume for has only
+            // its name and meter, whatever the skin orders.
             Border music = RackStrip(rack, "music");
             Assert.Null(music.GetVisualDescendants().OfType<Slider>().FirstOrDefault(s => s.IsEffectivelyVisible));
+            // One it reports a volume for has that volume as its gain.
+            Border mic2 = RackStrip(rack, "mic2");
+            Slider mic2Volume = Assert.Single(mic2.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
+            Assert.Equal(0.5, mic2Volume.Value);
+            Assert.Equal("Second microphone volume", AutomationProperties.GetName(mic2Volume));
             Assert.Equal("♫", music.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsEffectivelyVisible).Text);
             Assert.Equal("Music with a long display name", AutomationProperties.GetName(
                 music.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsEffectivelyVisible)));

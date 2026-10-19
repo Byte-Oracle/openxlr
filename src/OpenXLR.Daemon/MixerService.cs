@@ -536,6 +536,10 @@ public sealed class MixerService : IHostedService, IDisposable
                     _mixer.SetChannelMuted(cmd.Channel, cmd.Mix, cmd.Value.GetBoolean());
                     SyncOutputSelectors();   // the XLR 1 mute may move the Pro's hardware mic path
                     break;
+                case "setChannelVolume":
+                    if (cmd.Channel is null) return "setChannelVolume: need 'channel'";
+                    _mixer.SetChannelVolume(cmd.Channel, cmd.Value.GetDouble());
+                    break;
                 case "setMixVolume":
                     if (cmd.Mix is null) return "setMixVolume: need 'mix'";
                     _mixer.SetMixVolume(cmd.Mix, cmd.Value.GetDouble());

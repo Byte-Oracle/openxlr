@@ -64,6 +64,9 @@ mix-to-output feed commands, which accept any existing mix or a sum of distinct
 mix ids. For example,
 `{"cmd":"setMonitorFeed","device":"alsa_output.headset","feed":"monitor+chat"}`
 makes an already selected headset hear Monitor A and Chat summed.
+`{"cmd":"setChannelVolume","channel":"game","value":0.5}` sets the Game
+channel's own volume, which scales every send of the channel at once, and
+`GET /api/v1/channels/game` reads it back as `volume`.
 Both transports share the dispatcher,
 validation and broadcasts. HTTP returns
 `{"apiVersion":"1","ok":true,"messages":[]}` after a successful mutation.

@@ -622,10 +622,30 @@ public sealed class WindowLayoutTests
         Assert.Equal(["music", "game"], channels.Select(b => ((ChannelViewModel)b.DataContext!).Id));
         foreach (var channel in channels)
         {
-            var sliders = channel.GetVisualDescendants().OfType<Slider>()
+            var sliders = channel.GetVisualDescendants().OfType<Slider>().Where(s => s.DataContext is SendViewModel)
                 .OrderBy(s => s.TranslatePoint(default, channel)!.Value.Y).ToArray();
             Assert.Equal(["monitor", "chat", "stream"], sliders.Select(s => ((SendViewModel)s.DataContext!).MixId));
+            // The daemon reported no channel volume, so no tile draws one.
+            Assert.DoesNotContain(channel.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible && s.DataContext is ChannelViewModel);
         }
+
+        // A channel volume the daemon reports stands over the channel's sends.
+        typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(model, [JsonNode.Parse("""
+            {"channels":[{"id":"music","name":"music","volume":0.4},{"id":"game","name":"game","hardware":true,"volume":0.5}],
+             "mixes":[{"id":"monitor","name":"monitor"},{"id":"chat","name":"chat"},{"id":"stream","name":"stream"}]}
+            """)]);
+        Layout(main, 1040, 900);
+        Slider[] music = [.. channels[0].GetVisualDescendants().OfType<Slider>().Where(s => s.IsEffectivelyVisible)
+            .OrderBy(s => s.TranslatePoint(default, channels[0])!.Value.Y)];
+        Assert.Equal(4, music.Length);
+        Assert.IsType<ChannelViewModel>(music[0].DataContext);
+        Assert.Equal(0.4, music[0].Value);
+        Assert.Equal("music volume", Avalonia.Automation.AutomationProperties.GetName(music[0]));
+        Assert.All(music[1..], s => Assert.IsType<SendViewModel>(s.DataContext));
+        // A hardware input has none, whatever a state says.
+        Assert.DoesNotContain(channels[1].GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible && s.DataContext is ChannelViewModel);
+        LiveLayoutOrderTests.Apply(model, ["music", "game"], ["monitor", "chat", "stream"]);
+        Layout(main, 1040, 900);
         var mixes = main.GetVisualDescendants().OfType<Border>()
             .Where(b => b.DataContext is MixViewModel && b.Width == 232)
             .OrderBy(b => b.TranslatePoint(default, main)!.Value.Y)

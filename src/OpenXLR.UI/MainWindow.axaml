@@ -781,6 +781,17 @@
                       <skin:LevelMeter Level="{Binding MeterL}" AutomationProperties.Name="{loc:Text Key=LeftLevel}"/>
                       <skin:LevelMeter Level="{Binding MeterR}" AutomationProperties.Name="{loc:Text Key=RightLevel}"/>
                     </StackPanel>
+                    <!-- an application or capture channel's own volume, over every send below it -->
+                    <StackPanel Name="ChannelVolume" Spacing="1" IsVisible="{Binding HasVolume}">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{loc:Text Key=Volume}" Classes="h" FontSize="11"
+                                   TextTrimming="CharacterEllipsis" Margin="0,0,4,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding VolumeText}" Classes="val" FontSize="11"/>
+                      </Grid>
+                      <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                              ToolTip.Tip="{loc:Text Key=ChannelVolumeTip}"/>
+                    </StackPanel>
                     <ItemsControl ItemsSource="{Binding Sends}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:SendViewModel">

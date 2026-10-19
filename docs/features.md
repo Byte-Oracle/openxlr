@@ -138,6 +138,12 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   microphone), and Aux (what a second computer on the USB Aux port
   receives)
 - Per-channel, per-mix send levels and mutes; per-mix masters
+- A volume for each application and capture channel that scales every
+  send of the channel at once, like the channel level in Wave Link 3.
+  It is folded into the send streams the mixer already has, so it adds
+  no node and no delay. The window draws it in the channel tiles, in
+  the input rack and in the mix matrix's row heads with the channel's
+  meter under it; the terminal mixer and the OpenDeck dials change it too
 - Bidirectional Linux volume and mute controls for every monitor mix,
   with an explicit 150% boost button for monitor masters and output volume
 - An editable layout: Edit layout in the SUBMIXER card adds, renames,
@@ -428,7 +434,7 @@ restores the split profile when it stops.
 ## Profiles
 
 Named scenes: every hardware setting plus the whole submix (send
-levels, mutes, masters, monitor outputs, aux state, insert chains with
+levels, channel volumes, mutes, masters, monitor outputs, aux state, insert chains with
 their parameters). Saved per device and recalled from the header, over
 the API, or from a Stream Deck key. One profile per device can be
 marked to recall on connect: at daemon start, after a replug or power
@@ -456,7 +462,7 @@ WebSocket API, so they reflect changes made in the UI or on the
 hardware.
 
 Dials render a touch panel: a knob with a needle, a level meter, the
-value readout, and a mute overlay. Every send, mix master, gain,
+value readout, and a mute overlay. Every send, channel volume, mix master, gain,
 headphone volume, the crossfade and each desktop output's volume (up to
 150%, pressing toggles its mute) is a dial target, and one dial can
 hold several targets cycled by tap or press. A turn leads locally: the

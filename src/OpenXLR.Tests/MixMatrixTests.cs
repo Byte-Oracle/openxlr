@@ -52,6 +52,36 @@ public sealed class MixMatrixTests
     }
 
     [Fact]
+    public void AnApplicationRowsGainIsItsChannelVolumeOnceTheDaemonReportsOne()
+    {
+        var model = new MainViewModel(new DaemonClient());
+        string State(string volume) => $$"""
+            {"channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"volume":0.5},{"id":"game","name":"Game"{{volume}}}],
+             "mixes":[{"id":"monitor","name":"Monitor A"}]}
+            """;
+        ApplyMixer.Invoke(model, [JsonNode.Parse(State(""))]);
+        using var matrix = new MixMatrixViewModel(model);
+        using var rack = new InputRackViewModel(model);
+        MatrixRowViewModel row = matrix.Rows.Single(r => r.Channel.Id == "game");
+        InputStripViewModel strip = rack.Strips.Single(s => s.Channel.Id == "game");
+        // A daemon without channel volumes: the name and the meter only.
+        Assert.False(row.Channel.HasVolume);
+        Assert.DoesNotContain(SkinStripParts.Gain, row.Spec.Parts);
+        Assert.Contains(SkinStripParts.Meter, row.Spec.Parts);
+        Assert.DoesNotContain(SkinStripParts.Gain, strip.Spec.Parts);
+
+        // Once it reports one, the volume is the row's gain with the meter under it.
+        ApplyMixer.Invoke(model, [JsonNode.Parse(State(",\"volume\":0.4"))]);
+        Assert.True(row.Channel.HasVolume);
+        Assert.Equal(0.4, row.Channel.Volume);
+        Assert.Contains(SkinStripParts.Gain, row.Spec.Parts);
+        Assert.DoesNotContain(SkinStripParts.Meter, row.Spec.Parts);
+        Assert.Contains(SkinStripParts.Gain, strip.Spec.Parts);
+        // A hardware input never takes one, whatever a state says.
+        Assert.False(model.Channels.Single(c => c.Id == "xlr1").HasVolume);
+    }
+
+    [Fact]
     public void CellsHoldTheChannelsOwnSendsAndColumnsTheMixersOwnMixes()
     {
         var model = new MainViewModel(new DaemonClient());

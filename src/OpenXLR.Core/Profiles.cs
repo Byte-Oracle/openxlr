@@ -17,6 +17,12 @@ public sealed record MixerScene
     public List<string> MixMuted { get; init; } = [];
     /// <summary>"channel|mix" to level.</summary>
     public Dictionary<string, double> Levels { get; init; } = [];
+    /// <summary>
+    /// Application or capture channel id to its channel volume. Null in
+    /// profiles saved before channel volumes, which recall every channel they
+    /// describe at full volume.
+    /// </summary>
+    public Dictionary<string, double>? ChannelVolumes { get; init; }
     public List<string> ChannelMuted { get; init; } = [];
     /// <summary>
     /// Null in profiles written before monitor routing was stored; an explicit

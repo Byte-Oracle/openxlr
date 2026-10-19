@@ -2187,6 +2187,12 @@ Select the interface OpenXLR drives</value>
   <data name="ChannelMeterTip" xml:space="preserve">
     <value>The channel's own level, before its send into this mix</value>
   </data>
+  <data name="ChannelVolumeName" xml:space="preserve">
+    <value>{0} volume</value>
+  </data>
+  <data name="ChannelVolumeTip" xml:space="preserve">
+    <value>The channel's own volume. It scales every send of the channel at once; each send keeps its own level and mute.</value>
+  </data>
   <data name="MixFaderName" xml:space="preserve">
     <value>{0} master level</value>
   </data>

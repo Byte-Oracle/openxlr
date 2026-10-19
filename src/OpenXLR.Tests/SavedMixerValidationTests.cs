@@ -20,6 +20,7 @@ public sealed class SavedMixerValidationTests
     [InlineData("{\"inserts\":{\"xlr1\":[{\"id\":null,\"kind\":\"lv2\",\"plugin\":\"test\"}]}}", "inserts.xlr1", "null entry")]
     [InlineData("{\"inserts\":{\"xlr1\":[{\"id\":\"one\",\"kind\":\"lv2\",\"plugin\":\"test\",\"params\":null}]}}", "inserts.xlr1.params", "null entry")]
     [InlineData("{\"mixVolumes\":{\"monitor\":1e999}}", "mixVolumes", "non-finite number")]
+    [InlineData("{\"channelVolumes\":{\"music\":1e999}}", "channelVolumes", "non-finite number")]
     [InlineData("{\"inserts\":{\"xlr1\":[{\"id\":\"one\",\"kind\":\"lv2\",\"plugin\":\"test\",\"params\":{\"gain\":1e999}}]}}", "inserts.xlr1.params", "non-finite number")]
     public void SettingsDropTheBadEntryWhileProfilesAreRefusedWhole(string json, string field, string problem)
     {
@@ -36,6 +37,7 @@ public sealed class SavedMixerValidationTests
             Assert.Empty(loaded.MixVolumes);
             Assert.Empty(loaded.MixMuted);
             Assert.Empty(loaded.Levels);
+            Assert.Empty(loaded.ChannelVolumes);
             Assert.Empty(loaded.ChannelMuted);
             Assert.Empty(loaded.MonitorOutputs);
             Assert.Empty(loaded.MonitorFeeds);

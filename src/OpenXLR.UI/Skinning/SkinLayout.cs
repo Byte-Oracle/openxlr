@@ -209,10 +209,10 @@ public static class SkinMatrixParts
 
     /// <summary>
     /// A row head's parts, in their default order: the channel's icon and
-    /// name, its own meter, the input's hardware gain or Aux In's level, the
-    /// input's hardware mute and the input's plugin chain. A channel without
-    /// one of them, an application channel without gain, mute or chain, simply
-    /// does not draw it.
+    /// name, its own meter, the input's hardware gain or Aux In's level (an
+    /// application or capture channel's own volume), the input's hardware
+    /// mute and the input's plugin chain. A channel without one of them, an
+    /// application channel without mute or chain, simply does not draw it.
     /// </summary>
     public static IReadOnlyList<string> RowHead { get; } =
         [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute, SkinStripParts.Effects];

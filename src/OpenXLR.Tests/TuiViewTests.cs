@@ -752,6 +752,77 @@ public sealed class TuiViewTests
             Assert.Contains(sent, json => json.Contains("resetDevice", StringComparison.Ordinal));
         }
     }
+    /// <summary>The shared state with a channel volume on Music, as a daemon with channel volumes sends it.</summary>
+    private static (App App, List<string> Sent) WithChannelVolume(int tab)
+    {
+        DaemonLink link = new();
+        List<string> sent = [];
+        link.Sent += json => sent.Add(json);
+        link.Receive(StateJson.Replace("\"mutedIn\": [], \"hardware\": false", "\"mutedIn\": [], \"hardware\": false, \"volume\": 0.65",
+            StringComparison.Ordinal));
+        App app = new(link, Theme.Material);
+        app.ShowTab(tab);
+        app.Draw(new Screen(140, 36));
+        return (app, sent);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void TheChannelVolumeKeysMoveAnApplicationChannelsOwnVolume(int tab)
+    {
+        (App app, List<string> sent) = WithChannelVolume(tab);
+        app.Handle(new KeyPress(Key.Down));      // XLR 1
+        app.Handle(new KeyPress(Key.Down));      // Music, at 0.65
+        foreach ((char key, double expected) in new[] { ('>', 0.70), ('<', 0.60), ('.', 0.66), (',', 0.64) })
+        {
+            app.Handle(new KeyPress(Key.Char, key));
+            JsonElement command = JsonDocument.Parse(sent[^1]).RootElement;
+            Assert.Equal("setChannelVolume", Text(command, "cmd"));
+            Assert.Equal("music", Text(command, "channel"));
+            Assert.Equal(expected, command.GetProperty("value").GetDouble(), 3);
+        }
+
+        // A hardware input has no channel volume, and neither does a mix master.
+        sent.Clear();
+        app.Handle(new KeyPress(Key.Up));        // XLR 1
+        app.Handle(new KeyPress(Key.Char, '>'));
+        app.Handle(new KeyPress(Key.Home));      // the masters
+        app.Handle(new KeyPress(Key.Char, '<'));
+        Assert.Empty(sent);
+        Screen screen = new(140, 36);
+        app.Draw(screen);
+        Assert.Contains("Only an application or capture channel has a channel volume", Frame(screen), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheChannelVolumeIsDrawnBesideTheChannelItScales()
+    {
+        (App app, _) = WithChannelVolume(1);
+        Screen matrix = new(150, 42);
+        app.Draw(matrix);
+        // The sends are 80% and 100%; the channel's own 65% stands with its name.
+        string row = Frame(matrix).Split('\n').First(line => line.Contains("Music", StringComparison.Ordinal));
+        Assert.Contains("65%", row, StringComparison.Ordinal);
+
+        app.ShowTab(0);
+        app.Handle(new KeyPress(Key.Down));
+        app.Handle(new KeyPress(Key.Down));      // Music
+        Screen desk = new(150, 42);
+        app.Draw(desk);
+        Assert.Contains("channel volume 65%", Frame(desk), StringComparison.Ordinal);
+
+        // A daemon without channel volumes leaves the keys and the readout out.
+        (App old, List<string> sent) = Ready(1);
+        old.Handle(new KeyPress(Key.Down));
+        old.Handle(new KeyPress(Key.Down));
+        old.Handle(new KeyPress(Key.Char, '>'));
+        Assert.Empty(sent);
+        Screen oldDesk = new(150, 42);
+        old.Draw(oldDesk);
+        Assert.DoesNotMatch(@"channel volume \d", Frame(oldDesk));
+    }
+
     private static string Frame(Screen screen) => string.Join('\n', Enumerable.Range(0, screen.Height)
         .Select(y => new string(Enumerable.Range(0, screen.Width).Select(x => screen.At(x, y).Ch).ToArray())));
 

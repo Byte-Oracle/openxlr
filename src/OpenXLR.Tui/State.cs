@@ -51,6 +51,12 @@ internal sealed record ChannelEntry
     public string Name { get; init; } = string.Empty;
     public Dictionary<string, double> Levels { get; init; } = [];
     public List<string> MutedIn { get; init; } = [];
+
+    /// <summary>
+    /// The channel's own volume, which scales every send it makes; null for a
+    /// hardware input, and for every channel of a daemon that has none.
+    /// </summary>
+    public double? Volume { get; init; }
     public bool Hardware { get; init; }
     public string? CaptureSource { get; init; }
     public int CapturePair { get; init; }
@@ -73,6 +79,24 @@ internal sealed record ChannelEntry
     public double Level(string mix) => Levels.TryGetValue(mix, out double value) ? value : 0;
 
     public bool IsMuted(string mix) => MutedIn.Contains(mix);
+
+    /// <summary>
+    /// Step the channel volume by <paramref name="by"/>, within 0 to 1. Only an
+    /// application or capture channel has one; any other selection says so.
+    /// </summary>
+    public static void StepVolume(App app, ChannelEntry? channel, double by)
+    {
+        if (channel?.Volume is not double volume)
+        {
+            app.Say("Only an application or capture channel has a channel volume");
+            return;
+        }
+        app.Link.Send("setChannelVolume", body =>
+        {
+            body["channel"] = channel.Id;
+            body["value"] = Math.Round(Math.Clamp(volume + by, 0, 1), 2);
+        });
+    }
 }
 
 /// <summary>A live playback stream the daemon has placed on a channel.</summary>

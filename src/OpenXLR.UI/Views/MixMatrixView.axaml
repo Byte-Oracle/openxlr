@@ -186,7 +186,7 @@
           </DockPanel>
         </Border>
       </DataTemplate>
-      <!-- an application or capture channel: its name and its meter, which is all it has -->
+      <!-- an application or capture channel: its name, its meter and its own volume, the meter under the volume as under a microphone's gain -->
       <DataTemplate x:Key="channel" x:DataType="layout:MatrixRowViewModel">
         <Border Classes="tile matrixHead" Name="MatrixRowHead">
           <DockPanel>
@@ -215,6 +215,14 @@
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
                 </StackPanel>
+                <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                    <Slider Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                            Value="{Binding Channel.Volume, Mode=TwoWay}"
+                            AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"/>
+                  </layout:MeterFader>
+                </Grid>
               </layout:StripPanel>
             </Border>
           </DockPanel>
