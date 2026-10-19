@@ -102,7 +102,7 @@ The state message in full. At the top level: `daemonVersion`, `daemonBuildId`, `
 `connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 or Wave:1 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3 and Wave:1), `capabilities` (`gain`,
 `mute`, `lowCut`, `expander`, `voiceTune`, `hpVolume`, `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`, `compressor`, `outputRouting`,
-`auxInput`, `xlrInputs`, `hpOutputs`, `physicalControls`, `retainsSettings`,
+`auxInput`, `xlrInputs`, `xlrJacks` (false on the Wave:3 and Wave:1, whose one input is the microphone's own capsule rather than an XLR jack), `hpOutputs`, `physicalControls`, `retainsSettings`,
 `builtInDefaults`, and `gainMaxDb`, the highest gain in dB that `gain` and
 `gain2` take, from 0: 80 on the Wave XLR Pro and the MK.2 family, 75 on the
 Wave XLR and the first XLR Dock, 40 on the Wave:3 and Wave:1; a higher value is held
@@ -573,6 +573,20 @@ connected unit has its jack. With no unit connected, it keeps the last
 answer of this daemon run. Before any unit has connected in this run, XLR 1
 is present and XLR 2 and Aux In are present only while a supported unit is
 attached, so a desk with no Elgato unit gets one strip.
+
+A microphone strip's `name` follows what feeds it. XLR 1 and XLR 2 keep
+those names only while a real XLR jack feeds them: the driven unit's input
+on a Wave XLR Pro, a Wave XLR of either model or an XLR Dock. A strip bound
+to another source is `Mic 1` or `Mic 2`, and so is the strip on a Wave:3's
+or Wave:1's built-in capsule, whose `capabilities.xlrJacks` is false. With
+no unit driven, a strip on the interface keeps the name the last driven
+unit gave it in this run. The names are fixed strings, `renameChannel`
+refuses a hardware strip as before, and the ids stay `xlr1` and `xlr2` for
+every command, profile, skin, layout entry and Stream Deck target. The
+strip's `appearance.defaultIcon` follows the same rule: `mic` on a real XLR
+jack, `microphone` on a capsule or another source, and `headset` on a
+`bluez_input.` source. The top-level `warning` and the Sound Check refusal
+name the strip the same way.
 
 #### The interface while a strip is bound
 

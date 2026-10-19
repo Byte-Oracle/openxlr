@@ -108,8 +108,10 @@ writes `inputBindings` only. `setInputBinding` changes the field live; see
 `icon` is one of:
 
 - empty or absent: the default for the item's kind, which the daemon
-  publishes in the state as `defaultIcon` ([api.md](api.md)). Hardware
-  inputs wear `mic` (Aux In wears `jack`), capture inputs `camera`, the
+  publishes in the state as `defaultIcon` ([api.md](api.md)). XLR 1 and
+  XLR 2 wear `mic` on a real XLR jack, `microphone` on a Wave:3's or
+  Wave:1's capsule or another source, and `headset` on a Bluetooth
+  headset's source (`bluez_input.`); Aux In wears `jack`, capture inputs `camera`, the
   shipped application channels `game`, `music`, `browser`, `cog` (System),
   `chat` (Voice Chat) and `burst` (SFX), any other application channel
   `apps`, monitor mixes `headset`, Stream `broadcast`, Chat `people`, any
@@ -118,7 +120,7 @@ writes `inputBindings` only. `setInputBinding` changes the field live; see
 - one of the text glyphs ● ♪ ♫ ✦ ◆ ▶ ◉, drawn as text, as layouts from
   before the icon set keep them;
 - an icon name: a lower-case letter followed by up to 31 lower-case
-  letters, digits or hyphens. The built-in set is `mic`, `headset`,
+  letters, digits or hyphens. The built-in set is `mic`, `microphone`, `headset`,
   `speaker`, `jack`, `music`, `game`, `browser`, `chat`, `people`,
   `broadcast`, `camera`, `bell`, `star`, `globe`, `cog`, `film`, `voice`,
   `podcast`, `record`, `apps`, `burst` and `monitor`; a skin may add names

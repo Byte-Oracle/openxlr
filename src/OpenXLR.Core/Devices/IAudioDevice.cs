@@ -166,6 +166,13 @@ public sealed record DeviceCapabilities
     public int XlrInputs { get; init; } = 1;
 
     /// <summary>
+    /// Whether the inputs are XLR jacks. False on a USB microphone (Wave:3,
+    /// Wave:1), whose one input is its built-in capsule: its strip is named
+    /// "Mic 1", not "XLR 1", and wears the microphone icon.
+    /// </summary>
+    public bool XlrJacks { get; init; } = true;
+
+    /// <summary>
     /// Whether the device has physical controls (dials, buttons) that write
     /// hardware state directly. A daemon-side gain lock cannot stop those,
     /// so the lock only shows for devices without them.

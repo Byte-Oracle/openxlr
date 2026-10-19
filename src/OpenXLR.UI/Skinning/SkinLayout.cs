@@ -173,6 +173,12 @@ public static class SkinStripParts
 {
     /// <summary>The channel's icon and name. Never hidden: a strip always says whose it is.</summary>
     public const string Identity = "identity";
+    /// <summary>
+    /// A microphone strip's input binding: a chip naming the interface's jack
+    /// or the capture source that feeds XLR 1 or XLR 2, with its connection
+    /// light, which opens the binding dialog.
+    /// </summary>
+    public const string Binding = "binding";
     /// <summary>The channel's own level meter, left and right.</summary>
     public const string Meter = "meter";
     /// <summary>The input's hardware gain, where the interface has one.</summary>
@@ -189,7 +195,7 @@ public static class SkinStripParts
     public const string Mute = "mute";
 
     /// <summary>An input row's parts, in their default order.</summary>
-    public static IReadOnlyList<string> InputRow { get; } = [Identity, Meter, Gain, HardwareControls, Effects];
+    public static IReadOnlyList<string> InputRow { get; } = [Identity, Binding, Meter, Gain, HardwareControls, Effects];
 
     /// <summary>A send strip's parts, in their default order.</summary>
     public static IReadOnlyList<string> Send { get; } = [Identity, Meter, Fader, Value, Mute];
@@ -209,13 +215,15 @@ public static class SkinMatrixParts
 
     /// <summary>
     /// A row head's parts, in their default order: the channel's icon and
-    /// name, its own meter, the input's hardware gain or Aux In's level (an
-    /// application or capture channel's own volume), the input's hardware
-    /// mute and the input's plugin chain. A channel without one of them, an
-    /// application channel without mute or chain, simply does not draw it.
+    /// name, a microphone strip's input binding, its own meter, the input's
+    /// hardware gain or Aux In's level (an application or capture channel's
+    /// own volume), the input's hardware mute and the input's plugin chain. A
+    /// channel without one of them, an application channel without mute or
+    /// chain, simply does not draw it. The binding stands under the name, in
+    /// the name column, wherever the order puts it.
     /// </summary>
     public static IReadOnlyList<string> RowHead { get; } =
-        [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute, SkinStripParts.Effects];
+        [SkinStripParts.Identity, SkinStripParts.Binding, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute, SkinStripParts.Effects];
 
     /// <summary>
     /// A column head's parts, in their default order: the mix's icon and

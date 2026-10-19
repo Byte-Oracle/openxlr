@@ -17,6 +17,22 @@
     <Style Selector="Window.arranging Button.reorderHandle.fixedPlace">
       <Setter Property="IsVisible" Value="False"/>
     </Style>
+    <!-- A button that reads as a link: the header's way to the binding dialog. -->
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{DynamicResource Ox.Link.Foreground}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="2,1"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="{DynamicResource Ox.Mixer.SmallControlMinSize}"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource Ox.Link.ForegroundPointerOver}"/>
+    </Style>
     <Style Selector="Button.reorderTarget">
       <Setter Property="Foreground" Value="{DynamicResource Ox.Accent}"/>
       <Setter Property="Background" Value="{DynamicResource Ox.Control.BackgroundPointerOver}"/>

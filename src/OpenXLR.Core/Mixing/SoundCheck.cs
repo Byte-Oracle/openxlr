@@ -62,7 +62,7 @@ public sealed partial class Mixer
             ChannelDefinition input = _config.Channels.Single(c => c.Id == channel);
             if (!_built || !BindingConnectedLocked(input) || !_stripSources.TryGetValue(channel, out string? device))
                 throw new InvalidOperationException(BindingWarningLocked(input) is { } why
-                    ? $"The microphone is not connected. {input.Name}: {why}"
+                    ? $"The microphone is not connected. {ChannelNameLocked(input)}: {why}"
                     : "The microphone is not connected.");
             if (action == "record" && _soundCheck is null)
             {

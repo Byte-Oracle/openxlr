@@ -250,26 +250,38 @@ unchanged.
 ### Another microphone on XLR 1 or XLR 2
 
 XLR 1 and XLR 2 can each be bound to one mono port of any external PipeWire
-capture source; Options binds XLR 1 and the API either strip. The existing
-sends, software DSP, inserts, Sound Check and meters process that
-microphone. A missing source stays selected and silent until it returns. The
-picker names each port by its channel position and leaves out the sources of
-supported interfaces, which the header's interface picker drives instead.
-Source and port changes keep channel nodes and application routing, and
-start that strip's monitoring muted. The binding is machine wiring,
-independent of profile recall.
+capture source. The window binds either strip from a chip on the strip, from
+Options and, with no interface attached, from a link in the header; the API
+binds either too. The chip names the source and lights while the strip is
+linked, and a line under it says why a strip is silent. The existing sends,
+software DSP, inserts, Sound Check and meters process that microphone. A
+missing source stays selected and silent until it returns. The dialog names
+each port by its channel position, warns about a Bluetooth headset's
+headset profile, and leaves out the sources of supported interfaces, which
+the header's interface picker drives instead. Source and port changes keep
+channel nodes and application routing, and start that strip's monitoring
+muted. The binding is machine wiring, independent of profile recall.
+
+A strip on another source is named Mic 1 or Mic 2 and wears the
+microphone icon, or the headset for a Bluetooth headset; XLR 1 and XLR 2
+keep their names only on a real XLR jack. A Wave:3 or Wave:1 has a capsule
+rather than a jack, so its strip is Mic 1 too. The ids never change.
 
 The Elgato interface stays driven whatever the strips take: headphones,
 the dial, output selectors, USB Aux, additional interfaces, recall on
 connect and the gain lock keep working, and the other strips keep its
-audio. Its microphone can stay in the mixer as a capture channel, which
-then carries the interface's first input, and on a Wave XLR Pro the
-zero-latency path to the jacks follows that channel. With no interface
-connected, profiles live under `generic` and hold the mixer scene only.
-The terminal mixer names XLR 1's source in its header and picks it from its
-Options tab. Stream Deck keys and the Omarchy bar keep XLR 1's sends and
-send mutes working, and their hardware controls say Generic mic until they
-learn which channel carries the interface's input.
+audio. Its microphone can stay in the mixer as a capture channel, which the
+binding dialog offers to add. That channel then carries the interface's
+input: the window draws the interface's gain, mute and switches on it, and
+on a Wave XLR Pro the zero-latency path to the jacks follows it. With no
+channel carrying it, the INPUTS panel keeps the controls folded under a
+heading that says so, and the crossfade says where the interface's own
+microphone plays. With no interface connected, profiles live under
+`generic` and hold the mixer scene only. The terminal mixer names XLR 1's
+source in its header and picks it from its Options tab. Stream Deck keys
+and the Omarchy bar keep XLR 1's sends and send mutes working, and their
+hardware controls say Generic mic until they learn which channel carries
+the interface's input.
 
 ### External capture channels
 

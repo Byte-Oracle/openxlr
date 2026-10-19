@@ -114,11 +114,20 @@
         <TextBlock Grid.Column="2" Text="OpenXLR" Classes="title" VerticalAlignment="Center"/>
         <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*"
               ColumnSpacing="6" Margin="0,2,0,0">
-            <skin:StatusLed IsOn="{Binding InputConnected}"
+            <skin:StatusLed IsOn="{Binding DeviceConnected}"
                             AutomationProperties.Name="{loc:Text Key=InterfaceConnection}"/>
             <TextBlock Name="DeviceStatus" Grid.Column="1" Text="{Binding StatusLine}" Classes="h"
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StatusLine}"
-                       IsVisible="{Binding !HasMultipleDevices}"/>
+                       IsVisible="{Binding ShowDeviceStatus}"/>
+            <!-- no supported interface attached while XLR 1 waits for one: a way to give it another microphone -->
+            <Grid Name="NoInterface" Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="4" IsVisible="{Binding ShowChooseMicrophone}">
+              <TextBlock Text="{loc:Text Key=NoInterface}" Classes="h" VerticalAlignment="Center"/>
+              <Button Name="ChooseMicrophoneLink" Grid.Column="1" Classes="link" Click="OnChooseMicrophone" IsVisible="{Binding ShowChooseMicrophone}"
+                      ToolTip.Tip="{Binding ChooseMicrophoneText}">
+                <TextBlock Text="{Binding ChooseMicrophoneText}" FontSize="{DynamicResource Ox.Label.FontSize}"
+                           TextTrimming="CharacterEllipsis"/>
+              </Button>
+            </Grid>
             <DropDownButton Name="DevicePicker" Grid.Column="1" Content="{Binding ActiveDeviceName}" FontSize="11" Padding="6,1"
                             MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center" HorizontalAlignment="Left" Classes="ghost"
                             IsVisible="{Binding HasMultipleDevices}"
@@ -177,7 +186,7 @@
                     <TextBlock Text="{loc:Text Key=OnConnect}" Classes="h" FontSize="11" VerticalAlignment="Center"/>
                     <ComboBox Grid.Column="1" Margin="8,0,0,0" FontSize="12" HorizontalAlignment="Stretch"
                               ItemsSource="{Binding RecallChoices}"
-                              SelectedItem="{Binding RecallOnConnectChoice}" IsEnabled="{Binding !GenericMicrophone}"/>
+                              SelectedItem="{Binding RecallOnConnectChoice}" IsEnabled="{Binding DeviceConnected}"/>
                   </Grid>
                 </StackPanel>
               </Flyout>
@@ -277,167 +286,220 @@
       <views:InputRackView Name="InputRack" IsVisible="False"/>
       <StackPanel Name="HardwarePanel" Classes="dev" Spacing="4">
 
-        <!-- XLR 1 -->
-        <Grid ColumnDefinitions="90,*,64,Auto" IsVisible="{Binding !GenericMicrophone}">
-          <TextBlock Text="{loc:Text Key=XLR1Gain}" Classes="h" VerticalAlignment="Center"/>
-          <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="{Binding GainMaxDb}"
-                  Value="{Binding GainDb, Mode=TwoWay}" IsEnabled="{Binding !GainLocked}"/>
-          <TextBlock Grid.Column="2" Text="{Binding GainText}" Classes="val" VerticalAlignment="Center"
-                     HorizontalAlignment="Right"/>
-          <ToggleButton Grid.Column="3" Content="{loc:Text Key=Lock}" Classes="mute" FontSize="11" Padding="8,2"
-                        Margin="6,0,0,0" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowGainLock}"
-                        IsChecked="{Binding GainLocked, Mode=TwoWay}" VerticalAlignment="Center"
-                        ToolTip.Tip="{loc:Text Key=GainLockTheDaemonRejectsEveryGainChange}"/>
-        </Grid>
-        <WrapPanel Name="InputControls" ItemSpacing="6" LineSpacing="4">
-          <ToggleButton IsVisible="{Binding !GenericMicrophone}" Content="{Binding MuteLabel}" Classes="mute" IsChecked="{Binding Mute, Mode=TwoWay}"
-                        IsEnabled="{Binding !PhantomSettling}"
-                        ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
-          <ToggleButton Content="{loc:Text Key=LowCut}"    IsChecked="{Binding LowCut, Mode=TwoWay}"     IsVisible="{Binding CapLowCut}"/>
-          <ToggleButton Content="{Binding SoftLowCutText}" IsVisible="{Binding ShowSoftLowCut}"
-                        IsChecked="{Binding SoftLowCutOn, Mode=OneWay}" Click="OnCycleSoftLowCut"
-                        ToolTip.Tip="{loc:Text Key=HostSideLowCutForThisDeviceIts}"/>
-          <ToggleButton Content="{loc:Text Key=ClipGuard}" IsVisible="{Binding ShowSoftClipGuard}"
-                        IsChecked="{Binding SoftClipGuard, Mode=TwoWay}"
-                        IsEnabled="{Binding SoftClipGuardAvailable}"
-                        ToolTip.Tip="{Binding SoftClipGuardTip}"/>
-          <ToggleButton Content="{loc:Text Key=Expander}"   IsChecked="{Binding Expander, Mode=TwoWay}"   IsVisible="{Binding CapExpander}"/>
-          <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding VoiceTune, Mode=TwoWay}"  IsVisible="{Binding CapVoiceTune}"/>
-          <ToggleButton Content="{loc:Text Key=Phantom}"  IsChecked="{Binding Phantom, Mode=TwoWay}"    IsVisible="{Binding CapPhantom}"/>
-          <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding ClipGuard, Mode=TwoWay}" IsVisible="{Binding CapClipGuard}"/>
-          <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Compressor, Mode=TwoWay}"
-                        IsVisible="{Binding CapCompressor}"/>
-        </WrapPanel>
-        <Grid ColumnDefinitions="90,*,64" IsVisible="{Binding VoiceTune}">
-          <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
-          <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="100"
-                  Value="{Binding VoiceTuneStrength, Mode=TwoWay}"/>
-          <TextBlock Grid.Column="2" Text="{Binding VoiceTuneStrengthText}" Classes="val"
-                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
-        </Grid>
-
-        <!-- XLR 1 plugin inserts: plugins in the mic path, after the
-             software low cut and ClipGuard, heard by every mix. The chain
-             window adds, reorders and removes; each plugin's controls open
-             in their own window. -->
-        <StackPanel Spacing="4" Margin="0,4,0,0" IsVisible="{Binding HasMixer}">
-          <Grid ColumnDefinitions="90,*,Auto">
-            <TextBlock Text="{loc:Text Key=Inserts}" Classes="h" VerticalAlignment="Center"
-                       ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
-            <Button Grid.Column="2" Content="{Binding Inserts.ButtonText}" Classes="fx" Classes.fxOn="{Binding Inserts.IsProcessing}" Classes.fxOff="{Binding Inserts.IsOff}"
-                    Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                    Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
+        <!-- XLR 1. Its binding first; the interface's first input where XLR 1
+             carries it; then XLR 1's own software low cut, ClipGuard and inserts,
+             whatever feeds it. While another channel carries the interface's
+             microphone, or none does, the input moves under the strip's own
+             controls with a heading that says where it plays. -->
+        <Grid Name="Xlr1Section" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4">
+          <Grid Name="Xlr1Binding" ColumnDefinitions="90,*" IsVisible="{Binding HasXlr1Strip}">
+            <TextBlock Text="{Binding Xlr1InputLabel}" Classes="h" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            <StackPanel Grid.Column="1" Spacing="2">
+              <views:BindingChip DataContext="{Binding Xlr1Strip}" HorizontalAlignment="Left"/>
+              <TextBlock Text="{Binding Xlr1Strip.BindingWarning}" Classes="hint" FontSize="11" TextWrapping="Wrap"
+                         IsVisible="{Binding Xlr1Strip.HasBindingWarning, FallbackValue=False}"/>
+            </StackPanel>
           </Grid>
-          <!-- the chain at a glance: LED, name, bypass, controls; adding,
-               ordering and removing live in the chain window -->
-          <ItemsControl ItemsSource="{Binding Inserts.Items}" IsVisible="{Binding Inserts.HasItems}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:InsertViewModel">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,0,0,3">
-                  <skin:StatusLed IsOn="{Binding IsActive}" Kind="Insert" Margin="0,0,8,0"
-                                  AutomationProperties.Name="{loc:Text Key=PluginState}"/>
-                  <Grid Grid.Column="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
-                        ColumnSpacing="8" VerticalAlignment="Center" ClipToBounds="True">
-                    <TextBlock Text="{Binding Label}" Classes="insertName body" FontSize="12"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}"/>
-                    <TextBlock Grid.Column="1" Text="{Binding StateText}" Classes="h" FontSize="11"/>
-                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="warn"
-                               FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
-                  </Grid>
-                  <ToggleButton Grid.Column="2" Content="{loc:Text Key=NativeHostLetter}" Classes="insertmini"
-                                IsChecked="{Binding NativeHost, Mode=TwoWay}"
-                                IsVisible="{Binding CanChooseNativeHost}"
-                                IsEnabled="{Binding CanTurnNativeHostOn}"
-                                Margin="4,0,0,0"
-                                AutomationProperties.Name="{loc:Text Key=RunThisPluginInItsOwnProcess}"
-                                ToolTip.Tip="{loc:Text Key=RunThisPluginInItsOwnProcessWhich}"/>
-                  <ToggleButton Grid.Column="3" Content="{loc:Text Key=BypassLetter}" Classes="insertmini bypass"
-                                IsChecked="{Binding Bypass, Mode=TwoWay}"
-                                Margin="4,0,2,0"
-                                AutomationProperties.Name="{loc:Text Key=BypassThisPlugin}"
-                                ToolTip.Tip="{loc:Text Key=Bypass}"/>
-                  <Button Grid.Column="4" Content="⚙" Classes="insertmini"
-                          AutomationProperties.Name="{loc:Text Key=OpenThisPluginSControls}"
-                          Click="OnInsertControls" ToolTip.Tip="{Binding ControlsHint}"/>
-                </Grid>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
+          <StackPanel Name="Input1Block" Grid.Row="{Binding UnitInput1.BlockRow}" Spacing="4">
+            <Grid Name="Input1Heading" ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding UnitInput1.Elsewhere}" Margin="0,4,0,0">
+              <TextBlock Text="{Binding UnitInput1.Heading}" Classes="h" TextWrapping="Wrap" VerticalAlignment="Center"/>
+              <ToggleButton Name="Input1Fold" Grid.Column="1" Classes="ghost" Padding="6,1" FontSize="11"
+                            Content="{Binding UnitInput1.Expanded, Converter={x:Static vm:Converters.Chevron}}"
+                            MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                            IsChecked="{Binding UnitInput1.Expanded, Mode=TwoWay}" IsVisible="{Binding UnitInput1.CanFold}"
+                            AutomationProperties.Name="{Binding UnitInput1.Heading}"/>
+            </Grid>
+            <StackPanel Spacing="4" IsVisible="{Binding UnitInput1.ControlsShown}">
+              <Grid ColumnDefinitions="90,*,64,Auto">
+                <TextBlock Text="{Binding UnitInput1.GainLabel}" Classes="h" VerticalAlignment="Center"/>
+                <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="{Binding GainMaxDb}"
+                        Value="{Binding GainDb, Mode=TwoWay}" IsEnabled="{Binding !GainLocked}"
+                        AutomationProperties.Name="{Binding UnitInput1.GainName}"/>
+                <TextBlock Grid.Column="2" Text="{Binding GainText}" Classes="val" VerticalAlignment="Center"
+                           HorizontalAlignment="Right"/>
+                <ToggleButton Grid.Column="3" Content="{loc:Text Key=Lock}" Classes="mute" FontSize="11" Padding="8,2"
+                              Margin="6,0,0,0" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowGainLock}"
+                              IsChecked="{Binding GainLocked, Mode=TwoWay}" VerticalAlignment="Center"
+                              ToolTip.Tip="{loc:Text Key=GainLockTheDaemonRejectsEveryGainChange}"/>
+              </Grid>
+              <WrapPanel Name="InputControls" ItemSpacing="6" LineSpacing="4">
+                <ToggleButton Content="{Binding MuteLabel}" Classes="mute" IsChecked="{Binding Mute, Mode=TwoWay}"
+                              IsEnabled="{Binding !PhantomSettling}"
+                              ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                <ToggleButton Content="{loc:Text Key=LowCut}"    IsChecked="{Binding LowCut, Mode=TwoWay}"     IsVisible="{Binding CapLowCut}"/>
+                <ToggleButton Content="{loc:Text Key=Expander}"   IsChecked="{Binding Expander, Mode=TwoWay}"   IsVisible="{Binding CapExpander}"/>
+                <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding VoiceTune, Mode=TwoWay}"  IsVisible="{Binding CapVoiceTune}"/>
+                <ToggleButton Content="{loc:Text Key=Phantom}"  IsChecked="{Binding Phantom, Mode=TwoWay}"    IsVisible="{Binding CapPhantom}"/>
+                <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding ClipGuard, Mode=TwoWay}" IsVisible="{Binding CapClipGuard}"/>
+                <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Compressor, Mode=TwoWay}"
+                              IsVisible="{Binding CapCompressor}"/>
+              </WrapPanel>
+              <Grid ColumnDefinitions="90,*,64" IsVisible="{Binding VoiceTune}">
+                <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
+                <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="100"
+                        Value="{Binding VoiceTuneStrength, Mode=TwoWay}"/>
+                <TextBlock Grid.Column="2" Text="{Binding VoiceTuneStrengthText}" Classes="val"
+                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Row="2" Spacing="4">
+            <!-- XLR 1's own software low cut and ClipGuard, for a signal with no hardware ones in front of it -->
+            <WrapPanel Name="SoftwareControls" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding ShowSoftwareControls}">
+              <ToggleButton Content="{Binding SoftLowCutText}" IsVisible="{Binding ShowSoftLowCut}"
+                            IsChecked="{Binding SoftLowCutOn, Mode=OneWay}" Click="OnCycleSoftLowCut"
+                            ToolTip.Tip="{loc:Text Key=HostSideLowCutForThisDeviceIts}"/>
+              <ToggleButton Content="{loc:Text Key=ClipGuard}" IsVisible="{Binding ShowSoftClipGuard}"
+                            IsChecked="{Binding SoftClipGuard, Mode=TwoWay}"
+                            IsEnabled="{Binding SoftClipGuardAvailable}"
+                            ToolTip.Tip="{Binding SoftClipGuardTip}"/>
+            </WrapPanel>
 
-        <!-- XLR 2 -->
-        <Grid ColumnDefinitions="90,*,64" Margin="0,2,0,0" IsVisible="{Binding HasXlr2}">
-          <TextBlock Text="{loc:Text Key=XLR2Gain}" Classes="h" VerticalAlignment="Center"/>
-          <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="{Binding GainMaxDb}"
-                  Value="{Binding Gain2Db, Mode=TwoWay}" IsEnabled="{Binding !GainLocked}"/>
-          <TextBlock Grid.Column="2" Text="{Binding Gain2Text}" Classes="val" VerticalAlignment="Center"
-                     HorizontalAlignment="Right"/>
+            <!-- XLR 1 plugin inserts: plugins in the mic path, after the
+                 software low cut and ClipGuard, heard by every mix. The chain
+                 window adds, reorders and removes; each plugin's controls open
+                 in their own window. -->
+            <StackPanel Spacing="4" Margin="0,4,0,0" IsVisible="{Binding HasMixer}">
+              <Grid ColumnDefinitions="90,*,Auto">
+                <TextBlock Text="{loc:Text Key=Inserts}" Classes="h" VerticalAlignment="Center"
+                           ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
+                <Button Grid.Column="2" Content="{Binding Inserts.ButtonText}" Classes="fx" Classes.fxOn="{Binding Inserts.IsProcessing}" Classes.fxOff="{Binding Inserts.IsOff}"
+                        Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                        Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
+              </Grid>
+              <!-- the chain at a glance: LED, name, bypass, controls; adding,
+                   ordering and removing live in the chain window -->
+              <ItemsControl ItemsSource="{Binding Inserts.Items}" IsVisible="{Binding Inserts.HasItems}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:InsertViewModel">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,0,0,3">
+                      <skin:StatusLed IsOn="{Binding IsActive}" Kind="Insert" Margin="0,0,8,0"
+                                      AutomationProperties.Name="{loc:Text Key=PluginState}"/>
+                      <Grid Grid.Column="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+                            ColumnSpacing="8" VerticalAlignment="Center" ClipToBounds="True">
+                        <TextBlock Text="{Binding Label}" Classes="insertName body" FontSize="12"
+                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding StateText}" Classes="h" FontSize="11"/>
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="warn"
+                                   FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
+                      </Grid>
+                      <ToggleButton Grid.Column="2" Content="{loc:Text Key=NativeHostLetter}" Classes="insertmini"
+                                    IsChecked="{Binding NativeHost, Mode=TwoWay}"
+                                    IsVisible="{Binding CanChooseNativeHost}"
+                                    IsEnabled="{Binding CanTurnNativeHostOn}"
+                                    Margin="4,0,0,0"
+                                    AutomationProperties.Name="{loc:Text Key=RunThisPluginInItsOwnProcess}"
+                                    ToolTip.Tip="{loc:Text Key=RunThisPluginInItsOwnProcessWhich}"/>
+                      <ToggleButton Grid.Column="3" Content="{loc:Text Key=BypassLetter}" Classes="insertmini bypass"
+                                    IsChecked="{Binding Bypass, Mode=TwoWay}"
+                                    Margin="4,0,2,0"
+                                    AutomationProperties.Name="{loc:Text Key=BypassThisPlugin}"
+                                    ToolTip.Tip="{loc:Text Key=Bypass}"/>
+                      <Button Grid.Column="4" Content="⚙" Classes="insertmini"
+                              AutomationProperties.Name="{loc:Text Key=OpenThisPluginSControls}"
+                              Click="OnInsertControls" ToolTip.Tip="{Binding ControlsHint}"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </StackPanel>
         </Grid>
-        <WrapPanel Name="Input2Controls" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding HasXlr2}">
-          <ToggleButton Content="{Binding Mute2Label}" Classes="mute" IsChecked="{Binding Mute2, Mode=TwoWay}"
-                        IsEnabled="{Binding !PhantomSettling2}"
-                        ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
-          <ToggleButton Content="{loc:Text Key=LowCut}"    IsChecked="{Binding LowCut2, Mode=TwoWay}"/>
-          <ToggleButton Content="{loc:Text Key=Expander}"   IsChecked="{Binding Expander2, Mode=TwoWay}"/>
-          <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding VoiceTune2, Mode=TwoWay}"/>
-          <ToggleButton Content="{loc:Text Key=Phantom}"  IsChecked="{Binding Phantom2, Mode=TwoWay}"/>
-          <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding ClipGuard2, Mode=TwoWay}"/>
-          <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Compressor2, Mode=TwoWay}"/>
-        </WrapPanel>
-        <!-- XLR 2 plugin inserts: same chain concept, its own mono filter-chain -->
-        <StackPanel IsVisible="{Binding HasXlr2}">
-        <StackPanel Spacing="4" Margin="0,4,0,0" IsVisible="{Binding HasMixer}">
-          <Grid ColumnDefinitions="90,*,Auto">
-            <TextBlock Text="{loc:Text Key=Inserts}" Classes="h" VerticalAlignment="Center"
-                       ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
-            <Button Grid.Column="2" Content="{Binding Inserts2.ButtonText}" Classes="fx" Classes.fxOn="{Binding Inserts2.IsProcessing}" Classes.fxOff="{Binding Inserts2.IsOff}"
-                    Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                    Tag="xlr2" Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
-          </Grid>
-          <!-- the chain at a glance: LED, name, bypass, controls; adding,
-               ordering and removing live in the chain window -->
-          <ItemsControl ItemsSource="{Binding Inserts2.Items}" IsVisible="{Binding Inserts2.HasItems}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:InsertViewModel">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,0,0,3">
-                  <skin:StatusLed IsOn="{Binding IsActive}" Kind="Insert" Margin="0,0,8,0"
-                                  AutomationProperties.Name="{loc:Text Key=PluginState}"/>
-                  <Grid Grid.Column="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
-                        ColumnSpacing="8" VerticalAlignment="Center" ClipToBounds="True">
-                    <TextBlock Text="{Binding Label}" Classes="insertName body" FontSize="12"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}"/>
-                    <TextBlock Grid.Column="1" Text="{Binding StateText}" Classes="h" FontSize="11"/>
-                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="warn"
-                               FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
-                  </Grid>
-                  <ToggleButton Grid.Column="2" Content="{loc:Text Key=NativeHostLetter}" Classes="insertmini"
-                                IsChecked="{Binding NativeHost, Mode=TwoWay}"
-                                IsVisible="{Binding CanChooseNativeHost}"
-                                IsEnabled="{Binding CanTurnNativeHostOn}"
-                                Margin="4,0,0,0"
-                                AutomationProperties.Name="{loc:Text Key=RunThisPluginInItsOwnProcess}"
-                                ToolTip.Tip="{loc:Text Key=RunThisPluginInItsOwnProcessWhich}"/>
-                  <ToggleButton Grid.Column="3" Content="{loc:Text Key=BypassLetter}" Classes="insertmini bypass"
-                                IsChecked="{Binding Bypass, Mode=TwoWay}"
-                                Margin="4,0,2,0"
-                                AutomationProperties.Name="{loc:Text Key=BypassThisPlugin}"
-                                ToolTip.Tip="{loc:Text Key=Bypass}"/>
-                  <Button Grid.Column="4" Content="⚙" Classes="insertmini"
-                          AutomationProperties.Name="{loc:Text Key=OpenThisPluginSControls}"
-                          Click="OnInsertControls" ToolTip.Tip="{Binding ControlsHint}"/>
-                </Grid>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-        </StackPanel>
 
-        <Grid ColumnDefinitions="90,*,64" IsVisible="{Binding VoiceTune2}">
-          <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
-          <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="100"
-                  Value="{Binding VoiceTuneStrength2, Mode=TwoWay}"/>
-          <TextBlock Grid.Column="2" Text="{Binding VoiceTuneStrength2Text}" Classes="val"
-                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
+        <!-- XLR 2: the same, on an interface with a second input, or bound to a source
+             so that a one-input interface has a second microphone strip -->
+        <Grid Name="Xlr2Section" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4" Margin="0,2,0,0" IsVisible="{Binding ShowXlr2Section}">
+          <Grid Name="Xlr2Binding" ColumnDefinitions="90,*" IsVisible="{Binding HasXlr2Strip}">
+            <TextBlock Text="{Binding Xlr2InputLabel}" Classes="h" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            <StackPanel Grid.Column="1" Spacing="2">
+              <views:BindingChip DataContext="{Binding Xlr2Strip}" HorizontalAlignment="Left"/>
+              <TextBlock Text="{Binding Xlr2Strip.BindingWarning}" Classes="hint" FontSize="11" TextWrapping="Wrap"
+                         IsVisible="{Binding Xlr2Strip.HasBindingWarning, FallbackValue=False}"/>
+            </StackPanel>
+          </Grid>
+          <StackPanel Name="Input2Block" Grid.Row="{Binding UnitInput2.BlockRow}" Spacing="4" IsVisible="{Binding HasXlr2}">
+            <Grid Name="Input2Heading" ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding UnitInput2.Elsewhere}" Margin="0,4,0,0">
+              <TextBlock Text="{Binding UnitInput2.Heading}" Classes="h" TextWrapping="Wrap" VerticalAlignment="Center"/>
+              <ToggleButton Name="Input2Fold" Grid.Column="1" Classes="ghost" Padding="6,1" FontSize="11"
+                            Content="{Binding UnitInput2.Expanded, Converter={x:Static vm:Converters.Chevron}}"
+                            MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                            IsChecked="{Binding UnitInput2.Expanded, Mode=TwoWay}" IsVisible="{Binding UnitInput2.CanFold}"
+                            AutomationProperties.Name="{Binding UnitInput2.Heading}"/>
+            </Grid>
+            <StackPanel Spacing="4" IsVisible="{Binding UnitInput2.ControlsShown}">
+              <Grid ColumnDefinitions="90,*,64">
+                <TextBlock Text="{Binding UnitInput2.GainLabel}" Classes="h" VerticalAlignment="Center"/>
+                <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="{Binding GainMaxDb}"
+                        Value="{Binding Gain2Db, Mode=TwoWay}" IsEnabled="{Binding !GainLocked}"
+                        AutomationProperties.Name="{Binding UnitInput2.GainName}"/>
+                <TextBlock Grid.Column="2" Text="{Binding Gain2Text}" Classes="val" VerticalAlignment="Center"
+                           HorizontalAlignment="Right"/>
+              </Grid>
+              <WrapPanel Name="Input2Controls" ItemSpacing="6" LineSpacing="4">
+                <ToggleButton Content="{Binding Mute2Label}" Classes="mute" IsChecked="{Binding Mute2, Mode=TwoWay}"
+                              IsEnabled="{Binding !PhantomSettling2}"
+                              ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                <ToggleButton Content="{loc:Text Key=LowCut}"    IsChecked="{Binding LowCut2, Mode=TwoWay}"/>
+                <ToggleButton Content="{loc:Text Key=Expander}"   IsChecked="{Binding Expander2, Mode=TwoWay}"/>
+                <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding VoiceTune2, Mode=TwoWay}"/>
+                <ToggleButton Content="{loc:Text Key=Phantom}"  IsChecked="{Binding Phantom2, Mode=TwoWay}"/>
+                <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding ClipGuard2, Mode=TwoWay}"/>
+                <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Compressor2, Mode=TwoWay}"/>
+              </WrapPanel>
+              <Grid ColumnDefinitions="90,*,64" IsVisible="{Binding VoiceTune2}">
+                <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
+                <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="100"
+                        Value="{Binding VoiceTuneStrength2, Mode=TwoWay}"/>
+                <TextBlock Grid.Column="2" Text="{Binding VoiceTuneStrength2Text}" Classes="val"
+                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+          <!-- XLR 2 plugin inserts: same chain concept, its own mono filter-chain -->
+          <StackPanel Grid.Row="2" Spacing="4" Margin="0,4,0,0" IsVisible="{Binding HasMixer}">
+            <Grid ColumnDefinitions="90,*,Auto">
+              <TextBlock Text="{loc:Text Key=Inserts}" Classes="h" VerticalAlignment="Center"
+                         ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
+              <Button Grid.Column="2" Content="{Binding Inserts2.ButtonText}" Classes="fx" Classes.fxOn="{Binding Inserts2.IsProcessing}" Classes.fxOff="{Binding Inserts2.IsOff}"
+                      Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                      Tag="xlr2" Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
+            </Grid>
+            <!-- the chain at a glance: LED, name, bypass, controls; adding,
+                 ordering and removing live in the chain window -->
+            <ItemsControl ItemsSource="{Binding Inserts2.Items}" IsVisible="{Binding Inserts2.HasItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:InsertViewModel">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,0,0,3">
+                    <skin:StatusLed IsOn="{Binding IsActive}" Kind="Insert" Margin="0,0,8,0"
+                                    AutomationProperties.Name="{loc:Text Key=PluginState}"/>
+                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+                          ColumnSpacing="8" VerticalAlignment="Center" ClipToBounds="True">
+                      <TextBlock Text="{Binding Label}" Classes="insertName body" FontSize="12"
+                                 TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding StateText}" Classes="h" FontSize="11"/>
+                      <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="warn"
+                                 FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
+                    </Grid>
+                    <ToggleButton Grid.Column="2" Content="{loc:Text Key=NativeHostLetter}" Classes="insertmini"
+                                  IsChecked="{Binding NativeHost, Mode=TwoWay}"
+                                  IsVisible="{Binding CanChooseNativeHost}"
+                                  IsEnabled="{Binding CanTurnNativeHostOn}"
+                                  Margin="4,0,0,0"
+                                  AutomationProperties.Name="{loc:Text Key=RunThisPluginInItsOwnProcess}"
+                                  ToolTip.Tip="{loc:Text Key=RunThisPluginInItsOwnProcessWhich}"/>
+                    <ToggleButton Grid.Column="3" Content="{loc:Text Key=BypassLetter}" Classes="insertmini bypass"
+                                  IsChecked="{Binding Bypass, Mode=TwoWay}"
+                                  Margin="4,0,2,0"
+                                  AutomationProperties.Name="{loc:Text Key=BypassThisPlugin}"
+                                  ToolTip.Tip="{loc:Text Key=Bypass}"/>
+                    <Button Grid.Column="4" Content="⚙" Classes="insertmini"
+                            AutomationProperties.Name="{loc:Text Key=OpenThisPluginSControls}"
+                            Click="OnInsertControls" ToolTip.Tip="{Binding ControlsHint}"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
         </Grid>
 
         <!-- USB Aux input stage -->
@@ -459,7 +521,6 @@
       <Border.IsVisible>
         <MultiBinding Converter="{x:Static BoolConverters.And}">
           <Binding Path="ShowDetailedSections"/>
-          <Binding Path="!GenericMicrophone"/>
           <Binding Path="(layout:RegionHost.Shown)" RelativeSource="{RelativeSource Self}"/>
         </MultiBinding>
       </Border.IsVisible>
@@ -506,6 +567,9 @@
           <TextBlock x:Name="CrossfadeValue" Grid.Column="2" Text="{Binding CrossfadeText}" Classes="val"
                      VerticalAlignment="Center" HorizontalAlignment="Right"/>
         </Grid>
+        <!-- the blend mixes the interface's own microphone into its jack, wherever that microphone plays in the mixer -->
+        <TextBlock Name="CrossfadeNote" Text="{Binding CrossfadeNote}" Classes="hint" FontSize="11" TextWrapping="Wrap"
+                   Margin="90,0,0,0" IsVisible="{Binding HasCrossfadeNote}"/>
         <UniformGrid Columns="7">
           <ToggleButton Content="{loc:Text Key=LowImp}" IsChecked="{Binding LowImpedance, Mode=TwoWay}" Margin="0,0,6,0"
                         IsVisible="{Binding CapLowImpedance}"/>

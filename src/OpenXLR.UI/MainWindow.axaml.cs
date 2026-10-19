@@ -286,6 +286,12 @@ public partial class MainWindow : Window
 
     private void OnCycleSoftLowCut(object? sender, RoutedEventArgs e) => _vm.CycleSoftLowCut();
 
+    /// <summary>The header's link with no interface attached: bind XLR 1 to another microphone.</summary>
+    private async void OnChooseMicrophone(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm) await InputBindingDialog.ShowAsync(this, vm, "xlr1");
+    }
+
     // Plugin inserts: every chain, input or mix, opens the same window,
     // and each insert's controls open in their own (see InsertWindows).
     private void OnXlrInserts(object? sender, RoutedEventArgs e)

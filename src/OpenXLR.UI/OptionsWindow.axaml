@@ -2,6 +2,7 @@
         xmlns:loc="using:OpenXLR.UI.Localization"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:OpenXLR.UI"
+        xmlns:views="using:OpenXLR.UI.Views"
         x:Class="OpenXLR.UI.OptionsWindow"
         x:DataType="vm:OptionsViewModel"
         Title="{loc:Text Key=OpenXLROptions}" Width="980" SizeToContent="Height"
@@ -74,9 +75,26 @@
         <CheckBox Content="{loc:Text Key=EnableSoftwareMixer}"
                   IsChecked="{Binding Submixer, Mode=TwoWay}"
                   ToolTip.Tip="{loc:Text Key=OffOpenXLRControlsTheHardwareOnlyAndLeaves}"/>
-        <TextBlock Text="{Binding Main.PrimaryInputDescription}" TextWrapping="Wrap" Classes="hint"/>
-        <Button Name="PrimaryMicrophone" Content="{loc:Text Key=ChoosePrimaryMicrophone}"
-                IsEnabled="{Binding Main.HasMixer}" HorizontalAlignment="Left" Click="OnPrimaryMicrophone"/>
+        <!-- what feeds XLR 1 and XLR 2: the interface's jacks or other capture sources, one chip each -->
+        <StackPanel Name="InputBindings" Spacing="4" IsVisible="{Binding Main.HasMixer}">
+          <TextBlock Text="{loc:Text Key=InputBindings}" Classes="h"/>
+          <ItemsControl Name="InputBindingRows" ItemsSource="{Binding Main.BindableStrips}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ChannelViewModel">
+                <Grid ColumnDefinitions="110,*" Margin="0,0,0,4">
+                  <TextBlock Text="{Binding Name}" Classes="h" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{Binding Name}"/>
+                  <StackPanel Grid.Column="1" Spacing="2">
+                    <views:BindingChip HorizontalAlignment="Left"/>
+                    <TextBlock Text="{Binding BindingWarning}" Classes="hint" FontSize="11" TextWrapping="Wrap"
+                               IsVisible="{Binding HasBindingWarning}"/>
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{loc:Text Key=InputBindingsHint}" FontSize="11" Foreground="{DynamicResource Ox.Text.Secondary}" TextWrapping="Wrap"/>
+        </StackPanel>
         <CheckBox Name="CompensateMixLatency" Content="{loc:Text Key=CompensatePluginLatencyAcrossMixes}"
                   IsChecked="{Binding Main.CompensateMixLatency, Mode=TwoWay}" IsEnabled="{Binding Main.HasMixer}"
                   ToolTip.Tip="{loc:Text Key=DelayTheOtherMixesSoEachLines}"/>

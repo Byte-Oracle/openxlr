@@ -2505,7 +2505,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     _mixVolume.GetValueOrDefault(m.Id, 1.0),
                     _mixMuted.Contains(m.Id), KindName(m.Kind), m.IsEditable))],
                 Channels = [.. _config.Channels.Select(c => new ChannelStatus(
-                    c.Id, c.Name,
+                    c.Id, ChannelNameLocked(c),
                     _config.Mixes.ToDictionary(m => m.Id, m => _levels.GetValueOrDefault(Cell(c.Id, m.Id), 0.0)),
                     [.. _config.Mixes.Where(m => _muted.Contains(Cell(c.Id, m.Id))).Select(m => m.Id)],
                     c.InputPair is not null, c.CaptureSource, c.CapturePair, _captureFeeds.ContainsKey(c.Id),

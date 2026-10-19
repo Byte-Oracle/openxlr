@@ -439,7 +439,8 @@ public sealed class MixerService : IHostedService, IDisposable
             _devices.ActiveNodeNameFragments,
             _devices.ActiveCapabilities?.OutputRouting ?? false,
             modelFallback: _devices.AttachedCount <= 1);
-        return _mixer.SetDrivenUnit(_devices.ActiveInfo?.InstanceId) | _mixer.SetAttached(_devices.AttachedCount > 0);
+        return _mixer.SetDrivenUnit(_devices.ActiveInfo?.InstanceId) | _mixer.SetAttached(_devices.AttachedCount > 0)
+            | _mixer.SetUnitXlrJacks(_devices.ActiveCapabilities?.XlrJacks);
     }
 
     internal void SweepOnce()

@@ -117,13 +117,20 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
     {
         InputStripKind.Xlr1 or InputStripKind.Xlr2 => SkinMatrixParts.RowHead,
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
-        // An application or capture channel's gain is its channel volume.
+        // A capture channel's gain is its channel volume, or the interface's
+        // gain while it carries the interface's microphone, which also brings
+        // the interface's mute.
+        InputStripKind.Capture => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute],
+        // An application channel's gain is its channel volume.
         _ => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
     };
 
-    /// <summary>True while the matrix draws a row for the channel: the view shows it, and XLR 2 needs an interface with two inputs.</summary>
+    /// <summary>
+    /// True while the matrix draws a row for the channel: the view shows it,
+    /// and XLR 2 needs an interface with two inputs or a source of its own.
+    /// </summary>
     internal bool ShowsRow(ChannelViewModel channel) =>
-        channel.DisplayVisible && (InputRackViewModel.KindOf(channel) != InputStripKind.Xlr2 || _main.HasXlr2);
+        channel.DisplayVisible && (InputRackViewModel.KindOf(channel) != InputStripKind.Xlr2 || _main.HasXlr2 || channel.IsSourceBound);
 
     /// <summary>
     /// How many of the window's monitor outputs hear this mix now: the ones
@@ -147,8 +154,6 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
     private void OnMainChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MainViewModel.HasXlr2)) Sync();
-        if (e.PropertyName == nameof(MainViewModel.GenericMicrophone))
-            foreach (MatrixRowViewModel row in Rows) row.RefreshSpec();
     }
 
     private void OnMixChanged(object? sender, PropertyChangedEventArgs e)
@@ -159,7 +164,7 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
     private void OnChannelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(ChannelViewModel.DisplayVisible) or nameof(ChannelViewModel.IsHardware)
-            or nameof(ChannelViewModel.CaptureSource)) Sync();
+            or nameof(ChannelViewModel.CaptureSource) or nameof(ChannelViewModel.IsSourceBound)) Sync();
     }
 
     private void OnOutputsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -433,20 +438,45 @@ public sealed class MatrixRowViewModel : ViewModelBase
     {
         SkinMatrixPartOptions head = Matrix.Options.RowHead;
         IReadOnlyCollection<string> available = MixMatrixViewModel.RowPartsOf(Kind);
-        string[] parts = [.. head.Shown.Where(p => p != SkinStripParts.Identity && available.Contains(p)
-            && !(Main.GenericMicrophone && Kind == InputStripKind.Xlr1 && p is SkinStripParts.Gain or SkinStripParts.Mute)
-            && !(InputRackViewModel.IsChannelVolumeKind(Kind) && p == SkinStripParts.Gain && !Channel.HasVolume))];
+        // The binding stands in the name column, not among the source controls.
+        string[] parts = [.. head.Shown.Where(p => p != SkinStripParts.Identity && p != SkinStripParts.Binding
+            && available.Contains(p) && Available(p))];
         // Without hardware gain the standalone meter remains visible, even
         // when the skin normally draws it under the gain fader.
         if (Matrix.MeterUnderFader && parts.Contains(SkinStripParts.Gain)) parts = [.. parts.Where(p => p != SkinStripParts.Meter)];
         return new StripSpec(parts, Orientation.Horizontal, null, head.Label, Orientation.Horizontal, false, Orientation.Horizontal);
     }
 
+    /// <summary>
+    /// Whether this channel has the part now. The gain and the mute belong to
+    /// the interface's input: an XLR row bound to another source has neither,
+    /// and a capture channel carrying the interface's microphone has both, its
+    /// gain the interface's in place of its own volume. An application or
+    /// capture channel's own volume shows once the daemon reports one.
+    /// </summary>
+    private bool Available(string part) => (Kind, part) switch
+    {
+        (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain or SkinStripParts.Mute) => CarriesUnit,
+        (InputStripKind.Capture, SkinStripParts.Mute) => CarriesUnit,
+        (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || Channel.HasVolume,
+        _ => true,
+    };
+
     internal void RefreshSpec()
     {
         Spec = CreateSpec();
         Raise(nameof(Spec));
     }
+
+    /// <summary>The interface's input this row carries, whose gain and mute its head draws, or null.</summary>
+    public UnitInputViewModel? Unit => Channel.ShownUnitInput is 1 or 2 ? Main.UnitInputOf(Channel.ShownUnitInput) : null;
+
+    /// <summary>The head draws the interface's gain and mute.</summary>
+    public bool CarriesUnit => Unit is not null;
+
+    /// <summary>The head draws the strip's binding chip under the name: XLR 1 or XLR 2, unless the skin hides it.</summary>
+    public bool ShowsBinding => Kind is InputStripKind.Xlr1 or InputStripKind.Xlr2
+        && Matrix.Options.RowHead.Shows(SkinStripParts.Binding);
 
     /// <summary>One cell per column, in the columns' order.</summary>
     public ObservableCollection<MatrixCellViewModel> Cells { get; } = [];
@@ -533,6 +563,9 @@ public sealed class MatrixRowViewModel : ViewModelBase
                 foreach (MatrixCellViewModel cell in Cells) cell.RefreshNames();
                 break;
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
+            case nameof(ChannelViewModel.ShownUnitInput):
+                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); RefreshSpec();
+                break;
         }
     }
 

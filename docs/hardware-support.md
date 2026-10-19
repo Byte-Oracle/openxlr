@@ -313,10 +313,12 @@ Without its card the microphone is still driven, Options says the
 desktop's controls are not kept in step, and the diagnostics dump gives
 the reason on its `alsa` line.
 
-The one input strip is the capsule; it carries the XLR 1 name the mixer
-gives its first hardware input. The Wave:3 has no XLR jack, no phantom
-power, no second input, no output routing and no aux port, and none of
-those is offered. None of the sources says whether the microphone keeps
+The one input strip is the capsule, not an XLR jack. The capabilities
+say so with `xlrJacks` false, so the mixer names that strip Mic 1 rather
+than XLR 1 and gives it the microphone icon, and the window calls its
+input the built-in microphone, never a jack. The Wave:3 has no XLR jack,
+no phantom power, no second input, no output routing and no aux port, and
+none of those is offered. None of the sources says whether the microphone keeps
 its settings across a power cycle. The backend leaves `retainsSettings`
 at true, so the daemon writes nothing on connect that the user did not
 ask for, and a replug on real hardware decides it.
@@ -376,7 +378,8 @@ gain when Wave Link is told so, the dial pressed to mute, and in Wave
 Link the gain, headphone volume, mic/PC mix, ClipGuard, low cut and
 gain lock. Those are the Wave:3's controls, and the two microphones
 shipped on one software generation. The backend refuses a config block
-of another length before it writes anything.
+of another length before it writes anything. Its input is the capsule,
+so its strip is Mic 1, as on the Wave:3.
 
 An owner's diagnostics archive, taken on 0.1.60 before any control was
 touched, settled the reading side. The unit answered both blocks:
@@ -527,7 +530,8 @@ following, each result with the diagnostics archive:
    their USB ports. Note each unit's `id` in the state's
    `waveInterfaces`, unplug one, plug it into another port: a unit with
    a serial keeps its id.
-2. Pick each in turn as the primary: XLR 1 carries that unit's
+2. Pick each in turn as the primary: the first input strip (XLR 1, or
+   Mic 1 on a Wave:3 or Wave:1) carries that unit's
    microphone, never the other's, and the daemon log names no fallback
    to the model name. If it does, include the `pactl list short sources`
    output; it shows how udev spelled the serial.

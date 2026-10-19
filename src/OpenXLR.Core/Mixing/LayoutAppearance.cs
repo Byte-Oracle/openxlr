@@ -87,7 +87,8 @@ public sealed partial class Mixer
     private MixerState WithAppearanceLocked(MixerState state) => state with
     {
         Channels = [.. state.Channels.Select(c => c with { Appearance = LayoutAppearanceState.From(
-            AppearanceLocked("channel:" + c.Id), LayoutDefaultIcons.ForChannel(c.Id, c.Hardware, c.CaptureSource)) })],
+            AppearanceLocked("channel:" + c.Id), LayoutDefaultIcons.ForChannel(c.Id, c.Hardware, c.CaptureSource,
+                c.Hardware && c.Binding.Kind == "source" ? c.Binding.Source : null, _unitXlrJacks)) })],
         Mixes = [.. state.Mixes.Select(m => m with { Appearance = LayoutAppearanceState.From(
             AppearanceLocked("mix:" + m.Id), LayoutDefaultIcons.ForMix(m.Id, m.Kind)) })],
         OutputAppearance = LayoutAppearance.Outputs.ToDictionary(id => id,

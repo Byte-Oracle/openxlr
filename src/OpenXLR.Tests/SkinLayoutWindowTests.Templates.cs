@@ -176,6 +176,12 @@ internal static partial class SkinLayoutWindowTests
             Assert.True(Top(SkinStripParts.Identity) < Top(SkinStripParts.Gain), "identity before gain");
             Assert.True(Top(SkinStripParts.Gain) < Top(SkinStripParts.Meter), "gain before meter");
             Assert.True(Top(SkinStripParts.Meter) < Top(SkinStripParts.HardwareControls), "the parts left out of partsOrder follow");
+            // The binding, left out of partsOrder too, follows in its default place: before the switches.
+            Assert.True(Top(SkinStripParts.Meter) < Top(SkinStripParts.Binding), "the binding follows the ordered parts");
+            Assert.True(Top(SkinStripParts.Binding) < Top(SkinStripParts.HardwareControls), "the binding keeps its default place");
+            Assert.True(Part(xlr1, SkinStripParts.Binding).IsEffectivelyVisible);
+            Assert.Equal(Localizer.Text("Xlr1Jack"), Part(xlr1, SkinStripParts.Binding).GetVisualDescendants().OfType<TextBlock>().First().Text);
+            Assert.Empty(RackStrip(rack, "music").GetVisualDescendants().OfType<BindingChip>());
             Control effects = Part(xlr1, SkinStripParts.Effects);
             Assert.False(effects.IsVisible);
             Control[] focusable = Focusable(window);

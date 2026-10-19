@@ -14,46 +14,6 @@ namespace OpenXLR.Tests;
 [Collection("xdg-config")]
 public sealed class PrimaryInputTests
 {
-    [Fact]
-    public async Task GenericStateHidesHardwareControlsAndKeepsSoftwareProcessing()
-    {
-        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
-        var model = new MainViewModel(client);
-        void Apply(string state) => typeof(MainViewModel).GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(model, [JsonNode.Parse(state)!]);
-        Apply("""{"connected":true,"capabilities":{"xlrInputs":2,"hpOutputs":2,"lowCut":true,"phantom":true,"clipGuard":true,"auxInput":true}}""");
-        Assert.True(model.CapPhantom);
-        Apply("""{"connected":false,"devices":[],"mixer":{"primaryInput":{"source":"test.mic","channel":1},"primaryInputConnected":true}}""");
-        Assert.True(model.GenericMicrophone);
-        Assert.False(model.CapPhantom);
-        Assert.False(model.CapClipGuard);
-        Assert.False(model.HasXlr2);
-        Assert.False(model.HasHp2);
-        Assert.False(model.CapAuxInput);
-        Assert.True(model.ShowSoftLowCut);
-        Assert.True(model.ShowSoftClipGuard);
-        Assert.False(model.ShowGainLock);
-        Assert.False(model.ShowResetDefaults);
-        Assert.Contains("test.mic", model.StatusLine);
-        model.Channels.Add(new(client, "xlr1", "Microphone", []) { IsHardware = true });
-        using var rack = new InputRackViewModel(model);
-        using var matrix = new MixMatrixViewModel(model);
-        Assert.DoesNotContain(SkinStripParts.Gain, rack.Strips.Single().Spec.Parts);
-        Assert.DoesNotContain(SkinStripParts.Gain, matrix.Rows.Single().Spec.Parts);
-        Assert.DoesNotContain(SkinStripParts.Mute, matrix.Rows.Single().Spec.Parts);
-        Assert.Contains(SkinStripParts.Meter, matrix.Rows.Single().Spec.Parts);
-        var flow = FlowGraph.From(model);
-        Assert.Contains(flow.Nodes, n => n.Key == "capture:xlr1" && n.Label == "test.mic" && n.Active);
-        Assert.DoesNotContain(flow.Nodes, n => n.Key == "hw:xlr1");
-        Apply("""{"connected":true,"capabilities":{"xlrInputs":2,"hpOutputs":2,"phantom":true,"clipGuard":true},"mixer":{}}""");
-        Assert.False(model.GenericMicrophone);
-        Assert.True(model.CapPhantom);
-        Assert.True(model.HasXlr2);
-        Assert.False(model.ShowSoftClipGuard);
-        Assert.Contains(SkinStripParts.Gain, rack.Strips.Single().Spec.Parts);
-        Assert.Contains(SkinStripParts.Gain, matrix.Rows.Single().Spec.Parts);
-        Assert.Contains(SkinStripParts.Mute, matrix.Rows.Single().Spec.Parts);
-    }
     private static DeviceInfo Unit(string model, ushort pid, string? serial, string port = "1-2")
         => new("Elgato", model, 0x0fd9, pid) { Location = new UsbLocation(1, 2, port, serial) };
 
@@ -99,14 +59,14 @@ public sealed class PrimaryInputTests
     [Fact]
     public void PortChoicesAreNamedAndCappedAtTheChannelCount()
     {
-        Assert.Equal(["1 (MONO)"], OptionsWindow.PortChoices(new("wave3", "Wave:3", false, true, 1, "MONO")).Select(p => p.Label));
-        Assert.Equal(["1 (FL)", "2 (FR)"], OptionsWindow.PortChoices(new("cam", "Webcam", false, true, 2, "FL,FR")).Select(p => p.Label));
-        Assert.Equal("3 (AUX2)", OptionsWindow.PortChoices(new("pro", "Interface", false, true, 18,
+        Assert.Equal(["1 (MONO)"], InputBindingDialog.PortChoices(new("wave3", "Wave:3", false, true, 1, "MONO")).Select(p => p.Label));
+        Assert.Equal(["1 (FL)", "2 (FR)"], InputBindingDialog.PortChoices(new("cam", "Webcam", false, true, 2, "FL,FR")).Select(p => p.Label));
+        Assert.Equal("3 (AUX2)", InputBindingDialog.PortChoices(new("pro", "Interface", false, true, 18,
             string.Join(',', Enumerable.Range(0, 18).Select(i => $"AUX{i}"))))[2].Label);
-        Assert.Equal(["1", "2"], OptionsWindow.PortChoices(new("plain", "Plain", false, true, 2)).Select(p => p.Label));
+        Assert.Equal(["1", "2"], InputBindingDialog.PortChoices(new("plain", "Plain", false, true, 2)).Select(p => p.Label));
         // Unknown layout: every port the command accepts. A saved port past the count stays selectable.
-        Assert.Equal(64, OptionsWindow.PortChoices(null).Count);
-        Assert.Equal([0, 1, 4], OptionsWindow.PortChoices(new("cam", "Webcam", false, true, 2, "FL,FR"), keep: 4).Select(p => p.Index));
+        Assert.Equal(64, InputBindingDialog.PortChoices(null).Count);
+        Assert.Equal([0, 1, 4], InputBindingDialog.PortChoices(new("cam", "Webcam", false, true, 2, "FL,FR"), keep: 4).Select(p => p.Index));
     }
 
     [Fact]

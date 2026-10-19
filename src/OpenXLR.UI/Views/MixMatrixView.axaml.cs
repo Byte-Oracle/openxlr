@@ -22,6 +22,13 @@ public partial class MixMatrixView : UserControl
             InsertWindows.OpenChain(window, inserts, key);
     }
 
+    /// <summary>An XLR row's name and binding line: open the binding dialog for the strip.</summary>
+    private void OnBinding(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is MatrixRowViewModel { Channel.IsBindable: true } row)
+            _ = InputBindingDialog.OpenFrom((Control)sender!, row.Channel.Id);
+    }
+
     private void OnMixInserts(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is MatrixColumnViewModel column && TopLevel.GetTopLevel((Control)sender!) is Window window)
