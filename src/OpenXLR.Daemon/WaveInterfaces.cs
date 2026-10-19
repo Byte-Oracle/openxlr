@@ -170,6 +170,24 @@ public sealed class WaveInterfaces : BackgroundService
         return unit.NodeNameFragment != unit.ModelNameFragment ? [unit.NodeNameFragment] : [];
     }
 
+    /// <summary>
+    /// Every attached unit, for the mixer: whether it is driven as an
+    /// additional interface, the fragments that find its own nodes while it
+    /// is, and what its inputs are. The primary is listed for its inputs only;
+    /// the mixer knows it as the driven unit.
+    /// </summary>
+    internal IReadOnlyList<OpenXLR.Core.Mixing.AttachedUnit> AttachedUnits()
+    {
+        string? primary = _primary.ActiveInfo?.InstanceId;
+        return [.. Volatile.Read(ref _available).Select(device =>
+        {
+            string id = device.Info.InstanceId;
+            bool driven = id != primary && _sessions.TryGetValue(id, out DeviceManager? session) && session.ActiveInfo is not null;
+            return new OpenXLR.Core.Mixing.AttachedUnit(id, driven ? OwnSourceFragments(id) : [],
+                device.Capabilities.XlrInputs, device.Capabilities.XlrJacks, driven);
+        })];
+    }
+
     /// <summary>The capture channels whose source one of these fragments names.</summary>
     internal static IReadOnlyList<string> CaptureChannelsFrom(IEnumerable<OpenXLR.Core.Mixing.ChannelStatus> channels, IReadOnlyList<string> fragments)
         => [.. channels.Where(c => c.CaptureSource is { } source && fragments.Any(f => source.Contains(f, StringComparison.OrdinalIgnoreCase)))

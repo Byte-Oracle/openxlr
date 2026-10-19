@@ -112,17 +112,33 @@
                 </StackPanel>
                 <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center">
                   <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                     IsVisible="{Binding CarriesUnit}">
                     <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
                             Value="{Binding Main.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
                             AutomationProperties.Name="{Binding Main.UnitInput1.GainName}"/>
                   </layout:MeterFader>
+                  <!-- an additional interface's gain in its place, while this row carries that interface's input -->
+                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                     IsVisible="{Binding CarriesExtraUnit}">
+                    <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
+                            Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
+                            AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
+                  </layout:MeterFader>
                 </Grid>
-                <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Main.Mute, Mode=TwoWay}"
-                              IsEnabled="{Binding !Main.PhantomSettling}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
-                              MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
-                              ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                <Panel layout:StripPanel.Part="mute" VerticalAlignment="Center">
+                  <ToggleButton Classes="mute mutemini matrixMute" IsVisible="{Binding CarriesUnit}" IsChecked="{Binding Main.Mute, Mode=TwoWay}"
+                                IsEnabled="{Binding !Main.PhantomSettling}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
+                                MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                                AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
+                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                  <ToggleButton Name="MatrixExtraMute" Classes="mute mutemini matrixMute" IsChecked="{Binding ExtraUnit.Mute, Mode=TwoWay}"
+                                IsEnabled="{Binding ExtraUnit.CanMute, FallbackValue=False}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
+                                MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding CarriesExtraUnit}"
+                                AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
+                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                </Panel>
                 <Button layout:StripPanel.Part="effects" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
                         Classes.fxOn="{Binding Main.Inserts.IsProcessing}" Classes.fxOff="{Binding Main.Inserts.IsOff}"
                         Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
@@ -174,17 +190,33 @@
                 </StackPanel>
                 <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center">
                   <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                     IsVisible="{Binding CarriesUnit}">
                     <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
                             Value="{Binding Main.Gain2Db, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
                             AutomationProperties.Name="{loc:Text Key=XLR2Gain}"/>
                   </layout:MeterFader>
+                  <!-- an additional interface's gain in its place, while this row carries that interface's input -->
+                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                     IsVisible="{Binding CarriesExtraUnit}">
+                    <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
+                            Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
+                            AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
+                  </layout:MeterFader>
                 </Grid>
-                <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Main.Mute2, Mode=TwoWay}"
-                              IsEnabled="{Binding !Main.PhantomSettling2}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
-                              MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
-                              ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                <Panel layout:StripPanel.Part="mute" VerticalAlignment="Center">
+                  <ToggleButton Classes="mute mutemini matrixMute" IsVisible="{Binding CarriesUnit}" IsChecked="{Binding Main.Mute2, Mode=TwoWay}"
+                                IsEnabled="{Binding !Main.PhantomSettling2}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
+                                MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                                AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
+                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                  <ToggleButton Name="MatrixExtraMute" Classes="mute mutemini matrixMute" IsChecked="{Binding ExtraUnit.Mute, Mode=TwoWay}"
+                                IsEnabled="{Binding ExtraUnit.CanMute, FallbackValue=False}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
+                                MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding CarriesExtraUnit}"
+                                AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
+                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                </Panel>
                 <Button layout:StripPanel.Part="effects" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
                         Classes.fxOn="{Binding Main.Inserts2.IsProcessing}" Classes.fxOff="{Binding Main.Inserts2.IsOff}"
                         Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
@@ -270,7 +302,7 @@
                 <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center">
                   <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
                                      LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
-                                     IsVisible="{Binding !CarriesUnit}">
+                                     IsVisible="{Binding ShowsOwnVolume}">
                     <Slider Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
                             Value="{Binding Channel.Volume, Mode=TwoWay}"
                             AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"/>
@@ -283,12 +315,27 @@
                             Value="{Binding Unit.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Unit.GainLocked, FallbackValue=False}"
                             AutomationProperties.Name="{Binding Unit.GainName}"/>
                   </layout:MeterFader>
+                  <!-- an additional interface's gain in its place, while this row carries that interface's input -->
+                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                     IsVisible="{Binding CarriesExtraUnit}">
+                    <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
+                            Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
+                            AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
+                  </layout:MeterFader>
                 </Grid>
-                <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Unit.Mute, Mode=TwoWay}"
-                              IsEnabled="{Binding !Unit.PhantomSettling, FallbackValue=False}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
-                              MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
-                              ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                <Panel layout:StripPanel.Part="mute" VerticalAlignment="Center">
+                  <ToggleButton Classes="mute mutemini matrixMute" IsVisible="{Binding CarriesUnit}" IsChecked="{Binding Unit.Mute, Mode=TwoWay}"
+                                IsEnabled="{Binding !Unit.PhantomSettling, FallbackValue=False}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
+                                MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                                AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
+                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                  <ToggleButton Name="MatrixExtraMute" Classes="mute mutemini matrixMute" IsChecked="{Binding ExtraUnit.Mute, Mode=TwoWay}"
+                                IsEnabled="{Binding ExtraUnit.CanMute, FallbackValue=False}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
+                                MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding CarriesExtraUnit}"
+                                AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
+                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                </Panel>
               </layout:StripPanel>
             </Border>
           </DockPanel>

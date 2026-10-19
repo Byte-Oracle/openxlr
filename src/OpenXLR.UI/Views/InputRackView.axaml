@@ -77,7 +77,7 @@
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="gain" Classes="dev">
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" IsVisible="{Binding CarriesUnit}">
                   <Slider Name="RackGain" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
                           Value="{Binding Main.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
                           AutomationProperties.Name="{Binding Main.UnitInput1.GainName}"/>
@@ -87,6 +87,10 @@
                                 IsChecked="{Binding Main.GainLocked, Mode=TwoWay}" VerticalAlignment="Center"
                                 ToolTip.Tip="{loc:Text Key=GainLockTheDaemonRejectsEveryGainChange}"/>
                 </Grid>
+                <!-- an additional interface's gain, while this strip carries that interface's input -->
+                <Panel IsVisible="{Binding CarriesExtraUnit}">
+                  <views:WaveUnitControls Name="RackExtraGain" Part="Gain" DataContext="{Binding ExtraUnit}"/>
+                </Panel>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" Spacing="4">
                 <!-- the interface's switches, while XLR 1 carries its microphone -->
@@ -109,6 +113,10 @@
                     <TextBlock Grid.Column="2" Text="{Binding Main.VoiceTuneStrengthText}" Classes="val" VerticalAlignment="Center"/>
                   </Grid>
                 </StackPanel>
+                <!-- an additional interface's switches, while this strip carries that interface's input -->
+                <Panel IsVisible="{Binding CarriesExtraUnit}">
+                  <views:WaveUnitControls Name="RackExtraSwitches" Part="Switches" DataContext="{Binding ExtraUnit}"/>
+                </Panel>
                 <!-- XLR 1's own software low cut and ClipGuard, whatever feeds it -->
                 <WrapPanel Name="RackSoftwareControls" ItemSpacing="6" LineSpacing="4">
                   <ToggleButton Content="{Binding Main.SoftLowCutText}" IsVisible="{Binding Main.ShowSoftLowCut}"
@@ -162,31 +170,41 @@
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="gain" Classes="dev">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding CarriesUnit}">
                   <Slider vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
                           Value="{Binding Main.Gain2Db, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
                           AutomationProperties.Name="{loc:Text Key=XLR2Gain}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Main.Gain2Text}" Classes="val" VerticalAlignment="Center"/>
                 </Grid>
+                <!-- an additional interface's gain, while this strip carries that interface's input -->
+                <Panel IsVisible="{Binding CarriesExtraUnit}">
+                  <views:WaveUnitControls Name="RackExtraGain" Part="Gain" DataContext="{Binding ExtraUnit}"/>
+                </Panel>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" Spacing="4">
-                <WrapPanel Name="RackInput2Controls" ItemSpacing="6" LineSpacing="4">
-                  <ToggleButton Content="{Binding Main.Mute2Label}" Classes="mute" IsChecked="{Binding Main.Mute2, Mode=TwoWay}"
-                                IsEnabled="{Binding !Main.PhantomSettling2}"
-                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
-                  <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding Main.LowCut2, Mode=TwoWay}"/>
-                  <ToggleButton Content="{loc:Text Key=Expander}" IsChecked="{Binding Main.Expander2, Mode=TwoWay}"/>
-                  <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding Main.VoiceTune2, Mode=TwoWay}"/>
-                  <ToggleButton Content="{loc:Text Key=Phantom}" IsChecked="{Binding Main.Phantom2, Mode=TwoWay}"/>
-                  <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding Main.ClipGuard2, Mode=TwoWay}"/>
-                  <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Main.Compressor2, Mode=TwoWay}"/>
-                </WrapPanel>
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" IsVisible="{Binding Main.VoiceTune2}">
-                  <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
-                  <Slider Grid.Column="1" vm:FaderInput.Step="1" Minimum="0" Maximum="100"
-                          Value="{Binding Main.VoiceTuneStrength2, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=VTStrength}"/>
-                  <TextBlock Grid.Column="2" Text="{Binding Main.VoiceTuneStrength2Text}" Classes="val" VerticalAlignment="Center"/>
-                </Grid>
+                <StackPanel Spacing="4" IsVisible="{Binding CarriesUnit}">
+                  <WrapPanel Name="RackInput2Controls" ItemSpacing="6" LineSpacing="4">
+                    <ToggleButton Content="{Binding Main.Mute2Label}" Classes="mute" IsChecked="{Binding Main.Mute2, Mode=TwoWay}"
+                                  IsEnabled="{Binding !Main.PhantomSettling2}"
+                                  ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                    <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding Main.LowCut2, Mode=TwoWay}"/>
+                    <ToggleButton Content="{loc:Text Key=Expander}" IsChecked="{Binding Main.Expander2, Mode=TwoWay}"/>
+                    <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding Main.VoiceTune2, Mode=TwoWay}"/>
+                    <ToggleButton Content="{loc:Text Key=Phantom}" IsChecked="{Binding Main.Phantom2, Mode=TwoWay}"/>
+                    <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding Main.ClipGuard2, Mode=TwoWay}"/>
+                    <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Main.Compressor2, Mode=TwoWay}"/>
+                  </WrapPanel>
+                  <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" IsVisible="{Binding Main.VoiceTune2}">
+                    <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
+                    <Slider Grid.Column="1" vm:FaderInput.Step="1" Minimum="0" Maximum="100"
+                            Value="{Binding Main.VoiceTuneStrength2, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=VTStrength}"/>
+                    <TextBlock Grid.Column="2" Text="{Binding Main.VoiceTuneStrength2Text}" Classes="val" VerticalAlignment="Center"/>
+                  </Grid>
+                </StackPanel>
+                <!-- an additional interface's switches, while this strip carries that interface's input -->
+                <Panel IsVisible="{Binding CarriesExtraUnit}">
+                  <views:WaveUnitControls Name="RackExtraSwitches" Part="Switches" DataContext="{Binding ExtraUnit}"/>
+                </Panel>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="effects" Spacing="4">
                 <StackPanel Spacing="4" IsVisible="{Binding Main.HasMixer}">
@@ -274,6 +292,10 @@
                                 IsChecked="{Binding Main.GainLocked, Mode=TwoWay}" VerticalAlignment="Center"
                                 ToolTip.Tip="{loc:Text Key=GainLockTheDaemonRejectsEveryGainChange}"/>
                 </Grid>
+                <!-- an additional interface's gain, while this strip carries that interface's input -->
+                <Panel IsVisible="{Binding CarriesExtraUnit}">
+                  <views:WaveUnitControls Name="RackExtraGain" Part="Gain" DataContext="{Binding ExtraUnit}"/>
+                </Panel>
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding ShowsVolume}">
                   <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Channel.Volume, Mode=TwoWay}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
@@ -283,23 +305,29 @@
               </StackPanel>
               <!-- the interface's switches, while this capture channel carries its microphone -->
               <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" Spacing="4">
-                <WrapPanel Name="RackUnitControls" ItemSpacing="6" LineSpacing="4">
-                  <ToggleButton Content="{Binding Unit.MuteLabel}" Classes="mute" IsChecked="{Binding Unit.Mute, Mode=TwoWay}"
-                                IsEnabled="{Binding !Unit.PhantomSettling, FallbackValue=False}"
-                                ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
-                  <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding Unit.LowCut, Mode=TwoWay}" IsVisible="{Binding Unit.CapLowCut, FallbackValue=False}"/>
-                  <ToggleButton Content="{loc:Text Key=Expander}" IsChecked="{Binding Unit.Expander, Mode=TwoWay}" IsVisible="{Binding Unit.CapExpander, FallbackValue=False}"/>
-                  <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding Unit.VoiceTune, Mode=TwoWay}" IsVisible="{Binding Unit.CapVoiceTune, FallbackValue=False}"/>
-                  <ToggleButton Content="{loc:Text Key=Phantom}" IsChecked="{Binding Unit.Phantom, Mode=TwoWay}" IsVisible="{Binding Unit.CapPhantom, FallbackValue=False}"/>
-                  <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding Unit.ClipGuard, Mode=TwoWay}" IsVisible="{Binding Unit.CapClipGuard, FallbackValue=False}"/>
-                  <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Unit.Compressor, Mode=TwoWay}" IsVisible="{Binding Unit.CapCompressor, FallbackValue=False}"/>
-                </WrapPanel>
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" IsVisible="{Binding Unit.VoiceTune, FallbackValue=False}">
-                  <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
-                  <Slider Grid.Column="1" vm:FaderInput.Step="1" Minimum="0" Maximum="100"
-                          Value="{Binding Unit.VoiceTuneStrength, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=VTStrength}"/>
-                  <TextBlock Grid.Column="2" Text="{Binding Unit.VoiceTuneStrengthText}" Classes="val" VerticalAlignment="Center"/>
-                </Grid>
+                <StackPanel Spacing="4" IsVisible="{Binding CarriesUnit}">
+                  <WrapPanel Name="RackUnitControls" ItemSpacing="6" LineSpacing="4">
+                    <ToggleButton Content="{Binding Unit.MuteLabel}" Classes="mute" IsChecked="{Binding Unit.Mute, Mode=TwoWay}"
+                                  IsEnabled="{Binding !Unit.PhantomSettling, FallbackValue=False}"
+                                  ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
+                    <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding Unit.LowCut, Mode=TwoWay}" IsVisible="{Binding Unit.CapLowCut, FallbackValue=False}"/>
+                    <ToggleButton Content="{loc:Text Key=Expander}" IsChecked="{Binding Unit.Expander, Mode=TwoWay}" IsVisible="{Binding Unit.CapExpander, FallbackValue=False}"/>
+                    <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding Unit.VoiceTune, Mode=TwoWay}" IsVisible="{Binding Unit.CapVoiceTune, FallbackValue=False}"/>
+                    <ToggleButton Content="{loc:Text Key=Phantom}" IsChecked="{Binding Unit.Phantom, Mode=TwoWay}" IsVisible="{Binding Unit.CapPhantom, FallbackValue=False}"/>
+                    <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding Unit.ClipGuard, Mode=TwoWay}" IsVisible="{Binding Unit.CapClipGuard, FallbackValue=False}"/>
+                    <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Unit.Compressor, Mode=TwoWay}" IsVisible="{Binding Unit.CapCompressor, FallbackValue=False}"/>
+                  </WrapPanel>
+                  <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" IsVisible="{Binding Unit.VoiceTune, FallbackValue=False}">
+                    <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
+                    <Slider Grid.Column="1" vm:FaderInput.Step="1" Minimum="0" Maximum="100"
+                            Value="{Binding Unit.VoiceTuneStrength, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=VTStrength}"/>
+                    <TextBlock Grid.Column="2" Text="{Binding Unit.VoiceTuneStrengthText}" Classes="val" VerticalAlignment="Center"/>
+                  </Grid>
+                </StackPanel>
+                <!-- an additional interface's switches, while this strip carries that interface's input -->
+                <Panel IsVisible="{Binding CarriesExtraUnit}">
+                  <views:WaveUnitControls Name="RackExtraSwitches" Part="Switches" DataContext="{Binding ExtraUnit}"/>
+                </Panel>
               </StackPanel>
             </layout:StripPanel>
           </DockPanel>

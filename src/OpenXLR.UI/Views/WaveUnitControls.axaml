@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:OpenXLR.UI.Localization"
+             xmlns:vm="using:OpenXLR.UI"
+             x:Class="OpenXLR.UI.Views.WaveUnitControls"
+             x:DataType="vm:WaveUnitInputViewModel">
+
+  <!-- One input of an additional interface: its gain and its switches. The
+       additional interfaces window draws one per input, and a strip that
+       carries the input draws it in its gain and switch parts, so both
+       places show the same controls under the same rules. -->
+  <StackPanel Spacing="6" IsEnabled="{Binding CanControl}">
+    <Panel Name="GainPart">
+      <Grid ColumnDefinitions="*,64" IsVisible="{Binding HasGain}">
+        <Slider Name="WaveUnitGain" vm:FaderInput.Step="1" IsEnabled="{Binding CanAdjustGain}" Minimum="0" Maximum="{Binding GainMaxDb}"
+                Value="{Binding GainDb, Mode=TwoWay}" AutomationProperties.Name="{Binding GainName}"/>
+        <TextBlock Classes="val" Grid.Column="1" Text="{Binding GainText}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+      </Grid>
+    </Panel>
+    <WrapPanel Name="SwitchesPart" ItemSpacing="6" LineSpacing="4">
+      <ToggleButton Name="WaveUnitMute" Content="{Binding MuteLabel}" Classes="mute" IsChecked="{Binding Mute, Mode=TwoWay}"
+                    IsVisible="{Binding HasMute}" IsEnabled="{Binding !PhantomSettling}"/>
+      <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding LowCut, Mode=TwoWay}" IsVisible="{Binding HasLowCut}"/>
+      <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding ClipGuard, Mode=TwoWay}" IsVisible="{Binding HasClipGuard}"/>
+      <ToggleButton Content="{loc:Text Key=Phantom}" IsChecked="{Binding Phantom, Mode=TwoWay}" IsVisible="{Binding HasPhantom}"/>
+      <TextBlock Classes="hint" Text="{loc:Text Key=PhantomPowerSettling}" IsVisible="{Binding PhantomSettling}" VerticalAlignment="Center"/>
+    </WrapPanel>
+  </StackPanel>
+</UserControl>

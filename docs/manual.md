@@ -299,13 +299,28 @@ the interface's gain, phantom power, hardware effects and headphone
 controls while XLR 1 is bound to another source. The interface's own dial
 and buttons keep working, and the [API](api.md) reaches every control.
 
-The dialog leaves out the capture sources of every attached interface
-OpenXLR supports, whether it drives that unit or not, and the daemon refuses
-them too: the strip would not show that unit's controls, and driving the
-unit can switch its card profile and rename the source under the strip. To
-use a supported unit as the microphone, pick it as the primary interface in
-the header, or add its microphone as a capture channel from Options,
-INTERFACE, **Additional interfaces**.
+A strip can also take another Elgato interface's microphone, such as a
+Wave:3's capsule while a Wave XLR Pro is the primary interface. The dialog
+lists every attached interface's sources except the primary's own, which
+is the first entry. When you choose one that OpenXLR does not drive yet,
+the dialog offers **Also drive this interface**, ticked. Save then binds the
+strip and enables that unit as an additional interface, as Options,
+INTERFACE, **Additional interfaces** does. If enabling it fails, the strip
+stays bound and the dialog says so. While the unit is driven, its gain,
+mute, low cut, ClipGuard and phantom power, whichever it has, are on the
+strip, in the input rack's gain and switch rows, in a mix matrix row's gain
+and mute, and in the classic INPUTS panel under the strip's chip. They are
+the same controls the additional interfaces window shows for that unit, and
+they act on that unit, not on the primary. Stop driving the unit and the
+controls leave the strip; the binding stays, and the strip keeps its audio.
+
+A strip on another interface's XLR jack, such as an XLR Dock's, keeps its
+XLR name; a strip on a Wave:3's or Wave:1's capsule is Mic 1 or Mic 2.
+
+Driving an interface, switching its card profile or plugging it in again
+can rename its source. A strip bound to an Elgato interface follows that
+interface to its new source and back, and keeps its port. Any other source
+follows its exact name only.
 
 Changing a strip's source or port mutes that strip in all monitor mixes;
 the other strips keep their mutes. Unmute it in the desired monitor mix
@@ -2149,8 +2164,9 @@ installs WirePlumber rules that keep these capture sources always active
 from `packaging/` into `~/.config/wireplumber/wireplumber.conf.d/` and
 restart WirePlumber.
 OpenXLR links the interface's capture before it routes any mix into the
-interface. Programs that play straight to the interface can still start
-playback first, which is why the rules matter.
+interface, and the same goes for another Elgato interface that XLR 1 or
+XLR 2 takes its microphone from. Programs that play straight to the
+interface can still start playback first, which is why the rules matter.
 
 A second cause, when the microphone is silent only after a reboot: the
 dock forgets its gain at every power cycle and comes back at the gain its

@@ -230,8 +230,8 @@ that final acknowledgement (or an `error` without a request id):
 | `assignApp` | `identity`, `channel`, `label?` | route an app (creates a registry entry if unseen); `channel: "ignore"` stops managing it, its streams go back to the system default output and stay wherever the desktop routes them |
 | `assignStream` | `streamId`, `channel` | route one live stream by its PipeWire id; also remembered for the app; `ignore` works here too |
 | `forgetApp` | `identity` | drop an app and its remembered channel |
-| `setInputBinding` | `channel`, `source?`, `captureMonoChannel?` | bind a hardware strip to one port of a PipeWire capture source by exact node name. `channel` is `xlr1` or `xlr2`; Aux In stays on the interface. With `source` null or absent the strip returns to the interface's capture pair and takes no port. With a source, `capturePair` must be 0 and `captureMonoChannel` is the zero-based port, 0 to 63, default 0. OpenXLR nodes, monitor taps, control characters and names over 256 characters are refused, and so, for now, is a node of an attached supported interface (a `devices` entry with `drivenUnit`). The source may be offline. Saved before the acknowledgement, rolled back on a failed save. The strip's monitor sends start muted after a change; no other strip changes. Channel ids, software processing and inserts stay as they are. See [input bindings](#input-bindings) |
-| `setPrimaryInput` | `source?`, `captureMonoChannel?` | the earlier form of `setInputBinding` with `channel: "xlr1"`, kept for the clients that still send it. A supported interface's node is refused with a message saying to pick that unit under automatic mode instead |
+| `setInputBinding` | `channel`, `source?`, `captureMonoChannel?` | bind a hardware strip to one port of a PipeWire capture source by exact node name. `channel` is `xlr1` or `xlr2`; Aux In stays on the interface. With `source` null or absent the strip returns to the interface's capture pair and takes no port. With a source, `capturePair` must be 0 and `captureMonoChannel` is the zero-based port, 0 to 63, default 0. OpenXLR nodes, monitor taps, control characters and names over 256 characters are refused. A node of an attached supported interface (a `devices` entry with `drivenUnit`) is accepted, and the binding records that unit, see [a strip on another interface](#a-strip-on-another-interface). The source may be offline. Saved before the acknowledgement, rolled back on a failed save. The strip's monitor sends start muted after a change; no other strip changes. Channel ids, software processing and inserts stay as they are. See [input bindings](#input-bindings) |
+| `setPrimaryInput` | `source?`, `captureMonoChannel?` | the earlier form of `setInputBinding` with `channel: "xlr1"`, kept for the clients that still send it |
 | `setEnforcedDefaults` | `sink`, `source` | system defaults to hold; `sink: "@monitor"` follows the first selected monitor output |
 | `setActiveDevice` | `device` | switch to another attached interface: one unit by its instance id from `detected`, or the first unit of a model by `vvvv:pppp` |
 | `setWaveInterfaceEnabled` | `device`, `value` | drive an attached unit, by its instance id from `waveInterfaces`, as an additional interface (`true`) or stop driving it (`false`); at most four. Refused for a unit that is not attached, and for a Wave XLR Pro whose capture node name another attached unit shares. Enabling creates no mixer channel; disabling an attached unit deletes the capture channels whose source is one of its own nodes, as `deleteChannel` does, found by its `captureHint` and, when not empty, its `captureModelHint`; nothing is deleted while `captureHint` is a model name another attached unit shares. See [additional interface state](#additional-interface-state) |
@@ -541,7 +541,10 @@ Each channel in the mixer state carries:
   on the interface's capture pair; `{"kind":"source","source":"...","pair":0,"monoChannel":1}`
   is a hardware strip bound to a source, or a capture channel, which
   reports its `captureSource`, `capturePair` and `captureMonoChannel` here
-  as well (`monoChannel` is absent when it takes a pair); `{"kind":"apps"}`
+  as well (`monoChannel` is absent when it takes a pair). A strip bound to
+  a supported interface's node also carries `unit`, that unit's id as
+  `waveInterfaces` spells it; `source` stays the name it was bound to, also
+  while the strip plays from the unit's renamed node. `{"kind":"apps"}`
   is an application channel. A bound hardware strip keeps `hardware` true
   and `captureSource` null, so a client that tells capture channels apart by
   `captureSource` does not mistake it for one.
@@ -549,23 +552,29 @@ Each channel in the mixer state carries:
   interface, the interface's node was found and the pair linked, and a
   pair the unit has that could not be linked is tried again each second,
   whatever the other strips on the unit do; for a bound strip, the exact source is present, unique, has the port and is
-  linked to both sides; for a capture channel, the same as
+  linked to both sides, or, for a binding with a `unit`, the one source
+  that unit's card publishes under another name is; for a capture channel, the same as
   `captureConnected`; always true for an application channel.
 - `bindingWarning`: why the channel's source is silent, or null: the source
   is not connected, the name matches more than one source, the port is
   missing, or the link is not made yet and is being retried. A strip on the
   interface leaves it null; the interface's own problems stay in the
   top-level `warning`.
-- `unitInput`: null, or `{unit, input, primary}` naming the driven unit (its
+- `unitInput`: null, or `{unit, input, primary}` naming a driven unit (its
   instance id, as `waveInterfaces` spells it; `primary` is true for the unit
-  in the header) and which of its microphone inputs, 1 or 2, the channel
-  carries. A strip on the interface carries the input on its pair: XLR 1
-  input 1, XLR 2 input 2 on a unit with two XLR inputs. When XLR 1 or XLR 2
-  is bound to a source, the input goes to the first capture channel, in
-  layout order, on the unit's own capture node at the first port (input 1)
-  or the third (input 2), or on that input's pair; with none, no channel
-  carries it. A unit's input is on one channel at most. The unit's controls
-  stay in `state` and `capabilities` and are written with `set` as before.
+  in the header, false for an additional interface) and which of its
+  microphone inputs, 1 or 2, the channel carries. A strip on the interface
+  carries the input on its pair: XLR 1 input 1, XLR 2 input 2 on a unit with
+  two XLR inputs. Otherwise the input goes to a strip bound to the unit's
+  node at the input's port (the first for input 1, the third for input 2),
+  then to the first capture channel, in layout order, on the unit's own
+  capture node at that port or on that input's pair; with none, no channel
+  carries it. The same rule names an additional interface's input, while
+  the daemon drives that unit. A unit's input is on one channel at most, and
+  a channel carries one input at most, the primary's first. The primary's
+  controls stay in `state` and `capabilities` and are written with `set`; an
+  additional unit's are in its `waveInterfaces` entry and are written with
+  `setWaveControl`.
 
 `present` follows one rule. A channel without a jack, and a strip bound to
 a source, is always present. A strip on the interface is present when the
@@ -576,9 +585,14 @@ attached, so a desk with no Elgato unit gets one strip.
 
 A microphone strip's `name` follows what feeds it. XLR 1 and XLR 2 keep
 those names only while a real XLR jack feeds them: the driven unit's input
-on a Wave XLR Pro, a Wave XLR of either model or an XLR Dock. A strip bound
-to another source is `Mic 1` or `Mic 2`, and so is the strip on a Wave:3's
-or Wave:1's built-in capsule, whose `capabilities.xlrJacks` is false. With
+on a Wave XLR Pro, a Wave XLR of either model or an XLR Dock, or such a
+unit's input that the strip is bound to, which keeps the strip's own name
+(a strip bound to an XLR Dock is `XLR 1` or `XLR 2`). A strip bound to any
+other source is `Mic 1` or `Mic 2`, and so is the strip on a Wave:3's or
+Wave:1's built-in capsule, whose `capabilities.xlrJacks` is false, the
+driven unit's or another one's. The daemon learns what a bound unit's
+inputs are when the unit is attached, and keeps that by model for the rest
+of the run. With
 no unit driven, a strip on the interface keeps the name the last driven
 unit gave it in this run. The names are fixed strings, `renameChannel`
 refuses a hardware strip as before, and the ids stay `xlr1` and `xlr2` for
@@ -619,12 +633,36 @@ A software ClipGuard left on behind a unit's hardware one goes off when
 XLR 1 is bound to a source and the plugin it needs is missing, as it does
 when the unit changes.
 
-`setInputBinding` and `setPrimaryInput` still refuse a node of an attached
-supported interface, whether the daemon drives that unit or not: the strip
-would not show the unit's controls, and driving the unit later can switch
-its card profile and rename the node under the strip. The `devices` entries
-of such nodes carry `drivenUnit`. A binding saved before this check is still
-restored as saved.
+#### A strip on another interface
+
+A strip can take a supported interface's own node, such as a Wave:3's
+capsule while a Wave XLR Pro is the primary. The `devices` entries of such
+nodes carry `drivenUnit`. The daemon records the unit in the binding (its
+`unit`, saved in `mixer.json`), and two things follow from it.
+
+- The strip follows the unit, not only the name. Driving the unit, a card
+  profile switch and some replugs rename the unit's node (a Wave:3's
+  `.mono-fallback` source becomes `.analog-stereo`; a card with a UCM split
+  goes to pro-audio). While the exact name is missing, the strip takes the
+  one source the unit's card publishes now, found by the card part of the
+  node name, which carries the unit's serial and does not change, and goes
+  back to the exact name when it returns. The strip keeps its port, its
+  binding as saved and its monitor mutes; the console rule mutes its
+  monitor sends when the node it plays from changes, as for any source. If
+  the card publishes several sources at that moment, the daemon picks none,
+  and the strip stays silent with a `bindingWarning` until it is bound
+  again. A binding without a `unit` follows its exact name only.
+- While the unit is driven as an additional interface, the strip's
+  `unitInput` names it with `primary` false, and a client draws that unit's
+  controls on the strip from its `waveInterfaces` entry. Driving the unit
+  is `setWaveInterfaceEnabled`, a separate command; the binding works
+  whether the unit is driven or not. Disabling the unit takes its
+  `unitInput` off the strip and leaves the binding in place.
+
+A route into the sink of a unit that a strip is bound to waits until that
+strip's capture is linked, as a route into the driven interface's own sink
+waits for the strips on it, and is made anyway after five seconds without
+the capture.
 
 Disabling the software mixer keeps the saved bindings for when the mixer is
 enabled again.
@@ -650,7 +688,10 @@ Clients match both verbatim, without trimming. The selection rules for the
 hardware strips are in [multiple Wave interfaces](wave-interfaces.md). An
 input binding on XLR 1 or XLR 2 changes none of this: every unit listed here
 is driven or not by its own choice, and a capture channel on an additional
-unit's node keeps working while a strip is bound.
+unit's node keeps working while a strip is bound. A strip or capture
+channel that carries a driven additional unit's input says so in its
+`unitInput`; the controls a client draws there are this entry's
+`capabilities` and `state`, written with `setWaveControl`.
 
 ## Configuration files
 

@@ -176,6 +176,101 @@ public sealed class InputBindingTests
     }
 
     [Fact]
+    public void AStripBoundToAUnitsNodeCarriesItsInputBeforeTheUnitsCaptureChannels()
+    {
+        const string pro = "0fd9:00b4@3f1c0000aaaa0000", wave3 = "0fd9:0070@1234567890abcdef";
+        const string proNode = "alsa_input.usb-Elgato_Systems_Elgato_Wave_XLR_Pro_SER-00.pro-input-0";
+        const string wave3Node = "alsa_input.usb-Elgato_Systems_Elgato_Wave_3_W3A-00.mono-fallback";
+        IReadOnlyList<ChannelDefinition> channels =
+        [
+            .. MixerConfig.Default().Channels,
+            new("pro_mic", "Pro mic") { CaptureSource = proNode, CaptureMonoChannel = 0 },
+            new("w3_mic", "Wave:3 mic") { CaptureSource = wave3Node, CaptureMonoChannel = 0 },
+            new("w3_pair", "Wave:3 pair") { CaptureSource = wave3Node, CapturePair = 0 },
+        ];
+        var driven = new AttachedUnit(wave3, ["Wave_3_W3A-", "Wave_3"], 1, XlrJacks: false, Driven: true);
+
+        // A capture channel on the additional unit's node carries its input,
+        // the first in layout order, and a stereo pair counts too.
+        var none = new Dictionary<string, SourceBinding>();
+        Assert.Equal("w3_mic", Mixer.AdditionalUnitInputChannel(channels, none, driven, 1));
+        Assert.Equal("w3_pair", Mixer.AdditionalUnitInputChannel([.. channels.Where(c => c.Id != "w3_mic")], none, driven, 1));
+        // A strip bound to it at the input's port wins, by the unit's id or by the node.
+        var bound = new Dictionary<string, SourceBinding> { ["xlr2"] = new(wave3Node, 0, 0) { Unit = wave3 } };
+        Assert.Equal("xlr2", Mixer.AdditionalUnitInputChannel(channels, bound, driven, 1));
+        var byNode = new Dictionary<string, SourceBinding> { ["xlr1"] = new(wave3Node, 0, 0) };
+        Assert.Equal("xlr1", Mixer.AdditionalUnitInputChannel(channels, byNode, driven, 1));
+        // Another port is not the input; a one-input unit has no input 2;
+        // a unit that is not driven has no controls to carry.
+        var otherPort = new Dictionary<string, SourceBinding> { ["xlr2"] = new(wave3Node, 0, 1) { Unit = wave3 } };
+        Assert.Equal("w3_mic", Mixer.AdditionalUnitInputChannel(channels, otherPort, driven, 1));
+        Assert.Null(Mixer.AdditionalUnitInputChannel(channels, bound, driven, 2));
+        Assert.Null(Mixer.AdditionalUnitInputChannel(channels, bound, driven with { Driven = false, Fragments = [] }, 1));
+        // The renamed node of a bound unit is still that unit's input.
+        var renamed = new Dictionary<string, SourceBinding> { ["xlr2"] = new(wave3Node.Replace("mono-fallback", "analog-stereo"), 0, 0) { Unit = wave3 } };
+        Assert.Equal("xlr2", Mixer.AdditionalUnitInputChannel(channels, renamed, driven, 1));
+
+        // The primary's own node bound to a strip: that strip carries the
+        // input once the strip on the jack is bound elsewhere, before a
+        // capture channel on the node.
+        var swapped = new Dictionary<string, SourceBinding> { ["xlr1"] = new("alsa_input.usb-cam"), ["xlr2"] = new(proNode, 0, 0) { Unit = pro } };
+        Assert.Equal("xlr2", Mixer.UnitInputChannel(channels, swapped, proNode, 2, 1, pro));
+        Assert.Equal("xlr2", Mixer.UnitInputChannel(channels, swapped, null, 2, 1, pro));
+        Assert.Equal("xlr2", Mixer.UnitInputChannel(channels, swapped, proNode, 2, 1));
+        var secondJack = new Dictionary<string, SourceBinding> { ["xlr1"] = new(proNode, 0, 2) { Unit = pro } };
+        Assert.Equal("pro_mic", Mixer.UnitInputChannel(channels, secondJack, proNode, 2, 1, pro));
+        Assert.Equal("xlr2", Mixer.UnitInputChannel(channels, secondJack, proNode, 2, 2, pro));
+
+        // In the state: each input on one channel at most, the primary's first.
+        using var mixer = new Mixer();
+        mixer.SetDrivenUnit(pro);
+        Assert.True(mixer.SetAttachedUnits([new(pro, [], 2, true, false), driven]));
+        Assert.False(mixer.SetAttachedUnits([new(pro, [], 2, true, false), driven with { Fragments = ["Wave_3_W3A-", "Wave_3"] }]));
+        mixer.SetInputBinding("xlr2", new(wave3Node, 0, 0) { Unit = wave3 });
+        ChannelStatus xlr2 = mixer.Snapshot().Channels.Single(c => c.Id == "xlr2");
+        Assert.Equal(new UnitInputStatus(wave3, 1, Primary: false), xlr2.UnitInput);
+        Assert.Equal(new ChannelBinding("source", wave3Node, 0, 0, wave3), xlr2.Binding);
+        Assert.Equal(new UnitInputStatus(pro, 1, Primary: true), mixer.Snapshot().Channels.Single(c => c.Id == "xlr1").UnitInput);
+        // The unit stops being driven: the binding stays, the controls go.
+        Assert.True(mixer.SetAttachedUnits([new(pro, [], 2, true, false), driven with { Driven = false, Fragments = [] }]));
+        xlr2 = mixer.Snapshot().Channels.Single(c => c.Id == "xlr2");
+        Assert.Null(xlr2.UnitInput);
+        Assert.Equal(wave3Node, xlr2.Binding.Source);
+    }
+
+    [Theory]
+    [InlineData("0fd9:0070@1234567890abcdef", true)]
+    [InlineData("0fd9:0070", true)]
+    [InlineData(null, true)]
+    [InlineData("0fd9:0070@xyz", false)]
+    [InlineData("../unit", false)]
+    [InlineData("", false)]
+    public void ABindingNamesItsUnitByAnIdOrNotAtAll(string? unit, bool valid)
+        => Assert.Equal(valid, new SourceBinding("alsa_input.usb-x-00.mono-fallback", 0, 0) { Unit = unit }.IsValid);
+
+    [Fact]
+    public void TheBindingsUnitIsSavedAndABadOneDropsTheBinding()
+    {
+        string dir = Directory.CreateTempSubdirectory("openxlr-bindings-unit-").FullName;
+        string path = Path.Combine(dir, "mixer.json");
+        try
+        {
+            var binding = new SourceBinding("alsa_input.usb-Elgato_Systems_Elgato_Wave_3_W3A-00.mono-fallback", 0, 0) { Unit = "0fd9:0070@1234567890abcdef" };
+            Assert.Null(new MixerSettings { InputBindings = new() { ["xlr2"] = binding } }.Save(path));
+            using (var written = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path)))
+                Assert.Equal("0fd9:0070@1234567890abcdef", written.RootElement.GetProperty("inputBindings").GetProperty("xlr2").GetProperty("unit").GetString());
+            Assert.Equal(binding, MixerSettings.Load(path)!.InputBindings!["xlr2"]);
+            // A plain source writes no unit at all.
+            Assert.Null(new MixerSettings { InputBindings = new() { ["xlr1"] = new("usb.mic", 0, 0) } }.Save(path));
+            Assert.DoesNotContain("\"unit\"", File.ReadAllText(path));
+            File.WriteAllText(path, """{"inputBindings":{"xlr1":{"source":"usb.mic","pair":0,"monoChannel":0,"unit":"../x"}}}""");
+            Assert.Null(MixerSettings.Load(path, out string? warning)!.InputBindings);
+            Assert.Contains("invalid binding for xlr1", warning);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void TheEarlierPrimaryInputMovesToInputBindingsOnceAndBadEntriesAreDropped()
     {
         string dir = Directory.CreateTempSubdirectory("openxlr-bindings-").FullName;

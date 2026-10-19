@@ -64,7 +64,9 @@ outputs for either.
 
 XLR 1 and XLR 2 can each be bound to another capture source instead
 ([input bindings](api.md#input-bindings)). A bound strip takes one port of
-that source, named exactly, and no step above applies to it. The rules above
+that source, named exactly, and no step above applies to it; a strip bound
+to another unit's source follows that unit's card instead
+([a strip on an additional unit](#a-strip-on-an-additional-unit)). The rules above
 still find the node for Aux In and for a strip left on the interface, and
 the units stay driven whatever the strips take. Their outputs, controls,
 recall and additional roles do not change. The primary's microphone input 1
@@ -119,6 +121,36 @@ the source and feeds it to both sides: the first port for microphone 1, the
 third for microphone 2. It starts muted in every mix. While its source or port
 is missing it stays silent and no other microphone takes its place.
 
+## A strip on an additional unit
+
+XLR 1 or XLR 2 can take an additional unit's microphone instead of a capture
+channel. Bind the strip to the unit's source from the strip's chip
+([input bindings](api.md#input-bindings)). The binding dialog lists every
+attached unit's sources except the primary's own and, for a unit not driven
+yet, offers **Also drive this interface**, which enables it as above. A
+strip on an additional unit has the strip's inserts and Sound Check, and,
+while the unit is driven, the unit's gain and switches, the same controls as
+in this window drawn by the same view, on the strip in the input rack, the
+mix matrix and the classic INPUTS panel. In the state the strip's
+`unitInput` names the unit with `primary` false. The first port is the
+unit's microphone 1 and the third its microphone 2, as for **Add input
+channel**; a strip bound to that input wins over a capture channel on it.
+
+The binding records the unit, because the unit's source can change its name
+while the strip is bound. Enabling the unit can switch its card to
+pro-audio, a card profile switch in the desktop's sound settings renames
+every node under the card, and so can a replug. The strip then takes the
+one source the unit's card publishes under its new name, at the same port,
+and returns to the saved name when it comes back. If the card publishes
+several sources at that moment, as a Wave XLR Pro in a split profile does,
+OpenXLR picks none, and the strip stays silent and says so until it is
+bound again.
+
+Disabling the unit takes its controls off the strip and leaves the binding.
+The strip keeps its audio, and is silent while the unit is unplugged. The
+strip is named by what feeds it: XLR 1 or XLR 2 on an XLR Dock's or a Wave
+XLR's jack, Mic 1 or Mic 2 on a Wave:3's or Wave:1's capsule.
+
 ## Profiles
 
 A profile saved while additional units are driven also holds their hardware
@@ -144,3 +176,7 @@ on tests with simulated units and a private PipeWire server:
   physical outputs stay on its own card, as primary and as additional.
 - The serial in a node name as udev spells it, for every model, and the
   fallback to the model name when it differs.
+- A strip bound to an additional unit, such as a Wave:3 beside a Wave XLR
+  Pro: the unit's controls on the strip, the strip following the unit's
+  source through a card profile switch and a replug, and capture before
+  playback when a mix is routed into that unit.

@@ -88,7 +88,9 @@ public sealed partial class Mixer
     {
         Channels = [.. state.Channels.Select(c => c with { Appearance = LayoutAppearanceState.From(
             AppearanceLocked("channel:" + c.Id), LayoutDefaultIcons.ForChannel(c.Id, c.Hardware, c.CaptureSource,
-                c.Hardware && c.Binding.Kind == "source" ? c.Binding.Source : null, _unitXlrJacks)) })],
+                // A strip bound to another unit's XLR jack wears the jack's icon.
+                c.Hardware && c.Binding.Kind == "source" && !OnXlrJackLocked(c.Id) ? c.Binding.Source : null,
+                c.Hardware && c.Binding.Kind == "source" || _unitXlrJacks)) })],
         Mixes = [.. state.Mixes.Select(m => m with { Appearance = LayoutAppearanceState.From(
             AppearanceLocked("mix:" + m.Id), LayoutDefaultIcons.ForMix(m.Id, m.Kind)) })],
         OutputAppearance = LayoutAppearance.Outputs.ToDictionary(id => id,

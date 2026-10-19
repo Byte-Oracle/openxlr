@@ -1220,17 +1220,24 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             // change renames every node under it) is wired again.
             foreach (ChannelDefinition ch in strips)
                 if (_inputFeeds.TryGetValue(ch.Id, out PortLink? feed) && _pw.EnsureLinks(feed) == LinkHealth.Broken) due.Add(ch.Id);
-            // A bound strip is wired again when its exact source appears, or
-            // when a second source acquires the name while the old links
-            // remain healthy. Never choose a microphone by accident.
+            // A bound strip is wired again when its exact source appears, when
+            // a second source acquires the name while the old links remain
+            // healthy, or when the unit it is bound to publishes its node
+            // under another name. Never choose a microphone by accident.
             List<ChannelDefinition> bound = [.. strips.Where(c => _bindings.ContainsKey(c.Id))];
             if (bound.Count > 0)
             {
                 List<AudioNode> sources = [.. _pw.ListDevices().Where(d => d.Kind == AudioNodeKind.Source)];
                 foreach (ChannelDefinition ch in bound)
                 {
-                    bool unique = sources.Count(d => d.Name == _bindings[ch.Id].Source) == 1;
-                    if (unique != _inputFeeds.ContainsKey(ch.Id)) due.Add(ch.Id);
+                    SourceBinding binding = _bindings[ch.Id];
+                    bool unique = sources.Count(d => d.Name == binding.Source) == 1;
+                    // A unit's renamed node: only the card's own sources are
+                    // looked at, and only while the exact name is missing.
+                    string? target = unique ? binding.Source
+                        : binding.Unit is not null ? BoundSourceLocked(binding, sources, out _) : null;
+                    bool fed = _inputFeeds.ContainsKey(ch.Id);
+                    if ((target is not null) != fed || fed && _stripSources.GetValueOrDefault(ch.Id) != target) due.Add(ch.Id);
                 }
             }
             // No strip on the interface has a feed (the device was absent at
@@ -1932,13 +1939,17 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     internal static readonly TimeSpan CaptureFirstGrace = TimeSpan.FromSeconds(5);
     /// <summary>Milliseconds for <see cref="CaptureFirstGrace"/>; tests move it on.</summary>
     internal Func<long> Clock { get; init; } = () => Environment.TickCount64;
-    private long? _playbackHeldSince;
-    private string? _playbackHoldNoted;
+    // When a route into each card first waited, and the output the late
+    // capture was last noted for, by the card part of the node name.
+    private readonly Dictionary<string, long> _playbackHeldSince = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _playbackHoldNoted = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Whether a route into <paramref name="target"/> waits for now: the
-    /// target is the driven interface's own sink, and none of the strips that
-    /// take the interface has its capture linked yet. Elgato's full-speed
+    /// target is a sink of an Elgato unit whose capture a strip takes, and
+    /// none of the strips that take that unit has its capture linked yet.
+    /// That is the driven interface's own sink while strips are on it, and
+    /// the sink of another unit a strip is bound to. Elgato's full-speed
     /// units record silence for as long as capture stays open when their
     /// playback started first (the XLR Dock, the original Wave XLR and the
     /// Wave:3 on some ports), so the mixer never starts it first. The
@@ -1948,30 +1959,39 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// </summary>
     private bool HoldPlaybackLocked(string target)
     {
-        List<ChannelDefinition> unit = [.. _config.Channels.Where(c => c.InputPair is not null && !_bindings.ContainsKey(c.Id))];
-        if (unit.Count == 0 || unit.Any(c => _inputFeeds.ContainsKey(c.Id)))
+        string bare = target.IndexOf('#') is int marker and >= 0 ? target[..marker] : target;
+        if (!bare.StartsWith("alsa_output.", StringComparison.Ordinal)) return false;
+        string card = InterfaceNodes.CardKey(bare);
+        List<string> takers = [];
+        if (IsDrivenUnitSinkLocked(target))
+            takers.AddRange(_config.Channels.Where(c => c.InputPair is not null && !_bindings.ContainsKey(c.Id)).Select(c => c.Id));
+        // A strip bound to a unit's node takes that unit's capture, under the
+        // node's present name or, until it is found, the bound one.
+        foreach ((string strip, SourceBinding binding) in _bindings)
+            if (binding.Unit is not null && InterfaceNodes.CardKey(_stripSources.GetValueOrDefault(strip) ?? binding.Source) == card
+                && _config.Channels.Any(c => c.Id == strip && c.InputPair is not null))
+                takers.Add(strip);
+        if (takers.Count == 0 || takers.Any(_inputFeeds.ContainsKey))
         {
-            _playbackHeldSince = null;
-            _playbackHoldNoted = null;
+            _playbackHeldSince.Remove(card);
+            _playbackHoldNoted.Remove(card);
             return false;
         }
-        if (!IsDrivenUnitSinkLocked(target)) return false;
         // The wait counts only while the sink is there: a unit that is
         // unplugged has nothing to start, and when it comes back its capture
         // gets the whole grace again.
-        string bare = target.IndexOf('#') is int marker and >= 0 ? target[..marker] : target;
         if (!_pw.ListDevices(true, _inputHints).Any(d => d.Kind == AudioNodeKind.Sink
                 && (d.Name == bare || d.Name.StartsWith(bare + "#", StringComparison.Ordinal))))
         {
-            _playbackHeldSince = null;
+            _playbackHeldSince.Remove(card);
             return false;
         }
         long now = Clock();
-        _playbackHeldSince ??= now;
-        if (now - _playbackHeldSince.Value < (long)CaptureFirstGrace.TotalMilliseconds) return true;
-        if (_playbackHoldNoted != target)
+        if (!_playbackHeldSince.TryGetValue(card, out long since)) _playbackHeldSince[card] = since = now;
+        if (now - since < (long)CaptureFirstGrace.TotalMilliseconds) return true;
+        if (_playbackHoldNoted.GetValueOrDefault(card) != target)
         {
-            _playbackHoldNoted = target;
+            _playbackHoldNoted[card] = target;
             InputNote?.Invoke($"routing into {target} before the interface's capture is linked; it did not come within {CaptureFirstGrace.TotalSeconds:0} seconds");
         }
         return false;
@@ -2493,6 +2513,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             DspFeatureAvailability clipGuard = _pw.GetSoftwareClipGuardAvailability();
+            Dictionary<string, UnitInputStatus> unitInputs = UnitInputsLocked();
             return WithAppearanceLocked(new MixerState
             {
                 PrimaryInputConnected = _stripSources.ContainsKey("xlr1") && _inputFeeds.ContainsKey("xlr1"),
@@ -2515,7 +2536,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     Binding = BindingStateLocked(c),
                     BindingConnected = BindingConnectedLocked(c),
                     BindingWarning = BindingWarningLocked(c),
-                    UnitInput = UnitInputLocked(c.Id),
+                    UnitInput = unitInputs.GetValueOrDefault(c.Id),
                     Volume = ChannelVolumeStatusLocked(c),
                 })],
                 RenamedSinceStart = _renamedSinceBuild,

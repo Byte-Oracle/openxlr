@@ -197,10 +197,137 @@ public sealed partial class MonitorVolumeIntegrationTests
         }
     }
 
-    private sealed class Unit(string model, ushort product, string serial) : IAudioDevice
+    /// <summary>
+    /// A strip bound to a second unit's capture node while the first unit is
+    /// the primary: the binding records the unit, the strip carries that
+    /// unit's controls once it is driven as an additional interface, and it
+    /// follows the unit's node when a card profile switch renames it, there
+    /// and back, with its audio. A source that is not a supported unit's is
+    /// never followed to another name.
+    /// </summary>
+    [MonitorPipeWireFact]
+    public async Task AStripBoundToASecondUnitFollowsItsRenamedNodeAndCarriesItsControlsWhileDriven()
+    {
+        string dir = Directory.CreateTempSubdirectory("openxlr-driven-source-").FullName;
+        string? previous = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", dir);
+        var pw = new PipeWireAdapter(); using var registry = pw.WatchGraph();
+        const string card = "usb-Elgato_Systems_Elgato_Wave_3_w3A-00";
+        const string mono = "alsa_input." + card + ".mono-fallback", stereo = "alsa_input." + card + ".analog-stereo";
+        const string cam = "alsa_input.usb-046d_Test_Cam_CAM1-02.analog-stereo", camRenamed = "alsa_input.usb-046d_Test_Cam_CAM1-02.mono-fallback";
+        using var stop = new CancellationTokenSource();
+        Task<ProcessResult>? generator = null;
+        try
+        {
+            new DaemonSettings { Submixer = true }.Save();
+            pw.CreateNullSink("primary_signal", "Wave:3 capsule");
+            uint node = pw.CreateVirtualMic(mono, "primary_signal.monitor", "Elgato Wave:3 Mono");
+            uint camNode = pw.CreateVirtualMic(cam, "primary_signal.monitor", "Test webcam");
+            WaitForRecovery(() => pw.ListDevices().Any(d => d.Name == mono) && pw.ListDevices().Any(d => d.Name == cam));
+            // The primary first in the table's order, the Wave:3 attached beside it.
+            var primary = new Unit("Wave XLR", 0x007d, "unitP");
+            var wave3 = new Unit("Wave:3", 0x0070, "w3A", xlrJacks: false);
+            IReadOnlyList<IAudioDevice> attached = [new Unit("Wave XLR", 0x007d, "unitP"), new Unit("Wave:3", 0x0070, "w3A", xlrJacks: false)];
+            var config = new ConfigurationBuilder().Build();
+            using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => [primary, wave3]);
+            devices.SweepOnce();
+            Assert.True(primary.Connected);
+            Assert.False(wave3.Connected);
+            using var lifetime = new TestLifetime();
+            using var mixer = new MixerService(NullLogger<MixerService>.Instance, config, devices);
+            using var interfaces = new WaveInterfaces(devices, NullLogger<DeviceManager>.Instance, config, () => attached);
+            var hub = new WebSocketHub(devices, mixer, NullLogger<WebSocketHub>.Instance, lifetime, interfaces);
+            await mixer.StartAsync(CancellationToken.None);
+            await interfaces.StartAsync(CancellationToken.None);
+            generator = PrimarySignal(stop.Token);
+            try
+            {
+                WaitForRecovery(() => interfaces.Snapshot().Count == 2 && mixer.Built);
+                string id = wave3.Info.InstanceId;
+                async Task Ok(string command) => Assert.True((await hub.ExecuteForApiAsync(command)).Ok, command);
+                ChannelStatus Strip(string strip) => mixer.Snapshot()!.Channels.Single(c => c.Id == strip);
+                void FedFrom(string strip, string source) => WaitForRecovery(() =>
+                {
+                    mixer.SweepOnce();
+                    (string From, string To)[] links = GraphLinksInto("OpenXLR_ch_" + strip);
+                    return links.Length == 2 && links.All(l => l.From.StartsWith(source + ":", StringComparison.Ordinal)) && Strip(strip).BindingConnected;
+                });
+
+                // The Wave:3's node is a source like any other, and the binding
+                // remembers whose it is; the unit is not driven yet.
+                await Ok($$"""{"cmd":"setInputBinding","channel":"xlr2","source":"{{mono}}","captureMonoChannel":0}""");
+                Assert.Equal(new ChannelBinding("source", mono, 0, 0, id), Strip("xlr2").Binding);
+                Assert.Equal(id, MixerSettings.Load()!.InputBindings!["xlr2"].Unit);
+                Assert.Equal("Mic 2", Strip("xlr2").Name);   // a capsule, not a jack
+                FedFrom("xlr2", mono);
+                StripSound("xlr2", .1);
+                Assert.Null(Strip("xlr2").UnitInput);
+                Assert.Equal(new UnitInputStatus(primary.Info.InstanceId, 1, Primary: true), Strip("xlr1").UnitInput);
+
+                // Driven as an additional interface: its input is on the strip.
+                await Ok($$"""{"cmd":"setWaveInterfaceEnabled","device":"{{id}}","value":true}""");
+                WaitForRecovery(() => Strip("xlr2").UnitInput == new UnitInputStatus(id, 1, Primary: false));
+                Assert.Equal(new UnitInputStatus(primary.Info.InstanceId, 1, Primary: true), Strip("xlr1").UnitInput);
+                Assert.Contains(hub.Snapshot().WaveInterfaces!, u => u.Id == id && u.Connected && !u.Active);
+
+                // A card profile switch renames the node: the strip follows the
+                // card, keeps its binding as saved, and stays the unit's.
+                pw.UnloadModule(node);
+                WaitForRecovery(() => { mixer.SweepOnce(); return !Strip("xlr2").BindingConnected; });
+                node = pw.CreateVirtualMic(stereo, "primary_signal.monitor", "Elgato Wave:3 Analog Stereo");
+                FedFrom("xlr2", stereo);
+                StripSound("xlr2", .1);
+                Assert.Equal(mono, Strip("xlr2").Binding.Source);
+                Assert.Null(Strip("xlr2").BindingWarning);
+                Assert.Equal(new UnitInputStatus(id, 1, Primary: false), Strip("xlr2").UnitInput);
+                Assert.Equal(mono, MixerSettings.Load()!.InputBindings!["xlr2"].Source);
+                // And back: the exact name wins again.
+                pw.UnloadModule(node);
+                node = pw.CreateVirtualMic(mono, "primary_signal.monitor", "Elgato Wave:3 Mono");
+                FedFrom("xlr2", mono);
+                StripSound("xlr2", .1);
+
+                // A webcam is followed by its exact name only.
+                await Ok($$"""{"cmd":"setInputBinding","channel":"xlr1","source":"{{cam}}","captureMonoChannel":0}""");
+                Assert.Null(Strip("xlr1").Binding.Unit);
+                FedFrom("xlr1", cam);
+                pw.UnloadModule(camNode);
+                camNode = pw.CreateVirtualMic(camRenamed, "primary_signal.monitor", "Test webcam mono");
+                WaitForRecovery(() => pw.ListDevices().Any(d => d.Name == camRenamed));
+                for (int i = 0; i < 3; i++) mixer.SweepOnce();
+                Assert.False(Strip("xlr1").BindingConnected);
+                Assert.Empty(IncomingRouteLinks("OpenXLR_ch_xlr1"));
+                Assert.Contains("not connected", Strip("xlr1").BindingWarning);
+                FedFrom("xlr2", mono);   // the other strip never flinched
+
+                // No longer driven: the binding stays, the controls go.
+                await Ok($$"""{"cmd":"setWaveInterfaceEnabled","device":"{{id}}","value":false}""");
+                WaitForRecovery(() => Strip("xlr2").UnitInput is null);
+                Assert.Equal(mono, Strip("xlr2").Binding.Source);
+                FedFrom("xlr2", mono);
+            }
+            finally
+            {
+                stop.Cancel();
+                await interfaces.StopAsync(CancellationToken.None);
+                await mixer.StopAsync(CancellationToken.None);
+                devices.SuspendSession();
+            }
+        }
+        finally
+        {
+            stop.Cancel();
+            if (generator is not null) await generator;
+            pw.TearDown();
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previous);
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    private sealed class Unit(string model, ushort product, string serial, bool xlrJacks = true) : IAudioDevice
     {
         public DeviceInfo Info { get; } = new("Elgato", model, 0x0fd9, product) { Location = new(1, (byte)(product & 0x7f), "1-" + serial, serial) };
-        public DeviceCapabilities Capabilities { get; } = new() { Gain = true, RetainsSettings = true };
+        public DeviceCapabilities Capabilities { get; } = new() { Gain = true, Mute = true, RetainsSettings = true, XlrJacks = xlrJacks };
         public bool Connected { get; private set; }
         public DeviceState ReadState() => new() { GainDb = 30 };
         public void Connect() => Connected = true;

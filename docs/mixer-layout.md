@@ -79,9 +79,14 @@ maps a hardware strip to the source it is bound to:
 `xlr1` and `xlr2` are the only keys; a strip left out, and Aux In always,
 takes the interface's capture pair. `source` is the exact node name,
 `pair` is 0 and `monoChannel` is the zero-based port fed to both sides of
-the strip, 0 when absent. When the daemon reads the file it drops an entry
-with another key, or with a source or port the command would refuse, and
-its log names the entry. A binding does not change channel ids or order and is not
+the strip, 0 when absent. `unit` is present only for a source that belonged
+to a supported Elgato interface when it was bound, as that unit's id
+(`"unit": "0fd9:0070@1234567890abcdef"`, or the bare model id for a unit
+that has none of its own); the daemon writes it, and while the exact source
+is missing the strip follows that unit's renamed source. When the daemon
+reads the file it drops an entry with another key, with a source or port the
+command would refuse, or with a `unit` that is not such an id, and its log
+names the entry. A binding does not change channel ids or order and is not
 exported into profiles. A file written before this field existed holds
 XLR 1's source as `"primaryInput": {"source": "...", "channel": 0}`; when
 `inputBindings` is absent it is read as XLR 1's binding, and the next save

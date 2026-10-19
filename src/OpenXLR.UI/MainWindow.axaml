@@ -300,6 +300,13 @@
                          IsVisible="{Binding Xlr1Strip.HasBindingWarning, FallbackValue=False}"/>
             </StackPanel>
           </Grid>
+          <!-- an additional interface's input while XLR 1 is bound to it:
+               the controls the additional interfaces window draws for it -->
+          <Grid Name="Xlr1ExtraUnit" Grid.Row="1" ColumnDefinitions="90,*"
+                IsVisible="{Binding Xlr1Strip.CarriesExtraUnit, FallbackValue=False}">
+            <TextBlock Text="{loc:Text Key=UnitInputGain}" Classes="h" VerticalAlignment="Top" Margin="0,6,0,0"/>
+            <views:WaveUnitControls Grid.Column="1" DataContext="{Binding Xlr1Strip.ExtraUnitInput}"/>
+          </Grid>
           <StackPanel Name="Input1Block" Grid.Row="{Binding UnitInput1.BlockRow}" Spacing="4">
             <Grid Name="Input1Heading" ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding UnitInput1.Elsewhere}" Margin="0,4,0,0">
               <TextBlock Text="{Binding UnitInput1.Heading}" Classes="h" TextWrapping="Wrap" VerticalAlignment="Center"/>
@@ -416,6 +423,13 @@
               <TextBlock Text="{Binding Xlr2Strip.BindingWarning}" Classes="hint" FontSize="11" TextWrapping="Wrap"
                          IsVisible="{Binding Xlr2Strip.HasBindingWarning, FallbackValue=False}"/>
             </StackPanel>
+          </Grid>
+          <!-- an additional interface's input while XLR 2 is bound to it:
+               the controls the additional interfaces window draws for it -->
+          <Grid Name="Xlr2ExtraUnit" Grid.Row="1" ColumnDefinitions="90,*"
+                IsVisible="{Binding Xlr2Strip.CarriesExtraUnit, FallbackValue=False}">
+            <TextBlock Text="{loc:Text Key=UnitInputGain}" Classes="h" VerticalAlignment="Top" Margin="0,6,0,0"/>
+            <views:WaveUnitControls Grid.Column="1" DataContext="{Binding Xlr2Strip.ExtraUnitInput}"/>
           </Grid>
           <StackPanel Name="Input2Block" Grid.Row="{Binding UnitInput2.BlockRow}" Spacing="4" IsVisible="{Binding HasXlr2}">
             <Grid Name="Input2Heading" ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding UnitInput2.Elsewhere}" Margin="0,4,0,0">

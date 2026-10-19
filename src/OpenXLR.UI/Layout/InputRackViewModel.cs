@@ -185,10 +185,10 @@ public sealed class InputStripViewModel : ViewModelBase
     /// </summary>
     private bool Available(string part) => (Kind, part) switch
     {
-        (InputStripKind.Xlr1, SkinStripParts.HardwareControls) => CarriesUnit || Main.ShowSoftLowCut || Main.ShowSoftClipGuard,
-        (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain) => CarriesUnit,
-        (InputStripKind.Xlr2 or InputStripKind.Capture, SkinStripParts.HardwareControls) => CarriesUnit,
-        (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || Channel.HasVolume,
+        (InputStripKind.Xlr1, SkinStripParts.HardwareControls) => CarriesUnit || CarriesExtraUnit || Main.ShowSoftLowCut || Main.ShowSoftClipGuard,
+        (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit,
+        (InputStripKind.Xlr2 or InputStripKind.Capture, SkinStripParts.HardwareControls) => CarriesUnit || CarriesExtraUnit,
+        (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         _ => true,
     };
 
@@ -197,6 +197,12 @@ public sealed class InputStripViewModel : ViewModelBase
 
     /// <summary>The strip draws the interface's gain and switches.</summary>
     public bool CarriesUnit => Unit is not null;
+
+    /// <summary>An additional interface's input this strip carries, whose gain and switches it draws, or null.</summary>
+    public WaveUnitInputViewModel? ExtraUnit => Channel.ExtraUnitInput;
+
+    /// <summary>The strip draws an additional interface's gain and switches.</summary>
+    public bool CarriesExtraUnit => Channel.CarriesExtraUnit;
 
     /// <summary>A capture channel carrying the interface's microphone draws its own volume beside the interface's gain.</summary>
     public bool ShowsVolume => Channel.HasVolume;
@@ -254,6 +260,9 @@ public sealed class InputStripViewModel : ViewModelBase
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); Raise(nameof(ShowsVolume)); break;
             case nameof(ChannelViewModel.ShownUnitInput):
                 Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); RefreshSpec();
+                break;
+            case nameof(ChannelViewModel.ExtraUnitInput):
+                Raise(nameof(ExtraUnit)); Raise(nameof(CarriesExtraUnit)); RefreshSpec();
                 break;
             case nameof(ChannelViewModel.IsSourceBound): Raise(nameof(Shown)); break;
             case nameof(ChannelViewModel.IsHardware) or nameof(ChannelViewModel.CaptureSource):

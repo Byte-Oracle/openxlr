@@ -1,5 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:loc="using:OpenXLR.UI.Localization" xmlns:vm="using:OpenXLR.UI"
+        xmlns:loc="using:OpenXLR.UI.Localization" xmlns:vm="using:OpenXLR.UI" xmlns:views="using:OpenXLR.UI.Views"
         x:Class="OpenXLR.UI.WaveInterfacesWindow" x:DataType="vm:MainViewModel"
         Title="{loc:Text Key=AdditionalInterfaces}" Width="680" Height="620" MinWidth="480" MinHeight="360"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource Ox.Window.Background}">
@@ -17,31 +17,17 @@
                   <TextBlock Text="{loc:Text Key=DriveAsAdditionalInterface}" TextWrapping="Wrap"/>
                 </CheckBox>
                 <StackPanel IsEnabled="{Binding CanControl}" IsVisible="{Binding Connected}" Spacing="6">
-                  <Grid ColumnDefinitions="*,64" IsVisible="{Binding HasGain}">
-                    <Slider vm:FaderInput.Step="1" IsEnabled="{Binding CanAdjustGain}" Minimum="0" Maximum="{Binding GainMaxDb}" Value="{Binding Gain, Mode=TwoWay}"
-                            AutomationProperties.Name="{loc:Text Key=InterfaceGain}"/>
-                    <TextBlock Classes="val" Grid.Column="1" Text="{Binding GainText}"/>
-                  </Grid>
-                  <WrapPanel ItemSpacing="8" LineSpacing="4">
-                    <ToggleButton Content="{loc:Text Key=Mute}" IsChecked="{Binding Mute, Mode=TwoWay}" IsVisible="{Binding HasMute}"/>
-                    <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding LowCut, Mode=TwoWay}" IsVisible="{Binding HasLowCut}"/>
-                    <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding ClipGuard, Mode=TwoWay}" IsVisible="{Binding HasClipGuard}"/>
-                    <ToggleButton Content="{loc:Text Key=Phantom}" IsChecked="{Binding Phantom, Mode=TwoWay}" IsVisible="{Binding HasPhantom}"/>
-                    <TextBlock Classes="hint" Text="{loc:Text Key=PhantomPowerSettling}" IsVisible="{Binding PhantomSettling}" VerticalAlignment="Center"/>
-                  </WrapPanel>
-                  <StackPanel IsVisible="{Binding HasSecondInput}" Spacing="6">
-                    <Grid ColumnDefinitions="*,64">
-                      <Slider vm:FaderInput.Step="1" IsEnabled="{Binding CanAdjustGain}" Minimum="0" Maximum="{Binding GainMaxDb}" Value="{Binding Gain2, Mode=TwoWay}"
-                              AutomationProperties.Name="{loc:Text Key=InterfaceGainInput2}"/>
-                      <TextBlock Classes="val" Grid.Column="1" Text="{Binding Gain2Text}"/>
-                    </Grid>
-                    <WrapPanel ItemSpacing="8" LineSpacing="4">
-                      <ToggleButton Content="{loc:Text Key=MuteInput2}" IsChecked="{Binding Mute2, Mode=TwoWay}"/>
-                      <ToggleButton Content="{loc:Text Key=Phantom}" IsChecked="{Binding Phantom2, Mode=TwoWay}" IsVisible="{Binding HasPhantom}"/>
-                      <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding LowCut2, Mode=TwoWay}" IsVisible="{Binding HasLowCut}"/>
-                      <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding ClipGuard2, Mode=TwoWay}" IsVisible="{Binding HasClipGuard}"/>
-                    </WrapPanel>
-                  </StackPanel>
+                  <!-- each input's gain and switches, the same view a strip carrying the input draws -->
+                  <ItemsControl Name="UnitInputs" ItemsSource="{Binding Inputs}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:WaveUnitInputViewModel">
+                        <views:WaveUnitControls/>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
                   <TextBlock Classes="h" Text="{loc:Text Key=InterfaceCaptureSource}"/>
                   <ComboBox AutomationProperties.Name="{loc:Text Key=InterfaceCaptureSource}" ItemsSource="{Binding Sources}" SelectedItem="{Binding Source, Mode=TwoWay}"
                             HorizontalAlignment="Stretch" PlaceholderText="{loc:Text Key=InterfaceSourcePlaceholder}">

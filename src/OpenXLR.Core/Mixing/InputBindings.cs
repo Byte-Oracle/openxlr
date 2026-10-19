@@ -9,9 +9,29 @@ namespace OpenXLR.Core.Mixing;
 /// </summary>
 public sealed record SourceBinding(string Source, int Pair = 0, int? MonoChannel = 0)
 {
-    /// <summary>A name the capture rules accept, pair 0 and a mono port from 0 to 63.</summary>
+    /// <summary>
+    /// The supported Elgato unit the source belonged to when it was bound,
+    /// by the id <c>waveInterfaces</c> gives it, or null for any other
+    /// source. The daemon fills it in. While the exact node is missing, a
+    /// binding with a unit follows that unit's card to the node it publishes
+    /// now: driving the unit, or switching its card profile, renames the node.
+    /// </summary>
+    public string? Unit { get; init; }
+
+    /// <summary>A name the capture rules accept, pair 0, a mono port from 0 to 63, and a unit id or none.</summary>
     [JsonIgnore]
-    public bool IsValid => Pair == 0 && MonoChannel is not null && CaptureBinding.IsValid(Source, Pair, MonoChannel);
+    public bool IsValid => Pair == 0 && MonoChannel is not null && CaptureBinding.IsValid(Source, Pair, MonoChannel) && IsUnitId(Unit);
+
+    /// <summary>
+    /// Null, an instance id (<c>0fd9:0070@…</c>), or the bare model id
+    /// (<c>0fd9:0070</c>) a unit goes by when its card cannot be told apart
+    /// from another one's.
+    /// </summary>
+    public static bool IsUnitId(string? id) => id is null || UsbLocation.IsInstanceId(id)
+        || id is { Length: 9 } && id[4] == ':' && id.Where((_, index) => index != 4).All(char.IsAsciiHexDigit);
+
+    /// <summary>The model part of a unit id, which decides what the unit's inputs are.</summary>
+    internal static string ModelOf(string unit) => unit.Length > 9 ? unit[..9] : unit;
 
     /// <summary>The zero-based source port the strip takes.</summary>
     [JsonIgnore]
@@ -34,7 +54,24 @@ public sealed record PrimaryInputBinding(string Source, int Channel = 0)
 /// driven interface's capture pair), <c>source</c> (an exact capture node,
 /// on a hardware strip or a capture channel) or <c>apps</c>.
 /// </summary>
-public sealed record ChannelBinding(string Kind, string? Source = null, int? Pair = null, int? MonoChannel = null);
+public sealed record ChannelBinding(string Kind, string? Source = null, int? Pair = null, int? MonoChannel = null, string? Unit = null);
+
+/// <summary>
+/// A supported unit attached next to the primary one, as the daemon sees it.
+/// </summary>
+/// <param name="Id">Its instance id, as <c>waveInterfaces</c> spells it.</param>
+/// <param name="Fragments">The node-name fragments that find its own nodes and no other unit's; empty while it is not driven.</param>
+/// <param name="XlrInputs">How many microphone inputs it has.</param>
+/// <param name="XlrJacks">Its inputs are XLR jacks, not a USB microphone's capsule.</param>
+/// <param name="Driven">Driven as an additional interface, so its controls can be shown.</param>
+public sealed record AttachedUnit(string Id, IReadOnlyList<string> Fragments, int XlrInputs, bool XlrJacks, bool Driven)
+{
+    internal bool SameAs(AttachedUnit other) => Id == other.Id && XlrInputs == other.XlrInputs && XlrJacks == other.XlrJacks
+        && Driven == other.Driven && Fragments.SequenceEqual(other.Fragments, StringComparer.Ordinal);
+
+    /// <summary>Whether a node is one of this unit's own: its name holds one of the unit's fragments.</summary>
+    internal bool Owns(string node) => Fragments.Any(f => f.Length > 0 && node.Contains(f, StringComparison.OrdinalIgnoreCase));
+}
 
 /// <summary>Which input stage of which driven unit a channel carries.</summary>
 /// <param name="Unit">The unit's instance id, as <c>waveInterfaces</c> spells it.</param>
@@ -58,6 +95,10 @@ public sealed partial class Mixer
     private string? _drivenUnit;   // the primary unit's instance id while one is driven
     private bool _attached;        // a supported unit is attached, driven or not
     private bool _unitXlrJacks = true;   // the last driven unit's inputs are XLR jacks, not a capsule
+    private IReadOnlyList<AttachedUnit> _units = [];   // the other attached units
+    // Whether each model's inputs are XLR jacks, from every unit seen in this
+    // run, so a strip bound to an unplugged unit keeps its name.
+    private readonly Dictionary<string, bool> _modelJacks = new(StringComparer.Ordinal);
 
     /// <summary>
     /// The name a microphone strip goes by while it is not fed by a real XLR
@@ -72,8 +113,43 @@ public sealed partial class Mixer
     /// source, or on a Wave:3's or Wave:1's capsule, is Mic 1 or Mic 2.
     /// </summary>
     private string ChannelNameLocked(ChannelDefinition channel)
-        => channel.InputPair is not null && channel.Id is "xlr1" or "xlr2"
-            && (_bindings.ContainsKey(channel.Id) || !_unitXlrJacks) ? MicName(channel.Id) : channel.Name;
+        => channel.InputPair is not null && channel.Id is "xlr1" or "xlr2" && !OnXlrJackLocked(channel.Id) ? MicName(channel.Id) : channel.Name;
+
+    /// <summary>
+    /// Whether a strip is fed by a real XLR jack: the driven unit's, unless
+    /// that unit has a capsule, or one of another supported unit's jacks that
+    /// the strip is bound to. Any other source is not a jack.
+    /// </summary>
+    private bool OnXlrJackLocked(string strip)
+    {
+        if (!_bindings.TryGetValue(strip, out SourceBinding? binding)) return _unitXlrJacks;
+        if (binding.Unit is not { } unit) return false;
+        if (unit == _drivenUnit) return _unitXlrJacks;
+        return _modelJacks.TryGetValue(SourceBinding.ModelOf(unit), out bool jacks) && jacks;
+    }
+
+    /// <summary>
+    /// The supported units attached next to the primary one: which of them are
+    /// driven, the fragments that find their nodes, and what their inputs
+    /// are. True when it changed what the state reports.
+    /// </summary>
+    public bool SetAttachedUnits(IReadOnlyList<AttachedUnit> units)
+    {
+        lock (_gate)
+        {
+            bool changed = false;
+            foreach (AttachedUnit unit in units)
+            {
+                string model = SourceBinding.ModelOf(unit.Id);
+                if (_modelJacks.TryGetValue(model, out bool known) && known == unit.XlrJacks) continue;
+                _modelJacks[model] = unit.XlrJacks;
+                changed = true;
+            }
+            if (_units.Count == units.Count && _units.Zip(units).All(pair => pair.First.SameAs(pair.Second))) return changed;
+            _units = [.. units];
+            return true;
+        }
+    }
 
     /// <summary>
     /// Whether the driven unit's inputs are XLR jacks, from its capabilities;
@@ -84,7 +160,9 @@ public sealed partial class Mixer
     {
         lock (_gate)
         {
-            if (xlrJacks is not bool value || value == _unitXlrJacks) return false;
+            if (xlrJacks is not bool value) return false;
+            if (_drivenUnit is { } unit) _modelJacks[SourceBinding.ModelOf(unit)] = value;
+            if (value == _unitXlrJacks) return false;
             _unitXlrJacks = value;
             return true;
         }
@@ -242,9 +320,10 @@ public sealed partial class Mixer
     /// <summary>
     /// The channel that carries the driven unit's microphone input 1 or 2,
     /// or null. The hardware strip on that input's pair wins while it takes
-    /// the interface; otherwise the first capture channel, in layout order,
-    /// on the unit's own node at that input's port (the first for input 1,
-    /// the third for input 2) or on its pair.
+    /// the interface; then a strip bound to the unit's own node at that
+    /// input's port (the first for input 1, the third for input 2); then the
+    /// first capture channel, in layout order, on the unit's own node at that
+    /// port or on its pair.
     /// </summary>
     private string? UnitInputChannelLocked(int input)
         => _drivenUnit is null ? null : CarrierOfLocked(input);
@@ -252,33 +331,72 @@ public sealed partial class Mixer
     // The same rule without asking whether a unit is driven: the Pro's
     // direct path only runs while the daemon drives one.
     private string? CarrierOfLocked(int input)
-        => UnitInputChannel(_config.Channels, _bindings, _inputDevice, _deviceXlrInputs ?? 1, input);
+        => UnitInputChannel(_config.Channels, _bindings, _inputDevice, _deviceXlrInputs ?? 1, input, _drivenUnit);
 
     /// <inheritdoc cref="UnitInputChannelLocked"/>
     internal static string? UnitInputChannel(IReadOnlyList<ChannelDefinition> channels,
-        IReadOnlyDictionary<string, SourceBinding> bindings, string? unitNode, int xlrInputs, int input)
+        IReadOnlyDictionary<string, SourceBinding> bindings, string? unitNode, int xlrInputs, int input, string? unitId = null)
     {
         if (input is not (1 or 2) || input > xlrInputs) return null;
         ChannelDefinition? strip = channels.FirstOrDefault(c => c.InputPair == input - 1);
         if (strip is not null && !bindings.ContainsKey(strip.Id)) return strip.Id;
-        if (unitNode is null) return null;
+        return CarrierOn(channels, bindings, input,
+            binding => unitId is not null && binding.Unit == unitId || unitNode is not null && binding.Source == unitNode,
+            source => unitNode is not null && source == unitNode);
+    }
+
+    /// <summary>
+    /// The channel that carries an additional unit's input 1 or 2, or null:
+    /// a strip bound to that unit's node at the input's port, else the first
+    /// capture channel on one of its nodes at that port or on its pair. A
+    /// unit that is not driven has no controls to show, so nothing carries it.
+    /// </summary>
+    internal static string? AdditionalUnitInputChannel(IReadOnlyList<ChannelDefinition> channels,
+        IReadOnlyDictionary<string, SourceBinding> bindings, AttachedUnit unit, int input)
+    {
+        if (!unit.Driven || unit.Fragments.Count == 0 || input is not (1 or 2) || input > unit.XlrInputs) return null;
+        return CarrierOn(channels, bindings, input, binding => binding.Unit == unit.Id || unit.Owns(binding.Source), unit.Owns);
+    }
+
+    // The strips bound to a unit at the input's port come first, then the
+    // capture channels on its node, each in layout order.
+    private static string? CarrierOn(IReadOnlyList<ChannelDefinition> channels, IReadOnlyDictionary<string, SourceBinding> bindings,
+        int input, Func<SourceBinding, bool> boundToUnit, Func<string, bool> unitNode)
+    {
         int port = input == 1 ? 0 : 2;
-        return channels.FirstOrDefault(c => c.CaptureSource == unitNode
+        ChannelDefinition? bound = channels.FirstOrDefault(c => c.InputPair is not null
+            && bindings.TryGetValue(c.Id, out SourceBinding? b) && b.Port == port && boundToUnit(b));
+        if (bound is not null) return bound.Id;
+        return channels.FirstOrDefault(c => c.CaptureSource is { } source && unitNode(source)
             && (c.CaptureMonoChannel == port || c.CaptureMonoChannel is null && c.CapturePair == input - 1))?.Id;
     }
 
-    private UnitInputStatus? UnitInputLocked(string channel)
+    /// <summary>
+    /// Which unit input each channel carries: the primary unit's inputs
+    /// first, then each driven additional unit's. A channel carries one input
+    /// at most, and each input appears on one channel at most.
+    /// </summary>
+    private Dictionary<string, UnitInputStatus> UnitInputsLocked()
     {
-        for (int input = 1; input <= 2; input++)
-            if (UnitInputChannelLocked(input) == channel) return new(_drivenUnit!, input, Primary: true);
-        return null;
+        var carried = new Dictionary<string, UnitInputStatus>(StringComparer.Ordinal);
+        if (_drivenUnit is { } primary)
+            for (int input = 1; input <= 2; input++)
+                if (UnitInputChannelLocked(input) is { } channel) carried.TryAdd(channel, new(primary, input, Primary: true));
+        foreach (AttachedUnit unit in _units)
+        {
+            if (unit.Id == _drivenUnit) continue;
+            for (int input = 1; input <= 2; input++)
+                if (AdditionalUnitInputChannel(_config.Channels, _bindings, unit, input) is { } channel)
+                    carried.TryAdd(channel, new(unit.Id, input, Primary: false));
+        }
+        return carried;
     }
 
     private ChannelBinding BindingStateLocked(ChannelDefinition channel)
     {
         if (channel.InputPair is int pair)
             return _bindings.TryGetValue(channel.Id, out SourceBinding? b)
-                ? new("source", b.Source, b.Pair, b.MonoChannel)
+                ? new("source", b.Source, b.Pair, b.MonoChannel, b.Unit)
                 : new("unit", Pair: pair);
         return channel.CaptureSource is { } source
             ? new("source", source, channel.CapturePair, channel.CaptureMonoChannel)
@@ -312,21 +430,49 @@ public sealed partial class Mixer
     /// </summary>
     private string? ResolveBoundSourceLocked(string strip, SourceBinding binding, IReadOnlyList<AudioNode> sources)
     {
+        string? source = BoundSourceLocked(binding, sources, out string? warning);
+        if (warning is null) _stripWarnings.Remove(strip);
+        else _stripWarnings[strip] = warning;
+        return source;
+    }
+
+    /// <summary>
+    /// The node a binding is fed from now, or null with the reason. The exact
+    /// name wins. While it is missing, a binding to a supported unit's node
+    /// follows the unit's card, whose part of the node name stays the same
+    /// when the unit is driven, its card profile switches or it is plugged in
+    /// again: the one source that card publishes with the port is the unit's
+    /// microphone under its new name. A card with several sources (a split
+    /// profile) is not guessed at.
+    /// </summary>
+    private string? BoundSourceLocked(SourceBinding binding, IReadOnlyList<AudioNode> sources, out string? warning)
+    {
         int matches = sources.Count(s => s.Name == binding.Source);
-        string? warning = matches switch
+        if (matches == 0 && binding.Unit is not null)
+        {
+            string card = InterfaceNodes.CardKey(binding.Source);
+            List<AudioNode> renamed = [.. sources.Where(s => !s.IsOwn && InterfaceNodes.CardKey(s.Name) == card)];
+            if (renamed.Count == 1)
+            {
+                string node = renamed[0].Name;
+                bool hasPort = renamed[0].Channels is int ports ? ports > binding.Port : _pw.HasCaptureChannel(node, binding.Port);
+                warning = hasPort ? null : $"{node} has no port {binding.Port + 1}. The strip stays silent until it returns.";
+                return hasPort ? node : null;
+            }
+            if (renamed.Count > 1)
+            {
+                warning = $"{binding.Source} is gone and its interface now has {renamed.Count} sources. The strip stays silent until it is bound again.";
+                return null;
+            }
+        }
+        warning = matches switch
         {
             0 => $"{binding.Source} is not connected. The strip stays silent until it returns.",
             1 => _pw.HasCaptureChannel(binding.Source, binding.Port) ? null
                 : $"{binding.Source} has no port {binding.Port + 1}. The strip stays silent until it returns.",
             _ => $"More than one source is named {binding.Source}. The strip stays silent until the name is unique.",
         };
-        if (warning is null)
-        {
-            _stripWarnings.Remove(strip);
-            return binding.Source;
-        }
-        _stripWarnings[strip] = warning;
-        return null;
+        return warning is null ? binding.Source : null;
     }
 
     /// <summary>Console rule: a strip whose source changed comes up muted in the monitor mixes.</summary>

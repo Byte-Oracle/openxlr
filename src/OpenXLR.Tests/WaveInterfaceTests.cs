@@ -283,6 +283,68 @@ public sealed class WaveInterfaceTests : IDisposable
         finally { await interfaces.StopAsync(CancellationToken.None); primary.SuspendSession(); }
     }
 
+    /// <summary>
+    /// The mixer hears which attached units are driven as additional ones and
+    /// by which fragments their nodes are found, and maps an additional unit's
+    /// input to the strip bound to its node at the input's port, else to a
+    /// capture channel on its node: unitInput names that unit, not the primary.
+    /// </summary>
+    [Fact]
+    public async Task UnitInputMapsToTheNodeAndPortOfADrivenAdditionalUnit()
+    {
+        var pro = new FakeDevice("proP", outputRouting: true);
+        var dock = new FakeDevice("dockC", port: "1-5", model: "XLR Dock");
+        using var primary = Manager(() => [pro]); primary.SweepOnce();
+        using var interfaces = new WaveInterfaces(primary, NullLogger<DeviceManager>.Instance, Configuration, () => [pro, dock]);
+        await interfaces.StartAsync(CancellationToken.None);
+        try
+        {
+            string proId = pro.Info.InstanceId, dockId = dock.Info.InstanceId;
+            const string dockNode = "alsa_input.usb-Elgato_Systems_Elgato_XLR_Dock_dockC-00.analog-stereo";
+            Wait(() => interfaces.AttachedUnits().Count == 2);
+            // Attached and not driven: listed for what its inputs are, with nothing to find.
+            AttachedUnit idle = interfaces.AttachedUnits().Single(u => u.Id == dockId);
+            Assert.False(idle.Driven); Assert.Empty(idle.Fragments); Assert.True(idle.XlrJacks); Assert.Equal(1, idle.XlrInputs);
+            Assert.False(interfaces.AttachedUnits().Single(u => u.Id == proId).Driven);   // the primary is the mixer's driven unit
+
+            using var mixer = new Mixer();
+            mixer.SetDrivenUnit(proId);
+            mixer.SetInputBinding("xlr2", new(dockNode, 0, 0) { Unit = dockId });
+            mixer.SetAttachedUnits(interfaces.AttachedUnits());
+            UnitInputStatus? Carried(string channel) => mixer.Snapshot().Channels.Single(c => c.Id == channel).UnitInput;
+            Assert.Null(Carried("xlr2"));
+
+            Assert.Null(interfaces.SetEnabled(dockId, true));
+            Wait(() => interfaces.AttachedUnits().Any(u => u.Id == dockId && u.Driven));
+            Assert.Equal(["XLR_Dock_dockC-", "XLR_Dock"], interfaces.AttachedUnits().Single(u => u.Id == dockId).Fragments);
+            Assert.True(mixer.SetAttachedUnits(interfaces.AttachedUnits()));
+            Assert.Equal(new UnitInputStatus(dockId, 1, Primary: false), Carried("xlr2"));
+            Assert.Equal(new UnitInputStatus(proId, 1, Primary: true), Carried("xlr1"));
+            Assert.Equal("XLR 2", mixer.Snapshot().Channels.Single(c => c.Id == "xlr2").Name);   // a jack, not a capsule
+
+            // The same node at another port is not the unit's input; the third
+            // port of a one-input unit is no second input either.
+            mixer.SetInputBinding("xlr2", new(dockNode, 0, 1) { Unit = dockId });
+            Assert.Null(Carried("xlr2"));
+            mixer.SetInputBinding("xlr2", new(dockNode, 0, 2) { Unit = dockId });
+            Assert.Null(Carried("xlr2"));
+            // A capture channel on the unit's node at its first port carries it
+            // whatever the strip takes, the way Add input channel makes one.
+            IReadOnlyList<ChannelDefinition> withCapture = [.. MixerConfig.Default().Channels, new("dock_mic", "Dock mic") { CaptureSource = dockNode, CaptureMonoChannel = 0 }];
+            AttachedUnit driven = interfaces.AttachedUnits().Single(u => u.Id == dockId);
+            Assert.Equal("dock_mic", Mixer.AdditionalUnitInputChannel(withCapture, mixer.InputBindings, driven, 1));
+
+            // Disabled: the binding stays, silent of controls.
+            mixer.SetInputBinding("xlr2", new(dockNode, 0, 0) { Unit = dockId });
+            Assert.Null(interfaces.SetEnabled(dockId, false));
+            Wait(() => !interfaces.AttachedUnits().Single(u => u.Id == dockId).Driven);
+            Assert.True(mixer.SetAttachedUnits(interfaces.AttachedUnits()));
+            Assert.Null(Carried("xlr2"));
+            Assert.Equal(dockNode, mixer.InputBinding("xlr2")!.Source);
+        }
+        finally { await interfaces.StopAsync(CancellationToken.None); primary.SuspendSession(); }
+    }
+
     [Theory]
     [InlineData("../escape")]
     [InlineData("0fd9:007d")]

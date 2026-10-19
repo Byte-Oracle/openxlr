@@ -149,7 +149,7 @@ public sealed partial class MonitorVolumeIntegrationTests
     }
 
     [MonitorPipeWireFact]
-    public async Task SupportedUnitNodesAreRefusedAndTheProKeepsItsJacksWhileXlr1IsBound()
+    public async Task SupportedUnitNodesAreBoundWithTheirUnitAndTheProKeepsItsJacksWhileXlr1IsBound()
     {
         const string proSink = "alsa_output.usb-Elgato_Elgato_Wave_XLR_Pro_PROSER-00.pro-output-0";
         const string proSource = "alsa_input.usb-Elgato_Elgato_Wave_XLR_Pro_PROSER-00.pro-input-0";
@@ -177,12 +177,12 @@ public sealed partial class MonitorVolumeIntegrationTests
             Assert.True(cam.Channels > 0);
             Assert.Equal(cam.Channels, cam.Positions?.Count);
 
-            // The driven unit's own node is refused before anything changes.
-            string? refused = mixer.Apply(new() { Cmd = "setPrimaryInput", Source = proSource });
-            Assert.Contains("Elgato Wave XLR Pro", refused);
-            Assert.Contains("Automatic", refused);
-            Assert.Null(mixer.Snapshot()!.PrimaryInput);
-            Assert.Contains("Elgato Wave XLR Pro", mixer.Apply(new() { Cmd = "setInputBinding", Channel = "xlr2", Source = proSource }));
+            // A supported unit's node is a source like any other, even the
+            // driven unit's own; the binding remembers whose node it is.
+            Assert.Null(mixer.Apply(new() { Cmd = "setInputBinding", Channel = "xlr2", Source = proSource }));
+            Assert.Equal(new ChannelBinding("source", proSource, 0, 0, pro.Info.InstanceId), mixer.Snapshot()!.Channels.Single(c => c.Id == "xlr2").Binding);
+            Assert.Equal(pro.Info.InstanceId, MixerSettings.Load()!.InputBindings!["xlr2"].Unit);
+            Assert.Null(mixer.Apply(new() { Cmd = "setInputBinding", Channel = "xlr2" }));
             Assert.Null(mixer.Snapshot()!.Channels.Single(c => c.Id == "xlr2").Binding.Source);
 
             Assert.Null(mixer.Apply(new() { Cmd = "setMonitorOutputs", Devices = [jack] }));

@@ -28,7 +28,7 @@ namespace OpenXLR.Tests;
 /// header's LED meaning the interface, and the classic INPUTS panel's chip
 /// and heading. Run from the window layout test, on its UI thread.
 /// </summary>
-internal static class InputBindingWindowTests
+internal static partial class InputBindingWindowTests
 {
     private const string Bluetooth = "bluez_input.headset.monitor-like_name";
 
