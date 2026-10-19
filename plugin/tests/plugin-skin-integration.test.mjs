@@ -61,9 +61,23 @@ test('live palettes repaint key art, dial text, needles and stationary meters wi
     assert.ok(svg(meterImages().at(-1).payload.meter).includes('#aabb22'));
     const feedback = host.messages.filter(m => m.event === 'setFeedback' && m.payload.needle).at(-1).payload;
     for (const field of ['title', 'icon', 'needle']) assert.ok(svg(feedback[field]).includes('#010203'), field);
-    // Two readings in the same width bucket still have different colour zones.
+    // The bar is one gradient laid along its length: every colour is in every
+    // image, at fixed places, and the fill only grows and shrinks over it.
+    const bar = svg(meterImages().at(-1).payload.meter);
+    for (const colour of ['#11aa22', '#aabb22', '#ee0011']) assert.ok(bar.includes(colour), colour);
+    assert.match(bar, /gradientUnits="userSpaceOnUse"/);
+    assert.match(bar, /fill="url\(#level\)"/);
+    const quiet = meterImages().length;
+    daemon.receive({type:'meters',levels:{'mix:monitor':[.2,.2]}});
+    assert.equal(meterImages().length, quiet + 1);
+    const low = svg(meterImages().at(-1).payload.meter);
+    assert.equal(low.replace(/<rect width="\d+" height="6" rx="3" fill="url\(#level\)"\/>/, ''),
+      bar.replace(/<rect width="\d+" height="6" rx="3" fill="url\(#level\)"\/>/, ''), 'only the fill width changes with the level');
+    // A level crossing a colour edge inside one width bucket is not redrawn.
+    daemon.receive({type:'meters',levels:{'mix:monitor':[.902,.902]}});
+    const settled = meterImages().length;
     daemon.receive({type:'meters',levels:{'mix:monitor':[.906,.906]}});
-    assert.ok(svg(meterImages().at(-1).payload.meter).includes('#ee0011'));
+    assert.equal(meterImages().length, settled);
     host.receive({event:'willDisappear',context:'dial'});
     host.receive({event:'willAppear',context:'dial',action:'com.emaspa.openxlr.dial',payload:{settings:{target:'mixvol:monitor'}}});
     const oldMeters = meterImages().length;
