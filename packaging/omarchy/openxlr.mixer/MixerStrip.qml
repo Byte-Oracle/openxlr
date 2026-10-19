@@ -21,6 +21,8 @@ Rectangle {
     readonly property var meter: Mixer.pair(link.levels, (master ? "mix:" : "ch:") + entry.id, mono)
     readonly property bool available: link.ready && !link.pending
     readonly property bool hardwareMuted: mono && link.snapshot && !!(link.snapshot.state || {})[Mixer.muteControl(entry.id)]
+    // A generic microphone has no hardware mute the daemon accepts; the send mute above still works.
+    readonly property bool generic: Mixer.genericInput(link.snapshot) !== null
     readonly property string kind: master ? (entry.kind === "monitor" ? "MON" : entry.kind === "virtualMic" ? "MIC" : "AUX") : entry.hardware ? "INPUT" : entry.captureSource ? "CAPTURE" : "APP"
     width: 104
     height: 286
@@ -169,10 +171,10 @@ Rectangle {
         foreground: root.foreground
         face: root.face
         family: root.family
-        text: root.hardwareMuted ? "Mic muted" : "Mic on"
-        marked: root.hardwareMuted
-        enabled: root.available && !!root.link.snapshot && !!root.link.snapshot.connected && !!(root.link.snapshot.capabilities || {}).mute
-        Accessible.name: root.entry.name + " hardware mute"
+        text: root.generic ? "Generic mic" : root.hardwareMuted ? "Mic muted" : "Mic on"
+        marked: root.hardwareMuted && !root.generic
+        enabled: root.available && !root.generic && !!root.link.snapshot && !!root.link.snapshot.connected && !!(root.link.snapshot.capabilities || {}).mute
+        Accessible.name: root.entry.name + (root.generic ? " hardware mute, not on a generic microphone" : " hardware mute")
         onClicked: root.link.send({
             cmd: "set",
             control: Mixer.muteControl(root.entry.id),

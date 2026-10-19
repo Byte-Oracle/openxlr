@@ -221,3 +221,18 @@ test('a channel the device cannot feed is left out, and an older daemon keeps th
   assert.deepEqual(plain(mixer.shownChannels(null)), []);
   assert.deepEqual(plain(mixer.shownChannels(undefined)), []);
 });
+
+test('a generic microphone is named with its description and port, and automatic mode adds nothing', () => {
+  const source = 'alsa_input.usb-Blue_Yeti_Nano';
+  const generic = { connected: false, devices: [{ name: source, description: 'Yeti Nano', kind: 1 }],
+    mixer: { ...state.mixer, primaryInput: { source, channel: 1 }, primaryInputConnected: true } };
+  assert.equal(mixer.genericInput(generic).source, source);
+  assert.equal(mixer.genericLabel(generic), 'Generic mic: Yeti Nano, port 2');
+  generic.mixer.primaryInputConnected = false;
+  generic.devices = [];
+  assert.equal(mixer.genericLabel(generic), `Generic mic: ${source}, port 2, not linked`);
+  assert.equal(mixer.genericInput(state), null);
+  assert.equal(mixer.genericLabel(state), '');
+  assert.equal(mixer.genericLabel(null), '');
+  assert.equal(mixer.genericInput({ mixer: { primaryInput: { source: '' } } }), null);
+});

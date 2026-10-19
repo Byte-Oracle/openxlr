@@ -14,6 +14,9 @@ internal abstract class Row
     /// <summary>False for a row the device cannot do, which is drawn faded and skipped.</summary>
     public bool Enabled { get; init; } = true;
 
+    /// <summary>What a disabled row says in place of its value.</summary>
+    public string DisabledText { get; init; } = "not on this device";
+
     /// <summary>A note shown to the right of the value.</summary>
     public string? Note { get; init; }
 
@@ -30,7 +33,7 @@ internal sealed class ToggleRow(string label, bool value, Action<bool> set) : Ro
     {
         if (!Enabled)
         {
-            screen.Text(x, y, " not on this device ", theme.ControlDisabled, back);
+            screen.Text(x, y, $" {DisabledText} ", theme.ControlDisabled, back, maxWidth: width);
             return;
         }
         Widgets.Key(screen, x, y, value ? " on" : "off", value, theme, focused);
@@ -76,7 +79,7 @@ internal sealed class NumberRow(
     {
         if (!Enabled)
         {
-            screen.Text(x, y, " not on this device ", theme.ControlDisabled, back);
+            screen.Text(x, y, $" {DisabledText} ", theme.ControlDisabled, back, maxWidth: width);
             return;
         }
         int barWidth = Math.Max(4, width - 10);

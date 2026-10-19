@@ -285,7 +285,7 @@ internal sealed class DaemonLink : IAsyncDisposable
                     Connected = true;
                     State = snapshot;
                     UpdateChains(snapshot);
-                    Status = snapshot.Connected ? "connected" : "no interface";
+                    Status = snapshot.Connected ? "connected" : snapshot.Generic ? "generic microphone" : "no interface";
                     Changed?.Invoke();
                 }
                 break;

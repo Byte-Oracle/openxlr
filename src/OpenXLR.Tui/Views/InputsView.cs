@@ -31,12 +31,19 @@ internal sealed class InputsView : View
         return state is not null && _list.Handle(key, Build(app, state));
     }
 
+    /// <summary>What a hardware row says in generic microphone mode, where no Elgato unit is driven.</summary>
+    internal const string GenericOff = "not on a generic mic";
+
     private static List<Row> Build(App app, Snapshot state)
     {
         List<Row> rows = [];
         DaemonLink link = app.Link;
         int inputs = Math.Max(1, state.Count("xlrInputs"));
         int gainMax = state.Count("gainMaxDb") is int max and > 0 ? max : 80;
+        // A generic microphone has no USB controls here: its gain and phantom
+        // power are set on the microphone or its own interface. The rows stay
+        // in place, faded with that reason, so the page reads the same.
+        string off = state.Generic ? GenericOff : "not on this device";
 
         for (int input = 1; input <= inputs; input++)
         {
@@ -44,33 +51,44 @@ internal sealed class InputsView : View
             rows.Add(new HeadingRow($"XLR {input}"));
             rows.Add(new NumberRow($"Gain", state.Number($"gain{suffix}Db"), 0, gainMax, 1,
                 value => $"{value:0} dB", value => Set(link, $"gain{suffix}", (int)Math.Round(value)))
-            { Enabled = state.Can("gain"), FineStep = 1, Note = state.Flag("gainLocked") ? "locked" : null });
+            {
+                Enabled = state.Can("gain"), FineStep = 1, DisabledText = off,
+                Note = state.Generic ? "set on the mic" : state.Flag("gainLocked") ? "locked" : null,
+            });
             rows.Add(new ToggleRow("Mute", state.Flag($"mute{suffix}"),
-                value => Set(link, $"mute{suffix}", value)) { Enabled = state.Can("mute") });
+                value => Set(link, $"mute{suffix}", value)) { Enabled = state.Can("mute"), DisabledText = off });
             rows.Add(new ToggleRow("Low cut", state.Flag($"lowCut{suffix}"),
-                value => Set(link, $"lowCut{suffix}", value)) { Enabled = state.Can("lowCut") });
+                value => Set(link, $"lowCut{suffix}", value)) { Enabled = state.Can("lowCut"), DisabledText = off });
             rows.Add(new ToggleRow("Expander", state.Flag($"expander{suffix}"),
-                value => Set(link, $"expander{suffix}", value)) { Enabled = state.Can("expander") });
+                value => Set(link, $"expander{suffix}", value)) { Enabled = state.Can("expander"), DisabledText = off });
             rows.Add(new ToggleRow("Voice tune", state.Flag($"voiceTune{suffix}"),
-                value => Set(link, $"voiceTune{suffix}", value)) { Enabled = state.Can("voiceTune") });
+                value => Set(link, $"voiceTune{suffix}", value)) { Enabled = state.Can("voiceTune"), DisabledText = off });
             rows.Add(new NumberRow("VT strength", state.Number($"voiceTuneStrength{suffix}"), 0, 100, 5,
                 Widgets.Percent0, value => Set(link, $"voiceTuneStrength{suffix}", (int)Math.Round(value)))
-            { Enabled = state.Can("voiceTune") });
+            { Enabled = state.Can("voiceTune"), DisabledText = off });
             rows.Add(new ToggleRow("Phantom power", state.Flag($"phantom{suffix}"),
                 value => Set(link, $"phantom{suffix}", value))
             {
-                Enabled = state.Can("phantom"),
+                Enabled = state.Can("phantom"), DisabledText = off,
                 Note = state.Flag($"phantomSettling{suffix}") ? "settling" : null,
             });
             rows.Add(new ToggleRow("ClipGuard", state.Flag($"clipGuard{suffix}"),
-                value => Set(link, $"clipGuard{suffix}", value)) { Enabled = state.Can("clipGuard") });
+                value => Set(link, $"clipGuard{suffix}", value)) { Enabled = state.Can("clipGuard"), DisabledText = off });
             rows.Add(new ToggleRow("Compressor", state.Flag($"compressor{suffix}"),
-                value => Set(link, $"compressor{suffix}", value)) { Enabled = state.Can("compressor") });
+                value => Set(link, $"compressor{suffix}", value)) { Enabled = state.Can("compressor"), DisabledText = off });
+            if (input == 1 && state.GenericLabel is { } generic)
+            {
+                rows.Add(new TextRow("Source", generic));
+                rows.Add(new TextRow("Route", state.Mixer.PrimaryInputConnected ? "linked to XLR 1"
+                    : "not linked, XLR 1 is silent"));
+            }
         }
 
+        // The software low cut and ClipGuard run in the mixer, so they work on
+        // a generic microphone too; the gain lock guards a hardware gain.
         rows.Add(new HeadingRow("Software"));
         rows.Add(new ToggleRow("Gain lock", state.Flag("gainLocked"),
-            value => Set(link, "gainLock", value)) { Enabled = state.Can("gain") });
+            value => Set(link, "gainLock", value)) { Enabled = state.Can("gain"), DisabledText = off });
         string[] lowCuts = ["off", "80 Hz", "120 Hz"];
         int lowCutAt = state.Mixer.LowCutHz switch { 80 => 1, 120 => 2, _ => 0 };
         rows.Add(new ChoiceRow("Software low cut", lowCuts, lowCutAt, index =>
@@ -81,15 +99,15 @@ internal sealed class InputsView : View
 
         rows.Add(new HeadingRow("Headphones"));
         rows.Add(new NumberRow("Phones 1", Percent(state.Number("hpVolumeDb")), 0, 100, 5, Widgets.Percent0,
-            value => Set(link, "hpVolumeDb", Decibels(value))) { Enabled = state.Can("hpVolume") });
+            value => Set(link, "hpVolumeDb", Decibels(value))) { Enabled = state.Can("hpVolume"), DisabledText = off });
         if (state.Count("hpOutputs") > 1)
             rows.Add(new NumberRow("Phones 2", Percent(state.Number("hp2VolumeDb")), 0, 100, 5, Widgets.Percent0,
                 value => Set(link, "hp2VolumeDb", Decibels(value))) { Enabled = state.Can("hpVolume") });
         rows.Add(new NumberRow("Mic to PC blend", state.Number("crossfade"), 0, 200, 10,
             value => value <= 0 ? "mic only" : value >= 200 ? "PC only" : $"{value:0}",
-            value => Set(link, "crossfade", (int)Math.Round(value))) { Enabled = state.Can("crossfade") });
+            value => Set(link, "crossfade", (int)Math.Round(value))) { Enabled = state.Can("crossfade"), DisabledText = off });
         rows.Add(new ToggleRow("Low impedance", state.Flag("lowImpedance"),
-            value => Set(link, "lowImpedance", value)) { Enabled = state.Can("lowImpedance") });
+            value => Set(link, "lowImpedance", value)) { Enabled = state.Can("lowImpedance"), DisabledText = off });
 
         if (state.Can("outputRouting"))
         {

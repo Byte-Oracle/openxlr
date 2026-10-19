@@ -58,6 +58,7 @@ TestCase {
         sent = [];
         fakeLink.ready = true;
         fakeLink.pending = false;
+        fakeLink.snapshot = { connected: true, state: { mute: false }, capabilities: { mute: true } };
         strip = createTemporaryObject(stripComponent, testCase);
         verify(strip !== null);
     }
@@ -99,6 +100,24 @@ TestCase {
         compare(sent[1].cmd, "set");
         compare(sent[1].control, "mute");
         compare(sent[1].value, true);
+    }
+    function test_aGenericMicrophoneKeepsTheSendMuteAndExplainsTheHardwareMute(): void {
+        fakeLink.snapshot = {
+            connected: false,
+            devices: [{ name: "alsa_input.usb-Yeti", description: "Yeti Nano", kind: 1 }],
+            mixer: { primaryInput: { source: "alsa_input.usb-Yeti", channel: 0 }, primaryInputConnected: true }
+        };
+        var hardware = findChild(strip, "hardwareMute");
+        compare(hardware.text, "Generic mic");
+        verify(!hardware.enabled);
+        mouseClick(hardware);
+        mouseClick(findChild(strip, "sendMute"));
+        compare(sent.length, 1);
+        compare(sent[0].cmd, "setChannelMuted");
+        compare(sent[0].channel, "xlr1");
+        fakeLink.snapshot = { connected: true, state: { mute: false }, capabilities: { mute: true } };
+        compare(hardware.text, "Mic on");
+        verify(hardware.enabled);
     }
     function test_offlineAndPendingStripsCannotSend(): void {
         fakeLink.ready = false;

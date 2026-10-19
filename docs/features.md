@@ -248,6 +248,9 @@ channel nodes and application routing, and start monitoring muted.
 Generic mode releases Elgato USB control, hides hardware-only controls and
 keeps separate mixer-only profiles. The saved source is machine wiring,
 independent of profile recall. Automatic mode resumes Elgato control.
+The terminal mixer names the source in its header and picks it from its
+Options tab. Stream Deck keys and the Omarchy bar keep XLR 1's sends and
+send mutes working, and their hardware controls say Generic mic.
 
 ### External capture channels
 
