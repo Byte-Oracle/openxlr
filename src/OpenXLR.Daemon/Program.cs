@@ -26,6 +26,11 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     ContentRootPath = AppContext.BaseDirectory,
 });
 builder.Services.AddSingleton(startupDefaults);
+// The unit allows 45 s to stop (TimeoutStopSec). Past this limit the host
+// stops waiting for the device loop and the remaining services, which leaves
+// room for the process to exit before systemd kills it. The mixer keeps its
+// own, shorter limit for the audio server (MixerService.StopBudget).
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(30));
 
 // Start the notifier before graph construction so progressing startup work
 // can extend systemd's deadline. Readiness still waits for ApplicationStarted.

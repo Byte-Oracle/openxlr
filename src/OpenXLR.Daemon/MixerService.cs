@@ -31,6 +31,22 @@ public sealed class MixerService : IHostedService, IDisposable
     // user chose after the daemon was gone.
     private readonly CancellationTokenSource _stopping = new();
     private Task _defaultDefense = Task.CompletedTask;
+    // Cancelled once the stop has run for StopBudget: the adapter then kills
+    // a helper still running and starts no other, so a stalled audio server
+    // ends the stop early instead of each pactl call waiting out its own
+    // deadline (a graph has dozens of modules, five seconds each).
+    private readonly CancellationTokenSource _stopDeadline = new();
+    private long _stopStarted;   // monotonic ms when the host began to stop; 0 before
+
+    /// <summary>
+    /// How long the stop may spend on the audio server, counted from the
+    /// moment the host begins to stop. The unit allows 45 s
+    /// (TimeoutStopSec) for the whole daemon; the device manager's card
+    /// profile restore (two helpers, five seconds each), a Wine session
+    /// ending (up to seven) and the process exit come after or beside this.
+    /// What is left loaded is removed by the next start. Tests shorten it.
+    /// </summary>
+    internal TimeSpan StopBudget { get; init; } = TimeSpan.FromSeconds(15);
     // System.Threading.Timer fires a new callback every period regardless of
     // whether the previous one finished. If one tick runs long (a slow
     // PipeWire round-trip, e.g. spawning a filter-chain module), overlapping
@@ -74,6 +90,9 @@ public sealed class MixerService : IHostedService, IDisposable
         _devices = devices;
         _startupDefaults = startupDefaults;
         _lifetime = lifetime;
+        // The budget runs from the start of the host's stop, not from this
+        // service's turn: the services stopped before it spend the same 45 s.
+        lifetime?.ApplicationStopping.Register(() => Interlocked.CompareExchange(ref _stopStarted, Environment.TickCount64, 0));
         EditorPolicy = editorPolicy ?? new NativeEditorPolicy();
         _pipeWire = new PipeWireAdapter(_progress.Mark, note => _log.LogInformation("{msg}", note));
         _mixer = new(_pipeWire) { InputNote = note => _log.LogWarning("hardware input: {note}", note) };
@@ -526,9 +545,16 @@ public sealed class MixerService : IHostedService, IDisposable
     {
         // No default-device write may land after the graph is gone.
         _stopping.Cancel();
+        Interlocked.CompareExchange(ref _stopStarted, Environment.TickCount64, 0);
+        long spent = Environment.TickCount64 - Interlocked.Read(ref _stopStarted);
+        double left = StopBudget.TotalMilliseconds - spent;
+        if (left > 0) _stopDeadline.CancelAfter(TimeSpan.FromMilliseconds(left));
+        else _stopDeadline.Cancel();
+        _pipeWire.EndHelpersAt(_stopDeadline.Token);
         // A build attempt in progress finishes or fails on its helpers'
-        // deadlines; join it so the timers and the graph it may have made
-        // are the ones stopped and torn down below.
+        // deadlines, which the stop limit above bounds; join it so the
+        // timers and the graph it may have made are the ones stopped and
+        // torn down below.
         await _buildRetry;
         ValueTask sweep = Interlocked.Exchange(ref _streamSweep, null)?.DisposeAsync() ?? ValueTask.CompletedTask;
         ValueTask meters = Interlocked.Exchange(ref _meterPush, null)?.DisposeAsync() ?? ValueTask.CompletedTask;
@@ -551,6 +577,11 @@ public sealed class MixerService : IHostedService, IDisposable
             _log.LogInformation("submix graph torn down");
         }
         else _saves.Close(write: false);
+        // One line for whatever the limit cut short.
+        if (_stopDeadline.IsCancellationRequested)
+            _log.LogWarning("stop: the audio server took longer than {s} s, so the helpers still running were ended{left}",
+                (int)StopBudget.TotalSeconds, _pipeWire.ModulesLeft == 0 ? ""
+                    : $" and {_pipeWire.ModulesLeft} OpenXLR module(s) stay loaded until the next start removes them");
         Interlocked.Exchange(ref _graphWatch, null)?.Dispose();
     }
 
