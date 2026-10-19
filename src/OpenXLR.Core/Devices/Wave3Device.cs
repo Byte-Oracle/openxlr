@@ -6,11 +6,11 @@ namespace OpenXLR.Core.Devices;
 
 /// <summary>
 /// The Elgato Wave:3 (0fd9:0070): a USB condenser microphone with a headphone
-/// jack, not an XLR interface. Nobody on this project owns one. Every protocol
-/// fact below comes from public work on other people's units and each line
-/// names its source. One user's quick test found the unit and saw gain, mute,
-/// headphone volume and the monitor balance answer; docs/hardware-support.md
-/// records that as beta and the rest as coded.
+/// jack, not an XLR interface. Every protocol fact below comes from public
+/// work on other people's units and each line names its source. The
+/// maintainer's unit (firmware 1.2.4) has since confirmed the writes and
+/// readbacks listed in docs/hardware-support.md, which keeps the checks
+/// that need someone at the microphone open and the device in beta.
 ///
 /// Sources, by the tag used below:
 ///   OW   rikkichy/openwave, crates/openwave-core/src/profiles.rs and
@@ -18,7 +18,8 @@ namespace OpenXLR.Core.Devices;
 ///        users. Where it and a schema reading differ, it wins here.
 ///   W3R  LukasParke/wave3-research, WAVE3_PROTOCOL_SUMMARY.md and
 ///        native-linux/docs/protocol-notes.md: live probing of one unit
-///        (firmware 0.3.7, API 5.3) from Linux.
+///        (API 5.3) from Linux. Its "firmware 0.3.7" is device info bytes
+///        6..8, which read the same on units with different firmware.
 ///   LW   zhgmx/LibreWave, docs/protocol-evidence.md: a schema recovered
 ///        from Wave Link for the API 5.3 and 5.4 /config message, not run on
 ///        hardware by that project.
@@ -83,9 +84,12 @@ namespace OpenXLR.Core.Devices;
 /// the hardware: every change seen in the block (the dial, the mute pad, a
 /// write from OpenXLR) is written to the card, and every half second the
 /// card's mute and headphone level are read back, and a change made there by
-/// something else is written into the block. The gain is never read back: W3R
-/// found the firmware ignores a gain written through the class control, so a
-/// card value that differs from the block is a stale cache, not a request.
+/// something else is written into the block. The gain is never read back. W3R
+/// found its unit ignoring a gain written through the class control; firmware
+/// 1.2.4 applies one and shows it in the block, as it does the mute and the
+/// headphone level, so a desktop's gain change reaches the state through the
+/// block either way. A card value that differs from the block is a stale
+/// cache, not a request.
 ///
 /// The Wave:1 (0fd9:006e), the smaller microphone of the same generation,
 /// is <see cref="Wave1Device"/>: this class with its product id and name.
@@ -109,7 +113,9 @@ public class Wave3Device : IAudioDevice
     // W3R read 51 bytes of device info, the MK.1's length; OW asks for 64,
     // requires exactly 64 back before it will drive a unit, and has users, so
     // a Wave:3 answers 64. The firmware version is the three bytes at 21
-    // (OW's profile, shown in its window); the dump shows whatever comes back.
+    // (OW's profile, shown in its window); two units read 1.2.2 and 1.2.4
+    // there while bytes 6..8 read 00 03 07 on both. The dump shows whatever
+    // comes back.
     internal const int DevInfoLen = 64;
     internal const int OffFirmware = 21;
 

@@ -5,8 +5,8 @@ namespace OpenXLR.Core.Devices;
 /// the Wave:3's generation, not an XLR interface. Nobody on this project owns
 /// one and no public source has probed one, so this is the Wave:3's backend
 /// under the Wave:1's product id and name. An owner's diagnostics on 0.1.60
-/// showed the unit answering both blocks in the Wave:3's layout, with bytes
-/// 2 and 3 reading 0x00EC where a Wave:3 reads zero, and a second archive
+/// showed the unit answering both blocks in the Wave:3's layout, bytes 2
+/// and 3 reading 0x00EC as a Wave:3's do, and a second archive
 /// showed the gain, mute and headphone volume written from the UI taking
 /// effect; the firmware kept a gain word written with the dial on
 /// headphones. ClipGuard and the mix writes are not yet confirmed
