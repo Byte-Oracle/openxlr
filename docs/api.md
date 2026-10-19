@@ -132,7 +132,8 @@ to a source, or the driven unit lacks the control, so `lowCutHz` and
 `soundCheck` (see [Sound Check](#sound-check)),
 `exclusiveGroups` (`id`, `name`, `channels`; see
 [exclusive groups](mixer-layout.md#exclusive-groups)), `enforcedDefaultSink`, `enforcedDefaultSource`, `streams` (`id`, `serial`,
-`label`, `identity`, `channelId`, `active`, `running`), `renamedSinceStart`
+`label`, `identity`, `channelId`, `active`, `running`, and `icon`; see
+[application icons](#application-icons)), `renamedSinceStart`
 and `layoutWarning`. A `devices` entry carries `name`, `description`, `kind`
 (0 for a sink, 1 for a source), `isOwn`, `isPhysical`, for a sink
 `volume` and `muted`, and for a source `channels` (its channel count from
@@ -396,6 +397,34 @@ The OpenDeck plugin in `plugin/`, the terminal mixer
 (`packaging/omarchy/openxlr.mixer/DaemonLink.qml`) are clients of this
 API; the command handler is `WebSocketHub.cs` and the message shapes are
 in `Protocol.cs`, both under `src/OpenXLR.Daemon/`.
+
+### Application icons
+
+A `streams` entry carries `icon` when the daemon found one for the app: a
+freedesktop icon name, or an absolute image path when the app's desktop
+entry names one. `icon` is absent when nothing was found. The daemon tries,
+in order:
+
+1. the `application.icon_name` the app published to PipeWire, a bare name
+   only;
+2. the desktop entry whose id is the Flatpak portal's
+   `pipewire.access.portal.app_id`, else the app's `application.id`;
+3. the desktop entry whose id, `StartupWMClass`, last reverse-DNS segment
+   of the id, or Exec program is the process binary;
+4. the desktop entry whose `Name`, `StartupWMClass` or id is the app's
+   label, or whose `Name` has the same letters and digits, the way game
+   identities compare;
+5. the process binary itself, lowercased, since many packages install their
+   icon under the program's name.
+
+Wine and Proton binaries are skipped, since every game shares them. The
+daemon reads desktop entries from `XDG_DATA_HOME`, `XDG_DATA_DIRS`, the user
+and system Flatpak exports and `/var/lib/snapd/desktop`; an earlier
+directory's entry hides a later one with the same id. It reads them again
+only when one of those directories changes. The daemon matches a remembered
+app that is not running by its identity and label, and an app keeps the
+icon it was last seen with. The name can be one the client's icon theme
+lacks, so a client needs its own fallback.
 
 ### Plugin latency
 

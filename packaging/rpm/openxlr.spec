@@ -45,6 +45,10 @@ Requires:       glib2
 Recommends:     alsa-utils
 Recommends:     pulseaudio-utils
 Recommends:     xdg-utils
+# SVG application icons in the window are drawn through GdkPixbuf and its
+# librsvg loader; without them the window falls back to PNG icons.
+Recommends:     gdk-pixbuf2
+Recommends:     librsvg2
 Suggests:       ladspa-swh-plugins
 Suggests:       lsp-plugins-lv2
 Suggests:       openxlr-yabridge

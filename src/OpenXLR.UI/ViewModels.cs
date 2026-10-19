@@ -1088,12 +1088,14 @@ public sealed partial class MainViewModel : ViewModelBase
             string channel = stream["channelId"]?.GetValue<string>() ?? "";
             bool active = stream["active"]?.GetValue<bool>() ?? true;
             bool running = stream["running"]?.GetValue<bool>() ?? true;
+            string? icon = stream["icon"] is JsonValue iconValue && iconValue.TryGetValue(out string? named) ? named : null;
             seen.Add(identity);
             if (!byIdentity.TryGetValue(identity, out AppStreamViewModel? existing))
             {
                 existing = new AppStreamViewModel(_client, identity, label, choices);
                 // Initial state is a daemon update too, not a user routing edit.
                 existing.ApplyFromDaemon(channel, active, running);
+                existing.Icon = icon;
                 byIdentity.Add(identity, existing);
                 Apps.Add(existing);
             }
@@ -1101,6 +1103,7 @@ public sealed partial class MainViewModel : ViewModelBase
             {
                 existing.SyncChannels(choices);
                 existing.ApplyFromDaemon(channel, active, running, label);
+                existing.Icon = icon;
             }
         }
         for (int i = Apps.Count - 1; i >= 0; i--)
@@ -1261,6 +1264,10 @@ public sealed class AppStreamViewModel : ViewModelBase
 
     private string _label;
     public string Label { get => _label; private set => Set(ref _label, value); }
+
+    private string? _icon;
+    /// <summary>The daemon's icon for the app: a freedesktop icon name or an image path, or null.</summary>
+    public string? Icon { get => _icon; set => Set(ref _icon, value); }
 
     /// <summary>The application channels by name, plus "not managed".</summary>
     public ObservableCollection<ChannelChoice> Channels { get; } = [];

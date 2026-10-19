@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="OpenXLR.UI.Views.ApplicationIconView"
+             Width="{DynamicResource Ox.AppIcon.Size}" Height="{DynamicResource Ox.AppIcon.Size}"
+             VerticalAlignment="Center" IsHitTestVisible="False" Focusable="False"
+             AutomationProperties.AccessibilityView="Raw">
+
+  <!-- An application's icon beside its name: the picture the desktop's icon
+       theme has for it, or, until one loads or when none does, the name's
+       first letter on a badge of the same size, so the rows stay aligned.
+       The name beside it says what the icon shows, so the icon is not
+       announced on its own. -->
+  <Panel>
+    <Border Name="Badge" Background="{DynamicResource Ox.AppIcon.Background}"
+            CornerRadius="{DynamicResource Ox.AppIcon.CornerRadius}">
+      <TextBlock Name="Initial" Foreground="{DynamicResource Ox.AppIcon.Foreground}"
+                 FontSize="{DynamicResource Ox.AppIcon.FontSize}" FontWeight="{DynamicResource Ox.Label.FontWeight}"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+    <Image Name="Picture" Stretch="Uniform" IsVisible="False"
+           RenderOptions.BitmapInterpolationMode="HighQuality"/>
+  </Panel>
+</UserControl>

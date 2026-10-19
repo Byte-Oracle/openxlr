@@ -266,4 +266,10 @@ public sealed record StreamAssignment(int Id, int Serial, string Label, string I
 
     /// <summary>The app is running and registered with PipeWire (audio-capable).</summary>
     public bool Running { get; init; } = true;
+
+    /// <summary>
+    /// The app's icon as a freedesktop icon name or an absolute image path, as
+    /// <see cref="ApplicationIconResolver"/> found it; null when nothing did.
+    /// </summary>
+    public string? Icon { get; init; }
 }

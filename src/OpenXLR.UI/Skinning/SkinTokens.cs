@@ -323,6 +323,15 @@ public static class SkinTokens
             new SkinBridge("CheckBoxCheckBackgroundFillChecked"),
         ], SolidOnly: true),
 
+        // An application's icon in APPLICATIONS: the size it is drawn at,
+        // and the badge with the name's initial that stands in for an icon
+        // the desktop does not have, at the same size so the rows line up.
+        Number("Ox.AppIcon.Size", 18, 12, 48),
+        Brush("Ox.AppIcon.Background", "#353a47"),
+        Brush("Ox.AppIcon.Foreground", "#b9bfcc"),
+        Radius("Ox.AppIcon.CornerRadius", 4),
+        Number("Ox.AppIcon.FontSize", 11, 6, 32),
+
         // The audio flow window.
         Brush("Ox.Flow.Background", "#242624"),
         Brush("Ox.Flow.Card", "#333633"),

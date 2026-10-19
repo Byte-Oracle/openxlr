@@ -49,12 +49,12 @@ public sealed class StreamLifecycleTests
                 new MixerConfig { Channels = [new("system", "System"), new("music", "Music")], Mixes = [] });
         }
 
-        public void Set(string binary, int serial = 100, bool playing = true)
+        public void Set(string binary, int serial = 100, bool playing = true, string clientProps = "")
         {
             string name = JsonSerializer.Serialize(binary);
             string client = $$$$"""
                 {"id":20,"type":"PipeWire:Interface:Client","info":{"props":{
-                    "application.process.binary":{{{{name}}}},"application.name":{{{{name}}}}
+                    {{{{clientProps}}}}"application.process.binary":{{{{name}}}},"application.name":{{{{name}}}}
                 }}}
                 """;
             string stream = $$$$"""
@@ -70,6 +70,11 @@ public sealed class StreamLifecycleTests
         }
 
         public void RefuseMoves() => File.WriteAllText(Path.Combine(_directory, "refuse-moves"), "");
+
+        public string Folder => _directory;
+
+        /// <summary>Retire the adapter's short-lived graph cache after writing the graph by hand.</summary>
+        public void Retire() => _adapter.SetSinkMuted("OpenXLR_ch_system", false);
 
         public void Dispose()
         {
@@ -101,6 +106,51 @@ public sealed class StreamLifecycleTests
         Assert.Equal((serial, identity, "music"), (stream.Serial, stream.Identity, stream.ChannelId));
         Assert.Contains($"move-sink-input {serial} OpenXLR_ch_music", graph.Writes);
         Assert.False(graph.Mixer.SyncStreams());
+    }
+
+    [Fact]
+    public void AnAppCarriesTheIconItsDesktopEntryNamesAndKeepsItOnceGone()
+    {
+        string data = Directory.CreateTempSubdirectory("openxlr-app-icon-data-").FullName;
+        string?[] saved = [Environment.GetEnvironmentVariable("XDG_DATA_HOME"), Environment.GetEnvironmentVariable("XDG_DATA_DIRS")];
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", data);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(data, "none"));
+            Directory.CreateDirectory(Path.Combine(data, "applications"));
+            File.WriteAllText(Path.Combine(data, "applications", "org.example.OpenXlrTestPlayer.desktop"),
+                "[Desktop Entry]\nType=Application\nName=Player\nExec=player\nIcon=org.example.OpenXlrTestPlayer\n");
+            using var graph = new Graph();
+            graph.Set("player", clientProps: "\"pipewire.access.portal.app_id\":\"org.example.OpenXlrTestPlayer\",");
+            Assert.True(graph.Mixer.SyncStreams());
+            Assert.Equal("org.example.OpenXlrTestPlayer", Assert.Single(graph.Mixer.Snapshot().Streams).Icon);
+            Assert.False(graph.Mixer.SyncStreams());
+
+            // A published icon name wins over the entry.
+            graph.Set("player", clientProps: "\"application.icon_name\":\"player-published\",");
+            Assert.True(graph.Mixer.SyncStreams());
+            Assert.Equal("player-published", Assert.Single(graph.Mixer.Snapshot().Streams).Icon);
+
+            // Gone, it keeps the icon it was last seen with.
+            File.WriteAllText(Path.Combine(graph.Folder, "graph.json"), "[]");
+            graph.Retire();
+            Assert.True(graph.Mixer.SyncStreams());
+            StreamAssignment gone = Assert.Single(graph.Mixer.Snapshot().Streams);
+            Assert.False(gone.Running);
+            Assert.Equal("player-published", gone.Icon);
+
+            // A remembered app with no live hints is found by its identity.
+            graph.Mixer.AssignApp("org.example.OpenXlrTestPlayer", "music", "Other");
+            graph.Mixer.SyncStreams();
+            Assert.Equal("org.example.OpenXlrTestPlayer",
+                graph.Mixer.Snapshot().Streams.Single(a => a.Identity == "org.example.OpenXlrTestPlayer").Icon);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", saved[0]);
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", saved[1]);
+            Directory.Delete(data, recursive: true);
+        }
     }
 
     [Theory]

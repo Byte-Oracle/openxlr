@@ -146,6 +146,10 @@ public sealed record AudioStream(int Id, string? AppName, string? Binary, string
     public int Serial { get; init; }
     /// <summary>Owning application process, when the live PipeWire client supplies it.</summary>
     public int ProcessId { get; init; }
+    /// <summary>The <c>application.icon_name</c> the application published, or null.</summary>
+    public string? IconName { get; init; }
+    /// <summary>The desktop application id: the Flatpak portal's, else <c>application.id</c>; or null.</summary>
+    public string? AppId { get; init; }
 
     /// <summary>
     /// Stable-ish key for remembering a per-app choice. Prefers the binary, but
