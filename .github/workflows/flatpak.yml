@@ -1,0 +1,70 @@
+name: Flatpak
+
+on:
+  push:
+    branches: ["codex/flatpak-*"]
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'native/**'
+      - 'packaging/flatpak/**'
+      - 'tools/test-flatpak.py'
+      - 'tools/test-flatpak-usb.py'
+      - 'tools/test-monitor-volume.py'
+      - '.github/workflows/flatpak.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  available:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check runner syntax
+        run: python3 -m py_compile tools/test-flatpak.py tools/test-flatpak-usb.py tools/test-monitor-volume.py
+      - id: check
+        name: Check Flatpak prerequisites in this tree
+        run: |
+          if [ -f packaging/flatpak/io.github.emaspa.openxlr.json ] && [ -f src/OpenXLR.UI/FlatpakSession.cs ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+            python3 packaging/flatpak/test-package.py
+            python3 packaging/flatpak/nuget-sources.py --check
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::The Flatpak runtime and manifest PRs must be present before installed-sandbox acceptance can run.'
+          fi
+
+  sandbox:
+    needs: available
+    if: needs.available.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Flatpak and private audio test tools
+        run: |
+          sudo add-apt-repository --yes ppa:flatpak/stable
+          sudo apt-get update
+          sudo apt-get install --yes flatpak appstream dbus-x11 pipewire pipewire-pulse wireplumber pulseaudio-utils xvfb xauth
+          # The hosted VM's AppArmor namespace restriction otherwise prevents
+          # bubblewrap from starting the test sandbox. App permissions remain
+          # those declared by the manifest.
+          if sysctl kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Install the SDK and plugin extension
+        run: |
+          dbus-run-session -- flatpak install --user --noninteractive -y flathub org.flatpak.Builder org.freedesktop.Sdk//25.08 org.freedesktop.Platform//25.08 org.freedesktop.Sdk.Extension.dotnet10//25.08 org.freedesktop.LinuxAudio.Plugins.LSP//25.08
+      - name: Validate and build offline
+        run: |
+          appstreamcli validate --no-net packaging/flatpak/io.github.emaspa.openxlr.metainfo.xml
+          dbus-run-session -- flatpak run org.flatpak.Builder --user --force-clean --disable-rofiles-fuse --state-dir="$HOME/.cache/openxlr-flatpak/state" --repo="$HOME/.cache/openxlr-flatpak/repo" "$HOME/.cache/openxlr-flatpak/build" packaging/flatpak/io.github.emaspa.openxlr.json
+          flatpak remote-add --user --no-gpg-verify --if-not-exists openxlr-local "$HOME/.cache/openxlr-flatpak/repo"
+          flatpak install --user --noninteractive -y openxlr-local io.github.emaspa.openxlr
+      - name: Exercise the installed runtime with private audio
+        run: xvfb-run -a -s '-screen 0 1920x1080x24' python3 tools/test-flatpak.py

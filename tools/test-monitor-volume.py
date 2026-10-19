@@ -64,9 +64,13 @@ def main():
                     policies = [["--config-file", "main.conf"], ["--config-file", "policy.conf"]]
                 for policy in policies:
                     processes.append(subprocess.Popen(["wireplumber", *policy], env=env, stdout=log, stderr=log))
-                subprocess.run(["dotnet", "test", "src/OpenXLR.Tests/OpenXLR.Tests.csproj",
+                command = ["dotnet", "test", "src/OpenXLR.Tests/OpenXLR.Tests.csproj",
                                 "-c", "Release", "--no-build", "--filter",
-                                os.environ.get("OPENXLR_TEST_FILTER", "FullyQualifiedName~MonitorVolumeIntegrationTests|FullyQualifiedName~FilterStateIntegrationTests|FullyQualifiedName~ProfileStartupTests|FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~MixDelayIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests|FullyQualifiedName~SoundCheckIntegrationTests"), *sys.argv[1:]],
+                                os.environ.get("OPENXLR_TEST_FILTER", "FullyQualifiedName~MonitorVolumeIntegrationTests|FullyQualifiedName~FilterStateIntegrationTests|FullyQualifiedName~ProfileStartupTests|FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~MixDelayIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests|FullyQualifiedName~SoundCheckIntegrationTests"), *sys.argv[1:]]
+                if sys.argv[1:2] == ["--command"]:
+                    command = sys.argv[2:]
+                    if not command: raise ValueError("--command needs an executable")
+                subprocess.run(command,
                                env=env, check=True, timeout=300,
                                cwd=Path(__file__).resolve().parent.parent)
             except Exception:
