@@ -60,16 +60,21 @@ internal static class PrimaryInputWindowTests
             Open();
             Window dialog = Assert.Single(options.OwnedWindows);
             var source = Find<ComboBox>(dialog, "PrimaryInputSource");
-            var port = Find<NumericUpDown>(dialog, "PrimaryInputChannel");
+            var port = Find<ComboBox>(dialog, "PrimaryInputChannel");
             var save = Find<Button>(dialog, "ApplyPrimaryInput");
-            Assert.Equal(2, source.ItemCount); // Automatic and the external source, without our own virtual microphone.
+            // Automatic, the webcam and the mono microphone: not our own virtual
+            // microphone, and not the node of the interface OpenXLR drives.
+            Assert.Equal(3, source.ItemCount);
+            Assert.DoesNotContain(source.Items.OfType<DeviceChoice>(), c => c.Name == DrivenNode);
             Assert.False(port.IsEnabled);
+            source.SelectedIndex = 2;
+            Assert.Equal(["1 (MONO)"], Labels(port));
             source.SelectedIndex = 1;
-            port.Value = null;
+            Assert.Equal(["1 (FL)", "2 (FR)"], Labels(port));
+            Assert.Equal(0, port.SelectedIndex); // a new source starts at its first port
+            port.SelectedIndex = -1;
             Assert.False(save.IsEnabled);
-            port.Value = 1.5m;
-            Assert.False(save.IsEnabled);
-            port.Value = 2;
+            port.SelectedIndex = 1;
             Assert.True(port.IsEnabled);
             Assert.True(save.IsEnabled);
             foreach (double width in new[] { 480d, 360d })
@@ -98,7 +103,8 @@ internal static class PrimaryInputWindowTests
             CheckInputTemplates(main);
             Open();
             dialog = Assert.Single(options.OwnedWindows);
-            Find<NumericUpDown>(dialog, "PrimaryInputChannel").Value = null;
+            // The saved port is selected again when the picker reopens.
+            Assert.Equal(1, Find<ComboBox>(dialog, "PrimaryInputChannel").SelectedIndex);
             Find<ComboBox>(dialog, "PrimaryInputSource").SelectedIndex = 0;
             Find<Button>(dialog, "ApplyPrimaryInput").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             await Until(() => !dialog.IsVisible);
@@ -112,6 +118,10 @@ internal static class PrimaryInputWindowTests
         void Open() => typeof(OptionsWindow).GetMethod("OnPrimaryMicrophone", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(options, [null, new RoutedEventArgs()]);
     }
+
+    private static string[] Labels(ComboBox ports) => [.. ports.Items.OfType<OptionsWindow.PortChoice>().Select(p => p.Label)];
+
+    private const string DrivenNode = "alsa_input.usb-Elgato_Elgato_Wave_XLR_Pro_SERIAL-00.pro-input-0";
 
     private static T Find<T>(Window window, string name) where T : Control
         => window.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
@@ -148,9 +158,12 @@ internal static class PrimaryInputWindowTests
     private static object State(bool generic) => new
     {
         type = "state", connected = false,
-        devices = new[]
+        devices = new object[]
         {
-            new { name = "primary.mic", description = "External USB microphone with a long descriptive device name", kind = 1, isOwn = false },
+            new { name = "primary.mic", description = "External USB microphone with a long descriptive device name", kind = 1, isOwn = false,
+                channels = 2, positions = new[] { "FL", "FR" } },
+            new { name = "mono.mic", description = "Mono microphone", kind = 1, isOwn = false, channels = 1, positions = new[] { "MONO" } },
+            new { name = DrivenNode, description = "Wave XLR Pro", kind = 1, isOwn = false, channels = 18, drivenUnit = "0fd9:00b4@abc" },
             new { name = "OpenXLR_chat", description = "OpenXLR Chat", kind = 1, isOwn = true },
         },
         mixer = new { primaryInput = generic ? new { source = "primary.mic", channel = 1 } : null,

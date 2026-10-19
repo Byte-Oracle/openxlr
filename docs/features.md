@@ -243,7 +243,10 @@ unchanged.
 Options can bind XLR 1 to any external PipeWire capture source and one of its
 mono ports, without an Elgato interface. The existing sends, software DSP,
 inserts, Sound Check and meters process that microphone. A missing source
-stays selected and silent until it returns. Source and port changes keep
+stays selected and silent until it returns. The picker names each port by
+its channel position and leaves out the sources of supported interfaces,
+which automatic mode drives instead. A Wave XLR Pro monitor output moves to
+an ordinary output for the length of generic mode. Source and port changes keep
 channel nodes and application routing, and start monitoring muted.
 Generic mode releases Elgato USB control, hides hardware-only controls and
 keeps separate mixer-only profiles. The saved source is machine wiring,

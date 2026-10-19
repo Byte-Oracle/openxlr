@@ -125,6 +125,45 @@ public sealed class DeviceManager : BackgroundService
         return null;
     }
 
+    /// <summary>
+    /// The attached supported interface whose card publishes a PipeWire node,
+    /// as its instance id and name, or null (see <see cref="OpenXLR.Core.Mixing.InterfaceNodes.Owner"/>).
+    /// Every attached unit counts, driven or not: generic microphone mode
+    /// releases them all, so "driven" would change under the question.
+    /// </summary>
+    public (string Id, string Name)? SupportedUnitFor(string nodeName)
+    {
+        lock (_gate) return OpenXLR.Core.Mixing.InterfaceNodes.Owner(nodeName, _detected);
+    }
+
+    // Generic microphone mode opens no unit, but the attached units are still
+    // listed, about once a second, so their nodes stay recognisable.
+    private long _releasedDetectAt;
+
+    private void DetectWhileReleased()
+    {
+        if (Environment.TickCount64 < _releasedDetectAt) return;
+        _releasedDetectAt = Environment.TickCount64 + 1000;
+        bool changed;
+        try
+        {
+            IReadOnlyList<IAudioDevice> all = _detect();
+            lock (_gate)
+            {
+                if (_hardwareEnabled) return;
+                changed = !all.Select(d => d.Info.InstanceId).SequenceEqual(_detected.Select(d => d.InstanceId));
+                _detected = [.. all.Select(d => d.Info)];
+            }
+        }
+        catch (Exception ex)
+        {
+            // The device loop must outlive a bad bus listing; the next pass tries again.
+            _log.LogDebug("detection while released: {msg}", ex.Message);
+            return;
+        }
+        if (changed) StateChanged?.Invoke(Snapshot());
+    }
+
     /// <summary>How many supported interfaces the last detection found, driven or not.</summary>
     public int AttachedCount { get { lock (_gate) return _detected.Count; } }
 
@@ -315,6 +354,7 @@ public sealed class DeviceManager : BackgroundService
     /// <summary>One pass of the device loop: connect, poll, park the card profile, persist. Tests drive it directly.</summary>
     internal void SweepOnce()
     {
+        if (!_suspended && !_hardwareEnabled) DetectWhileReleased();
         if (_suspended || !_hardwareEnabled) { Progress.Mark(); return; }
         try
         {
