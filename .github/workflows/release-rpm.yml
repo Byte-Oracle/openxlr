@@ -58,6 +58,8 @@ jobs:
           test -x /usr/lib/openxlr/daemon/openxlr-lv2-host
           test -f /usr/lib/udev/rules.d/70-openxlr.rules
           test -f /usr/share/wireplumber/wireplumber.conf.d/50-xlr-dock-capture-hold.conf
+          test -f /usr/share/wireplumber/wireplumber.conf.d/52-openxlr-mk1-capture-hold.conf
+          test -f /usr/share/wireplumber/wireplumber.conf.d/53-openxlr-wave3-capture-hold.conf
           test -f /usr/lib/systemd/user/openxlr-daemon.service
           test -f /usr/lib/systemd/user/pipewire-pulse.service.d/openxlr.conf
 

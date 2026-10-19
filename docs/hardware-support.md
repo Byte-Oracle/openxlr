@@ -331,15 +331,27 @@ The PipeWire node names in wave3-research's dump are
 `alsa_input.usb-Elgato_Systems_Elgato_Wave_3_<serial>-00.mono-fallback`
 and the matching `alsa_output`: udev turns the colon in the product
 string into an underscore, and that is the fragment the daemon looks
-for. No capture-hold WirePlumber rule ships for it. openwave applies its
-own rule to the Wave:3 alongside the Wave XLR, but the ordering bug the
-XLR Dock and the original Wave XLR have has not been reported on a
-Wave:3. The maintainer's unit runs at full speed behind a hub and its
-kernel logs the XLR Dock's `bad transfer trb length` warning, yet with
-playback running on its sink before capture opened it recorded every
-time, in three trials. An owner who records
-silence after a playback stream opened first would need a copy of
-`52-openxlr-mk1-capture-hold.conf` matching `Elgato_Wave_3_`.
+for.
+
+Kernel behaviour: the same full-duplex ordering bug as the XLR Dock and
+the original Wave XLR, on some ports. An owner's unit (bcdDevice 1.22,
+at full speed on a root port of an AMD xHCI controller) recorded
+bit-exact zeros after some boots while every stream looked normal.
+Opening capture before any playback made it work until the idle suspend
+closed the capture. Restarting the daemon did not help; a replug did.
+OpenXLR ships a WirePlumber rule
+([packaging/53-openxlr-wave3-capture-hold.conf](../packaging/53-openxlr-wave3-capture-hold.conf))
+that keeps the Wave:3's capture source always active, as openwave does.
+The owner ran with the same settings over several reboots and the
+silence did not come back. The rule matches `Elgato_Wave_3_` only, so
+the Wave:1 and the Wave XLR models are not touched. The Debian, RPM and
+Nix packages install it; a source install copies it by hand.
+
+The maintainer's unit has not shown the bug. It runs at full speed
+behind a hub and its kernel logs the XLR Dock's `bad transfer trb
+length` warning, yet with playback running on its sink before capture
+opened it recorded every time, in three trials. As on the dock, the port
+and the controller seem to decide whether the bug shows.
 
 ## Wave:1 (0fd9:006e), beta
 
@@ -486,9 +498,10 @@ diagnostics archive:
    nothing is written on connect, then unplug and replug: the settings
    from before are still there, or the microphone came back at
    defaults, which decides `retainsSettings`.
-9. Play through the microphone's own sink before anything records from
-   it, then record: sound, or the silence that would call for a
-   capture-hold rule.
+9. Reboot with the capture-hold rule installed, play through the
+   microphone's own sink before anything records from it, then record:
+   sound every time. Say whether the unit records silence without the
+   rule, and which USB port and controller it is on.
 10. Change the microphone's output volume and mute its input in the
     desktop's sound settings: within a second the headphones and the
     mute ring follow, and so does the window. Then turn the dial in

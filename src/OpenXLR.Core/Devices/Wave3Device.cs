@@ -91,6 +91,11 @@ namespace OpenXLR.Core.Devices;
 /// block either way. A card value that differs from the block is a stale
 /// cache, not a request.
 ///
+/// Mic capture on some ports needs 53-openxlr-wave3-capture-hold.conf
+/// (packaging/): an owner's unit recorded bit-exact silence after some boots
+/// when playback opened on it before capture, the full-duplex ordering bug of
+/// the XLR Dock and the original Wave XLR; see the file.
+///
 /// The Wave:1 (0fd9:006e), the smaller microphone of the same generation,
 /// is <see cref="Wave1Device"/>: this class with its product id and name.
 /// No public source has probed one; its class summary says what is taken
