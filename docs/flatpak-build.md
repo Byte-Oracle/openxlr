@@ -31,7 +31,11 @@ and OpenXLR runtime directory are writable outside private app storage.
 Loopback API and Stream Deck clients require the shared network namespace.
 Audio clients identify their media category as Manager so WirePlumber can
 permit global mixer controls, including default-device selection.
-It grants neither home-directory access nor permission to spawn host commands.
+It does not grant whole-home access or the host-spawn service. KWin scripting
+is deliberately excluded: that permission can execute desktop scripts outside
+the sandbox. Focused-application routing is therefore not enabled by default;
+use a native package for that integration. Portal-based output shortcuts
+remain available.
 
 After a NuGet update, regenerate `packaging/flatpak/nuget-sources.json` with
 `python3 packaging/flatpak/nuget-sources.py`. The generator records package

@@ -30,7 +30,6 @@
     "--filesystem=xdg-config/wireplumber:create",
     "--talk-name=org.kde.StatusNotifierWatcher",
     "--talk-name=com.canonical.AppMenu.Registrar",
-    "--talk-name=org.kde.KWin",
     "--own-name=org.openxlr.Desktop",
     "--env=DOTNET_ROOT=/app/lib/dotnet",
     "--env=OPENXLR_BUILD_MIXER=1",

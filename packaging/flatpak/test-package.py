@@ -41,7 +41,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn('--device=usb', permissions)
         self.assertIn('--filesystem=xdg-run/pipewire-0:ro', permissions)
         for permission in permissions:
-            self.assertNotIn(permission, ('--device=all', '--filesystem=host', '--filesystem=home', '--socket=session-bus', '--socket=system-bus'))
+            self.assertNotIn(permission, ('--device=all', '--filesystem=host', '--filesystem=home', '--socket=session-bus', '--socket=system-bus', '--talk-name=org.kde.KWin'))
             self.assertNotIn('org.freedesktop.Flatpak', permission)
         extension = manifest['add-extensions']['org.freedesktop.LinuxAudio.Plugins']
         self.assertEqual('lv2', extension['merge-dirs'])
