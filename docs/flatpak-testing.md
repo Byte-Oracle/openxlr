@@ -53,7 +53,8 @@ audible check through physical headphones.
 On Plasma Wayland with XWayland available, run
 `python3 tools/test-flatpak.py --desktop`. This also checks registration, close, restore and removal against
 the real desktop tray host. It opens only a new test window; existing windows
-are excluded from the window selection.
+are excluded from the window selection, and editor checks require the
+OpenXLR plugin host's window title.
 
 For the read-only USB check on an XLR Dock MK.1, first stop the installed
 daemon and any Flatpak instance that owns the device, then run:
