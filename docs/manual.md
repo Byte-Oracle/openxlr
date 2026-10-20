@@ -684,6 +684,12 @@ A plugin that is not installed, or cannot run at the chain's width, is
 refused and the chain stays as it was. The file format and limits are in
 [effect-presets.md](effect-presets.md).
 
+Each chain is rebuilt on its own. Adding, removing, reordering or
+bypassing a plugin on XLR 2 rebuilds XLR 2's chain and nothing else, so
+XLR 1's plugins keep running and their editors stay open. The same holds
+for every mix. Moving a control changes the running plugin without a
+rebuild.
+
 <a name="plugin-latency"></a>
 **Plugin latency.** Some plugins delay the audio they process, a limiter
 that looks ahead or a linear-phase equaliser for instance, and report by
@@ -1414,6 +1420,17 @@ take the new sends into it. The same goes for a channel's
 volume, and a channel it knows but saved before that channel had a volume
 goes back to 100%. A profile saved before XLR 1, XLR 2 and Aux In had a
 volume recalls them at 100%.
+
+Loading a profile rebuilds only the plugin chains it changes. A chain with
+the same plugins, order, bypass and host as the profile's keeps running and
+takes the profile's control values as it plays, and an open plugin editor
+stays open. A chain the profile changes is rebuilt on its own, so audio
+through that chain stops for a moment. A profile replaces the chains it
+names. A mix it does not name loses its plugins, as before; an input it
+does not name keeps its chain. Older versions saved an input's chain only
+once it had been edited, so a profile from them may not name XLR 1 or XLR
+2, and loading it leaves that input's plugins as they are. Save it again to
+have it name both.
 
 **Restoring settings on connect.** For the original Wave XLR and first
 XLR Dock, OpenXLR restores the last settings it observed. This policy

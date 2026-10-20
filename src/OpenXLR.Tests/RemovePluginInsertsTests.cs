@@ -32,8 +32,10 @@ public sealed class RemovePluginInsertsTests
             });
         Assert.Equal((5, 4, null), result);
         Assert.Equal(1, saves);
-        Assert.Equal(3, rewired.Count);
-        Assert.Single(rewired, keys => keys.SequenceEqual(new[] { "xlr1", "xlr2" }));
+        // One rebuild per chain: XLR 1's plugins never restart for XLR 2's edit.
+        Assert.Equal(4, rewired.Count);
+        Assert.All(rewired, keys => Assert.Single(keys));
+        Assert.Equal(new[] { "mix:monitor", "mix:stream", "xlr1", "xlr2" }, rewired.Select(keys => keys[0]).Order());
         Assert.DoesNotContain(rewired, keys => keys.Contains("mix:chat"));
         Assert.Equal(new[] { first, last }, chains["xlr1"]);
         Assert.Same(first, chains["xlr1"][0]);
@@ -45,7 +47,7 @@ public sealed class RemovePluginInsertsTests
     }
 
     [Fact]
-    public void AFailedSharedInputRewireKeepsBothInputDefinitionsAndReportsPartialSuccess()
+    public void AFailedInputRewireKeepsOnlyThatInputsDefinitionAndReportsPartialSuccess()
     {
         List<InsertDefinition> first = [Insert("a", "eq")], second = [Insert("b", "eq")];
         var chains = new Dictionary<string, List<InsertDefinition>>
@@ -53,14 +55,22 @@ public sealed class RemovePluginInsertsTests
             ["xlr1"] = first, ["xlr2"] = second, ["mix:stream"] = [Insert("c", "eq")],
         };
         int saves = 0;
+        var rewired = new List<string>();
         var result = Mixer.RemovePluginInserts(chains, new HashSet<(string, string)> { ("vst3", "eq") },
-            keys => { if (keys.Contains("xlr1")) throw new IOException("input rewire failed"); }, () => saves++);
-        Assert.Equal(1, result.Removed);
-        Assert.Equal(1, result.Chains);
-        Assert.Contains("xlr1, xlr2", result.Error);
+            keys =>
+            {
+                rewired.AddRange(keys);
+                if (keys.Contains("xlr1")) throw new IOException("input rewire failed");
+            }, () => saves++);
+        Assert.Equal(2, result.Removed);
+        Assert.Equal(2, result.Chains);
+        Assert.Contains("xlr1: input rewire failed", result.Error);
+        Assert.DoesNotContain("xlr2", result.Error);
+        // XLR 1 is put back and rebuilt alone; XLR 2 keeps its removal.
         Assert.Same(first, chains["xlr1"]);
-        Assert.Same(second, chains["xlr2"]);
+        Assert.Empty(chains["xlr2"]);
         Assert.Empty(chains["mix:stream"]);
+        Assert.Equal(new[] { "mix:stream", "xlr1", "xlr1", "xlr2" }, rewired.Order());
         Assert.Equal(1, saves);
     }
 
