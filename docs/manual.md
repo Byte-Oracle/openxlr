@@ -2499,14 +2499,16 @@ automatic recall falls back to the last hardware settings; the journal
 reports the reason, and a marker that cannot be read also appears in the
 window's profile warning. Fix or remove that file to choose a profile again.
 
-The window's preference files, `ui.json` and `daemon.json`, follow the same
-rule. When the window saves one, it keeps the keys it does not know, such as a
-setting written by a newer OpenXLR. A list written as `null` reads as an empty
-list. The window leaves a file in place when it cannot read or parse it, or
-when the file gives a key twice. It then runs with default preferences and
-saves nothing over the file until you fix or remove it. Changes made in the
-meantime are not saved, though one that takes effect at once, such as the
-skin, still applies for that run. The line beside **Close** at the bottom of
+The preference files, `ui.json` and `daemon.json`, are limited to 4 MiB when
+read or saved by the window, daemon or terminal mixer. Pipes and other
+special files are refused before reading, and a save that would exceed the
+limit leaves the existing file untouched. When the window saves one, it keeps
+the keys it does not know, such as a setting written by a newer OpenXLR. A
+list written as `null` reads as an empty list. The window leaves a file in
+place when it cannot read or parse it, or when the file gives a key twice.
+It then runs with default preferences and saves nothing over the file until
+you fix or remove it. Changes made in the meantime are not saved, though one
+that takes effect at once, such as the skin, still applies for that run. The line beside **Close** at the bottom of
 Options names the file and the reason. It appears when Options opens and after
 a change that could not be saved, and the next successful save clears it.
 

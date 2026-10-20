@@ -430,7 +430,7 @@ internal static class PreferenceFile
         try
         {
             if (!File.Exists(path)) return null;
-            return JsonSerializer.Deserialize<T>(File.ReadAllText(path), json)
+            return JsonSerializer.Deserialize<T>(RegularFile.ReadText(path, OpenXlrPaths.MaxPreferenceBytes), json)
                 ?? throw new JsonException(Localizer.Text("PreferenceFileHoldsNull"));
         }
         catch (Exception ex)
@@ -448,7 +448,7 @@ internal static class PreferenceFile
         if (problem is not null) return problem;
         try
         {
-            OpenXlrPaths.WriteAtomicJson(path, value, json);
+            OpenXlrPaths.WriteAtomicJson(path, value, json, OpenXlrPaths.MaxPreferenceBytes);
             return null;
         }
         catch (Exception ex)

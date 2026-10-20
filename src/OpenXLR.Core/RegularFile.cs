@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 
 #if OPENXLR_UI
 namespace OpenXLR.UI;
+#elif OPENXLR_TUI
+namespace OpenXLR.Tui;
 #else
 namespace OpenXLR.Core;
 #endif

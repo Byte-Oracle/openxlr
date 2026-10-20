@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using OpenXLR.Core;
 using OpenXLR.UI;
@@ -12,6 +14,7 @@ namespace OpenXLR.Tests;
 [Collection("xdg-config")]
 public sealed class PreferenceFileTests : IDisposable
 {
+    private const int PreferenceLimit = OpenXLR.Core.OpenXlrPaths.MaxPreferenceBytes;
     private readonly string _home = Path.Combine(Path.GetTempPath(), "openxlr-prefs-" + Guid.NewGuid());
     private readonly string? _oldConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
 
@@ -35,6 +38,148 @@ public sealed class PreferenceFileTests : IDisposable
         var client = new DaemonClient();
         return new OptionsViewModel(client, new MainViewModel(client));
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OversizedPreferenceFilesAreLeftForTheUserToRepair(bool daemon)
+    {
+        string path = daemon ? DaemonJson : UiJson;
+        string text = "{\"startMinimized\":true,\"submixer\":true}" + new string(' ', PreferenceLimit);
+        File.WriteAllText(path, text);
+
+        string? problem;
+        if (daemon)
+        {
+            DaemonPrefs settings = DaemonPrefs.Load(out problem);
+            Assert.Null(settings.Submixer);
+            Assert.NotNull((settings with { Submixer = false }).Save());
+        }
+        else
+        {
+            UiSettings settings = UiSettings.Load(out problem);
+            Assert.False(settings.StartMinimized);
+            Assert.NotNull((settings with { StartMinimized = true }).Save());
+        }
+        Assert.Contains(Path.GetFileName(path), problem);
+        Assert.Equal(text, File.ReadAllText(path));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OversizedPreferenceWritesKeepTheExistingFile(bool daemon)
+    {
+        string path = daemon ? DaemonJson : UiJson;
+        const string original = "{\"future\":true}";
+        File.WriteAllText(path, original);
+        var unknown = new Dictionary<string, JsonElement>
+        {
+            ["future"] = JsonSerializer.SerializeToElement(new string('x', PreferenceLimit)),
+        };
+
+        string? problem = daemon
+            ? new DaemonPrefs { UnknownKeys = unknown }.Save()
+            : new UiSettings { UnknownKeys = unknown }.Save();
+
+        Assert.Contains(Path.GetFileName(path), problem);
+        Assert.Equal(original, File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void TheDaemonAlsoRejectsOversizedPreferencesWithoutChangingTheFile()
+    {
+        string text = "{\"submixer\":true}" + new string(' ', PreferenceLimit);
+        File.WriteAllText(DaemonJson, text);
+
+        Assert.Null(DaemonSettings.Read(out string? problem));
+        Assert.NotNull(problem);
+        Assert.Equal(text, File.ReadAllText(DaemonJson));
+    }
+
+    [Fact]
+    public void OversizedDaemonWritesKeepTheExistingFile()
+    {
+        const string original = "{\"future\":true}";
+        File.WriteAllText(DaemonJson, original);
+        var settings = new DaemonSettings
+        {
+            UnknownKeys = new() { ["future"] = JsonSerializer.SerializeToElement(new string('x', PreferenceLimit)) },
+        };
+
+        Assert.Throws<IOException>(settings.Save);
+        Assert.Equal(original, File.ReadAllText(DaemonJson));
+    }
+
+    [Theory]
+    [InlineData("ui")]
+    [InlineData("window-daemon")]
+    [InlineData("daemon")]
+    public void TheReadLimitIsInclusiveAndMissingFilesAndLegacyEncodingsStillLoad(string kind)
+    {
+        Assert.Equal(kind == "ui" ? false : (bool?)null, ReadChoice(kind, out string? problem));
+        Assert.Null(problem);
+        string path = kind == "ui" ? UiJson : DaemonJson;
+        const string json = "{\"submixer\":true,\"startMinimized\":true}";
+        File.WriteAllText(path, json.PadRight(PreferenceLimit));
+        Assert.True(ReadChoice(kind, out problem));
+        Assert.Null(problem);
+        foreach (Encoding encoding in new Encoding[] { new UTF8Encoding(true), Encoding.Unicode })
+        {
+            File.WriteAllText(path, json, encoding);
+            Assert.True(ReadChoice(kind, out problem));
+            Assert.Null(problem);
+        }
+    }
+
+    [Theory]
+    [InlineData("ui")]
+    [InlineData("window-daemon")]
+    [InlineData("daemon")]
+    public void PreferencesAtTheWriteLimitRemainReadable(string kind)
+    {
+        string path = kind == "ui" ? UiJson : DaemonJson;
+        Action<Dictionary<string, JsonElement>> save = kind switch
+        {
+            "ui" => keys => Assert.Null(new UiSettings { UnknownKeys = keys }.Save()),
+            "window-daemon" => keys => Assert.Null(new DaemonPrefs { UnknownKeys = keys }.Save()),
+            _ => keys => new DaemonSettings { UnknownKeys = keys }.Save(),
+        };
+        var unknown = new Dictionary<string, JsonElement> { ["padding"] = JsonSerializer.SerializeToElement("") };
+        save(unknown);
+        int overhead = checked((int)new FileInfo(path).Length);
+        unknown["padding"] = JsonSerializer.SerializeToElement(new string('x', PreferenceLimit - overhead));
+
+        save(unknown);
+
+        Assert.Equal(PreferenceLimit, new FileInfo(path).Length);
+        ReadChoice(kind, out string? problem);
+        Assert.Null(problem);
+    }
+
+    [Theory]
+    [InlineData("ui")]
+    [InlineData("window-daemon")]
+    [InlineData("daemon")]
+    public async Task PipesCannotBlockPreferenceReads(string kind)
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        string path = kind == "ui" ? UiJson : DaemonJson;
+        var created = OpenXLR.Core.ProcessRunner.Run("mkfifo", [path]);
+        Assert.True(created.Ok, created.Stderr);
+        using var keeper = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+        var read = Task.Run(() => { ReadChoice(kind, out string? problem); return problem; });
+        try { Assert.NotNull(await read.WaitAsync(TimeSpan.FromSeconds(3))); }
+        finally { keeper.Dispose(); await read.WaitAsync(TimeSpan.FromSeconds(3)); }
+        Assert.True(File.Exists(path));
+    }
+
+    private static bool? ReadChoice(string kind, out string? problem) => kind switch
+    {
+        "ui" => UiSettings.Load(out problem).StartMinimized,
+        "window-daemon" => DaemonPrefs.Load(out problem).Submixer,
+        _ => DaemonSettings.Read(out problem)?.Submixer,
+    };
 
     [Fact]
     public void UnknownUiKeysSurviveALoadAndSave()

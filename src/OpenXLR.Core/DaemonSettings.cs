@@ -51,7 +51,7 @@ public sealed record DaemonSettings
         try
         {
             if (!File.Exists(FilePath)) return new DaemonSettings();
-            return JsonSerializer.Deserialize<DaemonSettings>(File.ReadAllText(FilePath), Json)
+            return JsonSerializer.Deserialize<DaemonSettings>(RegularFile.ReadText(FilePath, OpenXlrPaths.MaxPreferenceBytes), Json)
                 ?? throw new JsonException("the file holds null");
         }
         catch (Exception ex)
@@ -61,7 +61,7 @@ public sealed record DaemonSettings
         }
     }
 
-    public void Save() => OpenXlrPaths.WriteAtomicJson(FilePath, this, Json);
+    public void Save() => OpenXlrPaths.WriteAtomicJson(FilePath, this, Json, OpenXlrPaths.MaxPreferenceBytes);
 
     /// <summary>
     /// The effective submixer switch: the saved choice when there is one,
