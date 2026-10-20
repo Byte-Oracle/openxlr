@@ -126,6 +126,22 @@ function sourceBound(channel) {
     return !!channel && channel.hardware === true && !!channel.binding && channel.binding.kind === "source"
         && typeof channel.binding.source === "string" && channel.binding.source !== "";
 }
+// A supported unit can rename its capture node when its card profile changes.
+// Follow the same unique source as the daemon; an ambiguous unit stays named
+// by the saved node rather than borrowing another source's description.
+function bindingSource(snapshot, channel) {
+    var source = channel.binding.source;
+    var devices = snapshot && Array.isArray(snapshot.devices) ? snapshot.devices : [];
+    if (devices.some(function (entry) { return !!entry && entry.kind === 1 && entry.name === source; }))
+        return source;
+    var unit = channel.binding.unit;
+    if (typeof unit !== "string" || !unit)
+        return source;
+    var matches = devices.filter(function (entry) {
+        return !!entry && entry.kind === 1 && !entry.isOwn && entry.drivenUnit === unit;
+    });
+    return matches.length === 1 ? matches[0].name : source;
+}
 // What feeds a bound strip: the source's description and its port, or why
 // it is silent. "" for every other channel.
 function bindingNote(snapshot, channel) {
@@ -135,14 +151,14 @@ function bindingNote(snapshot, channel) {
         return channel.bindingWarning;
     var port = typeof channel.binding.monoChannel === "number" && isFinite(channel.binding.monoChannel)
         ? channel.binding.monoChannel + 1 : 1;
-    return outputName(snapshot, channel.binding.source) + ", port " + port
+    return outputName(snapshot, bindingSource(snapshot, channel)) + ", port " + port
         + (channel.bindingConnected === false ? ", not linked" : "");
 }
 // The strip's line under its name: what kind of channel it is, or for a
 // bound strip its source, short, and OFF while that source is silent.
 function kindLine(snapshot, channel) {
     if (sourceBound(channel))
-        return outputName(snapshot, channel.binding.source) + (channel.bindingConnected === false ? " OFF" : "");
+        return outputName(snapshot, bindingSource(snapshot, channel)) + (channel.bindingConnected === false ? " OFF" : "");
     var kind = channel.hardware ? "INPUT" : channel.captureSource ? "CAPTURE" : "APP";
     return kind + (channel.captureSource && !channel.captureConnected ? " OFF" : "");
 }

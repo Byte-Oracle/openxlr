@@ -68,7 +68,10 @@ XLR 1 and XLR 2. A bound strip has no hardware mute button, and its
 bracketed send mutes work as usual. Its kind line shows the source's
 description in place of `INPUT`, with `OFF` while the source is silent.
 The tooltip adds the source's description and port to that input's line,
-or the daemon's sentence saying why it is silent. A fader sends its value on
+or the daemon's sentence saying why it is silent. A binding to a supported
+interface follows that unit's unique capture node when a card profile change
+renames it. If several sources match, the saved node name remains on display.
+A fader sends its value on
 release; focused faders also take the arrow keys in one-percentage-point
 steps. Controls wait for the daemon's reply before accepting another edit.
 A rejected edit leaves the daemon's value on screen and shows its error.
