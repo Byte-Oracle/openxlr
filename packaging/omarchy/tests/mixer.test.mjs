@@ -222,17 +222,89 @@ test('a channel the device cannot feed is left out, and an older daemon keeps th
   assert.deepEqual(plain(mixer.shownChannels(undefined)), []);
 });
 
-test('a generic microphone is named with its description and port, and automatic mode adds nothing', () => {
+test('the interface mute follows the channel that carries its input', () => {
+  const unit = '0fd9:00b4@0123456789abcdef';
   const source = 'alsa_input.usb-Blue_Yeti_Nano';
-  const generic = { connected: false, devices: [{ name: source, description: 'Yeti Nano', kind: 1 }],
-    mixer: { ...state.mixer, primaryInput: { source, channel: 1 }, primaryInputConnected: true } };
-  assert.equal(mixer.genericInput(generic).source, source);
-  assert.equal(mixer.genericLabel(generic), 'Generic mic: Yeti Nano, port 2');
-  generic.mixer.primaryInputConnected = false;
-  generic.devices = [];
-  assert.equal(mixer.genericLabel(generic), `Generic mic: ${source}, port 2, not linked`);
-  assert.equal(mixer.genericInput(state), null);
-  assert.equal(mixer.genericLabel(state), '');
-  assert.equal(mixer.genericLabel(null), '');
-  assert.equal(mixer.genericInput({ mixer: { primaryInput: { source: '' } } }), null);
+  const snapshot = { connected: true, state: { mute: true, mute2: false },
+    devices: [{ name: source, description: 'Yeti Nano', kind: 1 }],
+    mixer: { ...state.mixer, channels: [
+      { id: 'xlr1', name: 'Mic 1', hardware: true, binding: { kind: 'source', source, pair: 0, monoChannel: 1 },
+        bindingConnected: true },
+      { id: 'xlr2', name: 'XLR 2', hardware: true, binding: { kind: 'unit', pair: 1 },
+        unitInput: { unit, input: 2, primary: true } },
+      { id: 'cap1', name: 'Pro mic', captureSource: 'alsa_input.usb-Elgato_Wave_XLR_Pro', captureConnected: true,
+        unitInput: { unit, input: 1, primary: true } },
+    ] } };
+  const [xlr1, xlr2, capture] = snapshot.mixer.channels;
+  assert.equal(mixer.unitCarrier(snapshot.mixer, 1).id, 'cap1');
+  assert.equal(mixer.unitCarrier(snapshot.mixer, 2).id, 'xlr2');
+  assert.equal(mixer.muteControl(snapshot, 'xlr1'), '');
+  assert.equal(mixer.muteControl(snapshot, 'cap1'), 'mute');
+  assert.equal(mixer.muteControl(snapshot, 'xlr2'), 'mute2');
+  assert.equal(mixer.hardwareMuted(snapshot, 'xlr1'), false);
+  assert.equal(mixer.hardwareMuted(snapshot, 'cap1'), true);
+  assert.equal(mixer.channelName(snapshot.mixer.channels, 'xlr1'), 'Mic 1');
+  assert.equal(mixer.channelName(snapshot.mixer.channels, 'aux'), '');
+
+  // What feeds a bound strip, on its strip and in the tooltip.
+  assert.equal(mixer.kindLine(snapshot, xlr1), 'Yeti Nano');
+  assert.equal(mixer.bindingNote(snapshot, xlr1), 'Yeti Nano, port 2');
+  assert.equal(mixer.kindLine(snapshot, xlr2), 'INPUT');
+  assert.equal(mixer.bindingNote(snapshot, xlr2), '');
+  assert.equal(mixer.kindLine(snapshot, capture), 'CAPTURE');
+  xlr1.bindingConnected = false;
+  assert.equal(mixer.kindLine(snapshot, xlr1), 'Yeti Nano OFF');
+  assert.equal(mixer.bindingNote(snapshot, xlr1), 'Yeti Nano, port 2, not linked');
+  xlr1.bindingWarning = 'Yeti Nano is not connected.';
+  assert.equal(mixer.bindingNote(snapshot, xlr1), 'Yeti Nano is not connected.');
+  assert.equal(mixer.kindLine({}, xlr1), `${source} OFF`);
+
+  // The daemon names input 2 but not input 1: nothing carries input 1.
+  delete capture.unitInput;
+  assert.equal(mixer.unitCarrier(snapshot.mixer, 1), null);
+  assert.equal(mixer.muteControl(snapshot, 'cap1'), '');
+
+  // An older daemon, or no unit connected: the strips on the interface stand in.
+  const old = { state: { mute: true }, mixer: { channels: [{ id: 'xlr1', hardware: true }, { id: 'xlr2', hardware: true }] } };
+  assert.equal(mixer.muteControl(old, 'xlr1'), 'mute');
+  assert.equal(mixer.muteControl(old, 'xlr2'), 'mute2');
+  assert.equal(mixer.hardwareMuted(old, 'xlr1'), true);
+  assert.equal(mixer.muteControl(null, 'xlr1'), '');
+  assert.equal(mixer.muteControl({ mixer: { channels: 'nonsense' } }, 'xlr1'), '');
+  assert.equal(mixer.hardwareMuted({ mixer: old.mixer }, 'xlr1'), false);
+});
+
+test('a strip on a driven additional unit carries that unit\'s mute', () => {
+  const wave3 = '0fd9:0070@fedcba9876543210';
+  const snapshot = { connected: true, state: { mute: false }, capabilities: { mute: true },
+    waveInterfaces: [
+      { id: '0fd9:00b4@0123456789abcdef', active: true, enabled: false, connected: true },
+      { id: wave3, active: false, enabled: true, connected: true, capabilities: { mute: true }, state: { mute: true } },
+    ],
+    mixer: { ...state.mixer, channels: [
+      { id: 'xlr1', name: 'XLR 1', hardware: true, binding: { kind: 'unit', pair: 0 },
+        unitInput: { unit: '0fd9:00b4@0123456789abcdef', input: 1, primary: true } },
+      { id: 'xlr2', name: 'Mic 2', hardware: true,
+        binding: { kind: 'source', source: 'alsa_input.usb-Elgato_Wave_3', pair: 0, monoChannel: 0, unit: wave3 },
+        unitInput: { unit: wave3, input: 1, primary: false } },
+    ] } };
+  assert.deepEqual(plain(mixer.muteTarget(snapshot, 'xlr2')), { device: wave3, control: 'mute' });
+  assert.deepEqual(plain(mixer.muteTarget(snapshot, 'xlr1')), { device: '', control: 'mute' });
+  assert.equal(mixer.hardwareMuted(snapshot, 'xlr2'), true);
+  assert.equal(mixer.hardwareMuted(snapshot, 'xlr1'), false);
+  assert.equal(mixer.muteAvailable(snapshot, 'xlr2'), true);
+  assert.deepEqual(plain(mixer.muteCommandFor(snapshot, 'xlr2', false)),
+    { cmd: 'setWaveControl', device: wave3, control: 'mute', value: false });
+  assert.deepEqual(plain(mixer.muteCommandFor(snapshot, 'xlr1', true)), { cmd: 'set', control: 'mute', value: true });
+  // The primary's own input 2 is not on this strip: the primary's mute2 never dims it.
+  snapshot.state.mute2 = true;
+  snapshot.waveInterfaces[1].state.mute = false;
+  assert.equal(mixer.hardwareMuted(snapshot, 'xlr2'), false);
+  // Unplugged: the mute is still the unit's, but cannot be written.
+  snapshot.waveInterfaces[1].connected = false;
+  assert.equal(mixer.muteAvailable(snapshot, 'xlr2'), false);
+  // Not driven: no hardware mute on the strip at all.
+  snapshot.waveInterfaces[1].enabled = false;
+  assert.equal(mixer.muteTarget(snapshot, 'xlr2'), null);
+  assert.equal(mixer.muteCommandFor(snapshot, 'xlr2', true), null);
 });

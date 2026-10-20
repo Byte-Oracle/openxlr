@@ -89,6 +89,29 @@ public sealed class OmarchyPluginTests
         NoLinks(new DirectoryInfo(plugin));
     }
 
+    /// <summary>
+    /// A microphone strip is XLR 1 only on a real XLR jack and Mic 1 on a
+    /// capsule or another microphone, and the interface's mute belongs to
+    /// whichever channel carries its input. The bar reads both from the state,
+    /// so no part of it names a strip or assumes which strip a mute is on.
+    /// </summary>
+    [Fact]
+    public void TheBarTakesStripNamesAndTheMuteMappingFromTheState()
+    {
+        string plugin = Path.Combine(Root(), "packaging", "omarchy", "openxlr.mixer");
+        foreach (string file in Directory.GetFiles(plugin).Where(path => path.EndsWith(".qml", StringComparison.Ordinal)
+                     || path.EndsWith(".js", StringComparison.Ordinal)))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string name in new[] { "\"XLR 1\"", "\"XLR 2\"", "Generic mic", "mixer.primaryInput" })
+                Assert.False(text.Contains(name, StringComparison.Ordinal), $"{Path.GetFileName(file)} has {name}");
+        }
+        string mixer = File.ReadAllText(Path.Combine(plugin, "Mixer.js"));
+        Assert.Contains("unitInput", mixer, StringComparison.Ordinal);
+        Assert.Contains("Mixer.channelName(root.channels, modelData)",
+            File.ReadAllText(Path.Combine(plugin, "BarContent.qml")), StringComparison.Ordinal);
+    }
+
     private static void NoLinks(DirectoryInfo directory)
     {
         foreach (FileSystemInfo entry in directory.EnumerateFileSystemInfos())

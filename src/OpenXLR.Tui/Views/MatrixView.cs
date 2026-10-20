@@ -120,12 +120,22 @@ internal sealed class MatrixView : View
             screen.Fill(area.X, line, area.Width, step, rowBack);
             if (pitch > step) screen.Fill(area.X, line + step, area.Width, 1, theme.Card);
 
-            Rgb nameColour = channel.Hardware ? theme.TextPrimary : theme.TextDetail;
+            // A microphone strip whose source is silent is named in the warning colour.
+            Rgb nameColour = channel.Hardware && !channel.BindingConnected ? theme.TextWarning
+                : channel.Hardware ? theme.TextPrimary : theme.TextDetail;
             // An application or capture channel's own volume stands between
             // its name and its meter, since it scales every cell in the row.
             int volumeWidth = channel.Volume is null ? 0 : 5;
             screen.Text(x0, nameLine, channel.Name, nameColour, rowBack, bold: selectedRow,
                 maxWidth: meterX - x0 - 1 - volumeWidth);
+            // A strip bound to another microphone names it, or says why it is
+            // silent, on the row under its name, which a mono strip's single
+            // bar and the cells' one line leave free. A short terminal has no
+            // such row.
+            if (roomy && channel.SourceBound && nameLine + 1 < line + step)
+                screen.Text(x0 + 1, nameLine + 1, channel.BindingWarning is { Length: > 0 } warning ? warning
+                    : state.BindingLabel(channel), channel.BindingConnected ? theme.TextMuted : theme.TextWarning,
+                    rowBack, maxWidth: area.Width - 3);
             if (channel.Volume is double volume)
                 screen.Text(meterX - volumeWidth, nameLine, Widgets.Percent(volume).PadLeft(4),
                     theme.TextDetail, rowBack);
