@@ -83,10 +83,7 @@ public static class Diagnostics
             await WriteCmd(Clean, work, "modules.txt", "pactl", "list", "short", "modules");
             await WriteCmd(Clean, work, "lsusb.txt", "lsusb");
             if (FlatpakEnvironment.IsFlatpak)
-            {
-                CopyRedactedIfExists(Clean, OpenXlrPaths.StateDir, "daemon.log", work, 1152 * 1024);
-                CopyRedactedIfExists(Clean, OpenXlrPaths.StateDir, "daemon.log.old", work, 1152 * 1024);
-            }
+                CopyDaemonLogs(Clean, OpenXlrPaths.StateDir, work);
             else await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
                 "--since", "2 hours ago", "--no-pager");
 
@@ -498,7 +495,22 @@ public static class Diagnostics
         return text;
     }
 
-    internal static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest, int? maximum = null)
+    internal const int DaemonLogCopyLimit = 1152 * 1024;
+
+    internal static void CopyDaemonLogs(Func<string, string> clean, string dir, string dest)
+    {
+        foreach (string name in new[] { "daemon.log", "daemon.log.old" })
+        {
+            if (new FileInfo(Path.Combine(dir, name)).LinkTarget is not null)
+            {
+                File.WriteAllText(Path.Combine(dest, name), "Log unavailable: symbolic links are not collected.");
+                continue;
+            }
+            CopyRedactedIfExists(text => clean(RedactSecretValues(text)), dir, name, dest, DaemonLogCopyLimit);
+        }
+    }
+
+    private static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest, int? maximum = null)
     {
         string src = Path.Combine(dir, file);
         if (File.Exists(src))

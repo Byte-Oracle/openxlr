@@ -15,6 +15,7 @@ namespace OpenXLR.UI;
 /// </summary>
 internal sealed class FlatpakTray : IDisposable, IAsyncDisposable, IPathMethodHandler
 {
+    private const int MaximumMenuItems = 32;
     internal const string Service = FlatpakEnvironment.AppId + ".Tray";
     internal const string Watcher = "org.kde.StatusNotifierWatcher";
     private const string ItemInterface = "org.kde.StatusNotifierItem", MenuInterface = "com.canonical.dbusmenu";
@@ -117,6 +118,18 @@ internal sealed class FlatpakTray : IDisposable, IAsyncDisposable, IPathMethodHa
         writer.WriteArrayEnd(children);
     }
 
+    private static int[]? ReadMenuIds(ref Reader reader)
+    {
+        var ids = new List<int>();
+        var end = reader.ReadArrayStart(DBusType.Int32);
+        while (reader.HasNext(end))
+        {
+            if (ids.Count == MaximumMenuItems) return null;
+            ids.Add(reader.ReadInt32());
+        }
+        return ids.ToArray();
+    }
+
     private const string MenuXml = """
         <interface name="com.canonical.dbusmenu">
           <method name="GetLayout"><arg type="i" direction="in"/><arg type="i" direction="in"/><arg type="as" direction="in"/><arg type="u" direction="out"/><arg type="(ia{sv}av)" direction="out"/></method>
@@ -187,7 +200,8 @@ internal sealed class FlatpakTray : IDisposable, IAsyncDisposable, IPathMethodHa
         }
         else if (iface == MenuInterface && member == "GetGroupProperties")
         {
-            int[] ids = reader.ReadArrayOfInt32();
+            if (ReadMenuIds(ref reader) is not { } ids)
+            { context.ReplyError("org.freedesktop.DBus.Error.InvalidArgs", "Too many tray entries."); return ValueTask.CompletedTask; }
             using var reply = context.CreateReplyWriter("a(ia{sv})");
             var array = reply.WriteArrayStart(DBusType.Struct);
             foreach (int id in ids.Where(id => id is >= 0 and <= 3).Distinct())
@@ -203,7 +217,8 @@ internal sealed class FlatpakTray : IDisposable, IAsyncDisposable, IPathMethodHa
         }
         else if (iface == MenuInterface && member == "AboutToShowGroup")
         {
-            int[] ids = reader.ReadArrayOfInt32();
+            if (ReadMenuIds(ref reader) is not { } ids)
+            { context.ReplyError("org.freedesktop.DBus.Error.InvalidArgs", "Too many tray entries."); return ValueTask.CompletedTask; }
             using var reply = context.CreateReplyWriter("aiai");
             reply.WriteArray(System.Array.Empty<int>()); reply.WriteArray(ids.Where(id => id is < 0 or > 3));
             context.Reply(reply.CreateMessage());
@@ -214,7 +229,7 @@ internal sealed class FlatpakTray : IDisposable, IAsyncDisposable, IPathMethodHa
             var end = reader.ReadArrayStart(DBusType.Struct);
             while (reader.HasNext(end))
             {
-                if (++count > 32)
+                if (++count > MaximumMenuItems)
                 { context.ReplyError("org.freedesktop.DBus.Error.InvalidArgs", "Too many tray events."); return ValueTask.CompletedTask; }
                 reader.AlignStruct(); int id = reader.ReadInt32(); string kind = reader.ReadString();
                 reader.ReadVariantValue(); reader.ReadUInt32();

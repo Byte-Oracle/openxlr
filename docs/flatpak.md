@@ -24,6 +24,10 @@ under `$XDG_STATE_HOME/openxlr` has one rotated copy. Collect
 diagnostics includes both instead of the journal.
 Existing log paths must be regular files, so a leftover pipe cannot block
 the daemon. Diagnostic copies use the same privacy filtering as native logs.
+Log links are omitted, and credential-shaped fields are masked even when
+their values are not known in advance.
+Tray menu queries and event batches have a fixed item limit, so an invalid
+desktop request cannot create an unbounded list of menu items.
 
 ## Host setup
 
@@ -31,7 +35,7 @@ On first opening the mixer, the three WirePlumber rules are installed in
 the host user's `~/.config/wireplumber/wireplumber.conf.d`. Identical files
 are kept. Different files and symbolic links are reported and never
 overwritten. The rules take effect at the next login. For a custom host
-`XDG_CONFIG_HOME`, grant its `wireplumber` directory and set
+`XDG_CONFIG_HOME`, grant its `wireplumber/wireplumber.conf.d` directory and set
 `OPENXLR_HOST_CONFIG_HOME` to its parent with a Flatpak override. App
 preferences and profiles stay in Flatpak's private XDG directories.
 

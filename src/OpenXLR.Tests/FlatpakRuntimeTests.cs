@@ -179,22 +179,40 @@ public sealed class FlatpakRuntimeTests
         {
             string path = Path.Combine(root, "daemon.log");
             File.WriteAllText(path, "/home/test-login/plugin {\"application.process.id\":12345} token=secret-value");
-            string Clean(string text) => OpenXLR.UI.Diagnostics.Redact(text, ["secret-value"], "test-login");
-            OpenXLR.UI.Diagnostics.CopyRedactedIfExists(Clean, root, "daemon.log", output, 1024);
+            string Clean(string text) => OpenXLR.UI.Diagnostics.Redact(text, [], "test-login");
+            OpenXLR.UI.Diagnostics.CopyDaemonLogs(Clean, root, output);
             string text = File.ReadAllText(Path.Combine(output, "daemon.log"));
             Assert.DoesNotContain("test-login", text);
             Assert.DoesNotContain("secret-value", text);
             Assert.DoesNotContain("12345", text);
-            File.WriteAllText(path, new string('x', 1025));
-            OpenXLR.UI.Diagnostics.CopyRedactedIfExists(Clean, root, "daemon.log", output, 1024);
+            File.WriteAllText(path, new string('x', OpenXLR.UI.Diagnostics.DaemonLogCopyLimit + 1));
+            OpenXLR.UI.Diagnostics.CopyDaemonLogs(Clean, root, output);
             Assert.Contains("Log unavailable:", File.ReadAllText(Path.Combine(output, "daemon.log")));
             if (OperatingSystem.IsLinux())
             {
                 File.Delete(path);
                 Assert.True(ProcessRunner.Run("mkfifo", [path]).Ok);
-                OpenXLR.UI.Diagnostics.CopyRedactedIfExists(Clean, root, "daemon.log", output, 1024);
+                OpenXLR.UI.Diagnostics.CopyDaemonLogs(Clean, root, output);
                 Assert.Contains("Log unavailable:", File.ReadAllText(Path.Combine(output, "daemon.log")));
             }
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void DiagnosticLogLinksCannotCollectAnotherPrivateFile()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        string root = Directory.CreateTempSubdirectory("openxlr-log-link-").FullName;
+        string output = Directory.CreateDirectory(Path.Combine(root, "output")).FullName;
+        try
+        {
+            string secret = "NEVER-COLLECT-PRIVATE-TOKEN";
+            string target = Path.Combine(root, "token");
+            File.WriteAllText(target, secret);
+            File.CreateSymbolicLink(Path.Combine(root, "daemon.log"), target);
+            OpenXLR.UI.Diagnostics.CopyDaemonLogs(text => text, root, output);
+            Assert.DoesNotContain(secret, File.ReadAllText(Path.Combine(output, "daemon.log")));
         }
         finally { Directory.Delete(root, true); }
     }
