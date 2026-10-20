@@ -8,7 +8,7 @@ extension. Flatpak 1.16 or newer is required for the USB-only device grant.
 ```sh
 flatpak install --user flathub org.freedesktop.Sdk//25.08 org.freedesktop.Platform//25.08 org.freedesktop.Sdk.Extension.dotnet10//25.08 org.flatpak.Builder
 python3 packaging/flatpak/nuget-sources.py --check
-flatpak run org.flatpak.Builder --user --force-clean --disable-rofiles-fuse --repo="$HOME/.cache/openxlr-flatpak/repo" "$HOME/.cache/openxlr-flatpak/build" packaging/flatpak/io.github.emaspa.openxlr.json
+flatpak run org.flatpak.Builder --user --force-clean --disable-rofiles-fuse --state-dir="$HOME/.cache/openxlr-flatpak/state" --repo="$HOME/.cache/openxlr-flatpak/repo" "$HOME/.cache/openxlr-flatpak/build" packaging/flatpak/io.github.emaspa.openxlr.json
 flatpak --user remote-add --no-gpg-verify --if-not-exists openxlr-local "$HOME/.cache/openxlr-flatpak/repo"
 flatpak install --user openxlr-local io.github.emaspa.openxlr
 ```
@@ -28,6 +28,9 @@ starts its own PipeWire server or session manager in normal use.
 The manifest grants the audio sockets, USB device nodes, graphics and
 specific tray/focus D-Bus names. Only the host WirePlumber configuration
 and OpenXLR runtime directory are writable outside private app storage.
+Imported LV2, CLAP and VST3 bundles live in app-private persistent folders.
+The window, catalogue and native host see those folders under the usual
+home-directory names, without access to the host's plugin folders.
 Loopback API and Stream Deck clients require the shared network namespace.
 Audio clients identify their media category as Manager so WirePlumber can
 permit global mixer controls, including default-device selection.
@@ -49,6 +52,21 @@ Install LV2 plugins separately, for example:
 flatpak install --user flathub org.freedesktop.LinuxAudio.Plugins.LSP//25.08
 ```
 
-Run the acceptance checks described in [flatpak.md](flatpak.md) before
+Run the acceptance checks described in [flatpak-testing.md](flatpak-testing.md) before
 using the build with a live audio setup. The ordinary packages remain the
 recommended installation.
+
+## Flathub handoff
+
+The manifest is an in-repository development build. Before submission,
+replace its directory source with the immutable upstream Git commit that
+contains the runtime, packaging and acceptance changes. Keep the dependency
+checksums and locked restore. Add release metadata and a representative
+upstream-hosted screenshot for the version the maintainer chooses to ship,
+then run Flathub's manifest, build-directory and AppStream checks.
+
+The installable CI bundle and checksum described in
+[flatpak-testing.md](flatpak-testing.md) allow testing before a Flathub
+submission. A clean-desktop login, a physical-output hearing check and
+USB controls on the other supported models remain acceptance work. Neither
+the test artifact nor the manifest publishes an app to Flathub.

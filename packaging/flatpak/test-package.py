@@ -55,6 +55,12 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(app + '.desktop', metadata.findtext('launchable'))
         self.assertEqual(['x86_64'], json.loads((HERE / 'flathub.json').read_text())['only-arches'])
 
+    def test_imports_are_private_and_do_not_grant_host_plugin_folders(self):
+        permissions = json.loads((HERE / 'io.github.emaspa.openxlr.json').read_text())['finish-args']
+        for folder in ('.lv2', '.clap', '.vst3'):
+            self.assertIn('--persist=' + folder, permissions)
+            self.assertFalse(any(item.startswith('--filesystem=') and folder in item for item in permissions))
+
     def test_archives_are_pinned_and_no_git_source_floats(self):
         manifest = json.loads((HERE / 'io.github.emaspa.openxlr.json').read_text())
         for module in manifest['modules']:
