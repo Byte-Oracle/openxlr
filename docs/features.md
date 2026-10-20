@@ -46,10 +46,11 @@ the mic/PC mix still await an archive collected with them changed. A
 block of another length is still refused before writing anything.
 The daemon drives it after every other supported device.
 
-Hardware EQ is not mapped on the Wave FX devices. On the XLR Dock MK.2
-and the Wave XLR MK.2 there is none to map: Wave Link runs their
-equalizer on the computer ([findings](mk2-eq-findings.md)), and OpenXLR's
-[microphone EQ](#software-controls) runs in software on every model. The Pro's ducking, mix
+Hardware EQ is not driven on the Wave FX devices. The XLR Dock MK.2 and
+the Wave XLR MK.2 run one on the device on firmware 1.0.15, and its
+layout is known ([findings](mk2-eq-findings.md)), but OpenXLR does not
+write it yet. OpenXLR's [microphone EQ](#software-controls) runs in
+software on every model. The Pro's ducking, mix
 maximizer, channel booster and remaining hardware mix matrix are also
 unmapped. Wave Link configures those onboard effects on supported systems;
 OpenXLR's LV2, CLAP and VST3 inserts process audio on the Linux host.

@@ -286,9 +286,10 @@ while fixes to existing hosts remain part of normal maintenance.
   The window's editor is on `main` too: a response graph with draggable
   handles, a row of fields per band, the switch, a bypass to compare, copy
   and paste between microphones, opened from INPUTS, an input rack and the
-  matrix row heads ([manual](manual.md#microphone-eq)). Next the terminal
-  mixer and the OpenDeck plugin together with capture microphones, then
-  the Wave XLR Pro's hardware EQ once its protocol is captured.
+  matrix row heads ([manual](manual.md#microphone-eq)). Next the MK.2
+  family's hardware EQ, then the terminal mixer and the OpenDeck plugin
+  together with capture microphones, then the Wave XLR Pro's hardware EQ
+  once its protocol is captured.
 
 ## Next: daemon and integrations
 
@@ -359,8 +360,9 @@ while fixes to existing hosts remain part of normal maintenance.
 
 ## Devices
 
-- [ ] XLR Dock MK.2: blocks 0x0000, 0x0002, 0x0006 and 0x0016, which
-  exist and are not decoded, and bytes 3 to 17 of the settings block,
+- [ ] XLR Dock MK.2: blocks 0x0002, 0x0006 and 0x0016, which exist and
+  are not decoded, block 0x0000 beyond its firmware version bytes, and
+  bytes 3 to 17 of the settings block,
   several of which change the level (likely compressor and expander
   parameters).
 - [ ] Pro: the remaining hardware mix matrix (which return feeds which
@@ -368,14 +370,17 @@ while fixes to existing hosts remain part of normal maintenance.
   (see the protocol notes, block 0x0001 bytes 12 and 13). Direct control
   of that matrix from the window is the long-term answer to the
   crossfade and mic-monitoring questions.
-- [ ] The microphone EQ on hardware. Wave Link 3.5 runs its equalizer
-  on the computer for every model but possibly the Pro: neither the XLR
-  Dock MK.2 on firmware 1.0.0 nor the Wave XLR MK.2 applies the bands it
-  stores ([findings](mk2-eq-findings.md)), so on those the
-  [microphone EQ](#later-plugins) stays software, as it is on Windows.
-  The Pro's equalizer, which Elgato describes as onboard, comes last:
-  once a capture maps it, the same EQ drives it on the device instead of
-  in software.
+- [ ] The microphone EQ on hardware. On firmware 1.0.15 the XLR Dock
+  MK.2 and the Wave XLR MK.2 run a four-band equalizer on the device
+  behind a master enable bit, and Wave Link 3.5 writes it there; on the
+  dock's firmware 1.0.0 Wave Link ran it on the computer
+  ([findings](mk2-eq-findings.md)). Measured from Linux with the enable
+  bit set, its filters match the software EQ's for the same values, so
+  the MK.2 equalizer comes next: the same EQ runs on the device when the
+  microphone is a supported unit. The [microphone EQ](#later-plugins) stays software for
+  every device and firmware without one. The Pro's equalizer, which
+  Elgato describes as onboard, comes last: once a capture maps it, the
+  same EQ drives it on the device instead of in software.
 - [ ] Ducking on the Pro, which lowers the other mixes while you speak
   and is applied per mix. It is the one onboard effect that touches the
   mix matrix rather than the microphone path, so it is worth capturing

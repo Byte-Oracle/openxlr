@@ -51,12 +51,11 @@ mapped OpenXLR controls. Elgato describes all four as running on the
 device: a four-band equalizer, ducking that lowers the other mixes while
 you speak and is applied per mix, a maximizer per mix, and a booster
 worth up to 12 dB above the normal ceiling on any input. The MK.2
-models have no ducking, and on the XLR Dock MK.2 the equalizer is not
-onboard either: Wave Link 3.5 runs it on the computer and the dock only
-stores the band values
-([findings](mk2-eq-findings.md)). The Wave XLR MK.2 measured the
-same way: it stores four bands and does not apply them. The full
-hardware mix matrix is also unfinished.
+models have no ducking. They do have a four-band equalizer on the device
+on firmware 1.0.15, switched on by a master enable bit, and Wave Link
+3.5 writes it there; OpenXLR does not drive it yet
+([findings](mk2-eq-findings.md)). The full hardware mix matrix is also
+unfinished.
 Elgato's [Pro feature guide](https://www.elgato.com/us/en/explorer/products/wave/wave-xlr-pro-give-your-setup-superpowers/)
 distinguishes those onboard effects from VST processing on the computer.
 OpenXLR exposes Voice Tune and the other DSP controls listed above; its
@@ -163,9 +162,10 @@ each of them works.
 
 The XLR Dock MK.2 for the Stream Deck+ is built on the same Wave FX
 platform (80 dB gain, phantom, ClipGuard 2.0, onboard expander, voice
-tune and compressor). Elgato also lists an EQ, but on this dock Wave Link
-runs it on the computer
-([findings](mk2-eq-findings.md)). Its `lsusb -v` dump
+tune and compressor). Elgato also lists an EQ. On firmware 1.0.15 Wave
+Link writes it to both MK.2 models, and the Wave XLR MK.2 was heard
+applying it on its own; on the dock's firmware 1.0.0 Wave Link ran it on
+the computer ([findings](mk2-eq-findings.md)). Its `lsusb -v` dump
 ([issue #1](https://github.com/emaspa/openxlr/issues/1)) shows the same
 five interfaces as the Wave XLR MK.2, including the vendor-specific
 interface 3 that carries the control protocol. Interface 3 has two
@@ -195,6 +195,18 @@ nothing and accepts a bank only after all three blocks fill a 38, 2 and
 6 byte read. That is evidence, not proof. A longer block truncated to
 the requested length answers the same way.
 
+The bank follows the firmware. On 2026-10-20 the author's dock answered
+at `0x0103` on firmware 1.0.0, and at `0x0203` after Wave Link updated it
+to 1.0.15, the bank the Wave XLR MK.2 uses on the same firmware
+([findings](mk2-eq-findings.md#the-docks-update-to-firmware-1015)). That
+fits the owner report above, whose firmware version is not known. The
+probe should therefore select `0x0203` on an updated dock and name it in
+the connection note. Read from Linux after the update, every block at
+`0x0103` stalls and every block at `0x0203` answers, which is the case
+the probe's fallback handles; the daemon itself has not been run against
+this dock since its update. The update re-enumerates the dock as a bootloader with product id
+`0x00c8` while it flashes.
+
 Other USB errors keep their normal failure handling. The selected bank
 stays fixed until disconnect, and the backend detects it again on
 reconnect. The connection note names the alternate bank, and names both
@@ -208,8 +220,18 @@ once. Gain, mute and headphone volume were cross-checked against the
 kernel's ALSA controls for the card, which mirror the feature units:
 every write showed up there and read back from the block. Blocks
 0x0000 (117 bytes, with the serial and a firmware build string), 0x0002
-(21), 0x0006 (17) and 0x0016 (51) exist too and are not decoded yet;
-those are the lengths Wave Link asks for.
+(21), 0x0006 (17) and 0x0016 (51 on firmware 1.0.0, 61 on 1.0.15) exist
+too; those are the lengths Wave Link asks for. Block 0x0000 bytes 5, 6
+and 7 are the firmware version as major, minor and patch (`01 00 0f` is
+1.0.15) on both MK.2 models. The rest of those blocks is not decoded yet.
+
+Switching phantom power off makes the dock's firmware set the mute bit
+(settings byte 1 bit 0) by itself and clear it 12.5 s later, seen on
+firmware 1.0.15 with Wave Link; the Pro does the same for about 13 s. The
+daemon's 15 s phantom settling window covers that hold, which has not
+been checked from Linux on the dock yet. The update to 1.0.15 also
+switched phantom power on for the author's dock, so check it after an
+update.
 
 The backend asks for the three blocks at those lengths. An answer
 shorter than the block but long enough for the offsets in use (11 bytes
@@ -226,7 +248,12 @@ read.
 
 Every exposed control listed above was confirmed on the dock on
 2026-09-05, the DSP ones by ear through the monitor mix and phantom with a condenser microphone.
-Hardware EQ is not mapped. Blocks 0x0002 and 0x0006 exist and are not decoded.
+Hardware EQ is not driven. Its layout in the settings block is known on
+firmware 1.0.15 ([findings](mk2-eq-findings.md#the-equalizer-in-block-0x0004)),
+and a Linux check with its master enable bit set is still owed. Wave
+Link 3.5 leaves that EQ on when it quits, so a unit it has driven can
+reach OpenXLR with it running; byte 2 of the settings block in a
+diagnostics dump shows it. Blocks 0x0002 and 0x0006 exist and are not decoded.
 
 ## Wave:3 (0fd9:0070), beta
 
