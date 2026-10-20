@@ -10,8 +10,8 @@ or change a device. Software LV2, CLAP and VST3 inserts are a separate path.
 | Device | USB product id | Unmapped effects to capture |
 |---|---|---|
 | Wave XLR Pro | `00b4` | Four-band EQ, ducking, mix maximizer, channel booster |
-| Wave XLR MK.2 | `00b6` | Four-band EQ |
-| XLR Dock MK.2 | `00c7` | Four-band EQ |
+| Wave XLR MK.2 | `00b6` | Whether the four-band EQ reaches the device at all (on the XLR Dock MK.2 it does not) |
+| XLR Dock MK.2 | `00c7` | None for the EQ: Wave Link runs it on the computer, see the [findings](xlr-dock-mk2-eq-findings.md) |
 
 The original Wave XLR, first XLR Dock and Wave:3 do not gain these controls
 by sharing the USB vendor id. Use their existing controls and host-side

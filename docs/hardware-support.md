@@ -50,9 +50,13 @@ The Pro's onboard EQ, ducking, mix maximizer and channel booster have no
 mapped OpenXLR controls. Elgato describes all four as running on the
 device: a four-band equalizer, ducking that lowers the other mixes while
 you speak and is applied per mix, a maximizer per mix, and a booster
-worth up to 12 dB above the normal ceiling on any input. The same
-four-band equalizer runs on the Wave XLR MK.2 and the XLR Dock MK.2,
-which have no ducking. The full hardware mix matrix is also unfinished.
+worth up to 12 dB above the normal ceiling on any input. The MK.2
+models have no ducking, and on the XLR Dock MK.2 the equalizer is not
+onboard either: Wave Link 3.5 runs it on the computer and the dock only
+stores the band values
+([findings](xlr-dock-mk2-eq-findings.md)). The Wave XLR MK.2 has not
+been tested and is likely the same. The full hardware mix matrix is also
+unfinished.
 Elgato's [Pro feature guide](https://www.elgato.com/us/en/explorer/products/wave/wave-xlr-pro-give-your-setup-superpowers/)
 distinguishes those onboard effects from VST processing on the computer.
 OpenXLR exposes Voice Tune and the other DSP controls listed above; its
@@ -159,14 +163,19 @@ each of them works.
 
 The XLR Dock MK.2 for the Stream Deck+ is built on the same Wave FX
 platform (80 dB gain, phantom, ClipGuard 2.0, onboard expander, voice
-tune, compressor, EQ). Its `lsusb -v` dump
+tune and compressor). Elgato also lists an EQ, but on this dock Wave Link
+runs it on the computer
+([findings](xlr-dock-mk2-eq-findings.md)). Its `lsusb -v` dump
 ([issue #1](https://github.com/emaspa/openxlr/issues/1)) shows the same
 five interfaces as the Wave XLR MK.2, including the vendor-specific
 interface 3 that carries the control protocol. Interface 3 has two
 alternate settings. Setting 0 has no endpoints, every control transfer
 below goes to it, and OpenXLR never leaves it. Setting 1 adds an
-interrupt IN endpoint of 104 bytes and an interrupt OUT endpoint of 204
-bytes, which no one here has looked at. Run against one on
+interrupt IN endpoint `0x84` and an interrupt OUT endpoint `0x02`; the
+author's unit reports them as 204 and 404 bytes. Wave Link 3.5 selects
+setting 1 and streams the microphone to the computer and the processed
+result back over those two endpoints, then runs its effects in its own
+plugin host. Run against one on
 2026-09-05: the blocks have the MK.2 layout (0x0004 input settings,
 38 bytes; 0x0005 headphones, 2 bytes; 0x0001 crossfade, 6 bytes) but
 the firmware serves them at `wIndex 0x0103`, the Pro's bank, and stalls
@@ -198,7 +207,9 @@ There is no commit block (0x0003 stalls) and writes take effect at
 once. Gain, mute and headphone volume were cross-checked against the
 kernel's ALSA controls for the card, which mirror the feature units:
 every write showed up there and read back from the block. Blocks
-0x0002 and 0x0006 exist too and are not decoded yet.
+0x0000 (117 bytes, with the serial and a firmware build string), 0x0002
+(21), 0x0006 (17) and 0x0016 (51) exist too and are not decoded yet;
+those are the lengths Wave Link asks for.
 
 The backend asks for the three blocks at those lengths. An answer
 shorter than the block but long enough for the offsets in use (11 bytes
