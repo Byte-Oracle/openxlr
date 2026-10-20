@@ -1145,7 +1145,8 @@ public sealed class DeviceManager : BackgroundService
             State = _last ?? (_unansweredId == id && _lastGoodId == id ? _lastGood : null),
         };
         UnitEqSupport? eq = dev.EqSupport is { } support
-            ? new UnitEqSupport(dev.Info.Model, dev.Firmware, support.Ready, support.Reason, support.Note) : null;
+            ? new UnitEqSupport(dev.Info.Model, dev.Firmware, support.Ready, support.Reason, support.Note) { Inputs = dev.Capabilities.XlrInputs }
+            : null;
         _published = new Published(msg, dev.Info, eq);
         return msg;
     }
@@ -1216,7 +1217,9 @@ public sealed class DeviceManager : BackgroundService
     /// </summary>
     internal void PostEq(int input, DeviceEq eq, string owner)
     {
-        if (_published.Info is null) return;
+        // An input the unit does not have holds no EQ: nothing to write and
+        // nothing that failed.
+        if (_published.Info is null || input < 1 || input > (_published.Message.Capabilities?.XlrInputs ?? 1)) return;
         bool wake;
         lock (_eqGate)
         {
@@ -1284,6 +1287,12 @@ public sealed class DeviceManager : BackgroundService
             bool failed = false;
             foreach ((int input, EqSlot slot, DeviceEq eq) in due)
             {
+                if (input > dev.Capabilities.XlrInputs)
+                {
+                    // Posted while the unit before this one was driven.
+                    lock (_eqGate) _eqSlots.Remove(input);
+                    continue;
+                }
                 bool wrote;
                 try { wrote = dev.SetEq(input, eq); }
                 catch (UsbHungException) { throw; }

@@ -263,6 +263,38 @@ public sealed class DeviceEqMixerTests
         NeverDoubled(mixer, port);
     }
 
+    /// <summary>
+    /// XLR 2 while a one-input unit is the primary, here with the jacks of the
+    /// two-input unit before it still in place: the input is not the unit's,
+    /// so XLR 2 is no EQ carrier. Nothing is posted to an input 2, nothing
+    /// fails, and the state names no unit for XLR 2's EQ. A unit with two
+    /// inputs carries both.
+    /// </summary>
+    [Fact]
+    public void AnInputTheUnitDoesNotHaveCarriesNoEqAndNeverFails()
+    {
+        var port = new Port { AutoSweep = true };
+        using var mixer = new Mixer { Time = new ManualTime() };
+        mixer.SetInputJacks(2, true);
+        mixer.SetDrivenUnit(Dock);
+        mixer.SetDeviceEqPort(port);
+        mixer.SetUnitEqSupport(new Dictionary<string, UnitEqSupport> { [Dock] = Ready() });
+        mixer.SetEqEnabled("xlr1", true);
+        mixer.SetEqEnabled("xlr2", true);
+        mixer.SyncDeviceEq();
+        Assert.True(mixer.EqRunsOnDevice("xlr1"));
+        Assert.False(mixer.EqRunsOnDevice("xlr2"));
+        Assert.DoesNotContain(port.Posts, p => p.Input == 2);
+        MicEqState xlr2 = Eq(mixer, "xlr2");
+        Assert.Null(xlr2.Device);
+        Assert.True(mixer.EqWantsSoftwareStage("xlr2"));
+
+        mixer.SetUnitEqSupport(new Dictionary<string, UnitEqSupport> { [Dock] = Ready() with { Inputs = 2 } });
+        Assert.True(mixer.EqRunsOnDevice("xlr2"));
+        Assert.Contains(port.Posts, p => p.Input == 2);
+        Assert.True(Eq(mixer, "xlr2").Device!.Ready);
+    }
+
     [Fact]
     public void AnUnplugPostsNothingAndAReconnectIsToldItsEqAgain()
     {

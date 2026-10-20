@@ -1109,7 +1109,9 @@ software otherwise:
 
 `processing` is the channel's choice, `device` or `software`. `device` is
 non-null while the channel carries an input of a unit whose model has a
-hardware EQ (the MK.2 family): `{unit, input, name, firmware, ready, reason, note,
+hardware EQ (the MK.2 family). A one-input unit has no input 2, so on one
+XLR 2's `device` is null and its EQ runs in software with no `reason`.
+Otherwise `device` is `{unit, input, name, firmware, ready, reason, note,
 minimumFirmware}`. `unit` is the instance id `waveInterfaces` gives, `input`
 1 or 2, `name` the model, `firmware` the version the unit reports or null,
 `minimumFirmware` `1.0.15`. `ready` is true while the unit runs the EQ now.

@@ -129,6 +129,27 @@ public sealed class DeviceEqWriterTests
         return 0;
     });
 
+    /// <summary>
+    /// A post to an input the unit does not have, the second input of a
+    /// one-input dock, is dropped: no write, no rewrite and no failure.
+    /// </summary>
+    [Fact]
+    public void APostToAnInputTheUnitDoesNotHaveIsDroppedNotFailed() => WithConfigDir(() =>
+    {
+        var time = new ManualTime();
+        var unit = new EqUnit { Clock = time };
+        using DeviceManager manager = Manager(unit, time);
+        manager.PostEq(2, Eq(true, 3), "XLR 2");
+        SweepFor(manager, time, 1000);
+        Assert.Equal(0, unit.Calls);
+        Assert.Equal(DeviceEqStatus.None, manager.EqStatus(2));
+        manager.PostEq(1, Eq(true, 3), "XLR 1");
+        SweepFor(manager, time, 200);
+        Assert.Equal([Eq(true, 3)], unit.Writes.Select(w => w.Eq));
+        Assert.Equal(DeviceEqPhase.Verified, manager.EqStatus(1).Phase);
+        return 0;
+    });
+
     [Fact]
     public void NothingIsWrittenWhilePhantomPowerSettlesAndTheLatestAfter() => WithConfigDir(() =>
     {

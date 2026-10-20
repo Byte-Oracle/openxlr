@@ -480,17 +480,19 @@ public sealed class MixerService : IHostedService, IDisposable
             stop.ThrowIfCancellationRequested();
             if (GraphLost()) return true;
             stop.ThrowIfCancellationRequested();
+            // Which input jacks the device actually has, so a client does
+            // not offer a strip the hardware cannot feed. Before the driven
+            // unit is handed on below, so the strips it carries are counted
+            // by its own jacks, never by the unit before it.
+            OpenXLR.Core.Devices.DeviceCapabilities? jacks = _devices.ActiveCapabilities;
+            if (_mixer.SetInputJacks(jacks?.XlrInputs, jacks?.AuxInput)) Changed?.Invoke();
+            stop.ThrowIfCancellationRequested();
             if (UpdateInputDeviceHint()) Changed?.Invoke();
             stop.ThrowIfCancellationRequested();
             // Which driven units run the microphone EQ, and each microphone's
             // EQ put where it runs: a unit that connected or left, a firmware
             // update, a binding that moved.
             if (_mixer.SetUnitEqSupport(_eqPort.Units()) | _mixer.SyncDeviceEq()) Changed?.Invoke();
-            stop.ThrowIfCancellationRequested();
-            // Which input jacks the device actually has, so a client
-            // does not offer a strip the hardware cannot feed.
-            if (_mixer.SetInputJacks(_devices.ActiveCapabilities?.XlrInputs,
-                    _devices.ActiveCapabilities?.AuxInput)) Changed?.Invoke();
             // Software DSP only for devices without the hardware version.
             _mixer.SetLowCutApplicable(!(_devices.ActiveCapabilities?.LowCut ?? false));
             stop.ThrowIfCancellationRequested();
