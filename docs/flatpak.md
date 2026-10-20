@@ -37,7 +37,7 @@ the host user's `~/.config/wireplumber/wireplumber.conf.d`. Identical files
 are kept. Different files and symbolic links are reported and never
 overwritten. The rules take effect at the next login. For a custom host
 `XDG_CONFIG_HOME`, grant its `wireplumber/wireplumber.conf.d` directory and set
-`OPENXLR_HOST_CONFIG_HOME` to its parent with a Flatpak override. App
+`OPENXLR_HOST_CONFIG_HOME` to that host `XDG_CONFIG_HOME` with a Flatpak override. App
 preferences and profiles stay in Flatpak's private XDG directories.
 
 USB controls require the host udev rule. Run outside the sandbox, then
