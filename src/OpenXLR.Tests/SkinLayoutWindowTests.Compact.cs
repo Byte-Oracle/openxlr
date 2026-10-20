@@ -197,4 +197,7 @@ internal static partial class SkinLayoutWindowTests
 
     private static Border[] ApplicationChips(Window window) =>
         [.. window.GetVisualDescendants().OfType<Border>().Where(b => b.Name == "ApplicationChip" && b.IsEffectivelyVisible)];
+
+    private static Border[] ApplicationTiles(Window window) =>
+        [.. window.GetVisualDescendants().OfType<Border>().Where(b => b.Name == "ApplicationTile" && b.IsEffectivelyVisible)];
 }

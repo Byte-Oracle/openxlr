@@ -331,6 +331,11 @@ public static class SkinTokens
         Brush("Ox.AppIcon.Foreground", "#b9bfcc"),
         Radius("Ox.AppIcon.CornerRadius", 4),
         Number("Ox.AppIcon.FontSize", 11, 6, 32),
+        // The name's width in a tile of APPLICATIONS' columns, the same in
+        // every tile so the tiles of a column line up. 128 holds about sixteen
+        // characters of the body text, "Telegram Desktop" or "VLC media
+        // player"; a longer name scrolls while the pointer is on its tile.
+        Number("Ox.AppColumns.NameWidth", 128, 64, 400),
 
         // The audio flow window.
         Brush("Ox.Flow.Background", "#242624"),

@@ -110,11 +110,12 @@ public partial class MainWindow
         {
             _applicationsShape = shape;
             bool list = applications == SkinLayoutTemplates.ApplicationList;
-            // Columns hold the same chips as the wrap, so a chip is as wide in both.
+            // Columns hold tiles of one width, so the tiles of a column line up.
             ApplicationRows.ItemsPanel = applications == SkinLayoutTemplates.ApplicationColumns
                 ? new FuncTemplate<Panel?>(() => new ApplicationColumnsPanel { PerColumn = perColumn })
                 : (ITemplate<Panel?>)this.FindResource(list ? "ApplicationListPanel" : "ApplicationChipsPanel")!;
-            ApplicationRows.ItemTemplate = (Avalonia.Controls.Templates.IDataTemplate)this.FindResource(list ? "ApplicationLine" : "ApplicationChip")!;
+            ApplicationRows.ItemTemplate = (Avalonia.Controls.Templates.IDataTemplate)this.FindResource(
+                list ? "ApplicationLine" : applications == SkinLayoutTemplates.ApplicationColumns ? "ApplicationTile" : "ApplicationChip")!;
         }
     }
 

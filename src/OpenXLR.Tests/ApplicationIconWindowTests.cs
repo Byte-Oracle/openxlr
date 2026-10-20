@@ -118,12 +118,14 @@ internal static class ApplicationIconWindowTests
             Assert.True(Expected(app) == view.ShowsPicture, $"{here}: picture {view.ShowsPicture}, expected {Expected(app)}");
             Assert.Equal(size, view.Bounds.Width, 0.5);
             Assert.Equal(size, view.Bounds.Height, 0.5);
-            Border row = view.GetVisualAncestors().OfType<Border>().First(b => b.Name is "ApplicationChip" or "ApplicationLine");
+            Border row = view.GetVisualAncestors().OfType<Border>().First(b => b.Name is "ApplicationChip" or "ApplicationLine" or "ApplicationTile");
             AssertInside(view, row);
             TextBlock label = row.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == app.Label && t.IsEffectivelyVisible);
             var led = row.GetVisualDescendants().OfType<OpenXLR.UI.Skinning.StatusLed>().Single();
             var picker = row.GetVisualDescendants().OfType<ComboBox>().Single();
-            AssertNoOverlap([led, view, label, picker]);
+            // A tile's name runs on under its clip; the part that shows is the clip.
+            Control shown = label.Parent as OpenXLR.UI.Layout.ScrollingName ?? (Control)label;
+            AssertNoOverlap([led, view, shown, picker]);
             // Before the name, centred on it.
             Point icon = view.TranslatePoint(new Point(0, size / 2), window)!.Value;
             Point name = label.TranslatePoint(new Point(0, label.Bounds.Height / 2), window)!.Value;

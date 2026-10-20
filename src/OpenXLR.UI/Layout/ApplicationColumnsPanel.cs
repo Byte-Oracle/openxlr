@@ -7,12 +7,13 @@ namespace OpenXLR.UI.Layout;
 
 /// <summary>
 /// APPLICATIONS' <c>"application-columns"</c> template: the chips in
-/// columns of at most <see cref="PerColumn"/>, top to bottom, the next chip
-/// starting the next column to the right. Each chip keeps the size it asks
-/// for, which is the size the classic wrap gives it, since both draw the same
-/// chip template; a column is as wide as its widest chip. A column that does
-/// not fit beside the ones before it goes on below them, whole, so the order
-/// stays column by column and nothing scrolls sideways.
+/// columns of at most <see cref="PerColumn"/>, top to bottom, the next tile
+/// starting the next column to the right. Each tile keeps the size it asks
+/// for; the tile template gives every tile the same width, its name a fixed
+/// width and its channel picker a width shared by all the tiles under this
+/// panel, which is their shared size scope. A column is as wide as its widest
+/// tile. A column that does not fit beside the ones before it goes on below
+/// them, whole, so the order stays column by column and nothing scrolls sideways.
 /// </summary>
 public sealed class ApplicationColumnsPanel : Panel
 {
@@ -21,6 +22,9 @@ public sealed class ApplicationColumnsPanel : Panel
             coerce: (_, value) => Math.Max(1, value));
 
     static ApplicationColumnsPanel() => AffectsMeasure<ApplicationColumnsPanel>(PerColumnProperty);
+
+    /// <summary>The tiles' channel pickers share one width across the whole panel.</summary>
+    public ApplicationColumnsPanel() => Grid.SetIsSharedSizeScope(this, true);
 
     /// <summary>How many chips one column holds.</summary>
     public int PerColumn

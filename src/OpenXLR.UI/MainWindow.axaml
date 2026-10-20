@@ -21,7 +21,7 @@
     <!-- APPLICATIONS' templates. A chip per application, wrapping across
          the section, is the classic one; a line per application, the name
          shortening beside its channel picker, fits a narrow column. The
-         columns template lays the same chips out in columns of a skin's
+         columns template lays tiles of one width out in columns of a skin's
          length (Layout/ApplicationColumnsPanel, made in code since the length
          comes from the skin). All bind the same application objects, show the
          application's icon before its name, and the picker is the only control. -->
@@ -39,6 +39,54 @@
                     SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
                     AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=ApplicationChannelName}}"/>
         </StackPanel>
+      </Border>
+    </DataTemplate>
+    <!-- The columns' tile: the chip's parts, every one the same width so the
+         tiles of a column line up. The name has the skin's
+         Ox.AppColumns.NameWidth; a longer one is clipped and glides to its end
+         while the pointer is over the tile. The picker is as wide as the
+         longest channel it lists, which the invisible copies of every channel
+         name under the selection set, and the shared size group keeps the
+         pickers of all tiles one width even when one shows no selection. -->
+    <DataTemplate x:Key="ApplicationTile" x:DataType="vm:AppStreamViewModel">
+      <Border Classes="tile" Name="ApplicationTile" Padding="8,6" Margin="0,0,4,8">
+        <Grid ColumnSpacing="8">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ApplicationChannel"/>
+          </Grid.ColumnDefinitions>
+          <skin:StatusLed IsOn="{Binding Active}" VerticalAlignment="Center"
+                          AutomationProperties.Name="{loc:Text Key=StreamState}"
+                          ToolTip.Tip="{Binding StatusText}"/>
+          <views:ApplicationIconView Grid.Column="1" Icon="{Binding Icon}" Label="{Binding Label}"/>
+          <layout:ScrollingName Grid.Column="2" Name="ApplicationName" VerticalAlignment="Center"
+                                Width="{DynamicResource Ox.AppColumns.NameWidth}"
+                                Scrolls="{Binding $parent[Border].IsPointerOver}" ToolTip.Tip="{Binding Label}">
+            <TextBlock Text="{Binding Label}" Classes="body" VerticalAlignment="Center"/>
+          </layout:ScrollingName>
+          <ComboBox Grid.Column="3" Name="ApplicationChannel" ItemsSource="{Binding Channels}" MinWidth="110"
+                    HorizontalAlignment="Stretch"
+                    SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                    AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=ApplicationChannelName}}">
+            <ComboBox.SelectionBoxItemTemplate>
+              <DataTemplate x:DataType="vm:ChannelChoice">
+                <Panel>
+                  <ItemsControl Name="ApplicationChannelSizer" ItemsSource="{Binding $parent[ComboBox].ItemsSource}"
+                                Opacity="0" IsHitTestVisible="False" Focusable="False"
+                                AutomationProperties.AccessibilityView="Raw">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><Panel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ChannelChoice"><TextBlock Text="{Binding Name}"/></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Text="{Binding Name}"/>
+                </Panel>
+              </DataTemplate>
+            </ComboBox.SelectionBoxItemTemplate>
+          </ComboBox>
+        </Grid>
       </Border>
     </DataTemplate>
     <DataTemplate x:Key="ApplicationLine" x:DataType="vm:AppStreamViewModel">

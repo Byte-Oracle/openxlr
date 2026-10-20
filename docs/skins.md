@@ -681,7 +681,8 @@ skin that only recolours the cards leaves buttons exactly as they are.
 Each application in APPLICATIONS shows its icon before its name, found in
 the desktop's icon theme. An application the theme has no icon for gets a
 badge of the same size with the first letter of its name, so the rows stay
-lined up.
+lined up. In APPLICATIONS' columns the name has a width of its own as well,
+the same in every tile.
 
 | Token | Kind | Default | Range | What it paints |
 |---|---|---|---|---|
@@ -690,6 +691,7 @@ lined up.
 | `Ox.AppIcon.Foreground` | brush | #b9bfcc |  | the application's initial on that badge |
 | `Ox.AppIcon.CornerRadius` | radius | 4 | 0 to 48 | that badge's corners |
 | `Ox.AppIcon.FontSize` | number | 11 | 6 to 32 | the size of that initial |
+| `Ox.AppColumns.NameWidth` | number | 128 | 64 to 400 | the width of an application's name in a tile of APPLICATIONS' columns, the same in every tile; a longer name is clipped and scrolls to its end while the pointer is over its tile |
 
 ### Audio flow window
 
@@ -1144,12 +1146,22 @@ its tooltip, and its channel picker. The picker assigns the application to
 a channel exactly as a chip's does. Levels and sends stay with the
 channels; the list only assigns.
 
-APPLICATIONS' columns are the chips of the default template, in columns:
-the first `perColumn` applications top to bottom, the next ones in a
-column to the right, in the order the chips wrap in. Each chip is as wide
-as it is in the wrap, and a column is as wide as its widest chip. Columns that do not fit the section's width start a new row of
+APPLICATIONS' columns are tiles of one width, in columns: the first
+`perColumn` applications top to bottom, the next ones in a column to the
+right, in the order the chips of the default template wrap in. A tile holds
+what a chip holds: its state lamp, its icon, its name and its channel
+picker. Each part is the same width in every tile, so the tiles of a column
+line up and so do their pickers. The name is
+`Ox.AppColumns.NameWidth` wide, 128 by default, which holds about sixteen
+characters such as "Telegram Desktop". A longer name is clipped; while the
+pointer is over its tile it glides once to its end and stays there, and
+glides back when the pointer leaves. Nothing moves at rest, and the tooltip
+shows the whole name. The glide does not yet follow a desktop setting to
+reduce motion, since the UI toolkit does not report one. The picker is as wide as the longest channel it
+lists. Columns that do not fit the section's width start a new row of
 columns below, whole, so nothing scrolls sideways; a window narrower than
-two columns shows them one under the other.
+two columns shows them one under the other. The default template's chips
+keep the width of their own name and channel.
 
 The input rack draws one strip per channel, in the mixer's channel
 order. The strip of an XLR input holds the parts the INPUTS panel shows for
