@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -30,23 +29,26 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
     public static readonly TimeSpan SendInterval = TimeSpan.FromMilliseconds(20);
 
     /// <summary>How long an edit waits for the daemon to report it back before a different report wins.</summary>
-    internal const int EchoMilliseconds = 1000;
+    internal static readonly TimeSpan EchoWait = TimeSpan.FromSeconds(1);
 
     private readonly IEqCommands _commands;
     private readonly EqBandSender _sender;
+    private readonly TimeProvider _time;
     private bool _enabled, _reportedEnabled, _comparing, _available = true;
     private bool? _awaitingEnabled;
-    private long _awaitingEnabledUntil;
+    private long _awaitingEnabledSince;
     private string? _backend, _error;
     private string _channelName;
     private EqBandViewModel? _selected;
 
-    public MicEqViewModel(IEqCommands commands, string channel, string channelName, TimeSpan? sendInterval = null)
+    /// <param name="time">The clock for the send interval and the echo wait; a test passes one it moves by hand.</param>
+    public MicEqViewModel(IEqCommands commands, string channel, string channelName, TimeSpan? sendInterval = null, TimeProvider? time = null)
     {
         _commands = commands;
         Channel = channel;
         _channelName = channelName;
-        _sender = new EqBandSender(sendInterval ?? SendInterval, (band, change) => _ = _commands.SetEqBandAsync(channel, band, change));
+        _time = time ?? TimeProvider.System;
+        _sender = new EqBandSender(sendInterval ?? SendInterval, (band, change) => _ = _commands.SetEqBandAsync(channel, band, change), _time);
         Bands = [.. Enumerable.Range(1, MicEq.BandCount).Select(n => new EqBandViewModel(this, n, MicEq.Default.Bands[n - 1]))];
         EqClipboard.Changed += OnClipboardChanged;
     }
@@ -132,8 +134,11 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
     private void Expect(bool enabled)
     {
         _awaitingEnabled = enabled;
-        _awaitingEnabledUntil = Environment.TickCount64 + EchoMilliseconds;
+        _awaitingEnabledSince = _time.GetTimestamp();
     }
+
+    /// <summary>An edit made at <paramref name="since"/> still waits for its echo: a different report is older than it.</summary>
+    internal bool Waiting(long since) => _time.GetElapsedTime(since) < EchoWait;
 
     /// <summary>Which backend runs the EQ: <c>software</c>, later <c>device</c>, null while nothing runs it.</summary>
     public string? Backend => _backend;
@@ -187,6 +192,8 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
 
     internal void RaiseChanged() => Changed?.Invoke();
 
+    internal TimeProvider Time => _time;
+
     /// <summary>
     /// Take a channel's <c>eq</c> from a state push, and the mixer's
     /// <c>eqLimits</c>. A band being dragged keeps what the user is doing, and
@@ -205,7 +212,7 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
         _available = eq["available"]?.GetValue<bool>() ?? true;
         _error = eq["error"]?.GetValue<string>();
         _reportedEnabled = enabled;
-        if (_awaitingEnabled is bool expected && expected != enabled && Environment.TickCount64 < _awaitingEnabledUntil)
+        if (_awaitingEnabled is bool expected && expected != enabled && Waiting(_awaitingEnabledSince))
         {
             // An older report than the switch the user just moved.
         }
@@ -315,7 +322,7 @@ public sealed class EqBandViewModel : ViewModelBase
 {
     private EqBand _band;
     private EqBand? _awaiting;
-    private long _awaitingUntil;
+    private long _awaitingSince;
     private EqBand? _reported;
     private bool _dragging;
 
@@ -540,7 +547,7 @@ public sealed class EqBandViewModel : ViewModelBase
     {
         _reported = band;
         if (_dragging) return;
-        if (_awaiting is { } awaiting && Environment.TickCount64 < _awaitingUntil && awaiting != band) return;
+        if (_awaiting is { } awaiting && awaiting != band && Owner.Waiting(_awaitingSince)) return;
         _awaiting = null;
         Show(band);
     }
@@ -549,7 +556,7 @@ public sealed class EqBandViewModel : ViewModelBase
     internal void ShowLocal(EqBand band)
     {
         _awaiting = band;
-        _awaitingUntil = Environment.TickCount64 + MicEqViewModel.EchoMilliseconds;
+        _awaitingSince = Owner.Time.GetTimestamp();
         Show(band);
     }
 
@@ -586,24 +593,29 @@ public sealed class EqBandViewModel : ViewModelBase
 /// The band changes on their way to the daemon. Each band sends at most once
 /// an interval and always its last value: a change inside the interval waits
 /// and merges with the ones after it, so one <c>setEqBand</c> carries every
-/// field that moved, and the last change of a drag is never lost.
+/// field that moved, and the last change of a drag is never lost. A change
+/// that finds its band's interval over goes at once, and what follows it
+/// inside the next interval goes when that interval ends, so the last value
+/// of each field always reaches the daemon, though not always in one command.
 /// </summary>
 internal sealed class EqBandSender : IDisposable
 {
     private readonly object _gate = new();
+    private readonly TimeProvider _time;
     private readonly long _interval;
     private readonly Action<int, EqBandChange> _send;
     private readonly EqBandChange?[] _pending = new EqBandChange?[MicEq.BandCount];
     private readonly long[] _last = new long[MicEq.BandCount];
-    private readonly Timer _timer;
+    private readonly ITimer _timer;
     private bool _disposed;
 
-    public EqBandSender(TimeSpan interval, Action<int, EqBandChange> send)
+    public EqBandSender(TimeSpan interval, Action<int, EqBandChange> send, TimeProvider? time = null)
     {
-        _interval = (long)(interval.TotalSeconds * Stopwatch.Frequency);
+        _time = time ?? TimeProvider.System;
+        _interval = (long)(interval.TotalSeconds * _time.TimestampFrequency);
         _send = send;
         Array.Fill(_last, long.MinValue / 2);
-        _timer = new Timer(_ => Due());
+        _timer = _time.CreateTimer(_ => Due(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
     public void Queue(int band, EqBandChange change)
@@ -613,7 +625,7 @@ internal sealed class EqBandSender : IDisposable
             if (_disposed) return;
             int i = band - 1;
             _pending[i] = Merge(_pending[i], change);
-            long now = Stopwatch.GetTimestamp();
+            long now = _time.GetTimestamp();
             // Sent under the lock, so two sends of one band keep their order
             // on their way into the client's send queue.
             if (now - _last[i] >= _interval) Take(i, now);
@@ -632,7 +644,7 @@ internal sealed class EqBandSender : IDisposable
         lock (_gate)
         {
             if (_disposed) return;
-            long now = Stopwatch.GetTimestamp();
+            long now = _time.GetTimestamp();
             for (int i = 0; i < _pending.Length; i++)
                 if (_pending[i] is not null && now - _last[i] >= _interval) Take(i, now);
             Arm(now);
@@ -653,7 +665,7 @@ internal sealed class EqBandSender : IDisposable
         for (int i = 0; i < _pending.Length; i++)
             if (_pending[i] is not null) next = Math.Min(next, _last[i] + _interval);
         if (next == long.MaxValue) return;
-        double milliseconds = Math.Max(0, next - now) * 1000.0 / Stopwatch.Frequency;
+        double milliseconds = Math.Max(0, next - now) * 1000.0 / _time.TimestampFrequency;
         _timer.Change(TimeSpan.FromMilliseconds(Math.Ceiling(milliseconds)), Timeout.InfiniteTimeSpan);
     }
 
@@ -667,7 +679,7 @@ internal sealed class EqBandSender : IDisposable
         {
             // What waits still goes: the last value of a drag is never lost.
             for (int i = 0; i < _pending.Length; i++)
-                if (_pending[i] is not null) Take(i, Stopwatch.GetTimestamp());
+                if (_pending[i] is not null) Take(i, _time.GetTimestamp());
             _disposed = true;
         }
         _timer.Dispose();
