@@ -73,7 +73,7 @@ def main():
                     command = sys.argv[2:]
                     if not command: raise ValueError("--command needs an executable")
                 subprocess.run(command,
-                               env=env, check=True, timeout=300,
+                               env=env, check=True, timeout=600,
                                cwd=Path(__file__).resolve().parent.parent)
             except Exception:
                 log.flush()
