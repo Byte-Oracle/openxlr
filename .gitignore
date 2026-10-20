@@ -16,6 +16,7 @@ native/tests/vst3
 native/tests/lifecycle
 native/tests/scan-plugin.so
 native/tests/sound-check
+native/tests/eq
 # nix build output symlink
 result
 

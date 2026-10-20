@@ -95,6 +95,7 @@ jobs:
           node --check plugin/com.emaspa.openxlr.sdPlugin/plugin.mjs
           python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
           python3 tools/check-openapi.py docs/openapi-v1.json
+          python3 tools/eq-reference.py --check
           node --test plugin/tests/*.test.mjs
           node --test packaging/omarchy/tests/*.test.mjs
           python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
@@ -106,6 +107,7 @@ jobs:
             pipewire pipewire-pulse wireplumber pulseaudio-utils swh-plugins lsp-plugins-lv2 g++ libpipewire-0.3-dev liblilv-dev lv2-dev libx11-dev libxtst6 xvfb xauth
           make -C native
           make -C native test-sound-check
+          make -C native test-eq
           dotnet build src/OpenXLR.slnx -c Release --no-restore -warnaserror -p:EnableNativeLv2Host=true
           test -x native/openxlr-lv2-host
           make -C native test-audio test-clap test-lv2 test-vst3 test-scan

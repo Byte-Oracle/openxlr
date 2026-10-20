@@ -797,6 +797,49 @@ public sealed class PipeWireAdapter
         return filter;
     }
 
+    /// <summary>
+    /// The native helper the microphone EQ runs in. Null means the one
+    /// installed beside the daemon; a test points it elsewhere to see what a
+    /// build without the helper does.
+    /// </summary>
+    internal string? EqHost { get; set; }
+
+    /// <summary>Whether the microphone EQ's helper is there to start.</summary>
+    internal bool EqHostInstalled => File.Exists(EqHost ?? NativePluginHost.Executable);
+
+    /// <summary>
+    /// One microphone's EQ stage: the native helper's mono "eq" backend under
+    /// <c>OpenXLR_eq_&lt;id&gt;</c>, started with every control at
+    /// <paramref name="controls"/>, so it plays the right curve from its
+    /// first block. Refused at once when the helper is not installed.
+    /// </summary>
+    internal FilterHandle CreateMicEq(string id, IReadOnlyDictionary<string, double> controls)
+    {
+        string executable = EqHost ?? NativePluginHost.Executable;
+        if (!File.Exists(executable)) throw new InvalidOperationException(Mixer.EqNeedsHost);
+        int rate = ParseGraphSampleRate(Run("pw-metadata", "-n", "settings"));
+        string node = "OpenXLR_eq_" + id;
+        NativePluginHost host;
+        try
+        {
+            host = new NativePluginHost(new() { Id = id, Kind = "eq", Plugin = "eq", Params = new(controls) },
+                node, 1, rate, executable, [], meterSymbols: new HashSet<string>(StringComparer.Ordinal));
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new InvalidOperationException($"The microphone EQ could not start the native plugin host. {ex.Message}", ex);
+        }
+        _nativeHosts.Add(host);
+        var filter = new FilterHandle(node, node, node, host.Process) { NativeHost = host };
+        if (!WaitForPorts(node, "playback", false, TimeSpan.FromSeconds(3), host.Process)
+            || !WaitForPorts(node, "capture", true, TimeSpan.FromSeconds(3), host.Process))
+        {
+            StopFilter(filter);
+            throw new InvalidOperationException("The microphone EQ's audio ports did not appear.");
+        }
+        return filter;
+    }
+
     /// <summary>A stereo insert chain for a mix, spliced between the mix and its consumers.</summary>
     public FilterHandle CreateMixChain(string id, string description, IReadOnlyList<InsertDefinition> inserts)
         => CreateFilterChain($"OpenXLR_ins_{id}_in", $"OpenXLR_ins_{id}_out", description, 2, 0, false, inserts);

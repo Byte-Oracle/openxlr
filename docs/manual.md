@@ -750,6 +750,46 @@ already in the take; changing those while it loops changes nothing.
 - A loop can click at the point where it starts over; record with a short
   silence at each end.
 
+<a name="microphone-eq"></a>
+**Microphone EQ.** XLR 1 and XLR 2 each have a four-band EQ with the same
+band types, ranges and steps as Wave Link's, and the same curves. The
+daemon runs it; the editor in the window is still to come, so for now it is
+driven through the [control API](api.md#microphone-eq), from a script or
+any client that speaks it. Over HTTP, with the token from
+`$XDG_RUNTIME_DIR/openxlr/token`:
+
+```sh
+token=$(cat "$XDG_RUNTIME_DIR/openxlr/token")
+send() { curl -s -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+  -d "$1" http://127.0.0.1:37890/api/v1/commands; echo; }
+send '{"cmd":"setEqBand","channel":"xlr1","band":2,"frequency":250,"gain":-3,"q":1.4}'
+send '{"cmd":"setEqEnabled","channel":"xlr1","value":true}'
+curl -s -H "Authorization: Bearer $token" http://127.0.0.1:37890/api/v1/channels/xlr1
+```
+
+The last command shows the EQ under `eq`, with each value as the daemon
+stored it: whole hertz, quarter decibels and Wave Link's Q steps.
+
+- The EQ is off until you switch it on. Its bands start where Wave Link's
+  do: a 36 Hz high pass, bells at 310 Hz and 2172 Hz at 0 dB, and a low
+  pass at 15049 Hz that is off.
+- It comes first on the input, before the low cut, ClipGuard and your
+  plugins, so ClipGuard also catches a boost. Sound Check's loop goes
+  through it.
+- The first switch on links the EQ into the input, the way a plugin chain
+  is linked in, without restarting your plugins. After that every change
+  goes to the running EQ: frequency, gain and Q move without resetting the
+  filters, and switching a band, its type or the whole EQ crosses over in
+  5 ms. Off, it stays in the path bypassed until the input is next rebuilt,
+  so on and off compare at once.
+- The hardware's zero-latency monitoring carries the microphone without the
+  EQ, as it does without your plugins.
+- The EQ is saved with the mixer and in profiles. A profile saved before
+  the EQ existed leaves it as it is.
+- It needs the native plugin host the packages include. Without it, the
+  daemon refuses to switch the EQ on and says why, and the microphone keeps
+  its path.
+
 <a name="native-editor-compatibility"></a>
 **Native editor compatibility.** Open Options, PLUGINS, then "Native editors"
 to choose plugins that should use OpenXLR's generated controls instead of their

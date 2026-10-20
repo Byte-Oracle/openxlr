@@ -402,6 +402,9 @@ public sealed class WebSocketHub
             case "setInsertParam":
             case "renameInsert":
             case "showInsertUi":
+            case "setEq":
+            case "setEqEnabled":
+            case "setEqBand":
                 error = _mixer.Apply(cmd);                     // broadcasts on success
                 stateOnError = true;
                 break;

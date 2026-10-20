@@ -31,15 +31,22 @@ internal readonly record struct ParamChange(string InsertId, string Symbol, doub
 
 /// <summary>
 /// How one hardware input is wired, decided before anything is built: the
-/// node it is fed from (the loop helper while Sound Check runs on it), and the
-/// software low cut, ClipGuard and inserts its chain carries. A route with
-/// none of those feeds the channel directly.
+/// node it is fed from (the loop helper while Sound Check runs on it), the
+/// microphone EQ at its head, and the software low cut, ClipGuard and inserts
+/// its chain carries. A route with none of those feeds the channel directly.
 /// </summary>
 internal sealed record InputRoute(ChannelDefinition Channel, string? Input, bool Bound, bool Looped,
     int LowCutHz, bool ClipGuard, List<InsertDefinition> Inserts, bool ActiveInserts)
 {
     /// <summary>The node the channel's audio enters from: the loop helper while looped, else the input.</summary>
     public string? Source { get; init; }
+
+    /// <summary>
+    /// Whether the route wants an EQ stage at its head, between the source
+    /// and the chain. It is not part of the chain's structure: the stage is
+    /// spliced in and out by relinking, so it never builds a chain again.
+    /// </summary>
+    public bool Eq { get; init; }
 
     /// <summary>Whether the route runs through a chain of its own.</summary>
     public bool Chained => LowCutHz > 0 || ClipGuard || ActiveInserts;
@@ -74,6 +81,7 @@ public sealed partial class Mixer
         return new InputRoute(ch, input, bound, looped, lc ? _lowCutHz : 0, cg, inserts, anyInsert)
         {
             Source = looped ? _soundCheck!.SourceName : input,
+            Eq = IsMicrophoneId(ch.Id) && EqLocked(ch.Id).Enabled,
         };
     }
 

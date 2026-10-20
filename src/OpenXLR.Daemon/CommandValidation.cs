@@ -63,6 +63,10 @@ public static class CommandValidation
             case "setWaveInterfaceEnabled":
             case "setWaveControl":
                 return CheckWave(cmd);
+            case "setEq":
+            case "setEqEnabled":
+            case "setEqBand":
+                return CheckEq(cmd, layout, nativeHostInstalled ?? PluginCatalog.HostInstalled);
             case "getNativeEditorRules":
                 return null;
             case "setNativeEditorRule":
@@ -274,6 +278,39 @@ public static class CommandValidation
                 return Finite(cmd, "value");
             default:
                 return null;   // the service knows the rest, or reports the command as unknown
+        }
+    }
+
+    /// <summary>
+    /// The microphone EQ commands: a microphone channel, and values inside
+    /// the EQ's ranges. A value outside a range is refused, not clamped; the
+    /// mixer snaps what it takes onto the EQ's steps. Switching the EQ on is
+    /// refused at once when the native helper is not installed, since
+    /// nothing could run it; values can still be set.
+    /// </summary>
+    internal static string? CheckEq(Command cmd, ILayoutInfo layout, bool hostInstalled)
+    {
+        if (cmd.Channel is null) return $"{cmd.Cmd}: need 'channel'";
+        if (TooLong(cmd.Channel, 36) || !layout.IsMicrophoneChannel(cmd.Channel))
+            return $"{cmd.Cmd}: '{Short(cmd.Channel)}' is not a microphone input";
+        switch (cmd.Cmd)
+        {
+            case "setEqEnabled":
+                if (cmd.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) return "setEqEnabled: value must be a boolean";
+                return cmd.Value.GetBoolean() && !hostInstalled ? Mixer.EqNeedsHost : null;
+            case "setEq":
+                if (MicEq.Read(cmd.Eq, out string? error) is not { } eq) return $"setEq: {error}";
+                return eq.Enabled && !hostInstalled ? Mixer.EqNeedsHost : null;
+            default:
+                if (cmd.Band is not int band || band is < 1 or > MicEq.BandCount) return $"setEqBand: need 'band' from 1 to {MicEq.BandCount}";
+                var change = new EqBandChange(cmd.Enabled, cmd.Type, cmd.Frequency, cmd.Gain, cmd.Q);
+                if (change.IsEmpty) return "setEqBand: need at least one of 'enabled', 'type', 'frequency', 'gain' and 'q'";
+                if (change.Type is not null && MicEq.TypeIndex(change.Type) < 0)
+                    return $"setEqBand: type must be one of {string.Join(", ", MicEq.Types)}";
+                // Each present field is checked on a band that is valid
+                // otherwise, so the message names the field at fault.
+                EqBand probe = change.ApplyTo(MicEq.Default.Bands[0] with { Type = change.Type ?? MicEq.Peak });
+                return MicEq.Check(probe) is string problem ? $"setEqBand: {problem}" : null;
         }
     }
 

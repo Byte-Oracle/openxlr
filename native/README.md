@@ -75,6 +75,16 @@ samples: live passthrough, recording, replay, a new recording replacing the
 old one, the ten-second bound in samples and in time, and that only the audio
 thread reports the mode. It needs no PipeWire, display or plugin.
 
+`make -C native test-eq` drives the microphone EQ backend the same way. It
+measures the spectrum of an impulse at 48 kHz and 44.1 kHz against the table
+in `tests/eq-reference.txt`, which `tools/eq-reference.py` computes from the
+Audio EQ Cookbook, within 0.05 dB; checks that a 0.25 dB or 1 Hz step keeps
+the error below -30 dB of the ideal output while an emptied filter state
+measures far worse; that switching a band or the EQ and changing a band's type
+follow a 5 ms crossfade to within -40 dB; that a minute of silence after a
+loud burst leaves no subnormal number and every filter at rest; and prints
+what a sample costs.
+
 `python3 native/tests/lsp-editor.py` is an opt-in desktop regression using
 an isolated LSP Gate Mono LV2 instance. It needs python-xlib, the installed
 plugin, a running PipeWire server and a display large enough for the tested
@@ -253,6 +263,29 @@ thread does the same when a recording request has gone ten seconds without
 a cycle serving it, so a suspended input cannot start recording long after
 the request. The test programs that compile `host.c` into themselves do not
 link `sound-check.o`; to them `soundcheck` is an unknown backend.
+
+## Microphone EQ
+
+`openxlr-lv2-host eq NODE 1 RATE [SYMBOL=VALUE ...]` runs the microphone EQ:
+four biquads in cascade with the coefficients of the Audio EQ Cookbook, mono,
+with the same ports, pipe and supervision as an insert and no algorithmic
+latency. Its controls are `enabled` and, for N from 1 to 4, `bandN_enabled`,
+`bandN_type` (0 low cut, 1 low shelf, 2 bell, 3 notch, 4 high shelf, 5 high
+cut), `bandN_frequency` (20 to 20000 Hz), `bandN_gain` (-12 to 12 dB) and
+`bandN_qlog10` (-1 to 1, log10 of Q). The daemon starts it with every value
+on the command line and changes them with `set` lines.
+
+The audio thread reads the controls at the start of a block. A frequency,
+gain or Q change recomputes that band and keeps its filter state, which is
+what keeps a drag free of clicks. Every band's filter runs whether the band
+is on or not, and the cascade runs while the EQ is off, so switching a band
+or the EQ is a 5 ms crossfade between two signals that already exist. A type
+change runs the new filter over the band's last 8192 input samples first,
+then fades it in over 5 ms while the old filter fades out. The filters run in
+double precision, and a filter whose whole state falls below 1e-25 is set to
+rest, so a decaying tail never reaches subnormal numbers. The test programs
+that compile `host.c` into themselves do not link `eq.o`; to them `eq` is an
+unknown backend.
 
 ## Scope
 

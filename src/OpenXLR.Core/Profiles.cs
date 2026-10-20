@@ -42,6 +42,12 @@ public sealed record MixerScene
     public bool? SoftClipGuard { get; init; }
     /// <summary>Plugin insert chains by channel; absent in older profiles.</summary>
     public Dictionary<string, List<InsertDefinition>>? Inserts { get; init; }
+    /// <summary>
+    /// Microphone EQs by channel; absent in older profiles, which leave every
+    /// EQ as it is. A recall replaces the EQ of each channel named here and
+    /// leaves the others.
+    /// </summary>
+    public Dictionary<string, MicEq>? Eq { get; init; }
 }
 
 /// <summary>

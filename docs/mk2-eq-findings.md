@@ -304,8 +304,8 @@ voice audibly.
 
 - On these two devices and firmware builds there is no hardware equalizer
   for OpenXLR to drive. A microphone EQ belongs in software, as Wave Link does it.
-  OpenXLR plans a built-in four-band EQ for microphone inputs for that
-  reason.
+  OpenXLR's built-in four-band [microphone EQ](api.md#microphone-eq)
+  runs in software for that reason.
 - The Wave XLR Pro may still run its equalizer on the device. Elgato's
   feature guide describes it that way, Wave Link has hardware mixing
   and settings sync for the Pro only, and `waveapi.dll` carries an EQ tree

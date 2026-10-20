@@ -198,6 +198,7 @@ public sealed partial class Mixer
             RemoveCaptureFeedLocked(id);
             _inserts.Remove(id);
             _insertErrors.Remove(id);
+            _eq.Remove(id);
             _channelVolume.Remove(id);
             if (_combineModules.Remove(id, out uint module))
             {

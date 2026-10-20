@@ -41,12 +41,15 @@ internal sealed class RestartPolicy(Func<long> clock, int limit = 3, long window
     /// message, and the helper's last line when one was recorded, since
     /// "kept failing" alone says nothing about why.
     /// </summary>
-    public string Message(string key)
+    public string Message(string key) => Message(key, GivenUp);
+
+    /// <summary>The same, for a stage that says something other than <see cref="GivenUp"/> when given up on.</summary>
+    public string Message(string key, string givenUp)
     {
         string? reason = _failures.TryGetValue(key, out (int Count, long Since, string? Reason) seen) ? seen.Reason?.Trim() : null;
-        if (string.IsNullOrEmpty(reason)) return GivenUp;
+        if (string.IsNullOrEmpty(reason)) return givenUp;
         if (reason.Length > ReasonCap) reason = reason[..ReasonCap];
-        return $"{GivenUp}. The plugin host's last message: {reason}";
+        return $"{givenUp}. The plugin host's last message: {reason}";
     }
 
     /// <summary>Forget a chain's history: the user changed it, so it is new again.</summary>

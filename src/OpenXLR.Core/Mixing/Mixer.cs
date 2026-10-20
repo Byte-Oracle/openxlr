@@ -267,6 +267,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         var nextFeeds = new Dictionary<string, PortLink>();
         var nextChains = new Dictionary<string, FilterHandle>();
         var nextChainOuts = new Dictionary<string, PortLink>();
+        // The EQ stages at the strips' heads, the links into them, and the
+        // node each strip's feed comes from.
+        var nextEqStages = new Dictionary<string, SoftwareEqBackend>();
+        var nextEqInputs = new Dictionary<string, PortLink>();
+        var nextEqUpstreams = new Dictionary<string, string>();
+        var heads = new Dictionary<string, string>();
         var carried = new HashSet<string>();
         var routes = new Dictionary<string, InputRoute>();
         foreach (ChannelDefinition ch in strips.Where(Rewires))
@@ -283,6 +289,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     if (_inputFeeds.TryGetValue(ch.Id, out PortLink? keptFeed)) nextFeeds[ch.Id] = keptFeed;
                     if (_chains.TryGetValue(ch.Id, out FilterHandle? keptChain)) nextChains[ch.Id] = keptChain;
                     if (_chainOuts.TryGetValue(ch.Id, out PortLink? keptOut)) nextChainOuts[ch.Id] = keptOut;
+                    if (_eqStages.TryGetValue(ch.Id, out SoftwareEqBackend? keptStage)) nextEqStages[ch.Id] = keptStage;
+                    if (_eqInputs.TryGetValue(ch.Id, out PortLink? keptInto)) nextEqInputs[ch.Id] = keptInto;
+                    if (_eqUpstreams.TryGetValue(ch.Id, out string? keptUpstream)) nextEqUpstreams[ch.Id] = keptUpstream;
+                    if (_inputHeads.TryGetValue(ch.Id, out string? keptHead)) heads[ch.Id] = keptHead;
                     continue;
                 }
                 InputRoute route = routes[ch.Id];
@@ -290,8 +300,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 bool bound = route.Bound;
                 bool sameInput = _stripSources.GetValueOrDefault(ch.Id) == input
                     && _wiredBindings.GetValueOrDefault(ch.Id) == _bindings.GetValueOrDefault(ch.Id);
-                bool looped = route.Looped;
-                string source = route.Source!;
+                string upstream = route.Source!;
                 bool lc = route.LowCutHz > 0;
                 bool cg = route.ClipGuard;
                 List<InsertDefinition> inserts = route.Inserts;
@@ -301,8 +310,49 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 // A strip on the interface whose pair the device lacks (a
                 // stereo interface has no XLR 2 or Aux In pair) stays silent;
                 // no chain is started for it.
-                if ((lc || cg || anyInsert) && !looped && !bound && ch.InputPair is > 0
+                if ((lc || cg || anyInsert || route.Eq) && !route.Looped && !bound && ch.InputPair is > 0
                     && !_pw.HasCaptureChannel(input, 2 * ch.InputPair.Value)) continue;
+
+                // The EQ stage at the head: a running one is kept, so its
+                // filters carry on, and only relinked when its upstream
+                // changed; otherwise one is started while the EQ is on. A
+                // stage that cannot run leaves the strip without it.
+                SoftwareEqBackend? stage = null;
+                if (route.Eq)
+                {
+                    if (_eqStages.TryGetValue(ch.Id, out SoftwareEqBackend? running) && running.IsAlive)
+                    {
+                        if (sameInput && _eqUpstreams.GetValueOrDefault(ch.Id) == upstream
+                            && _eqInputs.TryGetValue(ch.Id, out PortLink? keptInto) && _pw.EnsureLinks(keptInto) != LinkHealth.Broken)
+                        {
+                            stage = running;
+                            nextEqInputs[ch.Id] = keptInto;
+                        }
+                        else
+                        {
+                            PortLink into = RouteInputLocked(upstream, running.Node, ch, route.Looped);
+                            if (into.Pairs.Count > 0) { stage = running; nextEqInputs[ch.Id] = into; }
+                            else _eqErrors[ch.Id] = "The microphone could not be linked into its EQ.";
+                        }
+                    }
+                    else if (StartEqStageLocked(ch, upstream, route.Looped, out PortLink? into) is { } started)
+                    {
+                        stage = started;
+                        nextEqInputs[ch.Id] = into!;
+                    }
+                    if (stage is not null)
+                    {
+                        nextEqStages[ch.Id] = stage;
+                        nextEqUpstreams[ch.Id] = upstream;
+                    }
+                }
+                else _eqErrors.Remove(ch.Id);
+                // What the chain or channel is fed from: the EQ stage's
+                // single output, the loop helper's, or the source itself.
+                string source = stage?.Node ?? upstream;
+                bool looped = stage is not null || route.Looped;
+                heads[ch.Id] = source;
+                bool sameHead = _inputHeads.GetValueOrDefault(ch.Id) == source;
                 if (lc || cg || anyInsert)
                 {
                     if (!givenUp) _insertErrors.Remove(ch.Id);
@@ -319,7 +369,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                         _insertErrors[ch.Id] = ex.Message;
                         if (!lc && !cg)
                         {
-                            if (sameInput && !_chains.ContainsKey(ch.Id)
+                            if (sameInput && sameHead && !_chains.ContainsKey(ch.Id)
                                 && _inputFeeds.TryGetValue(ch.Id, out PortLink? existingFeed)
                                 && _pw.EnsureLinks(existingFeed) != LinkHealth.Broken)
                                 nextFeeds[ch.Id] = existingFeed;
@@ -363,7 +413,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 // Reuse a healthy direct feed when neither the source nor the
                 // DSP changed. A feed missing a pair is made again; the pair
                 // that survived is kept connected (see UnlinkDiscardedFeed).
-                if (sameInput && !_chains.ContainsKey(ch.Id)
+                if (sameInput && sameHead && !_chains.ContainsKey(ch.Id)
                     && _inputFeeds.TryGetValue(ch.Id, out PortLink? directFeed)
                     && _pw.EnsureLinks(directFeed) != LinkHealth.Broken)
                 {
@@ -391,6 +441,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 UnlinkDiscardedFeed(link, _inputFeeds.GetValueOrDefault(key));
             foreach ((string key, FilterHandle chain) in nextChains)
                 if (!carried.Contains(key)) _pw.StopFilter(chain);
+            foreach ((string key, PortLink into) in nextEqInputs)
+                if (!ReferenceEquals(into, _eqInputs.GetValueOrDefault(key))) _pw.Unlink(into);
+            foreach ((string key, SoftwareEqBackend stage) in nextEqStages)
+                if (!ReferenceEquals(stage, _eqStages.GetValueOrDefault(key))) stage.Release();
             throw;
         }
 
@@ -403,6 +457,20 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (!ReferenceEquals(_chains[key], nextChains.GetValueOrDefault(key))) _pw.StopFilter(_chains[key]);
             _chains.Remove(key);
         }
+
+        foreach ((string key, PortLink old) in _eqInputs)
+            if (!ReferenceEquals(old, nextEqInputs.GetValueOrDefault(key))) _pw.Unlink(old);
+        foreach ((string key, SoftwareEqBackend old) in _eqStages)
+            if (!ReferenceEquals(old, nextEqStages.GetValueOrDefault(key))) old.Release();
+        _eqInputs.Clear();
+        foreach ((string key, PortLink into) in nextEqInputs) _eqInputs[key] = into;
+        _eqStages.Clear();
+        foreach ((string key, SoftwareEqBackend stage) in nextEqStages) _eqStages[key] = stage;
+        _eqUpstreams.Clear();
+        foreach ((string key, string upstream) in nextEqUpstreams) _eqUpstreams[key] = upstream;
+        _inputHeads.Clear();
+        foreach (string key in nextFeeds.Keys)
+            if (heads.TryGetValue(key, out string? head)) _inputHeads[key] = head;
 
         _inputFeeds.Clear();
         foreach ((string key, PortLink feed) in nextFeeds) _inputFeeds[key] = feed;
@@ -429,7 +497,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         // the session manager) would double the unfiltered signal onto the
         // filtered one. Clear such links now that the chain route is live;
         // the chain's own links are between other nodes and untouched.
-        foreach (string key in nextChains.Keys)
+        foreach (string key in nextChains.Keys.Union(nextEqStages.Keys))
         {
             if (carried.Contains(key)) continue;
             ChannelDefinition? ch = _config.Channels.FirstOrDefault(c => c.Id == key);
@@ -498,6 +566,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             if (!_built) return false;
             bool soundCheckChanged = EnsureSoundCheckLocked();
+            soundCheckChanged |= HealEqStagesLocked();
             if (_chains.Count == 0 && _mixDelays.Count == 0 && _latencyReports.Count == 0)
                 return EnsureMixRoutesLocked() || soundCheckChanged;
             bool changed = false;
@@ -1277,12 +1346,17 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             if (!_built) return false;
             bool captureChanged = EnsureCaptureFeedsLocked();
+            // A dead EQ stage is replaced first, by relinking the head, so
+            // the feed it took down does not build the whole strip again.
+            captureChanged |= HealEqStagesLocked();
             List<ChannelDefinition> strips = [.. _config.Channels.Where(c => c.InputPair is not null)];
             var due = new HashSet<string>();
             // A feed whose source node has since vanished (a card profile
-            // change renames every node under it) is wired again.
+            // change renames every node under it) is wired again. With an
+            // EQ stage at the head, the source feeds the stage.
             foreach (ChannelDefinition ch in strips)
-                if (_inputFeeds.TryGetValue(ch.Id, out PortLink? feed) && _pw.EnsureLinks(feed) == LinkHealth.Broken) due.Add(ch.Id);
+                if (_inputFeeds.TryGetValue(ch.Id, out PortLink? feed) && _pw.EnsureLinks(feed) == LinkHealth.Broken
+                    || _eqInputs.TryGetValue(ch.Id, out PortLink? into) && _pw.EnsureLinks(into) == LinkHealth.Broken) due.Add(ch.Id);
             // A bound strip is wired again when its exact source appears, when
             // a second source acquires the name while the old links remain
             // healthy, or when the unit it is bound to publishes its node
@@ -1369,6 +1443,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 SoftClipGuard = _softClipGuard,
                 CompensateMixLatency = _compensateMixLatency,
                 Inserts = CopyInsertsLocked(),
+                Eq = new Dictionary<string, MicEq>(_eq, StringComparer.Ordinal),
                 Appearance = ExportAppearanceLocked(),
             };
         }
@@ -1498,10 +1573,14 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 _pw.MeasurePluginLatency = s.CompensateMixLatency;
                 rebuildAll = true;
             }
+            // The EQs first, so a strip built below starts with them. A
+            // microphone the file does not name keeps its EQ.
+            RecallEqLocked(s.Eq);
             // A chain the file does not name keeps what it has, and only a
             // chain whose structure changed is built again.
             if (chainsChanged || rebuildAll || s.Inserts.Count > 0)
                 ApplyChainsLocked(s.Inserts.Count > 0 ? s.Inserts : null, absentMixesEmpty: false, rebuildAll);
+            SyncEqStagesLocked();
             UpdateMixLatencyLocked();
         }
     }
@@ -1525,6 +1604,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 LowCutHz = _lowCutHz,
                 SoftClipGuard = _softClipGuard,
                 Inserts = SceneInsertsLocked(),
+                Eq = SceneEqLocked(),
             };
         }
     }
@@ -1604,8 +1684,13 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             // profiles always had it. Only a chain whose plugins, order,
             // bypass or host changed is built again; the others take the
             // profile's control values live.
+            // A profile without EQs leaves every EQ alone; one with them
+            // replaces the EQ of each microphone it names. Values reach a
+            // running stage live; an EQ switched on is spliced in.
+            if (s.Eq is not null) RecallEqLocked(s.Eq);
             if (chainsChanged || s.Inserts is not null)
                 ApplyChainsLocked(s.Inserts, absentMixesEmpty: true, rebuildAll: false);
+            if (s.Eq is not null) SyncEqStagesLocked();
         }
         if (s.OutputVolume is double v) SetOutputVolume(v);
     }
@@ -2604,6 +2689,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     BindingWarning = BindingWarningLocked(c),
                     UnitInput = unitInputs.GetValueOrDefault(c.Id),
                     Volume = ChannelVolumeLocked(c.Id),
+                    Eq = IsMicrophoneId(c.Id) ? EqStateLocked(c.Id) : null,
                 })],
                 RenamedSinceStart = _renamedSinceBuild,
                 MonitorOutput = _monitorOutputs.FirstOrDefault(),
@@ -2832,6 +2918,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         foreach (PortLink feed in _inputFeeds.Values) _pw.Unlink(feed);
         _inputFeeds.Clear();
         foreach (string id in _captureFeeds.Keys.ToArray()) RemoveCaptureFeedLocked(id);
+        RemoveEqStagesLocked();
         RemoveInputChainsLocked();
         RemoveMixChainsLocked();
         _chainStructures.Clear();
