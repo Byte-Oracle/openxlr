@@ -56,6 +56,16 @@ internal static partial class InputBindingWindowTests
             devices.Add(JsonNode.Parse("""{"name":"mono.mic","description":"Mono microphone","kind":1,"channels":1,"positions":["MONO"]}"""));
             devices.Add(JsonNode.Parse("{\"name\":\"" + Bluetooth + "\",\"description\":\"Bluetooth headset\",\"kind\":1,\"channels\":1}"));
             devices.Add(JsonNode.Parse("""{"name":"OpenXLR_chat","description":"OpenXLR Chat","kind":1,"isOwn":true}"""));
+            // Each microphone strip with its EQ, which stands after the chip in the classic panel. The EQ
+            // goes first, so the steps below still find a channel's text ending at its binding.
+            JsonArray list = state["mixer"]!["channels"]!.AsArray();
+            for (int i = 0; i < list.Count; i++)
+                if (list[i]!["id"]!.GetValue<string>() is "xlr1" or "xlr2")
+                {
+                    var withEq = new JsonObject { ["eq"] = JsonNode.Parse("""{"enabled":true,"bands":[],"backend":"software","available":true}""") };
+                    foreach ((string key, JsonNode? value) in list[i]!.AsObject()) withEq[key] = value?.DeepClone();
+                    list[i] = withEq;
+                }
             state["type"] = "state";
             return state;
         }
@@ -141,6 +151,15 @@ internal static partial class InputBindingWindowTests
             Assert.Equal(Localizer.Text("Xlr1Jack"), Chip(chipRow).GetVisualDescendants().OfType<TextBlock>().Single().Text);
             Assert.False(window.FindControl<Grid>("Input1Heading")!.IsEffectivelyVisible);
             Assert.True(window.FindControl<WrapPanel>("InputControls")!.IsEffectivelyVisible);
+            foreach (bool touch in new[] { true, false })
+            {
+                SkinService.ApplyControlSizing(touch);
+                foreach (double width in new[] { 640d, 1040 })
+                {
+                    Layout(window, width, 900);
+                    EqEditorWindowTests.CheckClassicEq(window, $"jack, touch {touch} at {width}");
+                }
+            }
             MainWindowLabelTests.CheckFixedColumnLabels(window, Localizer.Format("StripInputLabel", "XLR 1"),
                 Localizer.Format("StripInputLabel", "XLR 2"), Localizer.Text("XLR1Gain"));
             foreach (double width in new[] { 640d, 1040 }) { Layout(window, width, 900); Capture(window, $"binding-classic-jack-{width}"); }
@@ -277,8 +296,24 @@ internal static partial class InputBindingWindowTests
                 Assert.True(crossfade.IsEffectivelyVisible);
                 Assert.Equal(Localizer.Format("CrossfadeMicPlaysOn", "Pro mic"), crossfade.Text);
                 AssertInside(crossfade, window);
+                EqEditorWindowTests.CheckClassicEq(window, $"webcam at {width}");
                 Capture(window, $"binding-classic-elsewhere-{width}");
             }
+            // A source with a long description: the chip trims it and the EQ keeps its place after it.
+            const string longName = "Webcam With A Description Long Enough To Run Past The Narrow Window's Input Line Twice Over";
+            ApplyState(main, daemon.State().ToJsonString().Replace("\"description\":\"Webcam\"", "\"description\":\"" + longName + "\"", StringComparison.Ordinal));
+            Assert.StartsWith(longName, xlr1.BindingLabel, StringComparison.Ordinal);
+            foreach (bool touch in new[] { false, true })
+            {
+                SkinService.ApplyControlSizing(touch);
+                Layout(window, 640, 900);
+                EqEditorWindowTests.CheckClassicEq(window, $"long source, touch {touch} at 640");
+                Assert.Contains(window.FindControl<Grid>("Xlr1ChipRow")!.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "ChipText")
+                    .TextLayout.TextLines, l => l.HasCollapsed);
+                Capture(window, $"binding-classic-long-{(touch ? "touch" : "standard")}-640");
+            }
+            SkinService.ApplyControlSizing(false);
+            ApplyState(main, daemon.State().ToJsonString());
 
             // From a rack strip's chip: back to the interface's jack, which sends no port.
             Chip(RackStrip(surface, "xlr1")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -357,6 +392,7 @@ internal static partial class InputBindingWindowTests
         }
         finally
         {
+            SkinService.ApplyControlSizing(false);
             foreach (Window owner in new[] { options, surface, window })
                 foreach (Window owned in owner.OwnedWindows.ToArray()) owned.Close();
             surface.Close();
