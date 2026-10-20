@@ -156,25 +156,27 @@ public sealed class SkinPackageTests : IDisposable
     }
 
     /// <summary>
-    /// Broadcast is the reference layout skin an
-    /// author copies: its whole layout is taken, with the input rack, two
-    /// banks of upright strips starting on Monitor A and Stream, MONITOR's
-    /// toolbar, HEADPHONES beside it, the application list, every header action in
-    /// the row and nothing folded. Its meter
-    /// colours are flat, so both palette exporters can carry it.
+    /// Broadcast is the reference layout skin an author copies, and Wave
+    /// wears the same arrangement in its own palette: the whole layout is
+    /// taken, with INPUTS hidden, the mix matrix, MONITOR's toolbar,
+    /// HEADPHONES beside it, the applications in columns, every header
+    /// action in the row and nothing folded. The meter colours are flat, so
+    /// both palette exporters can carry them.
     /// </summary>
-    [Fact]
-    public void TheBroadcastSkinCarriesTheWholeLayout()
+    [Theory]
+    [InlineData("broadcast", "Broadcast")]
+    [InlineData("wave", "Wave")]
+    public void TheMatrixSkinsCarryTheWholeLayout(string id, string name)
     {
-        SkinEntry broadcast = Assert.Single(SkinCatalog.BuiltIn(), e => e.Id == "broadcast");
-        Assert.Empty(broadcast.Errors);
-        Assert.Equal("Broadcast", broadcast.Name);
-        Assert.Equal("OpenXLR", broadcast.Package.Author);
-        Assert.False(string.IsNullOrWhiteSpace(broadcast.Package.Description));
-        Assert.DoesNotContain("Wave Link", broadcast.Package.Description!, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Elgato", broadcast.Package.Description!, StringComparison.OrdinalIgnoreCase);
+        SkinEntry skin = Assert.Single(SkinCatalog.BuiltIn(), e => e.Id == id);
+        Assert.Empty(skin.Errors);
+        Assert.Equal(name, skin.Name);
+        Assert.Equal("OpenXLR", skin.Package.Author);
+        Assert.False(string.IsNullOrWhiteSpace(skin.Package.Description));
+        Assert.DoesNotContain("Wave Link", skin.Package.Description!, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Elgato", skin.Package.Description!, StringComparison.OrdinalIgnoreCase);
 
-        SkinLayout layout = Assert.IsType<SkinLayout>(broadcast.Package.Layout);
+        SkinLayout layout = Assert.IsType<SkinLayout>(skin.Package.Layout);
         // The header stays above the tree, across the window.
         Assert.False(layout.PlacesHeader);
         // A column: a grid with HEADPHONES in its top left cell, MONITOR in its top right cell and
@@ -195,8 +197,8 @@ public sealed class SkinPackageTests : IDisposable
         Assert.Equal(SkinRegionVisibility.Hidden, layout.OptionsFor(SkinLayoutRegions.Inputs).Visibility);
         Assert.True(layout.Submixer.IsMatrix);
         SkinMatrixOptions matrix = layout.Submixer.Matrix;
-        // The binding, which the skin does not order, follows; a matrix draws it under the name.
-        Assert.Equal(["identity", "mute", "gain", "meter", "effects", "binding"], matrix.RowHead.Shown);
+        // XLR 1's and XLR 2's binding, drawn under the name wherever the order puts it.
+        Assert.Equal(["identity", "binding", "mute", "gain", "meter", "effects"], matrix.RowHead.Shown);
         Assert.Equal(["identity", "outputs", "mute", "master", "effects"], matrix.ColumnHead.Shown);
         Assert.Equal(["mute", "fader"], matrix.Cell.Shown);
         Assert.Equal(SkinLabelStyle.IconAndText, matrix.RowHead.Label);
@@ -211,13 +213,13 @@ public sealed class SkinPackageTests : IDisposable
         Assert.Equal(["profiles", "flow", "arrange", "restart-daemon", "version", "about"], layout.Header.Row);
         Assert.Empty(layout.Header.Overflow);
 
-        Assert.Equal("console", broadcast.Package.Controls["fader"]);
+        Assert.Equal("console", skin.Package.Controls["fader"]);
         foreach (string zone in new[] { "Ox.Meter.Fill", "Ox.Meter.Warning", "Ox.Meter.Hot", "Ox.Meter.Track" })
-            Assert.IsType<SkinSolid>(broadcast.Package.Tokens[zone]);
+            Assert.IsType<SkinSolid>(skin.Package.Tokens[zone]);
         Assert.Equal(3, new[] { "Ox.Meter.Fill", "Ox.Meter.Warning", "Ox.Meter.Hot" }
-            .Select(z => ((SkinSolid)broadcast.Package.Tokens[z]).Color).Distinct().Count());
-        Assert.True(((SkinNumber)broadcast.Package.Tokens["Ox.Meter.WarningLevel"]).Value
-            < ((SkinNumber)broadcast.Package.Tokens["Ox.Meter.HotLevel"]).Value);
+            .Select(z => ((SkinSolid)skin.Package.Tokens[z]).Color).Distinct().Count());
+        Assert.True(((SkinNumber)skin.Package.Tokens["Ox.Meter.WarningLevel"]).Value
+            < ((SkinNumber)skin.Package.Tokens["Ox.Meter.HotLevel"]).Value);
     }
 
     /// <summary>

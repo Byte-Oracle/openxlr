@@ -1728,11 +1728,12 @@ the application, so a package brings them with it:
   described below;
 - **Nyan Pink**, dark plum cards, candy pink faders and cyan details,
   using the classic arrangement and your saved section order;
-- **Wave**, with dark charcoal cards, blue faders and green meters. Its matrix puts inputs down the side and mixes across
-  the top, with the monitor toolbar
-  above and headphone controls below, and the applications in columns of six. Input bindings, gain, mute and
-  effects stay available in the row heads. Choosing it changes appearance
-  and arrangement, not routing or audio levels.
+- **Wave**, dark charcoal cards, blue faders and green meters, arranged
+  the way Broadcast is: everything said about Broadcast below holds for
+  Wave too, in its own colours, with a wider name column and the cards a
+  little closer together. Your Arrange moves are kept for each of the two
+  separately. Choosing it changes appearance and arrangement, not routing
+  or audio levels.
 
 <a name="broadcast"></a>
 **Broadcast** draws the SUBMIXER as a mix matrix. Each row is a channel and

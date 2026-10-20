@@ -121,21 +121,47 @@
     "version": 1,
     "main": {
       "kind": "stack",
-      "id": "wave-mixer",
+      "id": "desk",
       "orientation": "vertical",
       "spacing": 8,
       "children": [
         {
-          "kind": "region",
-          "region": "monitor"
-        },
-        {
-          "kind": "region",
-          "region": "submixer"
-        },
-        {
-          "kind": "region",
-          "region": "headphones"
+          "kind": "grid",
+          "id": "mixes",
+          "spacing": 8,
+          "columns": [
+            {
+              "star": 1
+            },
+            {
+              "size": 360
+            }
+          ],
+          "rows": [
+            "auto",
+            "auto"
+          ],
+          "children": [
+            {
+              "kind": "region",
+              "region": "headphones",
+              "row": 0,
+              "column": 0
+            },
+            {
+              "kind": "region",
+              "region": "monitor",
+              "row": 0,
+              "column": 1
+            },
+            {
+              "kind": "region",
+              "region": "submixer",
+              "row": 1,
+              "column": 0,
+              "columnSpan": 2
+            }
+          ]
         },
         {
           "kind": "region",

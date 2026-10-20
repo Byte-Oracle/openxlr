@@ -145,7 +145,7 @@
         "template": "mix-matrix",
         "matrix": {
           "rowHead": {
-            "parts": ["identity", "mute", "gain", "meter", "effects"],
+            "parts": ["identity", "binding", "mute", "gain", "meter", "effects"],
             "label": { "style": "icon-and-text" }
           },
           "columnHead": {

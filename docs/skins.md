@@ -34,10 +34,13 @@ every package has them and there is nothing to install:
 - **Nyan Pink**, a dark plum palette with candy pink faders, cyan details
   and segmented green, amber and red meters. It keeps the classic mixer
   arrangement and the saved section order.
-- **Wave**: dark charcoal cards, blue faders and green meters. Inputs form rows and mixes form columns in the existing
-  mix matrix, with the monitor toolbar above
-  and headphone controls below, and the applications in columns of six. It uses the same routing and controls as
-  the other skins; no Elgato artwork or additional software is needed.
+- **Wave**, Broadcast's arrangement in a palette of its own: dark charcoal
+  cards with a thin border, blue faders and green meters, and a wider name
+  column in the matrix. HEADPHONES and MONITOR's toolbar share the row
+  above the matrix, INPUTS is hidden, and APPLICATIONS is under the matrix
+  in columns of six. Its cards sit 8 pixels apart where Broadcast's sit 12.
+  It uses the same routing and controls as the other skins; no Elgato
+  artwork or additional software is needed.
 
 Pick one in Options under APPEARANCE. The terminal mixer reads the same
 folders and the same saved choice, on its own Options tab, so an appearance
@@ -857,6 +860,9 @@ action in its row and none in the overflow menu. Showing INPUTS from
 Arrange mode puts it under the matrix. HEADPHONES beside the toolbar asks
 for about 1000 pixels, so a narrower window scrolls the tree sideways, as
 [Sizes](#sizes) says.
+Its row heads list every part, `binding` included, so a copy shows each
+part there is to move or hide. The shipped Wave skin uses the same tree
+and regions, with 8 pixel gaps in place of 12.
 
 A complete skin that puts the header across the top, INPUTS beside the
 submixer, the headphones and the monitor under INPUTS, and the

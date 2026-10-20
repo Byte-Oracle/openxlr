@@ -222,9 +222,12 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   See [Broadcast](manual.md#broadcast)
 - Nyan Pink: dark plum surfaces, pink faders and cyan details, keeping the
   classic mixer arrangement and the saved section order.
-- The Wave skin: a dark palette with blue faders, green meters and the existing mix matrix, with inputs down the side and
-  mixes across the top. It also reaches the terminal, Deck and bar through
-  the shared skin palettes. See [Skins](skins.md).
+- The Wave skin: Broadcast's arrangement on a dark charcoal palette with
+  blue faders and green meters. HEADPHONES and MONITOR's toolbar side by
+  side above the mix matrix, INPUTS hidden until Arrange mode shows it, and
+  APPLICATIONS in columns of six under the matrix. Its palette also
+  reaches the terminal, Deck and bar through the shared skin palettes. See
+  [Skins](skins.md)
 - A compact view with one chosen channel strip, and a mini view with that
   channel's send into one chosen mix, its master and the monitor volume,
   for a narrow window. Chosen in Options and kept in `ui.json`; hidden
