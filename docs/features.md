@@ -212,8 +212,7 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   See [Broadcast](manual.md#broadcast)
 - Nyan Pink: dark plum surfaces, pink faders and cyan details, keeping the
   classic mixer arrangement and the saved section order.
-- The Wave skin: a dark Wave Link 3 inspired palette with blue faders,
-  green meters and the existing mix matrix, with inputs down the side and
+- The Wave skin: a dark palette with blue faders, green meters and the existing mix matrix, with inputs down the side and
   mixes across the top. It also reaches the terminal, Deck and bar through
   the shared skin palettes. See [Skins](skins.md).
 - A compact view with one chosen channel strip, and a mini view with that
