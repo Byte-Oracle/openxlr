@@ -22,12 +22,21 @@ extension, changes a live parameter, measures its effect, opens its native
 editor, moves/resizes it, closes and reopens it, then quits through the tray menu and checks daemon and graph cleanup. Desktop volume is cubic: a 0.1 input at 50% produces
 0.0125 before the plugin, and the plugin's linear output gain of 0.5 makes
 that 0.00625. Captures are checked for finite values and settled amplitude.
+The same run imports a bundle into app-private storage, checks that all
+three native plugin import folders are writable and that LV2 scans include
+the private folder, and removes only the uniquely named test import.
 
 The Flatpak workflow runs this once per tree, without a language or size
 process matrix. While the separate runtime or manifest PR is absent, it
 reports that prerequisite and skips sandbox acceptance. That skip is not
 a passed acceptance run. A combined disposable checkout can be tested
 locally before those prerequisites land.
+After acceptance succeeds, CI provides `openxlr-flatpak-x86_64` with the
+tested `.flatpak` bundle and its SHA-256 checksum. This is a test artifact,
+not a Flathub release. With Flathub enabled for the user, extract both files,
+run `sha256sum -c openxlr.flatpak.sha256`, then install with
+`flatpak install --user ./openxlr.flatpak`. Keep the same manual host setup
+and native-daemon precautions as a locally built Flatpak.
 
 The normal C# suite checks the Background portal on a private D-Bus session,
 including refusal, startup command lines and cancellation. Its TrayWindowTests

@@ -64,7 +64,15 @@ jobs:
         run: |
           appstreamcli validate --no-net packaging/flatpak/io.github.emaspa.openxlr.metainfo.xml
           dbus-run-session -- flatpak run org.flatpak.Builder --user --force-clean --disable-rofiles-fuse --state-dir="$HOME/.cache/openxlr-flatpak/state" --repo="$HOME/.cache/openxlr-flatpak/repo" "$HOME/.cache/openxlr-flatpak/build" packaging/flatpak/io.github.emaspa.openxlr.json
-          flatpak remote-add --user --no-gpg-verify --if-not-exists openxlr-local "$HOME/.cache/openxlr-flatpak/repo"
-          flatpak install --user --noninteractive -y openxlr-local io.github.emaspa.openxlr
+          flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo "$HOME/.cache/openxlr-flatpak/repo" "$RUNNER_TEMP/openxlr.flatpak" io.github.emaspa.openxlr
+          cd "$RUNNER_TEMP"
+          sha256sum openxlr.flatpak > openxlr.flatpak.sha256
+          flatpak install --user --noninteractive -y ./openxlr.flatpak
       - name: Exercise the installed runtime with private audio
         run: xvfb-run -a -s '-screen 0 1920x1080x24' python3 tools/test-flatpak.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: openxlr-flatpak-x86_64
+          path: |
+            ${{ runner.temp }}/openxlr.flatpak
+            ${{ runner.temp }}/openxlr.flatpak.sha256

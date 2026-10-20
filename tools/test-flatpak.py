@@ -10,10 +10,12 @@ import json
 import math
 import os
 import re
+import shutil
 from pathlib import Path
 import subprocess
 import sys
 import time
+import tempfile
 import urllib.request
 
 APP = 'io.github.emaspa.openxlr'
@@ -38,6 +40,16 @@ def run(*args):
     return subprocess.check_output(args, text=True, timeout=15).strip()
 
 
+def stop_process(process):
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+
+
 class Windows:
     """The small X11 surface also used by native plugin editors on Wayland."""
     class Data(c.Union):
@@ -45,6 +57,10 @@ class Windows:
 
     class Message(c.Structure):
         pass
+
+    Message._fields_ = [('type', c.c_int), ('serial', c.c_ulong), ('send', c.c_int),
+                        ('display', c.c_void_p), ('window', c.c_ulong), ('message', c.c_ulong),
+                        ('format', c.c_int), ('data', Data)]
 
     class Attributes(c.Structure):
         _fields_ = [(name, c.c_int) for name in ('x', 'y', 'width', 'height', 'border', 'depth')] + [
@@ -61,9 +77,6 @@ class Windows:
         return value
 
     def __init__(self):
-        self.Message._fields_ = [('type', c.c_int), ('serial', c.c_ulong), ('send', c.c_int),
-                               ('display', c.c_void_p), ('window', c.c_ulong), ('message', c.c_ulong),
-                               ('format', c.c_int), ('data', self.Data)]
         self.x = c.CDLL('libX11.so.6')
         signatures = {
             'XOpenDisplay': (c.c_void_p, [c.c_char_p]),
@@ -166,6 +179,7 @@ def sandbox():
         return set(re.findall(r"'([^']+)'", reply))
     previous_tray = tray_items() if desktop else set()
     own_tray = set()
+    imported = None
     with open(runtime / 'application.log', 'w') as log:
         app = subprocess.Popen(['openxlr'], stdout=log, stderr=log)
         try:
@@ -207,11 +221,7 @@ def sandbox():
                         wait(lambda: capture.stat().st_size >= 48000 * 2 * 4 * 2, 15)
                     finally:
                         for process in (play, record):
-                            process.terminate()
-                            try:
-                                process.wait(timeout=5)
-                            except subprocess.TimeoutExpired:
-                                process.kill(); process.wait()
+                            stop_process(process)
                 samples = array.array('f'); samples.frombytes(capture.read_bytes())
                 assert samples and all(math.isfinite(value) for value in samples)
                 peak = max(abs(value) for value in samples[-48000 * 2:])
@@ -222,6 +232,22 @@ def sandbox():
             plugins = api('plugins')
             plugin = 'http://lsp-plug.in/plugins/lv2/comp_delay_stereo'
             assert plugin in json.dumps(plugins), 'Install the LSP LinuxAudio extension before this test'
+            source = Path(tempfile.mkdtemp(prefix='openxlr-acceptance-', suffix='.lv2', dir=runtime))
+            shutil.copytree('/app/extensions/Plugins/lv2/lsp-plugins.lv2', source, dirs_exist_ok=True)
+            imported = Path.home() / '.lv2' / source.name
+            assert not imported.exists()
+            command('installPlugin', path=str(source))
+            assert (imported / 'manifest.ttl').is_file(), 'The sandbox could not import an LV2 bundle'
+            setup = api('plugin-setup')['messages'][0]
+            assert setup['lv2Directory'] == '~/.lv2'
+            for folder in ('.lv2', '.clap', '.vst3'):
+                directory = Path.home() / folder
+                directory.mkdir(exist_ok=True)
+                with tempfile.TemporaryFile(dir=directory) as probe:
+                    probe.write(b'private plugin storage')
+            discovery = api('plugin-diagnostics')['messages'][0]['discovery']
+            assert str(Path.home() / '.lv2') in discovery['searchPaths']['lv2Override'].split(':')
+            print('PASS: private LV2 import and writable private LV2/CLAP/VST3 folders', flush=True)
             command('setInserts', channel='mix:monitor', inserts=[{'id': 'acceptance', 'kind': 'lv2', 'plugin': plugin, 'nativeHost': True}])
             wait(lambda: any(item.get('nativeHostRunning') for item in api('inserts/mix:monitor')), 30)
             before = set(window.titles())
@@ -246,28 +272,36 @@ def sandbox():
                         print(evidence.read().decode(errors='replace'), flush=True)
             raise
         finally:
-            # Use the exported tray action so this reaches the real Quit
-            # callback and waits for normal daemon cleanup.
-            subprocess.run(['gdbus', 'call', '--session', '--dest', APP + '.Tray', '--object-path', '/MenuBar',
-                                     '--method', 'com.canonical.dbusmenu.Event', 'int32 3', 'clicked', '<0>', 'uint32 0'],
-                                    stdout=subprocess.DEVNULL, stderr=log, timeout=10)
-            app.wait(timeout=50)
-            assert app.returncode == 0, 'The window did not quit normally'
-            def daemon_stopped():
+            try:
+                # Use the exported tray action so this reaches the real Quit
+                # callback and waits for normal daemon cleanup.
+                subprocess.run(['gdbus', 'call', '--session', '--dest', APP + '.Tray', '--object-path', '/MenuBar',
+                                         '--method', 'com.canonical.dbusmenu.Event', 'int32 3', 'clicked', '<0>', 'uint32 0'],
+                                        stdout=subprocess.DEVNULL, stderr=log, timeout=10)
+                app.wait(timeout=50)
+                assert app.returncode == 0, 'The window did not quit normally'
+                def daemon_stopped():
+                    try:
+                        api()
+                        return False
+                    except urllib.error.URLError:
+                        return True
+                wait(daemon_stopped, 50)
+                wait(lambda: 'OpenXLR_' not in run('pactl', 'list', 'short', 'sinks'), 15)
+                if desktop:
+                    wait(lambda: not (own_tray & tray_items()))
+                    print('PASS: real desktop tray registration, close, restore and unregister', flush=True)
+                print('PASS: GUI exit released its daemon and audio nodes', flush=True)
+            finally:
                 try:
-                    api()
-                    return False
-                except urllib.error.URLError:
-                    return True
-            wait(daemon_stopped, 50)
-            wait(lambda: 'OpenXLR_' not in run('pactl', 'list', 'short', 'sinks'), 15)
-            if desktop:
-                wait(lambda: not (own_tray & tray_items()))
-                print('PASS: real desktop tray registration, close, restore and unregister', flush=True)
-            print('PASS: GUI exit released its daemon and audio nodes', flush=True)
-            window.close()
-            for module in reversed(modules):
-                run('pactl', 'unload-module', module)
+                    stop_process(app)
+                finally:
+                    window.close()
+                    if imported is not None and imported.is_dir() and not imported.is_symlink():
+                        shutil.rmtree(imported)
+                    for module in reversed(modules):
+                        run('pactl', 'unload-module', module)
+
 
 
 def private_host():
