@@ -186,8 +186,9 @@ public partial class PluginFoldersWindow : Window
             if (fresh?["ok"]?.GetValue<bool>() != true || item is null) return Localizer.Text("CouldNotVerifyPlugin");
             if (item["inUse"]?.GetValue<bool>() == true) return Localizer.Text("RemoveUsesBeforeUninstalling");
             if (item["winePrefix"]?.GetValue<string>() is not { Length: > 0 } prefix) return Localizer.Text("NoLongerInWinePrefix");
-            int exit = await ProcessRunner.RunInteractiveAsync("wine", ["uninstaller"],
-                new Dictionary<string, string> { ["WINEPREFIX"] = prefix });
+            var environment = new Dictionary<string, string> { ["WINEPREFIX"] = prefix };
+            WineDllOverrides.Apply(environment);
+            int exit = await ProcessRunner.RunInteractiveAsync("wine", ["uninstaller"], environment);
             string result = PluginInstall.Describe(await vm.Client.SyncWindowsPluginsAsync(ChangeTimeout), Localizer.Text("TheRescan"));
             return (exit == 0 ? Localizer.Text("WineUninstallerClosed") : Localizer.Format("WineUninstallerExited", exit)) + " " + result;
         }, Localizer.Text("WaitingForWineUninstaller"));

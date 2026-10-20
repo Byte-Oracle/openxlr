@@ -1009,6 +1009,15 @@ than asking you to go and find it. Once a folder is bridged, yabridge keeps
 it on its own list, so a second plugin installed into it needs only the
 sync, and the Bridge button has nothing left to offer.
 
+OpenXLR switches Wine's USB driver off in the Wine prefixes it starts.
+With the driver on, Wine holds every USB device on the computer open, the
+Wave among them. A plugin that checks for a USB licence dongle cannot see
+it. To keep the driver on, put `wineusb.sys=b` in the daemon's
+`WINEDLLOVERRIDES`; OpenXLR passes a value that names the driver
+unchanged. The switch only takes effect when OpenXLR is first to start
+that prefix, because a Wine program already running there keeps the
+drivers it started with.
+
 Picking one Windows `.vst3` or `.clap` file with "Install file" installs
 only that plugin. OpenXLR copies it into its own folder under
 `~/.local/share/openxlr/windows-plugins`, grouped by format and plugin name,
