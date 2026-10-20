@@ -132,6 +132,24 @@ few releases, and they get to settle in users' hands first.
   pair, healed by the sweep when the device returns. A capture channel
   is edited like an application channel but takes no application
   assignments.
+- [x] Input bindings: XLR 1 and XLR 2 each take the interface's own input
+  or one port of any other PipeWire capture source, by exact node name.
+  Aux In stays on the interface. The binding is machine wiring in
+  `mixer.json`, never part of a profile, and changes no channel id, node
+  name or application routing. The interface stays driven: headphones,
+  the dial, output routing, additional interfaces, recall on connect and
+  the gain lock keep working. Its gain, mute and hardware effects follow
+  the channel that carries its microphone, which can be a capture channel
+  the binding dialog offers to add, and so does the Wave XLR Pro's
+  zero-latency monitor path. A bound strip is Mic 1 or Mic 2; XLR 1 and
+  XLR 2 keep those names only on a real XLR jack, so a Wave:3's capsule is
+  Mic 1 too. A strip bound to another supported Elgato unit follows its
+  source through a rename, and shows that unit's controls while it is
+  driven as an additional interface. The window, the terminal mixer, the
+  Stream Deck plugin and the Omarchy bar show each strip's source and
+  connection. Most of the hardware acceptance is still open;
+  [hardware-support.md](hardware-support.md#input-bindings) lists what has
+  been checked on real units.
 - [x] Skins can arrange the desktop window: an optional `layout` block,
   version 1, places the header and the five sections in a tree of stacks,
   grids and docks with bounded tracks, spans, edges and gaps, starts a

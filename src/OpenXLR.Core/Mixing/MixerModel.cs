@@ -138,10 +138,6 @@ public sealed record ChannelDefinition(string Id, string Name)
 /// <summary>Live mixer state pushed to clients.</summary>
 public sealed record MixerState
 {
-    /// <summary>XLR 1's source binding in the earlier shape, or null while XLR 1 takes the interface.</summary>
-    public PrimaryInputBinding? PrimaryInput { get; init; }
-    /// <summary>XLR 1's feed exists, whatever it is bound to.</summary>
-    public bool PrimaryInputConnected { get; init; }
     /// <summary>XLR 1's signal has no hardware low cut in front of it: a source binding, or a unit without one.</summary>
     public bool SoftLowCutApplicable { get; init; }
     /// <summary>XLR 1's signal has no hardware ClipGuard in front of it: a source binding, or a unit without one.</summary>

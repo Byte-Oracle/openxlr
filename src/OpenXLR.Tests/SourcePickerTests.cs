@@ -11,8 +11,12 @@ using OpenXLR.UI.Skinning;
 
 namespace OpenXLR.Tests;
 
+/// <summary>
+/// What the binding dialog knows about a capture source: which supported
+/// unit owns its node, how many ports it has and what PipeWire calls them.
+/// </summary>
 [Collection("xdg-config")]
-public sealed class PrimaryInputTests
+public sealed class SourcePickerTests
 {
     private static DeviceInfo Unit(string model, ushort pid, string? serial, string port = "1-2")
         => new("Elgato", model, 0x0fd9, pid) { Location = new UsbLocation(1, 2, port, serial) };

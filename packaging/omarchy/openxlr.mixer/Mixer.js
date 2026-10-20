@@ -49,18 +49,18 @@ function outputName(snapshot, output) {
 // node while a strip is bound to another microphone. While no channel names
 // one, as with no unit connected or an older daemon, a strip still on the
 // interface stands for its input, as it always has.
-function carriesPrimaryInput(channel) {
+function carriesPrimaryUnitInput(channel) {
     return !!channel && !!channel.unitInput && channel.unitInput.primary === true;
 }
 function unitCarrier(mixer, input) {
     var channels = mixer && Array.isArray(mixer.channels) ? mixer.channels : [];
     var named = channels.filter(function (channel) {
-        return carriesPrimaryInput(channel) && channel.unitInput.input === input;
+        return carriesPrimaryUnitInput(channel) && channel.unitInput.input === input;
     })[0];
     if (named)
         return named;
     // The daemon names the other input but not this one: no channel carries it.
-    if (channels.some(carriesPrimaryInput))
+    if (channels.some(carriesPrimaryUnitInput))
         return null;
     var id = input === 2 ? "xlr2" : "xlr1";
     var strip = channels.filter(function (channel) {

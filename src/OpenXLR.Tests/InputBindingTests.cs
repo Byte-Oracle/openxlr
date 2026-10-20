@@ -18,7 +18,7 @@ public sealed class InputBindingTests
     [InlineData("mic\nother", 0)]
     [InlineData("mic", -1)]
     [InlineData("mic", 64)]
-    public void InvalidBindingsAreRejectedByTheCommandTheAliasAndTheMixer(string source, int port)
+    public void InvalidBindingsAreRejectedByTheCommandAndTheMixer(string source, int port)
     {
         using var mixer = new Mixer();
         foreach (string strip in (string[])["xlr1", "xlr2"])
@@ -28,8 +28,6 @@ public sealed class InputBindingTests
             Assert.Throws<ArgumentException>(() => mixer.SetInputBinding(strip, new(source, 0, port)));
             Assert.Null(mixer.InputBinding(strip));
         }
-        Assert.NotNull(CommandValidation.Check(new Command
-            { Cmd = "setPrimaryInput", Source = source, CaptureMonoChannel = port }, mixer, _ => null));
     }
 
     [Fact]
@@ -54,8 +52,6 @@ public sealed class InputBindingTests
             new() { Cmd = "setInputBinding", Channel = "xlr2" },
             new() { Cmd = "setInputBinding", Channel = "xlr2", Source = "mic" },
             new() { Cmd = "setInputBinding", Channel = "xlr1", Source = "mic", CaptureMonoChannel = 63 },
-            new() { Cmd = "setPrimaryInput" },
-            new() { Cmd = "setPrimaryInput", Source = "mic", CaptureMonoChannel = 1 },
         })
             Assert.Null(CommandValidation.Check(ok, mixer, _ => null));
         foreach (Command bad in new Command[]
@@ -63,32 +59,32 @@ public sealed class InputBindingTests
             new() { Cmd = "setInputBinding", Channel = "xlr2", CaptureMonoChannel = 1 },
             new() { Cmd = "setInputBinding", Channel = "xlr2", Source = "mic", CapturePair = 1 },
             new() { Cmd = "setInputBinding", Channel = "xlr1", Source = new string('a', 257) },
-            new() { Cmd = "setPrimaryInput", CaptureMonoChannel = 1 },
         })
             Assert.NotNull(CommandValidation.Check(bad, mixer, _ => null));
     }
 
     [Fact]
-    public void EachStripKeepsItsOwnBindingAndTheAliasFieldsFollowXlr1()
+    public void EachStripKeepsItsOwnBindingAndTheStateHasNoMixerWideInput()
     {
         using var mixer = new Mixer();
         mixer.SetInputBinding("xlr2", new("usb.mic", 0, 3));
-        Assert.Null(mixer.PrimaryInput);
+        Assert.Null(mixer.InputBinding("xlr1"));
         Assert.Equal(new SourceBinding("usb.mic", 0, 3), mixer.ExportSettings().InputBindings!["xlr2"]);
         // XLR 2 alone leaves the Pro's direct microphone path alone.
         Assert.True(mixer.SetHardwareMicMonitor(true));
         Assert.False(mixer.SetHardwareMicMonitor(false));
 
         mixer.SetInputBinding("xlr1", new("webcam", 0, 1));
-        Assert.Equal(new PrimaryInputBinding("webcam", 1), mixer.PrimaryInput);
+        Assert.Equal(new SourceBinding("webcam", 0, 1), mixer.InputBinding("xlr1"));
         Assert.False(mixer.SetHardwareMicMonitor(true));
         MixerSettings saved = mixer.ExportSettings();
         Assert.Equal(2, saved.InputBindings!.Count);
         Assert.Null(saved.PrimaryInput);
 
         MixerState state = mixer.Snapshot();
-        Assert.Equal(new PrimaryInputBinding("webcam", 1), state.PrimaryInput);
-        Assert.False(state.PrimaryInputConnected);
+        // Each channel reports its own binding; nothing mixer-wide names XLR 1's source.
+        string json = System.Text.Json.JsonSerializer.Serialize(state, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        Assert.DoesNotContain("primaryInput", json, StringComparison.Ordinal);
         Dictionary<string, ChannelStatus> channels = state.Channels.ToDictionary(c => c.Id);
         Assert.Equal(new ChannelBinding("source", "webcam", 0, 1), channels["xlr1"].Binding);
         Assert.Equal(new ChannelBinding("source", "usb.mic", 0, 3), channels["xlr2"].Binding);

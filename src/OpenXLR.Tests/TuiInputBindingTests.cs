@@ -236,7 +236,6 @@ public sealed class TuiInputBindingTests
         (App app, _) = Ready(width: width, height: height);
         string frame = Draw(app, width, height);
         Assert.Contains("Elgato Wave XLR Pro", frame, StringComparison.Ordinal);
-        Assert.DoesNotContain("Generic", frame, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("no interface", frame, StringComparison.Ordinal);
     }
 
@@ -553,14 +552,5 @@ public sealed class TuiInputBindingTests
         Press(app, Key.Down, ToXlr2Source);
         Press(app, Key.Left);                    // the last source in the list, the headset
         Assert.Contains("stays in headset mode while bound", Draw(app, 160, 60), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void OptionsHasNoMicrophonePickerAnyMore()
-    {
-        (App app, _) = Ready(tab: 7);
-        string frame = Draw(app);
-        Assert.DoesNotContain("Primary microphone", frame, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Generic", frame, StringComparison.OrdinalIgnoreCase);
     }
 }

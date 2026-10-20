@@ -353,7 +353,6 @@ public sealed class WebSocketHub
                 await ReplyOperationAsync(await Task.Run(() => InstallPlugin(_ => new OpenXLR.Core.Mixing.InstallOutcome(true, "", []))));
                 break;
             case "setInputBinding":
-            case "setPrimaryInput":
             case "setInserts":
                 // Profile recall and input binding changes share this gate.
                 // A folder cannot be removed between checking its users and

@@ -224,7 +224,7 @@ Options has a tip for step 2: enforcing `OpenXLR Chat` as the system
 default input ([section 3.7](#default-devices)) makes every voice app pick it up without
 configuration.
 
-<a name="generic-microphone"></a>
+<a name="input-bindings"></a>
 #### Use another microphone on XLR 1 or XLR 2
 
 XLR 1 and XLR 2 take the interface's own inputs by default. Either strip
@@ -2105,7 +2105,7 @@ power and processing toggles, act on the interface whatever feeds the
 strips. Their
 label names the channel that carries that input: XLR 1 on a Wave XLR Pro's
 jack, Mic 1 on a Wave:3's capsule, or, while XLR 1 is
-[bound to another microphone](#generic-microphone), the capture channel
+[bound to another microphone](#input-bindings), the capture channel
 that carries the interface's microphone, such as Wave XLR Pro input 1. A
 key shortens a long name. With no channel carrying the input the
 label reads Input 1 or Input 2. A gain dial's meter shows the carrying
@@ -2564,7 +2564,7 @@ source binding. Application routing never targets capture inputs.
 A capture channel on the primary interface's own source, at the first port
 or pair for its first microphone or the third port or second pair for its
 second, carries that microphone while XLR 1 or XLR 2 is bound to another
-source ([Use another microphone on XLR 1 or XLR 2](#generic-microphone)).
+source ([Use another microphone on XLR 1 or XLR 2](#input-bindings)).
 The interface's gain, mute and switches are then drawn on it in an input
 rack and a mix matrix, and in INPUTS under a heading that names it. Its own
 volume stays beside them. When the XLR strip takes the interface again, the
@@ -2697,7 +2697,7 @@ XLR 1 and XLR 2 unless a strip is bound elsewhere, the key is that input's
 own mute, the same control as Mute on the Inputs page. When that channel's
 send into the chosen mix is muted, the word muted stands where its
 percentage would be, and the matrix is where that send is toggled. A strip
-[bound to another microphone](#generic-microphone) is not the interface,
+[bound to another microphone](#input-bindings) is not the interface,
 so its key mutes its send into the chosen mix like any other channel's.
 Its name plate shows the source where INPUT would be, in the warning colour
 while the source is silent, and the line under the desk names the source
@@ -2789,7 +2789,7 @@ channel carrying it, it reads Input 1, not in the mixer. The controls work
 in every case, so a hot preamp can still be turned down.
 
 The Bindings card chooses what feeds XLR 1 and XLR 2, the choice the window
-makes in [Use another microphone on XLR 1 or XLR 2](#generic-microphone).
+makes in [Use another microphone on XLR 1 or XLR 2](#input-bindings).
 Each strip has four rows. The source lists the interface's own input first,
 Interface jack (XLR 1) or Built-in microphone on a Wave:3 or Wave:1. Every
 capture source the daemon accepts follows, leaving out OpenXLR's own nodes,
@@ -2884,7 +2884,7 @@ separate mic button affects its hardware mute in every destination.
 Input labels are the daemon's strip names: XLR 1 on an XLR jack, Mic 1 on
 a Wave:3's capsule or another microphone. The mic button belongs to the
 channel that carries the interface's input. A strip
-[bound to another microphone](#generic-microphone) has no mic button and
+[bound to another microphone](#input-bindings) has no mic button and
 is not dimmed by the interface's mute. Its kind line and the tooltip name
 its source, or say why it is silent, and its bracketed send mutes work as
 usual. A capture channel that carries the interface's microphone gets the

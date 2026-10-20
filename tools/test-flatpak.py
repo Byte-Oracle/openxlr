@@ -147,7 +147,7 @@ def sandbox():
     config.mkdir(parents=True, exist_ok=True)
     (config / 'ui.json').write_text(json.dumps({'minimizeToTray': True}))
     (config / 'daemon.json').write_text('{"submixer":true}')
-    (config / 'mixer.json').write_text(json.dumps({'primaryInput': {'source': 'acceptance_mic', 'channel': 0}}))
+    (config / 'mixer.json').write_text(json.dumps({'inputBindings': {'xlr1': {'source': 'acceptance_mic', 'pair': 0, 'monoChannel': 0}}}))
     (config / 'flatpak-notice').write_text('1\n')
     modules = [run('pactl', 'load-module', 'module-null-sink', 'sink_name=acceptance_output', 'channels=2'),
                run('pactl', 'load-module', 'module-null-sink', 'sink_name=acceptance_mic_sink', 'channels=2'),

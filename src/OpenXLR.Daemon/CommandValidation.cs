@@ -84,9 +84,6 @@ public static class CommandValidation
                 if (cmd.Channel is null || TooLong(cmd.Channel, 36) || !layout.HasBindableStrip(cmd.Channel))
                     return "setInputBinding: need channel 'xlr1' or 'xlr2'";
                 return CheckBinding(cmd);
-            case "setPrimaryInput":
-                // The earlier form of setInputBinding with channel "xlr1".
-                return layout.HasBindableStrip("xlr1") ? CheckBinding(cmd) : "setPrimaryInput: the layout has no XLR 1 strip";
             case "createCaptureChannel":
                 if (BadName(cmd.Name)) return "createCaptureChannel: name must contain 1 to 60 printable characters";
                 return CaptureBinding.IsValid(cmd.Source, cmd.CapturePair, cmd.CaptureMonoChannel) ? null

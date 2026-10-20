@@ -39,9 +39,8 @@ public sealed record SourceBinding(string Source, int Pair = 0, int? MonoChannel
 }
 
 /// <summary>
-/// XLR 1's source binding in the shape the earlier <c>primaryInput</c> field
-/// had, for mixer.json files written before <c>inputBindings</c> and for the
-/// clients that still read <c>mixer.primaryInput</c>.
+/// XLR 1's source in the earlier <c>primaryInput</c> field of mixer.json,
+/// read from files written before <c>inputBindings</c> and never written.
 /// </summary>
 public sealed record PrimaryInputBinding(string Source, int Channel = 0)
 {
@@ -178,12 +177,6 @@ public sealed partial class Mixer
 
     /// <summary>Every strip bound to a source.</summary>
     public IReadOnlyDictionary<string, SourceBinding> InputBindings { get { lock (_gate) return new Dictionary<string, SourceBinding>(_bindings); } }
-
-    /// <summary>XLR 1's binding in the earlier <c>primaryInput</c> shape, or null when XLR 1 takes the interface.</summary>
-    public PrimaryInputBinding? PrimaryInput { get { lock (_gate) return PrimaryInputLocked(); } }
-
-    private PrimaryInputBinding? PrimaryInputLocked()
-        => _bindings.TryGetValue("xlr1", out SourceBinding? b) ? new(b.Source, b.Port) : null;
 
     /// <summary>
     /// Bind every strip as <paramref name="bindings"/> says, the strips it

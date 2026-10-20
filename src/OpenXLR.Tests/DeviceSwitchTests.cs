@@ -119,20 +119,19 @@ public sealed class DeviceSwitchTests
     }
 
     /// <summary>
-    /// The earlier primaryInput field is read as XLR 1's binding, and like
-    /// any binding it leaves USB control alone whether or not the software
-    /// mixer runs.
+    /// A saved binding of XLR 1 to another source leaves USB control alone
+    /// whether or not the software mixer runs.
     /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ASavedPrimaryInputKeepsUsbControlWithOrWithoutTheMixer(bool mixerEnabled)
+    public void ASavedInputBindingKeepsUsbControlWithOrWithoutTheMixer(bool mixerEnabled)
     {
         WithConfigDir(() =>
         {
             new DaemonSettings { Submixer = mixerEnabled }.Save();
             Assert.Null(new OpenXLR.Core.Mixing.MixerSettings
-                { PrimaryInput = new("unplugged.microphone", 1) }.Save());
+                { InputBindings = new() { ["xlr1"] = new("unplugged.microphone", 0, 1) } }.Save());
             var wave = new CountingDevice(WaveXlr);
             using var manager = new DeviceManager(NullLogger<DeviceManager>.Instance,
                 new ConfigurationBuilder().Build(), () => [wave]);
