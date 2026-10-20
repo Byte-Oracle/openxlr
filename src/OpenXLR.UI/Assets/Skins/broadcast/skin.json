@@ -162,7 +162,7 @@
         "popOut": { "default": "docked" }
       },
       "inputs": { "visibility": "hidden" },
-      "applications": { "template": "application-list" }
+      "applications": { "template": "application-columns", "perColumn": 6 }
     }
   }
 }

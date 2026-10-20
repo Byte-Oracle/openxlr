@@ -40,6 +40,7 @@ public static class SkinLayoutReader
     private static readonly string[] SubmixerOptions =
         [.. SectionOptions, "template", "orientation", "visibleBanks", "selectionDefaults", "strip", "master", "matrix", "popOut"];
     private static readonly string[] TemplateOptions = [.. SectionOptions, "template"];
+    private static readonly string[] ApplicationsOptions = [.. TemplateOptions, "perColumn"];
     private static readonly string[] BankOnlyOptions = ["orientation", "visibleBanks", "selectionDefaults", "strip", "master"];
     private static readonly string[] MatrixOnlyOptions = ["matrix"];
     private static readonly string[] MatrixOptions = ["rowHead", "columnHead", "cell", "meter"];
@@ -117,6 +118,7 @@ public static class SkinLayoutReader
         SkinSubmixerOptions submixer = SkinSubmixerOptions.Default;
         string monitor = SkinLayoutTemplates.OutputPanel;
         string applications = SkinLayoutTemplates.ApplicationChips;
+        int perColumn = SkinFormat.DefaultApplicationsPerColumn;
         SkinMixerPlacement popOut = SkinMixerPlacement.Docked;
         if (fields.TryGetValue("regions", out JsonElement regionsElement))
         {
@@ -140,15 +142,14 @@ public static class SkinLayoutReader
                     }
                     if (id == SkinLayoutRegions.Monitor && section.TryGetValue("template", out JsonElement monitorTemplate))
                         monitor = Name(monitorTemplate, at + ".template", SkinLayoutTemplates.Monitor, "a MONITOR template");
-                    if (id == SkinLayoutRegions.Applications && section.TryGetValue("template", out JsonElement appsTemplate))
-                        applications = Name(appsTemplate, at + ".template", SkinLayoutTemplates.Applications, "an APPLICATIONS template");
+                    if (id == SkinLayoutRegions.Applications) (applications, perColumn) = ReadApplications(section, at);
                 }
             }
         }
         return new SkinLayout(version, main)
         {
             Regions = regions, Header = header, Inputs = inputs, Submixer = submixer,
-            Monitor = monitor, Applications = applications, PopOut = popOut,
+            Monitor = monitor, Applications = applications, ApplicationsPerColumn = perColumn, PopOut = popOut,
         };
     }
 
@@ -382,7 +383,8 @@ public static class SkinLayoutReader
         {
             SkinLayoutRegions.Inputs => InputsOptions,
             SkinLayoutRegions.Submixer => SubmixerOptions,
-            SkinLayoutRegions.Monitor or SkinLayoutRegions.Applications => TemplateOptions,
+            SkinLayoutRegions.Monitor => TemplateOptions,
+            SkinLayoutRegions.Applications => ApplicationsOptions,
             _ => SectionOptions,
         });
         var options = SkinRegionOptions.Default;
@@ -402,6 +404,20 @@ public static class SkinLayoutReader
         if (fields.TryGetValue("height", out JsonElement height))
             options = options with { Height = Number(height, path + ".height", SkinFormat.MinRegionSize, SkinFormat.MaxRegionSize) };
         return options;
+    }
+
+    /// <summary>APPLICATIONS' template, and how many applications a column of <c>"application-columns"</c> holds.</summary>
+    private static (string Template, int PerColumn) ReadApplications(Dictionary<string, JsonElement> fields, string path)
+    {
+        string template = fields.TryGetValue("template", out JsonElement element)
+            ? Name(element, path + ".template", SkinLayoutTemplates.Applications, "an APPLICATIONS template")
+            : SkinLayoutTemplates.ApplicationChips;
+        if (!fields.TryGetValue("perColumn", out JsonElement perColumn)) return (template, SkinFormat.DefaultApplicationsPerColumn);
+        if (template != SkinLayoutTemplates.ApplicationColumns)
+            throw new LayoutException(path + ".perColumn",
+                $"\"perColumn\" belongs to the \"{SkinLayoutTemplates.ApplicationColumns}\" template; set \"template\": \"{SkinLayoutTemplates.ApplicationColumns}\" or leave it out.");
+        return (template, Whole(perColumn, path + ".perColumn", SkinFormat.MinApplicationsPerColumn, SkinFormat.MaxApplicationsPerColumn,
+            "a column holds at least one application, and more columns follow for the rest"));
     }
 
     /// <summary>INPUTS' template, and an input rack's strip.</summary>

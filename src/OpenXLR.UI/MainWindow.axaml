@@ -18,11 +18,13 @@
     <StyleInclude Source="avares://OpenXLR.UI/MixerStyles.axaml"/>
   </Window.Styles>
   <Window.Resources>
-    <!-- APPLICATIONS' two templates. A chip per application, wrapping across
+    <!-- APPLICATIONS' templates. A chip per application, wrapping across
          the section, is the classic one; a line per application, the name
-         shortening beside its channel picker, fits a narrow column. Both bind
-         the same application objects, show the application's icon before its
-         name, and the picker is the only control. -->
+         shortening beside its channel picker, fits a narrow column. The
+         columns template lays the same chips out in columns of a skin's
+         length (Layout/ApplicationColumnsPanel, made in code since the length
+         comes from the skin). All bind the same application objects, show the
+         application's icon before its name, and the picker is the only control. -->
     <ItemsPanelTemplate x:Key="ApplicationChipsPanel"><WrapPanel/></ItemsPanelTemplate>
     <ItemsPanelTemplate x:Key="ApplicationListPanel"><StackPanel Spacing="4"/></ItemsPanelTemplate>
     <DataTemplate x:Key="ApplicationChip" x:DataType="vm:AppStreamViewModel">
@@ -679,7 +681,7 @@
                     IsEnabled="{Binding HasApps}" Click="OnManageApps"/>
           </StackPanel>
         </Expander.Header>
-        <!-- the chips or the list, as the skin's template picks
+        <!-- the chips, the list or the columns, as the skin's template picks
              (ApplicationChip, ApplicationLine and their panels above) -->
         <ItemsControl Name="ApplicationRows" ItemsSource="{Binding ActiveApps}"
                       ItemsPanel="{StaticResource ApplicationChipsPanel}" ItemTemplate="{StaticResource ApplicationChip}"/>

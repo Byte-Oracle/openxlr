@@ -22,7 +22,7 @@ namespace OpenXLR.Tests;
 /// header across the top, HEADPHONES and MONITOR's toolbar side by side under
 /// it, the submixer as a mix matrix across the window, a row per channel and
 /// a column per mix, INPUTS hidden until Arrange mode shows it, APPLICATIONS
-/// under the matrix, nothing folded and every header action in the row. At 640, 1040 and 2560
+/// under the matrix in columns, nothing folded and every header action in the row. At 640, 1040 and 2560
 /// pixels, in Standard and Touch sizing, with six mixes, an interface
 /// without XLR 2, a capture channel that is not connected and a 40 character
 /// name, nothing is clipped or overlaps and every channel has a cell in
@@ -465,10 +465,11 @@ internal static partial class SkinLayoutWindowTests
         TextBlock name = board.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsEffectivelyVisible && t.Text == LongName);
         AssertInside(name, name.GetVisualAncestors().OfType<Border>().First(b => b.Name == "MatrixRowName"));
 
-        // The application list: a line per application inside the list's section.
-        Border[] lines = ApplicationLines(window);
-        Assert.Equal(model.ActiveApps.Count, lines.Length);
-        foreach (Border line in lines) AssertInside(line, Card("ApplicationsTile"));
+        // The applications in columns of chips inside their section (CheckApplicationColumns has the rest).
+        Border[] chips = ApplicationChips(window);
+        Assert.Equal(model.ActiveApps.Count, chips.Length);
+        Assert.Empty(ApplicationLines(window));
+        foreach (Border chip in chips) AssertInside(chip, Card("ApplicationsTile"));
         ApplicationIconWindowTests.Check(window, where);
 
         // HEADPHONES beside the toolbar need a window about 1000 wide; the tree fits a

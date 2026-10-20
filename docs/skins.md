@@ -28,7 +28,7 @@ every package has them and there is nothing to install:
   with each channel's send into each mix where its row crosses the mix's
   column. HEADPHONES and MONITOR's toolbar share the row above it, INPUTS
   is hidden because the matrix's row heads carry the input gain, mute and
-  plugins, and APPLICATIONS is under the matrix, on a dark neutral
+  plugins, and APPLICATIONS is under the matrix in columns of six, on a dark neutral
   palette. It is the reference for writing a layout skin; see
   [Layout](#layout).
 - **Nyan Pink**, a dark plum palette with candy pink faders, cyan details
@@ -36,7 +36,7 @@ every package has them and there is nothing to install:
   arrangement and the saved section order.
 - **Wave**: dark charcoal cards, blue faders and green meters. Inputs form rows and mixes form columns in the existing
   mix matrix, with the monitor toolbar above
-  and headphone controls below. It uses the same routing and controls as
+  and headphone controls below, and the applications in columns of six. It uses the same routing and controls as
   the other skins; no Elgato artwork or additional software is needed.
 
 Pick one in Options under APPEARANCE. The terminal mixer reads the same
@@ -848,8 +848,8 @@ HEADPHONES fills its top left cell, MONITOR's `"output-toolbar"` sits in
 its top right cell, and the submixer, a `"mix-matrix"`, spans both columns
 under them.
 Then come INPUTS, `"hidden"` since the matrix's row heads carry the input
-gain, mute and plugins, and the applications as an `"application-list"`,
-each across the whole width. Nothing starts folded. The tree leaves the
+gain, mute and plugins, and the applications as `"application-columns"`
+of 6, each across the whole width. Nothing starts folded. The tree leaves the
 header out, so the header stays across the top of the window, with every
 action in its row and none in the overflow menu. Showing INPUTS from
 Arrange mode puts it under the matrix. HEADPHONES beside the toolbar asks
@@ -1110,19 +1110,22 @@ send fader stays a send fader.
 
 | Option | Template | What it is |
 |---|---|---|
-| `template` | `inputs`, `monitor`, `applications`, `submixer` | which template draws the section. INPUTS takes `"hardware-panel"`, the INPUTS panel as it has always been and the default, or `"input-rack"`. MONITOR takes `"output-panel"`, the default, or `"output-toolbar"`. APPLICATIONS takes `"application-chips"`, the default, or `"application-list"`. The submixer takes `"channel-tiles"`, the channel tiles and mix masters as they have always been and the default, `"mix-banks"` or `"mix-matrix"` |
+| `template` | `inputs`, `monitor`, `applications`, `submixer` | which template draws the section. INPUTS takes `"hardware-panel"`, the INPUTS panel as it has always been and the default, or `"input-rack"`. MONITOR takes `"output-panel"`, the default, or `"output-toolbar"`. APPLICATIONS takes `"application-chips"`, the default, `"application-list"` or `"application-columns"`. The submixer takes `"channel-tiles"`, the channel tiles and mix masters as they have always been and the default, `"mix-banks"` or `"mix-matrix"` |
 | `strip` | `"input-rack"`, `"mix-banks"` | how one strip of the rack or of a bank is drawn, below |
 | `orientation` | `"mix-banks"` | `"horizontal"`, the default, puts the banks side by side; `"vertical"` one above the other |
 | `visibleBanks` | `"mix-banks"` | how many banks show, from 1 to 4; 2 when it is missing |
 | `selectionDefaults` | `"mix-banks"` | the mixes the banks start on, by the id `mixer.json` gives them, such as `"monitor"` and `"stream"`: at most 16 mix ids, each 1 to 64 lowercase letters, digits, hyphens and underscores |
 | `master` | `"mix-banks"` | how each bank's master is drawn, below |
+| `perColumn` | `"application-columns"` | how many applications one column holds before the next column starts, from 1 to 24; 6 when it is missing |
 | `matrix` | `"mix-matrix"` | how the matrix's row heads, column heads and cells are drawn; see [The mix matrix](#the-mix-matrix) |
 | `popOut` | `submixer`, any template | where the submixer starts out: `{ "default": "docked" }`, the default, or `{ "default": "detached" }`. See [The mixer's own window](#the-mixers-own-window) |
 
 An option that belongs to another template, such as `strip` with
-`"hardware-panel"`, `visibleBanks` without `"mix-banks"` or `matrix`
-without `"mix-matrix"`, drops the layout like any other fault. MONITOR and APPLICATIONS take `template` and
-the options every section has, nothing else; HEADPHONES has no template.
+`"hardware-panel"`, `visibleBanks` without `"mix-banks"`, `matrix`
+without `"mix-matrix"` or `perColumn` without `"application-columns"`, drops
+the layout like any other fault. MONITOR takes `template` and the options
+every section has, nothing else; APPLICATIONS takes those and `perColumn`;
+HEADPHONES has no template.
 
 MONITOR's toolbar is one compact row, meant for a footer or a slot beside
 the header: the output picker, the volume and its readout. The panel's
@@ -1140,6 +1143,13 @@ column: its state lamp, its name, which shortens to fit and shows whole in
 its tooltip, and its channel picker. The picker assigns the application to
 a channel exactly as a chip's does. Levels and sends stay with the
 channels; the list only assigns.
+
+APPLICATIONS' columns are the chips of the default template, in columns:
+the first `perColumn` applications top to bottom, the next ones in a
+column to the right, in the order the chips wrap in. Each chip is as wide
+as it is in the wrap, and a column is as wide as its widest chip. Columns that do not fit the section's width start a new row of
+columns below, whole, so nothing scrolls sideways; a window narrower than
+two columns shows them one under the other.
 
 The input rack draws one strip per channel, in the mixer's channel
 order. The strip of an XLR input holds the parts the INPUTS panel shows for

@@ -194,6 +194,15 @@ public static class SkinFormat
     /// <summary>The most mix banks a submixer of banks shows. Every mix stays reachable through each bank's picker.</summary>
     public const int MaxVisibleBanks = 4;
 
+    /// <summary>The fewest applications one column of <c>"application-columns"</c> may hold.</summary>
+    public const int MinApplicationsPerColumn = 1;
+
+    /// <summary>The most applications one column of <c>"application-columns"</c> may hold.</summary>
+    public const int MaxApplicationsPerColumn = 24;
+
+    /// <summary>How many applications one column holds when <c>perColumn</c> is missing.</summary>
+    public const int DefaultApplicationsPerColumn = 6;
+
     /// <summary>How many mix ids <c>selectionDefaults</c> may list.</summary>
     public const int MaxSelectionDefaults = 16;
 

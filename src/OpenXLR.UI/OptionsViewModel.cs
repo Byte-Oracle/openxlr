@@ -723,6 +723,7 @@ public sealed class OptionsViewModel : ViewModelBase
         if (layout.Submixer.IsMatrix) parts.Add(Localizer.Text("LayoutPartMatrix"));
         if (layout.Monitor == Skinning.SkinLayoutTemplates.OutputToolbar) parts.Add(Localizer.Text("LayoutPartOutputToolbar"));
         if (layout.Applications == Skinning.SkinLayoutTemplates.ApplicationList) parts.Add(Localizer.Text("LayoutPartApplicationList"));
+        if (layout.Applications == Skinning.SkinLayoutTemplates.ApplicationColumns) parts.Add(Localizer.Text("LayoutPartApplicationColumns"));
         if (layout.PopOut == Skinning.SkinMixerPlacement.Detached) parts.Add(Localizer.Text("LayoutPartDetached"));
         return Localizer.Format("SkinLayoutSummary", string.Join(", ", parts));
     }
