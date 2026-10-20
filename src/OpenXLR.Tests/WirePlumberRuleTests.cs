@@ -55,6 +55,7 @@ public sealed class WirePlumberRuleTests
         string root = Root();
         string[] rules = [.. Directory.GetFiles(Path.Combine(root, "packaging"), "5*.conf").Select(path => Path.GetFileName(path)).Order()];
         Assert.Contains(Wave3, rules);
+        Assert.Equal(rules, OpenXLR.UI.FlatpakSetup.Rules.Order());
         string debian = File.ReadAllText(Path.Combine(root, "debian", "rules"));
         string spec = File.ReadAllText(Path.Combine(root, "packaging", "rpm", "openxlr.spec"));
         string nix = File.ReadAllText(Path.Combine(root, "packaging", "nix", "package.nix"));

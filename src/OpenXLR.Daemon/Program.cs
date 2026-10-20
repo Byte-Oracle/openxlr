@@ -31,10 +31,16 @@ builder.Services.AddSingleton(startupDefaults);
 // room for the process to exit before systemd kills it. The mixer keeps its
 // own, shorter limit for the audio server (MixerService.StopBudget).
 builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(30));
+if (OpenXLR.Core.FlatpakEnvironment.IsFlatpak)
+{
+    builder.Logging.ClearProviders();
+    builder.Logging.AddProvider(new FlatpakLog(Path.Combine(OpenXLR.Core.OpenXlrPaths.StateDir, "daemon.log")));
+    builder.Services.AddHostedService<FlatpakParentLifetime>();
+}
 
 // Start the notifier before graph construction so progressing startup work
 // can extend systemd's deadline. Readiness still waits for ApplicationStarted.
-builder.Services.AddHostedService<ServiceWatchdog>();
+if (!OpenXLR.Core.FlatpakEnvironment.IsFlatpak) builder.Services.AddHostedService<ServiceWatchdog>();
 
 // The DeviceManager is both a singleton (queried by the hub) and the hosted
 // background service that runs the poll/reconnect loop.
@@ -100,7 +106,7 @@ using FileStream? instanceLock = DaemonLock.TryAcquire();
 if (instanceLock is null)
 {
     app.Logger.LogError("another OpenXLR daemon is already running for this user (it holds {Lock}); exiting", DaemonLock.Path);
-    return 75;
+    return OpenXLR.Core.FlatpakEnvironment.IsFlatpak ? 73 : 75;
 }
 
 // Preserve the installed payload inventory before an upgrade or removal can
@@ -138,7 +144,7 @@ for (int attempt = 0; ; attempt++)
     catch (SocketException ex)
     {
         app.Logger.LogError("port {Port} still busy after 60 s ({Error}); exiting for systemd to retry", ApiPort, ex.Message);
-        return 75;   // EX_TEMPFAIL: a clean exit, no core dump; Restart=on-failure tries again
+        return OpenXLR.Core.FlatpakEnvironment.IsFlatpak ? 73 : 75;
     }
 }
 

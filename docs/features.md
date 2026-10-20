@@ -2,6 +2,9 @@
 
 What OpenXLR does, area by area, and how. The README has the summary.
 
+The experimental [Flatpak mode](flatpak.md) runs the daemon with the window
+and requests login startup through the desktop portal.
+
 ## Hardware control
 
 Controls are reached over each device's USB protocol; the per-control

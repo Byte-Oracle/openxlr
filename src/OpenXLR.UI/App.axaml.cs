@@ -23,14 +23,14 @@ public partial class App : Application
         {
             // An earlier version wrote a user unit with a build-tree path on
             // packaged installs; fix it before the user has to notice.
-            if (UiSettings.Load().StartDaemonAtLogin)
+            if (!FlatpakEnvironment.IsFlatpak && UiSettings.Load().StartDaemonAtLogin)
                 StartupIntegration.RepairDaemonUnit();
 
             // A moved installation must not leave an enabled mixer-at-login
             // preference pointing at a binary that is gone. An entry removed
             // with a desktop tool stays removed. Either way the outcome is
             // kept, and Options reports anything the user should know.
-            StartupIntegration.RepairWindowAutostart();
+            if (!FlatpakEnvironment.IsFlatpak) StartupIntegration.RepairWindowAutostart();
 
             var window = new MainWindow();
             // A later launch asks for the window through the single-instance

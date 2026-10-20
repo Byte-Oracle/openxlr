@@ -12,6 +12,68 @@ namespace OpenXLR.Tests;
 [Collection("xdg-config")]
 public sealed class DesktopKeysTests
 {
+    [DesktopBusTheory]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
+    public async Task FlatpakAutostartUsesTheBackgroundPortal(bool audio, bool window, bool grant)
+    {
+        await using var environment = await PrivateBus.Start();
+        using var desktop = new DBusConnection(environment.Address);
+        await desktop.ConnectAsync();
+        await desktop.RequestNameAsync(DesktopBus.Portal);
+        var backend = new BackgroundBackend(new DesktopBus(desktop), grant);
+        desktop.AddMethodHandler(backend);
+        using var client = new DBusConnection(environment.Address);
+        await client.ConnectAsync();
+        Task<bool> configure = FlatpakBackground.ConfigureAsync(new DesktopBus(client), audio, window, CancellationToken.None);
+        if (grant || (!audio && !window)) Assert.Equal(grant, await configure.WaitAsync(TimeSpan.FromSeconds(5)));
+        else await Assert.ThrowsAsync<InvalidOperationException>(() => configure);
+        Assert.Equal(audio || window, backend.Autostart);
+        Assert.Equal(window ? new[] { "openxlr" } : new[] { "openxlr", "--background" }, backend.Command);
+    }
+
+    [DesktopBusFact]
+    public async Task BackgroundRefusalDoesNotHideAnAcceptedAutostartEntry()
+    {
+        await using var environment = await PrivateBus.Start();
+        using var desktop = new DBusConnection(environment.Address);
+        await desktop.ConnectAsync(); await desktop.RequestNameAsync(DesktopBus.Portal);
+        desktop.AddMethodHandler(new BackgroundBackend(new DesktopBus(desktop), grant: false, grantAutostart: true));
+        using var client = new DBusConnection(environment.Address);
+        await client.ConnectAsync();
+        Assert.False(await FlatpakBackground.ConfigureAsync(new DesktopBus(client), true, false, CancellationToken.None));
+    }
+
+    private sealed class BackgroundBackend(DesktopBus bus, bool grant, bool? grantAutostart = null) : IPathMethodHandler
+    {
+        public string Path => "/";
+        public bool HandlesChildPaths => true;
+        internal bool Autostart;
+        internal string[] Command = [];
+        public ValueTask HandleMethodAsync(MethodContext context)
+        {
+            if (context.Request.InterfaceAsString != FlatpakBackground.Interface) { context.ReplyUnknownMethodError(); return ValueTask.CompletedTask; }
+            var reader = context.Request.GetBodyReader();
+            Assert.Equal("", reader.ReadString());
+            var options = reader.ReadDictionaryOfStringToVariantValue();
+            Autostart = options["autostart"].GetBool();
+            Command = options["commandline"].GetArray<string>();
+            string sender = context.Request.SenderAsString!;
+            string path = "/org/freedesktop/portal/desktop/request/" + sender[1..].Replace('.', '_') + "/" + options["handle_token"].GetString();
+            using var reply = context.CreateReplyWriter("o"); reply.WriteObjectPath(path); context.Reply(reply.CreateMessage());
+            using var signal = bus.Connection.GetMessageWriter();
+            signal.WriteSignalHeader(destination: sender, path: path, @interface: "org.freedesktop.portal.Request", member: "Response", signature: "ua{sv}");
+            signal.WriteUInt32(0);
+            signal.WriteDictionary(new Dictionary<string, VariantValue> { ["background"] = grant, ["autostart"] = grantAutostart ?? (grant && Autostart) });
+            bus.Connection.TrySendMessage(signal.CreateMessage());
+            return ValueTask.CompletedTask;
+        }
+    }
+
     [DesktopBusFact]
     public async Task PortalKeysAndDeckQueriesUseTheSameFocusServiceAndCleanUp()
     {
@@ -353,7 +415,7 @@ public sealed class DesktopKeysTests
         }
     }
 
-    private sealed class PrivateBus : IAsyncDisposable
+    internal sealed class PrivateBus : IAsyncDisposable
     {
         private readonly string _directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "openxlr-keys-" + Guid.NewGuid());
         private readonly string? _oldBus = Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS");

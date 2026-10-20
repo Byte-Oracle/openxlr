@@ -150,6 +150,39 @@ public static class ProcessRunner
     }
 
     /// <summary>
+    /// Own a background child until it exits or cancellation requests a graceful
+    /// stop. Only that child receives TERM; its helpers can finish their cleanup.
+    /// The whole remaining tree is killed after the shutdown deadline.
+    /// </summary>
+    internal static async Task<int> RunOwnedAsync(string exe, IReadOnlyList<string> args,
+        CancellationToken stop, TimeSpan grace, IReadOnlyCollection<string>? removeEnvironment = null,
+        IReadOnlyDictionary<string, string>? environment = null)
+    {
+        stop.ThrowIfCancellationRequested();
+        var start = new ProcessStartInfo(exe) { UseShellExecute = false };
+        foreach (string argument in args) start.ArgumentList.Add(argument);
+        ApplyEnvironment(start, environment, removeEnvironment);
+        using Process process = Process.Start(start) ?? throw new InvalidOperationException($"failed to start {exe}");
+        try { await process.WaitForExitAsync(stop).ConfigureAwait(false); }
+        catch (OperationCanceledException)
+        {
+            if (!process.HasExited)
+            {
+                if (OperatingSystem.IsLinux()) SendSignal(process.Id, 15);
+                else KillTree(process);
+                try { await process.WaitForExitAsync().WaitAsync(grace).ConfigureAwait(false); }
+                catch (TimeoutException) { KillTree(process); }
+            }
+        }
+        if (!process.HasExited) KillTree(process);
+        await process.WaitForExitAsync().ConfigureAwait(false);
+        return process.ExitCode;
+    }
+
+    [System.Runtime.InteropServices.DllImport("libc", EntryPoint = "kill", SetLastError = true)]
+    private static extern int SendSignal(int pid, int signal);
+
+    /// <summary>
     /// Subscribe to a helper until cancellation, EOF or a reader failure. The
     /// reader bounds individual messages and startup time; silence after startup
     /// is normal. Stderr remains capped and both pipes stop together.
