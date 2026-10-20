@@ -22,6 +22,8 @@ public enum LedKind
     Connection,
     /// <summary>Bypassed or failed: the lamp shows the alert colour.</summary>
     Insert,
+    /// <summary>Power on a jack, as phantom power: the lamp is lit in the alert colour, as on an interface's panel, and dark when off.</summary>
+    Power,
 }
 
 /// <summary>

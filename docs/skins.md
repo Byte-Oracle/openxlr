@@ -27,8 +27,8 @@ every package has them and there is nothing to install:
   a mix matrix across the window, a row per channel and a column per mix,
   with each channel's send into each mix where its row crosses the mix's
   column. HEADPHONES and MONITOR's toolbar share the row above it, INPUTS
-  is hidden because the matrix's row heads carry the input gain, mute and
-  plugins, and APPLICATIONS is under the matrix in columns of six, on a dark neutral
+  is hidden because the matrix's row heads carry the input gain, mute,
+  microphone switches and plugins, and APPLICATIONS is under the matrix in columns of six, on a dark neutral
   palette. It is the reference for writing a layout skin; see
   [Layout](#layout).
 - **Nyan Pink**, a dark plum palette with candy pink faders, cyan details
@@ -524,9 +524,9 @@ with a message saying why.
 
 | Token | Kind | Default | Range | What it paints |
 |---|---|---|---|---|
-| `Ox.Led.On` | colour | #3ecf7a |  | a connected device, a plugin that is processing, the button of a chain with one |
+| `Ox.Led.On` | colour | #3ecf7a |  | a connected device, a plugin that is processing, the button of a chain with one, a matrix row's **Mic** button while one of its switches is on |
 | `Ox.Led.Off` | colour | #4a4f5c |  | a device that is not there |
-| `Ox.Led.Alert` | colour | #ff3c4e |  | a plugin bypassed or failed, the button of a chain with nothing processing |
+| `Ox.Led.Alert` | colour | #ff3c4e |  | a plugin bypassed or failed, the button of a chain with nothing processing, the phantom power lamp on a matrix row's **Mic** button while phantom power is on |
 | `Ox.Meter.Fill` | colour | #3ecf7a |  | the quiet end of the scale |
 | `Ox.Meter.Warning` | colour | #3ecf7a |  | the middle of the scale |
 | `Ox.Meter.Hot` | colour | #3ecf7a |  | the loud end of the scale |
@@ -748,7 +748,7 @@ controls.
 
 | Token | Kind | Default | Range | What it paints |
 |---|---|---|---|---|
-| `Ox.Matrix.NameWidth` | number | 112 | 56 to 400 | the width of a row head's name column |
+| `Ox.Matrix.NameWidth` | number | 140 | 56 to 400 | the width of a row head's name column, which holds the name, the binding line under it and the **Mic** button |
 | `Ox.Matrix.CellWidth` | number | 168 | 120 to 400 | the width of a cell, of a column head and of a row head's source controls |
 | `Ox.Matrix.RowHeight` | number | 40 | 28 to 120 | the height of a row: its head and every cell in it; a row whose head stacks a gain over the channel volume is as tall as the two faders need, never less |
 | `Ox.Matrix.MutedBackground` | brush | #40a03434 | | the background of a cell whose send is muted, when the matrix tints muted cells. Translucent by default, so the cell's own surface shows through as a red tint |
@@ -853,7 +853,7 @@ HEADPHONES fills its top left cell, MONITOR's `"output-toolbar"` sits in
 its top right cell, and the submixer, a `"mix-matrix"`, spans both columns
 under them.
 Then come INPUTS, `"hidden"` since the matrix's row heads carry the input
-gain, mute and plugins, and the applications as `"application-columns"`
+gain, mute, microphone switches and plugins, and the applications as `"application-columns"`
 of 6, each across the whole width. Nothing starts folded. The tree leaves the
 header out, so the header stays across the top of the window, with every
 action in its row and none in the overflow menu. Showing INPUTS from
@@ -1309,7 +1309,7 @@ templates keep their 600 pixels. The others need less:
   bank;
 - a mix matrix needs its row heads, `Ox.Matrix.NameWidth` and
   `Ox.Matrix.CellWidth`, and one column beside them, plus the card's
-  padding: 476 pixels with the default tokens. More columns than fit scroll
+  padding: 504 pixels with the default tokens. More columns than fit scroll
   sideways inside the card.
 
 None asks for more than the classic 600 pixels, and Touch sizing raises
@@ -1414,7 +1414,20 @@ Each row starts with the channel's head: its icon and name, then the same
 controls the INPUTS panel shows for the channel, under the same rules. XLR 1
 and XLR 2 have their hardware gain, with the meter under it, their mute,
 which waits while phantom power settles, and the button that opens their
-plugin chain. The gain lock still disables the gain. Aux In has its level
+plugin chain. The gain lock still disables the gain. At the end of the name
+column a **Mic** button opens a flyout with the switches INPUTS shows beside
+the mute: low cut, expander, Voice Tune, phantom power, ClipGuard and the
+compressor, each where the interface has it, with the Voice Tune strength
+while Voice Tune is on and, on XLR 1, the software low cut and ClipGuard of
+an interface without hardware ones. They are the INPUTS panel's own buttons,
+bound to the same settings, so a click there does what it does in INPUTS.
+The mute is not repeated in the flyout, since the head has its own. **Mic**
+is lettered in `Ox.Led.On` while one of the switches is on, and carries the
+interface's phantom power lamp, lit in `Ox.Led.Alert` while phantom power is
+on or settling, so both show without opening it. A capture channel carrying
+the interface's microphone has the button too, with that input's switches,
+and a strip carrying an additional interface's input has that interface's
+switches. Aux In has its level
 and level lock. Every channel has its own volume, which scales every send
 in its row. On XLR 1, XLR 2 and Aux In it is a second fader under the gain
 or the level, the meter under the gain, and that row is as tall as the two
@@ -1450,7 +1463,8 @@ named for the channel and the mix.
 `parts` lists part names in the order they are drawn; parts it leaves out
 follow in their default order. `hidden` lists parts left out, and a part
 appears once across the two lists. A row head's parts, in their default
-order, are `identity`, `binding`, `meter`, `gain`, `mute` and `effects`. A
+order, are `identity`, `binding`, `meter`, `gain`, `mute`, `processing` and
+`effects`. A
 column head's are `identity`, `master`, `mute`, `effects` and `outputs`. A
 cell's are `mute`, `fader` and `value`.
 
@@ -1461,6 +1475,7 @@ cell's are `mute`, `fader` and `value`.
 | `meter` | row head | the channel's meter as a part of its own. Under the faders it is the gain's track instead, so a channel with gain draws it there |
 | `gain` | row head | the input's hardware gain, or Aux In's level and level lock, with the channel's own volume as a second fader under it; a channel without a gain shows its volume alone. A capture channel carrying the interface's microphone shows the interface's gain over its volume |
 | `mute` | row head, column head, cell | the input's hardware mute, the mix's mute, or the send's mute in the column's mix. A capture channel carrying the interface's microphone has the interface's mute |
+| `processing` | row head | the **Mic** button that opens the input's switches in a flyout. It is lettered in `Ox.Led.On` while a switch is on, and its lamp lights while phantom power is on. It stands at the end of the name column, wherever `parts` puts it, so the source controls keep their room. A row whose input has no switch, and a channel that carries no interface's input, does not draw it. A skin that lists every other part and not this one still gets it |
 | `effects` | row head, column head | the button that opens the input's or the mix's plugin chain |
 | `master` | column head | the mix's master level as a short fader |
 | `outputs` | column head | the outputs line |

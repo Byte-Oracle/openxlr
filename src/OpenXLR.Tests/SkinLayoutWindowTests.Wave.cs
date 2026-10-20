@@ -85,6 +85,7 @@ internal static partial class SkinLayoutWindowTests
         }
         SkinService.ApplyControlSizing(false);
         model.Channels.Single(c => c.Id == "xlr1").DirectMonitored = false;
+        CheckProcessing(window, model, "wave");
         Layout(window, 1040, 1400);
 
         // A muted send's cell takes Wave's muted colour.

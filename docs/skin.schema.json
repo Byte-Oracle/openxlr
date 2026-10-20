@@ -217,7 +217,7 @@
         },
         "Ox.Led.On": {
           "$ref": "#/$defs/flatColour",
-          "description": "a connected device, a plugin that is processing, the button of a chain with one"
+          "description": "a connected device, a plugin that is processing, the button of a chain with one, a matrix row's **Mic** button while one of its switches is on"
         },
         "Ox.Led.Off": {
           "$ref": "#/$defs/flatColour",
@@ -225,7 +225,7 @@
         },
         "Ox.Led.Alert": {
           "$ref": "#/$defs/flatColour",
-          "description": "a plugin bypassed or failed, the button of a chain with nothing processing"
+          "description": "a plugin bypassed or failed, the button of a chain with nothing processing, the phantom power lamp on a matrix row's **Mic** button while phantom power is on"
         },
         "Ox.Meter.Fill": {
           "$ref": "#/$defs/flatColour",
@@ -665,7 +665,7 @@
           "type": "number",
           "minimum": 56,
           "maximum": 400,
-          "description": "the width of a row head's name column"
+          "description": "the width of a row head's name column, which holds the name, the binding line under it and the **Mic** button"
         },
         "Ox.Matrix.CellWidth": {
           "type": "number",
@@ -1656,7 +1656,7 @@
         "parts": {
           "type": "array",
           "uniqueItems": true,
-          "maxItems": 6,
+          "maxItems": 7,
           "items": {
             "enum": [
               "identity",
@@ -1664,6 +1664,7 @@
               "meter",
               "gain",
               "mute",
+              "processing",
               "effects"
             ]
           },
@@ -1672,13 +1673,14 @@
         "hidden": {
           "type": "array",
           "uniqueItems": true,
-          "maxItems": 5,
+          "maxItems": 6,
           "items": {
             "enum": [
               "binding",
               "meter",
               "gain",
               "mute",
+              "processing",
               "effects"
             ]
           },

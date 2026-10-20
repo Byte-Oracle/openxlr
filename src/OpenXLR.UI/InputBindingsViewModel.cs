@@ -202,9 +202,32 @@ public sealed class UnitInputViewModel : ViewModelBase
     public bool CapClipGuard => _main.CapClipGuard;
     public bool CapCompressor => _main.CapCompressor;
 
+    // --- the switches at a glance, for a part that keeps them behind one button ---
+
+    /// <summary>The interface has at least one of the switches the INPUTS panel shows beside the mute.</summary>
+    public bool HasSwitches => CapLowCut || CapExpander || CapVoiceTune || CapPhantom || CapClipGuard || CapCompressor;
+
+    /// <summary>One of the switches the interface has is on. Phantom power is power, not processing, so <see cref="PhantomShown"/> says it.</summary>
+    public bool SwitchesOn => CapLowCut && LowCut || CapExpander && Expander || CapVoiceTune && VoiceTune
+        || CapClipGuard && ClipGuard || CapCompressor && Compressor;
+
+    /// <summary>Phantom power is on, or settling, on an interface that has it.</summary>
+    public bool PhantomShown => CapPhantom && Phantom || PhantomSettling;
+
+    private static readonly HashSet<string> SummaryNames = new(StringComparer.Ordinal)
+    {
+        nameof(LowCut), nameof(Expander), nameof(VoiceTune), nameof(Phantom), nameof(ClipGuard), nameof(Compressor),
+        nameof(PhantomSettling), nameof(CapLowCut), nameof(CapExpander), nameof(CapVoiceTune), nameof(CapPhantom),
+        nameof(CapClipGuard), nameof(CapCompressor),
+    };
+
     private void OnMainChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is { } name && _names.TryGetValue(name, out string? mine)) Raise(mine);
+        if (e.PropertyName is { } name && _names.TryGetValue(name, out string? mine))
+        {
+            Raise(mine);
+            if (SummaryNames.Contains(mine)) { Raise(nameof(HasSwitches)); Raise(nameof(SwitchesOn)); Raise(nameof(PhantomShown)); }
+        }
         if (e.PropertyName == nameof(MainViewModel.UnitXlrJacks)) { Raise(nameof(GainName)); Raise(nameof(GainLabel)); }
     }
 }

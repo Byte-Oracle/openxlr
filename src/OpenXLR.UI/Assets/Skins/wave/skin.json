@@ -197,6 +197,7 @@
               "mute",
               "gain",
               "meter",
+              "processing",
               "effects"
             ],
             "label": {

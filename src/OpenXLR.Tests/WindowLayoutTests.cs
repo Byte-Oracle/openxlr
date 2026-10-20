@@ -882,6 +882,32 @@ public sealed class WindowLayoutTests
         bitmap.Render(window);
         bitmap.Save(Path.Combine(directory, name + ".png"), PngBitmapEncoderOptions.Default);
     }
+
+    /// <summary>
+    /// The window with an open popup, a flyout's or a menu's, drawn over it
+    /// where the popup stands on the screen. The picture grows to hold a
+    /// popup that reaches past the window.
+    /// </summary>
+    internal static void Capture(TopLevel window, string name, Visual popupContent)
+    {
+        if (Environment.GetEnvironmentVariable("OPENXLR_LAYOUT_ARTIFACTS") is not { Length: > 0 } directory) return;
+        TopLevel popup = TopLevel.GetTopLevel(popupContent)!;
+        Directory.CreateDirectory(directory);
+        using var page = new RenderTargetBitmap(new PixelSize((int)window.Bounds.Width, (int)window.Bounds.Height));
+        page.Render(window);
+        using var layer = new RenderTargetBitmap(new PixelSize((int)popup.Bounds.Width, (int)popup.Bounds.Height));
+        layer.Render(popup);
+        PixelPoint origin = window.PointToScreen(default), at = popup.PointToScreen(default);
+        var place = new Rect(at.X - origin.X, at.Y - origin.Y, popup.Bounds.Width, popup.Bounds.Height);
+        using var composed = new RenderTargetBitmap(new PixelSize(
+            (int)Math.Max(window.Bounds.Width, place.Right), (int)Math.Max(window.Bounds.Height, place.Bottom)));
+        using (Avalonia.Media.DrawingContext context = composed.CreateDrawingContext())
+        {
+            context.DrawImage(page, new Rect(page.Size));
+            context.DrawImage(layer, place);
+        }
+        composed.Save(Path.Combine(directory, name + ".png"), PngBitmapEncoderOptions.Default);
+    }
 }
 
 public sealed class LayoutFactAttribute : FactAttribute

@@ -31,6 +31,16 @@ public partial class WaveUnitControls : UserControl
         set => SetValue(PartProperty, value);
     }
 
+    public static readonly StyledProperty<bool> ShowsMuteProperty =
+        AvaloniaProperty.Register<WaveUnitControls, bool>(nameof(ShowsMute), true);
+
+    /// <summary>The switches include the mute, where the unit has one. False where the owner draws the mute itself.</summary>
+    public bool ShowsMute
+    {
+        get => GetValue(ShowsMuteProperty);
+        set => SetValue(ShowsMuteProperty, value);
+    }
+
     public WaveUnitControls()
     {
         InitializeComponent();

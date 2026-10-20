@@ -435,6 +435,114 @@ public sealed class MixMatrixTests
     /// does, following channels and mixes or taking new options, sends
     /// anything else, a layout order least of all.
     /// </summary>
+    /// <summary>A full state push: the interface, its capabilities and the mixer, as the daemon sends them.</summary>
+    private static void ApplyState(MainViewModel model, JsonNode state) =>
+        typeof(MainViewModel).GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(model, [state]);
+
+    /// <summary>A Wave XLR Pro's state with other capabilities and mixer flags in their place.</summary>
+    private static JsonNode State(string channels, string? capabilities = null, string mixerExtra = "")
+    {
+        JsonNode state = JsonNode.Parse(InputBindingModelTests.ProState(channels, mixerExtra: mixerExtra))!;
+        if (capabilities is not null) state["capabilities"] = JsonNode.Parse(capabilities);
+        return state;
+    }
+
+    [Fact]
+    public async Task ARowsMicrophoneSwitchesFollowTheInputItCarriesAndWhatTheInterfaceHas()
+    {
+        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        var model = new MainViewModel(client);
+        string pro = $"{InputBindingModelTests.Xlr("xlr1", 0, InputBindingModelTests.Input(1))},"
+            + $"{InputBindingModelTests.Xlr("xlr2", 1, InputBindingModelTests.Input(2))},{{\"id\":\"game\",\"name\":\"Game\"}},"
+            + "{\"id\":\"cam\",\"name\":\"Camera\",\"captureSource\":\"cam\"}";
+        ApplyState(model, State(pro));
+        using var matrix = new MixMatrixViewModel(model);
+        MatrixRowViewModel Row(string id) => matrix.Rows.Single(r => r.Channel.Id == id);
+
+        // A Wave XLR Pro: both XLR rows have the part, each for its own input; nothing else has it.
+        Assert.Equal(["xlr1", "xlr2"], matrix.Rows.Where(r => r.ShowsProcessing).Select(r => r.Channel.Id));
+        Assert.Same(model.UnitInput1, Row("xlr1").Unit);
+        Assert.Same(model.UnitInput2, Row("xlr2").Unit);
+        Assert.True(Row("xlr1").Has(SkinMatrixParts.Processing));
+        // It stands in the name column, not among the source controls.
+        Assert.DoesNotContain(SkinMatrixParts.Processing, Row("xlr1").Spec.Parts);
+        Assert.True(Row("xlr1").HasPhantom);
+        Assert.False(Row("xlr1").ShowsSoftware);
+
+        // Lit by its own input's switches only, phantom power on its own, both said as they change.
+        var raised = new List<string?>();
+        Row("xlr2").PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        Assert.False(Row("xlr2").ProcessingOn);
+        model.Compressor2 = true;
+        Assert.True(Row("xlr2").ProcessingOn);
+        Assert.False(Row("xlr1").ProcessingOn);
+        Assert.Contains(nameof(MatrixRowViewModel.ProcessingOn), raised);
+        model.Compressor2 = false;
+        model.Phantom2 = true;
+        Assert.False(Row("xlr2").ProcessingOn);
+        Assert.True(Row("xlr2").PhantomOn);
+        Assert.False(Row("xlr1").PhantomOn);
+        Assert.Equal(Localizer.Format("MatrixProcessingPhantomName", "XLR 2"), Row("xlr2").ProcessingName);
+        model.Phantom2 = false;
+        model.PhantomSettling2 = true;
+        Assert.True(Row("xlr2").PhantomOn);
+        model.PhantomSettling2 = false;
+        Assert.Equal(Localizer.Format("MatrixProcessingName", "XLR 2"), Row("xlr2").ProcessingName);
+        // A switch the interface does not have does not light it.
+        model.CapCompressor = false;
+        model.Compressor2 = true;
+        Assert.False(Row("xlr2").ProcessingOn);
+        model.Compressor2 = false;
+
+        // The first Wave XLR: phantom power only, with XLR 1's software low
+        // cut and ClipGuard. The part stays for them; lit by the low cut.
+        const string Phantom = """{"xlrInputs":1,"hpOutputs":1,"phantom":true,"physicalControls":true}""";
+        const string Software = ",\"softLowCutApplicable\":true,\"softClipGuardApplicable\":true,\"lowCutHz\":80";
+        string one = InputBindingModelTests.Xlr("xlr1", 0, InputBindingModelTests.Input(1));
+        ApplyState(model, State(one, Phantom, Software));
+        Assert.Equal(["xlr1"], matrix.Rows.Where(r => r.ShowsProcessing).Select(r => r.Channel.Id));
+        Assert.True(Row("xlr1").ShowsSoftware);
+        Assert.True(Row("xlr1").HasPhantom);
+        Assert.True(Row("xlr1").ProcessingOn);
+        // A USB microphone with neither: the software alone keeps it.
+        ApplyState(model, State(one, """{"xlrInputs":1,"hpOutputs":1,"xlrJacks":false}""", Software.Replace("80", "0")));
+        Assert.True(Row("xlr1").ShowsProcessing);
+        Assert.False(Row("xlr1").HasPhantom);
+        Assert.False(Row("xlr1").ProcessingOn);
+        // Nothing to switch, the daemon saying no software processing applies: no part.
+        ApplyState(model, State(one, """{"xlrInputs":1,"hpOutputs":1,"xlrJacks":false}""",
+            ",\"softLowCutApplicable\":false,\"softClipGuardApplicable\":false"));
+        Assert.False(Row("xlr1").ShowsProcessing);
+
+        // XLR 1 bound to a webcam and the Pro's microphone on a capture channel:
+        // the capture channel has the part, for input 1; XLR 1 keeps it only for its software.
+        ApplyState(model, State($"{InputBindingModelTests.BoundXlr1(true)},{InputBindingModelTests.ProMic(InputBindingModelTests.Input(1))}"));
+        Assert.Null(Row("xlr1").Unit);
+        Assert.Equal(InputStripKind.Capture, Row("promic").Kind);
+        Assert.Same(model.UnitInput1, Row("promic").Unit);
+        Assert.True(Row("promic").ShowsProcessing);
+        Assert.False(Row("promic").ShowsSoftware);
+        Assert.Equal(model.ShowSoftwareControls, Row("xlr1").ShowsProcessing);
+        model.LowCut = true;
+        Assert.True(Row("promic").ProcessingOn);
+        model.LowCut = false;
+
+        // A skin that hides the part leaves it out everywhere.
+        matrix.Configure(SkinMatrixOptions.Default with
+        {
+            RowHead = new SkinMatrixPartOptions(SkinMatrixParts.RowHead, [SkinMatrixParts.Processing], SkinLabelStyle.Text),
+        });
+        Assert.DoesNotContain(matrix.Rows, r => r.ShowsProcessing);
+
+        // A row the matrix no longer draws stops following the input.
+        MatrixRowViewModel gone = Row("promic");
+        raised.Clear();
+        gone.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        matrix.Dispose();
+        model.LowCut = true;
+        Assert.Empty(raised);
+    }
+
     [Fact]
     public async Task AWriteThroughACellIsTheSendsOwnAndTheMatrixSendsNoCommand()
     {

@@ -1763,8 +1763,18 @@ with it. A channel with no send into a mix has an empty cell there.
 The head at the start of each row carries the channel's icon and name and
 what INPUTS would show for it. XLR 1 and XLR 2 have their mute, their gain
 with the meter under it, and **FX**, which opens their plugin chain; the
-gain lock and phantom power's settling time still apply. Aux In has its
-level and **Lock**. Each of them also has its [volume](#channel-volume),
+gain lock and phantom power's settling time still apply. Beside the name,
+**Mic** opens the switches INPUTS shows next to the mute: Low Cut,
+Expander, Voice Tune, Phantom, ClipGuard and Compressor, the ones your
+interface has, with the Voice Tune strength while Voice Tune is on. On an
+interface without a hardware low cut or ClipGuard, XLR 1's software low cut
+and ClipGuard are there too. They are the same buttons as in INPUTS, so
+switching one here switches it there. **Mic** turns green while one of them
+is on, and its small lamp lights red while phantom power is on, so you can
+see both without opening it. A capture channel that carries the interface's
+microphone has **Mic** too, and a strip bound to an additional interface
+has that interface's switches. Aux In has its level and **Lock**. Each of
+them also has its [volume](#channel-volume),
 a second fader under the gain or the level, and the row grows to hold
 both. An application or capture channel has its volume, with its meter
 under it.
@@ -1779,7 +1789,7 @@ bypassed or failed; an empty chain keeps the plain button.
 HEADPHONES and MONITOR share the row above the matrix: the headphone
 levels and the direct monitor blend on the left, the output picker and its
 volume in a toolbar on the right. INPUTS is hidden, since the row heads
-carry the input gain, mute and plugins; **Arrange** lists it with a button
+carry the input gain, mute, switches and plugins; **Arrange** lists it with a button
 that shows it again, under the matrix. APPLICATIONS sits under the matrix,
 its applications in columns of six: the seventh starts the next column to
 the right, and columns that do not fit the window's width continue below.

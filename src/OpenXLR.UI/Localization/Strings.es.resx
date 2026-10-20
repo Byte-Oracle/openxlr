@@ -2283,6 +2283,18 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="MatrixEffects" xml:space="preserve">
     <value>FX</value>
   </data>
+  <data name="MatrixProcessing" xml:space="preserve">
+    <value>Mic</value>
+  </data>
+  <data name="MatrixProcessingName" xml:space="preserve">
+    <value>Interruptores del micrófono de {0}</value>
+  </data>
+  <data name="MatrixProcessingPhantomName" xml:space="preserve">
+    <value>Interruptores del micrófono de {0}, alimentación phantom activada</value>
+  </data>
+  <data name="MatrixProcessingTip" xml:space="preserve">
+    <value>Los interruptores del micrófono: corte de graves, expansor, Voice Tune, alimentación phantom, ClipGuard y compresor, si la interfaz los tiene. Se ilumina mientras uno está activado. La luz se enciende en rojo mientras la alimentación phantom está activada.</value>
+  </data>
   <data name="IconDefaultNamed" xml:space="preserve">
     <value>Predeterminado ({0})</value>
   </data>

@@ -4,6 +4,7 @@
              xmlns:vm="using:OpenXLR.UI"
              xmlns:skin="using:OpenXLR.UI.Skinning"
              xmlns:layout="using:OpenXLR.UI.Layout"
+             xmlns:views="using:OpenXLR.UI.Views"
              x:Class="OpenXLR.UI.Views.MixMatrixView"
              x:DataType="layout:MixMatrixViewModel">
 
@@ -80,6 +81,46 @@
       </Style>
     </ControlTheme>
 
+    <!-- The processing part's flyout: the INPUTS panel's switches for the input the
+         row carries, bound to the same properties under the same capability rules
+         and styled as they are there, the Voice Tune strength under them while Voice
+         Tune is on, an additional interface's switches, and XLR 1's software low
+         cut and ClipGuard. The mute stays the row head's own part. -->
+    <DataTemplate x:Key="ProcessingSwitches" x:DataType="layout:MatrixRowViewModel">
+      <!-- as wide as the switches need, at most the width the monitor picker's flyout gives its rows, so they wrap as in INPUTS -->
+      <StackPanel Classes="dev" Spacing="6" Name="MatrixProcessingPanel" MaxWidth="400">
+        <TextBlock Text="{Binding Channel.Name}" Classes="h" TextTrimming="CharacterEllipsis"/>
+        <StackPanel Spacing="4" IsVisible="{Binding CarriesUnit}">
+          <WrapPanel Name="MatrixUnitSwitches" ItemSpacing="6" LineSpacing="4">
+            <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding Unit.LowCut, Mode=TwoWay}" IsVisible="{Binding Unit.CapLowCut, FallbackValue=False}"/>
+            <ToggleButton Content="{loc:Text Key=Expander}" IsChecked="{Binding Unit.Expander, Mode=TwoWay}" IsVisible="{Binding Unit.CapExpander, FallbackValue=False}"/>
+            <ToggleButton Content="{loc:Text Key=VoiceTune}" IsChecked="{Binding Unit.VoiceTune, Mode=TwoWay}" IsVisible="{Binding Unit.CapVoiceTune, FallbackValue=False}"/>
+            <ToggleButton Content="{loc:Text Key=Phantom}" IsChecked="{Binding Unit.Phantom, Mode=TwoWay}" IsVisible="{Binding Unit.CapPhantom, FallbackValue=False}"/>
+            <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding Unit.ClipGuard, Mode=TwoWay}" IsVisible="{Binding Unit.CapClipGuard, FallbackValue=False}"/>
+            <ToggleButton Content="{loc:Text Key=Compressor}" IsChecked="{Binding Unit.Compressor, Mode=TwoWay}" IsVisible="{Binding Unit.CapCompressor, FallbackValue=False}"/>
+          </WrapPanel>
+          <Grid Name="MatrixVoiceTuneStrength" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" IsVisible="{Binding Unit.VoiceTune, FallbackValue=False}">
+            <TextBlock Text="{loc:Text Key=VTStrength}" Classes="h" VerticalAlignment="Center"/>
+            <Slider Grid.Column="1" vm:FaderInput.Step="1" Minimum="0" Maximum="100"
+                    Value="{Binding Unit.VoiceTuneStrength, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=VTStrength}"/>
+            <TextBlock Grid.Column="2" Text="{Binding Unit.VoiceTuneStrengthText}" Classes="val" VerticalAlignment="Center"/>
+          </Grid>
+        </StackPanel>
+        <Panel IsVisible="{Binding CarriesExtraUnit}">
+          <views:WaveUnitControls Name="MatrixExtraSwitches" Part="Switches" ShowsMute="False" DataContext="{Binding ExtraUnit}"/>
+        </Panel>
+        <WrapPanel Name="MatrixSoftwareSwitches" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding ShowsSoftware}">
+          <ToggleButton Content="{Binding Main.SoftLowCutText}" IsVisible="{Binding Main.ShowSoftLowCut}"
+                        IsChecked="{Binding Main.SoftLowCutOn, Mode=OneWay}" Click="OnCycleSoftLowCut"
+                        ToolTip.Tip="{loc:Text Key=HostSideLowCutForThisDeviceIts}"/>
+          <ToggleButton Content="{loc:Text Key=ClipGuard}" IsVisible="{Binding Main.ShowSoftClipGuard}"
+                        IsChecked="{Binding Main.SoftClipGuard, Mode=TwoWay}"
+                        IsEnabled="{Binding Main.SoftClipGuardAvailable}"
+                        ToolTip.Tip="{Binding Main.SoftClipGuardTip}"/>
+        </WrapPanel>
+      </StackPanel>
+    </DataTemplate>
+
     <!-- A row head, by what the channel is. -->
     <layout:StripTemplateSelector x:Key="RowHeads">
       <!-- XLR 1: its binding under its name, its hardware gain over its meter, its mute and its chain, under the
@@ -90,7 +131,7 @@
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
                       Name="MatrixRowName">
-                <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
                   <Button Grid.RowSpan="2" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
                           Content="↕" Tag="{Binding Channel}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
@@ -113,6 +154,24 @@
                   <Button Grid.Column="1" Grid.ColumnSpan="2" Grid.RowSpan="2" Name="MatrixBinding" Theme="{StaticResource MatrixBindingTarget}"
                           IsVisible="{Binding ShowsBinding}" Click="OnBinding"
                           AutomationProperties.Name="{Binding Channel.BindingChipName}" ToolTip.Tip="{Binding Channel.BindingTip}"/>
+                  <!-- the microphone's switches behind one button at the end of the name column, wherever the
+                       order puts the part, so the source controls keep their room: lettered as a lit chain while
+                       one is on, with the interface's phantom power lamp, lit while phantom power is on -->
+                  <Button Grid.Column="3" Grid.RowSpan="2" Name="MatrixProcessing" Classes="matrixProcessing fx" Classes.fxOn="{Binding ProcessingOn}"
+                          Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                          MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowsProcessing}"
+                          AutomationProperties.Name="{Binding ProcessingName}" ToolTip.Tip="{loc:Text Key=MatrixProcessingTip}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <skin:StatusLed Name="MatrixPhantom" Kind="Power" IsOn="{Binding PhantomOn}" IsVisible="{Binding HasPhantom}"
+                                      AutomationProperties.AccessibilityView="Raw"/>
+                      <TextBlock Text="{loc:Text Key=MatrixProcessing}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button.Flyout>
+                      <Flyout Placement="BottomEdgeAlignedLeft">
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ProcessingSwitches}"/>
+                      </Flyout>
+                    </Button.Flyout>
+                  </Button>
                 </Grid>
               </Border>
             <Border Width="{DynamicResource Ox.Matrix.CellWidth}" Padding="4,0" Name="MatrixSource">
@@ -185,7 +244,7 @@
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
                       Name="MatrixRowName">
-                <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
                   <Button Grid.RowSpan="2" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
                           Content="↕" Tag="{Binding Channel}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
@@ -208,6 +267,24 @@
                   <Button Grid.Column="1" Grid.ColumnSpan="2" Grid.RowSpan="2" Name="MatrixBinding" Theme="{StaticResource MatrixBindingTarget}"
                           IsVisible="{Binding ShowsBinding}" Click="OnBinding"
                           AutomationProperties.Name="{Binding Channel.BindingChipName}" ToolTip.Tip="{Binding Channel.BindingTip}"/>
+                  <!-- the microphone's switches behind one button at the end of the name column, wherever the
+                       order puts the part, so the source controls keep their room: lettered as a lit chain while
+                       one is on, with the interface's phantom power lamp, lit while phantom power is on -->
+                  <Button Grid.Column="3" Grid.RowSpan="2" Name="MatrixProcessing" Classes="matrixProcessing fx" Classes.fxOn="{Binding ProcessingOn}"
+                          Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                          MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowsProcessing}"
+                          AutomationProperties.Name="{Binding ProcessingName}" ToolTip.Tip="{loc:Text Key=MatrixProcessingTip}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <skin:StatusLed Name="MatrixPhantom" Kind="Power" IsOn="{Binding PhantomOn}" IsVisible="{Binding HasPhantom}"
+                                      AutomationProperties.AccessibilityView="Raw"/>
+                      <TextBlock Text="{loc:Text Key=MatrixProcessing}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button.Flyout>
+                      <Flyout Placement="BottomEdgeAlignedLeft">
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ProcessingSwitches}"/>
+                      </Flyout>
+                    </Button.Flyout>
+                  </Button>
                 </Grid>
               </Border>
             <Border Width="{DynamicResource Ox.Matrix.CellWidth}" Padding="4,0" Name="MatrixSource">
@@ -341,7 +418,7 @@
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
                       Name="MatrixRowName">
-                <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
                   <Button Grid.RowSpan="2" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
                           Content="↕" Tag="{Binding Channel}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
@@ -354,6 +431,24 @@
                   <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Channel.CaptureLabel}" Classes="hint" FontSize="11"
                              TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Channel.CaptureLabel}"
                              IsVisible="{Binding Channel.CaptureLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                  <!-- the microphone's switches behind one button at the end of the name column, wherever the
+                       order puts the part, so the source controls keep their room: lettered as a lit chain while
+                       one is on, with the interface's phantom power lamp, lit while phantom power is on -->
+                  <Button Grid.Column="3" Grid.RowSpan="2" Name="MatrixProcessing" Classes="matrixProcessing fx" Classes.fxOn="{Binding ProcessingOn}"
+                          Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                          MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowsProcessing}"
+                          AutomationProperties.Name="{Binding ProcessingName}" ToolTip.Tip="{loc:Text Key=MatrixProcessingTip}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <skin:StatusLed Name="MatrixPhantom" Kind="Power" IsOn="{Binding PhantomOn}" IsVisible="{Binding HasPhantom}"
+                                      AutomationProperties.AccessibilityView="Raw"/>
+                      <TextBlock Text="{loc:Text Key=MatrixProcessing}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button.Flyout>
+                      <Flyout Placement="BottomEdgeAlignedLeft">
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ProcessingSwitches}"/>
+                      </Flyout>
+                    </Button.Flyout>
+                  </Button>
                 </Grid>
               </Border>
             <Border Width="{DynamicResource Ox.Matrix.CellWidth}" Padding="4,0" Name="MatrixSource">

@@ -218,19 +218,28 @@ public static class SkinMatrixParts
     public const string Master = "master";
     /// <summary>A column head's outputs line: how many monitor outputs hear the mix, or what kind of mix it is.</summary>
     public const string Outputs = "outputs";
+    /// <summary>
+    /// A row head's microphone switches: one button, lit while one of them is
+    /// on and marked while phantom power is, that opens the INPUTS panel's
+    /// low cut, expander, Voice Tune, phantom power, ClipGuard and compressor
+    /// for the input the row carries, with XLR 1's software low cut and
+    /// ClipGuard, in a flyout.
+    /// </summary>
+    public const string Processing = "processing";
 
     /// <summary>
     /// A row head's parts, in their default order: the channel's icon and
     /// name, a microphone strip's input binding, its own meter, the input's
     /// hardware gain or Aux In's level over the channel's own volume (the
-    /// volume alone on a channel without one), the input's hardware mute and
-    /// the input's plugin chain. A
-    /// channel without one of them, an application channel without mute or
-    /// chain, simply does not draw it. The binding stands under the name, in
-    /// the name column, wherever the order puts it.
+    /// volume alone on a channel without one), the input's hardware mute, its
+    /// microphone switches and the input's plugin chain. A channel without one
+    /// of them, an application channel without mute, switches or chain,
+    /// simply does not draw it. The binding stands under the name, in the
+    /// name column, wherever the order puts it.
     /// </summary>
     public static IReadOnlyList<string> RowHead { get; } =
-        [SkinStripParts.Identity, SkinStripParts.Binding, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute, SkinStripParts.Effects];
+        [SkinStripParts.Identity, SkinStripParts.Binding, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute, Processing,
+         SkinStripParts.Effects];
 
     /// <summary>
     /// A column head's parts, in their default order: the mix's icon and

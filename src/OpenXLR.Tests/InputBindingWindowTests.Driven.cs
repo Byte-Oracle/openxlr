@@ -11,6 +11,7 @@ using Avalonia.VisualTree;
 using OpenXLR.UI;
 using OpenXLR.UI.Layout;
 using OpenXLR.UI.Localization;
+using OpenXLR.UI.Skinning;
 using OpenXLR.UI.Views;
 using static OpenXLR.Tests.InputBindingModelTests;
 using static OpenXLR.Tests.WindowLayoutTests;
@@ -108,11 +109,13 @@ internal static partial class InputBindingWindowTests
             while (!stop.IsCancellationRequested)
             {
                 JsonNode cmd = await SocketTestServer.Receive(socket, stop);
-                if (cmd["cmd"]?.GetValue<string>() is not ("setInputBinding" or "createCaptureChannel" or "setWaveInterfaceEnabled" or "setWaveControl")) continue;
+                if (cmd["cmd"]?.GetValue<string>() is not ("setInputBinding" or "createCaptureChannel" or "setWaveInterfaceEnabled" or "setWaveControl" or "set")) continue;
                 commands.Enqueue(cmd);
                 daemon.Handle(cmd);
                 await SocketTestServer.Send(socket, daemon.State(), stop);
-                await SocketTestServer.Send(socket, new { type = "commandResult", requestId = cmd["requestId"]!.GetValue<string>(), error = (string?)null }, stop);
+                // A switch's write is not a request, so it waits for no answer.
+                if (cmd["requestId"] is { } requestId)
+                    await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>(), error = (string?)null }, stop);
             }
         });
 
@@ -201,8 +204,69 @@ internal static partial class InputBindingWindowTests
                 Assert.Equal("MatrixExtraMute", headMute.Name);
                 AssertInside(headGain, head);
                 AssertInside(headMute, head);
+                foreach (MatrixRowViewModel row in matrix.Rows)
+                    SkinLayoutWindowTests.CheckProcessingPlace(SkinLayoutWindowTests.RowHead(surface, row.Channel.Id), row, $"driven at {width}");
                 Capture(surface, $"driven-rack-matrix-{width}");
             }
+
+            // Each row's microphone switches: XLR 1 the Pro's first input's, the
+            // kept channel the Pro's second input's, as the classic panel shows
+            // them, and XLR 2 the Wave:3's, as the rack shows them, less the mute
+            // the head draws. A switch there sends what the classic one sends.
+            Layout(surface, 1040, 900);
+            Layout(window, 1040, 900);
+            foreach ((string row, string classic) in new[] { ("xlr1", "InputControls"), ("promic2", "Input2Controls") })
+            {
+                Button processing = SkinLayoutWindowTests.ProcessingButton(surface, row)!;
+                Assert.True(processing.GetVisualDescendants().OfType<StatusLed>().Single().IsEffectivelyVisible, row);
+                ToggleButton[] switches = SkinLayoutWindowTests.OpenSwitches(surface, processing);
+                Assert.Equal(SkinLayoutWindowTests.ClassicSwitches(window, classic), switches.Select(SkinLayoutWindowTests.Lettering));
+                Assert.Equal(6, switches.Length);
+                if (row == "promic2") Capture(surface, "driven-processing-kept-channel", SkinLayoutWindowTests.FlyoutPanel(processing));
+                processing.Flyout!.Hide();
+            }
+            Button wave3 = SkinLayoutWindowTests.ProcessingButton(surface, "xlr2")!;
+            // The Wave:3 has no phantom power, so no lamp.
+            Assert.False(wave3.GetVisualDescendants().OfType<StatusLed>().Single().IsEffectivelyVisible);
+            ToggleButton[] unitSwitches = SkinLayoutWindowTests.OpenSwitches(surface, wave3);
+            WaveUnitControls rackSwitches = RackStrip(surface, "xlr2").GetVisualDescendants().OfType<WaveUnitControls>().Single(c => c.Name == "RackExtraSwitches");
+            Assert.Equal(rackSwitches.GetVisualDescendants().OfType<ToggleButton>().Where(t => t.IsEffectivelyVisible && t.Name != "WaveUnitMute")
+                .Select(SkinLayoutWindowTests.Lettering), unitSwitches.Select(SkinLayoutWindowTests.Lettering));
+            Assert.Equal([Localizer.Text("ClipGuard")], unitSwitches.Select(SkinLayoutWindowTests.Lettering));
+            Capture(surface, "driven-processing-additional-unit", SkinLayoutWindowTests.FlyoutPanel(wave3));
+
+            async Task<JsonNode> Written(Func<JsonNode, bool> match, int before)
+            {
+                await Until(() => commands.Count(match) > before);
+                return commands.Last(match);
+            }
+            static bool Set(JsonNode c) => c["cmd"]!.GetValue<string>() == "set";
+            static bool WaveSet(JsonNode c) => c["cmd"]!.GetValue<string>() == "setWaveControl" && c["control"]!.GetValue<string>() == "clipGuard";
+            unitSwitches.Single().IsChecked = !unitSwitches.Single().IsChecked;
+            JsonNode fromFlyout = await Written(WaveSet, 0);
+            wave3.Flyout!.Hide();
+            await Until(() => main.WaveInterfaces.Single(w => w.Id == Wave3).ClipGuard);
+            ToggleButton rackClipGuard = rackSwitches.GetVisualDescendants().OfType<ToggleButton>().Single(t => t.IsEffectivelyVisible && t.Name != "WaveUnitMute");
+            rackClipGuard.IsChecked = !rackClipGuard.IsChecked;
+            JsonNode fromRack = await Written(WaveSet, 1);
+            Assert.Equal(Wave3, fromFlyout["device"]!.GetValue<string>());
+            Assert.Equal(Without(fromRack), Without(fromFlyout));
+
+            Button kept = SkinLayoutWindowTests.ProcessingButton(surface, "promic2")!;
+            ToggleButton keptLowCut = SkinLayoutWindowTests.OpenSwitches(surface, kept).Single(t => SkinLayoutWindowTests.Lettering(t) == Localizer.Text("LowCut"));
+            keptLowCut.IsChecked = true;
+            JsonNode keptWrite = await Written(Set, 0);
+            kept.Flyout!.Hide();
+            // The classic button shows it on; off and on again, it writes the same.
+            ToggleButton classicLowCut = window.FindControl<WrapPanel>("Input2Controls")!.Children.OfType<ToggleButton>()
+                .Single(t => SkinLayoutWindowTests.Lettering(t) == Localizer.Text("LowCut"));
+            Assert.True(classicLowCut.IsChecked);
+            classicLowCut.IsChecked = false;
+            await Written(Set, 1);
+            classicLowCut.IsChecked = true;
+            JsonNode classicWrite = await Written(Set, 2);
+            Assert.Equal("lowCut2", keptWrite["control"]!.GetValue<string>());
+            Assert.Equal(Without(classicWrite), Without(keptWrite));
 
             // The controls write to the Wave:3, not to the primary.
             Layout(surface, 640, 900);
@@ -265,6 +329,14 @@ internal static partial class InputBindingWindowTests
             surface.Close();
             window.Close();
             Dispatcher.UIThread.RunJobs();
+        }
+
+        // A command as the daemon reads it, without the id each request carries.
+        static string Without(JsonNode command)
+        {
+            JsonObject copy = command.DeepClone().AsObject();
+            copy.Remove("requestId");
+            return copy.ToJsonString();
         }
 
         // The gain of the view that draws it, and the mute of the view that draws the switches.

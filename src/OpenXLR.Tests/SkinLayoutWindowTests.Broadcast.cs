@@ -175,6 +175,7 @@ internal static partial class SkinLayoutWindowTests
                 }
             }
             SkinService.ApplyControlSizing(false);
+            CheckProcessing(window, model, "broadcast");
 
             // XLR 1 bound to a webcam: the daemon names it Mic 1, its row keeps
             // its name, its binding line and its chain, and loses the interface's
@@ -316,6 +317,7 @@ internal static partial class SkinLayoutWindowTests
             Layout(window, 1040, 1400);
             Assert.Contains(matrix.Rows, r => r.Channel.Id == "xlr2");
             CheckBroadcastAt(window, model, "with XLR 2");
+            CheckProcessingXlr2(window, model);
             model.HasXlr2 = false;
             apply.Invoke(model, [JsonNode.Parse(mixer)]);
             Layout(window, 1040, 1400);
@@ -586,6 +588,7 @@ internal static partial class SkinLayoutWindowTests
             Border source = head.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MatrixSource");
             AssertPartsApart(source);
             CheckLevels(head, model, where);
+            CheckProcessingPlace(head, model, where);
             Border[] cells = [.. row.GetVisualDescendants().OfType<Border>().Where(b => b.Name == "MatrixCell" && b.IsEffectivelyVisible)];
             Assert.Equal(matrix.Columns.Count, cells.Length);
             AssertNoOverlap([head, .. cells]);

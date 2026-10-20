@@ -22,6 +22,12 @@ public partial class MixMatrixView : UserControl
             InsertWindows.OpenChain(window, inserts, key);
     }
 
+    /// <summary>XLR 1's software low cut in the processing flyout: off, 80 Hz, 120 Hz, as in the INPUTS panel.</summary>
+    private void OnCycleSoftLowCut(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is MatrixRowViewModel row) row.Main.CycleSoftLowCut();
+    }
+
     /// <summary>An XLR row's name and binding line: open the binding dialog for the strip.</summary>
     private void OnBinding(object? sender, RoutedEventArgs e)
     {
