@@ -834,9 +834,6 @@
   <data name="InputChainHint" xml:space="preserve">
     <value>Plugins, en orden, antes de que esta entrada llegue a las mezclas</value>
   </data>
-  <data name="InputChannelsHeading" xml:space="preserve">
-    <value>CANALES DE ENTRADA</value>
-  </data>
   <data name="INPUTS" xml:space="preserve">
     <value>ENTRADAS</value>
   </data>

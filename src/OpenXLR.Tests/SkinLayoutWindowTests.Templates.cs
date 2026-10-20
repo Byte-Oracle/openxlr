@@ -98,7 +98,10 @@ internal static partial class SkinLayoutWindowTests
             Assert.NotNull(window.MixBanks);
             Assert.Same(window.MixBanks, panel.Banks);
             Assert.True(panel.BankItems.IsVisible);
-            Assert.False(window.FindControl<TextBlock>("InputChannelHeading")!.IsEffectivelyVisible);
+            // The banks stand in for the classic tiles, master headings and all.
+            Assert.Null(window.FindControl<TextBlock>("InputChannelHeading"));
+            Assert.False(window.FindControl<ItemsControl>("ChannelTiles")!.IsEffectivelyVisible);
+            Assert.False(window.FindControl<TextBlock>("OutputMixHeading")!.IsEffectivelyVisible);
             MixerPresentationViewModel banks = window.MixBanks!;
             Assert.Equal(["monitor", "stream"], banks.Selection);
 
@@ -302,7 +305,8 @@ internal static partial class SkinLayoutWindowTests
             Assert.Null(window.MixBanks);
             Assert.Null(window.InputRackModel);
             Assert.False(panel.BankItems.IsVisible);
-            Assert.True(window.FindControl<TextBlock>("InputChannelHeading")!.IsEffectivelyVisible);
+            Assert.True(window.FindControl<ItemsControl>("ChannelTiles")!.IsEffectivelyVisible);
+            Assert.True(window.FindControl<TextBlock>("OutputMixHeading")!.IsEffectivelyVisible);
             Assert.True(window.FindControl<StackPanel>("HardwarePanel")!.IsVisible);
             Assert.Equal(channels, model.Channels);
             Assert.Equal(mixes, model.Mixes);

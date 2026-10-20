@@ -44,6 +44,7 @@ public sealed partial class SkinWindowTests
             ControlAppearancesSwitchAndTheFaderStillWorks(main);
             NeitherShippedAppearanceBreaksTheLayoutOrTheLabels(main, options, flow);
             EveryBuiltInSkinKeepsTheMainLabelsReadable(main);
+            ChannelTileAlignmentWindowTests.CheckSkins();
             EveryWindowWearsTheSkin(main);
             ACheckBoxLabelTakesItsOwnToken(options);
             IndicatorsAndMetersDrawInsideTheBoxTheyAreGiven();

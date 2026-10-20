@@ -119,8 +119,11 @@ does not reach the speakers until unmuted.
 
 ## Submixer
 
-Input channels and output mixes have separate headings in the submixer, so
-channel sends and mix master controls can be distinguished at a glance.
+The submixer shows the channel strips under its own header and the mix
+masters below them under OUTPUT MIXES, so channel sends and mix master
+controls can be distinguished at a glance. XLR 1, XLR 2 and Aux In leave an
+empty space where an application's Volume row is, so the send rows line up
+across the strips.
 
 The **Flow** window shows inputs, channels, mixes and outputs in four columns.
 Click a card to trace its signal path, with colours for each routing stage and
