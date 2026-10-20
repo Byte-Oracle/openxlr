@@ -493,7 +493,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             if (!_built) return false;
             bool soundCheckChanged = EnsureSoundCheckLocked();
-            if (_chains.Count == 0 && _mixDelays.Count == 0 && _latencyReports.Count == 0) return soundCheckChanged;
+            if (_chains.Count == 0 && _mixDelays.Count == 0 && _latencyReports.Count == 0)
+                return EnsureMixRoutesLocked() || soundCheckChanged;
             bool changed = false;
             // Mix chains heal individually; input chains re-wire the whole input path.
             foreach (MixDefinition mix in _config.Mixes)
@@ -512,6 +513,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 || _chainOuts.Values.Any(l => _pw.EnsureLinks(l) == LinkHealth.Broken);
             if (inputBroken) { WireInputFeedsLocked(); changed = true; }
             changed |= UpdateMixLatencyLocked();
+            changed |= EnsureMixRoutesLocked();
             // A heal can retire the last bridged plugin without any command
             // being given: a chain the restart policy has given up on is left
             // off, and the helper that held Wine up goes with it. No rewire
@@ -524,6 +526,40 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             }
             return changed || soundCheckChanged;
         }
+    }
+
+    private bool EnsureMixRoutesLocked()
+    {
+        bool changed = false;
+        foreach (MixDefinition mix in _config.Mixes)
+        {
+            string key = MixKey(mix);
+            if (_chains.TryGetValue(key, out FilterHandle? chain))
+                changed |= EnsureMixLinkLocked(_mixTaps, key, mix.SinkName, "monitor", chain.SinkName);
+            if (mix.Kind == MixKind.VirtualMic)
+            {
+                (string node, string prefix) = MixTapLocked(mix);
+                changed |= EnsureMixLinkLocked(_mixPostLinks, key, node, prefix, mix.PostSinkName);
+            }
+        }
+        return changed;
+    }
+
+    /// <summary>Repair a stereo mix leg without replacing its running plugin or dropping surviving pairs.</summary>
+    private bool EnsureMixLinkLocked(Dictionary<string, PortLink> routes, string key, string from, string prefix, string to)
+    {
+        PortLink? previous = routes.GetValueOrDefault(key);
+        if (previous is { Pairs.Count: >= 2 })
+        {
+            LinkHealth health = _pw.EnsureLinks(previous);
+            if (health != LinkHealth.Broken) return health == LinkHealth.Relinked;
+        }
+        PortLink fresh = _pw.LinkNodes(from, prefix, to, "playback");
+        routes[key] = fresh;
+        if (previous is not null)
+            _pw.Unlink(new PortLink([.. previous.Pairs.Except(fresh.Pairs)]));
+        return fresh.Complete && fresh.Pairs.Count >= 2
+            || previous is not null && (previous.Complete != fresh.Complete || !previous.Pairs.ToHashSet().SetEquals(fresh.Pairs));
     }
 
     /// <summary>
