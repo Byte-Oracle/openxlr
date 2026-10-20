@@ -547,9 +547,19 @@ public sealed partial class MainViewModel : ViewModelBase
     {
         Raise(nameof(MonitorSummary));
         if (_applying) return;
-        var names = MonitorOutputs.Where(o => o.IsSelected).Select(o => o.Name).ToList();
+        // The daemon's order first, so the output the desktop volume drives
+        // stays first, then what was just ticked.
+        var ticked = MonitorOutputs.Where(o => o.IsSelected).Select(o => o.Name).ToHashSet();
+        var names = _monitorSelection.Where(ticked.Contains)
+            .Concat(MonitorOutputs.Where(o => o.IsSelected && !_monitorSelection.Contains(o.Name)).Select(o => o.Name))
+            .ToList();
         _ = _client.SetMonitorOutputsAsync(names);
     }
+
+    // The monitor outputs as the daemon last reported them, in its order.
+    private List<string> _monitorSelection = [];
+    // Device descriptions seen this session, to name a selected output while it is missing.
+    private readonly Dictionary<string, string> _outputLabels = [];
 
     /// <summary>Enforced defaults as reported by the daemon (for the Options window).</summary>
     public string? EnforcedDefaultSink { get; private set; }
@@ -962,14 +972,26 @@ public sealed partial class MainViewModel : ViewModelBase
         Replace(Outputs, sinks);
         Replace(Inputs, sources);
 
+        _monitorSelection = (mixer?["monitorOutputs"] as JsonArray)?.Select(n => n?.GetValue<string>())
+            .Where(n => n is not null).Select(n => n!).Distinct().ToList() ?? [];
+        var current = new HashSet<string>(_monitorSelection);
+        foreach (AudioDeviceItem s in sinks) _outputLabels[s.Name] = s.Label;
+
+        // A selected output whose device is unplugged, asleep or not yet
+        // probed stays in the list, ticked and named as missing. The daemon
+        // keeps it selected and routes to it again when it returns; a list
+        // without it would send a selection that drops it at the next tick.
+        var wanted = sinks.Where(s => !s.IsOwn).Select(s => (s.Name, s.Label, Present: true)).ToList();
+        foreach (string name in _monitorSelection.Where(n => !sinks.Any(s => s.Name == n)))
+            wanted.Add((name, Localizer.Format("MonitorOutputMissing", _outputLabels.GetValueOrDefault(name) ?? name), false));
+
         // Rebuild the multi-select list only when membership changed, so open
         // dropdowns and checkbox states survive routine pushes.
-        var wanted = sinks.Where(s => !s.IsOwn).ToList();
-        if (!wanted.Select(w => w.Name).SequenceEqual(MonitorOutputs.Select(m => m.Name)))
+        if (!wanted.Select(w => (w.Name, w.Present)).SequenceEqual(MonitorOutputs.Select(m => (m.Name, m.IsPresent))))
         {
             MonitorOutputs.Clear();
-            foreach (AudioDeviceItem s in wanted)
-                MonitorOutputs.Add(new MonitorOutputItem(s.Name, s.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged));
+            foreach (var w in wanted)
+                MonitorOutputs.Add(new MonitorOutputItem(w.Name, w.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged, w.Present));
         }
 
         EnforcedDefaultSink = mixer?["enforcedDefaultSink"]?.GetValue<string>();
@@ -978,9 +1000,6 @@ public sealed partial class MainViewModel : ViewModelBase
         if (!SliderSync.RecentlyTouched("outvol"))
             OutputVolume = mixer?["outputVolume"]?.GetValue<double>() ?? 0;
 
-        var current = new HashSet<string>(
-            (mixer?["monitorOutputs"] as JsonArray)?.Select(n => n?.GetValue<string>())
-                .Where(n => n is not null).Select(n => n!) ?? []);
         foreach (MonitorOutputItem item in MonitorOutputs) item.Sync(current.Contains(item.Name));
 
         var allMixes = (mixer?["mixes"] as JsonArray)?.Where(m => m is not null).ToList() ?? [];
@@ -1376,16 +1395,20 @@ public sealed class MonitorOutputItem : ViewModelBase
     private readonly Action<string, string> _feedChanged;
     private bool _syncing;
 
-    public MonitorOutputItem(string name, string label, Action changed, Action<string, string> feedChanged)
+    public MonitorOutputItem(string name, string label, Action changed, Action<string, string> feedChanged, bool isPresent = true)
     {
         Name = name;
         Label = label;
+        IsPresent = isPresent;
         _changed = changed;
         _feedChanged = feedChanged;
     }
 
     public string Name { get; }
     public string Label { get; }
+
+    /// <summary>False for a selected output whose device is missing; it stays selected until unticked.</summary>
+    public bool IsPresent { get; }
 
     /// <summary>The mixes this output can be fed by.</summary>
     public ObservableCollection<MixOption> Feeds { get; } = [];

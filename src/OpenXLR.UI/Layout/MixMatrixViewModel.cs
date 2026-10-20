@@ -134,10 +134,11 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
 
     /// <summary>
     /// How many of the window's monitor outputs hear this mix now: the ones
-    /// ticked in MONITOR whose feed is the mix, alone or summed with another.
+    /// ticked in MONITOR whose feed is the mix, alone or summed with another,
+    /// and whose device is there.
     /// </summary>
     internal int OutputsOf(MixViewModel mix) => _main.MonitorOutputs.Count(o =>
-        o.IsSelected && o.Feed is { } feed && feed.Id.Split('+').Contains(mix.Id, StringComparer.Ordinal));
+        o.IsSelected && o.IsPresent && o.Feed is { } feed && feed.Id.Split('+').Contains(mix.Id, StringComparer.Ordinal));
 
     private void OnMixesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
