@@ -60,7 +60,14 @@ public sealed partial class MonitorVolumeIntegrationTests
         {
             pw.CreateNullSink("link_source", "Source");
             pw.CreateNullSink("link_target", "Target");
-            WaitForRecovery(() => pw.FindNodeId("link_source") is not null && pw.FindNodeId("link_target") is not null);
+            // A node publishes its ports a moment after the node itself, and
+            // LinkNodes pairs the ports it can list at that moment.
+            WaitForRecovery(() =>
+            {
+                string outs = ProcessRunner.Run("pw-link", ["-o"]).StdoutText, ins = ProcessRunner.Run("pw-link", ["-i"]).StdoutText;
+                return new[] { "FL", "FR" }.All(side => outs.Contains("link_source:monitor_" + side, StringComparison.Ordinal)
+                    && ins.Contains("link_target:playback_" + side, StringComparison.Ordinal));
+            });
             PortLink link = pw.LinkNodes("link_source", "monitor", "link_target", "playback");
             Assert.Equal(2, link.Pairs.Count);
             Assert.True(SpinWait.SpinUntil(() => pw.EnsureLinks(link) == LinkHealth.Healthy, TimeSpan.FromSeconds(3)));
