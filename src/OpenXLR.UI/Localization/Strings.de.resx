@@ -2493,6 +2493,39 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="EqStatusDevice" xml:space="preserve">
     <value>An, läuft auf dem Interface.</value>
   </data>
+  <data name="EqHardwareBadge" xml:space="preserve">
+    <value>Hardware-Verarbeitung</value>
+  </data>
+  <data name="EqHardwareBadgeTip" xml:space="preserve">
+    <value>Dieser EQ läuft auf dem eigenen Prozessor von {0}, vor USB.</value>
+  </data>
+  <data name="EqHardwareBadgeTipUnnamed" xml:space="preserve">
+    <value>Dieser EQ läuft auf dem eigenen Prozessor des Interfaces, vor USB.</value>
+  </data>
+  <data name="EqTheInterface" xml:space="preserve">
+    <value>Interface</value>
+  </data>
+  <data name="EqStatusDeviceNamed" xml:space="preserve">
+    <value>An, läuft auf dem eigenen Prozessor von {0}.</value>
+  </data>
+  <data name="EqDeviceFirmwareOld" xml:space="preserve">
+    <value>Läuft in Software: {0} hat Firmware {1}, und das Gerät rechnet den EQ ab Firmware {2} selbst. Elgatos Updater ist in Wave Link unter Windows oder macOS.</value>
+  </data>
+  <data name="EqDeviceFirmwareUnknown" xml:space="preserve">
+    <value>Läuft in Software: Die Firmware-Version von {0} ließ sich nicht lesen, und das Gerät rechnet den EQ erst ab Firmware {1} selbst.</value>
+  </data>
+  <data name="EqDeviceUnsupported" xml:space="preserve">
+    <value>Läuft in Software: {0} enthält EQ-Einstellungen, die OpenXLR nicht erkennt. Sammle die Diagnose für einen Gerätebericht.</value>
+  </data>
+  <data name="EqDeviceFailed" xml:space="preserve">
+    <value>Läuft in Software: {0} hat den geschriebenen EQ nicht behalten. Schalte den EQ aus und wieder an, um es erneut mit dem Gerät zu versuchen.</value>
+  </data>
+  <data name="EqDeviceBySoftware" xml:space="preserve">
+    <value>Läuft wie gewählt in Software; {0} kann ihn auf dem eigenen Prozessor rechnen.</value>
+  </data>
+  <data name="EqButtonTipDevice" xml:space="preserve">
+    <value>Der Vierband-EQ des Mikrofons, auf dem eigenen Prozessor von {0} vor USB. Leuchtet, solange er an ist. Öffnet den Editor.</value>
+  </data>
   <data name="EqStatusStarting" xml:space="preserve">
     <value>An, startet.</value>
   </data>

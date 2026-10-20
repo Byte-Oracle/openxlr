@@ -21,6 +21,15 @@ namespace OpenXLR.Core.Devices;
 /// compressor follow the Pro's bit positions, which the tester's block dump
 /// matched, and await the same verification.
 ///
+/// From firmware 1.0.15 the same block carries a four-band EQ the unit runs
+/// on its own DSP: a switch at byte 2 bit 0 and five bytes per band from
+/// byte 18 (<see cref="WaveFxEq"/>). Wave Link 3.5 writes the whole block per
+/// change with no commit. Its curves match the RBJ cookbook OpenXLR's
+/// software EQ uses, measured on the XLR Dock MK.2 within about 1 dB for
+/// every type. Block 0x0000 (117 bytes) holds the firmware version at bytes 5
+/// to 7, read once at connect; the EQ is driven only from 1.0.15, the version
+/// both models were measured on.
+///
 /// The XLR Dock MK.2 (<see cref="XlrDockMk2Device"/>) presents the same USB
 /// descriptor layout (five interfaces, vendor interface 3 whose alternate
 /// setting 0 has no endpoints; we never leave that setting)
@@ -35,6 +44,8 @@ public class WaveXlrMk2Device : IAudioDevice
     private const byte RtWrite = 0x41;
     private const byte VReq = 0x01;
 
+    private const ushort BlockIdentity = 0x0000;
+    private const int IdentityLen = 117;
     private const ushort BlockCrossfade = 0x0001;
     private const ushort BlockSettings = 0x0004;
     private const ushort BlockHp = 0x0005;
@@ -69,9 +80,23 @@ public class WaveXlrMk2Device : IAudioDevice
 
     public DeviceInfo Info { get; }
 
-    public DeviceCapabilities Capabilities { get; }
+    /// <summary>The model's controls, with <see cref="DeviceCapabilities.HardwareEq"/> set at connect.</summary>
+    public DeviceCapabilities Capabilities { get; private set; }
+    private readonly DeviceCapabilities _modelCapabilities;
+
+    /// <summary>The version block 0x0000 reports, as major.minor.patch; null until read.</summary>
+    public string? Firmware { get; private set; }
+
+    /// <summary>Whether this unit runs the EQ, decided at connect by its firmware and its block.</summary>
+    public DeviceEqSupport? EqSupport { get; private set; }
+
+    // The settings block as the last read or write left it, which ReadEq
+    // decodes without a transfer.
+    private byte[]? _settings;
 
     public WaveXlrMk2Device() : this(ProductId, "Wave XLR MK.2", physicalControls: true, vIndex: 0x0203) { }
+
+    internal WaveXlrMk2Device(IUsbTransport usb) : this(ProductId, "Wave XLR MK.2", physicalControls: true, vIndex: 0x0203, usb: usb) { }
 
     /// <param name="model">Must match the device's iProduct string minus the
     /// vendor, since the daemon derives the PipeWire node-name hint from it.</param>
@@ -83,7 +108,7 @@ public class WaveXlrMk2Device : IAudioDevice
         _alternateVIndex = alternateVIndex;
         _usb = usb ?? UsbTransport.Create();
         Info = UsbTransport.WithLocation(new DeviceInfo("Elgato", model, VendorId, productId));
-        Capabilities = new DeviceCapabilities
+        Capabilities = _modelCapabilities = new DeviceCapabilities
         {
             Gain = true,
             PhysicalControls = physicalControls,
@@ -114,35 +139,97 @@ public class WaveXlrMk2Device : IAudioDevice
     {
         lock (_lock)
         {
-            ConnectionNote = null;
-            _vIndex = _preferredVIndex;
+            ForgetUnitLocked();
             if (!_usb.Open(VendorId, Info.ProductId))
                 throw new InvalidOperationException($"{Info.Model} present but could not be opened (udev rule?)");
             try
             {
-                if (_alternateVIndex is not ushort alternate) return;
-                if (ProbeBank()) return;
-                _vIndex = alternate;
-                if (ProbeBank())
-                {
-                    ConnectionNote = $"USB control bank 0x{alternate:x4} selected: 0x{_preferredVIndex:x4} did not answer the expected blocks.";
-                    return;
-                }
-                // Neither bank answered the three blocks the way both known
-                // variants do. Stay open on the preferred bank rather than
-                // refuse the device: the ordinary reads then report what the
-                // firmware really does and diagnostics can dump the blocks,
-                // which is what a third variant needs to be understood.
-                _vIndex = _preferredVIndex;
-                ConnectionNote = $"neither USB control bank 0x{_preferredVIndex:x4} nor 0x{alternate:x4} answered the expected settings, headphones and crossfade blocks; using 0x{_preferredVIndex:x4}. Collect diagnostics for a device report.";
+                bool answered = SelectBank();
+                ReadEqSupport(answered);
             }
             catch
             {
                 _usb.Close();
-                _vIndex = _preferredVIndex;
+                ForgetUnitLocked();
                 throw;
             }
         }
+    }
+
+    // What one connection learnt about its unit; a reconnect learns it again,
+    // since a firmware update re-enumerates the unit.
+    private void ForgetUnitLocked()
+    {
+        ConnectionNote = null;
+        Firmware = null;
+        EqSupport = null;
+        Capabilities = _modelCapabilities;
+        _settings = null;
+        _vIndex = _preferredVIndex;
+    }
+
+    /// <summary>The bank the unit answers on; false when neither known bank answered.</summary>
+    private bool SelectBank()
+    {
+        if (_alternateVIndex is not ushort alternate) return true;
+        if (ProbeBank()) return true;
+        _vIndex = alternate;
+        if (ProbeBank())
+        {
+            ConnectionNote = $"USB control bank 0x{alternate:x4} selected: 0x{_preferredVIndex:x4} did not answer the expected blocks.";
+            return true;
+        }
+        // Neither bank answered the three blocks the way both known
+        // variants do. Stay open on the preferred bank rather than
+        // refuse the device: the ordinary reads then report what the
+        // firmware really does and diagnostics can dump the blocks,
+        // which is what a third variant needs to be understood.
+        _vIndex = _preferredVIndex;
+        ConnectionNote = $"neither USB control bank 0x{_preferredVIndex:x4} nor 0x{alternate:x4} answered the expected settings, headphones and crossfade blocks; using 0x{_preferredVIndex:x4}. Collect diagnostics for a device report.";
+        return false;
+    }
+
+    /// <summary>
+    /// The firmware gate: block 0x0000 once, then the settings block when the
+    /// version is 1.0.15 or later, whose EQ fields must decode. Anything else
+    /// leaves the EQ to software and says why. On a bank that did not answer,
+    /// nothing is read. A unit that stalls or answers short here is not
+    /// refused: only its EQ runs in software.
+    /// </summary>
+    private void ReadEqSupport(bool bankAnswered)
+    {
+        Version? version = null;
+        if (bankAnswered)
+        {
+            var identity = new byte[IdentityLen];
+            int n = TransferWithRetry(RtRead, VReq, BlockIdentity, identity, IdentityLen);
+            if (n > 0) version = WaveFxEq.FirmwareVersion(identity.AsSpan(0, n));
+        }
+        Firmware = version is null ? null : $"{version.Major}.{version.Minor}.{version.Build}";
+        string model = Info.Model;
+        if (version is null)
+            EqSupport = new(false, DeviceEqSupport.FirmwareUnknown,
+                $"The firmware version of this {model} could not be read, so its EQ runs in software.");
+        else if (version < WaveFxEq.EqFirmware)
+            EqSupport = new(false, DeviceEqSupport.FirmwareOld,
+                $"This {model} has firmware {Firmware}. From 1.0.15 the unit runs the EQ itself; Elgato's updater is in Wave Link on Windows or macOS.");
+        else
+        {
+            byte[] block = Read(BlockSettings, SettingsLen, used: 0);
+            if (block.Length >= WaveFxEq.StructLength && WaveFxEq.Decodes(WaveFxEq.Decode(block)))
+            {
+                _settings = block;
+                EqSupport = new(true);
+            }
+            else
+            {
+                EqSupport = new(false, DeviceEqSupport.UnsupportedBlock,
+                    $"This {model} holds EQ settings OpenXLR does not recognise, so its EQ runs in software. Collect diagnostics for a device report.");
+                string note = "the EQ fields of the settings block do not decode, so the microphone EQ runs in software. Collect diagnostics for a device report.";
+                ConnectionNote = ConnectionNote is null ? note : $"{ConnectionNote} Also, {note}";
+            }
+        }
+        Capabilities = _modelCapabilities with { HardwareEq = EqSupport.Ready };
     }
 
     // A successful settings read alone is not enough to authorize writes, so
@@ -168,8 +255,7 @@ public class WaveXlrMk2Device : IAudioDevice
         lock (_lock)
         {
             _usb.Close();
-            _vIndex = _preferredVIndex;
-            ConnectionNote = null;
+            ForgetUnitLocked();
         }
     }
 
@@ -236,6 +322,7 @@ public class WaveXlrMk2Device : IAudioDevice
     public DeviceState ReadState()
     {
         byte[] s = Read(BlockSettings, SettingsLen, SettingsUsed);
+        lock (_lock) _settings = s;
         byte[] hp = Read(BlockHp, HpLen, HpUsed);
         byte[] xf = Read(BlockCrossfade, CrossfadeLen, CrossfadeUsed);
         return new DeviceState
@@ -286,16 +373,52 @@ public class WaveXlrMk2Device : IAudioDevice
             ? (byte)(b[ClipGuardOffset] & ~ClipGuardOffMask)
             : (byte)(b[ClipGuardOffset] | ClipGuardOffMask));
 
+    public bool SetEq(int input, DeviceEq eq)
+    {
+        if (input != 1 || EqSupport?.Ready != true)
+            throw new InvalidOperationException($"{Info.Model}: this unit does not run the EQ on input {input}");
+        lock (_lock)
+        {
+            byte[] b = Read(BlockSettings, SettingsLen, WaveFxEq.StructLength);
+            byte[] held = (byte[])b.Clone();
+            WaveFxEq.Encode(b, eq);
+            if (b.AsSpan().SequenceEqual(held))
+            {
+                _settings = held;
+                return false;
+            }
+            Write(BlockSettings, b);
+            _settings = b;
+            return true;
+        }
+    }
+
+    public DeviceEq? ReadEq(int input)
+    {
+        lock (_lock)
+            return input == 1 && EqSupport?.Ready == true && _settings is { Length: >= WaveFxEq.StructLength } s ? WaveFxEq.Decode(s) : null;
+    }
+
     public IReadOnlyDictionary<string, string> DumpBlocks()
     {
         var blocks = new Dictionary<string, string>();
         foreach ((string name, ushort block, int len) in new[]
-                 { ("settings", BlockSettings, SettingsLen), ("hp", BlockHp, HpLen),
+                 { ("identity", BlockIdentity, IdentityLen), ("settings", BlockSettings, SettingsLen), ("hp", BlockHp, HpLen),
                    ("crossfade", BlockCrossfade, CrossfadeLen) })
         {
-            try { blocks[name] = Convert.ToHexString(Read(block, len, used: 0)); }
+            try
+            {
+                byte[] read = Read(block, len, used: 0);
+                blocks[name] = Convert.ToHexString(read);
+                if (block == BlockSettings)
+                    blocks["eq"] = WaveFxEq.Decode(read) is { } eq
+                        ? eq + (WaveFxEq.Decodes(eq) ? "" : " (outside the EQ's ranges)")
+                        : "too short to hold the EQ";
+            }
             catch (Exception ex) { blocks[name] = $"error: {ex.Message}"; }
         }
+        blocks["firmware"] = Firmware ?? "not read";
+        blocks["eqSupport"] = EqSupport is { } support ? support.Ready ? "on the unit" : $"in software: {support.Reason}" : "not decided";
         return blocks;
     }
 }

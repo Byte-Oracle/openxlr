@@ -28,6 +28,14 @@ public interface IAudioDevice : IDisposable
     /// <summary>The unit's firmware version as it reports it, or null where it is not read. Read after <see cref="Connect"/>.</summary>
     string? Firmware => null;
 
+    /// <summary>
+    /// Whether this unit runs the microphone EQ on its own DSP, and why not
+    /// when its model can but this unit does not. Null on a model without a
+    /// hardware EQ. Read after <see cref="Connect"/>;
+    /// <see cref="DeviceCapabilities.HardwareEq"/> is its <c>Ready</c>.
+    /// </summary>
+    DeviceEqSupport? EqSupport => null;
+
     void Connect();
     void Disconnect();
 
@@ -59,6 +67,24 @@ public interface IAudioDevice : IDisposable
     void SetPhantom2(bool on) { }
     void SetClipGuard2(bool on) { }
     void SetCompressor2(bool on) { }
+
+    // The microphone EQ on the unit's own DSP. Default no-ops, like the
+    // second-input setters; a unit whose capabilities report HardwareEq
+    // overrides them.
+    /// <summary>
+    /// Write one input's EQ (1 or 2) through a read of the settings block, an
+    /// edit of the fields the EQ owns and a write of the whole block. A value
+    /// with no bands writes the switch alone. False when the unit already
+    /// held it and nothing was written.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The unit does not run the EQ, or a transfer failed.</exception>
+    bool SetEq(int input, DeviceEq eq) => throw new InvalidOperationException("this unit does not run the EQ");
+
+    /// <summary>
+    /// One input's EQ as the last poll read it, raw, without a transfer; null
+    /// where the unit does not run the EQ or nothing has been read yet.
+    /// </summary>
+    DeviceEq? ReadEq(int input) => null;
 
     // Physical output routing and aux input. Default no-ops; devices with
     // OutputRouting / AuxInput capabilities override them.
@@ -151,10 +177,12 @@ public sealed record DeviceCapabilities
     public bool Compressor { get; init; }
 
     /// <summary>
-    /// The unit's DSP runs the microphone EQ and the driver can write it.
-    /// False on every model today: the MK.2 family keeps EQ values it does
-    /// not apply, and the Wave XLR Pro's EQ protocol is not known yet, so
-    /// every microphone's EQ runs in software.
+    /// The unit's DSP runs the microphone EQ and the driver can write it:
+    /// the Wave XLR MK.2 and the XLR Dock MK.2 from firmware 1.0.15, whose
+    /// settings block holds four bands and a switch they apply (measured on
+    /// both). False on every other model and on older firmware, where the
+    /// microphone's EQ runs in software; the Wave XLR Pro's EQ protocol is
+    /// not known yet.
     /// </summary>
     public bool HardwareEq { get; init; }
 

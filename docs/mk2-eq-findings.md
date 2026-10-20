@@ -493,18 +493,20 @@ stored +3.25 dB shelf at 227 Hz and -3 dB bell at 860 Hz did nothing.
 
 ## What this means for OpenXLR
 
-- On firmware 1.0.15 the MK.2 family has a hardware equalizer OpenXLR
-  can drive. The layout is known, a write applies at once, and its filters
-  match OpenXLR's software EQ for the same values. OpenXLR does not drive
-  it yet, and the `hardwareEq` capability stays false on every model.
+- On firmware 1.0.15 the MK.2 family has a hardware equalizer, and
+  OpenXLR drives it: the layout is known, a write applies at once, and its
+  filters match OpenXLR's software EQ for the same values. A microphone
+  that carries such a unit's input runs its EQ there, and the unit's
+  `hardwareEq` capability is true; see
+  [where the EQ runs](api.md#where-the-eq-runs).
 - OpenXLR's four-band [microphone EQ](api.md#microphone-eq) runs in
-  software. It stays the EQ for every device and firmware without a
-  hardware one, which includes the dock on firmware 1.0.0 unless the
-  switch turns out to work there.
-- Wave Link 3.5 leaves the hardware EQ on when it quits. A unit it has
-  driven can run that EQ under Linux before any processing OpenXLR
-  applies, and OpenXLR does not show it. Byte 2 of the settings block in
-  a diagnostics dump tells.
+  software for every device and firmware without a hardware one, which
+  includes the dock on firmware 1.0.0 unless the switch turns out to work
+  there.
+- Wave Link 3.5 leaves the hardware EQ on when it quits. When such a unit
+  connects, OpenXLR writes the microphone's own EQ over it, or switches it
+  off on an input whose EQ runs in software. Byte 2 of the settings block
+  in a diagnostics dump shows the switch.
 - The dock's control bank depends on its firmware: `0x0103` on 1.0.0 and
   `0x0203` on 1.0.15. OpenXLR's dock backend tries `0x0103` first and
   `0x0203` when a block stalls or answers short. On the updated dock

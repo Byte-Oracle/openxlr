@@ -1444,6 +1444,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 CompensateMixLatency = _compensateMixLatency,
                 Inserts = CopyInsertsLocked(),
                 Eq = new Dictionary<string, MicEq>(_eq, StringComparer.Ordinal),
+                EqProcessing = new Dictionary<string, string>(_eqProcessing, StringComparer.Ordinal),
                 Appearance = ExportAppearanceLocked(),
             };
         }
@@ -1574,8 +1575,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 rebuildAll = true;
             }
             // The EQs first, so a strip built below starts with them. A
-            // microphone the file does not name keeps its EQ.
+            // microphone the file does not name keeps its EQ. Where each one
+            // runs is machine wiring, read only from this file.
             RecallEqLocked(s.Eq);
+            _eqProcessing.Clear();
+            foreach ((string channel, string processing) in s.EqProcessing)
+                if (processing == MicEqProcessing.Software) _eqProcessing[channel] = processing;
             // A chain the file does not name keeps what it has, and only a
             // chain whose structure changed is built again.
             if (chainsChanged || rebuildAll || s.Inserts.Count > 0)
@@ -2689,7 +2694,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     BindingWarning = BindingWarningLocked(c),
                     UnitInput = unitInputs.GetValueOrDefault(c.Id),
                     Volume = ChannelVolumeLocked(c.Id),
-                    Eq = IsMicrophoneId(c.Id) ? EqStateLocked(c.Id) : null,
+                    Eq = IsMicrophoneId(c.Id) ? EqStateLocked(c.Id, unitInputs) : null,
                 })],
                 RenamedSinceStart = _renamedSinceBuild,
                 MonitorOutput = _monitorOutputs.FirstOrDefault(),

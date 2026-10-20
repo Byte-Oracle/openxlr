@@ -99,10 +99,10 @@ failed reads and the unit has not answered yet, `state` holds the last values
 read from it and `warning` says the unit does not answer.
 
 The state message in full. At the top level: `daemonVersion`, `daemonBuildId`, `warning`,
-`connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 or Wave:1 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3 and Wave:1), `capabilities` (`gain`,
+`connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 or Wave:1 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3, the Wave:1 and the MK.2 family), `capabilities` (`gain`,
 `mute`, `lowCut`, `expander`, `voiceTune`, `hpVolume`, `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`, `compressor`, `outputRouting`,
-`auxInput`, `xlrInputs`, `xlrJacks` (false on the Wave:3 and Wave:1, whose one input is the microphone's own capsule rather than an XLR jack), `hpOutputs`, `physicalControls`, `retainsSettings`, `hardwareEq` (the unit's DSP runs the [microphone EQ](#microphone-eq) and the driver can write it; false on every model today),
+`auxInput`, `xlrInputs`, `xlrJacks` (false on the Wave:3 and Wave:1, whose one input is the microphone's own capsule rather than an XLR jack), `hpOutputs`, `physicalControls`, `retainsSettings`, `hardwareEq` (the unit's DSP runs the [microphone EQ](#microphone-eq) and the driver can write it: true on the Wave XLR MK.2 and the XLR Dock MK.2 from firmware 1.0.15, false on every other model and on older firmware),
 `builtInDefaults`, and `gainMaxDb`, the highest gain in dB that `gain` and
 `gain2` take, from 0: 80 on the Wave XLR Pro and the MK.2 family, 75 on the
 Wave XLR and the first XLR Dock, 40 on the Wave:3 and Wave:1; a higher value is held
@@ -222,7 +222,8 @@ that final acknowledgement (or an `error` without a request id):
 | `soundCheck` | `channel`, `action` | Sound Check on `xlr1` or `xlr2`; no other channel takes it. `record` starts a session if none runs and records up to ten seconds, replacing an earlier sample; `loop` plays the sample into the channel in place of the microphone and needs at least a tenth of a second recorded; `live` goes back to the microphone and keeps the sample; `stop` ends the session and discards the sample. One session at a time: `record`, `loop` and `live` for the other channel are refused, and its `stop` does nothing. Every action but `stop` is refused at once when the native plugin host is not installed. Never saved. See [Sound Check](#sound-check) |
 | `setEq` | `channel`, `eq` | replace a microphone's whole EQ: `eq` is `{enabled, bands}` with exactly four bands, each `{enabled, type, frequency, gain, q}` with every field. `channel` is `xlr1` or `xlr2`; any other channel is refused. See [microphone EQ](#microphone-eq) |
 | `setEqEnabled` | `channel`, `value` | the EQ's own switch, a boolean. Off bypasses inside the running stage, so on and off compare at once |
-| `setEqBand` | `channel`, `band`, at least one of `enabled`, `type`, `frequency`, `gain`, `q` | change part of one band, 1 to 4; an absent field keeps its value. Values outside the ranges are refused, not clamped, and what is taken is snapped onto the EQ's steps. Switching the EQ on, here or through `setEq`, is refused at once when the native plugin host is not installed |
+| `setEqBand` | `channel`, `band`, at least one of `enabled`, `type`, `frequency`, `gain`, `q` | change part of one band, 1 to 4; an absent field keeps its value. Values outside the ranges are refused, not clamped, and what is taken is snapped onto the EQ's steps. Switching the EQ on, here or through `setEq`, is refused at once when the native plugin host is not installed and no unit runs the channel's EQ |
+| `setEqProcessing` | `channel`, `value` | where a microphone's EQ runs when the unit it carries can run it: `device` (the default) on the unit's own DSP, or `software` on this computer. Any other value is refused. Saved in `mixer.json` under `eqProcessing`, never in a profile. Moving between the two switches the leaving one off first. See [where the EQ runs](#where-the-eq-runs) |
 | `adjustOutputVolume` | optional `device`, `value` | change a PipeWire output by desktop percentage points (`0.05` is 5%). Finite steps from -0.5 to 0.5, final volume clamped to 0 through 1.5. Omit `device` for the current desktop default |
 | `setOutputDeviceVolume` | optional `device`, `value` | set a PipeWire output's desktop volume; `value` finite, 0 to 1.5 on the desktop scale (1.0 is 100%), rejected outside that range. A monitor mix sink is set through its mix master; a selected monitor output follows the linked monitor-volume behaviour. Omit `device` for the current desktop default; device names are accepted and rejected as for `adjustOutputVolume` |
 | `toggleOutputMute` | optional `device` | toggle an output's mute; omit `device` for the current desktop default. On one of the selected monitor outputs it toggles the mute of the mixes feeding that output (what pressing a Deck dial on the monitor does), so the mixer window, dial rings and keys agree; on a monitor mix sink it toggles that mix; on any other output it toggles the sink's mute at the audio server |
@@ -989,16 +990,18 @@ that channel clears it or a new `record` replaces it.
 ### Microphone EQ
 
 XLR 1 and XLR 2 each have a four-band EQ with the controls, ranges, steps
-and curves of Wave Link's. It runs in the native plugin host at the head of
-the input's route, before the software low cut, ClipGuard and the inserts,
-so the channel volume, the sends, the meters and Sound Check's loop all see
-the equalised signal; the Wave XLR Pro's zero-latency hardware path and the
-other units' hardware monitor mix carry the raw microphone. It adds no
-latency. It is off until switched on.
+and curves of Wave Link's. On the Wave XLR MK.2 and the XLR Dock MK.2 from
+firmware 1.0.15 the unit's own DSP runs it (see
+[where the EQ runs](#where-the-eq-runs)). Everywhere else it runs in the
+native plugin host at the head of the input's route, before the software
+low cut, ClipGuard and the inserts, so the channel volume, the sends, the
+meters and Sound Check's loop all see the equalised signal; the Wave XLR
+Pro's zero-latency hardware path and the other units' hardware monitor mix
+carry the raw microphone. It adds no latency. It is off until switched on.
 
 A channel's `eq` in the mixer state is
-`{enabled, bands, backend, available, error}`. `bands` holds four
-`{enabled, type, frequency, gain, q}`:
+`{enabled, bands, backend, available, error, processing, device}`. `bands`
+holds four `{enabled, type, frequency, gain, q}`:
 
 - `type`: `lowCut` (high pass), `lowShelf`, `peak` (a bell, which Wave Link
   calls Band Pass), `notch`, `highShelf` or `highCut` (low pass).
@@ -1012,12 +1015,14 @@ A channel's `eq` in the mixer state is
 
 The defaults are Wave Link's: a 36 Hz `lowCut`, `peak` bands at 310 Hz and
 2172 Hz, and a 15049 Hz `highCut` that is off, every `q` 0.7047 and every
-`gain` 0, with the EQ off. `backend` is `software` while a stage runs for
-the channel and null while none does: the EQ is off and was off when the
-route was built, or its stage could not start. `available` is false when
-the native plugin host is not installed, or after the stage failed three
-times in five minutes, and `error` then says why; switching the EQ off and
-on again tries once more. The mixer state's `eqLimits` gives the same ranges
+`gain` 0, with the EQ off. `backend` is `device` while the unit's own DSP
+runs the EQ, with the EQ on or off, since the unit holds the switch;
+`software` while a stage runs for the channel; and null while neither does:
+the EQ is off and was off when the route was built, or its stage could not
+start. `available` is always true on the unit, which needs no helper; in
+software it is false when the native plugin host is not installed, or after
+the stage failed three times in five minutes, and `error` then says why;
+switching the EQ off and on again tries once more. The mixer state's `eqLimits` gives the same ranges
 for clients to draw from: `{bands, types, frequency {min, max, step}, gain
 {min, max, step}, q {min, max, log10Step}}`.
 
@@ -1045,6 +1050,75 @@ replaces the EQ of each channel it names and leaves the others, and a
 profile without `eq`, as every older one is, leaves every EQ alone. A recall
 that changes only values writes them to the running stages and starts
 nothing; one that switches an EQ on splices its stage in.
+
+#### Where the EQ runs
+
+A microphone's EQ runs on the unit's own DSP when all of these hold, and in
+software otherwise:
+
+1. The channel carries a driven unit's input, by the rule `unitInput` follows:
+   the primary unit or an additional interface, the hardware strip on its
+   pair, or a strip bound to the unit's own node at that input's port.
+2. The unit runs the EQ: a Wave XLR MK.2 or XLR Dock MK.2 whose firmware,
+   read from block `0x0000` bytes 5 to 7, is 1.0.15 or later, and whose EQ
+   fields decode. Its `capabilities.hardwareEq`, and the one in its
+   `waveInterfaces` entry, is then true.
+3. The channel's `processing` is `device`, the default. `setEqProcessing`
+   sets it.
+4. No Sound Check session runs on the channel.
+5. The unit has not failed to keep the EQ written to it in this run.
+
+`processing` is the channel's choice, `device` or `software`. `device` is
+non-null while the channel carries a unit whose model has a hardware EQ (the
+MK.2 family): `{unit, input, name, firmware, ready, reason, note,
+minimumFirmware}`. `unit` is the instance id `waveInterfaces` gives, `input`
+1 or 2, `name` the model, `firmware` the version the unit reports or null,
+`minimumFirmware` `1.0.15`. `ready` is true while the unit runs the EQ now.
+When it is false, `reason` says why in a word a client can explain and
+`note` in a sentence: `firmwareOld` (older than 1.0.15; Elgato's updater is
+in Wave Link on Windows or macOS), `firmwareUnknown` (the version could not
+be read), `unsupportedBlock` (the EQ fields hold values the EQ does not
+take; diagnostics show the block) or `failed` (the unit did not keep an EQ
+written to it twice; switching the EQ or the choice off and on tries it
+again). OpenXLR writes no EQ field to a unit that is not ready.
+
+The values stay the ones above. The unit stores frequency, gain in quarter
+decibels and the type as they are, and Q as round(64 log10 q): each of the
+126 points of the Q grid has its own byte and comes back to itself, so the
+state reports the same numbers on either backend. The unit's filters follow
+the same cookbook curves (measured on the XLR Dock MK.2 within about 1 dB
+for every type), so the editor draws one curve for both.
+
+On the unit, each change is a read of the settings block and a write of the
+whole block with the EQ fields changed, the way Wave Link 3.5 writes it.
+The first change of a drag goes out at once, then at most ten a second, and
+the last value always lands, within 100 ms. Nothing is written while phantom
+power settles, since the firmware writes the same block then; the latest
+value goes out when it ends. Each write is read back by the next poll; a
+unit that does not keep it is written once more, then the channel moves to
+software with `reason` `failed`.
+
+Moving between the two switches the leaving one off first. Leaving the
+unit, OpenXLR clears only the unit's EQ switch and keeps its bands, and
+software starts once the unit confirms it, after 1 s at most. Moving to the
+unit, OpenXLR switches the software stage off, then writes the unit's EQ. A voice is never
+equalised twice; the price is a moment without the EQ, normally tens of
+milliseconds. Sound Check's `record` hands the EQ to software the same way
+and waits for the unit's confirmation, so the take is the raw microphone and
+the loop hears every edit; the unit takes the EQ back when the session ends.
+
+When a unit connects, at daemon start, after a replug or a firmware update,
+OpenXLR writes each carried input's EQ to it, or switches the unit's EQ off
+on an input whose EQ runs in software, so an EQ Wave Link left on cannot
+double OpenXLR's. A unit that already holds it is not written, so a daemon
+restart leaves the voice alone; a unit that held another EQ, Wave Link's
+from another computer, gets OpenXLR's and the journal says so once. A change
+another program makes while OpenXLR runs is written back, at most every
+5 s, and said once in the journal. Nothing is written when the daemon
+stops, when the unit is unplugged, or when no channel carries the unit's
+input (hardware-control mode included): the unit keeps the EQ it last held.
+Another channel taking the same unit's audio, a capture channel on its node,
+hears the unit's EQ, as it hears the unit's low cut.
 
 ### Output key targets
 

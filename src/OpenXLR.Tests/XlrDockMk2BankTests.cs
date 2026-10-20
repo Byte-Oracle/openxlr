@@ -38,7 +38,8 @@ public sealed class XlrDockMk2BankTests
         device.Connect();
         Assert.True(device.Connected);
         Assert.All(usb.Calls, call => Assert.Equal(0xC1, call.Type));
-        Assert.Equal(new ushort[] { 4, 5, 1 }, usb.Calls.Where(c => c.Bank == bank).Select(c => c.Block));
+        // The three blocks pick the bank; block 0x0000 then gives the firmware.
+        Assert.Equal(new ushort[] { 4, 5, 1, 0 }, usb.Calls.Where(c => c.Bank == bank).Select(c => c.Block));
         // The ordinary bank is not worth a note; the other one names itself.
         if (bank == 0x0103) Assert.Null(device.ConnectionNote);
         else Assert.Contains($"0x{bank:x4}", device.ConnectionNote);
@@ -90,7 +91,7 @@ public sealed class XlrDockMk2BankTests
         var usb = new Usb { Reply = (_, _) => ++calls == 1 ? -1 : null };
         using var device = new XlrDockMk2Device(usb);
         device.Connect();
-        Assert.Equal(4, usb.Calls.Count);
+        Assert.Equal(5, usb.Calls.Count);
         Assert.All(usb.Calls, c => Assert.Equal(0x0103, c.Bank));
     }
 
@@ -105,7 +106,7 @@ public sealed class XlrDockMk2BankTests
         usb.Bank = 0x0103;
         usb.Calls.Clear();
         device.Connect();
-        Assert.Equal(3, usb.Calls.Count);
+        Assert.Equal(4, usb.Calls.Count);
         Assert.All(usb.Calls, c => Assert.Equal(0x0103, c.Bank));
     }
 

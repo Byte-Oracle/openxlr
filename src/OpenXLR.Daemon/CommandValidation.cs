@@ -66,6 +66,7 @@ public static class CommandValidation
             case "setEq":
             case "setEqEnabled":
             case "setEqBand":
+            case "setEqProcessing":
                 return CheckEq(cmd, layout, nativeHostInstalled ?? PluginCatalog.HostInstalled);
             case "getNativeEditorRules":
                 return null;
@@ -285,8 +286,9 @@ public static class CommandValidation
     /// The microphone EQ commands: a microphone channel, and values inside
     /// the EQ's ranges. A value outside a range is refused, not clamped; the
     /// mixer snaps what it takes onto the EQ's steps. Switching the EQ on is
-    /// refused at once when the native helper is not installed, since
-    /// nothing could run it; values can still be set.
+    /// refused at once when the native helper is not installed and no unit
+    /// runs the channel's EQ, since nothing could run it; values can still be
+    /// set. Where the EQ runs is <c>device</c> or <c>software</c>.
     /// </summary>
     internal static string? CheckEq(Command cmd, ILayoutInfo layout, bool hostInstalled)
     {
@@ -297,10 +299,13 @@ public static class CommandValidation
         {
             case "setEqEnabled":
                 if (cmd.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) return "setEqEnabled: value must be a boolean";
-                return cmd.Value.GetBoolean() && !hostInstalled ? Mixer.EqNeedsHost : null;
+                return cmd.Value.GetBoolean() && !hostInstalled && !layout.EqRunsOnDevice(cmd.Channel) ? Mixer.EqNeedsHost : null;
             case "setEq":
                 if (MicEq.Read(cmd.Eq, out string? error) is not { } eq) return $"setEq: {error}";
-                return eq.Enabled && !hostInstalled ? Mixer.EqNeedsHost : null;
+                return eq.Enabled && !hostInstalled && !layout.EqRunsOnDevice(cmd.Channel) ? Mixer.EqNeedsHost : null;
+            case "setEqProcessing":
+                return cmd.Value.ValueKind == JsonValueKind.String && MicEqProcessing.IsValid(cmd.Value.GetString())
+                    ? null : "setEqProcessing: value must be 'device' or 'software'";
             default:
                 if (cmd.Band is not int band || band is < 1 or > MicEq.BandCount) return $"setEqBand: need 'band' from 1 to {MicEq.BandCount}";
                 var change = new EqBandChange(cmd.Enabled, cmd.Type, cmd.Frequency, cmd.Gain, cmd.Q);

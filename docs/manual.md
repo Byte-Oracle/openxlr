@@ -809,16 +809,57 @@ and Q steps of 3.75 percent. The editor shows the values the daemon keeps.
   5 ms. A drag sends each band's changes at most 50 times a second. Off, the
   EQ stays in the path bypassed until the input is next rebuilt, so on, off
   and **Compare** switch at once.
-- The hardware's zero-latency monitoring carries the microphone without the
-  EQ, as it does without your plugins.
+- In software, the hardware's zero-latency monitoring carries the
+  microphone without the EQ, as it does without your plugins.
 - The Flow window lists the EQ first in the input's card while it is on.
 - The EQ is saved with the mixer and in profiles. A profile saved before
   the EQ existed leaves it as it is.
-- It needs the native plugin host the packages include. Without it the
-  editor says so, the daemon refuses to switch the EQ on, and the
-  microphone keeps its path.
+- In software it needs the native plugin host the packages include.
+  Without it the editor says so, the daemon refuses to switch the EQ on,
+  and the microphone keeps its path. On the unit it needs nothing.
 - Scripts drive the same EQ through the [control API](api.md#microphone-eq)
   with `setEq`, `setEqEnabled` and `setEqBand`.
+
+**Where the EQ runs.** A Wave XLR MK.2 or XLR Dock MK.2 on firmware 1.0.15
+or later runs the EQ on its own processor, before USB, the way Wave Link
+3.5 does. The editor then shows **Hardware processing** in its header and
+names the unit in the line at the bottom, and the **EQ** button's tooltip
+says the same. Everything else stays as described above: the same values,
+the same curve, **Compare**, Copy and Paste, profiles. Nothing is added to
+the input's route, and the plugin host is not needed.
+
+- On older firmware the EQ runs on this computer. A note above the
+  editor's bottom line names the unit's firmware and the version it needs.
+  Elgato's updater is in Wave Link on Windows or macOS. The same note
+  appears when the firmware version or the unit's EQ settings cannot be
+  read, or when the unit did not keep an EQ written to it; switch the EQ
+  off and on to try the unit again.
+- Only the microphone the unit carries is equalised there: XLR 1 or XLR 2
+  on the unit's own input, an additional interface's input, or a strip
+  bound to the unit's own capture node. A microphone bound to any other
+  source uses the EQ on this computer. A capture channel that takes the
+  same unit's audio hears the unit's EQ, as it hears its low cut.
+- Sound Check moves the EQ to this computer while it records and loops,
+  so the take is the raw microphone and the loop follows every edit; the
+  unit takes it back when Sound Check stops.
+- When the unit connects, OpenXLR writes its EQ over the one the unit
+  holds, Wave Link's from another computer included, and the journal says
+  so once. A unit that already holds it is not written, so restarting the
+  daemon does not touch your voice. If another program changes the unit's
+  EQ while OpenXLR runs, OpenXLR writes its own back.
+- Moving the EQ between the unit and this computer switches the old place
+  off before the new one comes on, so your voice is never equalised twice;
+  you may hear a moment without the EQ.
+- When OpenXLR stops, or you unplug the unit, the unit keeps running the
+  EQ it last held, as it keeps its gain and low cut. Switch the EQ off in
+  the editor first if you want the unit plain without OpenXLR. Moving a
+  microphone to another source, or keeping it in software, switches only
+  the unit's EQ off and keeps its bands.
+- Whether the unit's EQ also reaches its own zero-latency headphone
+  monitoring has not been measured yet.
+- `setEqProcessing` in the [control API](api.md#where-the-eq-runs) keeps a
+  microphone's EQ on this computer instead, for instance to compare the
+  two; the editor's switch for it is still to come.
 
 <a name="native-editor-compatibility"></a>
 **Native editor compatibility.** Open Options, PLUGINS, then "Native editors"

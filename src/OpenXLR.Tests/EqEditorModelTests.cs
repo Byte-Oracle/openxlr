@@ -51,72 +51,6 @@ public sealed class EqEditorModelTests
         }
     }
 
-    /// <summary>
-    /// A clock that moves only when the test moves it, and fires the timers
-    /// it made on the test's own thread at the moment they are due. What the
-    /// sender and the echo wait do then depends on the steps of the test,
-    /// never on how busy the machine is.
-    /// </summary>
-    private sealed class ManualTime : TimeProvider
-    {
-        private readonly List<ManualTimer> _timers = [];
-        private long _now;
-
-        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
-
-        public override long GetTimestamp() => _now;
-
-        public TimeSpan Elapsed => TimeSpan.FromTicks(_now);
-
-        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
-        {
-            var timer = new ManualTimer(this, callback, state);
-            _timers.Add(timer);
-            timer.Change(dueTime, period);
-            return timer;
-        }
-
-        /// <summary>Move the clock on, firing each timer at its due time on the way.</summary>
-        public void Advance(TimeSpan by)
-        {
-            long target = _now + by.Ticks;
-            while (_timers.Where(t => t.Due is { } due && due <= target).OrderBy(t => t.Due).FirstOrDefault() is { } next)
-            {
-                _now = Math.Max(_now, next.Due!.Value);
-                next.Fire();
-            }
-            _now = target;
-        }
-
-        private sealed class ManualTimer(ManualTime time, TimerCallback callback, object? state) : ITimer
-        {
-            private TimeSpan _period = Timeout.InfiniteTimeSpan;
-
-            public long? Due { get; private set; }
-
-            public bool Change(TimeSpan dueTime, TimeSpan period)
-            {
-                _period = period;
-                Due = dueTime == Timeout.InfiniteTimeSpan ? null : time._now + dueTime.Ticks;
-                return true;
-            }
-
-            public void Fire()
-            {
-                Due = _period == Timeout.InfiniteTimeSpan ? null : time._now + _period.Ticks;
-                callback(state);
-            }
-
-            public void Dispose() => time._timers.Remove(this);
-
-            public ValueTask DisposeAsync()
-            {
-                Dispose();
-                return ValueTask.CompletedTask;
-            }
-        }
-    }
-
     private static (MicEqViewModel Eq, Recorder Sent) Model(string channel = "xlr1", ManualTime? time = null)
     {
         var sent = new Recorder();
@@ -583,5 +517,74 @@ public sealed class EqEditorModelTests
         Assert.Null(xlr1.Eq);
         Assert.False(row.ShowsEq);
         Assert.DoesNotContain(FlowGraph.From(model).Nodes.Single(n => n.Key == "ch:xlr1").Processing.Split('\n'), l => l == Localizer.Format("FlowEq", 3));
+    }
+
+    private static JsonNode OnUnit(bool enabled, string backend, string processing, string firmware, bool ready, string? reason = null)
+    {
+        JsonNode state = State(enabled, Defaults, $"\"{backend}\"");
+        state["processing"] = processing;
+        state["device"] = new JsonObject
+        {
+            ["unit"] = "0fd9:00c7@0123456789abcdef", ["input"] = 1, ["name"] = "Wave XLR Dock MK.2",
+            ["firmware"] = firmware.Length == 0 ? null : firmware, ["ready"] = ready, ["reason"] = reason,
+            ["note"] = "daemon text", ["minimumFirmware"] = "1.0.15",
+        };
+        return state;
+    }
+
+    [Fact]
+    public void TheEditorSaysWhenTheUnitsOwnProcessorRunsTheEqAndWhyNot()
+    {
+        var (eq, _) = Model();
+        // A daemon from before the hardware EQ sends neither field: no badge, no note.
+        eq.Apply(State(true, Defaults), null);
+        Assert.False(eq.OnDevice);
+        Assert.Null(eq.DeviceNote);
+        Assert.False(eq.HasDeviceNote);
+        Assert.Equal("device", eq.Processing);
+        Assert.Equal(Localizer.Text("EqButtonTip"), eq.ButtonTip);
+
+        // On the unit: the badge, the unit named in the footer and the button's tooltip.
+        eq.Apply(OnUnit(true, "device", "device", "1.0.15", ready: true), null);
+        Assert.True(eq.OnDevice);
+        Assert.True(eq.IsLit);
+        Assert.Equal("Wave XLR Dock MK.2", eq.DeviceName);
+        Assert.Equal(Localizer.Format("EqStatusDeviceNamed", "Wave XLR Dock MK.2"), eq.Status);
+        Assert.Equal(Localizer.Format("EqHardwareBadgeTip", "Wave XLR Dock MK.2"), eq.DeviceBadgeTip);
+        Assert.Equal(Localizer.Format("EqButtonTipDevice", "Wave XLR Dock MK.2"), eq.ButtonTip);
+        Assert.Null(eq.DeviceNote);
+        // Off, the unit still holds it: still the badge, the footer says off.
+        eq.Apply(OnUnit(false, "device", "device", "1.0.15", ready: true), null);
+        Assert.True(eq.OnDevice);
+        Assert.Equal(Localizer.Text("EqStatusOff"), eq.Status);
+
+        // Older firmware: software runs it, and the note says why and what to do.
+        eq.Apply(OnUnit(true, "software", "device", "1.0.0", ready: false, "firmwareOld"), null);
+        Assert.False(eq.OnDevice);
+        Assert.True(eq.IsLit);
+        Assert.Equal(Localizer.Text("EqStatusSoftware"), eq.Status);
+        Assert.Equal(Localizer.Format("EqDeviceFirmwareOld", "Wave XLR Dock MK.2", "1.0.0", "1.0.15"), eq.DeviceNote);
+        Assert.Contains("1.0.0", eq.DeviceNote);
+        Assert.Contains("1.0.15", eq.DeviceNote);
+        Assert.True(eq.HasDeviceNote);
+        Assert.EndsWith(eq.DeviceNote!, eq.ButtonTip);
+
+        // The other reasons, and the daemon's own sentence for one this client does not know.
+        foreach ((string reason, string expected) in new[]
+        {
+            ("firmwareUnknown", Localizer.Format("EqDeviceFirmwareUnknown", "Wave XLR Dock MK.2", "1.0.15")),
+            ("unsupportedBlock", Localizer.Format("EqDeviceUnsupported", "Wave XLR Dock MK.2")),
+            ("failed", Localizer.Format("EqDeviceFailed", "Wave XLR Dock MK.2")),
+            ("somethingNew", "daemon text"),
+        })
+        {
+            eq.Apply(OnUnit(true, "software", "device", "", ready: false, reason), null);
+            Assert.Equal(expected, eq.DeviceNote);
+        }
+
+        // Software by choice on a unit that could run it.
+        eq.Apply(OnUnit(true, "software", "software", "1.0.15", ready: true), null);
+        Assert.Equal("software", eq.Processing);
+        Assert.Equal(Localizer.Format("EqDeviceBySoftware", "Wave XLR Dock MK.2"), eq.DeviceNote);
     }
 }

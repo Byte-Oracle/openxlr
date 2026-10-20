@@ -49,6 +49,8 @@ public sealed class EqEditorWindowTests
         private readonly object _gate = new();
         public readonly Dictionary<string, DaemonEq> Eqs = new() { ["xlr1"] = DaemonEq.Default, ["xlr2"] = DaemonEq.Default };
         public bool WithEq = true;
+        /// <summary>XLR 1's unit: null for none, <c>unit</c> when its DSP runs the EQ, <c>old</c> on firmware before 1.0.15.</summary>
+        public string? Device;
         public readonly ConcurrentQueue<(long At, JsonNode Command)> Commands = new();
 
         /// <summary>Released to push a state without a command, as the daemon does on its own changes.</summary>
@@ -69,7 +71,7 @@ public sealed class EqEditorWindowTests
                 foreach (JsonNode? channel in state["mixer"]!["channels"]!.AsArray())
                 {
                     channel!["volume"] = 0.8;
-                    if (WithEq) channel["eq"] = Json(Eqs[channel["id"]!.GetValue<string>()]);
+                    if (WithEq) channel["eq"] = Json(Eqs[channel["id"]!.GetValue<string>()], channel["id"]!.GetValue<string>() == "xlr1" ? Device : null);
                 }
                 state["type"] = "state";
                 state["daemonVersion"] = AppVersion.Current;
@@ -77,16 +79,24 @@ public sealed class EqEditorWindowTests
             }
         }
 
-        private static JsonNode Json(DaemonEq eq) => new JsonObject
+        private static JsonNode Json(DaemonEq eq, string? device) => new JsonObject
         {
             ["enabled"] = eq.Enabled,
             ["bands"] = new JsonArray([.. eq.Bands.Select(b => (JsonNode)new JsonObject
             {
                 ["enabled"] = b.Enabled, ["type"] = b.Type, ["frequency"] = b.Frequency, ["gain"] = b.Gain, ["q"] = b.Q,
             })]),
-            ["backend"] = eq.Enabled ? "software" : null,
+            ["backend"] = device == "unit" ? "device" : eq.Enabled ? "software" : null,
             ["available"] = true,
             ["error"] = null,
+            ["processing"] = "device",
+            ["device"] = device is null ? null : new JsonObject
+            {
+                ["unit"] = "0fd9:00c7@0123456789abcdef", ["input"] = 1, ["name"] = "Wave XLR Dock MK.2",
+                ["firmware"] = device == "unit" ? "1.0.15" : "1.0.0", ["ready"] = device == "unit",
+                ["reason"] = device == "unit" ? null : "firmwareOld", ["minimumFirmware"] = "1.0.15",
+                ["note"] = device == "unit" ? null : "This Wave XLR Dock MK.2 has firmware 1.0.0. From 1.0.15 the unit runs the EQ itself; Elgato's updater is in Wave Link on Windows or macOS.",
+            },
         };
 
         /// <summary>Take a command as the daemon does: checked, snapped, kept.</summary>
@@ -274,6 +284,7 @@ public sealed class EqEditorWindowTests
             editors.Add(second);
             await Tooltips(editor);
             await Skins(window, editor, main);
+            await Hardware(window, editor, daemon, eq1);
             Assert.DoesNotContain(daemon.Commands, c => !EqCommands.Contains(c.Command["cmd"]!.GetValue<string>()));
 
             // A state without the EQ, from an older daemon: no button anywhere, and the editors go.
@@ -302,6 +313,62 @@ public sealed class EqEditorWindowTests
     }
 
     private static string Sizing(bool touch) => touch ? "touch" : "standard";
+
+    /// <summary>
+    /// Where the EQ runs: a badge in the editor's header while the unit's own
+    /// processor runs it, inside the editor from 640 to 2400 pixels; a note
+    /// above the footer when the unit is on firmware before 1.0.15; the EQ
+    /// button's tooltip saying the same; neither while the state names no unit.
+    /// </summary>
+    private static async Task Hardware(MainWindow window, EqWindow editor, EqDaemon daemon, MicEqViewModel eq)
+    {
+        Border badge = editor.FindControl<Border>("EqHardwareBadge")!;
+        TextBlock note = editor.FindControl<TextBlock>("EqDeviceNote")!;
+        Assert.False(badge.IsVisible);
+        Assert.False(note.IsVisible);
+        daemon.Device = "unit";
+        daemon.Pushes.Release();
+        await Until(() => eq.OnDevice);
+        Pump(30);
+        foreach (double width in new[] { 640d, 1040, 2400 })
+        {
+            Layout(editor, width, width < 1000 ? 620 : 760);
+            Assert.True(badge.IsEffectivelyVisible, $"the badge is hidden at {width}");
+            AssertInside(badge, editor);
+            foreach (Control action in editor.FindControl<WrapPanel>("EqActions")!.Children) AssertNoOverlap([badge, action]);
+            Assert.False(note.IsVisible);
+        }
+        Assert.Equal(Localizer.Format("EqHardwareBadgeTip", "Wave XLR Dock MK.2"), ToolTip.GetTip(badge));
+        Assert.Equal(Localizer.Text("EqHardwareBadge"), badge.GetVisualDescendants().OfType<TextBlock>().Single().Text);
+        if (eq.Enabled && !eq.Comparing)
+            Assert.Equal(Localizer.Format("EqStatusDeviceNamed", "Wave XLR Dock MK.2"), editor.FindControl<TextBlock>("EqStatus")!.Text);
+        Assert.Equal(Localizer.Format("EqButtonTipDevice", "Wave XLR Dock MK.2"), ToolTip.GetTip(window.FindControl<Button>("Xlr1Eq")!));
+        Layout(editor, 820, 600);
+        Capture(editor, "eq-editor-on-the-unit");
+
+        daemon.Device = "old";
+        daemon.Pushes.Release();
+        await Until(() => !eq.OnDevice && eq.HasDeviceNote);
+        Pump(30);
+        Assert.False(badge.IsVisible);
+        Assert.True(note.IsEffectivelyVisible);
+        Assert.Equal(Localizer.Format("EqDeviceFirmwareOld", "Wave XLR Dock MK.2", "1.0.0", "1.0.15"), note.Text);
+        foreach (double width in new[] { 640d, 2400 })
+        {
+            Layout(editor, width, width < 1000 ? 620 : 760);
+            AssertInside(note, editor);
+        }
+        Layout(editor, 820, 600);
+        Capture(editor, "eq-editor-older-firmware");
+
+        daemon.Device = null;
+        daemon.Pushes.Release();
+        await Until(() => !eq.HasDeviceNote);
+        Pump(30);
+        Assert.False(badge.IsVisible);
+        Assert.False(note.IsVisible);
+        Assert.Equal(Localizer.Text("EqButtonTip"), ToolTip.GetTip(window.FindControl<Button>("Xlr1Eq")!));
+    }
 
     /// <summary>The editor fits at every width: its actions, the graph, the handles and every band's fields.</summary>
     private static void CheckEditor(EqWindow editor, MicEqViewModel eq)

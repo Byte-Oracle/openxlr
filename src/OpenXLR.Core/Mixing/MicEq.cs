@@ -230,8 +230,34 @@ public sealed record EqLimits
 
 /// <summary>
 /// A microphone channel's EQ as clients see it: the values, which backend
-/// runs them (<c>software</c>, later <c>device</c> on hardware that has
-/// one, null while the EQ is off and nothing runs it), whether it can run,
-/// and why not.
+/// runs them (<c>device</c> while the unit's own DSP runs it, on or off;
+/// <c>software</c> while a stage runs it on this computer; null while the
+/// EQ is off and nothing runs it), whether it can run, and why not.
 /// </summary>
-public sealed record MicEqState(bool Enabled, IReadOnlyList<EqBand> Bands, string? Backend, bool Available, string? Error);
+public sealed record MicEqState(bool Enabled, IReadOnlyList<EqBand> Bands, string? Backend, bool Available, string? Error)
+{
+    /// <summary>The channel's choice, <c>device</c> (the default) or <c>software</c>: where the EQ runs when the unit can run it.</summary>
+    public string Processing { get; init; } = MicEqProcessing.Device;
+
+    /// <summary>The unit input the channel carries, while that unit's model has a hardware EQ; null otherwise.</summary>
+    public MicEqDevice? Device { get; init; }
+}
+
+/// <summary>The choices of where a microphone's EQ runs.</summary>
+public static class MicEqProcessing
+{
+    public const string Device = "device", Software = "software";
+
+    public static bool IsValid(string? value) => value is Device or Software;
+}
+
+/// <summary>
+/// The unit a microphone channel carries, when its model has a hardware EQ:
+/// its id and input, its name and firmware, whether it runs the EQ now
+/// (<see cref="Ready"/>), and when it cannot, why: <see cref="Reason"/> is
+/// <c>firmwareOld</c>, <c>firmwareUnknown</c>, <c>unsupportedBlock</c> or
+/// <c>failed</c>, and <see cref="Note"/> the daemon's sentence.
+/// <see cref="MinimumFirmware"/> is the first version the unit runs it on.
+/// </summary>
+public sealed record MicEqDevice(string Unit, int Input, string Name, string? Firmware, bool Ready,
+    string? Reason = null, string? Note = null, string MinimumFirmware = "1.0.15");

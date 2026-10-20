@@ -1,6 +1,7 @@
 using System.Text.Json;
 using OpenXLR.Core;
 using OpenXLR.Core.Devices;
+using OpenXLR.Core.Mixing;
 
 namespace OpenXLR.Daemon;
 
@@ -16,6 +17,10 @@ public sealed class DeviceManager : BackgroundService
     private readonly ILogger<DeviceManager> _log;
     private readonly object _gate = new();
     private IAudioDevice? _device;
+    // The clock for phantom settling and the EQ writer's spacing; tests drive it by hand.
+    private readonly TimeProvider _time;
+    private DateTime UtcNow => _time.GetUtcNow().UtcDateTime;
+    private long NowMs => _time.GetTimestamp() * 1000 / _time.TimestampFrequency;
     private DeviceState? _last;
     // Replaced, never changed in place, so the client-facing readers below
     // can take it without the device lock.
@@ -28,7 +33,7 @@ public sealed class DeviceManager : BackgroundService
     /// transfer that does not come back, and a reader that read the device
     /// itself would turn a wedged unit into an exception per state broadcast.
     /// </summary>
-    private sealed record Published(StateMessage Message, DeviceInfo? Info);
+    private sealed record Published(StateMessage Message, DeviceInfo? Info, UnitEqSupport? Eq = null);
     private static readonly Published NothingDriven = new(new StateMessage { Connected = false }, null);
     private volatile Published _published = NothingDriven;
 
@@ -82,8 +87,9 @@ public sealed class DeviceManager : BackgroundService
 
     /// <summary>The detection source is injectable so the reconnect and set-aside logic can be driven by a fake device.</summary>
     internal DeviceManager(ILogger<DeviceManager> log, IConfiguration config, Func<IReadOnlyList<IAudioDevice>> detect,
-        IHostApplicationLifetime? lifetime = null)
+        IHostApplicationLifetime? lifetime = null, TimeProvider? time = null)
     {
+        _time = time ?? TimeProvider.System;
         lifetime?.ApplicationStopping.Register(StopConnecting);
         _detect = detect;
         _log = log;
@@ -229,7 +235,7 @@ public sealed class DeviceManager : BackgroundService
     // the ordinary state broadcasts.
     private int SettleSecondsLeft(DateTime wroteAt)
     {
-        double left = (PhantomSettleWindow - (DateTime.UtcNow - wroteAt)).TotalSeconds;
+        double left = (PhantomSettleWindow - (UtcNow - wroteAt)).TotalSeconds;
         return left > 0 ? (int)Math.Ceiling(left) : 0;
     }
 
@@ -240,7 +246,7 @@ public sealed class DeviceManager : BackgroundService
 
     private DeviceState Stamp(DeviceState s)
     {
-        DateTime now = DateTime.UtcNow;
+        DateTime now = UtcNow;
         bool held1 = SettleSecondsLeft(_phantomWroteAt) > 0
                      && (s.Mute || now - _phantomWroteAt < PhantomMuteGrace);
         bool held2 = SettleSecondsLeft(_phantomWroteAt2) > 0
@@ -320,7 +326,8 @@ public sealed class DeviceManager : BackgroundService
         while (!stop.IsCancellationRequested)
         {
             SweepOnce();
-            await Task.Delay(100, stop).ContinueWith(_ => { }, TaskScheduler.Default);
+            // An EQ posted while no write is due wakes the loop at once.
+            await _wake.WaitAsync(100, stop).ContinueWith(_ => { }, TaskScheduler.Default);
         }
         FlushLastState(force: true);
         Drop();
@@ -335,6 +342,7 @@ public sealed class DeviceManager : BackgroundService
         {
             EnsureConnected();
             Progress.Mark();
+            WriteEq();
             PollOnce();
             Progress.Mark();
             TryParkCardProfile();
@@ -442,7 +450,11 @@ public sealed class DeviceManager : BackgroundService
             if (_unansweredId is { } silent && !all.Any(d => d.Info.InstanceId == silent)) ClearUnansweredLocked();
             // The unit went away under its transport without a drop: clients
             // stop seeing it as driven now, not when the next state is read.
-            if (_device is { Connected: false } && _published.Message.Connected) RaiseFromLocked();
+            if (_device is { Connected: false } && _published.Message.Connected)
+            {
+                RaiseFromLocked();
+                ForgetEq();
+            }
             foreach (string drivenInstance in _drivenInstances)
                 if (!all.Any(d => d.Info.InstanceId == drivenInstance)) _absentInstances.Add(drivenInstance);
             // A device set aside for hanging gets a fresh start once it has
@@ -486,6 +498,9 @@ public sealed class DeviceManager : BackgroundService
             }
             _device = dev;
             _last = null;
+            ForgetEq();
+            if (dev.EqSupport is { Ready: false } eqSupport && eqSupport.Note is { } eqNote)
+                _log.LogInformation("{dev}: {note}", dev.Info.DisplayName, eqNote);
             if (_unansweredId is not null && _unansweredId != dev.Info.InstanceId) ClearUnansweredLocked();
             _log.LogInformation("connected {dev}", dev.Info.DisplayName);
             if (dev.ConnectionNote is string note) _log.LogWarning("{dev}: {note}", dev.Info.DisplayName, note);
@@ -745,6 +760,7 @@ public sealed class DeviceManager : BackgroundService
                 _last = now;
                 NoteChangedLocked();
             }
+            VerifyEqLocked(_device);
             if (changed || recovered) RaiseFromLocked();
         }
     }
@@ -799,7 +815,7 @@ public sealed class DeviceManager : BackgroundService
                     case ControlNames.Crossfade: _device.SetCrossfade(value.GetInt32()); break;
                     case ControlNames.Phantom:
                         _device.SetPhantom(value.GetBoolean());
-                        _phantomWroteAt = DateTime.UtcNow;
+                        _phantomWroteAt = UtcNow;
                         break;
                     case ControlNames.ClipGuard: _device.SetClipGuard(value.GetBoolean()); break;
                     case ControlNames.Compressor: _device.SetCompressor(value.GetBoolean()); break;
@@ -826,7 +842,7 @@ public sealed class DeviceManager : BackgroundService
                     case "voiceTuneStrength2": _device.SetVoiceTuneStrength2(value.GetInt32()); break;
                     case "phantom2":
                         _device.SetPhantom2(value.GetBoolean());
-                        _phantomWroteAt2 = DateTime.UtcNow;
+                        _phantomWroteAt2 = UtcNow;
                         break;
                     case "clipGuard2": _device.SetClipGuard2(value.GetBoolean()); break;
                     case "compressor2": _device.SetCompressor2(value.GetBoolean()); break;
@@ -927,7 +943,7 @@ public sealed class DeviceManager : BackgroundService
                 if (c.Expander && s.Expander != p.Expander) _device.SetExpander(p.Expander);
                 if (c.VoiceTune && s.VoiceTune != p.VoiceTune) _device.SetVoiceTune(p.VoiceTune);
                 if (c.VoiceTune && s.VoiceTuneStrength != p.VoiceTuneStrength) _device.SetVoiceTuneStrength(p.VoiceTuneStrength);
-                if (c.Phantom && s.Phantom != p.Phantom) { _device.SetPhantom(p.Phantom); _phantomWroteAt = DateTime.UtcNow; }
+                if (c.Phantom && s.Phantom != p.Phantom) { _device.SetPhantom(p.Phantom); _phantomWroteAt = UtcNow; }
                 if (c.ClipGuard && s.ClipGuard != p.ClipGuard) _device.SetClipGuard(p.ClipGuard);
                 if (c.Compressor && s.Compressor != p.Compressor) _device.SetCompressor(p.Compressor);
                 if (c.Gain && c.XlrInputs > 1 && !lockApplies && s.Gain2Db != p.Gain2Db) _device.SetGain2Db(p.Gain2Db);
@@ -936,7 +952,7 @@ public sealed class DeviceManager : BackgroundService
                 if (c.Expander && c.XlrInputs > 1 && s.Expander2 != p.Expander2) _device.SetExpander2(p.Expander2);
                 if (c.VoiceTune && c.XlrInputs > 1 && s.VoiceTune2 != p.VoiceTune2) _device.SetVoiceTune2(p.VoiceTune2);
                 if (c.VoiceTune && c.XlrInputs > 1 && s.VoiceTuneStrength2 != p.VoiceTuneStrength2) _device.SetVoiceTuneStrength2(p.VoiceTuneStrength2);
-                if (c.Phantom && c.XlrInputs > 1 && s.Phantom2 != p.Phantom2) { _device.SetPhantom2(p.Phantom2); _phantomWroteAt2 = DateTime.UtcNow; }
+                if (c.Phantom && c.XlrInputs > 1 && s.Phantom2 != p.Phantom2) { _device.SetPhantom2(p.Phantom2); _phantomWroteAt2 = UtcNow; }
                 if (c.ClipGuard && c.XlrInputs > 1 && s.ClipGuard2 != p.ClipGuard2) _device.SetClipGuard2(p.ClipGuard2);
                 if (c.Compressor && c.XlrInputs > 1 && s.Compressor2 != p.Compressor2) _device.SetCompressor2(p.Compressor2);
                 if (c.HpVolume && s.HpVolumeDb != p.HpVolumeDb) _device.SetHpVolumeDb(p.HpVolumeDb);
@@ -1079,7 +1095,9 @@ public sealed class DeviceManager : BackgroundService
             // the warning marks as such.
             State = _last ?? (_unansweredId == id && _lastGoodId == id ? _lastGood : null),
         };
-        _published = new Published(msg, dev.Info);
+        UnitEqSupport? eq = dev.EqSupport is { } support
+            ? new UnitEqSupport(dev.Info.Model, dev.Firmware, support.Ready, support.Reason, support.Note) : null;
+        _published = new Published(msg, dev.Info, eq);
         return msg;
     }
 
@@ -1093,7 +1111,214 @@ public sealed class DeviceManager : BackgroundService
             _device = null;
             _last = null;
             _published = NothingDriven;
+            // Nothing is written to a unit that went away: what was posted
+            // to it is forgotten, and the mixer posts again when it returns.
+            ForgetEq();
             if (was) StateChanged?.Invoke(NothingDriven.Message);
         }
+    }
+
+    // The microphone EQ on the unit's own DSP. The mixer posts the EQ each
+    // input should hold; the device loop writes it at the start of a sweep,
+    // at most once per EqWriteSpacing, and the poll in the same sweep reads
+    // it back. Posts and statuses take their own small lock, never the
+    // device lock, so a post does not wait out a USB transfer.
+    private sealed class EqSlot
+    {
+        public DeviceEq? Pending;   // the latest post, not written yet
+        public DeviceEq? Wanted;    // what the input should hold: the last post
+        public DeviceEq? Written;   // written, or found already held; the next poll reads it back
+        public DeviceEq? Verified;  // read back equal
+        public string? Failed;
+        public string Owner = "";
+        public int Misses;
+        public bool Settled;        // the first write of this connection is done
+        public long RewriteNotBefore;
+    }
+
+    private readonly object _eqGate = new();
+    private readonly Dictionary<int, EqSlot> _eqSlots = [];
+    private long _eqLastWrite = long.MinValue / 2;
+    private readonly HashSet<string> _eqElsewhereLogged = [];
+    private readonly SemaphoreSlim _wake = new(0, 1);
+
+    /// <summary>The least time between two EQ writes to one unit: Wave Link's rate, ten a second.</summary>
+    internal static readonly TimeSpan EqWriteSpacing = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>The least time between two rewrites of an EQ another program changed.</summary>
+    internal static readonly TimeSpan EqRewriteSpacing = TimeSpan.FromSeconds(5);
+
+    /// <summary>What a unit that did not keep a written EQ reports, after the unit's name.</summary>
+    internal const string EqNotKept = "did not keep the EQ written to it";
+
+    /// <summary>
+    /// Raised under the device lock when an input's EQ status settles:
+    /// verified, failed, or forgotten with the unit. Handlers only hand off.
+    /// </summary>
+    public event Action? EqStatusChanged;
+
+    /// <summary>Whether the driven unit runs the EQ, with its name and firmware; null when none is driven or its model has none.</summary>
+    internal UnitEqSupport? PublishedEqSupport => _published.Eq;
+
+    /// <summary>
+    /// The EQ one input of the driven unit should hold, replacing a value not
+    /// written yet. A value equal to the one the unit was last read holding is
+    /// not written again. Dropped while no unit is driven.
+    /// </summary>
+    internal void PostEq(int input, DeviceEq eq, string owner)
+    {
+        if (_published.Info is null) return;
+        bool wake;
+        lock (_eqGate)
+        {
+            if (!_eqSlots.TryGetValue(input, out EqSlot? slot)) _eqSlots[input] = slot = new EqSlot();
+            slot.Owner = owner;
+            slot.Wanted = eq;
+            if (slot.Failed is null && slot.Pending is null && slot.Written is null && eq.Equals(slot.Verified)) return;
+            slot.Pending = eq;
+            slot.Failed = null;
+            slot.Misses = 0;
+            wake = NowMs - _eqLastWrite >= (long)EqWriteSpacing.TotalMilliseconds;
+        }
+        if (wake) Wake();
+    }
+
+    /// <summary>Where the last post to one input stands.</summary>
+    internal DeviceEqStatus EqStatus(int input)
+    {
+        if (_published.Info is null) return DeviceEqStatus.None;
+        lock (_eqGate)
+        {
+            if (!_eqSlots.TryGetValue(input, out EqSlot? slot)) return DeviceEqStatus.None;
+            if (slot.Failed is { } reason) return new(DeviceEqPhase.Failed, null, reason);
+            if (slot.Pending is not null || slot.Written is not null) return new(DeviceEqPhase.Pending);
+            return slot.Verified is { } held ? new(DeviceEqPhase.Verified, held) : DeviceEqStatus.None;
+        }
+    }
+
+    private void Wake()
+    {
+        try { if (_wake.CurrentCount == 0) _wake.Release(); }
+        catch (SemaphoreFullException) { }
+    }
+
+    private void ForgetEq()
+    {
+        bool had;
+        lock (_eqGate)
+        {
+            had = _eqSlots.Count > 0;
+            _eqSlots.Clear();
+        }
+        if (had) EqStatusChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Write the EQ posted since the last write: once the spacing has passed,
+    /// and not while phantom power settles, when the firmware writes the same
+    /// block itself; the latest value goes out once that ends. A write that
+    /// fails counts as a miss, as one the unit does not keep.
+    /// </summary>
+    private void WriteEq()
+    {
+        lock (_gate)
+        {
+            if (_device is not { Connected: true } dev || dev.EqSupport?.Ready != true) return;
+            long now = NowMs;
+            if (now - _eqLastWrite < (long)EqWriteSpacing.TotalMilliseconds) return;
+            if (_last is { PhantomSettling: true } or { PhantomSettling2: true }) return;
+            List<(int Input, EqSlot Slot, DeviceEq Eq)> due = [];
+            lock (_eqGate)
+                foreach ((int input, EqSlot slot) in _eqSlots)
+                    if (slot.Pending is { } eq) due.Add((input, slot, eq));
+            if (due.Count == 0) return;
+            bool failed = false;
+            foreach ((int input, EqSlot slot, DeviceEq eq) in due)
+            {
+                bool wrote;
+                try { wrote = dev.SetEq(input, eq); }
+                catch (UsbHungException) { throw; }
+                catch (Exception ex)
+                {
+                    _log.LogDebug("EQ write to {dev} input {input}: {msg}", dev.Info.DisplayName, input, ex.Message);
+                    lock (_eqGate)
+                    {
+                        if (!ReferenceEquals(slot.Pending, eq)) continue;
+                        if (++slot.Misses >= 2) { slot.Pending = null; slot.Failed = $"{EqNotKept} ({ex.Message})"; failed = true; }
+                    }
+                    continue;
+                }
+                _eqLastWrite = now;
+                bool first;
+                lock (_eqGate)
+                {
+                    if (ReferenceEquals(slot.Pending, eq)) slot.Pending = null;
+                    slot.Written = eq;
+                    first = !slot.Settled;
+                    slot.Settled = true;
+                }
+                if (!wrote) continue;
+                if (first)
+                    _log.LogInformation(eq.SwitchOnly
+                        ? "{owner}'s EQ runs in software, so the EQ the {model} held is switched off."
+                        : "{owner}'s EQ was written to the {model}, replacing the one it held.", slot.Owner, dev.Info.Model);
+                else _log.LogDebug("EQ written to {dev} input {input}: {eq}", dev.Info.DisplayName, input, eq);
+            }
+            _eqLastWrite = now;
+            if (failed) EqStatusChanged?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// After a poll read the block: what was written must read back equal,
+    /// compared in the raw form. A mismatch is written once more and a second
+    /// one fails the input. A verified EQ that changed with nothing of ours
+    /// to explain it was changed by another program: ours is written back,
+    /// at most once every <see cref="EqRewriteSpacing"/>, and the journal
+    /// says so once per unit.
+    /// </summary>
+    private void VerifyEqLocked(IAudioDevice dev)
+    {
+        if (dev.EqSupport?.Ready != true) return;
+        bool settled = false, rewrite = false;
+        long now = NowMs;
+        lock (_eqGate)
+        {
+            foreach ((int input, EqSlot slot) in _eqSlots)
+            {
+                if (dev.ReadEq(input) is not { } held) continue;
+                if (slot.Written is { } written)
+                {
+                    slot.Written = null;
+                    if (written.HeldBy(held))
+                    {
+                        slot.Verified = written;
+                        slot.Misses = 0;
+                        settled = true;
+                    }
+                    else if (++slot.Misses >= 2)
+                    {
+                        slot.Pending = null;
+                        slot.Failed = EqNotKept;
+                        settled = true;
+                        _log.LogWarning("{dev} {reason}: input {input} read back {held} after {wanted}; {owner}'s EQ runs in software.",
+                            dev.Info.DisplayName, EqNotKept, input, held, written, slot.Owner);
+                    }
+                    else slot.Pending ??= written;
+                }
+                else if (slot.Pending is null && slot.Failed is null && slot.Verified is { } verified && !verified.HeldBy(held)
+                         && now >= slot.RewriteNotBefore)
+                {
+                    slot.Pending = slot.Wanted ?? verified;
+                    slot.RewriteNotBefore = now + (long)EqRewriteSpacing.TotalMilliseconds;
+                    rewrite = true;
+                    if (_eqElsewhereLogged.Add(dev.Info.InstanceId))
+                        _log.LogInformation("Another program changed the EQ {owner} runs on the {model}; OpenXLR writes its own back, at most every {s} s.",
+                            slot.Owner, dev.Info.Model, (int)EqRewriteSpacing.TotalSeconds);
+                }
+            }
+        }
+        if (settled) EqStatusChanged?.Invoke();
+        if (rewrite) Wake();
     }
 }

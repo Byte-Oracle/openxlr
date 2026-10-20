@@ -286,10 +286,13 @@ while fixes to existing hosts remain part of normal maintenance.
   The window's editor is on `main` too: a response graph with draggable
   handles, a row of fields per band, the switch, a bypass to compare, copy
   and paste between microphones, opened from INPUTS, an input rack and the
-  matrix row heads ([manual](manual.md#microphone-eq)). Next the MK.2
-  family's hardware EQ, then the terminal mixer and the OpenDeck plugin
-  together with capture microphones, then the Wave XLR Pro's hardware EQ
-  once its protocol is captured.
+  matrix row heads ([manual](manual.md#microphone-eq)). The daemon also
+  runs it on the MK.2 family's own DSP from firmware 1.0.15, with the
+  editor's badge and older-firmware note
+  ([api.md](api.md#where-the-eq-runs)); the editor's switch between the
+  unit and software comes next. Then the terminal mixer and the OpenDeck
+  plugin together with capture microphones, then the Wave XLR Pro's
+  hardware EQ once its protocol is captured.
 
 ## Next: daemon and integrations
 
@@ -372,15 +375,16 @@ while fixes to existing hosts remain part of normal maintenance.
   crossfade and mic-monitoring questions.
 - [ ] The microphone EQ on hardware. On firmware 1.0.15 the XLR Dock
   MK.2 and the Wave XLR MK.2 run a four-band equalizer on the device
-  behind a master enable bit, and Wave Link 3.5 writes it there; on the
-  dock's firmware 1.0.0 Wave Link ran it on the computer
+  behind a master enable bit, as Wave Link 3.5 writes it; on the dock's
+  firmware 1.0.0 Wave Link ran it on the computer
   ([findings](mk2-eq-findings.md)). Measured from Linux with the enable
-  bit set, its filters match the software EQ's for the same values, so
-  the MK.2 equalizer comes next: the same EQ runs on the device when the
-  microphone is a supported unit. The [microphone EQ](#later-plugins) stays software for
-  every device and firmware without one. The Pro's equalizer, which
-  Elgato describes as onboard, comes last: once a capture maps it, the
-  same EQ drives it on the device instead of in software.
+  bit set, its filters match the software EQ's for the same values, and
+  the daemon now drives it there ([api.md](api.md#where-the-eq-runs)).
+  Every other model and older firmware keep the
+  [microphone EQ](#later-plugins) in software. Still open: acceptance on
+  both units, the editor's switch between the unit and software, and the
+  Pro's equalizer, which Elgato describes as onboard: once a capture maps
+  it, the same EQ drives it on the device instead of in software.
 - [ ] Ducking on the Pro, which lowers the other mixes while you speak
   and is applied per mix. It is the one onboard effect that touches the
   mix matrix rather than the microphone path, so it is worth capturing

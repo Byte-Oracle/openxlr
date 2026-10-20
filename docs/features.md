@@ -46,12 +46,11 @@ the mic/PC mix still await an archive collected with them changed. A
 block of another length is still refused before writing anything.
 The daemon drives it after every other supported device.
 
-Hardware EQ is not driven on the Wave FX devices. The XLR Dock MK.2 and
-the Wave XLR MK.2 run one on the device on firmware 1.0.15, and its
-layout is known ([findings](mk2-eq-findings.md)), but OpenXLR does not
-write it yet. OpenXLR's [microphone EQ](#software-controls) runs in
-software on every model. The Pro's ducking, mix
-maximizer, channel booster and remaining hardware mix matrix are also
+The XLR Dock MK.2 and the Wave XLR MK.2 run OpenXLR's
+[microphone EQ](#software-controls) on their own DSP from firmware 1.0.15,
+the way Wave Link 3.5 does ([findings](mk2-eq-findings.md)); every other
+model and older firmware run it in software. The Pro's equalizer, ducking, mix
+maximizer, channel booster and remaining hardware mix matrix are
 unmapped. Wave Link configures those onboard effects on supported systems;
 OpenXLR's LV2, CLAP and VST3 inserts process audio on the Linux host.
 
@@ -125,7 +124,15 @@ When the backend has no mapped hardware control, OpenXLR provides:
   handles take the keyboard and carry names for screen readers. A drag
   sends each band's changes at most every 20 ms, and the editor shows the
   values the daemon keeps. The [control API](api.md#microphone-eq) drives
-  the same EQ.
+  the same EQ. On a Wave XLR MK.2 or XLR Dock MK.2 from firmware 1.0.15
+  the unit's own DSP runs it instead, with the same values and the same
+  curves: each change is one write of the unit's settings block, at most
+  ten a second, read back by the next poll. Moving between the unit and
+  software switches the leaving one off first, so a voice is never
+  equalised twice. The editor shows a Hardware processing badge while the
+  unit runs it, and a note when the unit's firmware is older than 1.0.15.
+  `setEqProcessing` keeps one microphone in software instead
+  ([api.md](api.md#where-the-eq-runs)).
 - Gain lock: the daemon rejects every gain change while the lock is set,
   from any client, and stores the lock per device in `gainlock.json`.
   Shown only for devices without a physical gain dial, which would
