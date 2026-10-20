@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Avalonia;
@@ -52,10 +51,76 @@ public sealed class EqEditorModelTests
         }
     }
 
-    private static (MicEqViewModel Eq, Recorder Sent) Model(string channel = "xlr1")
+    /// <summary>
+    /// A clock that moves only when the test moves it, and fires the timers
+    /// it made on the test's own thread at the moment they are due. What the
+    /// sender and the echo wait do then depends on the steps of the test,
+    /// never on how busy the machine is.
+    /// </summary>
+    private sealed class ManualTime : TimeProvider
+    {
+        private readonly List<ManualTimer> _timers = [];
+        private long _now;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => _now;
+
+        public TimeSpan Elapsed => TimeSpan.FromTicks(_now);
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            var timer = new ManualTimer(this, callback, state);
+            _timers.Add(timer);
+            timer.Change(dueTime, period);
+            return timer;
+        }
+
+        /// <summary>Move the clock on, firing each timer at its due time on the way.</summary>
+        public void Advance(TimeSpan by)
+        {
+            long target = _now + by.Ticks;
+            while (_timers.Where(t => t.Due is { } due && due <= target).OrderBy(t => t.Due).FirstOrDefault() is { } next)
+            {
+                _now = Math.Max(_now, next.Due!.Value);
+                next.Fire();
+            }
+            _now = target;
+        }
+
+        private sealed class ManualTimer(ManualTime time, TimerCallback callback, object? state) : ITimer
+        {
+            private TimeSpan _period = Timeout.InfiniteTimeSpan;
+
+            public long? Due { get; private set; }
+
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                _period = period;
+                Due = dueTime == Timeout.InfiniteTimeSpan ? null : time._now + dueTime.Ticks;
+                return true;
+            }
+
+            public void Fire()
+            {
+                Due = _period == Timeout.InfiniteTimeSpan ? null : time._now + _period.Ticks;
+                callback(state);
+            }
+
+            public void Dispose() => time._timers.Remove(this);
+
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
+        }
+    }
+
+    private static (MicEqViewModel Eq, Recorder Sent) Model(string channel = "xlr1", ManualTime? time = null)
     {
         var sent = new Recorder();
-        return (new MicEqViewModel(sent, channel, channel == "xlr1" ? "XLR 1" : "XLR 2", TimeSpan.Zero), sent);
+        return (new MicEqViewModel(sent, channel, channel == "xlr1" ? "XLR 1" : "XLR 2", TimeSpan.Zero, time ?? new ManualTime()), sent);
     }
 
     private static JsonNode State(bool enabled, string bands, string backend = "\"software\"") => JsonNode.Parse(
@@ -161,7 +226,8 @@ public sealed class EqEditorModelTests
     [Fact]
     public void ReportedValuesAreShownAndAnOlderEchoWaitsForTheEdit()
     {
-        var (eq, sent) = Model();
+        var time = new ManualTime();
+        var (eq, sent) = Model(time: time);
         eq.Apply(State(true, """
             {"enabled":true,"type":"lowCut","frequency":36,"gain":0,"q":0.7046930689671475},
             {"enabled":true,"type":"peak","frequency":310,"gain":9.25,"q":1.4125375446227544},
@@ -209,6 +275,16 @@ public sealed class EqEditorModelTests
         eq.Apply(State(true, Report(5)), null);
         Assert.Equal(5, band.Gain);
         Assert.Equal(2, band.Number);
+
+        // An echo that never comes: the edit waits a second for it, then the daemon's word wins.
+        band.Gain = 6;
+        sent.Band();
+        time.Advance(MicEqViewModel.EchoWait - TimeSpan.FromTicks(1));
+        eq.Apply(State(true, Report(5)), null);
+        Assert.Equal(6, band.Gain);
+        time.Advance(TimeSpan.FromTicks(1));
+        eq.Apply(State(true, Report(5)), null);
+        Assert.Equal(5, band.Gain);
     }
 
     [Fact]
@@ -275,37 +351,118 @@ public sealed class EqEditorModelTests
         Assert.Equal(-12, sent.Band().Change.Gain);
     }
 
+    /// <summary>A sender on a clock the test moves, recording each command with the clock's time.</summary>
+    private static (EqBandSender Sender, ManualTime Time, List<(int Band, TimeSpan At, EqBandChange Change)> Sent) Sender()
+    {
+        var time = new ManualTime();
+        var sent = new List<(int Band, TimeSpan At, EqBandChange Change)>();
+        return (new EqBandSender(TimeSpan.FromMilliseconds(20), (band, change) => sent.Add((band, time.Elapsed, change)), time), time, sent);
+    }
+
+    /// <summary>The last value a field took over the commands: what the daemon holds once they are in.</summary>
+    private static double? Last(IEnumerable<(int Band, TimeSpan At, EqBandChange Change)> sent, Func<EqBandChange, double?> field) =>
+        sent.Select(s => field(s.Change)).LastOrDefault(v => v is not null);
+
+    private static void AssertSpaced(IReadOnlyList<(int Band, TimeSpan At, EqBandChange Change)> sent)
+    {
+        for (int i = 1; i < sent.Count; i++)
+            Assert.True(sent[i].At - sent[i - 1].At >= TimeSpan.FromMilliseconds(20),
+                $"two changes of band {sent[i].Band} {(sent[i].At - sent[i - 1].At).TotalMilliseconds} ms apart");
+    }
+
     [Fact]
     public void BandChangesGoOutAtMostOnceAnIntervalMergedAndEndingOnTheLast()
     {
-        var times = new ConcurrentQueue<(int Band, long At, EqBandChange Change)>();
-        var watch = Stopwatch.StartNew();
-        using (var sender = new EqBandSender(TimeSpan.FromMilliseconds(20), (band, change) => times.Enqueue((band, watch.ElapsedTicks, change))))
+        var (sender, time, sent) = Sender();
+        using (sender)
         {
-            // Band 2 dragged for about 300 ms with a move every 2 ms, band 3's gain once on the way.
+            // Band 2 dragged for 300 ms with a move every 2 ms, band 3's Q once on the way.
             for (int i = 1; i <= 150; i++)
             {
                 sender.Queue(2, new EqBandChange(Frequency: 300 + i));
                 if (i % 2 == 0) sender.Queue(2, new EqBandChange(Gain: i * 0.25 % 12));
                 if (i == 75) sender.Queue(3, new EqBandChange(Q: 2));
-                Thread.Sleep(2);
+                time.Advance(TimeSpan.FromMilliseconds(2));
             }
-            Thread.Sleep(80);
+            time.Advance(TimeSpan.FromMilliseconds(80));
+            // Nothing waits any more: disposing sends nothing.
+            int before = sent.Count;
+            sender.Dispose();
+            Assert.Equal(before, sent.Count);
         }
-        var sent = times.ToArray();
-        var two = sent.Where(s => s.Band == 2).ToArray();
-        for (int i = 1; i < two.Length; i++)
+        var two = sent.Where(s => s.Band == 2).ToList();
+        AssertSpaced(two);
+        // The first move at once, then one command at the end of each interval: 0, 20, ... 300 ms.
+        TimeSpan[] interval = [.. Enumerable.Range(0, 16).Select(n => TimeSpan.FromMilliseconds(20 * n))];
+        Assert.Equal(interval, two.Select(s => s.At));
+        // Every move inside an interval merged into one command: the last frequency and gain of it, together.
+        Assert.All(two.Skip(1), s =>
         {
-            double gap = (two[i].At - two[i - 1].At) * 1000.0 / Stopwatch.Frequency;
-            Assert.True(gap >= 19.9, $"two changes of band 2 {gap:0.0} ms apart");
-        }
-        Assert.InRange(two.Length, 5, (int)(watch.ElapsedMilliseconds / 20) + 2);
+            Assert.NotNull(s.Change.Frequency);
+            Assert.NotNull(s.Change.Gain);
+        });
         // The last change of the drag arrives, with every field that moved.
-        Assert.Equal(450, two[^1].Change.Frequency);
-        Assert.Equal(150 * 0.25 % 12, two[^1].Change.Gain);
-        Assert.Contains(two, s => s.Change.Frequency is not null && s.Change.Gain is not null);
+        Assert.Equal(new EqBandChange(Frequency: 450, Gain: 150 * 0.25 % 12), two[^1].Change);
         // Another band is not held back by the first.
-        Assert.Single(sent, s => s.Band == 3 && s.Change.Q == 2);
+        Assert.Equal((3, TimeSpan.FromMilliseconds(148), new EqBandChange(Q: 2)), Assert.Single(sent, s => s.Band == 3));
+    }
+
+    [Fact]
+    public void AChangeAfterAPauseGoesAtOnceAndWhatFollowsItGoesAtTheEndOfTheInterval()
+    {
+        var (sender, time, sent) = Sender();
+        using (sender)
+        {
+            // A drag that stalls longer than the interval, as a busy machine makes it:
+            // the frequency finds the interval over and goes at once, and the gain
+            // that comes right after it has to wait for the next interval to end.
+            sender.Queue(2, new EqBandChange(Frequency: 449, Gain: 1));
+            time.Advance(TimeSpan.FromMilliseconds(5));
+            sender.Queue(2, new EqBandChange(Gain: 1.25));
+            time.Advance(TimeSpan.FromMilliseconds(40));
+            sender.Queue(2, new EqBandChange(Frequency: 450));
+            sender.Queue(2, new EqBandChange(Gain: 1.5));
+            time.Advance(TimeSpan.FromMilliseconds(19));
+            Assert.Equal(3, sent.Count);
+            time.Advance(TimeSpan.FromMilliseconds(1));
+        }
+        AssertSpaced(sent);
+        (int, TimeSpan, EqBandChange)[] expected =
+        [
+            (2, TimeSpan.Zero, new EqBandChange(Frequency: 449, Gain: 1)),
+            (2, TimeSpan.FromMilliseconds(20), new EqBandChange(Gain: 1.25)),
+            (2, TimeSpan.FromMilliseconds(45), new EqBandChange(Frequency: 450)),
+            (2, TimeSpan.FromMilliseconds(65), new EqBandChange(Gain: 1.5)),
+        ];
+        Assert.Equal(expected, sent.Select(s => (s.Band, s.At, s.Change)));
+        // The last command carries only the gain, and the daemon still ends on the last of each field.
+        Assert.Equal(450, Last(sent, c => c.Frequency));
+        Assert.Equal(1.5, Last(sent, c => c.Gain));
+    }
+
+    [Fact]
+    public void WhatWaitsGoesOutWhenTheEditorCloses()
+    {
+        var (sender, time, sent) = Sender();
+        sender.Queue(1, new EqBandChange(Frequency: 100));
+        sender.Queue(1, new EqBandChange(Frequency: 120));
+        sender.Queue(4, new EqBandChange(Enabled: true));
+        time.Advance(TimeSpan.FromMilliseconds(10));
+        sender.Queue(4, new EqBandChange(Type: MicEq.Notch));
+        Assert.Equal([1, 4], sent.Select(s => s.Band));
+        // Closed before the interval ends: both bands' last changes go at once, and nothing after.
+        sender.Dispose();
+        (int, TimeSpan, EqBandChange)[] expected =
+        [
+            (1, TimeSpan.Zero, new EqBandChange(Frequency: 100)),
+            (4, TimeSpan.Zero, new EqBandChange(Enabled: true)),
+            (1, TimeSpan.FromMilliseconds(10), new EqBandChange(Frequency: 120)),
+            (4, TimeSpan.FromMilliseconds(10), new EqBandChange(Type: MicEq.Notch)),
+        ];
+        Assert.Equal(expected, sent.Select(s => (s.Band, s.At, s.Change)));
+        sender.Queue(1, new EqBandChange(Frequency: 130));
+        time.Advance(TimeSpan.FromMilliseconds(100));
+        Assert.Equal(4, sent.Count);
     }
 
     [Fact]

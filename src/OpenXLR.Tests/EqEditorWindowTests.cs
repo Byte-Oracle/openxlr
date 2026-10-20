@@ -365,9 +365,9 @@ public sealed class EqEditorWindowTests
         PixelPoint start = handle.PointToScreen(new Point(handle.Bounds.Width / 2, handle.Bounds.Height / 2));
         pointer.MoveTo(start.X, start.Y);
         Pump(60);
+        var watch = Stopwatch.StartNew();
         pointer.SetButton(true);
         Pump(40);
-        var watch = Stopwatch.StartNew();
         for (int i = 1; i <= 50; i++)
         {
             pointer.MoveTo(start.X + i * 4, start.Y - i * 2);
@@ -376,12 +376,16 @@ public sealed class EqEditorWindowTests
         }
         Assert.True(graph.IsDragging);
         pointer.SetButton(false);
-        double dragged = watch.Elapsed.TotalMilliseconds;
         Pump(80);
         Assert.False(graph.IsDragging);
         await Until(() => daemon.Eqs["xlr1"].Bands[1].Frequency == eq.Bands[1].Frequency && daemon.Eqs["xlr1"].Bands[1].Gain == eq.Bands[1].Gain);
 
         (long At, JsonNode Command)[] sent = [.. daemon.Commands];
+        // Every command of the drag left after the watch started and before
+        // the daemon had them all, a send interval at least after the one
+        // before it: however late a loaded machine runs the pointer's moves
+        // or the sender's timer, there is room for no more than this many.
+        double dragged = watch.Elapsed.TotalMilliseconds;
         Assert.NotEmpty(sent);
         Assert.All(sent, c =>
         {
@@ -394,7 +398,7 @@ public sealed class EqEditorWindowTests
             if (c.Command["gain"] is { } db) Assert.Equal(DaemonEq.SnapGain(db.GetValue<double>()), db.GetValue<double>());
         });
         // At most one a send interval, and the last one is where the handle stopped.
-        Assert.True(sent.Length <= dragged / MicEqViewModel.SendInterval.TotalMilliseconds + 2,
+        Assert.True(sent.Length <= dragged / MicEqViewModel.SendInterval.TotalMilliseconds + 1,
             $"{sent.Length} changes in a drag of {dragged:0} ms");
         Assert.True(sent.Length >= 5, $"only {sent.Length} changes in a drag of {dragged:0} ms");
         Assert.True(eq.Bands[1].Frequency > 400, $"the handle moved to {eq.Bands[1].Frequency} Hz");
