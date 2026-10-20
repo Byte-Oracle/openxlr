@@ -2255,6 +2255,15 @@ the button is disabled until the service command finishes. If it fails,
 check `journalctl --user -u openxlr-daemon`. A daemon started by hand must
 be restarted by hand.
 
+An older user unit can fail before starting the daemon with
+`218/CAPABILITIES` and `Failed to drop capabilities`. Update the package
+and run `systemctl --user daemon-reload` followed by
+`systemctl --user restart openxlr-daemon`. Source installs can regenerate
+their owned unit by disabling and enabling Start audio at login in Options.
+The current unit keeps its other restrictions but does not ask the user
+manager to change its capability bounding set. Review any personal override
+before removing it; OpenXLR never deletes an override it did not create.
+
 A USB transfer that never returns fails after a few
 seconds instead of stalling the daemon; the device is dropped and
 reconnected after 10 seconds, and the fault is recorded. The USB
