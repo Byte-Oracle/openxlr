@@ -236,4 +236,70 @@ public sealed class StreamLifecycleTests
         Assert.Empty(graph.Mixer.Matcher.Overrides);
         Assert.Equal("system", Assert.Single(graph.Mixer.Streams).ChannelId);
     }
+
+    /// <summary>
+    /// Reduced from a live desk: Discord registers a client named after its
+    /// headset mute watcher beside its voice engine, Firefox plays one stream
+    /// and Chrome two. Each application is one entry under its own name.
+    /// </summary>
+    private const string ApplicationsGraph = """
+        [
+          {"id":30,"type":"PipeWire:Interface:Client","info":{"props":{
+            "application.name":"discord_hardware_mute","application.process.binary":"Discord","application.process.id":561674}}},
+          {"id":31,"type":"PipeWire:Interface:Client","info":{"props":{
+            "application.name":"WEBRTC VoiceEngine","application.process.binary":"Discord","application.process.id":561674}}},
+          {"id":32,"type":"PipeWire:Interface:Client","info":{"props":{
+            "application.name":"Firefox","application.process.binary":"firefox"}}},
+          {"id":33,"type":"PipeWire:Interface:Client","info":{"props":{
+            "application.name":"Google Chrome","application.process.binary":"chrome"}}},
+          {"id":40,"type":"PipeWire:Interface:Node","info":{"props":{
+            "client.id":30,"object.serial":140,"media.class":"Stream/Output/Audio","media.name":"playback"}}},
+          {"id":41,"type":"PipeWire:Interface:Node","info":{"props":{
+            "client.id":32,"object.serial":141,"media.class":"Stream/Output/Audio","media.name":"AudioStream"}}},
+          {"id":42,"type":"PipeWire:Interface:Node","info":{"props":{
+            "client.id":33,"object.serial":142,"media.class":"Stream/Output/Audio","media.name":"Playback"}}},
+          {"id":43,"type":"PipeWire:Interface:Node","info":{"props":{
+            "client.id":33,"object.serial":143,"media.class":"Stream/Output/Audio","media.name":"Playback"}}}
+        ]
+        """;
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void EachApplicationIsOneEntryUnderItsOwnName(bool playing)
+    {
+        using var graph = new Graph();
+        string json = ApplicationsGraph;
+        if (!playing) json = "[" + string.Join(",", JsonDocument.Parse(json).RootElement.EnumerateArray()
+            .Where(o => o.GetProperty("type").GetString()!.EndsWith("Client", StringComparison.Ordinal)).Select(o => o.GetRawText())) + "]";
+        File.WriteAllText(Path.Combine(graph.Folder, "graph.json"), json);
+        File.WriteAllText(Path.Combine(graph.Folder, "inputs"), "140\t3\n141\t3\n142\t3\n143\t3\n");
+        graph.Retire();
+        graph.Mixer.SyncStreams();
+
+        StreamAssignment[] apps = [.. graph.Mixer.Snapshot().Streams.OrderBy(a => a.Identity, StringComparer.Ordinal)];
+        Assert.Equal(["Discord", "chrome", "firefox"], apps.Select(a => a.Identity));
+        Assert.Equal(["Discord", "Google Chrome", "Firefox"], apps.Select(a => a.Label));
+        Assert.All(apps, app => Assert.Equal(playing, app.Active));
+        Assert.All(apps, app => Assert.True(app.Running));
+        if (playing)
+        {
+            // Chrome's two streams and Discord's mute watcher are each routed, under their application's entry.
+            Assert.Equal([140, 141, 142, 143], graph.Mixer.Streams.Select(s => s.Serial).Order());
+            Assert.Equal(["Discord", "Firefox", "Google Chrome", "Google Chrome"], graph.Mixer.Streams.Select(s => s.Label).Order(StringComparer.Ordinal));
+        }
+    }
+
+    [Fact]
+    public void ALabelSavedFromAHelperStreamReadsAsTheApplication()
+    {
+        using var graph = new Graph();
+        graph.Mixer.ApplySettings(new MixerSettings
+        {
+            KnownApps = [new("Discord", "discord_hardware_mute", "system"), new("firefox", "Firefox", "music")],
+        });
+        StreamAssignment[] apps = [.. graph.Mixer.Snapshot().Streams.OrderBy(a => a.Identity, StringComparer.Ordinal)];
+        Assert.Equal(["Discord", "Firefox"], apps.Select(a => a.Label));
+        Assert.All(apps, app => Assert.False(app.Running));
+    }
 }

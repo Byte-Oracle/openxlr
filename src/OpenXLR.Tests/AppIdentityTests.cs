@@ -219,4 +219,47 @@ public sealed class AppIdentityTests
         Assert.Empty(mixer.ExportSettings().KnownApps);
         Assert.Empty(mixer.Matcher.Overrides);
     }
+
+    /// <summary>
+    /// The name an entry shows. A runtime's name or an identifier one word
+    /// long with underscores gives way to the application's own binary; a
+    /// real name, a Windows executable's and anything without a binary of its
+    /// own stay as they are.
+    /// </summary>
+    [Theory]
+    [InlineData("discord_hardware_mute", "Discord", "Discord")]
+    [InlineData("WEBRTC VoiceEngine", "Discord", "Discord")]
+    [InlineData("Chromium", "Discord", "Discord")]
+    [InlineData("Firefox", "firefox", "Firefox")]
+    [InlineData("Google Chrome", "chrome", "Google Chrome")]
+    [InlineData("Snake_Game.exe", "wine64-preloader", "Snake_Game")]
+    [InlineData("snake_game", "wine64-preloader", "snake_game")]
+    [InlineData("some_tool", null, "some_tool")]
+    [InlineData("Two words_with underscore", "player", "Two words_with underscore")]
+    public void AnEntryShowsTheApplicationsNameNotAStreamIdentifier(string appName, string? binary, string label)
+    {
+        Assert.Equal(label, new AudioStream(1, appName, binary, null).Label);
+    }
+
+    [Fact]
+    public void EveryClientOfDiscordShowsOneNameUnderOneIdentity()
+    {
+        byte[] json = Encoding.UTF8.GetBytes("""
+            [
+              {"id":1,"type":"PipeWire:Interface:Client","info":{"props":{
+                "application.name":"discord_hardware_mute","application.process.binary":"Discord"}}},
+              {"id":2,"type":"PipeWire:Interface:Client","info":{"props":{
+                "application.name":"WEBRTC VoiceEngine","application.process.binary":"Discord"}}},
+              {"id":3,"type":"PipeWire:Interface:Client","info":{"props":{
+                "application.name":"Chromium input","application.process.binary":"Discord"}}},
+              {"id":4,"type":"PipeWire:Interface:Node","info":{"props":{
+                "client.id":1,"media.class":"Stream/Output/Audio","object.serial":7}}}
+            ]
+            """);
+        var (streams, clients) = PipeWireAdapter.ListApplications(json);
+        Assert.Equal(["Discord"], streams.Concat(clients).Select(s => s.Identity).Distinct());
+        Assert.Equal(["Discord"], streams.Concat(clients).Select(s => s.Label).Distinct());
+        // The name is for showing; the stream still matches as Discord does.
+        Assert.Equal("voicechat", new StreamMatcher().Match(Assert.Single(streams)));
+    }
 }

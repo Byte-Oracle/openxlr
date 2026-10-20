@@ -2238,6 +2238,9 @@ Select the interface OpenXLR drives</value>
   <data name="LayoutPartApplicationList" xml:space="preserve">
     <value>an application list</value>
   </data>
+  <data name="LayoutPartApplicationColumns" xml:space="preserve">
+    <value>application columns</value>
+  </data>
   <data name="LayoutPartDetached" xml:space="preserve">
     <value>the submixer in its own window</value>
   </data>

@@ -399,6 +399,7 @@ public sealed class SkinDocumentTests
         Says($"from {Number(SkinFormat.MinRegionSize)} to {Number(SkinFormat.MaxRegionSize)}");
         Says($"at least\n{Number(SkinLayoutDefaults.RowSectionMinWidth)} pixels wide");
         Says($"from {SkinFormat.MinVisibleBanks} to {SkinFormat.MaxVisibleBanks}; {SkinSubmixerOptions.DefaultVisibleBanks} when it is missing");
+        Says($"from {SkinFormat.MinApplicationsPerColumn} to {SkinFormat.MaxApplicationsPerColumn}; {SkinFormat.DefaultApplicationsPerColumn} when it is missing");
         Says($"at most {SkinFormat.MaxSelectionDefaults} mix ids, each 1 to {SkinFormat.MaxMixIdLength} lowercase letters, digits, hyphens and underscores");
         // Said in words: three strip widths for an input row or a row of a send list.
         Assert.Equal(3, SkinLayoutDefaults.RowStrips);
@@ -436,7 +437,7 @@ public sealed class SkinDocumentTests
         Assert.Equal(SkinLayoutRegions.All, Table("| Region | What it is |"));
         Assert.Equal(SkinHeaderActions.All, Table("| Action | What it is |"));
         Assert.Equal(["visibility", "width", "height", "actions", "overflow"], Table("| Option | Region | What it is |"));
-        Assert.Equal(["template", "strip", "orientation", "visibleBanks", "selectionDefaults", "master", "matrix", "popOut"], Table("| Option | Template | What it is |"));
+        Assert.Equal(["template", "strip", "orientation", "visibleBanks", "selectionDefaults", "master", "perColumn", "matrix", "popOut"], Table("| Option | Template | What it is |"));
         Assert.Equal(["rowHead", "columnHead", "cell", "meter"], Table("| Matrix option | What it is |"));
         Assert.Equal(SkinMatrixParts.RowHead.Concat(SkinMatrixParts.ColumnHead).Concat(SkinMatrixParts.Cell).Distinct(),
             Table("| Matrix part | Where | What it is |"));
@@ -577,14 +578,24 @@ public sealed class SkinDocumentTests
         Assert.Equal("#/$defs/layoutSectionOptions", Properties("layoutRegions").GetProperty("headphones").GetProperty("$ref").GetString());
         Assert.Equal("#/$defs/layoutMonitorOptions", Properties("layoutRegions").GetProperty("monitor").GetProperty("$ref").GetString());
         Assert.Equal("#/$defs/layoutApplicationsOptions", Properties("layoutRegions").GetProperty("applications").GetProperty("$ref").GetString());
-        // MONITOR and APPLICATIONS take every section option and a template, nothing else.
-        foreach ((string def, IReadOnlyList<string> templates) in new[]
-                 { ("layoutMonitorOptions", SkinLayoutTemplates.Monitor), ("layoutApplicationsOptions", SkinLayoutTemplates.Applications) })
+        // MONITOR takes every section option and a template, nothing else; APPLICATIONS also a column's length.
+        foreach ((string def, IReadOnlyList<string> templates, string[] names) in new[]
+                 {
+                     ("layoutMonitorOptions", SkinLayoutTemplates.Monitor, new[] { "visibility", "width", "height", "template" }),
+                     ("layoutApplicationsOptions", SkinLayoutTemplates.Applications, new[] { "visibility", "width", "height", "template", "perColumn" }),
+                 })
         {
-            Assert.Equal(["visibility", "width", "height", "template"], Names(Properties(def)));
+            Assert.Equal(names, Names(Properties(def)));
             Assert.Equal(templates, Strings(Properties(def).GetProperty("template").GetProperty("enum")));
             Assert.Equal(templates[0], Properties(def).GetProperty("template").GetProperty("default").GetString());
         }
+        JsonElement perColumn = Properties("layoutApplicationsOptions").GetProperty("perColumn");
+        Assert.Equal((SkinFormat.MinApplicationsPerColumn, SkinFormat.MaxApplicationsPerColumn, SkinFormat.DefaultApplicationsPerColumn),
+            (perColumn.GetProperty("minimum").GetInt32(), perColumn.GetProperty("maximum").GetInt32(), perColumn.GetProperty("default").GetInt32()));
+        // perColumn is refused without application-columns, as the reader refuses it.
+        Assert.Equal(SkinLayoutTemplates.ApplicationColumns,
+            Definition("layoutApplicationsOptions").GetProperty("if").GetProperty("properties").GetProperty("template").GetProperty("const").GetString());
+        Assert.Equal(["perColumn"], Strings(Definition("layoutApplicationsOptions").GetProperty("else").GetProperty("not").GetProperty("required")));
         JsonElement popOut = Definition("layoutPopOut");
         Assert.Equal(["default"], Strings(popOut.GetProperty("required")));
         Assert.Equal(["default"], Names(popOut.GetProperty("properties")));

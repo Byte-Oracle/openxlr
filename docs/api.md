@@ -136,6 +136,7 @@ to a source, or the driven unit lacks the control, so `lowCutHz` and
 `exclusiveGroups` (`id`, `name`, `channels`; see
 [exclusive groups](mixer-layout.md#exclusive-groups)), `enforcedDefaultSink`, `enforcedDefaultSource`, `streams` (`id`, `serial`,
 `label`, `identity`, `channelId`, `active`, `running`, and `icon`; see
+[application names](#application-names) and
 [application icons](#application-icons)), `renamedSinceStart`
 and `layoutWarning`. A `devices` entry carries `name`, `description`, `kind`
 (0 for a sink, 1 for a source), `isOwn`, `isPhysical`, for a sink
@@ -441,6 +442,27 @@ The OpenDeck plugin in `plugin/`, the terminal mixer
 (`packaging/omarchy/openxlr.mixer/DaemonLink.qml`) are clients of this
 API; the command handler is `WebSocketHub.cs` and the message shapes are
 in `Protocol.cs`, both under `src/OpenXLR.Daemon/`.
+
+### Application names
+
+`mixer.streams` has one entry per application, not per stream: every
+playback stream and audio client of one application shares its `identity`,
+and the entry stands for all of them. `identity` is the key an assignment
+is remembered under and the one `assignApp` and `forgetApp` take. It is
+the process binary as PipeWire reports it (`Discord`, `chrome`), `steam`
+for Steam's browser process, and a lowercased game key such as `balatro`
+for a Windows game under Wine or Proton. It is a key, not a name.
+`label` is the name a client shows. The daemon takes it from the stream or
+client's `application.name`, except when that names a runtime such as
+Chromium, Electron, WEBRTC VoiceEngine or Wine, or is an identifier: one
+word joined by underscores, with no space. Discord's
+`discord_hardware_mute`, the client it opens to watch a headset's mute
+switch, is one. In both cases the label is the process binary with its
+first letter capitalised (`Discord`), when the binary is the application's
+own and not a Wine or Proton runtime. A
+Windows executable's name loses its `.exe`. A label remembered in
+`mixer.json` from such an identifier is read back the same way. Clients
+show `label` and keep `identity` for commands.
 
 ### Application icons
 

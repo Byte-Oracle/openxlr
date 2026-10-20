@@ -192,7 +192,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   moves to the next one. Channel and mix order stay the layout's. See
   [Templates](skins.md#templates) and [Mix banks](manual.md#mix-banks)
 - Skins can draw MONITOR as a one-row toolbar that keeps every output and
-  its feed in its picker, APPLICATIONS as a list for a narrow column, and
+  its feed in its picker, APPLICATIONS as a list for a narrow column or as
+  columns of the chips with a skin's number per column, and
   open the submixer in its own window once when the skin is put on, unless
   you have already chosen where it goes. A skin switch ends a fader drag,
   keeps focus on the same channel, mix and control, keeps the page's
@@ -210,7 +211,7 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
 - The Broadcast skin, shipped with the application: the submixer as a mix
   matrix across the window, HEADPHONES and MONITOR's toolbar side by side
   above it, INPUTS hidden until Arrange mode shows it, and APPLICATIONS
-  under the matrix, on a dark neutral palette. It is the complete example
+  in columns of six under the matrix, on a dark neutral palette. It is the complete example
   of a layout skin, and a copy to start from is in `docs/examples/skins`.
   See [Broadcast](manual.md#broadcast)
 - Nyan Pink: dark plum surfaces, pink faders and cyan details, keeping the

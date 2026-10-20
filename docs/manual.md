@@ -525,6 +525,9 @@ names such as `Balatro.exe` use the same normalized key as their Wine or
 Proton client, so the app keeps one entry and one channel assignment.
 When older settings contain both that key and a stale executable-name
 alias, the existing normalized assignment takes precedence.
+The entry shows the application's name, not the name of one of its helper
+streams: Discord's `discord_hardware_mute` client, which it opens to watch
+a headset's mute switch, still reads as Discord.
 Identity matching ignores letter case, including live channel changes and
 the running and playing indicators. If PipeWire reuses a node id for a new
 stream, or a stream later reports its actual app identity, the next sweep
@@ -1689,7 +1692,7 @@ the application, so a package brings them with it:
   using the classic arrangement and your saved section order;
 - **Wave**, with dark charcoal cards, blue faders and green meters. Its matrix puts inputs down the side and mixes across
   the top, with the monitor toolbar
-  above and headphone controls below. Input bindings, gain, mute and
+  above and headphone controls below, and the applications in columns of six. Input bindings, gain, mute and
   effects stay available in the row heads. Choosing it changes appearance
   and arrangement, not routing or audio levels.
 
@@ -1719,7 +1722,9 @@ HEADPHONES and MONITOR share the row above the matrix: the headphone
 levels and the direct monitor blend on the left, the output picker and its
 volume in a toolbar on the right. INPUTS is hidden, since the row heads
 carry the input gain, mute and plugins; **Arrange** lists it with a button
-that shows it again, under the matrix. APPLICATIONS sits under the matrix.
+that shows it again, under the matrix. APPLICATIONS sits under the matrix,
+its applications in columns of six: the seventh starts the next column to
+the right, and columns that do not fit the window's width continue below.
 Nothing starts folded, and every header action stays in the header row.
 When the matrix is wider than the window it scrolls sideways inside its
 card, the row heads with it; a window narrower than about 1000 pixels
@@ -1741,7 +1746,7 @@ the order of the window's sections and run them in a row; the sections
 move in place, and [Arrange](#arrange) says how your own moves are kept
 under it. It may also draw INPUTS as a rack and the SUBMIXER as
 [mix banks](#mix-banks) or a mix matrix, as Broadcast does, MONITOR as a one-row toolbar, APPLICATIONS as a
-list for a narrow column, and open the submixer in its own window the
+list for a narrow column or in columns, and open the submixer in its own window the
 first time you put it on (see [Separate mixer window](#separate-mixer-window)).
 
 Under the skin picker, one line says what the chosen skin does to the

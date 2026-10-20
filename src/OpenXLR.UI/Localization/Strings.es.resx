@@ -2232,6 +2232,9 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="LayoutPartApplicationList" xml:space="preserve">
     <value>una lista de aplicaciones</value>
   </data>
+  <data name="LayoutPartApplicationColumns" xml:space="preserve">
+    <value>columnas de aplicaciones</value>
+  </data>
   <data name="LayoutPartDetached" xml:space="preserve">
     <value>el submezclador en su propia ventana</value>
   </data>

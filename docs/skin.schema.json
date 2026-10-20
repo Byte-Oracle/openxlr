@@ -1895,8 +1895,25 @@
     },
     "layoutApplicationsOptions": {
       "type": "object",
-      "description": "APPLICATIONS: the options every section has, and the template it is drawn with.",
+      "description": "APPLICATIONS: the options every section has, the template it is drawn with, and how many applications a column holds.",
       "additionalProperties": false,
+      "if": {
+        "required": [
+          "template"
+        ],
+        "properties": {
+          "template": {
+            "const": "application-columns"
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "required": [
+            "perColumn"
+          ]
+        }
+      },
       "properties": {
         "visibility": {
           "enum": [
@@ -1922,10 +1939,18 @@
         "template": {
           "enum": [
             "application-chips",
-            "application-list"
+            "application-list",
+            "application-columns"
           ],
           "default": "application-chips",
-          "description": "application-chips is the APPLICATIONS chips; application-list is one line per application with its channel picker, for a narrow column."
+          "description": "application-chips is the APPLICATIONS chips; application-list is one line per application with its channel picker, for a narrow column; application-columns puts the same chips in columns of perColumn, top to bottom, the columns left to right, and a column that does not fit goes below, whole."
+        },
+        "perColumn": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24,
+          "default": 6,
+          "description": "How many applications one column holds before the next column starts. Only with template application-columns."
         }
       }
     },

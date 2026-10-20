@@ -141,6 +141,9 @@ public sealed class SkinLayoutTests
             Assert.Contains(part, layout.Submixer.Matrix.RowHead.Shown);
         foreach (string part in new[] { "identity", "outputs", "master", "mute", "effects" })
             Assert.Contains(part, layout.Submixer.Matrix.ColumnHead.Shown);
+        // Its applications in columns of six across the window's width, as Broadcast's.
+        Assert.Equal(SkinLayoutTemplates.ApplicationColumns, layout.Applications);
+        Assert.Equal(6, layout.ApplicationsPerColumn);
     }
 
     [Fact]
@@ -777,7 +780,8 @@ public sealed class SkinLayoutTests
         Assert.Equal(SkinLayoutTemplates.OutputPanel, SkinLayoutDefaults.Classic.Monitor);
         Assert.Equal(SkinLayoutTemplates.ApplicationChips, SkinLayoutDefaults.Classic.Applications);
         Assert.Equal([SkinLayoutTemplates.OutputPanel, SkinLayoutTemplates.OutputToolbar], SkinLayoutTemplates.Monitor);
-        Assert.Equal([SkinLayoutTemplates.ApplicationChips, SkinLayoutTemplates.ApplicationList], SkinLayoutTemplates.Applications);
+        Assert.Equal([SkinLayoutTemplates.ApplicationChips, SkinLayoutTemplates.ApplicationList, SkinLayoutTemplates.ApplicationColumns],
+            SkinLayoutTemplates.Applications);
 
         SkinLayout compact = Taken(Regions("""
             "monitor":{"template":"output-toolbar","visibility":"collapsed"},"applications":{"template":"application-list","width":280}
@@ -796,12 +800,44 @@ public sealed class SkinLayoutTests
     }
 
     [Fact]
+    public void ApplicationColumnsReadHowManyApplicationsAColumnHolds()
+    {
+        SkinLayout columns = Taken(Regions("\"applications\":{\"template\":\"application-columns\",\"perColumn\":4}"));
+        Assert.Equal(SkinLayoutTemplates.ApplicationColumns, columns.Applications);
+        Assert.Equal(4, columns.ApplicationsPerColumn);
+        // Six when the skin leaves it out, and the same for every other template.
+        Assert.Equal(SkinFormat.DefaultApplicationsPerColumn,
+            Taken(Regions("\"applications\":{\"template\":\"application-columns\"}")).ApplicationsPerColumn);
+        Assert.Equal(6, SkinFormat.DefaultApplicationsPerColumn);
+        Assert.Equal(SkinFormat.DefaultApplicationsPerColumn, SkinLayoutDefaults.Classic.ApplicationsPerColumn);
+        foreach (int bound in new[] { SkinFormat.MinApplicationsPerColumn, SkinFormat.MaxApplicationsPerColumn })
+            Assert.Equal(bound, Taken(Regions($"\"applications\":{{\"template\":\"application-columns\",\"perColumn\":{bound}}}")).ApplicationsPerColumn);
+        // The length is structure: two lengths draw differently, the chips and the columns too.
+        Assert.NotEqual(columns.Description(),
+            Taken(Regions("\"applications\":{\"template\":\"application-columns\",\"perColumn\":5}")).Description());
+        Assert.NotEqual(columns.Description(), Taken(Regions("\"applications\":{}")).Description());
+        // Columns are the chips again, so they need no more room than the chips.
+        var sizes = new RegionSizes(StripWidth: 76, MixWidth: 232, BankSpacing: 12, Banks: 2, VisibleChannels: 6);
+        Assert.Equal(SkinLayoutDefaults.RowSectionMinWidth, SkinLayoutDefaults.RegionMinWidth("applications", columns, sizes));
+
+        foreach (string value in new[] { "0", "25", "-1", "2.5", "\"6\"", "null" })
+            Refused(Regions($"\"applications\":{{\"template\":\"application-columns\",\"perColumn\":{value}}}"),
+                "layout.regions.applications.perColumn");
+        // perColumn belongs to the columns template alone.
+        Assert.Contains("\"perColumn\" belongs to the \"application-columns\" template",
+            Refused(Regions("\"applications\":{\"template\":\"application-list\",\"perColumn\":6}"), "layout.regions.applications.perColumn"),
+            StringComparison.Ordinal);
+        Refused(Regions("\"applications\":{\"perColumn\":6}"), "layout.regions.applications.perColumn");
+        Refused(Regions("\"monitor\":{\"template\":\"output-toolbar\",\"perColumn\":6}"), "layout.regions.monitor.perColumn");
+    }
+
+    [Fact]
     public void AnUnknownMonitorOrApplicationsTemplateOrOptionIsRefused()
     {
         Assert.Contains("\"output-strip\" is not a MONITOR template",
             Refused(Regions("\"monitor\":{\"template\":\"output-strip\"}"), "layout.regions.monitor.template"), StringComparison.Ordinal);
         Refused(Regions("\"monitor\":{\"template\":2}"), "layout.regions.monitor.template");
-        Assert.Contains("\"application-chips\" or \"application-list\"",
+        Assert.Contains("\"application-chips\", \"application-list\" or \"application-columns\"",
             Refused(Regions("\"applications\":{\"template\":\"application-grid\"}"), "layout.regions.applications.template"),
             StringComparison.Ordinal);
         // A template of another region is not one of this region's.

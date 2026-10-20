@@ -203,7 +203,8 @@ public sealed class SkinPackageTests : IDisposable
         Assert.Equal(SkinMatrixMuted.Tint, matrix.Muted);
         Assert.Equal(SkinMatrixMeter.UnderFader, matrix.Meter);
         Assert.Equal(SkinLayoutTemplates.OutputToolbar, layout.Monitor);
-        Assert.Equal(SkinLayoutTemplates.ApplicationList, layout.Applications);
+        Assert.Equal(SkinLayoutTemplates.ApplicationColumns, layout.Applications);
+        Assert.Equal(6, layout.ApplicationsPerColumn);
         Assert.Equal(SkinMixerPlacement.Docked, layout.PopOut);
         Assert.Equal(SkinRegionVisibility.Visible, layout.OptionsFor(SkinLayoutRegions.Headphones).Visibility);
         Assert.Equal(SkinRegionVisibility.Visible, layout.OptionsFor(SkinLayoutRegions.Applications).Visibility);

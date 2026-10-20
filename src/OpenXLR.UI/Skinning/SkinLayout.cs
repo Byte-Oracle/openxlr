@@ -141,6 +141,12 @@ public static class SkinLayoutTemplates
     public const string ApplicationChips = "application-chips";
     /// <summary>APPLICATIONS as a list, one application per line with its channel picker, for a narrow column.</summary>
     public const string ApplicationList = "application-list";
+    /// <summary>
+    /// APPLICATIONS as columns of the chips: a column holds a skin's number of
+    /// chips top to bottom, the next application starts the next column, and
+    /// columns that do not fit the section's width go on below, whole.
+    /// </summary>
+    public const string ApplicationColumns = "application-columns";
 
     /// <summary>What <c>regions.inputs.template</c> may name; the first is the default.</summary>
     public static IReadOnlyList<string> Inputs { get; } = [HardwarePanel, InputRack];
@@ -152,7 +158,7 @@ public static class SkinLayoutTemplates
     public static IReadOnlyList<string> Monitor { get; } = [OutputPanel, OutputToolbar];
 
     /// <summary>What <c>regions.applications.template</c> may name; the first is the default.</summary>
-    public static IReadOnlyList<string> Applications { get; } = [ApplicationChips, ApplicationList];
+    public static IReadOnlyList<string> Applications { get; } = [ApplicationChips, ApplicationList, ApplicationColumns];
 
     /// <summary>What an input rack's <c>strip.template</c> may name.</summary>
     public static IReadOnlyList<string> InputStrips { get; } = [InputRow];
@@ -653,6 +659,12 @@ public sealed record SkinLayout(int Version, SkinLayoutContainer Main)
     public string Applications { get; init; } = SkinLayoutTemplates.ApplicationChips;
 
     /// <summary>
+    /// How many applications one column holds when APPLICATIONS is drawn as
+    /// <see cref="SkinLayoutTemplates.ApplicationColumns"/>; the other templates ignore it.
+    /// </summary>
+    public int ApplicationsPerColumn { get; init; } = SkinFormat.DefaultApplicationsPerColumn;
+
+    /// <summary>
     /// Where the submixer starts out under this skin. It is a default only:
     /// it applies while ui.json holds no docking choice of the user's, and
     /// then once per skin and layout version.
@@ -678,7 +690,9 @@ public sealed record SkinLayout(int Version, SkinLayoutContainer Main)
         }
         text.Append(" header=").Append(string.Join(',', Header.Row)).Append('|').Append(string.Join(',', Header.Overflow));
         text.Append(" inputs=").Append(Inputs.Description()).Append(" submixer=").Append(Submixer.Description());
-        text.Append(" monitor=").Append(Monitor).Append(" applications=").Append(Applications).Append(" popOut=").Append(PopOut);
+        text.Append(" monitor=").Append(Monitor).Append(" applications=").Append(Applications);
+        if (Applications == SkinLayoutTemplates.ApplicationColumns) text.Append(',').Append(ApplicationsPerColumn);
+        text.Append(" popOut=").Append(PopOut);
         return text.ToString();
     }
 }

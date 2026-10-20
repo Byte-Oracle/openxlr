@@ -193,15 +193,39 @@ public sealed record AudioStream(int Id, string? AppName, string? Binary, string
         ["Chromium", "Chromium input", "Electron", "WEBRTC VoiceEngine", "Wine",
          "ALSA plug-in", "ringrtc", "libcanberra"];
 
-    /// <summary>What to show in a picker.</summary>
+    /// <summary>
+    /// True for an <c>application.name</c> that is an identifier rather than
+    /// a name: one word joined by underscores, as Discord's
+    /// <c>discord_hardware_mute</c>, the client it opens to watch a headset's
+    /// mute switch. An application names one of its streams or helper
+    /// clients that way, not itself, so the process binary names it better.
+    /// A Windows executable keeps its name: under Wine the binary is the
+    /// runtime's, shared by every game.
+    /// </summary>
+    public static bool IsTechnicalName(string? name) =>
+        name is { Length: > 0 } && name.Contains('_') && !name.Any(char.IsWhiteSpace)
+        && !StreamMatcher.IsWindowsExecutable(name);
+
+    /// <summary>
+    /// What to show for the application: its <c>application.name</c> unless
+    /// that names a runtime (<see cref="GenericAppNames"/>) or is an
+    /// identifier (<see cref="IsTechnicalName"/>); then its process binary,
+    /// capitalised, when it has one of its own; else whatever it has. Every
+    /// stream and client of one identity resolves the same way, so an
+    /// application's helper streams do not rename it.
+    /// </summary>
     public string Label
     {
         get
         {
             if ((Binary ?? AppName ?? "").Equals("steamwebhelper", StringComparison.OrdinalIgnoreCase))
                 return "Steam";   // matches its merged identity
+            bool ownBinary = Binary is { Length: > 1 } && Binary != "paplay" && !StreamMatcher.IsWindowsExecutable(Binary)
+                && !Binary.Contains("wine", StringComparison.OrdinalIgnoreCase)
+                && !Binary.Contains("proton", StringComparison.OrdinalIgnoreCase);
             bool generic = AppName is not { Length: > 0 } || AppName == "paplay" ||
-                Array.Exists(GenericAppNames, g => AppName.Equals(g, StringComparison.OrdinalIgnoreCase));
+                Array.Exists(GenericAppNames, g => AppName.Equals(g, StringComparison.OrdinalIgnoreCase)) ||
+                IsTechnicalName(AppName) && ownBinary;
             string name;
             if (!generic) name = AppName!;
             else if (Binary is { Length: > 1 } && Binary != "paplay")

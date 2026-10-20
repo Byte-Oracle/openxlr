@@ -2232,6 +2232,9 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="LayoutPartApplicationList" xml:space="preserve">
     <value>eine Anwendungsliste</value>
   </data>
+  <data name="LayoutPartApplicationColumns" xml:space="preserve">
+    <value>Anwendungsspalten</value>
+  </data>
   <data name="LayoutPartDetached" xml:space="preserve">
     <value>der Submixer in einem eigenen Fenster</value>
   </data>

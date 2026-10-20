@@ -103,14 +103,23 @@ public partial class MainWindow
             _monitorTemplate = monitor;
             LayOutMonitor(MonitorControls.Bounds.Width > 0 ? MonitorControls.Bounds.Width : double.PositiveInfinity);
         }
-        bool list = layout?.Applications == SkinLayoutTemplates.ApplicationList;
-        object chip = this.FindResource(list ? "ApplicationLine" : "ApplicationChip")!;
-        if (!ReferenceEquals(ApplicationRows.ItemTemplate, chip))
+        string applications = layout?.Applications ?? SkinLayoutTemplates.ApplicationChips;
+        int perColumn = layout?.ApplicationsPerColumn ?? SkinFormat.DefaultApplicationsPerColumn;
+        string shape = applications == SkinLayoutTemplates.ApplicationColumns ? $"{applications}:{perColumn}" : applications;
+        if (_applicationsShape != shape)
         {
-            ApplicationRows.ItemsPanel = (ITemplate<Panel?>)this.FindResource(list ? "ApplicationListPanel" : "ApplicationChipsPanel")!;
-            ApplicationRows.ItemTemplate = (Avalonia.Controls.Templates.IDataTemplate)chip;
+            _applicationsShape = shape;
+            bool list = applications == SkinLayoutTemplates.ApplicationList;
+            // Columns hold the same chips as the wrap, so a chip is as wide in both.
+            ApplicationRows.ItemsPanel = applications == SkinLayoutTemplates.ApplicationColumns
+                ? new FuncTemplate<Panel?>(() => new ApplicationColumnsPanel { PerColumn = perColumn })
+                : (ITemplate<Panel?>)this.FindResource(list ? "ApplicationListPanel" : "ApplicationChipsPanel")!;
+            ApplicationRows.ItemTemplate = (Avalonia.Controls.Templates.IDataTemplate)this.FindResource(list ? "ApplicationLine" : "ApplicationChip")!;
         }
     }
+
+    /// <summary>The template APPLICATIONS wears now, with a column's length for <see cref="SkinLayoutTemplates.ApplicationColumns"/>.</summary>
+    private string _applicationsShape = SkinLayoutTemplates.ApplicationChips;
 
     /// <summary>The template MONITOR wears now: one of <see cref="SkinLayoutTemplates.Monitor"/>.</summary>
     internal string MonitorTemplate => _monitorTemplate;
