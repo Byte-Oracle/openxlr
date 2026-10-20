@@ -211,8 +211,8 @@ that final acknowledgement (or an `error` without a request id):
 | `rescanPlugins` | none | read the plugin directories again, for plugins installed by other means; answered with `pluginInstall` |
 | `addPluginSearchPath` | `kind`, `path` | add an existing folder to the `lv2`, `clap` or `vst3` search path without copying anything, save the list in `daemon.json` and read the catalogues again; answered with `pluginInstall`. See [Plugin search paths](#plugin-search-paths) |
 | `removePluginSearchPath` | `kind`, `path` | stop searching an added folder, keeping its files, and read the catalogues again; works for a folder that no longer exists; answered with `pluginInstall` |
-| `setInserts` | `channel`, `inserts[]` | replace a chain; `channel` is `xlr1`, `xlr2` or `mix:<id>`, each insert is `{id, kind, plugin, label?, bypass?, params?}` where `kind` is `"lv2"` with the plugin URI, `"clap"` with the plugin's id, or `"vst3"` with the class id as 32 hex digits; a CLAP or VST3 insert always runs in the native host, so its `nativeHost` reads true whatever was sent. An insert being added is refused when its plugin cannot run at the chain's width (one channel on an input, two on a mix, by `widths` or the port counts as `plugins` describes them); an insert already in the chain, the same plugin under the same id, is left to the chain builder, so one can always be removed; an id kept while its `kind` or `plugin` changes counts as an addition |
-| `setInsertBypass` | `channel`, `insertId`, `value` | bypass one insert |
+| `setInserts` | `channel`, `inserts[]` | replace a chain; `channel` is `xlr1`, `xlr2` or `mix:<id>`, each insert is `{id, kind, plugin, label?, bypass?, params?}` where `kind` is `"lv2"` with the plugin URI, `"clap"` with the plugin's id, or `"vst3"` with the class id as 32 hex digits; a CLAP or VST3 insert always runs in the native host, so its `nativeHost` reads true whatever was sent. An insert being added is refused when its plugin cannot run at the chain's width (one channel on an input, two on a mix, by `widths` or the port counts as `plugins` describes them); an insert already in the chain, the same plugin under the same id, is left to the chain builder, so one can always be removed; an id kept while its `kind` or `plugin` changes counts as an addition. Only this chain is rebuilt; every other chain keeps its running plugins |
+| `setInsertBypass` | `channel`, `insertId`, `value` | bypass one insert; rebuilds this chain only |
 | `setInsertParam` | `channel`, `insertId`, `symbol`, `value` | one plugin control, by the catalogue's `symbol` (LV2 port symbol or decimal CLAP/VST3 parameter id); use catalogue ranges and scale points. Refused when the insert is not in the chain or the catalogue does not declare the symbol for its plugin |
 | `renameInsert` | `channel`, `insertId`, `name` | change one insert's label; `name` is 1 to 256 characters with no control characters. The running plugin, its parameters and the audio path stay as they are. Refused when the insert is not in the chain |
 | `getNativeEditorRules` | none | read release defaults and explicit user overrides for native editor compatibility |
@@ -246,6 +246,19 @@ refused otherwise, leaving any existing profile untouched. `loadProfile`
 there applies the scene. `setRecallOnConnect` is refused, since nothing
 arrives to recall it on; the mixer starts with its saved settings instead.
 A profile never changes an input binding.
+
+A recall replaces the insert chains the profile's `mixer.inserts` names. An
+input key it does not name, `xlr1` or `xlr2`, keeps its chain; a mix key it
+does not name is cleared, as it always was. A profile with no `inserts` at
+all leaves every chain alone. The daemon rebuilds only a chain whose plugins,
+kinds, order, bypass or host choice differ from the running one. A chain that
+matches takes the recalled control values live, keeps its native editor
+open and stays in the graph under the same nodes. `saveProfile` writes an
+entry for XLR 1 and XLR 2 even when their chains are empty, so a new
+profile describes both. An older daemon wrote an input's key only once
+that chain had been edited. At startup the saved settings rebuild only the
+chains that differ too, and leave every chain they do not name, input or
+mix, as it is.
 
 Profile files have an 8 MiB save and load limit. The recall marker is at
 most 1 KiB and contains a profile name, not a path. Special files are refused

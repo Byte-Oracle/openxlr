@@ -208,9 +208,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// capture pair (XLR 1 = pair 0, XLR 2 = pair 1, Aux In = pair 2), or one
     /// port of the exact source the strip is bound to. The interface is found
     /// by name; a strip whose source is absent is silent and the others keep
-    /// playing. <paramref name="only"/> limits the work to those strips: the
-    /// rest keep their feeds and chains untouched. Safe to call again after a
-    /// hotplug.
+    /// playing. Each strip is wired from its <see cref="InputRoute"/>.
+    /// <paramref name="only"/> limits the work to those strips: the rest keep
+    /// their feeds and chains untouched, so their plugins keep running. Safe
+    /// to call again after a hotplug.
     /// </summary>
     private void WireInputFeedsLocked(IReadOnlyCollection<string>? only = null)
     {
@@ -267,6 +268,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         var nextChains = new Dictionary<string, FilterHandle>();
         var nextChainOuts = new Dictionary<string, PortLink>();
         var carried = new HashSet<string>();
+        var routes = new Dictionary<string, InputRoute>();
+        foreach (ChannelDefinition ch in strips.Where(Rewires))
+            routes[ch.Id] = InputRouteLocked(ch, next.GetValueOrDefault(ch.Id));
         long generation = ++_inputChainGeneration;
         try
         {
@@ -281,21 +285,17 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     if (_chainOuts.TryGetValue(ch.Id, out PortLink? keptOut)) nextChainOuts[ch.Id] = keptOut;
                     continue;
                 }
-                if (!next.TryGetValue(ch.Id, out string? input)) continue;
-                bool bound = _bindings.ContainsKey(ch.Id);
+                InputRoute route = routes[ch.Id];
+                if (route.Input is not string input) continue;
+                bool bound = route.Bound;
                 bool sameInput = _stripSources.GetValueOrDefault(ch.Id) == input
                     && _wiredBindings.GetValueOrDefault(ch.Id) == _bindings.GetValueOrDefault(ch.Id);
-                // A channel under Sound Check is fed from the loop helper's
-                // single output instead of its capture pair; everything
-                // downstream, the software DSP and the inserts, stays live.
-                bool looped = _soundCheck is not null && _soundCheckChannel == ch.Id;
-                string source = looped ? _soundCheck!.SourceName : input;
-                // The soft low cut and ClipGuard belong to the first XLR
-                // channel only; inserts can sit on either mono XLR channel.
-                bool lc = ch.InputPair == 0 && _lowCutHz > 0 && (bound || _lowCutApplicable);
-                bool cg = ch.InputPair == 0 && _softClipGuard && (bound || _clipGuardApplicable);
-                List<InsertDefinition> inserts = IsInsertChannel(ch.Id) ? InsertsFor(ch.Id) : [];
-                bool anyInsert = inserts.Any(i => !i.Bypass && PluginCatalog.Find(i) is not null);
+                bool looped = route.Looped;
+                string source = route.Source!;
+                bool lc = route.LowCutHz > 0;
+                bool cg = route.ClipGuard;
+                List<InsertDefinition> inserts = route.Inserts;
+                bool anyInsert = route.ActiveInserts;
                 bool givenUp = anyInsert && _restarts.Blocked(ch.Id);
                 if (givenUp) { inserts = []; anyInsert = false; _insertErrors[ch.Id] = _restarts.Message(ch.Id); }
                 // A strip on the interface whose pair the device lacks (a
@@ -310,7 +310,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     string chainId = $"{ch.Id}_{generation}";
                     try
                     {
-                        chain = _pw.CreateMicFilter(chainId, lc ? _lowCutHz : 0, cg, inserts);
+                        chain = _pw.CreateMicFilter(chainId, route.LowCutHz, cg, inserts);
                     }
                     catch (Exception ex) when (anyInsert)
                     {
@@ -332,7 +332,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                             }
                             continue;
                         }
-                        chain = _pw.CreateMicFilter(chainId + "_builtin", lc ? _lowCutHz : 0, cg);
+                        chain = _pw.CreateMicFilter(chainId + "_builtin", route.LowCutHz, cg);
                     }
 
                     // A port lookup can fail after the helper is ready too.
@@ -411,6 +411,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         foreach ((string key, FilterHandle chain) in nextChains) _chains[key] = chain;
         foreach (ChannelDefinition ch in strips.Where(Rewires))
         {
+            _chainStructures[ch.Id] = routes[ch.Id].Structure;
             if (next.TryGetValue(ch.Id, out string? source)) _stripSources[ch.Id] = source;
             else _stripSources.Remove(ch.Id);
             if (_bindings.TryGetValue(ch.Id, out SourceBinding? binding))
@@ -500,7 +501,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (_chains.Count == 0 && _mixDelays.Count == 0 && _latencyReports.Count == 0)
                 return EnsureMixRoutesLocked() || soundCheckChanged;
             bool changed = false;
-            // Mix chains heal individually; input chains re-wire the whole input path.
+            // Every chain heals on its own: a dead one is built again and the
+            // others keep running.
             foreach (MixDefinition mix in _config.Mixes)
             {
                 string key = MixKey(mix);
@@ -511,11 +513,16 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     changed = true;
                 }
             }
+            var broken = new List<string>();
             foreach ((string key, FilterHandle chain) in _chains)
-                if (!key.StartsWith("mix:", StringComparison.Ordinal) && !chain.IsAlive) ChainDiedLocked(key, chain);
-            bool inputBroken = _chains.Where(e => !e.Key.StartsWith("mix:", StringComparison.Ordinal)).Any(e => !e.Value.IsAlive)
-                || _chainOuts.Values.Any(l => _pw.EnsureLinks(l) == LinkHealth.Broken);
-            if (inputBroken) { WireInputFeedsLocked(); changed = true; }
+                if (!key.StartsWith("mix:", StringComparison.Ordinal) && !chain.IsAlive)
+                {
+                    ChainDiedLocked(key, chain);
+                    broken.Add(key);
+                }
+            foreach ((string key, PortLink link) in _chainOuts)
+                if (!broken.Contains(key) && _pw.EnsureLinks(link) == LinkHealth.Broken) broken.Add(key);
+            if (broken.Count > 0) { WireInputFeedsLocked(broken); changed = true; }
             changed |= UpdateMixLatencyLocked();
             changed |= EnsureMixRoutesLocked();
             // A heal can retire the last bridged plugin without any command
@@ -797,6 +804,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         if (_mixTaps.Remove(key, out PortLink? tap)) _pw.Unlink(tap);
         if (_chains.Remove(key, out FilterHandle? old)) _pw.StopFilter(old);
         _insertErrors.Remove(key);
+        _chainStructures[key] = MixChainLocked(key).Structure;
 
         List<InsertDefinition> inserts = InsertsFor(key);
         bool anyInsert = inserts.Any(i => !i.Bypass && PluginCatalog.Find(i) is { } p && p.Fits(2));
@@ -894,6 +902,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             WireInputFeedsLocked([strip.Id]);
     }
 
+    /// <summary>The strip the software low cut and ClipGuard sit on, bound or not; XLR 2's chain is not touched.</summary>
+    private string[] SoftDspStripLocked()
+        => [.. _config.Channels.Where(c => c.InputPair == 0).Select(c => c.Id)];
+
     // Software ClipGuard: a post-ADC hard limiter at -3 dB in the mic filter
     // chain, for devices whose ClipGuard runs host-side in the vendor app. It
     // limits the recorded signal but cannot undo clipping in the preamp/ADC.
@@ -917,7 +929,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             _softClipGuard = on;
             try
             {
-                if (_built) WireInputFeedsLocked();
+                if (_built) WireInputFeedsLocked(SoftDspStripLocked());
             }
             catch
             {
@@ -971,7 +983,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             _lowCutHz = hz;
             try
             {
-                if (_built) WireInputFeedsLocked();
+                if (_built) WireInputFeedsLocked(SoftDspStripLocked());
             }
             catch
             {
@@ -1025,9 +1037,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         var edits = inserts.Select(e => (e.Key, Before: e.Value,
             After: e.Value.Where(i => !plugins.Contains((i.Kind, i.Plugin))).ToList()))
             .Where(e => e.Before.Count != e.After.Count).ToArray();
-        // Both hardware inputs share one feed rebuild; mixes are independent.
-        var groups = edits.GroupBy(e => (Input: e.Key is "xlr1" or "xlr2",
-            Key: e.Key is "xlr1" or "xlr2" ? "" : e.Key)).Select(g => g.ToArray()).ToArray();
+        // Every chain is rebuilt on its own, inputs as well as mixes, so a
+        // failure on one leaves the others changed and running.
+        var groups = edits.Select(e => new[] { e }).ToArray();
         var completed = new List<string[]>();
         var errors = new List<string>();
         int removed = 0, chains = 0;
@@ -1089,11 +1101,20 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
     private void RewireInsertKeyLocked(string key) => RewireInsertKeysLocked([key]);
 
+    /// <summary>
+    /// Build the chains of these keys again, and only them: another input's
+    /// chain, or a mix's, keeps its running plugins.
+    /// </summary>
     private void RewireInsertKeysLocked(IReadOnlyList<string> keys, bool endWine = true)
     {
         foreach (string key in keys) _restarts.Forget(key);
-        if (MixForKey(keys[0]) is MixDefinition mix) WireMixChainLocked(mix);
-        else if (keys.Any(IsInsertChannel)) WireInputFeedsLocked();
+        var inputs = new List<string>();
+        foreach (string key in keys)
+        {
+            if (MixForKey(key) is MixDefinition mix) WireMixChainLocked(mix);
+            else if (IsInsertChannel(key)) inputs.Add(key);
+        }
+        if (inputs.Count > 0) WireInputFeedsLocked(inputs);
         if (endWine) EndUnusedWineLocked();
     }
 
@@ -1159,15 +1180,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (!parameters.ContainsKey(symbol) && parameters.Count >= InsertDefinition.MaxParams)
                 throw new InvalidOperationException($"insert '{insertId}' already holds {InsertDefinition.MaxParams} control values");
             parameters[symbol] = value;
-            if (!_built || list[idx].Bypass || _insertErrors.ContainsKey(channel)
-                || !_chains.TryGetValue(channel, out FilterHandle? chain)) return;
-            // The chain names LV2 stages i0, i1, ... in the order of the
-            // non-bypassed, loadable inserts, so find this insert's stage index.
-            int k = 0;
-            for (int j = 0; j < idx; j++)
-                if (!list[j].Bypass && PluginCatalog.Find(list[j]) is not null) k++;
-            try { _pw.SetFilterControl(chain, $"i{k}:{symbol}", value); }
-            catch (InvalidOperationException) { RewireInsertKeyLocked(channel); }
+            // A stage that refuses the value is built again with it, alone.
+            if (_built && !TryPushInsertParamLocked(channel, list, idx, symbol, value)) RewireInsertKeyLocked(channel);
         }
     }
 
@@ -1457,12 +1471,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     (s.MonitorOutput?.EndsWith("#usbaux", StringComparison.Ordinal) ?? false));
             WireAuxRouteLocked();
 
-            bool rewireInputs = false;
-            bool rewireMixes = false;
+            bool chainsChanged = false;
+            bool rebuildAll = false;
             if (s.LowCutHz is 80 or 120 && _lowCutHz != s.LowCutHz)
             {
                 _lowCutHz = s.LowCutHz;
-                rewireInputs = true;
+                chainsChanged = true;
             }
             if (s.SoftClipGuard && !_softClipGuard)
             {
@@ -1473,15 +1487,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 if (_pw.GetSoftwareClipGuardAvailability().Available)
                 {
                     _softClipGuard = true;
-                    rewireInputs = true;
+                    chainsChanged = true;
                 }
-            }
-            if (s.Inserts.Count > 0)
-            {
-                foreach ((string channel, List<InsertDefinition> list) in s.Inserts)
-                    _inserts[channel] = [.. list];
-                rewireInputs = true;
-                rewireMixes = true;
             }
             if (s.CompensateMixLatency != _compensateMixLatency)
             {
@@ -1489,12 +1496,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 // in the same host after a restart as before it.
                 _compensateMixLatency = s.CompensateMixLatency;
                 _pw.MeasurePluginLatency = s.CompensateMixLatency;
-                rewireInputs = true;
-                rewireMixes = true;
+                rebuildAll = true;
             }
-            if (rewireInputs) WireInputFeedsLocked();
-            if (rewireMixes)
-                foreach (MixDefinition mix in _config.Mixes) WireMixChainLocked(mix);
+            // A chain the file does not name keeps what it has, and only a
+            // chain whose structure changed is built again.
+            if (chainsChanged || rebuildAll || s.Inserts.Count > 0)
+                ApplyChainsLocked(s.Inserts.Count > 0 ? s.Inserts : null, absentMixesEmpty: false, rebuildAll);
             UpdateMixLatencyLocked();
         }
     }
@@ -1517,9 +1524,22 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 OutputVolume = _outputVolume,
                 LowCutHz = _lowCutHz,
                 SoftClipGuard = _softClipGuard,
-                Inserts = CopyInsertsLocked(),
+                Inserts = SceneInsertsLocked(),
             };
         }
+    }
+
+    /// <summary>
+    /// The chains a profile keeps: every one the mixer holds, and an empty
+    /// list for an input that has none. A recall leaves an input the profile
+    /// does not name as it is, so a new profile names every input.
+    /// </summary>
+    private Dictionary<string, List<InsertDefinition>> SceneInsertsLocked()
+    {
+        Dictionary<string, List<InsertDefinition>> chains = CopyInsertsLocked();
+        foreach (ChannelDefinition ch in _config.Channels)
+            if (ch.InputPair is not null && IsInsertChannel(ch.Id)) chains.TryAdd(ch.Id, []);
+        return chains;
     }
 
     /// <summary>
@@ -1565,32 +1585,27 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             _auxPortEnabled = s.AuxPortEnabled;
             WireAuxRouteLocked();
 
-            bool rewireInputs = false;
-            bool rewireMixes = false;
+            bool chainsChanged = false;
             if (s.LowCutHz is int hz && hz is 0 or 80 or 120 && _lowCutHz != hz)
             {
                 _lowCutHz = hz;
-                rewireInputs = true;
+                chainsChanged = true;
             }
             if (s.SoftClipGuard is bool scg && _softClipGuard != scg)
             {
                 if (!scg || _pw.GetSoftwareClipGuardAvailability().Available)
                 {
                     _softClipGuard = scg;
-                    rewireInputs = true;
+                    chainsChanged = true;
                 }
             }
-            if (s.Inserts is not null)
-            {
-                _inserts.Clear();
-                foreach ((string channel, List<InsertDefinition> list) in s.Inserts)
-                    _inserts[channel] = [.. list];
-                rewireInputs = true;
-                rewireMixes = true;
-            }
-            if (rewireInputs) WireInputFeedsLocked();
-            if (rewireMixes)
-                foreach (MixDefinition mix in _config.Mixes) WireMixChainLocked(mix);
+            // The profile replaces the chains it names. An input it does not
+            // name keeps its chain; a mix it does not name has no inserts, as
+            // profiles always had it. Only a chain whose plugins, order,
+            // bypass or host changed is built again; the others take the
+            // profile's control values live.
+            if (chainsChanged || s.Inserts is not null)
+                ApplyChainsLocked(s.Inserts, absentMixesEmpty: true, rebuildAll: false);
         }
         if (s.OutputVolume is double v) SetOutputVolume(v);
     }
@@ -2819,6 +2834,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         foreach (string id in _captureFeeds.Keys.ToArray()) RemoveCaptureFeedLocked(id);
         RemoveInputChainsLocked();
         RemoveMixChainsLocked();
+        _chainStructures.Clear();
         _inputDevice = null;
         _inputWarning = null;
         _stripSources.Clear();

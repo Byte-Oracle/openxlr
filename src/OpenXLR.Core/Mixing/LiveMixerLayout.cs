@@ -541,5 +541,6 @@ public sealed partial class Mixer
         if (_mixPostLinks.Remove(key, out PortLink? post)) _pw.Unlink(post);
         if (_chains.Remove(key, out FilterHandle? chain)) _pw.StopFilter(chain);
         _insertErrors.Remove(key);
+        _chainStructures.Remove(key);
     }
 }

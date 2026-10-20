@@ -377,7 +377,7 @@ public sealed partial class MonitorVolumeIntegrationTests
     /// 0.2 on every port, so XLR 1, XLR 2 and Aux In all read 0.2 from it.
     /// Returns the two module ids, parent first.
     /// </summary>
-    private static (uint Parent, uint Node) LoadBindUnit(PipeWireAdapter pw)
+    internal static (uint Parent, uint Node) LoadBindUnit(PipeWireAdapter pw)
     {
         uint parent = LoadModule("module-null-sink", "sink_name=bind_unit_parent", "channels=6", "sink_properties=device.description=Bind-unit-parent");
         WaitForRecovery(() => ProcessRunner.Run("pactl", ["list", "sources", "short"]).StdoutText.Contains("bind_unit_parent.monitor", StringComparison.Ordinal));
@@ -400,9 +400,9 @@ public sealed partial class MonitorVolumeIntegrationTests
         return uint.Parse(loaded.StdoutText.Trim());
     }
 
-    private static void UnloadModule(uint module) => ProcessRunner.Run("pactl", ["unload-module", module.ToString()]);
+    internal static void UnloadModule(uint module) => ProcessRunner.Run("pactl", ["unload-module", module.ToString()]);
 
-    private static Task<ProcessResult> BindUnitSignal(CancellationToken stop) => Task.Run(() =>
+    internal static Task<ProcessResult> BindUnitSignal(CancellationToken stop) => Task.Run(() =>
         ProcessRunner.Run("python3", ["-c", """
             import struct, subprocess
             args = ['--format=f32', '--rate=48000', '--channels=6']
