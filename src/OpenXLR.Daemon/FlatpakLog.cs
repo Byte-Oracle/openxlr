@@ -21,6 +21,8 @@ internal sealed class FlatpakLog(string path) : ILoggerProvider
                 OpenXlrPaths.EnsurePrivateDir(Path.GetDirectoryName(path)!);
                 if (new FileInfo(path).LinkTarget is not null || new FileInfo(path + ".old").LinkTarget is not null)
                     return;
+                if (File.Exists(path)) RegularFile.Require(path);
+                if (File.Exists(path + ".old")) RegularFile.Require(path + ".old");
                 if (File.Exists(path) && new FileInfo(path).Length >= Limit) File.Move(path, path + ".old", true);
                 // Bound one pathological message as well as the file count.
                 var options = new FileStreamOptions

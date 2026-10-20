@@ -17,11 +17,13 @@ Desktop settings can revoke permission later.
 
 Restart daemon restarts the child without touching host services. Failed
 children are retried with a delay; a busy API port or owned daemon lock
-ends the attempt. A parent-process wait also stops the daemon if the
+ends the attempt. Restart interrupts a pending retry delay. A parent-process wait also stops the daemon if the
 window crashes. The tray uses the app's D-Bus namespace, including when
 the desktop tray host restarts. There is no systemd watchdog. Private `daemon.log`
 under `$XDG_STATE_HOME/openxlr` has one rotated copy. Collect
 diagnostics includes both instead of the journal.
+Existing log paths must be regular files, so a leftover pipe cannot block
+the daemon. Diagnostic copies use the same privacy filtering as native logs.
 
 ## Host setup
 
@@ -56,6 +58,8 @@ Host plugin folders and yabridge are not exposed. Native editors need X11
 or XWayland. The native helper retains CLAP and VST3 support for compatible
 bundles imported into the app's private storage, provided their external
 dependencies are available in the sandbox.
+Imports under `~/.lv2`, `~/.clap` and `~/.vst3` are private persistent
+Flatpak mappings. They never replace bundles in the host's folders.
 
 Desktop-specific helper features, such as Plasma's shared maximum-volume
 preference, require helpers not included in the Freedesktop runtime. The

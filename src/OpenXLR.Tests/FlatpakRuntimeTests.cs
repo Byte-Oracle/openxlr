@@ -123,6 +123,83 @@ public sealed class FlatpakRuntimeTests
     }
 
     [Fact]
+    public async Task RestartInterruptsTheRetryDelay()
+    {
+        string root = Directory.CreateTempSubdirectory("openxlr-retry-").FullName;
+        var waiting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            string path = Path.Combine(root, "events");
+            string script = ExecutableScript.Write(Path.Combine(root, "child"),
+                "#!/bin/sh\necho start >> '" + path + "'\nexit 1\n");
+            using var session = new OpenXLR.UI.FlatpakSession(script, (_, token) =>
+            {
+                waiting.TrySetResult();
+                return Task.Delay(Timeout.InfiniteTimeSpan, token);
+            });
+            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(session.Restart());
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            while (File.ReadAllLines(path).Length < 2) await Task.Delay(10, deadline.Token);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task ALogFifoCannotBlockTheDaemon()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        string root = Directory.CreateTempSubdirectory("openxlr-log-fifo-").FullName;
+        string path = Path.Combine(root, "daemon.log");
+        Task? write = null;
+        try
+        {
+            Assert.True(ProcessRunner.Run("mkfifo", [path]).Ok);
+            using var log = new FlatpakLog(path);
+            write = Task.Run(() => log.Write("must not block"));
+            await write.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            if (write is { IsCompleted: false })
+            {
+                using var unblock = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+                await write.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void DiagnosticLogsKeepPrivacyFilteringAndFileBounds()
+    {
+        string root = Directory.CreateTempSubdirectory("openxlr-log-copy-").FullName;
+        string output = Directory.CreateDirectory(Path.Combine(root, "output")).FullName;
+        try
+        {
+            string path = Path.Combine(root, "daemon.log");
+            File.WriteAllText(path, "/home/test-login/plugin {\"application.process.id\":12345} token=secret-value");
+            string Clean(string text) => OpenXLR.UI.Diagnostics.Redact(text, ["secret-value"], "test-login");
+            OpenXLR.UI.Diagnostics.CopyRedactedIfExists(Clean, root, "daemon.log", output, 1024);
+            string text = File.ReadAllText(Path.Combine(output, "daemon.log"));
+            Assert.DoesNotContain("test-login", text);
+            Assert.DoesNotContain("secret-value", text);
+            Assert.DoesNotContain("12345", text);
+            File.WriteAllText(path, new string('x', 1025));
+            OpenXLR.UI.Diagnostics.CopyRedactedIfExists(Clean, root, "daemon.log", output, 1024);
+            Assert.Contains("Log unavailable:", File.ReadAllText(Path.Combine(output, "daemon.log")));
+            if (OperatingSystem.IsLinux())
+            {
+                File.Delete(path);
+                Assert.True(ProcessRunner.Run("mkfifo", [path]).Ok);
+                OpenXLR.UI.Diagnostics.CopyRedactedIfExists(Clean, root, "daemon.log", output, 1024);
+                Assert.Contains("Log unavailable:", File.ReadAllText(Path.Combine(output, "daemon.log")));
+            }
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public async Task CancelledOwnerNeverStartsItsChild()
     {
         using var stop = new CancellationTokenSource(); stop.Cancel();

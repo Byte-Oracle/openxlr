@@ -12,10 +12,12 @@ internal sealed class FlatpakSession : IDisposable
     private readonly object _gate = new();
     private CancellationTokenSource? _generation;
     private readonly Task _run;
+    private readonly Func<TimeSpan, CancellationToken, Task> _delay;
     internal static FlatpakSession? Current { get; private set; }
 
-    internal FlatpakSession(string binary)
+    internal FlatpakSession(string binary, Func<TimeSpan, CancellationToken, Task>? delay = null)
     {
+        _delay = delay ?? Task.Delay;
         _run = RunAsync(binary);
     }
 
@@ -45,24 +47,29 @@ internal sealed class FlatpakSession : IDisposable
             long began = Environment.TickCount64;
             try
             {
-                int exit = await ProcessRunner.RunOwnedAsync(binary, [], generation.Token, TimeSpan.FromSeconds(45),
-                    ["NOTIFY_SOCKET", "WATCHDOG_USEC", "WATCHDOG_PID"],
-                    new System.Collections.Generic.Dictionary<string, string>
-                    { ["OPENXLR_PARENT_PID"] = Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture) }).ConfigureAwait(false);
-                // A host installation owns the API port or lock: do not keep
-                // claiming hardware in a retry loop against another daemon.
-                if (exit == 73 && !generation.IsCancellationRequested) return;
+                try
+                {
+                    int exit = await ProcessRunner.RunOwnedAsync(binary, [], generation.Token, TimeSpan.FromSeconds(45),
+                        ["NOTIFY_SOCKET", "WATCHDOG_USEC", "WATCHDOG_PID"],
+                        new System.Collections.Generic.Dictionary<string, string>
+                        { ["OPENXLR_PARENT_PID"] = Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture) }).ConfigureAwait(false);
+                    // A host installation owns the API port or lock: do not keep
+                    // claiming hardware in a retry loop against another daemon.
+                    if (exit == 73 && !generation.IsCancellationRequested) return;
+                }
+                catch (Exception ex) when (ex is IOException or System.ComponentModel.Win32Exception or InvalidOperationException)
+                {
+                    Console.Error.WriteLine("Could not start the sandbox daemon: " + ex.Message);
+                }
+                if (_stop.IsCancellationRequested) break;
+                // Restart covers both the child and its retry wait. A deliberate
+                // restart begins as soon as the previous child has stopped.
+                if (generation.IsCancellationRequested) { failures = 0; continue; }
+                failures = Environment.TickCount64 - began > 60_000 ? 0 : Math.Min(failures + 1, 5);
+                await _delay(TimeSpan.FromSeconds(failures * 2), generation.Token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) { }
-            catch (Exception ex) when (ex is IOException or System.ComponentModel.Win32Exception or InvalidOperationException)
-            {
-                Console.Error.WriteLine("Could not start the sandbox daemon: " + ex.Message);
-            }
+            catch (OperationCanceledException) when (generation.IsCancellationRequested) { failures = 0; }
             finally { lock (_gate) _generation = null; }
-            if (_stop.IsCancellationRequested) break;
-            failures = Environment.TickCount64 - began > 60_000 ? 0 : Math.Min(failures + 1, 5);
-            try { await Task.Delay(TimeSpan.FromSeconds(failures * 2), _stop.Token).ConfigureAwait(false); }
-            catch (OperationCanceledException) { break; }
         }
     }
 

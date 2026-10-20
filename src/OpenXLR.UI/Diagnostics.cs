@@ -50,7 +50,7 @@ public static class Diagnostics
             await File.WriteAllTextAsync(Path.Combine(work, "PRIVACY.txt"), """
                 This archive is created locally and is never uploaded automatically.
                 It contains OpenXLR state, USB control blocks, PipeWire topology,
-                recent openxlr-daemon journal entries, application audio metadata,
+                recent openxlr-daemon journal entries or Flatpak logs, application audio metadata,
                 configuration files, plugin names and paths, the plugin catalogue,
                 Wine/yabridge versions and status, latest scan results, the saved
                 output of plugin scans that failed, and system
@@ -498,7 +498,7 @@ public static class Diagnostics
         return text;
     }
 
-    private static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest, int? maximum = null)
+    internal static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest, int? maximum = null)
     {
         string src = Path.Combine(dir, file);
         if (File.Exists(src))
