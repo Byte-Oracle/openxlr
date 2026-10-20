@@ -449,23 +449,8 @@ internal static partial class SkinLayoutWindowTests
                 foreach (MatrixCellViewModel cell in row.Cells)
                     Assert.Contains(cell.Send!, sends);
 
-            // The Wave skin's matrix draws the same row heads at its own sizes:
-            // XLR 1's gain over its volume, Aux In's level over its volume,
-            // every other channel's volume alone, at both control sizes.
-            Wear("wave");
-            Assert.NotNull(window.MixMatrix);
-            Assert.True(window.MixMatrix!.Rows.Single(r => r.Channel.Id == "xlr1").Stacked);
-            foreach (bool enlarged in new[] { false, true })
-            {
-                SkinService.ApplyControlSizing(enlarged);
-                foreach (double width in new[] { 640d, 1040, 2400 })
-                {
-                    Layout(window, width, 1400);
-                    CheckMatrixCells(window, window.MixMatrix!, $"wave, {(enlarged ? "touch" : "standard")} at {width}");
-                    if (width == 1040) Capture(window, $"skin-wave-{(enlarged ? "touch" : "standard")}-1040");
-                }
-            }
-            SkinService.ApplyControlSizing(false);
+            // Wave: the same arrangement and the same matrix in its own palette and sizes.
+            CheckWave(window, model, mixer);
             Wear(SkinPackage.DefaultId);
             Layout(window, 1040, 900);
         }
@@ -478,10 +463,11 @@ internal static partial class SkinLayoutWindowTests
     }
 
     /// <summary>
-    /// One size of the Broadcast window: the toolbar at the top right, the
-    /// matrix across the window under it, the folded sections under the
-    /// matrix, nothing overlapping or clipped, and every cell of the matrix
-    /// in its place.
+    /// One size of the Broadcast window, or of Wave's, which arranges it the
+    /// same way: HEADPHONES at the top left, the toolbar at the top right, the
+    /// matrix across the window under them, APPLICATIONS under the matrix,
+    /// nothing overlapping or clipped, and every cell of the matrix in its
+    /// place.
     /// </summary>
     private static void CheckBroadcastAt(MainWindow window, MainViewModel model, string where)
     {
@@ -549,7 +535,8 @@ internal static partial class SkinLayoutWindowTests
         // HEADPHONES beside the toolbar need a window about 1000 wide; the tree fits a
         // wider window, a matrix wider than its card scrolls inside the card, and a
         // narrower window scrolls the tree sideways under a header that keeps its width.
-        bool fits = window.Bounds.Width >= SkinLayoutDefaults.RowSectionMinWidth + 12 + 360 + 32;
+        double gap = ((Grid)window.LayoutHost.PanelFor("mixes")).ColumnSpacing;
+        bool fits = window.Bounds.Width >= SkinLayoutDefaults.RowSectionMinWidth + gap + 360 + 32;
         Assert.Equal(fits ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto, scroll.HorizontalScrollBarVisibility);
         if (fits)
             Assert.True(scroll.Extent.Width <= scroll.Viewport.Width + 1, $"the tree is {scroll.Extent.Width} wide in {scroll.Viewport.Width} {where}");

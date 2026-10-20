@@ -135,7 +135,14 @@ public sealed class SkinLayoutTests
         Assert.Empty(wave.Errors);
         SkinLayout layout = Assert.IsType<SkinLayout>(wave.Package.Layout);
         Assert.True(layout.Submixer.IsMatrix);
-        Assert.Equal(new[] { "monitor", "submixer", "headphones", "inputs", "applications" }, layout.Main.RegionOrder);
+        // Broadcast's arrangement: HEADPHONES beside MONITOR, the matrix under both, then INPUTS and APPLICATIONS.
+        SkinLayoutStack desk = Assert.IsType<SkinLayoutStack>(layout.Main);
+        SkinLayoutGrid mixes = Assert.IsType<SkinLayoutGrid>(desk.Children[0].Node);
+        Assert.Equal(new[] { "headphones", "monitor", "submixer" }, mixes.RegionOrder);
+        Assert.Equal(new[] { "inputs", "applications" }, desk.RegionOrder);
+        // Its cards sit 8 pixels apart, closer than Broadcast's 12, in the stack and in the grid alike.
+        Assert.Equal(8, desk.Spacing);
+        Assert.Equal(8, mixes.Spacing);
         Assert.Equal(SkinRegionVisibility.Hidden, layout.OptionsFor(SkinLayoutRegions.Inputs).Visibility);
         foreach (string part in new[] { "identity", "binding", "gain", "mute", "meter", "effects" })
             Assert.Contains(part, layout.Submixer.Matrix.RowHead.Shown);
