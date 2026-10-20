@@ -745,7 +745,7 @@ controls.
 |---|---|---|---|---|
 | `Ox.Matrix.NameWidth` | number | 112 | 56 to 400 | the width of a row head's name column |
 | `Ox.Matrix.CellWidth` | number | 168 | 120 to 400 | the width of a cell, of a column head and of a row head's source controls |
-| `Ox.Matrix.RowHeight` | number | 40 | 28 to 120 | the height of a row: its head and every cell in it |
+| `Ox.Matrix.RowHeight` | number | 40 | 28 to 120 | the height of a row: its head and every cell in it; a row whose head stacks a gain over the channel volume is as tall as the two faders need, never less |
 | `Ox.Matrix.MutedBackground` | brush | #40a03434 | | the background of a cell whose send is muted, when the matrix tints muted cells. Translucent by default, so the cell's own surface shows through as a red tint |
 | `Ox.Matrix.MutedForeground` | brush | #f6dede | | the lettering of a muted send's mute in a tinted cell |
 
@@ -1158,11 +1158,12 @@ strip of Aux In holds its level and level lock. These are the INPUTS
 panel's own controls, so a switch the interface does not have stays
 hidden, the gain lock still disables both gains, a mute still waits while
 phantom power settles, and XLR 2 shows only on an interface with two XLR
-inputs. An application or capture channel has no hardware gain and no
-chain of its own; its `gain` part is the channel's own volume, which
-scales every send it makes, so its strip has its name, its meter and that
-volume whatever the skin orders. A daemon that reports no volume for the
-channel leaves the strip at its name and its meter.
+inputs. Every channel's `gain` part also holds the channel's own volume,
+which scales every send it makes: under the gain or the level on XLR 1,
+XLR 2 and Aux In, alone on a strip without one. An application or capture
+channel has no hardware gain and no chain of its own, so its strip has its
+name, its meter and that volume whatever the skin orders. A daemon that
+reports no volume for the channel leaves the strip without it.
 
 Mix banks draw the submixer by mix instead of by channel. Each bank
 shows one mix: the send of every channel into that mix, then the mix's
@@ -1214,7 +1215,7 @@ An input row's parts, in their default order, are `identity`, `binding`,
 | `identity` | the channel's icon and name. It cannot be hidden |
 | `binding` | XLR 1's or XLR 2's input binding: a chip naming the interface's jack or the capture source that feeds the strip, with a light that is on while the feed is linked and, under it, why the strip is silent. Clicking it opens the binding dialog |
 | `meter` | the channel's own level meter, left and right |
-| `gain` | the input's hardware gain, Aux In's level, or an application or capture channel's own volume |
+| `gain` | the input's hardware gain or Aux In's level, with the channel's own volume under it; on an application or capture channel, its own volume |
 | `hardware-controls` | the input's switches, or Aux In's level lock |
 | `effects` | the input's plugin chain: its button and the chain at a glance |
 | `fader` | the send's level into the bank's mix |
@@ -1232,8 +1233,9 @@ interface's jack. While the strip is bound to another source, it is a
 capture channel on the interface's own node at that jack's port, whose
 `gain` part then shows the interface's gain above the channel's own volume
 and whose `hardware-controls` part shows the switches. A strip bound to
-another source has no `gain`, and XLR 1's `hardware-controls` keeps only its
-software low cut and ClipGuard, unless the source is an additional
+another source keeps only its own volume in `gain`, and XLR 1's
+`hardware-controls` keeps only its software low cut and ClipGuard, unless
+the source is an additional
 interface the daemon drives: then the strip's `gain` part shows that
 interface's gain and its `hardware-controls` part that interface's
 switches, as a capture channel on that interface's node does. A matrix row
@@ -1395,9 +1397,13 @@ controls the INPUTS panel shows for the channel, under the same rules. XLR 1
 and XLR 2 have their hardware gain, with the meter under it, their mute,
 which waits while phantom power settles, and the button that opens their
 plugin chain. The gain lock still disables the gain. Aux In has its level
-and level lock. An application or capture channel has its own volume,
-which scales every send in its row, with its meter under it, the way XLR 1
-has its gain. XLR 2 has a row only on an interface with two XLR inputs.
+and level lock. Every channel has its own volume, which scales every send
+in its row. On XLR 1, XLR 2 and Aux In it is a second fader under the gain
+or the level, the meter under the gain, and that row is as tall as the two
+faders need, never less than `Ox.Matrix.RowHeight`; its cells follow it.
+An application or capture channel, or a strip bound to another source,
+has the volume alone, with its meter under it. XLR 2 has a row only on an
+interface with two XLR inputs.
 
 Each column has a head: the mix's icon and name, an outputs line, a thin
 line in the mix's own colour when the layout editor gave it one, and a row
@@ -1435,7 +1441,7 @@ cell's are `mute`, `fader` and `value`.
 | `identity` | row head, column head | the channel's or the mix's icon and name. It cannot be hidden. In a row head it is the name column, on the left unless `parts` puts it last |
 | `binding` | row head | XLR 1's or XLR 2's input binding as a line under the name in the name column, wherever `parts` puts it: a light that is on while the feed is linked and the interface's jack or the source's name. The name and this line are one target that opens the binding dialog, and its tooltip says why the strip is silent |
 | `meter` | row head | the channel's meter as a part of its own. Under the faders it is the gain's track instead, so a channel with gain draws it there |
-| `gain` | row head | the input's hardware gain, Aux In's level and level lock, or an application or capture channel's own volume. A capture channel carrying the interface's microphone shows the interface's gain instead |
+| `gain` | row head | the input's hardware gain, or Aux In's level and level lock, with the channel's own volume as a second fader under it; a channel without a gain shows its volume alone. A capture channel carrying the interface's microphone shows the interface's gain over its volume |
 | `mute` | row head, column head, cell | the input's hardware mute, the mix's mute, or the send's mute in the column's mix. A capture channel carrying the interface's microphone has the interface's mute |
 | `effects` | row head, column head | the button that opens the input's or the mix's plugin chain |
 | `master` | column head | the mix's master level as a short fader |

@@ -101,8 +101,11 @@ export function layoutChoices(mixer, devices = []) {
       items: channels.map((channel) => option(`send:${channel.id}:all`, `${channel.name} in all mixes`)),
     },
   ];
-  // A channel volume is reported for application and capture channels only,
-  // and only by a daemon that has them; the group is left out without one.
+  // A channel volume is reported for every channel, XLR 1, XLR 2 and Aux In
+  // included, by a daemon that has them; an older daemon reports it for
+  // application and capture channels only, or not at all, and the group
+  // lists what it reports. The label is the strip's name, so a bound XLR 1
+  // reads "Mic 1 volume".
   const volumes = channels.filter((channel) => typeof channel.volume === "number");
   if (volumes.length) levelGroups.splice(2, 0, {
     id: "layout-channel-volumes",

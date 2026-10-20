@@ -75,8 +75,8 @@ internal static partial class SkinLayoutWindowTests
                 {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor"},{"id":"monitor2","name":"Monitor B","kind":"monitor"},
                           {"id":"stream","name":"Stream","kind":"virtualMic"},{"id":"chat","name":"Chat","kind":"virtualMic"},
                           {"id":"auxout","name":"Aux","kind":"auxPort"}],
-                 "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":0.8,"stream":0.6}},
-                             {"id":"xlr2","name":"XLR 2","hardware":true},
+                 "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":0.8,"stream":0.6},"volume":0.75},
+                             {"id":"xlr2","name":"XLR 2","hardware":true,"volume":1},
                              {"id":"aux","name":"Aux In","hardware":true},
                              {"id":"music","name":"Music with a long display name","levels":{"monitor":0.5,"stream":0.4},"appearance":{"icon":"♫"}},
                              {"id":"game","name":"Game","levels":{"monitor":1,"stream":1},"volume":1},
@@ -190,6 +190,32 @@ internal static partial class SkinLayoutWindowTests
             Control[] focusable = Focusable(window);
             Assert.DoesNotContain(focusable, c => c.GetSelfAndVisualAncestors().Contains(effects));
             Assert.Contains(focusable, c => c.Name == "RackGain");
+            // XLR 1's own volume stands under its gain in the gain part, a
+            // whole fader inside the strip; Aux In, which the daemon reports no
+            // volume for here, keeps its level alone.
+            Slider rackGain = xlr1.GetVisualDescendants().OfType<Slider>().Single(f => f.Name == "RackGain");
+            Grid rackVolume = xlr1.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "RackVolume");
+            Assert.True(rackVolume.IsEffectivelyVisible);
+            Slider xlr1Volume = rackVolume.GetVisualDescendants().OfType<Slider>().Single();
+            Assert.Equal(0.75, xlr1Volume.Value);
+            Assert.Equal("XLR 1 volume", AutomationProperties.GetName(xlr1Volume));
+            Assert.True(xlr1Volume.TranslatePoint(default, xlr1)!.Value.Y >= rackGain.TranslatePoint(new Point(0, rackGain.Bounds.Height), xlr1)!.Value.Y - 0.5);
+            Assert.Same(Part(xlr1, SkinStripParts.Gain), rackVolume.Parent);
+            AssertInside(xlr1Volume, xlr1);
+            Assert.False(RackStrip(rack, "aux").GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "RackVolume").IsEffectivelyVisible);
+            // The direct path's mark shows beside the volume of the channel it carries.
+            TextBlock rackNote = rackVolume.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "RackVolumeNote");
+            Assert.False(rackNote.IsEffectivelyVisible);
+            StopConnecting(window);
+            model.Channels.Single(c => c.Id == "xlr1").DirectMonitored = true;
+            Layout(window, 1040, 1200);
+            rackNote = RackStrip(rack, "xlr1").GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "RackVolumeNote");
+            Assert.True(rackNote.IsEffectivelyVisible);
+            AssertInside(rackNote, RackStrip(rack, "xlr1"));
+            Assert.Equal(Localizer.Text("ChannelVolumeDirectTip"), ToolTip.GetTip(rackNote));
+            Capture(window, "skin-layout-rack-direct-1040");
+            model.Channels.Single(c => c.Id == "xlr1").DirectMonitored = false;
+            Layout(window, 1040, 1200);
             // An application channel the daemon reports no volume for has only
             // its name and meter, whatever the skin orders.
             Border music = RackStrip(rack, "music");

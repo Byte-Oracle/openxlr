@@ -66,7 +66,8 @@ mix ids. For example,
 makes an already selected headset hear Monitor A and Chat summed.
 `{"cmd":"setChannelVolume","channel":"game","value":0.5}` sets the Game
 channel's own volume, which scales every send of the channel at once, and
-`GET /api/v1/channels/game` reads it back as `volume`.
+`GET /api/v1/channels/game` reads it back as `volume`. Every channel takes
+one, `xlr1`, `xlr2` and `aux` included.
 Both transports share the dispatcher,
 validation and broadcasts. HTTP returns
 `{"apiVersion":"1","ok":true,"messages":[]}` after a successful mutation.

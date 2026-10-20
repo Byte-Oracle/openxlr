@@ -2588,7 +2588,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     BindingConnected = BindingConnectedLocked(c),
                     BindingWarning = BindingWarningLocked(c),
                     UnitInput = unitInputs.GetValueOrDefault(c.Id),
-                    Volume = ChannelVolumeStatusLocked(c),
+                    Volume = ChannelVolumeLocked(c.Id),
                 })],
                 RenamedSinceStart = _renamedSinceBuild,
                 MonitorOutput = _monitorOutputs.FirstOrDefault(),

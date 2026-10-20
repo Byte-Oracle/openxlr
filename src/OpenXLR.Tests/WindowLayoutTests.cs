@@ -647,8 +647,13 @@ public sealed class WindowLayoutTests
         Assert.Equal(0.4, music[0].Value);
         Assert.Equal("music volume", Avalonia.Automation.AutomationProperties.GetName(music[0]));
         Assert.All(music[1..], s => Assert.IsType<SendViewModel>(s.DataContext));
-        // A hardware input has none, whatever a state says.
-        Assert.DoesNotContain(channels[1].GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible && s.DataContext is ChannelViewModel);
+        // A hardware input has one too, over its sends the same way.
+        Slider[] game = [.. channels[1].GetVisualDescendants().OfType<Slider>().Where(s => s.IsEffectivelyVisible)
+            .OrderBy(s => s.TranslatePoint(default, channels[1])!.Value.Y)];
+        Assert.IsType<ChannelViewModel>(game[0].DataContext);
+        Assert.Equal(0.5, game[0].Value);
+        Assert.Equal("game volume", Avalonia.Automation.AutomationProperties.GetName(game[0]));
+        Assert.Equal(music[1].TranslatePoint(default, main)!.Value.Y, game[1].TranslatePoint(default, main)!.Value.Y, 0.5);
         LiveLayoutOrderTests.Apply(model, ["music", "game"], ["monitor", "chat", "stream"]);
         Layout(main, 1040, 900);
         var mixes = main.GetVisualDescendants().OfType<Border>()
@@ -855,6 +860,18 @@ public sealed class WindowLayoutTests
                 Assert.True(intersection.Width <= 0 || intersection.Height <= 0,
                     $"{controls[i].GetType().Name} overlaps {controls[j].GetType().Name}.");
             }
+    }
+
+    /// <summary>
+    /// Stop a window's background connection, so a test that holds a device
+    /// state of its own is not undone by the reconnect loop reporting the
+    /// daemon gone.
+    /// </summary>
+    internal static void StopConnecting(MainWindow window)
+    {
+        ((DaemonClient)typeof(MainWindow).GetField("_client", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(window)!).DisposeAsync().AsTask().GetAwaiter().GetResult();
+        Dispatcher.UIThread.RunJobs();
     }
 
     internal static void Capture(TopLevel window, string name)

@@ -50,9 +50,9 @@ internal static partial class SkinLayoutWindowTests
                           {"id":"chat","name":"Chat","kind":"virtualMic","appearance":{"defaultIcon":"people"}},
                           {"id":"auxout","name":"Aux","kind":"auxPort","appearance":{"defaultIcon":"jack"}},
                           {"id":"music-bed","name":"Music bed","kind":"virtualMic","appearance":{"icon":"music","defaultIcon":"podcast"}}],
-                 "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":0.8,"stream":0.6},"appearance":{"defaultIcon":"mic"}},
+                 "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":0.8,"stream":0.6},"volume":0.7,"appearance":{"defaultIcon":"mic"}},
                              {"id":"xlr2","name":"XLR 2","hardware":true,"present":false,"appearance":{"defaultIcon":"mic"}},
-                             {"id":"aux","name":"Aux In","hardware":true,"appearance":{"defaultIcon":"jack"}},
+                             {"id":"aux","name":"Aux In","hardware":true,"volume":1,"appearance":{"defaultIcon":"jack"}},
                              {"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.4},"mutedIn":["stream"],"volume":0.9,"appearance":{"icon":"♫","defaultIcon":"music"}},
                              {"id":"board","name":"LONGNAME","levels":{"monitor":1,"stream":1},"volume":1,"appearance":{"defaultIcon":"apps"}},
                              {"id":"game","name":"Game","levels":{"monitor":1,"stream":1},"appearance":{"defaultIcon":"game"}},
@@ -171,7 +171,7 @@ internal static partial class SkinLayoutWindowTests
                 {
                     Layout(window, width, 1400);
                     CheckBroadcastAt(window, model, $"{(enlarged ? "touch" : "standard")} at {width}");
-                    if (!enlarged) Capture(window, $"skin-broadcast-{width}");
+                    Capture(window, enlarged ? $"skin-broadcast-touch-{width}" : $"skin-broadcast-{width}");
                 }
             }
             SkinService.ApplyControlSizing(false);
@@ -183,8 +183,8 @@ internal static partial class SkinLayoutWindowTests
             string bound = mixer.Replace("""{"id":"xlr1","name":"XLR 1","hardware":true,""",
                 "{\"id\":\"xlr1\",\"name\":\"Mic 1\",\"hardware\":true,\"binding\":{\"kind\":\"source\",\"source\":\"" + Webcam
                 + "\",\"pair\":0,\"monoChannel\":0},\"bindingConnected\":true,", StringComparison.Ordinal)
-                .Replace("""{"monitor":0.8,"stream":0.6},"appearance":{"defaultIcon":"mic"}""",
-                    """{"monitor":0.8,"stream":0.6},"appearance":{"defaultIcon":"microphone"}""", StringComparison.Ordinal);
+                .Replace("""{"monitor":0.8,"stream":0.6},"volume":0.7,"appearance":{"defaultIcon":"mic"}""",
+                    """{"monitor":0.8,"stream":0.6},"volume":0.7,"appearance":{"defaultIcon":"microphone"}""", StringComparison.Ordinal);
             Assert.NotEqual(mixer, bound);
             typeof(MainViewModel).GetMethod("ApplyDevices", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [JsonNode.Parse("""
                 [{"kind":0,"name":"speakers","description":"Desk speakers with a long description from the driver"},
@@ -202,7 +202,14 @@ internal static partial class SkinLayoutWindowTests
                     CheckBroadcastAt(window, model, where);
                     Border head = RowHead(window, "xlr1");
                     Assert.Contains(head.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text == "Mic 1");
-                    Assert.DoesNotContain(head.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
+                    // Its own volume stays, the head's one fader, with the meter under it.
+                    Slider micVolume = Assert.Single(head.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
+                    Assert.Equal("MatrixVolume", micVolume.Name);
+                    Assert.Equal(0.7, micVolume.Value);
+                    Assert.Equal("Mic 1 volume", AutomationProperties.GetName(micVolume));
+                    Assert.Equal(matrix.MeterUnderFader,
+                        head.GetVisualDescendants().OfType<MeterFader>().Single(f => f.IsEffectivelyVisible).Meters.IsEffectivelyVisible);
+                    Assert.Equal(RowHeightOf(window), head.Bounds.Height, 0.5);
                     Assert.DoesNotContain(head.GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible && t.Classes.Contains("matrixMute"));
                     Assert.Single(head.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Classes.Contains("matrixEffects"));
                     Assert.Equal("microphone", head.GetVisualDescendants().OfType<LayoutIconBlock>().Single().Shown);
@@ -248,10 +255,58 @@ internal static partial class SkinLayoutWindowTests
             Assert.Null(game.GetVisualDescendants().OfType<Slider>().FirstOrDefault(s => s.IsEffectivelyVisible));
             Assert.True(Part(game, SkinStripParts.Meter).IsEffectivelyVisible);
             Assert.Contains(game.GetVisualDescendants().OfType<LevelMeter>(), m => m.IsEffectivelyVisible);
-            // XLR 1's head has its gain over its meter, its mute and its chain.
+            // XLR 1's head has its gain over its meter, its own volume under the
+            // gain, its mute and its chain; the row grows to hold both faders.
             Border xlr1 = RowHead(window, "xlr1");
-            Assert.Single(xlr1.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
-            Assert.True(xlr1.GetVisualDescendants().OfType<MeterFader>().Single(f => f.IsEffectivelyVisible).Meters.IsEffectivelyVisible);
+            Slider[] xlr1Faders = [.. xlr1.GetVisualDescendants().OfType<Slider>().Where(s => s.IsEffectivelyVisible)
+                .OrderBy(s => s.TranslatePoint(default, xlr1)!.Value.Y)];
+            Assert.Equal(2, xlr1Faders.Length);
+            Assert.Equal(model.UnitInput1.GainName, AutomationProperties.GetName(xlr1Faders[0]));
+            Assert.Equal("XLR 1 volume", AutomationProperties.GetName(xlr1Faders[1]));
+            Assert.Equal(0.7, xlr1Faders[1].Value);
+            MeterFader[] xlr1Tracks = [.. xlr1.GetVisualDescendants().OfType<MeterFader>().Where(f => f.IsEffectivelyVisible)
+                .OrderBy(f => f.TranslatePoint(default, xlr1)!.Value.Y)];
+            Assert.True(xlr1Tracks[0].Meters.IsEffectivelyVisible);
+            Assert.False(xlr1Tracks[1].Meters.IsEffectivelyVisible);
+            Assert.True(matrix.Rows.Single(r => r.Channel.Id == "xlr1").Stacked);
+            xlr1Faders[1].Value = 0.5;
+            Assert.Equal(0.5, model.Channels.Single(c => c.Id == "xlr1").Volume);
+            // Aux In stacks its level over its volume the same way, or keeps the volume alone without the stage.
+            Assert.Equal(model.CapAuxInput ? 2 : 1, RowHead(window, "aux").GetVisualDescendants().OfType<Slider>().Count(s => s.IsEffectivelyVisible));
+            // While the Wave XLR Pro's direct path carries XLR 1 to the jacks, a
+            // mark beside its volume and the volume's tooltip say it reaches the
+            // mixes only; the row keeps its height.
+            ChannelViewModel xlr1Channel = model.Channels.Single(c => c.Id == "xlr1");
+            double xlr1Height = xlr1.Bounds.Height;
+            TextBlock note = xlr1.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "MatrixVolumeNote");
+            Assert.False(note.IsEffectivelyVisible);
+            Assert.Equal(Localizer.Text("ChannelVolumeTip"), ToolTip.GetTip(xlr1Faders[1]));
+            StopConnecting(window);
+            xlr1Channel.DirectMonitored = true;
+            foreach (bool enlarged in new[] { false, true })
+            {
+                SkinService.ApplyControlSizing(enlarged);
+                foreach (double width in new[] { 640d, 1040, 2560 })
+                {
+                    Layout(window, width, 1400);
+                    string where = $"direct path, {(enlarged ? "touch" : "standard")} at {width}";
+                    Border head = RowHead(window, "xlr1");
+                    TextBlock mark = head.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "MatrixVolumeNote");
+                    Assert.True(mark.IsEffectivelyVisible, where);
+                    AssertInside(mark, head);
+                    Assert.Equal(Localizer.Text("ChannelVolumeDirectTip"), ToolTip.GetTip(mark));
+                    Assert.Equal(Localizer.Text("ChannelVolumeDirectTip"),
+                        ToolTip.GetTip(head.GetVisualDescendants().OfType<Slider>().Single(f => f.Name == "MatrixVolume")));
+                    CheckMatrixCells(window, matrix, where);
+                    if (width == 1040) Capture(window, $"skin-broadcast-direct-{(enlarged ? "touch" : "standard")}-1040");
+                }
+            }
+            SkinService.ApplyControlSizing(false);
+            Layout(window, 1040, 1400);
+            Assert.Equal(xlr1Height, RowHead(window, "xlr1").Bounds.Height, 0.5);
+            xlr1Channel.DirectMonitored = false;
+            Layout(window, 1040, 1400);
+            Assert.False(RowHead(window, "xlr1").GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "MatrixVolumeNote").IsEffectivelyVisible);
             Assert.Single(xlr1.GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible && t.Classes.Contains("matrixMute"));
             Assert.Single(xlr1.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Classes.Contains("matrixEffects"));
             // XLR 2 has no row, comes back when the interface has it, and goes again.
@@ -393,6 +448,24 @@ internal static partial class SkinLayoutWindowTests
             foreach (MatrixRowViewModel row in window.MixMatrix!.Rows)
                 foreach (MatrixCellViewModel cell in row.Cells)
                     Assert.Contains(cell.Send!, sends);
+
+            // The Wave skin's matrix draws the same row heads at its own sizes:
+            // XLR 1's gain over its volume, Aux In's level over its volume,
+            // every other channel's volume alone, at both control sizes.
+            Wear("wave");
+            Assert.NotNull(window.MixMatrix);
+            Assert.True(window.MixMatrix!.Rows.Single(r => r.Channel.Id == "xlr1").Stacked);
+            foreach (bool enlarged in new[] { false, true })
+            {
+                SkinService.ApplyControlSizing(enlarged);
+                foreach (double width in new[] { 640d, 1040, 2400 })
+                {
+                    Layout(window, width, 1400);
+                    CheckMatrixCells(window, window.MixMatrix!, $"wave, {(enlarged ? "touch" : "standard")} at {width}");
+                    if (width == 1040) Capture(window, $"skin-wave-{(enlarged ? "touch" : "standard")}-1040");
+                }
+            }
+            SkinService.ApplyControlSizing(false);
             Wear(SkinPackage.DefaultId);
             Layout(window, 1040, 900);
         }
@@ -516,10 +589,15 @@ internal static partial class SkinLayoutWindowTests
         {
             var model = (MatrixRowViewModel)row.DataContext!;
             Border head = row.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MatrixRowHead");
-            Assert.Equal(nameWidth + cellWidth, head.Bounds.Width, 0.5);
-            Assert.Equal(rowHeight, head.Bounds.Height, 0.5);
+            // The name and source columns, inside the tile's own border where the skin draws one.
+            Assert.Equal(nameWidth + cellWidth + head.BorderThickness.Left + head.BorderThickness.Right, head.Bounds.Width, 0.5);
+            // A head that stacks a gain over the volume takes what the two need,
+            // never less than the row height; every other head is the row height.
+            if (model.Stacked) Assert.True(head.Bounds.Height >= rowHeight - 0.5, $"{model.Channel.Id} is {head.Bounds.Height} tall {where}");
+            else Assert.Equal(rowHeight, head.Bounds.Height, 0.5);
             Border source = head.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MatrixSource");
             AssertPartsApart(source);
+            CheckLevels(head, model, where);
             Border[] cells = [.. row.GetVisualDescendants().OfType<Border>().Where(b => b.Name == "MatrixCell" && b.IsEffectivelyVisible)];
             Assert.Equal(matrix.Columns.Count, cells.Length);
             AssertNoOverlap([head, .. cells]);
@@ -530,7 +608,7 @@ internal static partial class SkinLayoutWindowTests
                 Assert.Same(matrix.Columns[i].Mix, cell.Mix);
                 Assert.Same(cell.Channel.Sends.SingleOrDefault(s => s.MixId == cell.Mix.Id), cell.Send);
                 Assert.Equal(cellWidth, cells[i].Bounds.Width, 0.5);
-                Assert.Equal(rowHeight, cells[i].Bounds.Height, 0.5);
+                Assert.Equal(head.Bounds.Height, cells[i].Bounds.Height, 0.5);
                 // A column's head stands over its cells.
                 Assert.Equal(heads[i].TranslatePoint(default, view)!.Value.X, cells[i].TranslatePoint(default, view)!.Value.X, 0.5);
                 if (cell.IsEmpty) continue;
@@ -556,6 +634,48 @@ internal static partial class SkinLayoutWindowTests
             Layout(window, window.ClientSize.Width, window.ClientSize.Height);
         }
     }
+
+    /// <summary>
+    /// A row head's gain part: the gain over the channel's volume when it
+    /// stacks them, each a whole fader inside the head, the gain above, apart
+    /// and as long as each other; a lone volume or gain otherwise. The volume
+    /// fader names its channel, and the meter runs under one of them at most.
+    /// </summary>
+    internal static void CheckLevels(Border head, MatrixRowViewModel model, string where)
+    {
+        if (!model.Spec.Parts.Contains(SkinStripParts.Gain)) return;
+        StackPanel levels = head.GetVisualDescendants().OfType<StackPanel>().Single(p => p.Name == "MatrixLevels");
+        Slider[] faders = [.. levels.GetVisualDescendants().OfType<Slider>().Where(s => s.IsEffectivelyVisible)
+            .OrderBy(s => s.TranslatePoint(default, head)!.Value.Y)];
+        Slider? volume = faders.SingleOrDefault(s => s.Name == "MatrixVolume");
+        Assert.Equal(model.ShowsVolume, volume is not null);
+        Assert.Equal((model.HasGainFader ? 1 : 0) + (model.ShowsVolume ? 1 : 0), faders.Length);
+        foreach (Slider fader in faders) AssertInside(fader, head);
+        if (volume is not null)
+        {
+            Assert.Equal(Localizer.Format("ChannelVolumeName", model.Channel.Name), Avalonia.Automation.AutomationProperties.GetName(volume));
+            Assert.Equal(model.Channel.VolumeTip, ToolTip.GetTip(volume));
+        }
+        if (model.Stacked)
+        {
+            Assert.Same(volume, faders[1]);
+            double gainBottom = faders[0].TranslatePoint(new Point(0, faders[0].Bounds.Height), head)!.Value.Y;
+            Assert.True(gainBottom <= faders[1].TranslatePoint(default, head)!.Value.Y + 0.5,
+                $"{model.Channel.Id}: the gain and the volume overlap {where}");
+            // Both start at the part's left edge and keep most of its width; a
+            // lock or the direct path's mark takes only the end of a line.
+            foreach (Slider fader in faders)
+            {
+                Assert.Equal(0, fader.TranslatePoint(default, levels)!.Value.X, 0.5);
+                Assert.True(fader.Bounds.Width >= levels.Bounds.Width * 0.6,
+                    $"{model.Channel.Id}: a fader {fader.Bounds.Width:0.#} wide in {levels.Bounds.Width:0.#} {where}");
+            }
+        }
+        MeterFader[] tracks = [.. levels.GetVisualDescendants().OfType<MeterFader>().Where(m => m.IsEffectivelyVisible)];
+        Assert.True(tracks.Count(m => m.Meters.IsEffectivelyVisible) <= 1, $"{model.Channel.Id} draws two meters {where}");
+    }
+
+    private static double RowHeightOf(Window window) => (double)window.FindResource("Ox.Matrix.RowHeight")!;
 
     /// <summary>A channel's row head in the matrix.</summary>
     internal static Border RowHead(Visual root, string channel) =>

@@ -383,6 +383,26 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     state.mixer.channels[0].mutedIn = ["monitor", "monitor2"];
     daemon.receive(state);
     assert.equal(feedbackOf("chvol-dial").value, "MUTED");
+    // XLR 1 has a volume too, labelled with the strip's name: "Mic 1" while
+    // it is bound to another source. Its dial turns that volume.
+    state.mixer.channels[0].mutedIn = [];
+    state.mixer.channels.unshift({id:"xlr1",name:"Mic 1",hardware:true,volume:0.8,levels:{monitor:1,monitor2:1},mutedIn:[],
+      binding:{kind:"source",source:"alsa_input.usb-webcam"}});
+    daemon.receive(state);
+    host.receive({event:"sendToPlugin",context:"qa",payload:{request:"layout"}});
+    assert.deepEqual(host.messages.at(-1).payload.levelGroups.find(g => g.id === "layout-channel-volumes").items,
+      [{target:"chvol:xlr1", label:"Mic 1 volume"}, {target:"chvol:system", label:`${state.mixer.channels[1].name} volume`}]);
+    dialTarget("xlr1-volume-dial", "chvol:xlr1");
+    assert.equal(feedbackOf("xlr1-volume-dial").value, "80%");
+    host.receive({event:"dialRotate",context:"xlr1-volume-dial",payload:{ticks:-5}});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setChannelVolume",channel:"xlr1",value:0.75});
+    state.mixer.channels[0].name = "XLR 1";
+    delete state.mixer.channels[0].binding;
+    daemon.receive(state);
+    host.receive({event:"sendToPlugin",context:"qa",payload:{request:"layout"}});
+    assert.equal(host.messages.at(-1).payload.levelGroups.find(g => g.id === "layout-channel-volumes").items[0].label, "XLR 1 volume");
+    state.mixer.channels.shift();
+    daemon.receive(state);
     // A daemon that reports no volume for the channel leaves the dial unset.
     delete state.mixer.channels[0].volume;
     state.mixer.channels[0].mutedIn = [];

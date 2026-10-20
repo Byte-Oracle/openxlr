@@ -18,9 +18,11 @@ public sealed record MixerScene
     /// <summary>"channel|mix" to level.</summary>
     public Dictionary<string, double> Levels { get; init; } = [];
     /// <summary>
-    /// Application or capture channel id to its channel volume. Null in
-    /// profiles saved before channel volumes, which recall every channel they
-    /// describe at full volume.
+    /// Channel id to its channel volume. Null in profiles saved before channel
+    /// volumes, which recall every channel they describe at full volume; a
+    /// channel it describes but does not name, as XLR 1, XLR 2 and Aux In in
+    /// a profile saved before they took a volume, is recalled at full volume
+    /// too.
     /// </summary>
     public Dictionary<string, double>? ChannelVolumes { get; init; }
     public List<string> ChannelMuted { get; init; } = [];

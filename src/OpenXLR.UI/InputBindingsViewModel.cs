@@ -299,6 +299,8 @@ public sealed partial class MainViewModel
         foreach (ChannelViewModel channel in Channels)
         {
             channel.ShownUnitInput = ReferenceEquals(channel, carrier1) ? 1 : ReferenceEquals(channel, carrier2) ? 2 : 0;
+            // The Pro's direct path follows the channel that carries its first input.
+            channel.DirectMonitored = HpMixMicDirect && DeviceConnected && ReferenceEquals(channel, carrier1);
             // An additional unit's input, while the daemon drives that unit.
             channel.ExtraUnitInput = channel.UnitInput is { Primary: false } extra
                 && WaveInterfaces.FirstOrDefault(w => w.Id == extra.Unit && !w.Active && w.Connected) is { } unit
