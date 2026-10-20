@@ -64,6 +64,14 @@ var palettes = {
     "warningLevel": 0.7,
     "hotLevel": 0.9
   },
+  "nyan-pink": {
+    "fill": "#84e5c5",
+    "warning": "#ffd68a",
+    "hot": "#ff667f",
+    "track": "#140e1c",
+    "warningLevel": 0.7,
+    "hotLevel": 0.9
+  },
   "opendeck": {
     "fill": "#2ecc71",
     "warning": "#f2c14e",
@@ -101,6 +109,14 @@ var palettes = {
     "warning": "#e0af68",
     "hot": "#f7768e",
     "track": "#13141c",
+    "warningLevel": 0.7,
+    "hotLevel": 0.9
+  },
+  "wave": {
+    "fill": "#41d793",
+    "warning": "#ffd166",
+    "hot": "#ff657c",
+    "track": "#10141c",
     "warningLevel": 0.7,
     "hotLevel": 0.9
   }

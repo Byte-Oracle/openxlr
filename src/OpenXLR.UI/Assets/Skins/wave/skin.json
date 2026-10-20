@@ -1,0 +1,216 @@
+{
+  "$schema": "https://raw.githubusercontent.com/emaspa/openxlr/main/docs/skin.schema.json",
+  "schema": 1,
+  "id": "wave",
+  "name": "Wave",
+  "description": "A dark Wave Link 3 inspired mixer: blue faders, green meters and each input against every mix.",
+  "author": "OpenXLR",
+  "controls": {
+    "button": "flat",
+    "fader": "console",
+    "meter": "continuous",
+    "led": "flat",
+    "mute": "flat"
+  },
+  "tokens": {
+    "Ox.Window.Background": "#11141b",
+    "Ox.Card.Background": "#1b202a",
+    "Ox.Card.BorderBrush": "#303846",
+    "Ox.Card.BorderThickness": 1,
+    "Ox.Card.CornerRadius": 8,
+    "Ox.Tile.Background": "#242b37",
+    "Ox.Tile.BorderBrush": "#384353",
+    "Ox.Tile.BorderThickness": 1,
+    "Ox.Tile.CornerRadius": 6,
+    "Ox.Dialog.Background": "#1b202a",
+    "Ox.Danger.Background": "#b82746",
+    "Ox.Danger.Foreground": "#ffffff",
+    "Ox.Badge.Background": "#2b3340",
+    "Ox.Divider": "#384353",
+    "Ox.Text.Primary": "#eef3fb",
+    "Ox.Text.Secondary": "#c4cfde",
+    "Ox.Text.Muted": "#a6b2c4",
+    "Ox.Text.Detail": "#c4cfde",
+    "Ox.Text.Warning": "#ffd166",
+    "Ox.Text.Alert": "#ff8ca2",
+    "Ox.Text.Info": "#60c7ff",
+    "Ox.Link.Foreground": "#60c7ff",
+    "Ox.Link.ForegroundPointerOver": "#a5e0ff",
+    "Ox.Font.Family": "sans-serif",
+    "Ox.Led.On": "#41d793",
+    "Ox.Led.Off": "#5b687a",
+    "Ox.Led.Alert": "#ff657c",
+    "Ox.Meter.Fill": "#41d793",
+    "Ox.Meter.Warning": "#ffd166",
+    "Ox.Meter.Hot": "#ff657c",
+    "Ox.Meter.Track": "#10141c",
+    "Ox.Meter.CornerRadius": 1,
+    "Ox.Meter.Height": 3,
+    "Ox.Meter.WarningLevel": 0.7,
+    "Ox.Meter.HotLevel": 0.9,
+    "Ox.Mute.Background": "#2b3340",
+    "Ox.Mute.Foreground": "#c4cfde",
+    "Ox.Mute.BackgroundPointerOver": "#394556",
+    "Ox.Mute.BackgroundChecked": "#b82746",
+    "Ox.Mute.ForegroundChecked": "#ffffff",
+    "Ox.Mute.BorderBrush": "#00000000",
+    "Ox.Mute.BorderThickness": 0,
+    "Ox.Fader.Track": "#4c596c",
+    "Ox.Fader.Fill": "#45b7ff",
+    "Ox.Fader.TrackHeight": 2,
+    "Ox.Fader.TrackCornerRadius": 1,
+    "Ox.Fader.Thumb.Background": "#45b7ff",
+    "Ox.Fader.Thumb.BorderBrush": "#45b7ff",
+    "Ox.Fader.Thumb.BorderThickness": 0,
+    "Ox.Fader.Thumb.Width": 8,
+    "Ox.Fader.Thumb.Height": 12,
+    "Ox.Fader.Thumb.CornerRadius": 2,
+    "Ox.Fader.Thumb.Grip": "#00000000",
+    "Ox.Fader.Thumb.GripLength": 0,
+    "Ox.Control.Background": "#2b3340",
+    "Ox.Control.BackgroundPointerOver": "#394556",
+    "Ox.Control.BackgroundPressed": "#202631",
+    "Ox.Control.BackgroundChecked": "#123f5c",
+    "Ox.Control.BackgroundDisabled": "#252c37",
+    "Ox.Control.Foreground": "#eef3fb",
+    "Ox.Control.ForegroundChecked": "#a5e0ff",
+    "Ox.Control.ForegroundDisabled": "#a6b2c4",
+    "Ox.Control.BorderBrush": "#4c596c",
+    "Ox.Control.BorderBrushPointerOver": "#60c7ff",
+    "Ox.Control.BorderBrushDisabled": "#384353",
+    "Ox.Control.BorderThickness": 1,
+    "Ox.Control.CornerRadius": 6,
+    "Ox.Control.DisabledOpacity": 0.6,
+    "Ox.Ghost.Background": "#00000000",
+    "Ox.Toggle.Foreground": "#c4cfde",
+    "Ox.Toggle.ForegroundChecked": "#a5e0ff",
+    "Ox.Toggle.ForegroundDisabled": "#a6b2c4",
+    "Ox.Toggle.BorderBrushChecked": "#45b7ff",
+    "Ox.Bypass.Foreground": "#41d793",
+    "Ox.Bypass.ForegroundBypassed": "#ff8ca2",
+    "Ox.Check.Foreground": "#eef3fb",
+    "Ox.Input.Background": "#111720",
+    "Ox.Input.Foreground": "#eef3fb",
+    "Ox.Input.BorderBrush": "#4c596c",
+    "Ox.Flyout.Background": "#242b37",
+    "Ox.Tooltip.Background": "#111720",
+    "Ox.Tooltip.Foreground": "#eef3fb",
+    "Ox.Tooltip.BorderBrush": "#4c596c",
+    "Ox.Accent": "#45b7ff",
+    "Ox.Flow.Background": "#11141b",
+    "Ox.Flow.Card": "#242b37",
+    "Ox.Flow.CardSelected": "#123f5c",
+    "Ox.Flow.Text": "#eef3fb",
+    "Ox.Flow.TextDim": "#a6b2c4",
+    "Ox.Flow.Input": "#60d9f6",
+    "Ox.Flow.Channel": "#c5a2ff",
+    "Ox.Flow.Output": "#41d793",
+    "Ox.Flow.Muted": "#a6b2c4",
+    "Ox.Flow.NodeHoverBackground": "#123f5c",
+    "Ox.Flow.NodeHoverBorderBrush": "#45b7ff",
+    "Ox.Matrix.NameWidth": 156,
+    "Ox.Matrix.CellWidth": 164,
+    "Ox.Matrix.RowHeight": 48,
+    "Ox.Matrix.MutedBackground": "#482634",
+    "Ox.Matrix.MutedForeground": "#ffffff",
+    "Ox.Label.FontSize": 12,
+    "Ox.Label.FontWeight": "SemiBold",
+    "Ox.Title.FontSize": 18
+  },
+  "layout": {
+    "version": 1,
+    "main": {
+      "kind": "stack",
+      "id": "wave-mixer",
+      "orientation": "vertical",
+      "spacing": 8,
+      "children": [
+        {
+          "kind": "region",
+          "region": "monitor"
+        },
+        {
+          "kind": "region",
+          "region": "submixer"
+        },
+        {
+          "kind": "region",
+          "region": "headphones"
+        },
+        {
+          "kind": "region",
+          "region": "inputs"
+        },
+        {
+          "kind": "region",
+          "region": "applications"
+        }
+      ]
+    },
+    "regions": {
+      "header": {
+        "actions": [
+          "profiles",
+          "flow",
+          "arrange",
+          "restart-daemon",
+          "version",
+          "about"
+        ]
+      },
+      "monitor": {
+        "template": "output-toolbar"
+      },
+      "submixer": {
+        "template": "mix-matrix",
+        "matrix": {
+          "rowHead": {
+            "parts": [
+              "identity",
+              "binding",
+              "mute",
+              "gain",
+              "meter",
+              "effects"
+            ],
+            "label": {
+              "style": "icon-and-text"
+            }
+          },
+          "columnHead": {
+            "parts": [
+              "identity",
+              "outputs",
+              "mute",
+              "master",
+              "effects"
+            ],
+            "label": {
+              "style": "icon-and-text"
+            }
+          },
+          "cell": {
+            "parts": [
+              "mute",
+              "fader"
+            ],
+            "hidden": [
+              "value"
+            ],
+            "muted": "tint"
+          },
+          "meter": "under-fader"
+        },
+        "popOut": {
+          "default": "docked"
+        }
+      },
+      "inputs": {
+        "visibility": "hidden"
+      },
+      "applications": {
+        "template": "application-list"
+      }
+    }
+  }
+}

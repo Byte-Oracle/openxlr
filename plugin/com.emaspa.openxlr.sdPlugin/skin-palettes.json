@@ -121,6 +121,20 @@
     "Ox.Meter.WarningLevel": 0.7,
     "Ox.Meter.HotLevel": 0.9
   },
+  "nyan-pink": {
+    "Ox.Card.Background": "#24182e",
+    "Ox.Text.Primary": "#fff0fb",
+    "Ox.Text.Muted": "#c6a9cb",
+    "Ox.Led.On": "#84e5c5",
+    "Ox.Led.Off": "#72507d",
+    "Ox.Led.Alert": "#ff667f",
+    "Ox.Meter.Track": "#140e1c",
+    "Ox.Meter.Fill": "#84e5c5",
+    "Ox.Meter.Warning": "#ffd68a",
+    "Ox.Meter.Hot": "#ff667f",
+    "Ox.Meter.WarningLevel": 0.7,
+    "Ox.Meter.HotLevel": 0.9
+  },
   "opendeck": {
     "Ox.Card.Background": "#131313",
     "Ox.Text.Primary": "#e8ebf2",
@@ -188,6 +202,20 @@
     "Ox.Meter.Fill": "#9ece6a",
     "Ox.Meter.Warning": "#e0af68",
     "Ox.Meter.Hot": "#f7768e",
+    "Ox.Meter.WarningLevel": 0.7,
+    "Ox.Meter.HotLevel": 0.9
+  },
+  "wave": {
+    "Ox.Card.Background": "#1b202a",
+    "Ox.Text.Primary": "#eef3fb",
+    "Ox.Text.Muted": "#a6b2c4",
+    "Ox.Led.On": "#41d793",
+    "Ox.Led.Off": "#5b687a",
+    "Ox.Led.Alert": "#ff657c",
+    "Ox.Meter.Track": "#10141c",
+    "Ox.Meter.Fill": "#41d793",
+    "Ox.Meter.Warning": "#ffd166",
+    "Ox.Meter.Hot": "#ff657c",
     "Ox.Meter.WarningLevel": 0.7,
     "Ox.Meter.HotLevel": 0.9
   }

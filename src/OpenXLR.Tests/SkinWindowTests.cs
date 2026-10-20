@@ -403,14 +403,15 @@ public sealed partial class SkinWindowTests
             SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
             Pump(main);
 
-            // Broadcast to Material and back, twice: its matrix hands out the
+            // Each matrix skin to Material and back at narrow and wide sizes: its matrix hands out the
             // same mixes and sends, every cell the channel's own, and sends nothing.
             SkinEntry broadcast = Assert.Single(SkinCatalog.BuiltIn(), e => e.Id == "broadcast");
-            foreach (int round in new[] { 1, 2 })
+            foreach (SkinEntry matrixSkin in new[] { broadcast, SkinCatalog.Find("wave")! })
+            foreach (double width in new[] { 640d, 1040, 1920 })
             {
-                Assert.Empty(SkinService.Apply(broadcast));
+                Assert.Empty(SkinService.Apply(matrixSkin));
                 Pump(main);
-                Layout(main, 1040, 900);
+                Layout(main, width, 900);
                 Assert.Null(panel.Banks);
                 Assert.Null(main.InputRackModel);
                 Assert.NotNull(panel.Matrix);
@@ -425,7 +426,7 @@ public sealed partial class SkinWindowTests
                 SkinService.ChooseControlSizing(SkinService.TouchControls, out _);
                 Pump(main);
                 Assert.Same(matrix, panel.Matrix);
-                Capture(main, $"layout-broadcast-{round}");
+                Capture(main, $"layout-{matrixSkin.Id}-{width:0}");
                 Assert.Empty(SkinService.Apply(new SkinEntry(SkinPackage.Default, [])));
                 Pump(main);
                 Layout(main, 1040, 900);
@@ -434,6 +435,21 @@ public sealed partial class SkinWindowTests
                 Assert.Equal(channels, vm.Channels);
                 Assert.Equal(mixes, vm.Mixes);
                 Assert.Equal(sends, vm.Channels.SelectMany(c => c.Sends));
+            }
+            // A palette-only skin keeps the classic strips and every send.
+            foreach (double width in new[] { 640d, 1040, 1920 })
+            {
+                Assert.Empty(SkinService.Apply(SkinCatalog.Find("nyan-pink")!));
+                Pump(main);
+                Layout(main, width, 900);
+                Assert.Null(panel.Matrix);
+                Assert.Null(panel.Banks);
+                Assert.Equal(channels, vm.Channels);
+                Assert.Equal(mixes, vm.Mixes);
+                Assert.Equal(sends, vm.Channels.SelectMany(c => c.Sends));
+                Capture(main, $"layout-nyan-pink-{width:0}");
+                Assert.Empty(SkinService.Apply(new SkinEntry(SkinPackage.Default, [])));
+                Pump(main);
             }
             // Banks straight to the matrix and back: one presentation at a time, the same objects.
             Assert.Empty(SkinService.Apply(banks));

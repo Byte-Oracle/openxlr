@@ -100,7 +100,7 @@ public sealed class SkinPackageTests : IDisposable
         // package has them all without installing a single file.
         Assert.Equal(
             ["broadcast", "catppuccin", "catppuccin-latte", "everforest", "gruvbox", "kanagawa", "matte-black",
-                "nord", "opendeck", "osaka-jade", "ristretto", "rose-pine", "tokyo-night"],
+                "nord", "nyan-pink", "opendeck", "osaka-jade", "ristretto", "rose-pine", "tokyo-night", "wave"],
             built.Select(e => e.Id).Order(StringComparer.Ordinal));
         foreach (SkinEntry entry in built)
         {
@@ -141,7 +141,7 @@ public sealed class SkinPackageTests : IDisposable
     }
 
     /// <summary>
-    /// Broadcast is the one shipped skin with a layout, and the reference an
+    /// Broadcast is the reference layout skin an
     /// author copies: its whole layout is taken, with the input rack, two
     /// banks of upright strips starting on Monitor A and Stream, MONITOR's
     /// toolbar, HEADPHONES beside it, the application list, every header action in
@@ -798,7 +798,7 @@ public sealed class SkinPackageTests : IDisposable
     [Fact]
     public void EveryShippedAppearanceKeepsItsTextReadable()
     {
-        // Twelve appearances times every pair: a failure names all of them, so
+        // Every appearance against every pair: a failure names all of them, so
         // a skin is fixed in one pass rather than one colour per test run.
         var thin = new List<string>();
         foreach (SkinEntry entry in new[] { new SkinEntry(SkinPackage.Default, []), SkinService.MaterialLight }
@@ -826,22 +826,35 @@ public sealed class SkinPackageTests : IDisposable
     }
 
     /// <summary>
-    /// Material's light palette is new, so unlike the dark default it draws
-    /// its meter zones: each one stands out on the track behind it and the
+    /// The Material light palette and the Wave and Nyan Pink palettes draw their meter zones:
+    /// each one stands out on the track behind it and the
     /// three are told apart. An alert does not read as a warning either.
     /// </summary>
     [Fact]
-    public void MaterialLightKeepsItsMeterZonesAndAlertsApart()
+    public void MixerPalettesKeepTheirMeterZonesAndAlertsApart()
     {
-        SkinEntry light = SkinService.MaterialLight;
-        Color fill = Colours(light, "Ox.Meter.Fill")[0];
-        Color warning = Colours(light, "Ox.Meter.Warning")[0];
-        Color hot = Colours(light, "Ox.Meter.Hot")[0];
-        Assert.Equal(3, new[] { fill, warning, hot }.Distinct().Count());
-        foreach (string zone in new[] { "Ox.Meter.Fill", "Ox.Meter.Warning", "Ox.Meter.Hot" })
-            Assert.True(Worst(Colours(light, zone), Colours(light, "Ox.Meter.Track")) >= 3.0,
-                $"{zone} does not stand out on the meter track");
-        Assert.NotEqual(Colours(light, "Ox.Text.Warning")[0], Colours(light, "Ox.Text.Alert")[0]);
+        foreach (SkinEntry skin in new[] { SkinService.MaterialLight, SkinCatalog.Find("wave")!, SkinCatalog.Find("nyan-pink")! })
+        {
+            Color fill = Colours(skin, "Ox.Meter.Fill")[0];
+            Color warning = Colours(skin, "Ox.Meter.Warning")[0];
+            Color hot = Colours(skin, "Ox.Meter.Hot")[0];
+            Assert.Equal(3, new[] { fill, warning, hot }.Distinct().Count());
+            foreach (string zone in new[] { "Ox.Meter.Fill", "Ox.Meter.Warning", "Ox.Meter.Hot" })
+                Assert.True(Worst(Colours(skin, zone), Colours(skin, "Ox.Meter.Track")) >= 3.0,
+                    $"{skin.Id}: {zone} does not stand out on the meter track");
+            Assert.NotEqual(Colours(skin, "Ox.Text.Warning")[0], Colours(skin, "Ox.Text.Alert")[0]);
+        }
+    }
+
+    [Theory]
+    [InlineData("wave")]
+    [InlineData("nyan-pink")]
+    public void WaveAndNyanPinkKeepDarkSurfacesAndLightLettering(string id)
+    {
+        SkinEntry skin = Assert.Single(SkinCatalog.BuiltIn(), entry => entry.Id == id);
+        foreach (string surface in new[] { "Ox.Window.Background", "Ox.Card.Background", "Ox.Tile.Background", "Ox.Dialog.Background" })
+            Assert.All(Colours(skin, surface), colour => Assert.True(Luminance(colour) < .08, $"{id}: {surface} is not dark"));
+        Assert.All(Colours(skin, "Ox.Text.Primary"), colour => Assert.True(Luminance(colour) > .5, $"{id}: primary text is not light"));
     }
 
     /// <summary>

@@ -176,10 +176,11 @@ a skin overlays values on top of them.
   faders, text and accents; views reference tokens only, and the tokens a
   skin sets also feed the theme keys behind buttons, sliders and dropdowns.
 - [x] Skins: a user-supplied value set loaded from a file, selectable in
-  Options, so the mixer can look like the hardware it drives. Fourteen
+  Options, so the mixer can look like the hardware it drives. Sixteen
   appearances are compiled into the application, so every package carries
   them: Material, a Deck appearance built from the plugin's own key and
-  dial art, one for each of the eleven Omarchy palettes, and Broadcast.
+  dial art, one for each of the eleven Omarchy palettes, Nyan Pink,
+  Broadcast and Wave.
   Skins are data: no markup, no code, no path outside their own folder, no
   network. [skins.md](skins.md) is the contract.
 - [x] System, light and dark appearance, following the desktop by default.

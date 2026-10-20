@@ -210,6 +210,12 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   under the matrix, on a dark neutral palette. It is the complete example
   of a layout skin, and a copy to start from is in `docs/examples/skins`.
   See [Broadcast](manual.md#broadcast)
+- Nyan Pink: dark plum surfaces, pink faders and cyan details, keeping the
+  classic mixer arrangement and the saved section order.
+- The Wave skin: a dark Wave Link 3 inspired palette with blue faders,
+  green meters and the existing mix matrix, with inputs down the side and
+  mixes across the top. It also reaches the terminal, Deck and bar through
+  the shared skin palettes. See [Skins](skins.md).
 - A compact view with one chosen channel strip, and a mini view with that
   channel's send into one chosen mix, its master and the monitor volume,
   for a narrow window. Chosen in Options and kept in `ui.json`; hidden
@@ -648,11 +654,11 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   a bezel, a flat or a bevelled mute cap. A meter is coloured by position on
   its scale, so a skin can give it a hi-fi green, amber and red ladder
   without the bar ever repainting itself end to end. What a skin leaves out
-  keeps the shipped default. Fourteen appearances ship, all compiled into
+  keeps the shipped default. Sixteen appearances ship, all compiled into
   the application: Material, the window's own, Deck, built from the
   OpenDeck plugin's key and dial art, one for each of the eleven
-  Omarchy palettes, two of them light, and Broadcast, which also
-  arranges the window. The picker is in Options, the
+  Omarchy palettes, two of them light, Nyan Pink, Broadcast and Wave. The
+  last two also arrange the window. The picker is in Options, the
   choice lives in `ui.json` alone, and switching
   repaints open windows without touching audio or the layout. A skin is
   data. It carries no markup and no code, reaches no file outside its own
