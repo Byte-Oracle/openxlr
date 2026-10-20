@@ -49,7 +49,9 @@ hardware support table for current support claims.
   and corrections; later verified mappings supersede early guesses.
 - [Pro capture plan](wave-xlr-pro-capture-plan.md): completed capture procedure.
 - [MK.2 equalizer findings](mk2-eq-findings.md): captures and
-  measurements showing the XLR Dock MK.2 and Wave XLR MK.2 EQ runs in
-  Wave Link, not on the device.
+  measurements showing the XLR Dock MK.2 and Wave XLR MK.2 run their EQ
+  on the device on firmware 1.0.15, its layout and master enable bit,
+  and the dock's earlier firmware 1.0.0, where Wave Link ran it on the
+  computer.
 - [Linux audio research](wave-xlr-linux-audio-stack-research.md): August 2026
   survey and original design decisions.
