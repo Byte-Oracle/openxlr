@@ -371,6 +371,10 @@ temporarily busy, it keeps one pending meter update and resumes with the
 current levels instead of replaying a backlog of older readings. This
 affects only the display; the daemon continues processing audio.
 
+Each meter reads its own channel or mix. Changing the system default
+output never moves a meter, also not the meter of the channel or mix
+that was the default.
+
 1. In the MONITOR card, tick every device the monitor mixes should play
    on: your speakers, a headset, or several at once. On the Wave XLR
    Pro its own outputs (Headphones 1, Headphones 2, Line Out) appear
@@ -2408,6 +2412,13 @@ volume. Only the Monitor A and Monitor B sinks carry a master of their
 own; on every other OpenXLR sink the volume is not a control, so turning
 it down only cuts audio. The daemon puts those other sinks back to full
 volume on its sweep and logs when it had to.
+
+Each send is an internal stream of its channel, and the session manager
+can set a remembered level on a new one too. That can be full level, or
+the level and mute of another send on the same channel. WirePlumber 0.4,
+the version in Ubuntu 24.04, does this to every new stream, sometimes
+after OpenXLR has already set it. The sweep puts each send back on its
+fader within a second and logs which sends it moved.
 
 <a name="reporting"></a>
 ### 5.10 Reporting a problem

@@ -45,4 +45,26 @@ public sealed class OwnSinkLevelsTests
         Assert.Equal(expected, sink.DesktopVolume);
     }
 
+    private static string Leg(string name, string serial, string volumes, bool mute)
+        => "{\"id\": 7, \"type\": \"PipeWire:Interface:Node\", \"info\": {\"props\": {\"node.name\": \"" + name +
+           "\", \"media.class\": \"Stream/Output/Audio\", \"object.serial\": " + serial + "}, \"params\": {\"Props\": [{\"volume\": 1.0, \"channelVolumes\": [" +
+           volumes + "], \"mute\": " + (mute ? "true" : "false") + "}]}}}";
+
+    [Fact]
+    public void CombineLegsAreListedBySerialWithTheDesktopPercentageAndMute()
+    {
+        byte[] json = Dump(
+            // 60% written through pactl lands as 0.6 cubed, give or take the 16-bit volume step.
+            Leg("output.OpenXLR_ch_test_OpenXLR_mix_monitor2", "65", "0.215991, 0.215991", false),
+            Leg("output.OpenXLR_ch_test_OpenXLR_mix_chat", "\"66\"", "1.0, 1.0", true),
+            Leg("Firefox", "70", "0.5, 0.5", false),
+            Leg("output.OpenXLR_ch_test_OpenXLR_mix_stream", "\"not a serial\"", "1.0, 1.0", false),
+            Node("OpenXLR_mix_monitor2", "Audio/Sink", "1.0, 1.0", false));
+        var legs = PipeWireAdapter.CombineLegLevels(json);
+        Assert.Equal([65, 66], legs.Keys.Order());
+        Assert.Equal((60, false), legs[65]);
+        Assert.Equal((100, true), legs[66]);
+        Assert.Equal(60, PipeWireAdapter.SinkInputPercent(0.6));
+        Assert.Equal(100, PipeWireAdapter.SinkInputPercent(1.4));
+    }
 }

@@ -469,8 +469,6 @@ public sealed partial class MonitorVolumeIntegrationTests
                 { ["stream"] = 0.4, ["auxout"] = 0.3 } }],
         });
         mixer.SetMonitorOutputs(["test_master_output"]);
-        // Wait for late combine legs and their initial channel sends.
-        Assert.True(SpinWait.SpinUntil(() => { mixer.EnsureCellLevels(); return pw.FindNodeId("OpenXLR_ch_test") is not null; }, TimeSpan.FromSeconds(3)));
         foreach (var (feed, a, b, muteA, muteB, direct) in new[]
         {
             ("monitor", 1.0, 1.0, false, false, false),
@@ -524,8 +522,13 @@ public sealed partial class MonitorVolumeIntegrationTests
         Capture(.1 * Math.Pow(.7, 3), false, "test_feed_other");
         Capture(.1 * (Math.Pow(.8, 3) + Math.Pow(.7, 3)), false);
 
-        static void Capture(double expected, bool direct, string output = "test_master_output")
-            => CaptureLevel(expected, direct ? "OpenXLR_mix_monitor" : "OpenXLR_ch_test", output);
+        // Each recording starts once the sweep has every send on its fader,
+        // late legs and new ones the session manager moved included.
+        void Capture(double expected, bool direct, string output = "test_master_output")
+        {
+            SettleSends(mixer);
+            CaptureLevel(expected, direct ? "OpenXLR_mix_monitor" : "OpenXLR_ch_test", output);
+        }
     }
 
     /// <summary>
@@ -547,10 +550,10 @@ public sealed partial class MonitorVolumeIntegrationTests
             if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True):
                 args.append('--raw')
             capture = tempfile.TemporaryFile()
-            record = subprocess.Popen(['pw-cat', '--record', *args, '--target', sys.argv[3], '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
+            record = subprocess.Popen(['pw-cat', '--record', *args, '--properties={ node.link-group = openxlr-test-record }', '--target', sys.argv[3], '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
             play = None
             try:
-                play = subprocess.Popen(['pw-cat', '--playback', *args, '--target', sys.argv[2], '-'], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                play = subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', sys.argv[2], '-'], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
                 _, playback_errors = play.communicate(samples, timeout=10)
                 assert play.returncode == 0, playback_errors.decode()
                 record.terminate()

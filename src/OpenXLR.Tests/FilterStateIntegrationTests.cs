@@ -24,10 +24,10 @@ public sealed class FilterStateIntegrationTests
                     args = ['--format=f32', '--rate=48000', '--channels=1']
                     if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
                     with tempfile.TemporaryFile() as capture:
-                        record = subprocess.Popen(['pw-cat', '--record', *args, '--target', sys.argv[2], '-'], stdout=capture, stderr=subprocess.PIPE)
+                        record = subprocess.Popen(['pw-cat', '--record', *args, '--properties={ node.link-group = openxlr-test-record }', '--target', sys.argv[2], '-'], stdout=capture, stderr=subprocess.PIPE)
                         play = None
                         try:
-                            play = subprocess.Popen(['pw-cat', '--playback', *args, '--target', sys.argv[1], '-'], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+                            play = subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', sys.argv[1], '-'], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
                             _, errors = play.communicate(signal, timeout=10)
                             assert play.returncode == 0, errors.decode()
                             record.terminate(); record.communicate(timeout=5)

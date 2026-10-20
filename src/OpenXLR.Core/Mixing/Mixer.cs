@@ -97,8 +97,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private const string MixSinkPattern = "~" + MixDefinition.SinkPrefix;
     private readonly Dictionary<string, int> _legIndex = [];
     // Cells whose combine leg was not there when their fader was last pushed.
-    // A leg that turns up afterwards carries PipeWire's defaults, full level
-    // and unmuted, so the sweep pushes the stored fader onto it as soon as it
+    // A leg that turns up afterwards carries whatever the session manager
+    // restores onto a new stream, full level and unmuted when it remembers
+    // nothing, so the sweep pushes the stored fader onto it as soon as it
     // appears. See EnsureCellLevels.
     private readonly HashSet<string> _pendingCells = [];
     /// <summary>Rounds run on consecutive sweeps before backing off; a late leg is up in one or two.</summary>
@@ -2619,23 +2620,37 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         _ => "auxPort",
     };
 
-    /// <summary>Channel send, with the channel volume, and the master only when the mix has no desktop master.</summary>
-    private void ApplyCellLocked(string channelId, string mixId)
+    /// <summary>
+    /// What a send's leg should carry: the send level with the channel
+    /// volume, and the master only when the mix has no desktop master; and
+    /// whether it is muted, including while an exclusive peer's mute is
+    /// still waiting (<paramref name="waiting"/>).
+    /// </summary>
+    private (double Level, bool Muted) CellTargetLocked(string channelId, string mixId, out bool waiting)
     {
         string cell = Cell(channelId, mixId);
         bool monitor = MonitorMixLocked(mixId) is not null;
         double level = SendGain(_levels.GetValueOrDefault(cell, 0.0), ChannelVolumeLocked(channelId),
             monitor ? 1 : _mixVolume.GetValueOrDefault(mixId, 1.0));
-        bool waiting = !_muted.Contains(cell) && ExclusivePeerPendingLocked(channelId);
+        waiting = !_muted.Contains(cell) && ExclusivePeerPendingLocked(channelId);
         bool muted = waiting || _muted.Contains(cell) || (!monitor && _mixMuted.Contains(mixId));
         if (_hardwareMicChannel == channelId && monitor && MonitorFeed.Includes(JackFeedLocked(), mixId))
             muted = true;   // the hardware direct path carries it to the jacks
+        return (level, muted);
+    }
+
+    /// <summary>Channel send, with the channel volume, and the master only when the mix has no desktop master.</summary>
+    private void ApplyCellLocked(string channelId, string mixId)
+    {
+        string cell = Cell(channelId, mixId);
+        (double level, bool muted) = CellTargetLocked(channelId, mixId, out bool waiting);
 
         if (!_legIndex.TryGetValue(cell, out int idx))
         {
             DiscoverLegsLocked();
-            // A leg that has not grown yet sits at PipeWire's defaults, which
-            // are full level and unmuted. Remember the cell so the sweep can
+            // A leg that has not grown yet comes up at a level the session
+            // manager picks, full level and unmuted when it remembers
+            // nothing. Remember the cell so the sweep can
             // push the stored fader the moment the leg appears; leaving it
             // would open a send the user had closed.
             if (!_legIndex.TryGetValue(cell, out idx)) { MarkCellPendingLocked(cell); return; }
@@ -2699,22 +2714,37 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     }
 
     /// <summary>
-    /// Push the stored fader onto every send whose combine leg was missing
-    /// when it was last set. A combine grows its legs a moment after its
-    /// module loads, and the build does not wait for them, so a leg can turn
-    /// up after its cell was applied; until this runs it carries PipeWire's
-    /// defaults, full level and unmuted. A cell stays on this list until its
-    /// fader is on the leg or the cell itself is gone, on the backoff
-    /// <see cref="CellRoundGap"/> sets. Called from the sweep, and free
-    /// while nothing is waiting.
+    /// Keep every send's leg on its stored fader. Called from the sweep.
+    /// <para>
+    /// A leg that moved away from its fader is put back. The session manager
+    /// restores a remembered volume and mute onto every new stream, and every
+    /// leg of one channel shares the key it remembers them by, so a new leg
+    /// can take another send's level, or full level, and that write can land
+    /// after OpenXLR's own. WirePlumber 0.4 does this to every new leg, with
+    /// full level when it remembers nothing. The check reads the registry
+    /// the sweep already holds, so it costs no helper call while every leg
+    /// is where it belongs.
+    /// </para>
+    /// <para>
+    /// The stored fader is also pushed onto every send whose combine leg was
+    /// missing when it was last set. A combine grows its legs a moment after
+    /// its module loads, and the build does not wait for them, so a leg can
+    /// turn up after its cell was applied. A cell stays on this list until
+    /// its fader is on the leg or the cell itself is gone, on the backoff
+    /// <see cref="CellRoundGap"/> sets.
+    /// </para>
     /// </summary>
-    public bool EnsureCellLevels()
+    /// <param name="held">The sends whose leg was put back on its fader.</param>
+    public bool EnsureCellLevels(out IReadOnlyList<string> held)
     {
         lock (_gate)
         {
+            held = [];
             ForgetRemovedCells(_pendingCells, _cells);
-            if (!_built || _pendingCells.Count == 0) { _cellRounds = _cellWait = 0; return false; }
-            if (_cellWait > 0) { _cellWait--; return false; }
+            if (!_built) { _cellRounds = _cellWait = 0; return false; }
+            held = HoldCellLevelsLocked();
+            if (_pendingCells.Count == 0) { _cellRounds = _cellWait = 0; return held.Count > 0; }
+            if (_cellWait > 0) { _cellWait--; return held.Count > 0; }
             DiscoverLegsLocked();
             bool applied = false;
             foreach (string cell in _pendingCells.ToList())
@@ -2729,8 +2759,36 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             // The gap is a distance between rounds; the wait counts the
             // sweeps skipped in between, which is one fewer.
             _cellWait = Math.Max(0, CellRoundGap(_cellRounds) - 1);
-            return applied;
+            return applied || held.Count > 0;
         }
+    }
+
+    /// <inheritdoc cref="EnsureCellLevels(out IReadOnlyList{string})"/>
+    public bool EnsureCellLevels() => EnsureCellLevels(out _);
+
+    /// <summary>
+    /// Push the fader again onto every known leg whose level or mute differs
+    /// from it. A leg the registry does not show yet is left for the next
+    /// sweep, and a waiting cell is the pending round's business.
+    /// </summary>
+    private List<string> HoldCellLevelsLocked()
+    {
+        var held = new List<string>();
+        if (_legIndex.Count == 0) return held;
+        IReadOnlyDictionary<int, (int Percent, bool Muted)> legs = _pw.CombineLegLevels();
+        foreach ((string cell, int index) in _legIndex.ToList())
+        {
+            if (_pendingCells.Contains(cell) || !_cells.Contains(cell)) continue;
+            if (!legs.TryGetValue(index, out (int Percent, bool Muted) leg)) continue;
+            int bar = cell.IndexOf('|', StringComparison.Ordinal);
+            if (bar <= 0) continue;
+            string channel = cell[..bar], mix = cell[(bar + 1)..];
+            (double level, bool muted) = CellTargetLocked(channel, mix, out _);
+            if (leg.Percent == PipeWireAdapter.SinkInputPercent(level) && leg.Muted == muted) continue;
+            ApplyCellLocked(channel, mix);
+            held.Add(cell);
+        }
+        return held;
     }
 
     private MixDefinition? MonitorMixLocked(string mixId)

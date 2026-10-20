@@ -453,14 +453,18 @@ public sealed class MixerService : IHostedService, IDisposable
             | _mixer.SetUnitXlrJacks(_devices.ActiveCapabilities?.XlrJacks);
     }
 
-    internal void SweepOnce()
+    /// <summary>
+    /// One pass of the sweep. False when it did not run because the daemon is
+    /// stopping or another pass (the timer's or a caller's) is still running.
+    /// </summary>
+    internal bool SweepOnce()
     {
-        if (_stopping.IsCancellationRequested || Interlocked.CompareExchange(ref _sweepRunning, 1, 0) != 0) return;
+        if (_stopping.IsCancellationRequested || Interlocked.CompareExchange(ref _sweepRunning, 1, 0) != 0) return false;
         try
         {
             CancellationToken stop = _stopping.Token;
             stop.ThrowIfCancellationRequested();
-            if (GraphLost()) return;
+            if (GraphLost()) return true;
             stop.ThrowIfCancellationRequested();
             if (UpdateInputDeviceHint()) Changed?.Invoke();
             stop.ThrowIfCancellationRequested();
@@ -487,11 +491,15 @@ public sealed class MixerService : IHostedService, IDisposable
                 ScheduleSave();
                 Changed?.Invoke();
             }
-            // A combine leg that appeared after its cell was applied
-            // sits at PipeWire's defaults, full level and unmuted,
-            // until the stored fader is pushed onto it.
+            // A combine leg that appeared after its cell was applied, or
+            // that the session manager gave a remembered level after
+            // OpenXLR set it, plays at the wrong level until the stored
+            // fader is pushed onto it.
             stop.ThrowIfCancellationRequested();
-            _mixer.EnsureCellLevels();
+            _mixer.EnsureCellLevels(out IReadOnlyList<string> heldSends);
+            if (heldSends.Count > 0)
+                _log.LogInformation("put {n} send(s) back on their faders ({cells}); something outside OpenXLR had changed them",
+                    heldSends.Count, string.Join(", ", heldSends));
             stop.ThrowIfCancellationRequested();
             bool changed = _mixer.SyncStreams();
             changed |= _mixer.EnforceDefaults(stop);
@@ -542,6 +550,7 @@ public sealed class MixerService : IHostedService, IDisposable
             _progress.Mark();
             Volatile.Write(ref _sweepRunning, 0);
         }
+        return true;
     }
 
     private static string Run(string exe, params string[] args)

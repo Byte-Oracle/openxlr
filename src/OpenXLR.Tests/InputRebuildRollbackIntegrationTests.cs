@@ -31,6 +31,11 @@ public sealed partial class MonitorVolumeIntegrationTests
             Channels = [new("xlr1", "Mic") { InputPair = 0 }],
             Mixes = [new("monitor", "Monitor", MixKind.Monitor)],
         });
+        // The new source publishes its ports a moment after its node. Until
+        // they are listed the build leaves the strip silent ("rebuild_source
+        // has no port 1") and the daemon's sweep wires it, so the baseline is
+        // taken once the sweep has the strip connected.
+        PrimaryWait(() => { mixer.EnsureInputFeeds(); return mixer.Snapshot().Channels.Single(c => c.Id == "xlr1").BindingConnected; });
         mixer.SetLowCutHz(80);
         string[] previousNodes = MixDelayIntegrationTests.OwnNodes(pw);
         var previousLinks = GraphLinksInto("OpenXLR_ch_xlr1");

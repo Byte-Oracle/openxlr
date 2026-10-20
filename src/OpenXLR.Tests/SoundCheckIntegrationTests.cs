@@ -109,7 +109,7 @@ public sealed class SoundCheckIntegrationTests
             import subprocess, struct, sys
             args = ['--format=f32', '--rate=48000', '--channels=2']
             if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
-            p = subprocess.Popen(['pw-cat', '--playback', *args, '--target', 'soundcheck_signal', '-'], stdin=subprocess.PIPE)
+            p = subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', 'soundcheck_signal', '-'], stdin=subprocess.PIPE)
             try: p.communicate(struct.pack('<ff', *([float(sys.argv[1])] * 2)) * (48000 * 45), timeout=50)
             finally:
                 if p.poll() is None: p.kill()
@@ -132,7 +132,7 @@ public sealed class SoundCheckIntegrationTests
             args = ['--format=f32', '--rate=48000', '--channels=2']
             if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
             with tempfile.TemporaryFile() as capture:
-                p = subprocess.Popen(['pw-cat', '--record', *args, '--target', sys.argv[3], '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
+                p = subprocess.Popen(['pw-cat', '--record', *args, '--properties={ node.link-group = openxlr-test-record }', '--target', sys.argv[3], '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
                 try:
                     expected = float(sys.argv[1])
                     deadline = time.monotonic() + float(sys.argv[2])

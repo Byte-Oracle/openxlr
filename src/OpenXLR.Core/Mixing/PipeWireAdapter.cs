@@ -358,6 +358,44 @@ public sealed class PipeWireAdapter
     }
 
     /// <summary>
+    /// The level and mute each OpenXLR combine leg carries right now, keyed
+    /// by its sink-input index (the node's object serial), with the level as
+    /// the desktop percentage <see cref="SetSinkInputVolume"/> writes.
+    /// </summary>
+    public IReadOnlyDictionary<int, (int Percent, bool Muted)> CombineLegLevels() => CombineLegLevels(GraphObjects());
+
+    internal static IReadOnlyDictionary<int, (int Percent, bool Muted)> CombineLegLevels(byte[] json)
+        => CombineLegLevels(ParseObjects(json));
+
+    private static Dictionary<int, (int Percent, bool Muted)> CombineLegLevels(IEnumerable<JsonElement> objects)
+    {
+        var found = new Dictionary<int, (int, bool)>();
+        foreach (JsonElement o in objects)
+        {
+            if (!o.TryGetProperty("type", out JsonElement t) ||
+                !(t.GetString()?.EndsWith("Node", StringComparison.Ordinal) ?? false)) continue;
+            if (!o.TryGetProperty("info", out JsonElement info) ||
+                !info.TryGetProperty("props", out JsonElement props)) continue;
+            string? name = props.TryGetProperty("node.name", out JsonElement n) ? n.GetString() : null;
+            if (name is null || !name.StartsWith("output.OpenXLR_", StringComparison.Ordinal)) continue;
+            if (!props.TryGetProperty("media.class", out JsonElement m) || m.GetString() != "Stream/Output/Audio") continue;
+            if (!props.TryGetProperty("object.serial", out JsonElement s)) continue;
+            int serial = 0;
+            bool parsed = s.ValueKind switch
+            {
+                JsonValueKind.Number => s.TryGetInt32(out serial),
+                JsonValueKind.String => int.TryParse(s.GetString(), System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out serial),
+                _ => false,
+            };
+            if (!parsed) continue;
+            if (SinkLevel(info) is (_, double desktop, bool muted))
+                found[serial] = ((int)Math.Round(desktop * 100), muted);
+        }
+        return found;
+    }
+
+    /// <summary>
     /// A sink node's level from its Props param: the quietest channel as
     /// linear amplitude, the loudest as a desktop percentage, and mute.
     /// </summary>
@@ -447,12 +485,20 @@ public sealed class PipeWireAdapter
 
     /// <summary>Set one sink-input's volume (used for the combine fader legs).</summary>
     public void SetSinkInputVolume(int index, double volume)
-        => Run("pactl", "set-sink-input-volume", index.ToString(),
-            $"{(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}%");
+    {
+        Run("pactl", "set-sink-input-volume", index.ToString(), $"{SinkInputPercent(volume)}%");
+        InvalidateDump();
+    }
+
+    /// <summary>The desktop percentage <see cref="SetSinkInputVolume"/> writes for a volume.</summary>
+    internal static int SinkInputPercent(double volume) => (int)Math.Round(Math.Clamp(volume, 0, 1) * 100);
 
     /// <summary>Mute or unmute one sink-input.</summary>
     public void SetSinkInputMuted(int index, bool muted)
-        => Run("pactl", "set-sink-input-mute", index.ToString(), muted ? "1" : "0");
+    {
+        Run("pactl", "set-sink-input-mute", index.ToString(), muted ? "1" : "0");
+        InvalidateDump();
+    }
 
     /// <summary>
     /// The internal streams of a combine sink module, keyed by the sink each
