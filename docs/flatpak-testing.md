@@ -40,7 +40,9 @@ run `sha256sum -c openxlr.flatpak.sha256`, then install with
 `flatpak install --user ./openxlr.flatpak`. Keep the same manual host setup
 and native-daemon precautions as a locally built Flatpak.
 Relevant pushes to `main` run the same check once all three pieces have
-landed. A newer push cancels an outdated run instead of building both.
+landed, including changes to the shared WirePlumber rules, USB permission
+rule and desktop entry packaged by the Flatpak. A newer push cancels an
+outdated run instead of building both.
 
 The normal C# suite checks the Background portal on a private D-Bus session,
 including refusal, startup command lines and cancellation. Its TrayWindowTests
