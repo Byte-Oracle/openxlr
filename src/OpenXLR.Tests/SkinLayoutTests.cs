@@ -112,20 +112,35 @@ public sealed class SkinLayoutTests
     }
 
     /// <summary>
-    /// Broadcast is the one shipped skin that rearranges the window, and the
-    /// whole of its layout is taken. Every other shipped skin is colours and
+    /// Broadcast and Wave rearrange the window, and the whole of their
+    /// layouts is taken. Every other shipped skin is colours and
     /// control appearances only, so it keeps the classic arrangement and the
     /// user's own section order.
     /// </summary>
     [Fact]
-    public void EveryShippedSkinButBroadcastKeepsTheClassicArrangement()
+    public void ShippedLayoutSkinsDeclareTheirArrangementAndTheOtherPalettesKeepTheClassicOne()
     {
         foreach (SkinEntry entry in SkinCatalog.BuiltIn())
         {
             Assert.Empty(entry.Errors);
-            if (entry.Id == "broadcast") Assert.NotNull(entry.Package.Layout);
+            if (entry.Id is "broadcast" or "wave") Assert.NotNull(entry.Package.Layout);
             else Assert.Null(entry.Package.Layout);
         }
+    }
+
+    [Fact]
+    public void WaveKeepsTheInputBindingsAndProcessingReachableInItsMatrix()
+    {
+        SkinEntry wave = Assert.Single(SkinCatalog.BuiltIn(), entry => entry.Id == "wave");
+        Assert.Empty(wave.Errors);
+        SkinLayout layout = Assert.IsType<SkinLayout>(wave.Package.Layout);
+        Assert.True(layout.Submixer.IsMatrix);
+        Assert.Equal(new[] { "monitor", "submixer", "headphones", "inputs", "applications" }, layout.Main.RegionOrder);
+        Assert.Equal(SkinRegionVisibility.Hidden, layout.OptionsFor(SkinLayoutRegions.Inputs).Visibility);
+        foreach (string part in new[] { "identity", "binding", "gain", "mute", "meter", "effects" })
+            Assert.Contains(part, layout.Submixer.Matrix.RowHead.Shown);
+        foreach (string part in new[] { "identity", "outputs", "master", "mute", "effects" })
+            Assert.Contains(part, layout.Submixer.Matrix.ColumnHead.Shown);
     }
 
     [Fact]

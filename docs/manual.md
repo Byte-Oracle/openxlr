@@ -1523,7 +1523,7 @@ hides, and forgets only that skin's arrangement. If the skin is updated
 and its layout no longer has a place your arrangement names, the whole
 arrangement is set aside, the note under the header says so once, and
 the skin's own places are used. Switching to a skin without a layout,
-Material and every shipped skin but Broadcast included, brings back the
+such as Material or Deck, brings back the
 order you arranged there.
 
 A skin can also order the header's actions and put some of them in a ⋯
@@ -1648,7 +1648,7 @@ the old controls cannot affect a plugin that now uses the same slot id.
 <a name="skins"></a>
 ### 3.10 Change how the window looks
 
-Options, APPEARANCE picks a skin. OpenXLR ships fourteen, all built into
+Options, APPEARANCE picks a skin. OpenXLR ships sixteen, all built into
 the application, so a package brings them with it:
 
 - **Material**, the default, in a dark palette, which is what the window
@@ -1664,7 +1664,15 @@ the application, so a package brings them with it:
   Kanagawa, Matte Black, Nord, Osaka Jade, Ristretto, Rose Pine and Tokyo
   Night. Catppuccin Latte and Rose Pine are light;
 - **Broadcast**, a dark neutral palette that also rearranges the window,
-  described below.
+  described below;
+- **Nyan Pink**, dark plum cards, candy pink faders and cyan details,
+  using the classic arrangement and your saved section order;
+- **Wave**, inspired by Wave Link 3, with dark charcoal cards, blue faders
+  and green meters. Its matrix puts inputs down the side and mixes across
+  the top, with the monitor toolbar
+  above and headphone controls below. Input bindings, gain, mute and
+  effects stay available in the row heads. Choosing it changes appearance
+  and arrangement, not routing or audio levels.
 
 <a name="broadcast"></a>
 **Broadcast** draws the SUBMIXER as a mix matrix. Each row is a channel and

@@ -6,7 +6,7 @@ appearance values and, if it wants, where the header and the
 window's sections go ([Layout](#layout)); it carries no markup, no script and
 no code, and it cannot reach a file outside its own folder.
 
-OpenXLR ships fourteen appearances, all compiled into the application, so
+OpenXLR ships sixteen appearances, all compiled into the application, so
 every package has them and there is nothing to install:
 
 - **Material**, the default, in a dark and a light palette (see
@@ -23,7 +23,7 @@ every package has them and there is nothing to install:
   Latte, Everforest, Gruvbox, Kanagawa, Matte Black, Nord, Osaka Jade,
   Ristretto, Rose Pine and Tokyo Night. Rose Pine and Catppuccin Latte
   are the light ones.
-- **Broadcast**, the one that also rearranges the window: the submixer as
+- **Broadcast**, a dark layout skin: the submixer as
   a mix matrix across the window, a row per channel and a column per mix,
   with each channel's send into each mix where its row crosses the mix's
   column. HEADPHONES and MONITOR's toolbar share the row above it, INPUTS
@@ -31,6 +31,14 @@ every package has them and there is nothing to install:
   plugins, and APPLICATIONS is under the matrix, on a dark neutral
   palette. It is the reference for writing a layout skin; see
   [Layout](#layout).
+- **Nyan Pink**, a dark plum palette with candy pink faders, cyan details
+  and segmented green, amber and red meters. It keeps the classic mixer
+  arrangement and the saved section order.
+- **Wave**, inspired by Wave Link 3: dark charcoal cards, blue faders and
+  green meters. Inputs form rows and mixes form columns in the existing
+  mix matrix, with the monitor toolbar above
+  and headphone controls below. It uses the same routing and controls as
+  the other skins; no Elgato artwork or additional software is needed.
 
 Pick one in Options under APPEARANCE. The terminal mixer reads the same
 folders and the same saved choice, on its own Options tab, so an appearance
@@ -1655,8 +1663,8 @@ not know, and wears the skin in the classic arrangement.
 Arrange moves sections under any skin. Where it keeps your moves depends
 on the skin:
 
-- A skin without a layout, Material and every shipped skin but Broadcast
-  included, uses the order you arranged, kept in `ui.json` as `sectionOrder`, exactly as
+- A skin without a layout, such as Material or Deck, uses the order you
+  arranged, kept in `ui.json` as `sectionOrder`, exactly as
   before skins had layouts. A section dropped on another lands before or
   after it.
 - A skin with a layout starts from its own tree. Each region in the tree
