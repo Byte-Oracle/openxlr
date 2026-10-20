@@ -25,6 +25,8 @@ that 0.00625. Captures are checked for finite values and settled amplitude.
 The same run imports a bundle into app-private storage, checks that all
 three native plugin import folders are writable and that LV2 scans include
 the private folder, and removes only the uniquely named test import.
+Window polling retries when an editor disappears between discovery and
+the X11 status query, including on XWayland.
 
 The Flatpak workflow runs this once per tree, without a language or size
 process matrix. While the separate runtime or manifest PR is absent, it

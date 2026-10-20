@@ -73,7 +73,8 @@ class Windows:
 
     def attributes(self, window):
         value = self.Attributes()
-        assert self.x.XGetWindowAttributes(self.display, window, c.byref(value))
+        if not self.x.XGetWindowAttributes(self.display, window, c.byref(value)):
+            raise OSError(f'X11 window {window} is no longer available')
         return value
 
     def __init__(self):
