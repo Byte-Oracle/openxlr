@@ -28,6 +28,11 @@ or in a GitHub issue.
 
 ## Building and testing
 
+The .NET test process uses private configuration, data, cache, state and
+Wine-prefix directories, with empty default CLAP and VST3 search roots.
+Installed desktop plugins are not test inputs. `LV2_PATH` is retained for
+the system LV2 and native latency-fixture checks listed below.
+
 [docs/install-from-source.md](docs/install-from-source.md) covers the
 prerequisites and the build. The checks CI runs:
 
