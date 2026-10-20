@@ -26,6 +26,16 @@ may be driven as an additional interface. Pick one in the header. A lone
 attached unit is driven whatever its id, so a unit without a serial still
 connects after a port change.
 
+Only the header picker (`setActiveDevice`) moves the primary, and the
+journal says when it does. Until a unit is picked, the primary is a unit of
+the model `OPENXLR_DEVICE` names, or the first attached unit. Enabling or
+disabling an additional interface never changes it, and a unit enabled as
+additional is never driven as the primary in place of an absent one. Another
+unit may stand in while the chosen unit, or the model `OPENXLR_DEVICE` names,
+is away for a moment, after a USB reset or while a hung unit is set aside.
+It gives the primary role back as soon as the chosen unit is attached and
+usable again.
+
 A unit that hangs on three USB transfers is set aside on its own, without
 affecting another unit of the same model. It is driven again once it has been
 off the bus, which a changed USB address also shows when the unplug fell
@@ -100,8 +110,8 @@ Two Wave XLR Pros that the node name cannot tell apart cannot be made
 additional, because switching one card's profile could switch the other's.
 Pick one of them as the primary instead.
 
-Choosing a unit as the primary stops its additional manager before the
-primary opens it, so a unit is never driven twice. A command for that unit
+Choosing a unit as the primary in the picker stops its additional manager
+before the primary opens it, so a unit is never driven twice. A command for that unit
 then reaches the primary. Disabling an additional unit releases its USB
 handle and deletes the capture channels made from its own nodes, the ones
 found by the names the source list uses, with their sends and routing, as

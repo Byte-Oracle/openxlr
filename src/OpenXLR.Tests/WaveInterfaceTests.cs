@@ -396,6 +396,76 @@ public sealed class WaveInterfaceTests : IDisposable
         finally { await interfaces.StopAsync(CancellationToken.None); primary.SuspendSession(); }
     }
 
+    /// <summary>
+    /// The desk's setup: OPENXLR_DEVICE names the Pro, and an XLR Dock MK.2
+    /// sits next to it. Enabling and disabling the dock as an additional
+    /// interface leaves the Pro the primary, and so does the Pro dropping out
+    /// for a moment, its USB helper gone or the unit off the bus for a scan:
+    /// an enabled dock is never taken as a stand-in. A dock that is not
+    /// enabled may stand in while the Pro is away, and gives way once the Pro
+    /// is back. Only setActiveDevice moves the primary, and it stays moved.
+    /// </summary>
+    [Fact]
+    public async Task EnablingAnAdditionalInterfaceNeverMovesThePrimary()
+    {
+        var pro = new FakeDevice("proP", outputRouting: true);
+        var dock = new FakeDevice("dockM", port: "1-5", model: "Wave XLR Dock MK.2", productId: 0x00c7);
+        string proId = pro.Info.InstanceId, dockId = dock.Info.InstanceId;
+        // The dock is first on the bus, so a fallback with no preference would pick it.
+        IReadOnlyList<IAudioDevice> attached = [dock, pro];
+        using var primary = new DeviceManager(NullLogger<DeviceManager>.Instance, Configuration, () => attached, preferredModel: 0x00b4);
+        primary.SweepOnce();
+        Assert.Equal(proId, primary.ActiveInfo?.InstanceId);
+        using var interfaces = new WaveInterfaces(primary, NullLogger<DeviceManager>.Instance, Configuration, () => [dock.Fork(), pro.Fork()]);
+        await interfaces.StartAsync(CancellationToken.None);
+        WaveInterfaceState Unit(string id) => interfaces.Snapshot().Single(s => s.Id == id);
+        try
+        {
+            Wait(() => interfaces.Snapshot().Count == 2);
+            Assert.Null(interfaces.SetEnabled(dockId, true));
+            Wait(() => Unit(dockId).Connected);
+            for (int i = 0; i < 5; i++) primary.SweepOnce();
+            Assert.Equal(proId, primary.ActiveInfo?.InstanceId);
+            Assert.True(Unit(proId) is { Active: true, Connected: true });
+            Assert.True(Unit(dockId) is { Active: false, Enabled: true, Connected: true });
+            Assert.False(dock.Connected);   // the primary's own handle on the dock was never opened
+
+            // The Pro's transport goes away under the manager and the unit
+            // misses a scan: the enabled dock is not taken over.
+            pro.Unplug(); attached = [dock];
+            for (int i = 0; i < 3; i++) primary.SweepOnce();
+            Assert.Null(primary.ActiveInfo);
+            Assert.False(dock.Connected);
+            Assert.True(Unit(dockId).Connected);
+            attached = [dock, pro]; primary.SweepOnce();
+            Assert.Equal(proId, primary.ActiveInfo?.InstanceId);
+            Assert.True(Unit(dockId).Connected);
+
+            Assert.Null(interfaces.SetEnabled(dockId, false));
+            Wait(() => !Unit(dockId).Connected);
+            for (int i = 0; i < 3; i++) primary.SweepOnce();
+            Assert.Equal(proId, primary.ActiveInfo?.InstanceId);
+
+            // Not enabled, the dock stands in while the Pro is away, and the
+            // Pro takes the primary back once it returns.
+            pro.Unplug(); attached = [dock];
+            primary.SweepOnce();
+            Assert.Equal(dockId, primary.ActiveInfo?.InstanceId);
+            attached = [dock, pro]; primary.SweepOnce();
+            Assert.Equal(proId, primary.ActiveInfo?.InstanceId);
+            Assert.False(dock.Connected);
+
+            // The user's pick wins over OPENXLR_DEVICE, and stays.
+            Assert.Null(primary.SetActiveDevice(dockId));
+            for (int i = 0; i < 3; i++) primary.SweepOnce();
+            Assert.Equal(dockId, primary.ActiveInfo?.InstanceId);
+            Assert.Null(primary.SetActiveDevice(proId));
+            primary.SweepOnce();
+            Assert.Equal(proId, primary.ActiveInfo?.InstanceId);
+        }
+        finally { await interfaces.StopAsync(CancellationToken.None); primary.SuspendSession(); }
+    }
+
     [Theory]
     [InlineData("../escape")]
     [InlineData("0fd9:007d")]
@@ -492,10 +562,10 @@ public sealed class WaveInterfaceTests : IDisposable
     }
 
     private sealed class FakeDevice(string? serial, FakeDevice.Hardware? shared = null, bool retainsSettings = true,
-        string port = "1-2", bool outputRouting = false, string? model = null) : IAudioDevice
+        string port = "1-2", bool outputRouting = false, string? model = null, ushort? productId = null) : IAudioDevice
     {
         public DeviceInfo Info { get; private set; } = new("Elgato", model ?? (outputRouting ? "Wave XLR Pro" : "Wave XLR"), 0x0fd9,
-            model is not null ? (ushort)0x00a6 : outputRouting ? (ushort)0x00b4 : (ushort)0x007d)
+            productId ?? (model is not null ? (ushort)0x00a6 : outputRouting ? (ushort)0x00b4 : (ushort)0x007d))
             { Location = new(1, 2, port, serial) };
         public DeviceCapabilities Capabilities { get; } = new() { Gain = true, Mute = true, RetainsSettings = retainsSettings, OutputRouting = outputRouting };
         public bool Connected { get; private set; }
@@ -506,7 +576,7 @@ public sealed class WaveInterfaceTests : IDisposable
             public readonly ManualResetEventSlim ReadEntered = new();
         }
         private readonly Hardware _hardware = shared ?? new();
-        public FakeDevice Fork() => new(serial, _hardware, Capabilities.RetainsSettings, port, outputRouting, model);
+        public FakeDevice Fork() => new(serial, _hardware, Capabilities.RetainsSettings, port, outputRouting, model, productId);
         public int Gain { get => _hardware.Gain; set => _hardware.Gain = value; }
         public void Connect() => Connected = true;
         public void Disconnect() => Connected = false;

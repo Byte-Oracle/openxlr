@@ -2803,7 +2803,8 @@ strip has them back and the capture channel keeps only its volume.
 
 Several Wave interfaces can supply capture audio at once. The header picker
 chooses the primary interface, whose controls the main window shows and whose
-microphone feeds the XLR strips. Options, INTERFACE, **Additional
+microphone feeds the XLR strips. Only the picker changes it: enabling or
+disabling an additional interface leaves the primary where it is. Options, INTERFACE, **Additional
 interfaces** drives up to four more units with their own gain, mute and
 phantom power, and adds each one's microphone as a capture channel; see
 [Multiple Wave interfaces](wave-interfaces.md). The software low cut,

@@ -234,8 +234,8 @@ that final acknowledgement (or an `error` without a request id):
 | `forgetApp` | `identity` | drop an app and its remembered channel |
 | `setInputBinding` | `channel`, `source?`, `captureMonoChannel?` | bind a hardware strip to one port of a PipeWire capture source by exact node name. `channel` is `xlr1` or `xlr2`; Aux In stays on the interface. With `source` null or absent the strip returns to the interface's capture pair and takes no port. With a source, `capturePair` must be 0 and `captureMonoChannel` is the zero-based port, 0 to 63, default 0. OpenXLR nodes, monitor taps, control characters and names over 256 characters are refused. A node of an attached supported interface (a `devices` entry with `drivenUnit`) is accepted, and the binding records that unit, see [a strip on another interface](#a-strip-on-another-interface). The source may be offline. Saved before the acknowledgement, rolled back on a failed save. The strip's monitor sends start muted after a change; no other strip changes. Channel ids, software processing and inserts stay as they are. See [input bindings](#input-bindings) |
 | `setEnforcedDefaults` | `sink`, `source` | system defaults to hold; `sink: "@monitor"` follows the first selected monitor output |
-| `setActiveDevice` | `device` | switch to another attached interface: one unit by its instance id from `detected`, or the first unit of a model by `vvvv:pppp` |
-| `setWaveInterfaceEnabled` | `device`, `value` | drive an attached unit, by its instance id from `waveInterfaces`, as an additional interface (`true`) or stop driving it (`false`); at most four. Refused for a unit that is not attached, and for a Wave XLR Pro whose capture node name another attached unit shares. Enabling creates no mixer channel; disabling an attached unit deletes the capture channels whose source is one of its own nodes, as `deleteChannel` does, found by its `captureHint` and, when not empty, its `captureModelHint`; nothing is deleted while `captureHint` is a model name another attached unit shares. See [additional interface state](#additional-interface-state) |
+| `setActiveDevice` | `device` | switch to another attached interface: one unit by its instance id from `detected`, or the first unit of a model by `vvvv:pppp`. The one command that moves the primary; it wins over `OPENXLR_DEVICE`, and the choice stays until the next `setActiveDevice` or a restart |
+| `setWaveInterfaceEnabled` | `device`, `value` | drive an attached unit, by its instance id from `waveInterfaces`, as an additional interface (`true`) or stop driving it (`false`); at most four. Refused for a unit that is not attached, and for a Wave XLR Pro whose capture node name another attached unit shares. Enabling creates no mixer channel; disabling an attached unit deletes the capture channels whose source is one of its own nodes, as `deleteChannel` does, found by its `captureHint` and, when not empty, its `captureModelHint`; nothing is deleted while `captureHint` is a model name another attached unit shares. Neither value changes the primary, and a unit enabled here is never driven as the primary in place of an absent one; only `setActiveDevice` makes it the primary. See [additional interface state](#additional-interface-state) |
 | `setWaveControl` | `device`, `control`, `value` | the `set` command for one unit by instance id: an additional interface, or the primary when `device` is the primary's id. Same control names, capabilities, gain lock and phantom settling as `set`; an error for a unit that is not driven |
 | `saveProfile` / `loadProfile` / `deleteProfile` | `name` | named scenes, scoped to the connected interface, or to `generic` while none is connected (see below); loading restores saved gain even while locked and leaves the lock enabled |
 | `setRecallOnConnect` | `name` | the profile recalled whenever the active device connects fresh (daemon start, replug, switch to it); empty clears it. With none chosen, a device whose capabilities say `retainsSettings: false` gets the last settings the daemon saw on it instead. Refused while no interface is connected |
@@ -764,7 +764,10 @@ when it has no serial or shares it with another unit; it stays the same
 across replugs, and for a unit without a serial it changes with the port.
 `active` marks the primary, `enabled` the saved additional role, and
 `connected` and `state` describe whichever manager drives the unit. A unit
-that is primary is never driven as additional too.
+that is primary is never driven as additional too. `active` moves only with
+`setActiveDevice`. While the chosen unit is briefly away, another unit that
+is not `enabled` may stand in as the primary, and it hands the role back once
+the chosen unit returns.
 
 `captureHint` is the PipeWire name fragment of the unit's capture node: the
 model as udev spells it, then `_`, the serial and `-` when the unit has a
@@ -1105,8 +1108,8 @@ software otherwise:
 5. The unit has not failed to keep the EQ written to it in this run.
 
 `processing` is the channel's choice, `device` or `software`. `device` is
-non-null while the channel carries a unit whose model has a hardware EQ (the
-MK.2 family): `{unit, input, name, firmware, ready, reason, note,
+non-null while the channel carries an input of a unit whose model has a
+hardware EQ (the MK.2 family): `{unit, input, name, firmware, ready, reason, note,
 minimumFirmware}`. `unit` is the instance id `waveInterfaces` gives, `input`
 1 or 2, `name` the model, `firmware` the version the unit reports or null,
 `minimumFirmware` `1.0.15`. `ready` is true while the unit runs the EQ now.
