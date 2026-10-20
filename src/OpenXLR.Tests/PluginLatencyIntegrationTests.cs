@@ -50,10 +50,10 @@ public sealed class MixDelayIntegrationTests
                     if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
                     signal = b''.join(struct.pack('<ff', *([0.5 if i % period == 0 else 0.0] * 2)) for i in range(rate * 3))
                     with tempfile.TemporaryFile() as capture:
-                        record = subprocess.Popen(['pw-cat', '--record', *args, '--target', sys.argv[2], '-'], stdout=capture, stderr=subprocess.PIPE)
+                        record = subprocess.Popen(['pw-cat', '--record', *args, '--properties={ node.link-group = openxlr-test-record }', '--target', sys.argv[2], '-'], stdout=capture, stderr=subprocess.PIPE)
                         play = None
                         try:
-                            play = subprocess.Popen(['pw-cat', '--playback', *args, '--target', sys.argv[1], '-'], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+                            play = subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', sys.argv[1], '-'], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
                             _, err = play.communicate(signal, timeout=10)
                             assert play.returncode == 0, err.decode()
                             record.terminate(); record.communicate(timeout=5)
@@ -161,7 +161,7 @@ public sealed class PluginLatencyIntegrationTests
                 import subprocess, struct
                 args = ['--format=f32', '--rate=48000', '--channels=2']
                 if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
-                p = subprocess.Popen(['pw-cat', '--playback', *args, '--target', 'OpenXLR_ch_test', '-'], stdin=subprocess.PIPE)
+                p = subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', 'OpenXLR_ch_test', '-'], stdin=subprocess.PIPE)
                 try: p.communicate(struct.pack('<ff', .1, .1) * (48000 * 40), timeout=50)
                 finally:
                     if p.poll() is None: p.kill()

@@ -407,7 +407,7 @@ public sealed partial class MonitorVolumeIntegrationTests
             import struct, subprocess
             args = ['--format=f32', '--rate=48000', '--channels=6']
             if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
-            p = subprocess.Popen(['pw-cat', '--playback', *args, '--target', 'bind_unit_parent',
+            p = subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', 'bind_unit_parent',
                 '--properties={ node.name = "OpenXLR_bind_unit_fixture" }', '-'], stdin=subprocess.PIPE)
             try: p.communicate(struct.pack('<6f', *([.2] * 6)) * (48000 * 120), timeout=125)
             finally:
@@ -606,7 +606,7 @@ public sealed partial class MonitorVolumeIntegrationTests
             import struct, subprocess
             args = ['--format=f32', '--rate=48000', '--channels=2']
             if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.append('--raw')
-            p = subprocess.Popen(['pw-cat', '--playback', *args, '--target', 'primary_signal',
+            p = subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', 'primary_signal',
                 '--properties={ node.name = "OpenXLR_primary_fixture" }', '-'], stdin=subprocess.PIPE)
             try: p.communicate(struct.pack('<ff', .1, .4) * (48000 * 60), timeout=65)
             finally:

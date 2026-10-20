@@ -143,10 +143,10 @@ public sealed partial class MonitorVolumeIntegrationTests
                     for file, level in [(one, .1), (two, .2)]:
                         file.write(struct.pack('<ff', level, level) * (rate * 3)); file.seek(0)
                     try:
-                        record = subprocess.Popen(['pw-cat', '--record', *args, '--target', 'OpenXLR_mix_monitor', '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
+                        record = subprocess.Popen(['pw-cat', '--record', *args, '--properties={ node.link-group = openxlr-test-record }', '--target', 'OpenXLR_mix_monitor', '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
                         processes.append(record)
                         for name, file in [('test_capture_one', one), ('test_capture_two', two)]:
-                            processes.append(subprocess.Popen(['pw-cat', '--playback', *args, '--target', name, '-'], stdin=file, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE))
+                            processes.append(subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', name, '-'], stdin=file, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE))
                         for play in processes[1:]:
                             _, err = play.communicate(timeout=10)
                             assert play.returncode == 0, err.decode()

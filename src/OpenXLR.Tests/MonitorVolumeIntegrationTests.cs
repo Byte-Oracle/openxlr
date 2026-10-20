@@ -550,10 +550,10 @@ public sealed partial class MonitorVolumeIntegrationTests
             if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True):
                 args.append('--raw')
             capture = tempfile.TemporaryFile()
-            record = subprocess.Popen(['pw-cat', '--record', *args, '--target', sys.argv[3], '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
+            record = subprocess.Popen(['pw-cat', '--record', *args, '--properties={ node.link-group = openxlr-test-record }', '--target', sys.argv[3], '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
             play = None
             try:
-                play = subprocess.Popen(['pw-cat', '--playback', *args, '--target', sys.argv[2], '-'], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                play = subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', sys.argv[2], '-'], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
                 _, playback_errors = play.communicate(samples, timeout=10)
                 assert play.returncode == 0, playback_errors.decode()
                 record.terminate()
