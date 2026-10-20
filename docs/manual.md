@@ -136,15 +136,18 @@ does each one in a profile saved before channel volumes existed. XLR 1,
 XLR 2 and Aux In have no channel volume. Their level is the interface's
 gain or the Aux In level, which the window shows in the same place. The
 channel's meter shows what plays into the channel, before its volume.
+In the SUBMIXER tiles, XLR 1, XLR 2 and Aux In leave an empty space where
+the Volume row would be, so each send row sits at the same height in
+every tile. When no shown tile has a Volume row, they leave no space.
 
 ### Submixer categories
 
-The SUBMIXER separates **INPUT CHANNELS**, the channel strips and their sends,
-from **OUTPUT MIXES**, the master volumes and effects of the resulting mixes.
-Application audio and external capture sources are input channels too. Output
-mixes include monitor mixes and virtual microphones; they are not a list of
-physical output devices. The MONITOR section still chooses the physical
-outputs that receive these mixes.
+The SUBMIXER shows the channel strips and their sends first, right under
+its header, then **OUTPUT MIXES**, the master volumes and effects of the
+resulting mixes. Application audio and external capture sources have channel
+strips too. Output mixes include monitor mixes and virtual microphones; they
+are not a list of physical output devices. The MONITOR section still chooses
+the physical outputs that receive these mixes.
 
 **Application routing**: when an app starts playing, the daemon reads
 its name from PipeWire and picks a channel by rules: browsers to

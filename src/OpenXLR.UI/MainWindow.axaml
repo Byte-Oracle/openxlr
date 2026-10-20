@@ -756,9 +756,6 @@
       </views:MixerPanel.Header>
       <views:MixerPanel.Tiles>
       <DockPanel>
-        <TextBlock Name="InputChannelHeading" DockPanel.Dock="Top" Text="{loc:Text Key=InputChannelsHeading}"
-                   Classes="h" Margin="0,0,0,8" IsVisible="{Binding HasMixer}"/>
-
         <!-- Mix masters control the outgoing mixes, separate from the channel sends. -->
         <StackPanel DockPanel.Dock="Bottom" IsVisible="{Binding HasMixer}" Margin="0,10,0,0" Spacing="8">
         <TextBlock Name="OutputMixHeading" Text="{loc:Text Key=OutputMixesHeading}" Classes="h"/>
@@ -838,14 +835,19 @@
         <!-- channel strips: one column per channel, one fader per mix -->
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                       IsVisible="{Binding HasMixer}">
-          <ItemsControl ItemsSource="{Binding Channels}">
+          <!-- One size scope for every tile's volume row, so a send row sits at
+               the same height in every tile. -->
+          <ItemsControl Name="ChannelTiles" ItemsSource="{Binding Channels}" Grid.IsSharedSizeScope="True">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ChannelViewModel">
+                <!-- A tile out of sight keeps its volume row to itself, so it holds
+                     no space open in the tiles that are shown. -->
                 <Border Classes="tile" Padding="10" Margin="0,0,8,0" Width="{DynamicResource Ox.Mixer.ChannelWidth}"
-                        IsVisible="{Binding DisplayVisible}" Classes.revealed="{Binding Revealed}">
+                        IsVisible="{Binding DisplayVisible}" Classes.revealed="{Binding Revealed}"
+                        Grid.IsSharedSizeScope="{Binding !DisplayVisible}">
                   <StackPanel Spacing="8">
                     <Button Classes="ghost reorderHandle" Classes.fixedPlace="{Binding !IsEditable}" Content="↔" Tag="{Binding}"
                             HorizontalAlignment="Left" AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=MoveItem}}"
@@ -859,36 +861,44 @@
                       <skin:LevelMeter Level="{Binding MeterL}" AutomationProperties.Name="{loc:Text Key=LeftLevel}"/>
                       <skin:LevelMeter Level="{Binding MeterR}" AutomationProperties.Name="{loc:Text Key=RightLevel}"/>
                     </StackPanel>
-                    <!-- an application or capture channel's own volume, over every send below it -->
-                    <StackPanel Name="ChannelVolume" Spacing="1" IsVisible="{Binding HasVolume}">
-                      <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="{loc:Text Key=Volume}" Classes="h" FontSize="11"
-                                   TextTrimming="CharacterEllipsis" Margin="0,0,4,0"/>
-                        <TextBlock Grid.Column="1" Text="{Binding VolumeText}" Classes="val" FontSize="11"/>
-                      </Grid>
-                      <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}"
-                              AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
-                              ToolTip.Tip="{loc:Text Key=ChannelVolumeTip}"/>
-                    </StackPanel>
-                    <ItemsControl ItemsSource="{Binding Sends}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:SendViewModel">
-                          <StackPanel Margin="0,0,0,8" Spacing="1" IsVisible="{Binding DisplayVisible}" Classes.revealed="{Binding MixRevealed}">
-                            <Grid ColumnDefinitions="*,Auto">
-                              <TextBlock Text="{Binding MixName}" Classes="h" FontSize="11"
-                                         TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MixName}" Margin="0,0,4,0"/>
-                              <TextBlock Grid.Column="1" Text="{Binding LevelText}" Classes="val" FontSize="11"/>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                              <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Level, Mode=TwoWay}"
-                                      VerticalAlignment="Center"/>
-                              <ToggleButton Grid.Column="1" Classes="mute mutemini" IsChecked="{Binding Muted, Mode=TwoWay}"
-                                            Padding="7,2" FontSize="11" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center"/>
-                            </Grid>
-                          </StackPanel>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- an application or capture channel's own volume, over every send
+                         below it; the row is as tall in every tile, empty in a hardware
+                         one, while any shown tile has a volume -->
+                    <Grid Name="ChannelSendArea">
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" SharedSizeGroup="ChannelVolumeRow"/>
+                        <RowDefinition Height="Auto"/>
+                      </Grid.RowDefinitions>
+                      <StackPanel Name="ChannelVolume" Spacing="1" IsVisible="{Binding HasVolume}" Margin="0,0,0,8">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <TextBlock Text="{loc:Text Key=Volume}" Classes="h" FontSize="11"
+                                     TextTrimming="CharacterEllipsis" Margin="0,0,4,0"/>
+                          <TextBlock Grid.Column="1" Text="{Binding VolumeText}" Classes="val" FontSize="11"/>
+                        </Grid>
+                        <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}"
+                                AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                                ToolTip.Tip="{loc:Text Key=ChannelVolumeTip}"/>
+                      </StackPanel>
+                      <ItemsControl Grid.Row="1" ItemsSource="{Binding Sends}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:SendViewModel">
+                            <StackPanel Margin="0,0,0,8" Spacing="1" IsVisible="{Binding DisplayVisible}" Classes.revealed="{Binding MixRevealed}">
+                              <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding MixName}" Classes="h" FontSize="11"
+                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MixName}" Margin="0,0,4,0"/>
+                                <TextBlock Grid.Column="1" Text="{Binding LevelText}" Classes="val" FontSize="11"/>
+                              </Grid>
+                              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Level, Mode=TwoWay}"
+                                        VerticalAlignment="Center"/>
+                                <ToggleButton Grid.Column="1" Classes="mute mutemini" IsChecked="{Binding Muted, Mode=TwoWay}"
+                                              Padding="7,2" FontSize="11" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center"/>
+                              </Grid>
+                            </StackPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Grid>
                   </StackPanel>
                 </Border>
               </DataTemplate>

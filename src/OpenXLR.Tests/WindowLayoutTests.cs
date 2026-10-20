@@ -150,13 +150,15 @@ public sealed class WindowLayoutTests
                         AssertNoOverlap(((Grid)name.Parent!).Children.Where(c => c.IsVisible).ToArray());
                     }
 
-                    var inputHeading = main.FindControl<TextBlock>("InputChannelHeading")!;
+                    // The SUBMIXER header introduces the channel tiles; only the
+                    // mix masters below them carry a heading of their own.
+                    Assert.Null(main.FindControl<TextBlock>("InputChannelHeading"));
+                    var tiles = main.FindControl<ItemsControl>("ChannelTiles")!;
                     var outputHeading = main.FindControl<TextBlock>("OutputMixHeading")!;
-                    Assert.Equal(Localizer.Text("InputChannelsHeading"), inputHeading.Text);
                     Assert.Equal(Localizer.Text("OutputMixesHeading"), outputHeading.Text);
-                    AssertInside(inputHeading, main);
                     AssertInside(outputHeading, main);
-                    Assert.True(inputHeading.TranslatePoint(default, main)!.Value.Y
+                    Assert.Equal(0, tiles.FindAncestorOfType<ScrollViewer>()!.TranslatePoint(default, outputHeading.FindAncestorOfType<DockPanel>()!)!.Value.Y, 0.5);
+                    Assert.True(tiles.TranslatePoint(default, main)!.Value.Y
                         < outputHeading.TranslatePoint(default, main)!.Value.Y);
 
                     var masters = main.GetVisualDescendants().OfType<Border>()
@@ -589,6 +591,7 @@ public sealed class WindowLayoutTests
                 AssertLayoutAppearance(main, vm);
                 SkinLayoutWindowTests.Check();
                 MixerViewWindowTests.Check();
+                ChannelTileAlignmentWindowTests.Check();
                 MixerPopOutWindowTests.Check(main);
                 // The arrange check opens its own window, with a real pointer
                 // on it; nothing else may sit in front.
