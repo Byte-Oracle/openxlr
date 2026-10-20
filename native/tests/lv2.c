@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The LV2 latency report, against a fixture whose latency port follows its
-// own delay control. No PipeWire: the process calls are made here, on plain
-// buffers, and lilv finds the fixture through LV2_PATH.
+// own delay control, and the mono and stereo gain fixtures the capture chain
+// tests load. No PipeWire: the process calls are made here, on plain
+// buffers, and lilv finds the fixtures through LV2_PATH.
 //
 // host.c is included under a renamed main, as the other tests do, and lv2.c
 // after it to reach the backend's own functions.
@@ -29,14 +30,36 @@ static void cycle(Host *h) {
   atomic_fetch_add(&h->audio_left, 1);
 }
 
+static void gain_fixture(uint32_t channels, char *uri) {
+  Host h = {.rate = 48000, .channels = channels, .backend = &lv2_backend};
+  char *arguments[] = {uri};
+  assert(lv2_load(&h, arguments));
+  assert(lv2_activate(&h));
+  Control *gain = control_named(&h, "gain");
+  assert(gain);
+  atomic_store(&gain->desired, 0.25f);
+  float left[] = {0.1f, -0.2f}, right[] = {0.3f, -0.4f};
+  float out_left[2], out_right[2];
+  float *in[] = {left, right}, *out[] = {out_left, out_right};
+  lv2_process(&h, 2, in, out);
+  for (uint32_t channel = 0; channel < channels; channel++)
+    for (uint32_t frame = 0; frame < 2; frame++)
+      assert(fabsf(out[channel][frame] - in[channel][frame] * 0.25f) < 1e-6f);
+  lv2_deactivate(&h);
+  lv2_unload(&h);
+}
+
 int main(void) {
-  // The fixture's bundle is the only one this test may see: LV2_PATH names a
-  // fresh directory holding a link to it and nothing else.
-  char bundle[PATH_MAX], directory[] = "/tmp/openxlr-lv2-XXXXXX", link[PATH_MAX];
+  // The fixtures' bundles are the only ones this test may see: LV2_PATH
+  // names a fresh directory holding a link to each and nothing else.
+  char bundle[PATH_MAX], directory[] = "/tmp/openxlr-lv2-XXXXXX", link[PATH_MAX], gain_link[PATH_MAX];
   assert(realpath("tests/latency.lv2", bundle));
   assert(mkdtemp(directory));
   snprintf(link, sizeof(link), "%s/latency.lv2", directory);
   assert(symlink(bundle, link) == 0);
+  assert(realpath("tests/gain.lv2", bundle));
+  snprintf(gain_link, sizeof(gain_link), "%s/gain.lv2", directory);
+  assert(symlink(bundle, gain_link) == 0);
   setenv("LV2_PATH", directory, 1);
   Host h = {.rate = 48000, .channels = 2, .backend = &lv2_backend};
   char *arguments[] = {"urn:openxlr:test:latency"};
@@ -63,6 +86,10 @@ int main(void) {
 
   lv2_deactivate(&h);
   lv2_unload(&h);
+  gain_fixture(1, "urn:openxlr:test:gain:mono");
+  gain_fixture(2, "urn:openxlr:test:gain");
+  puts("PASS: mono and stereo gain fixtures scale each audio channel");
+  unlink(gain_link);
   unlink(link);
   rmdir(directory);
   return 0;

@@ -119,7 +119,8 @@ writes `inputBindings` only. `setInputBinding` changes the field live; see
   publishes in the state as `defaultIcon` ([api.md](api.md)). XLR 1 and
   XLR 2 wear `mic` on a real XLR jack, `microphone` on a Wave:3's or
   Wave:1's capsule or another source, and `headset` on a Bluetooth
-  headset's source (`bluez_input.`); Aux In wears `jack`, capture inputs `camera`, the
+  headset's source (`bluez_input.`); Aux In wears `jack`, mono capture inputs `microphone`,
+  `bluez_input.` capture sources `headset`, stereo capture pairs `camera`, the
   shipped application channels `game`, `music`, `browser`, `cog` (System),
   `chat` (Voice Chat) and `burst` (SFX), any other application channel
   `apps`, monitor mixes `headset`, Stream `broadcast`, Chat `people`, any
@@ -196,7 +197,7 @@ every save. Every field is optional on read; an absent one is empty or off.
 | `knownApps` | `{identity, label, channelId}` for every application seen |
 | `lowCutHz` | the software low cut, 0, 80 or 120 |
 | `softClipGuard` | the software ClipGuard |
-| `inserts` | insert chains by `xlr1`, `xlr2` or `mix:<id>` |
+| `inserts` | insert chains by `xlr1`, `xlr2`, capture channel id or `mix:<id>` |
 | `exclusiveGroups` | exclusive channel groups, see [Exclusive groups](#exclusive-groups) |
 
 A null field or a null entry inside one is dropped and logged; so is a
@@ -234,8 +235,8 @@ debounced, retried behaviour.
   routed to it, remembered assignments included, and whatever is playing
   into its sink at that moment move to the fallback application channel
   (`system`, or the remaining application channel whose id sorts first);
-  then its sink is unloaded, and a capture channel's link to its source
-  with it. The last application channel stays.
+  then its sink is unloaded, and a capture channel's links, insert hosts
+  and session stop with it. Its insert key is removed from the saved settings. The last application channel stays.
 - `createMix {name, kind?, icon?}` adds a user mix after the existing ones,
   ahead of Aux, with `icon` as `createChannel` takes it. Without `kind`, or with `kind: "virtualMic"`, it is a virtual
   microphone. With `kind: "monitor"` it is a monitor mix: one sink and no
@@ -326,14 +327,42 @@ old one.
 
 Disconnected sources retain their exact binding and faders. They reconnect
 when that node and pair return, without falling back to another microphone.
+While two nodes share the source's name the channel stays silent with a
+warning, until the name is unique again.
 Both sides of the channel must connect before the input reports connected.
 If only one link succeeds, it is removed and the next sweep retries the
 whole connection, including the two links used for a mono source.
 Multiple interfaces can therefore supply audio simultaneously, independently
-of the interface selected for hardware controls. Hardware controls and the
-built-in input DSP still belong to the selected Wave interface. Capture inputs
-can feed mix insert chains; per-input insert hosting remains limited to the
-existing XLR channels.
+of the interface selected for hardware controls. Hardware controls still
+target their unit. The software low cut, ClipGuard and microphone EQ stay
+on the XLR strips.
+Capture inputs host their own insert chains through the API. A binding with
+`captureMonoChannel` has `microphone: true` and `chainWidth: 1`; a pair has
+`microphone: false` and `chainWidth: 2`, even while disconnected.
+
+The daemon moves a pair-0 capture input with no mono port to
+`captureMonoChannel: 0` when its source reports `audio.channels: 1` and its
+saved insert list is empty. It logs the change and saves it in
+`mixer.json`. Existing links stay in place, since a lone source port already
+feeds both sides. Missing sources, unknown channel counts, other pairs and
+nonempty chains, including bypassed inserts, keep their binding and width.
+
+An active chain uses `OpenXLR_lc_<id>_<generation>_in/_out` before the
+existing combine. Without active inserts, no node is added. The new route
+is connected before the old one stops. Each chained channel owns and heals
+its links independently; the direct-feed healer handles unchained channels.
+A source going away stops its chain, and its return rebuilds it. Load errors
+leave the direct feed playing. Three host failures within five minutes leave
+that channel on its direct feed with the reason on its inserts.
+
+The settings loader checks insert keys against the restored layout. It
+keeps XLR 1, XLR 2, known mixes and capture channels, and drops and logs any
+other key. An insert whose plugin does not fit the width stays saved and
+reports an error. Profiles
+include capture chains, with an empty list for every input that has none;
+a profile missing a capture key leaves that chain alone. Deleting a capture
+input stops its chain after the removal is saved. Saved profiles retain the
+key, so recreating the same id can restore it on recall.
 
 ## Exclusive groups
 

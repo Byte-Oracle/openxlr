@@ -261,7 +261,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Chain key as in the state: an XLR input channel id or mix:<id>"
+            "description": "Chain key as in the state: an XLR or capture input channel id, or mix:<id>"
           }
         ],
         "responses": {

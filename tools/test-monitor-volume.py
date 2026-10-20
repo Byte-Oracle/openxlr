@@ -22,6 +22,8 @@ def main():
                    CLAP_PATH=runtime + "/plugins", VST3_PATH=runtime + "/plugins",
                    PULSE_SERVER="unix:" + runtime + "/pulse/native",
                    PIPEWIRE_REMOTE="pipewire-0", OPENXLR_TEST_MONITOR_VOLUME="1")
+        fixtures = str(Path(__file__).resolve().parent.parent / "native" / "tests")
+        env["LV2_PATH"] = fixtures + ":" + env.get("LV2_PATH", "/usr/lib/lv2:/usr/local/lib/lv2")
         processes = []
         with open(runtime + "/servers.log", "w+") as log:
             try:
@@ -71,7 +73,7 @@ def main():
                     command = sys.argv[2:]
                     if not command: raise ValueError("--command needs an executable")
                 subprocess.run(command,
-                               env=env, check=True, timeout=300,
+                               env=env, check=True, timeout=600,
                                cwd=Path(__file__).resolve().parent.parent)
             except Exception:
                 log.flush()

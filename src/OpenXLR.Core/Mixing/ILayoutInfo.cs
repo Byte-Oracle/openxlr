@@ -24,9 +24,9 @@ public interface ILayoutInfo
     bool IsMicrophoneChannel(string id) => Mixer.IsMicrophoneId(id) && HasChannel(id);
     /// <summary>Whether a microphone's EQ runs on its unit now, so switching it on needs no native helper.</summary>
     bool EqRunsOnDevice(string id) => false;
-    /// <summary>An insert chain key: an XLR input id or "mix:&lt;id&gt;".</summary>
+    /// <summary>An insert chain key: an XLR or capture input id, or "mix:&lt;id&gt;".</summary>
     bool IsInsertKey(string key);
-    /// <summary>The channels an insert chain carries: one on an XLR input, two on a mix.</summary>
+    /// <summary>The chain's binding width: one or two. The default is for legacy layouts.</summary>
     int InsertChannels(string key) => key.StartsWith("mix:", StringComparison.Ordinal) ? 2 : 1;
     /// <summary>
     /// The insert the chain already holds under this id, or null. A rule

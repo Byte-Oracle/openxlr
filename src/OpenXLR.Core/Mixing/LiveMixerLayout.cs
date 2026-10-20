@@ -77,6 +77,8 @@ public sealed partial class Mixer
                 Levels = _config.Mixes.ToDictionary(m => m.Id, _ => 1.0),
                 MutedIn = _config.Mixes.Select(m => m.Id).ToHashSet(),
             };
+            ChannelDefinition original = channel;
+            if (source is not null) channel = CaptureBinding.MigrateMono(channel, _pw.ListDevices(), InsertsFor(id));
             MixerConfig previous = _config;
             var previousAppearance = _appearance;
             uint module = _pw.CreateCombineSink(channel.SinkName, MixSinkPattern, $"OpenXLR {name}", visible: channel.IsApplication);
@@ -105,12 +107,16 @@ public sealed partial class Mixer
                 _appearance = previousAppearance;
                 _combineModules.Remove(id);
                 RemoveCaptureFeedLocked(id);
+                RemoveCaptureRouteLocked(id);
+                _captureWarnings.Remove(id);
                 RemoveChannelCellsLocked(id, previous.Mixes);
                 try { _pw.UnloadModule(module); }
                 catch (Exception cleanupError)
                 { throw new AggregateException("channel creation failed and its module could not be removed", editError, cleanupError); }
                 throw;
             }
+            if (!ReferenceEquals(original, channel))
+                _pw.Note($"Capture input {id} now takes mono port 1 of {source}.");
             _meters.Add($"ch:{id}", channel.SinkName);
         }
     }
@@ -164,6 +170,7 @@ public sealed partial class Mixer
 
             var movedOverrides = Matcher.Overrides.Where(kv => kv.Value == id).Select(kv => kv.Key).ToList();
             var movedApps = _apps.Where(kv => kv.Value.ChannelId == id).ToDictionary(kv => kv.Key, kv => kv.Value);
+            _inserts.Remove(id, out List<InsertDefinition>? previousInserts);
             CellSnapshot cells = TakeChannelCellsLocked(id, previous.Mixes);
             _config = next;
             foreach (string identity in movedOverrides) Matcher.SetOverride(identity, fallback.Id);
@@ -172,6 +179,7 @@ public sealed partial class Mixer
             catch
             {
                 _config = previous;
+                if (previousInserts is not null) _inserts[id] = previousInserts;
                 cells.Restore(this);
                 foreach (string identity in movedOverrides) Matcher.SetOverride(identity, id);
                 foreach ((string identity, StreamAssignment app) in movedApps) _apps[identity] = app;
@@ -196,6 +204,15 @@ public sealed partial class Mixer
             _appearance.Remove("channel:" + id);
             _meters.Remove($"ch:{id}");
             RemoveCaptureFeedLocked(id);
+            if (_soundCheckChannel == id)
+                StopSoundCheckLocked(restore: false, error: "Sound Check stopped because the capture input was deleted.");
+            bool chained = _chains.ContainsKey(id);
+            RemoveCaptureRouteLocked(id);
+            // A bridged plugin in the deleted chain may have been the last
+            // one holding Wine up.
+            if (chained) EndUnusedWineLocked();
+            _captureWarnings.Remove(id);
+            _restarts.Forget(id);
             _inserts.Remove(id);
             _insertErrors.Remove(id);
             _eq.Remove(id);

@@ -204,16 +204,61 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     }
 
     /// <summary>
-    /// Wire each hardware strip from its own source: the driven interface's
+    /// Wire each input from its own source: the driven interface's
     /// capture pair (XLR 1 = pair 0, XLR 2 = pair 1, Aux In = pair 2), or one
     /// port of the exact source the strip is bound to. The interface is found
     /// by name; a strip whose source is absent is silent and the others keep
-    /// playing. Each strip is wired from its <see cref="InputRoute"/>.
-    /// <paramref name="only"/> limits the work to those strips: the rest keep
+    /// playing. Capture inputs use their binding and chain width, and enter
+    /// this path only while an insert or Sound Check needs it.
+    /// Each chained input is wired from its <see cref="InputRoute"/>.
+    /// <paramref name="only"/> limits the work to those inputs: the rest keep
     /// their feeds and chains untouched, so their plugins keep running. Safe
     /// to call again after a hotplug.
     /// </summary>
     private void WireInputFeedsLocked(IReadOnlyCollection<string>? only = null)
+    {
+        string[] strips = [.. _config.Channels.Where(c => c.InputPair is not null && (only is null || only.Contains(c.Id))).Select(c => c.Id)];
+        if (strips.Length > 0) WireInputFeedLocked(strips);
+        foreach (ChannelDefinition ch in _config.Channels.Where(c => c.CaptureSource is not null).ToList())
+        {
+            if (only is not null && !only.Contains(ch.Id)) continue;
+            // Each capture commits alone. A link timeout on this source must
+            // not roll back another microphone or fail the mixer's build.
+            try
+            {
+                if (CaptureRouteLocked(ch))
+                {
+                    WireInputFeedLocked([ch.Id]);
+                    if (_captureFeeds.Remove(ch.Id, out PortLink? old))
+                        UnlinkDiscardedInputFeed(old, _inputFeeds.GetValueOrDefault(ch.Id));
+                }
+                else
+                {
+                    RestoreCaptureFeedLocked(ch);
+                    _chainStructures[ch.Id] = InputRouteLocked(ch, null).Structure;
+                    _insertErrors.Remove(ch.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _insertErrors[ch.Id] = ex.Message;
+                _restarts.Failed(ch.Id, ex.Message);
+                try
+                {
+                    RestoreCaptureFeedLocked(ch);
+                    if (CaptureRouteLocked(ch) && _captureFeeds.Remove(ch.Id, out PortLink? direct))
+                    {
+                        _inputFeeds[ch.Id] = direct;
+                        _stripSources[ch.Id] = ch.CaptureSource!;
+                        _inputHeads[ch.Id] = ch.CaptureSource!;
+                    }
+                }
+                catch (Exception restore) { NoteCaptureLocked(ch.Id, restore.Message); }
+            }
+        }
+    }
+
+    private void WireInputFeedLocked(IReadOnlyCollection<string> only)
     {
         // UCM split sources (".HiFi__Mic2__source" and friends) rank last: the
         // channels are wired by pair offset on the raw multichannel node, and
@@ -222,9 +267,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             .Where(d => d.Kind == AudioNodeKind.Source && !d.IsOwn)
             .OrderBy(d => d.Name.Contains(".HiFi__", StringComparison.Ordinal) ? 1 : 0)
             .ToList();
-        List<ChannelDefinition> strips = [.. _config.Channels.Where(c => c.InputPair is not null)];
-        bool Rewires(ChannelDefinition ch) => only is null || only.Contains(ch.Id);
-        bool unitTouched = strips.Any(ch => Rewires(ch) && !_bindings.ContainsKey(ch.Id));
+        List<ChannelDefinition> strips = [.. _config.Channels.Where(c => c.InputPair is not null || c.CaptureSource is not null)];
+        bool Rewires(ChannelDefinition ch) => only.Contains(ch.Id);
+        bool unitTouched = strips.Any(ch => Rewires(ch) && ch.InputPair is not null && !_bindings.ContainsKey(ch.Id));
         string? unitNode = unitTouched ? ResolveInputLocked(sources) : _inputDevice;
 
         // The source node each strip will be fed from; a strip left out is silent.
@@ -237,7 +282,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 continue;
             }
             string? source;
-            if (_bindings.TryGetValue(ch.Id, out SourceBinding? binding)) source = ResolveBoundSourceLocked(ch.Id, binding, sources);
+            if (ch.CaptureSource is not null) source = ResolveCaptureSourceLocked(ch, sources);
+            else if (_bindings.TryGetValue(ch.Id, out SourceBinding? binding)) source = ResolveBoundSourceLocked(ch.Id, binding, sources);
             else
             {
                 _stripWarnings.Remove(ch.Id);
@@ -247,7 +293,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         }
 
         // The sample belongs to the microphone it was recorded from.
-        if (_soundCheck is not null && _soundCheckChannel is { } checkedStrip && (only is null || only.Contains(checkedStrip))
+        if (_soundCheck is not null && _soundCheckChannel is { } checkedStrip && only.Contains(checkedStrip)
             && _soundCheckDevice != next.GetValueOrDefault(checkedStrip))
             StopSoundCheckLocked(restore: false, error: "Sound Check stopped because the input device changed.");
 
@@ -360,7 +406,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     string chainId = $"{ch.Id}_{generation}";
                     try
                     {
-                        chain = _pw.CreateMicFilter(chainId, route.LowCutHz, cg, inserts);
+                        chain = _pw.CreateMicFilter(chainId, route.LowCutHz, cg,
+                            ch.CaptureSource is null ? inserts : [.. inserts.Where(i => PluginCatalog.Find(i)?.Fits(route.Width) == true)],
+                            route.Width);
                     }
                     catch (Exception ex) when (anyInsert)
                     {
@@ -397,6 +445,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                         // not needed.
                         _pw.StopFilter(chain);
                         nextChains.Remove(ch.Id);
+                        if (ch.CaptureSource is not null)
+                            throw new InvalidOperationException($"could not connect the capture source for {ch.Id}");
                         continue;
                     }
                     PortLink onward = RouteInputLocked(chain.SourceName, ch.SinkName, ch, processed: true);
@@ -412,7 +462,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
                 // Reuse a healthy direct feed when neither the source nor the
                 // DSP changed. A feed missing a pair is made again; the pair
-                // that survived is kept connected (see UnlinkDiscardedFeed).
+                // that survived is kept connected (see UnlinkDiscardedInputFeed).
                 if (sameInput && sameHead && !_chains.ContainsKey(ch.Id)
                     && _inputFeeds.TryGetValue(ch.Id, out PortLink? directFeed)
                     && _pw.EnsureLinks(directFeed) != LinkHealth.Broken)
@@ -438,7 +488,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             foreach ((string key, PortLink link) in nextChainOuts)
                 if (!carried.Contains(key)) _pw.Unlink(link);
             foreach ((string key, PortLink link) in nextFeeds)
-                UnlinkDiscardedFeed(link, _inputFeeds.GetValueOrDefault(key));
+                UnlinkDiscardedInputFeed(link, _inputFeeds.GetValueOrDefault(key) ?? _captureFeeds.GetValueOrDefault(key));
             foreach ((string key, FilterHandle chain) in nextChains)
                 if (!carried.Contains(key)) _pw.StopFilter(chain);
             foreach ((string key, PortLink into) in nextEqInputs)
@@ -449,7 +499,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         }
 
         foreach ((string key, PortLink old) in _inputFeeds)
-            UnlinkDiscardedFeed(old, nextFeeds.GetValueOrDefault(key));
+            UnlinkDiscardedInputFeed(old, nextFeeds.GetValueOrDefault(key));
         foreach ((string key, PortLink old) in _chainOuts)
             if (!ReferenceEquals(old, nextChainOuts.GetValueOrDefault(key))) _pw.Unlink(old);
         foreach (string key in _chains.Keys.Where(k => !k.StartsWith("mix:", StringComparison.Ordinal)).ToList())
@@ -489,6 +539,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     _stripWarnings[ch.Id] = $"{binding.Source} could not be linked to the strip; retrying.";
             }
             else _wiredBindings.Remove(ch.Id);
+            if (ch.CaptureSource is not null && next.ContainsKey(ch.Id))
+                NoteCaptureLocked(ch.Id, _inputFeeds.ContainsKey(ch.Id) ? null
+                    : $"{ch.CaptureSource} could not be linked to the channel; retrying.");
         }
         if (unitTouched) _inputDevice = unitNode;
 
@@ -503,17 +556,14 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             ChannelDefinition? ch = _config.Channels.FirstOrDefault(c => c.Id == key);
             if (ch is not null && next.TryGetValue(key, out string? input)) _pw.UnlinkNodes(input, ch.SinkName);
         }
+    }
 
-        void UnlinkDiscardedFeed(PortLink discarded, PortLink? retained)
-        {
-            if (ReferenceEquals(discarded, retained)) return;
-            // A repaired feed adopts the pair that was still connected, so the
-            // old and the new route share it. Removing only the pairs the
-            // retained route does not hold keeps that side of the microphone
-            // audible on commit and on rollback.
-            _pw.Unlink(retained is null ? discarded
-                : new PortLink([.. discarded.Pairs.Except(retained.Pairs)]));
-        }
+    private void UnlinkDiscardedInputFeed(PortLink discarded, PortLink? retained)
+    {
+        if (ReferenceEquals(discarded, retained)) return;
+        // A repaired feed can adopt surviving links. Keep those connected
+        // both on commit and when rolling back a candidate.
+        _pw.Unlink(retained is null ? discarded : new PortLink([.. discarded.Pairs.Except(retained.Pairs)]));
     }
 
     private void RemoveInputChainsLocked()
@@ -771,8 +821,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     }
     private bool _hardwareOutputRouting;
     private int _lowCutHz;                 // 0 = off; software low cut on the first XLR channel
-    // Filter-chains by insert key. Input keys ("xlr1", "xlr2") hold a mono
-    // chain per hardware input that needs one (the first XLR channel's also
+    // Filter-chains by insert key. Input keys hold a mono or stereo
+    // chain per input that needs one (the first XLR channel's also
     // carries the soft low cut and ClipGuard); mix keys ("mix:stream") hold
     // a stereo chain spliced between the mix and its consumers.
     private readonly Dictionary<string, FilterHandle> _chains = new();
@@ -786,8 +836,11 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private readonly Dictionary<string, string> _insertErrors = new();
     private readonly RestartPolicy _restarts = new(() => Environment.TickCount64);
 
-    /// <summary>Insert keys: the mono XLR inputs (Aux In is stereo) and "mix:&lt;id&gt;" for every mix.</summary>
-    private bool IsInsertChannel(string key) => key is "xlr1" or "xlr2" || MixForKey(key) is not null;
+    /// <summary>Insert keys: inputs with a chain width, and "mix:&lt;id&gt;" for every mix.</summary>
+    private bool IsInsertChannel(string key) => ChainWidthLocked(key) is not null;
+
+    private int? ChainWidthLocked(string key)
+        => MixForKey(key) is not null ? 2 : _config.Channels.FirstOrDefault(c => c.Id == key)?.ChainWidth;
 
     // ILayoutInfo, for command validation ahead of the mixer methods.
     public bool HasChannel(string id) { lock (_gate) return _config.Channels.Any(c => c.Id == id); }
@@ -830,6 +883,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             : _monitorOutputs.Where(o => o.StartsWith(output[..(marker + 1)], StringComparison.Ordinal));
     }
     public bool IsInsertKey(string key) { lock (_gate) return IsInsertChannel(key); }
+    public int InsertChannels(string key) { lock (_gate) return ChainWidthLocked(key) ?? 0; }
 
     public InsertDefinition? InsertInChain(string key, string id) { lock (_gate) return InsertsFor(key).FirstOrDefault(i => i.Id == id); }
     public int OverrideCount { get { lock (_gate) return Matcher.Overrides.Count; } }
@@ -1266,7 +1320,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     .FirstOrDefault(s => s.Id == i.Id).Stage;
                 NativePluginHost? host = stage?.NativeHost;
                 return new InsertStatus(i,
-                    PluginCatalog.Find(i) is null ? "plugin not installed"
+                    PluginCatalog.Find(i) is not { } plugin ? "plugin not installed"
+                    : _config.Channels.FirstOrDefault(c => c.Id == channel && c.CaptureSource is not null)?.ChainWidth is int width
+                        && !plugin.Fits(width) ? $"plugin has no {(width == 1 ? "mono" : "stereo")} layout for this chain"
                     : !i.Bypass && _insertErrors.TryGetValue(channel, out string? err) ? err
                     : host?.EditorStalled == true ? "the plugin's editor stopped answering; its controls are frozen while audio keeps playing"
                     : null, host?.Meters, host?.IsRunning == true)
@@ -1623,7 +1679,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         Dictionary<string, List<InsertDefinition>> chains = CopyInsertsLocked();
         foreach (ChannelDefinition ch in _config.Channels)
-            if (ch.InputPair is not null && IsInsertChannel(ch.Id)) chains.TryAdd(ch.Id, []);
+            if (ch.ChainWidth is not null) chains.TryAdd(ch.Id, []);
         return chains;
     }
 
@@ -2685,10 +2741,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     c.Id, ChannelNameLocked(c),
                     _config.Mixes.ToDictionary(m => m.Id, m => _levels.GetValueOrDefault(Cell(c.Id, m.Id), 0.0)),
                     [.. _config.Mixes.Where(m => _muted.Contains(Cell(c.Id, m.Id))).Select(m => m.Id)],
-                    c.InputPair is not null, c.CaptureSource, c.CapturePair, _captureFeeds.ContainsKey(c.Id),
+                    c.InputPair is not null, c.CaptureSource, c.CapturePair, c.CaptureSource is not null && BindingConnectedLocked(c),
                     ChannelPresentLocked(c), GroupForChannelLocked(c.Id)?.Id)
                 {
                     CaptureMonoChannel = c.CaptureMonoChannel,
+                    Microphone = c.Microphone,
+                    ChainWidth = c.ChainWidth,
                     Binding = BindingStateLocked(c),
                     BindingConnected = BindingConnectedLocked(c),
                     BindingWarning = BindingWarningLocked(c),

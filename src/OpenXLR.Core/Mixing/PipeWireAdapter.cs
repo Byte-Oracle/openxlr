@@ -761,8 +761,8 @@ public sealed class PipeWireAdapter
     /// mic into it) and a source half (link onward to the channel).
     /// </summary>
     public FilterHandle CreateMicFilter(string id, int lowCutHz, bool clipGuard,
-        IReadOnlyList<InsertDefinition>? inserts = null)
-        => CreateFilterChain($"OpenXLR_lc_{id}_in", $"OpenXLR_lc_{id}_out", "OpenXLR Mic Filter", 1, lowCutHz, clipGuard, inserts);
+        IReadOnlyList<InsertDefinition>? inserts = null, int channels = 1)
+        => CreateFilterChain($"OpenXLR_lc_{id}_in", $"OpenXLR_lc_{id}_out", "OpenXLR Mic Filter", channels, lowCutHz, clipGuard, inserts);
 
     /// <summary>
     /// The Sound Check loop for one microphone channel: the native helper's
@@ -2024,9 +2024,13 @@ public sealed class PipeWireAdapter
 
     internal string Run(string exe, params string[] args)
     {
+        if (exe == "pw-link") Interlocked.Increment(ref _linkHelperStarts);
         try { return RunCore(exe, args, _stopDeadline); }
         finally { _progress?.Invoke(); }
     }
+
+    private long _linkHelperStarts;
+    internal long LinkHelperStarts => Interlocked.Read(ref _linkHelperStarts);
 
     private static InvalidOperationException StoppedHelper(string exe, string[] args)
         => new($"{exe} {string.Join(' ', args)} not finished: the daemon's stop deadline passed");

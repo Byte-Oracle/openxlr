@@ -52,6 +52,9 @@ tests/lv2: tests/lv2.o clap.o vst3.o
 tests/latency.lv2/latency.so: tests/latency.lv2/latency.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -shared -fPIC $< -o $@ -lm
 
+tests/gain.lv2/gain.so: tests/gain.lv2/gain.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -shared -fPIC $< -o $@
+
 # The C++ test includes vst3.cpp to exercise host-owned SDK objects.
 tests/vst3.o: tests/vst3.cpp vst3.cpp $(HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
@@ -88,14 +91,14 @@ test-audio: tests/audio
 test-clap: tests/clap
 	./tests/clap
 
-test-lv2: tests/lv2 tests/latency.lv2/latency.so
+test-lv2: tests/lv2 tests/latency.lv2/latency.so tests/gain.lv2/gain.so
 	./tests/lv2
 
 test-vst3: tests/vst3
 	./tests/vst3
 
 clean:
-	rm -f openxlr-lv2-host $(OBJECTS) tests/editor tests/editor.o tests/audio tests/audio.o tests/clap tests/clap.o tests/lifecycle tests/lifecycle.o tests/lv2 tests/lv2.o tests/latency.lv2/latency.so tests/vst3 tests/vst3.o tests/host.o tests/scan-plugin.so
+	rm -f openxlr-lv2-host $(OBJECTS) tests/editor tests/editor.o tests/audio tests/audio.o tests/clap tests/clap.o tests/lifecycle tests/lifecycle.o tests/lv2 tests/lv2.o tests/latency.lv2/latency.so tests/gain.lv2/gain.so tests/vst3 tests/vst3.o tests/host.o tests/scan-plugin.so
 
 # Sound Check: the loop backend, driven directly with deterministic samples
 # and no audio server.

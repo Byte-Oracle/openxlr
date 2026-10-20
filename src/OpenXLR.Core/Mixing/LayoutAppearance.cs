@@ -90,7 +90,7 @@ public sealed partial class Mixer
             AppearanceLocked("channel:" + c.Id), LayoutDefaultIcons.ForChannel(c.Id, c.Hardware, c.CaptureSource,
                 // A strip bound to another unit's XLR jack wears the jack's icon.
                 c.Hardware && c.Binding.Kind == "source" && !OnXlrJackLocked(c.Id) ? c.Binding.Source : null,
-                c.Hardware && c.Binding.Kind == "source" || _unitXlrJacks)) })],
+                c.Hardware && c.Binding.Kind == "source" || _unitXlrJacks, c.CaptureMonoChannel)) })],
         Mixes = [.. state.Mixes.Select(m => m with { Appearance = LayoutAppearanceState.From(
             AppearanceLocked("mix:" + m.Id), LayoutDefaultIcons.ForMix(m.Id, m.Kind)) })],
         OutputAppearance = LayoutAppearance.Outputs.ToDictionary(id => id,

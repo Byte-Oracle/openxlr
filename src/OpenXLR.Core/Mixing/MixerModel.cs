@@ -131,6 +131,12 @@ public sealed record ChannelDefinition(string Id, string Name)
     public int? CaptureMonoChannel { get; init; }
     public bool IsApplication => InputPair is null && CaptureSource is null;
 
+    /// <summary>XLR strips and capture inputs bound to one mono port.</summary>
+    public bool Microphone => Id is "xlr1" or "xlr2" || CaptureSource is not null && CaptureMonoChannel is not null;
+
+    /// <summary>The binding decides the chain width even while its source is absent.</summary>
+    public int? ChainWidth => Microphone ? 1 : CaptureSource is not null ? 2 : null;
+
     /// <summary>PipeWire node name of the channel sink.</summary>
     public string SinkName => $"OpenXLR_ch_{Id}";
 }
@@ -238,6 +244,10 @@ public sealed partial record ChannelStatus(string Id, string Name,
 {
     /// <summary>The single source port a capture channel takes, or null when it takes a pair.</summary>
     public int? CaptureMonoChannel { get; init; }
+
+    public bool Microphone { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]
+    public int? ChainWidth { get; init; }
 
     /// <summary>What feeds the channel: the interface's pair, an exact source, or applications.</summary>
     public ChannelBinding Binding { get; init; } = new("apps");

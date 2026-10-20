@@ -372,6 +372,7 @@ public sealed class MixerService : IHostedService, IDisposable
         }
         SyncOutputSelectors();
 
+        if (_mixer.MigrateCaptureInputs()) ScheduleSave();
         _log.LogInformation("submix graph built ({mixes} mixes, {channels} channels){route}",
             _mixer.Config.Mixes.Count, _mixer.Config.Channels.Count,
             output is null ? "" : $", monitor -> {output}");
@@ -520,6 +521,11 @@ public sealed class MixerService : IHostedService, IDisposable
                     heldSends.Count, string.Join(", ", heldSends));
             stop.ThrowIfCancellationRequested();
             bool changed = _mixer.SyncStreams();
+            if (_mixer.MigrateCaptureInputs())
+            {
+                ScheduleSave();
+                changed = true;
+            }
             changed |= _mixer.EnforceDefaults(stop);
             stop.ThrowIfCancellationRequested();
             changed |= _mixer.EnsureInputFeeds() | _mixer.EnsureAuxRoute();

@@ -38,7 +38,7 @@ installed on disk without restarting it. See [installation.md](installation.md).
 The device, profile and mixer resources are parts of the same snapshot
 `/state` returns, with the same field names; two requests may see two
 different moments. Channel and mix ids are exact and case-sensitive. Insert
-chains are keyed as in the state: an XLR input channel id or `mix:<id>`, so
+chains are keyed as in the state: an XLR or capture input channel id, or `mix:<id>`, so
 `/api/v1/inserts/mix:monitor` reads Monitor A's chain. While the mixer is off
 every mixer resource answers 503; with the mixer running an unknown id
 answers 404, and so does a channel without a chain. A chain the state holds
@@ -68,6 +68,15 @@ makes an already selected headset hear Monitor A and Chat summed.
 channel's own volume, which scales every send of the channel at once, and
 `GET /api/v1/channels/game` reads it back as `volume`. Every channel takes
 one, `xlr1`, `xlr2` and `aux` included.
+
+A capture channel reports `microphone` and `chainWidth` through
+`GET /api/v1/channels/{id}`. For a mono capture channel named `brio`,
+`{"cmd":"setInserts","channel":"brio","inserts":[{"id":"compressor","kind":"lv2","plugin":"http://lsp-plug.in/plugins/lv2/compressor_mono"}]}`
+sent to `POST /api/v1/commands` installs an LSP mono compressor when that
+plugin is installed. `GET /api/v1/inserts/brio` reads its chain back.
+The binding fixes the width even when the source is unplugged; a stereo
+capture input needs a plugin that fits two channels.
+
 The [microphone EQ](api.md#microphone-eq) takes four commands.
 `{"cmd":"setEqBand","channel":"xlr1","band":2,"frequency":250,"gain":-3.5,"q":1.4}`
 moves XLR 1's second band, `{"cmd":"setEqEnabled","channel":"xlr1","value":true}`
