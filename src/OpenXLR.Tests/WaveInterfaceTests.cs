@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenXLR.Core;
 using OpenXLR.Core.Devices;
@@ -195,6 +196,56 @@ public sealed class WaveInterfaceTests : IDisposable
             Assert.Contains(interfaces.Snapshot(), s => s.Id == b.Info.InstanceId && s.Connected);
         }
         finally { await interfaces.StopAsync(CancellationToken.None); primary.SuspendSession(); }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task OneUnitsStateChangeDoesNotWaitForAnotherUnitsUsbRead(bool blockPrimary)
+    {
+        var first = new FakeDevice.Hardware();
+        var second = new FakeDevice.Hardware();
+        using var a = new FakeDevice("unitA", first);
+        using var b = new FakeDevice("unitB", second);
+        using var primary = Manager(() => [a, b]);
+        primary.SweepOnce();
+        using var interfaces = new WaveInterfaces(primary, NullLogger<DeviceManager>.Instance, Configuration, () => [a.Fork(), b.Fork()]);
+        using var stop = new CancellationTokenSource();
+        using var mixer = new MixerService(NullLogger<MixerService>.Instance, Configuration, primary);
+        _ = new WebSocketHub(primary, mixer, NullLogger<WebSocketHub>.Instance, new Lifetime(stop.Token), interfaces);
+        using var release = new ManualResetEventSlim();
+        Task? poll = null;
+        Task<string?>? change = null;
+        await interfaces.StartAsync(CancellationToken.None);
+        try
+        {
+            Wait(() => interfaces.Snapshot().Count == 2);
+            Assert.Null(interfaces.SetEnabled(b.Info.InstanceId, true));
+            Wait(() => interfaces.Snapshot().Any(s => s.Id == b.Info.InstanceId && s.Connected));
+            FakeDevice.Hardware blocked = blockPrimary ? first : second;
+            blocked.ReadBlock = release;
+            if (blockPrimary) poll = Task.Run(primary.SweepOnce);
+            Assert.True(blocked.ReadEntered.Wait(TimeSpan.FromSeconds(5)));
+
+            change = Task.Run(() => blockPrimary
+                ? interfaces.Apply(b.Info.InstanceId, "gain", JsonSerializer.SerializeToElement(51))
+                : primary.Apply("gain", JsonSerializer.SerializeToElement(51)));
+            Assert.Null(await change.WaitAsync(TimeSpan.FromSeconds(2)));
+            AttachedUnit[] units = await Task.Run(() => interfaces.AttachedUnits().ToArray()).WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.True(units.Single(u => u.Id == b.Info.InstanceId).Driven);
+            Assert.False(release.IsSet);
+        }
+        finally
+        {
+            release.Set();
+            if (poll is not null) await poll.WaitAsync(TimeSpan.FromSeconds(5));
+            if (change is not null) await change.WaitAsync(TimeSpan.FromSeconds(5));
+            await interfaces.StopAsync(CancellationToken.None);
+            stop.Cancel();
+            primary.SuspendSession();
+            first.ReadEntered.Dispose();
+            second.ReadEntered.Dispose();
+        }
     }
 
     [Fact]
@@ -448,7 +499,12 @@ public sealed class WaveInterfaceTests : IDisposable
             { Location = new(1, 2, port, serial) };
         public DeviceCapabilities Capabilities { get; } = new() { Gain = true, Mute = true, RetainsSettings = retainsSettings, OutputRouting = outputRouting };
         public bool Connected { get; private set; }
-        internal sealed class Hardware { public int Gain = 30; }
+        internal sealed class Hardware
+        {
+            public int Gain = 30;
+            public volatile ManualResetEventSlim? ReadBlock;
+            public readonly ManualResetEventSlim ReadEntered = new();
+        }
         private readonly Hardware _hardware = shared ?? new();
         public FakeDevice Fork() => new(serial, _hardware, Capabilities.RetainsSettings, port, outputRouting, model);
         public int Gain { get => _hardware.Gain; set => _hardware.Gain = value; }
@@ -458,12 +514,28 @@ public sealed class WaveInterfaceTests : IDisposable
         public void Unplug() => Connected = false;
         public bool Hanging;
         public void MoveToAddress(byte address) => Info = Info with { Location = Info.Location! with { Address = address } };
-        public DeviceState ReadState() => Hanging ? throw new UsbHungException("hung") : new() { GainDb = Gain };
+        public DeviceState ReadState()
+        {
+            if (_hardware.ReadBlock is { } block)
+            {
+                _hardware.ReadEntered.Set();
+                Assert.True(block.Wait(TimeSpan.FromSeconds(10)));
+            }
+            return Hanging ? throw new UsbHungException("hung") : new() { GainDb = Gain };
+        }
         public void SetGainDb(int db) => Gain = db;
         public void SetMute(bool on) { } public void SetLowCut(bool on) { } public void SetExpander(bool on) { }
         public void SetVoiceTune(bool on) { } public void SetVoiceTuneStrength(int value) { }
         public void SetHpVolumeDb(double db) { } public void SetLowImpedance(bool on) { } public void SetCrossfade(int value) { }
         public void SetPhantom(bool on) { } public void SetClipGuard(bool on) { } public void SetCompressor(bool on) { }
+    }
+
+    private sealed class Lifetime(CancellationToken stopping) : IHostApplicationLifetime
+    {
+        public CancellationToken ApplicationStarted => CancellationToken.None;
+        public CancellationToken ApplicationStopping => stopping;
+        public CancellationToken ApplicationStopped => CancellationToken.None;
+        public void StopApplication() { }
     }
 
     public void Dispose()
