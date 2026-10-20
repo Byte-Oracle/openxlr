@@ -17,7 +17,8 @@ open `main`, so they can describe changes newer than the installed release.
 - [Effect presets](effect-presets.md): copied effects, A/B comparison and
   saved presets, with the preset file format and its limits.
 - [Hardware support](hardware-support.md): mapped controls, verification
-  records and unmapped hardware features.
+  records, unmapped hardware features, and what a microphone or interface
+  of another brand gets.
 - [Omarchy shell plugin](omarchy.md): the bar plugin, its enable command,
   the Arch package recipe and its limits.
 - [Source installation](install-from-source.md): prerequisites, native build,

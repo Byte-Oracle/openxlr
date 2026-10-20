@@ -3,7 +3,9 @@
 The controls OpenXLR exposes, with recorded hardware verification kept
 separate from implementation status. An unavailable control may exist in
 the device but have no mapped OpenXLR command. See the final section for
-the checks that still need an owner.
+the checks that still need an owner. A microphone or interface of another
+brand works in the mixer without hardware controls; see
+[Other microphones and interfaces](#other-microphones).
 
 | Device | USB id | Status |
 |---|---|---|
@@ -478,6 +480,54 @@ loud input and the mix changed what the headphones carry. The dump's
 followed. The gain word read with the dial on gain needs Wave Link to
 switch the dial first, so it stays open until an owner who has done
 that reports.
+
+<a name="other-microphones"></a>
+## Other microphones and interfaces
+
+OpenXLR does not need an Elgato device. Any source PipeWire lists for
+capture works: a USB microphone, a headset, a webcam, another brand's
+interface. It enters the mixer in one of two ways.
+
+Bound to XLR 1 or XLR 2 ([manual](manual.md#input-bindings)), one mono
+port of the source feeds both sides of the strip, which is then named
+Mic 1 or Mic 2. The strip keeps its sends into every mix, its volume and
+meter, the microphone EQ, its LV2, CLAP and VST3 insert chain and Sound
+Check. XLR 1 also gets the software low cut and ClipGuard; ClipGuard needs
+`swh-plugins`. The EQ and Sound Check run in the native plugin host, which
+the packages include. Aux In cannot be bound.
+
+As a capture input (Edit layout, **Add capture input**), the source gets a
+channel of its own with sends, a volume, meters and its place in profiles,
+fed from a stereo pair, or from one mono port through the API. A capture
+input has no insert chain, EQ or Sound Check of its own yet. The inserts on
+the mixes it feeds process it.
+
+Everything after the inputs works the same with or without Elgato
+hardware: application channels and routing, virtual microphones, monitor
+mixes on any PipeWire output, mix inserts, the Flow window, desktop keys,
+the terminal mixer, and the OpenDeck plugin's mixer, insert and output
+actions.
+
+OpenXLR sends nothing to another brand's device. Its preamp gain, phantom
+power, mute button, headphone level and onboard effects stay on the device
+or with its own software. These need an Elgato device: every control in
+the device sections above, the gain lock, recall on connect, last settings
+restored on connect, the Wave XLR Pro's output routing, USB Aux mix,
+zero-latency monitor path and Aux In, and the OpenDeck plugin's hardware
+actions.
+
+With no Elgato device attached, the daemon runs and builds the mixer as
+usual. XLR 1 is shown and stays silent until it is bound: the header reads
+"No interface." with a link to choose a microphone for it. XLR 2 and Aux In
+are hidden while no supported device has been attached since the daemon
+started; XLR 2 can still be bound from Options, AUDIO, Input bindings, and
+shows once it is. Profiles are saved under `generic` and hold the mixer
+alone.
+
+The routing, hotplug, restart and Sound Check cases for a bound source, and
+a desk with no Elgato device, are covered by tests against a private
+PipeWire server with simulated sources. The table below records which of
+them have been checked with real hardware.
 
 ## Input bindings
 

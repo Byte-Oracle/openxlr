@@ -14,8 +14,9 @@
 - C/C++ compiler, make, pkg-config, PipeWire/lilv/LV2/X11 headers for the
   native plugin host; X11 or XWayland for plugin editors
 - libusb 1.0
-- A supported Elgato interface (see the device table in the README); the submixer works
-  with any of them, and the aux and output routing features follow the
+- Optionally, a supported Elgato device for hardware control (see the
+  device table in the README). The submixer works with any capture source
+  PipeWire offers, and the aux and output routing features follow the
   device's capabilities
 
 All commands below run from the repository root unless stated otherwise.

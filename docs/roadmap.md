@@ -6,10 +6,10 @@ from issues and pull requests once they are agreed; a checked item is
 implemented on `main`. Device-specific verification is recorded in
 [hardware-support.md](hardware-support.md); release notes say when it shipped.
 
-The goal has not changed since the first release: native Linux control
-of the Elgato XLR interfaces, a Wave Link style submixer on plain
-PipeWire, and Stream Deck control through OpenDeck, with every device
-behaviour verified on hardware before it ships. The project is small on
+The goal is a Wave Link style mixer on plain PipeWire for any
+microphone, with native Linux control of Elgato's interfaces and USB
+microphones on top and Stream Deck control through OpenDeck. Every device
+behaviour is verified on hardware before it ships. The project is small on
 purpose. It prefers one small, idiomatic change over a framework, and a
 feature that is measured over one that is described.
 

@@ -12,13 +12,20 @@
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-emaspa-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/emaspa)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/emaspa)
 
-OpenXLR is a Wave Link replacement for Linux. It controls Elgato XLR
-interfaces and the Wave:3 and Wave:1 USB microphones over
-reverse-engineered USB protocols and adds a PipeWire
-submixer with per-application channels, virtual microphones, LV2, CLAP
-and VST3 plugin inserts, multi-output monitoring, a dedicated mix for a
-second computer on the USB Aux port, and an OpenDeck plugin for Stream
-Deck control.
+OpenXLR is a Wave Link replacement for Linux, and it works with any
+microphone or audio interface PipeWire can record from. Its mixer runs on
+PipeWire: per-application channels, virtual microphones for calls and
+streams, monitor mixes on any output, LV2, CLAP and VST3 plugin inserts,
+and an OpenDeck plugin for Stream Deck control. XLR 1 and XLR 2 take any
+capture source, and each keeps its four-band EQ, insert chain and Sound
+Check whatever feeds it. More sources join as channels of their own.
+
+On Elgato hardware OpenXLR also controls the device itself, over
+reverse-engineered USB protocols: gain, mute, phantom power and the
+onboard effects, the headphone outputs and, on the Wave XLR Pro, the
+output routing and a dedicated mix for a second computer on the USB Aux
+port. That covers the Elgato XLR interfaces and the Wave:3 and Wave:1 USB
+microphones.
 
 ![OpenXLR mixer](docs/screenshot-mixer-0142.png)
 
@@ -29,7 +36,7 @@ in the Tokyo Night skin. This README and the linked guides describe
 current `main`; for a released build, read the docs at its release tag.
 Changes merged after a release are available from source until the next release.
 
-Elgato ships no Linux software. These devices expose class-compliant USB
+Elgato ships no Linux software. Its devices expose class-compliant USB
 audio; OpenXLR also supplies device-specific configuration, including
 WirePlumber rules that keep XLR Dock, original Wave XLR and Wave:3
 capture alive.
@@ -41,6 +48,19 @@ Not affiliated with or endorsed by Elgato. Built by protocol analysis on
 the author's own hardware.
 
 ## Supported devices
+
+Any microphone, headset, webcam or audio interface that PipeWire lists as
+a capture source works in the mixer. Bound to XLR 1 or XLR 2
+([manual](docs/manual.md#input-bindings)), it gets that strip's sends,
+volume, meter, EQ, insert chain and Sound Check, and on XLR 1 the software
+low cut and ClipGuard. OpenXLR sends nothing to another brand's device, so
+set its preamp gain and phantom power on the device. With no Elgato device
+attached the daemon still builds the mixer, and the header offers to
+choose a microphone for XLR 1.
+[Hardware support](docs/hardware-support.md#other-microphones) lists what
+works without Elgato hardware and what does not.
+
+These Elgato devices also get their hardware controls over USB:
 
 | Device | USB id | Status |
 |---|---|---|
@@ -61,8 +81,8 @@ SUPPORT, Collect diagnostics).
 
 ## Features
 
-- **Hardware control** through device-specific USB protocols and standard
-  ALSA controls. On the Pro: gain,
+- **Hardware control** of Elgato devices through their USB protocols and
+  standard ALSA controls. On the Pro: gain,
   mute, low cut, expander, voice tune and phantom power per input,
   ClipGuard, compressor, aux input level and lock, two headphone
   volumes with low-impedance mode, the mic/PC crossfade, and the
@@ -72,13 +92,17 @@ SUPPORT, Collect diagnostics).
   gets that control through the dock's config block instead.
   Where a hardware low cut or ClipGuard control is unavailable, OpenXLR
   offers software processing in PipeWire. Gain lock is a daemon policy
-  for devices without physical gain controls. Hardware EQ, ducking, mix
-  maximizer and channel booster are not exposed; plugin effects run on
-  the computer, separate from the device's onboard processing.
+  for devices without physical gain controls. The XLR Dock MK.2 and the
+  Wave XLR MK.2 run the microphone EQ on their own processor from
+  firmware 1.0.15. The Pro's hardware EQ, ducking, mix maximizer and
+  channel booster are not exposed; plugin effects run on the computer,
+  separate from the device's onboard processing.
 - **Submixer** built from PipeWire nodes (null sinks, remap sources,
-  filter chains), no kernel modules. Channels for the hardware inputs,
-  for application groups and for other PipeWire capture sources (a
-  second microphone, a headset, a capture card); mixes for what you hear
+  filter chains), no kernel modules. Channels for XLR 1 and XLR 2, which
+  take an Elgato device's inputs or any other capture source, for the
+  Pro's Aux In, for application groups and for other PipeWire capture
+  sources (a second microphone, a headset, a capture card); mixes for
+  what you hear
   (Monitor A and Monitor B), for virtual microphones other apps record
   from, and for the USB Aux port. Any mix, or a sum of mixes, feeds
   any selected output. The default layout is Game, Music,
@@ -87,6 +111,13 @@ SUPPORT, Collect diagnostics).
   while audio plays, from the window or the API. Per-send levels and
   mutes, level meters, the monitor mixes on several outputs at once, and
   an optional boost that takes the monitor volume to 150%.
+- **Microphone processing** on XLR 1 and XLR 2, whatever feeds them: a
+  four-band EQ with Wave Link's band types, ranges and steps, and Sound
+  Check, which records a take and loops it through the strip's EQ and
+  inserts while you tune them. XLR 1 also has a software low cut and
+  ClipGuard when it is bound to another source or the interface has no
+  hardware version of them. A capture channel has
+  none of these yet; the inserts on the mixes it feeds process it.
 - **Inserts**: LV2, CLAP and VST3 plugin chains on each XLR input and each mix, with a
   plugin picker, generated controls, bypass and native plugin editors.
   Input chains use mono effects; mix chains use stereo effects. VST3 discovery
@@ -120,6 +151,7 @@ SUPPORT, Collect diagnostics).
   known scene at login or after a power cycle. OpenXLR also restores the
   last settings on the original Wave XLR and first XLR Dock without a
   profile, with a reset to the defaults recorded after a power cycle.
+  With no Elgato device connected, profiles hold the mixer alone.
 - **OpenDeck plugin**: key and dial actions for every switch, mute,
   level, insert and output, rendered with level meters and status LEDs,
   plus output volume and mute keys, the system output switch and
@@ -250,8 +282,8 @@ Here `openxlr` is the input passed to the flake's `outputs` function. The
 [module options](packaging/nix/module.nix) configure LV2 plugins, software
 ClipGuard and the optional Windows bridge.
 
-On every distribution, replug the interface once after installing so
-the udev rule applies. For the Stream Deck, install
+With an Elgato device, replug it once after installing so the udev rule
+applies. For the Stream Deck, install
 `com.emaspa.openxlr.sdPlugin.zip` from the release with OpenDeck's
 install-from-file, or copy the folder the package puts in
 `/usr/share/openxlr/` into `~/.config/opendeck/plugins/`. Inserts show
@@ -306,7 +338,8 @@ In a second terminal, from the same repository root:
 ./src/OpenXLR.UI/bin/Release/net10.0/OpenXLR.UI
 ```
 
-Device access needs the tracked udev rule and a replug. The source guide
+Elgato device access needs the tracked udev rule and a replug. The source
+guide
 also covers WirePlumber rules, the open-file limit, the user service,
 updating and uninstalling. Keep the native build flag on subsequent builds
 to retain CLAP, VST3 and plugin editors.
@@ -406,6 +439,12 @@ still open. A Wave:1 owner confirmed detection, the readings and the
 gain, mute and headphone volume writes through two diagnostics
 archives. See the device table and
 docs/hardware-support.md for what is still open.
+
+A microphone bound to XLR 1 or XLR 2 in place of an Elgato input, and a
+desk with no Elgato device at all, are covered by tests against a private
+PipeWire server with simulated sources. The checks on real setups that are
+still open are listed under input bindings in
+[docs/hardware-support.md](docs/hardware-support.md#input-bindings).
 
 The code is written by the two maintainers, with AI tooling (Anthropic's
 Claude and OpenAI's Codex) assisting with protocol capture analysis, UI
