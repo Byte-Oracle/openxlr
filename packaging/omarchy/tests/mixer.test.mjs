@@ -274,6 +274,34 @@ test('the interface mute follows the channel that carries its input', () => {
   assert.equal(mixer.hardwareMuted({ mixer: old.mixer }, 'xlr1'), false);
 });
 
+test('a bound strip names its unit after a capture node rename without guessing between nodes', () => {
+  const unit = '0fd9:0070@fedcba9876543210';
+  const source = 'alsa_input.usb-Elgato_Wave_3.mono-fallback';
+  const channel = { id: 'xlr1', hardware: true, bindingConnected: true,
+    binding: { kind: 'source', source, monoChannel: 0, unit } };
+  const renamed = { name: 'alsa_input.usb-Elgato_Wave_3.analog-stereo', description: 'Wave:3', kind: 1, drivenUnit: unit };
+  const snapshot = { devices: [renamed,
+    { name: 'alsa_output.usb-Elgato_Wave_3', description: 'Headphones', kind: 0, drivenUnit: unit },
+    { name: 'OpenXLR_Chat', description: 'Chat', kind: 1, isOwn: true, drivenUnit: unit }] };
+  assert.equal(mixer.kindLine(snapshot, channel), 'Wave:3');
+  assert.equal(mixer.bindingNote(snapshot, channel), 'Wave:3, port 1');
+
+  // The saved node wins while it still exists, even if the unit publishes another source.
+  snapshot.devices.push({ name: source, description: 'Saved microphone', kind: 1, drivenUnit: unit });
+  assert.equal(mixer.kindLine(snapshot, channel), 'Saved microphone');
+  snapshot.devices.pop();
+
+  // Two candidate sources are ambiguous; another unit is never a replacement.
+  snapshot.devices.push({ ...renamed, name: 'alsa_input.usb-Elgato_Wave_3.pro-input-0' });
+  assert.equal(mixer.kindLine(snapshot, channel), source);
+  assert.equal(mixer.bindingNote(snapshot, channel), `${source}, port 1`);
+  snapshot.devices = [{ ...renamed, drivenUnit: 'another-unit' }];
+  assert.equal(mixer.kindLine(snapshot, channel), source);
+  delete channel.binding.unit;
+  snapshot.devices = [renamed];
+  assert.equal(mixer.kindLine(snapshot, channel), source);
+});
+
 test('a strip on a driven additional unit carries that unit\'s mute', () => {
   const wave3 = '0fd9:0070@fedcba9876543210';
   const snapshot = { connected: true, state: { mute: false }, capabilities: { mute: true },
