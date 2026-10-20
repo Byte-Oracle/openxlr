@@ -927,8 +927,8 @@ public sealed class SkinLayoutTests
         Assert.True(submixer.IsMatrix);
         Assert.False(submixer.IsBanks);
         SkinMatrixOptions matrix = submixer.Matrix;
-        Assert.Equal(["identity", "mute", "gain", "binding", "meter", "effects"], matrix.RowHead.Order);
-        Assert.Equal(["identity", "mute", "gain", "binding", "meter"], matrix.RowHead.Shown);
+        Assert.Equal(["identity", "mute", "gain", "binding", "meter", "processing", "effects"], matrix.RowHead.Order);
+        Assert.Equal(["identity", "mute", "gain", "binding", "meter", "processing"], matrix.RowHead.Shown);
         Assert.Equal(SkinLabelStyle.IconAndText, matrix.RowHead.Label);
         Assert.Equal(["outputs", "identity", "master", "mute", "effects"], matrix.ColumnHead.Order);
         Assert.Equal(["outputs", "identity", "mute", "effects"], matrix.ColumnHead.Shown);
@@ -950,7 +950,11 @@ public sealed class SkinLayoutTests
         // An empty block, or empty lists, keep the defaults too.
         Assert.Equal(SkinMatrixOptions.Default.Description(),
             Taken(Matrix("\"matrix\":{\"rowHead\":{},\"columnHead\":{\"parts\":[]},\"cell\":{\"hidden\":[]}}")).Submixer.Matrix.Description());
-        Assert.Equal(["identity", "binding", "meter", "gain", "mute", "effects"], SkinMatrixParts.RowHead);
+        Assert.Equal(["identity", "binding", "meter", "gain", "mute", "processing", "effects"], SkinMatrixParts.RowHead);
+        // A skin that lists every part a row head had before the microphone switches gets them last.
+        Assert.Equal(["identity", "binding", "mute", "gain", "meter", "effects", "processing"],
+            Taken(Matrix("\"matrix\":{\"rowHead\":{\"parts\":[\"identity\",\"binding\",\"mute\",\"gain\",\"meter\",\"effects\"]}}"))
+                .Submixer.Matrix.RowHead.Shown);
         Assert.Equal(["identity", "master", "mute", "effects", "outputs"], SkinMatrixParts.ColumnHead);
         Assert.Equal(["mute", "fader", "value"], SkinMatrixParts.Cell);
     }
@@ -1011,7 +1015,7 @@ public sealed class SkinLayoutTests
         // Never more entries than the list has parts.
         Assert.Contains("at most 3", Refused(Matrix("\"matrix\":{\"cell\":{\"parts\":[\"mute\",\"fader\",\"value\",\"mute\"]}}"),
             "layout.regions.submixer.matrix.cell.parts"), StringComparison.Ordinal);
-        Refused(Matrix("\"matrix\":{\"rowHead\":{\"hidden\":[\"binding\",\"meter\",\"gain\",\"mute\",\"effects\",\"identity\",\"meter\"]}}"),
+        Refused(Matrix("\"matrix\":{\"rowHead\":{\"hidden\":[\"binding\",\"meter\",\"gain\",\"mute\",\"processing\",\"effects\",\"identity\",\"meter\"]}}"),
             "layout.regions.submixer.matrix.rowHead.hidden");
     }
 
@@ -1026,7 +1030,7 @@ public sealed class SkinLayoutTests
             "layout.regions.submixer.matrix.cell.hidden[0]"), StringComparison.Ordinal);
         // Everything else may go: a bare row head, a bare column head, a cell that is only its fader.
         SkinMatrixOptions bare = Taken(Matrix("""
-            "matrix":{"rowHead":{"hidden":["binding","meter","gain","mute","effects"]},"columnHead":{"hidden":["master","mute","effects","outputs"]},
+            "matrix":{"rowHead":{"hidden":["binding","meter","gain","mute","processing","effects"]},"columnHead":{"hidden":["master","mute","effects","outputs"]},
                       "cell":{"hidden":["mute","value"]}}
             """)).Submixer.Matrix;
         Assert.Equal(["identity"], bare.RowHead.Shown);

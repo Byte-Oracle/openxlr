@@ -108,7 +108,7 @@
     "Ox.Flow.Muted": "#8c8c8c",
     "Ox.Flow.NodeHoverBackground": "#333333",
     "Ox.Flow.NodeHoverBorderBrush": "#3b82f6",
-    "Ox.Matrix.NameWidth": 120,
+    "Ox.Matrix.NameWidth": 140,
     "Ox.Matrix.CellWidth": 168,
     "Ox.Matrix.RowHeight": 40,
     "Ox.Matrix.MutedBackground": "#4def4444",
@@ -145,7 +145,7 @@
         "template": "mix-matrix",
         "matrix": {
           "rowHead": {
-            "parts": ["identity", "binding", "mute", "gain", "meter", "effects"],
+            "parts": ["identity", "binding", "mute", "gain", "meter", "processing", "effects"],
             "label": { "style": "icon-and-text" }
           },
           "columnHead": {

@@ -212,7 +212,9 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
 - A mix matrix for the submixer: a row per channel, a column per mix, and
   each channel's send into each mix where they cross, its fader drawn over
   the channel's meter and its cell tinted red while muted. Row heads carry
-  the input gain, mute and plugin chain under the INPUTS panel's rules, and
+  the input gain, mute, microphone switches and plugin chain under the
+  INPUTS panel's rules, the switches behind a **Mic** button that shows
+  whether one is on and whether phantom power is, and
   column heads the mix's master, mute, chain and how many outputs hear it.
   A skin orders and hides the parts of the heads and cells. See
   [The mix matrix](skins.md#the-mix-matrix)

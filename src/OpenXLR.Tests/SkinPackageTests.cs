@@ -198,7 +198,7 @@ public sealed class SkinPackageTests : IDisposable
         Assert.True(layout.Submixer.IsMatrix);
         SkinMatrixOptions matrix = layout.Submixer.Matrix;
         // XLR 1's and XLR 2's binding, drawn under the name wherever the order puts it.
-        Assert.Equal(["identity", "binding", "mute", "gain", "meter", "effects"], matrix.RowHead.Shown);
+        Assert.Equal(["identity", "binding", "mute", "gain", "meter", "processing", "effects"], matrix.RowHead.Shown);
         Assert.Equal(["identity", "outputs", "mute", "master", "effects"], matrix.ColumnHead.Shown);
         Assert.Equal(["mute", "fader"], matrix.Cell.Shown);
         Assert.Equal(SkinLabelStyle.IconAndText, matrix.RowHead.Label);

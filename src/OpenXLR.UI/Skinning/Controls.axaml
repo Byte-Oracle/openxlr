@@ -232,6 +232,9 @@
     <Style Selector="^[Kind=Insert]">
       <Setter Property="OffBrush" Value="{DynamicResource Ox.Led.Alert}"/>
     </Style>
+    <Style Selector="^[Kind=Power]">
+      <Setter Property="OnBrush" Value="{DynamicResource Ox.Led.Alert}"/>
+    </Style>
   </ControlTheme>
 
   <ControlTheme x:Key="Ox.Led.Lamp" TargetType="skin:StatusLed"

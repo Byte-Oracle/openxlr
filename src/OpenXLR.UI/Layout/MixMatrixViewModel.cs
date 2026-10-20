@@ -119,8 +119,9 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
         // A capture channel's gain part holds its channel volume, under the
         // interface's gain while it carries the interface's microphone, which
-        // also brings the interface's mute.
-        InputStripKind.Capture => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute],
+        // also brings the interface's mute and switches.
+        InputStripKind.Capture => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute,
+            SkinMatrixParts.Processing],
         // An application channel's gain part holds its channel volume alone.
         _ => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
     };
@@ -418,8 +419,11 @@ public sealed class MatrixRowViewModel : ViewModelBase
         channel.PropertyChanged += OnChannelChanged;
         channel.Sends.CollectionChanged += OnSendsChanged;
         channel.Appearance.PropertyChanged += OnAppearanceChanged;
-        // Aux In's level comes and goes with the interface's stage.
-        if (Kind == InputStripKind.AuxIn) matrix.Main.PropertyChanged += OnMainChanged;
+        // Aux In's level comes and goes with the interface's stage, and an
+        // input's switches with the interface's capabilities and XLR 1's
+        // software low cut and ClipGuard.
+        if (Kind != InputStripKind.Application) matrix.Main.PropertyChanged += OnMainChanged;
+        WatchUnits();
     }
 
     public MixMatrixViewModel Matrix { get; }
@@ -441,9 +445,9 @@ public sealed class MatrixRowViewModel : ViewModelBase
     {
         SkinMatrixPartOptions head = Matrix.Options.RowHead;
         IReadOnlyCollection<string> available = MixMatrixViewModel.RowPartsOf(Kind);
-        // The binding stands in the name column, not among the source controls.
+        // The binding and the switches stand in the name column, not among the source controls.
         string[] parts = [.. head.Shown.Where(p => p != SkinStripParts.Identity && p != SkinStripParts.Binding
-            && available.Contains(p) && Available(p))];
+            && p != SkinMatrixParts.Processing && available.Contains(p) && Available(p))];
         // Without hardware gain the standalone meter remains visible, even
         // when the skin normally draws it under the gain fader.
         if (Matrix.MeterUnderFader && parts.Contains(SkinStripParts.Gain)) parts = [.. parts.Where(p => p != SkinStripParts.Meter)];
@@ -451,9 +455,12 @@ public sealed class MatrixRowViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Whether this channel has the part now. The gain and the mute belong to
-    /// the interface's input: an XLR row bound to another source has neither,
-    /// and a capture channel carrying the interface's microphone has both.
+    /// Whether this channel has the part now. The gain, the mute and the
+    /// switches belong to the interface's input: an XLR row bound to another
+    /// source has none of them, and a capture channel carrying the
+    /// interface's microphone has them all. The switches also need an
+    /// interface that has one, and XLR 1 keeps the part for its software low
+    /// cut and ClipGuard, whatever feeds it, as the INPUTS panel does.
     /// The gain part also holds the channel's own volume, which every channel
     /// has once the daemon reports one, so a row keeps the part for its
     /// volume when it has no gain.
@@ -461,6 +468,8 @@ public sealed class MatrixRowViewModel : ViewModelBase
     private bool Available(string part) => (Kind, part) switch
     {
         (InputStripKind.Xlr1 or InputStripKind.Xlr2 or InputStripKind.Capture, SkinStripParts.Mute) => CarriesUnit || CarriesExtraUnit,
+        (InputStripKind.Xlr1 or InputStripKind.Xlr2 or InputStripKind.Capture, SkinMatrixParts.Processing) =>
+            Unit is { HasSwitches: true } || ExtraUnit is { HasSwitches: true } || ShowsSoftware,
         (InputStripKind.AuxIn, SkinStripParts.Gain) => Main.CapAuxInput || Channel.HasVolume,
         (_, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         _ => true,
@@ -487,6 +496,35 @@ public sealed class MatrixRowViewModel : ViewModelBase
 
     /// <summary>The head draws an additional interface's gain and mute.</summary>
     public bool CarriesExtraUnit => Channel.CarriesExtraUnit;
+
+    /// <summary>
+    /// The head draws the processing button, at the end of the name column:
+    /// the skin shows the part and the input the row carries has a switch, or
+    /// the row is XLR 1 with its software low cut or ClipGuard.
+    /// </summary>
+    public bool ShowsProcessing => Matrix.Options.RowHead.Shows(SkinMatrixParts.Processing)
+        && MixMatrixViewModel.RowPartsOf(Kind).Contains(SkinMatrixParts.Processing) && Available(SkinMatrixParts.Processing);
+
+    /// <summary>The processing part holds XLR 1's software low cut or ClipGuard: the row is XLR 1 and one of them applies.</summary>
+    public bool ShowsSoftware => Kind == InputStripKind.Xlr1 && Main.ShowSoftwareControls;
+
+    /// <summary>
+    /// The processing button is lit: a switch the input's interface has is
+    /// on, or XLR 1's software low cut or ClipGuard is.
+    /// </summary>
+    public bool ProcessingOn => Unit is { SwitchesOn: true } || ExtraUnit is { SwitchesOn: true }
+        || ShowsSoftware && (Main.ShowSoftLowCut && Main.SoftLowCutOn || Main.ShowSoftClipGuard && Main.SoftClipGuard);
+
+    /// <summary>The processing button says that phantom power is on, or settling, without being opened.</summary>
+    public bool PhantomOn => Unit is { PhantomShown: true } || ExtraUnit is { PhantomShown: true };
+
+    /// <summary>The input's interface has phantom power, so the processing button carries its lamp.</summary>
+    public bool HasPhantom => Unit is { CapPhantom: true } || ExtraUnit is { HasPhantom: true };
+
+    /// <summary>The processing button's name for a screen reader, with the channel's name and phantom power when it is on.</summary>
+    public string ProcessingName => PhantomOn
+        ? Localizer.Format("MatrixProcessingPhantomName", Channel.Name)
+        : Localizer.Format("MatrixProcessingName", Channel.Name);
 
     /// <summary>
     /// The head's gain part draws a gain: the interface's while the row
@@ -551,7 +589,8 @@ public sealed class MatrixRowViewModel : ViewModelBase
     };
 
     /// <summary>True when the head draws this part.</summary>
-    public bool Has(string part) => part == SkinStripParts.Identity || Spec.Parts.Contains(part, StringComparer.Ordinal);
+    public bool Has(string part) => part == SkinStripParts.Identity || Spec.Parts.Contains(part, StringComparer.Ordinal)
+        || part == SkinMatrixParts.Processing && ShowsProcessing;
 
     /// <summary>True when this row shows no Arrange handle: the channel keeps its place, or the input rack carries its handle.</summary>
     public bool HandleHidden => !Channel.IsEditable || !Matrix.OwnsHandles;
@@ -599,21 +638,69 @@ public sealed class MatrixRowViewModel : ViewModelBase
             case nameof(ChannelViewModel.Name):
                 Raise(nameof(LeftLevelName));
                 Raise(nameof(RightLevelName));
+                Raise(nameof(ProcessingName));
                 foreach (MatrixCellViewModel cell in Cells) cell.RefreshNames();
                 break;
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
             case nameof(ChannelViewModel.ShownUnitInput):
-                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); RefreshSpec();
+                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); WatchUnits(); RefreshSpec(); RaiseSwitches();
                 break;
             case nameof(ChannelViewModel.ExtraUnitInput):
-                Raise(nameof(ExtraUnit)); Raise(nameof(CarriesExtraUnit)); RefreshSpec();
+                Raise(nameof(ExtraUnit)); Raise(nameof(CarriesExtraUnit)); WatchUnits(); RefreshSpec(); RaiseSwitches();
                 break;
         }
     }
 
     private void OnMainChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.CapAuxInput)) RefreshSpec();
+        switch (e.PropertyName)
+        {
+            case nameof(MainViewModel.CapAuxInput) when Kind == InputStripKind.AuxIn: RefreshSpec(); break;
+            case nameof(MainViewModel.ShowSoftLowCut) or nameof(MainViewModel.ShowSoftClipGuard) when Kind == InputStripKind.Xlr1:
+                Raise(nameof(ShowsSoftware)); RaiseSwitches(); break;
+            case nameof(MainViewModel.SoftLowCutHz) or nameof(MainViewModel.SoftClipGuard) when Kind == InputStripKind.Xlr1:
+                Raise(nameof(ProcessingOn)); break;
+        }
+    }
+
+    // The input view models this row's switches come from: the primary
+    // unit's, which live as long as the window's model, and an additional
+    // unit's while the row carries it.
+    private UnitInputViewModel? _watchedUnit;
+    private WaveUnitInputViewModel? _watchedExtra;
+
+    private void WatchUnits()
+    {
+        UnitInputViewModel? unit = _detached ? null : Unit;
+        if (!ReferenceEquals(_watchedUnit, unit))
+        {
+            if (_watchedUnit is not null) _watchedUnit.PropertyChanged -= OnUnitChanged;
+            _watchedUnit = unit;
+            if (unit is not null) unit.PropertyChanged += OnUnitChanged;
+        }
+        WaveUnitInputViewModel? extra = _detached ? null : ExtraUnit;
+        if (!ReferenceEquals(_watchedExtra, extra))
+        {
+            if (_watchedExtra is not null) _watchedExtra.PropertyChanged -= OnUnitChanged;
+            _watchedExtra = extra;
+            if (extra is not null) extra.PropertyChanged += OnUnitChanged;
+        }
+    }
+
+    private void OnUnitChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // An additional unit raises every name at once after a state.
+        if (e.PropertyName is null or nameof(UnitInputViewModel.HasSwitches) or nameof(UnitInputViewModel.SwitchesOn)
+            or nameof(UnitInputViewModel.PhantomShown)) RaiseSwitches();
+    }
+
+    private void RaiseSwitches()
+    {
+        Raise(nameof(ShowsProcessing));
+        Raise(nameof(ProcessingOn));
+        Raise(nameof(PhantomOn));
+        Raise(nameof(HasPhantom));
+        Raise(nameof(ProcessingName));
     }
 
     private void OnSendsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -634,7 +721,8 @@ public sealed class MatrixRowViewModel : ViewModelBase
         Channel.PropertyChanged -= OnChannelChanged;
         Channel.Sends.CollectionChanged -= OnSendsChanged;
         Channel.Appearance.PropertyChanged -= OnAppearanceChanged;
-        if (Kind == InputStripKind.AuxIn) Matrix.Main.PropertyChanged -= OnMainChanged;
+        if (Kind != InputStripKind.Application) Matrix.Main.PropertyChanged -= OnMainChanged;
+        WatchUnits();
         foreach (MatrixCellViewModel cell in Cells) cell.Detach();
         Cells.Clear();
     }

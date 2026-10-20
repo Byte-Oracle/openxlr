@@ -374,7 +374,7 @@ public static class SkinTokens
         // and of a row head's source controls, and the height of a row. Every
         // cell is the same size, so the columns line up down the matrix and the
         // rows across it. Touch sizing raises the three to TouchMinimums.
-        Number("Ox.Matrix.NameWidth", 112, 56, 400),
+        Number("Ox.Matrix.NameWidth", 140, 56, 400),
         Number("Ox.Matrix.CellWidth", 168, 120, 400),
         Number("Ox.Matrix.RowHeight", 40, 28, 120),
         // A muted send's cell: its background, and the lettering of its mute.

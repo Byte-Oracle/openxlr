@@ -294,6 +294,15 @@ public sealed class WaveUnitInputViewModel : ViewModelBase
     public bool ClipGuard { get => Second ? Unit.ClipGuard2 : Unit.ClipGuard; set { if (Second) Unit.ClipGuard2 = value; else Unit.ClipGuard = value; } }
     public bool Phantom { get => Second ? Unit.Phantom2 : Unit.Phantom; set { if (Second) Unit.Phantom2 = value; else Unit.Phantom = value; } }
 
+    /// <summary>The unit has at least one of the switches its controls show beside the mute.</summary>
+    public bool HasSwitches => HasLowCut || HasClipGuard || HasPhantom;
+
+    /// <summary>One of the switches the unit has is on. Phantom power is power, not processing, so <see cref="PhantomShown"/> says it.</summary>
+    public bool SwitchesOn => HasLowCut && LowCut || HasClipGuard && ClipGuard;
+
+    /// <summary>Phantom power is on, or settling, on a unit that has it.</summary>
+    public bool PhantomShown => HasPhantom && Phantom || PhantomSettling;
+
     /// <summary>The mute's label: the second input says which it is.</summary>
     public string MuteLabel => Second ? Localizer.Text("MuteInput2") : Localizer.Text("Mute");
 
