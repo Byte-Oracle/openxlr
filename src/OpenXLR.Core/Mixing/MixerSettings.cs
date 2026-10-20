@@ -87,6 +87,13 @@ public sealed record MixerSettings
     public Dictionary<string, List<InsertDefinition>> Inserts { get; init; } = [];
 
     /// <summary>
+    /// Microphone EQs by channel id. A microphone absent here has the
+    /// defaults with the EQ off. An entry for a channel that is not a
+    /// microphone is kept as it is.
+    /// </summary>
+    public Dictionary<string, MicEq> Eq { get; init; } = [];
+
+    /// <summary>
     /// Every plugin the saved chains name. A client that reconnects while the
     /// daemon is still starting asks for the catalogue before the chains are
     /// restored, and this is what they will hold.

@@ -189,6 +189,9 @@ public sealed record MixerState
     /// <summary>Why the mixes are not aligned as planned, or null.</summary>
     public string? MixLatencyError { get; init; }
 
+    /// <summary>The microphone EQ's ranges, steps and type names.</summary>
+    public EqLimits EqLimits { get; init; } = EqLimits.Instance;
+
     /// <summary>The running Sound Check session, or idle. Never saved.</summary>
     public SoundCheckState SoundCheck { get; init; } = new(null, "idle", 0);
 
@@ -253,6 +256,9 @@ public sealed partial record ChannelStatus(string Id, string Name,
     /// hardware input has one too, after the interface's gain.
     /// </summary>
     public double? Volume { get; init; }
+
+    /// <summary>The microphone EQ, on a microphone channel; null on every other channel.</summary>
+    public MicEqState? Eq { get; init; }
 }
 
 

@@ -150,6 +150,14 @@ public sealed record DeviceCapabilities
     public bool ClipGuard { get; init; }
     public bool Compressor { get; init; }
 
+    /// <summary>
+    /// The unit's DSP runs the microphone EQ and the driver can write it.
+    /// False on every model today: the MK.2 family keeps EQ values it does
+    /// not apply, and the Wave XLR Pro's EQ protocol is not known yet, so
+    /// every microphone's EQ runs in software.
+    /// </summary>
+    public bool HardwareEq { get; init; }
+
     /// <summary>Per-jack routing of the hardware monitor bus (HP1/HP2/USB Aux out/Line out).</summary>
     public bool OutputRouting { get; init; }
 

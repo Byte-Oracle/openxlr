@@ -100,6 +100,19 @@ public sealed record Command
     /// <summary>"setInsertParam": the control port symbol.</summary>
     [JsonPropertyName("symbol")] public string? Symbol { get; init; }
 
+    /// <summary>"setEq": the whole EQ, <c>{enabled, bands: [four of {enabled, type, frequency, gain, q}]}</c>.</summary>
+    [JsonPropertyName("eq")] public System.Text.Json.JsonElement Eq { get; init; }
+
+    /// <summary>"setEqBand": which band, 1 to 4.</summary>
+    [JsonPropertyName("band")] public int? Band { get; init; }
+
+    /// <summary>"setEqBand": the fields of the band that change; an absent one is kept.</summary>
+    [JsonPropertyName("enabled")] public bool? Enabled { get; init; }
+    [JsonPropertyName("type")] public string? Type { get; init; }
+    [JsonPropertyName("frequency")] public double? Frequency { get; init; }
+    [JsonPropertyName("gain")] public double? Gain { get; init; }
+    [JsonPropertyName("q")] public double? Q { get; init; }
+
     /// <summary>Plugin installs and folder management: the file or directory the user picked, absolute.</summary>
     [JsonPropertyName("path")] public string? Path { get; init; }
 

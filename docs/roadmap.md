@@ -274,6 +274,18 @@ while fixes to existing hosts remain part of normal maintenance.
   changes. Skipped bundles and folders the scan could not read are named
   in Options, and a failed scan keeps the phase it reached in its log.
 - [x] Plugin manager: search paths and rescan in one place.
+- [ ] Microphone EQ, requested by the maintainer ahead of the order
+  above: a four-band EQ on every microphone input equal to Wave Link's in
+  band types, ranges, steps, defaults and curves, in four steps. The
+  daemon side is on `main` for XLR 1 and XLR 2: the model with snapping
+  to Wave Link's steps, the curve maths, a built-in backend in the native
+  helper that keeps its filter state while values move and crossfades
+  switches, the splice at the head of the input that leaves the chain
+  running, the `setEq`, `setEqEnabled` and `setEqBand` commands, the
+  state, `mixer.json` and profiles ([api.md](api.md#microphone-eq)).
+  Next the window's editor, with its response graph, then the terminal
+  mixer and the OpenDeck plugin together with capture microphones, then
+  the Wave XLR Pro's hardware EQ once its protocol is captured.
 
 ## Next: daemon and integrations
 
@@ -353,15 +365,14 @@ while fixes to existing hosts remain part of normal maintenance.
   (see the protocol notes, block 0x0001 bytes 12 and 13). Direct control
   of that matrix from the window is the long-term answer to the
   crossfade and mic-monitoring questions.
-- [ ] A built-in four-band equalizer for microphone inputs, with Wave
-  Link's controls, ranges and curves. On the XLR Dock MK.2 Wave Link runs
-  its equalizer on the computer, and neither the dock nor the Wave XLR
-  MK.2 applies the bands it stores
-  ([findings](mk2-eq-findings.md)), so for the MK.2 family the EQ is
-  software, as it is on Windows.
-- [ ] The Pro's equalizer, which Elgato describes as onboard. Once a
-  capture maps it, the built-in equalizer drives it on the device
-  instead of in software.
+- [ ] The microphone EQ on hardware. Wave Link 3.5 runs its equalizer
+  on the computer for every model but possibly the Pro: neither the XLR
+  Dock MK.2 on firmware 1.0.0 nor the Wave XLR MK.2 applies the bands it
+  stores ([findings](mk2-eq-findings.md)), so on those the
+  [microphone EQ](#later-plugins) stays software, as it is on Windows.
+  The Pro's equalizer, which Elgato describes as onboard, comes last:
+  once a capture maps it, the same EQ drives it on the device instead of
+  in software.
 - [ ] Ducking on the Pro, which lowers the other mixes while you speak
   and is applied per mix. It is the one onboard effect that touches the
   mix matrix rather than the microphone path, so it is worth capturing

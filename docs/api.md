@@ -73,7 +73,7 @@ Messages from the daemon, each a JSON object with a `type` field:
 
 | Type | When | Content |
 |---|---|---|
-| `state` | on connect and on every change | `daemonVersion`, device state, capabilities, mixer state, the device list, the app registry, profile names, `activeProfile` (the profile last recalled or saved for the active device; not cleared by later manual changes), `recallOnConnect` (the profile recalled when the device connects, or null), `warning` (one sentence the user should see, or null: the mixer waiting for the audio server, which did not answer when the daemon built the graph (see `mixerWaiting`), mixer settings that cannot be written to disk, which the daemon keeps retrying with backoff, a device set aside after three hung USB transfers in one run, a device that does not answer USB reads (named, with the error, until a read succeeds or the unit leaves the bus), hardware input strips left silent because the capture node's name matches two units or because several interfaces are attached and none is driven, a hardware strip bound to a source that is missing, named twice, lacks the selected port or is not linked yet, one sentence per strip with the strip's name in front, or additional interface choices that could not be read or saved). In the mixer state, each channel carries `hardware` (true for the fixed input channels), `captureSource` (exact external source name or null), `capturePair` (zero-based pair), `captureMonoChannel` (the one zero-based source port fed to both sides, or null for a pair), `captureConnected` (its capture route exists), `binding`, `bindingConnected`, `bindingWarning` and `unitInput` (see [input bindings](#input-bindings)), `present` (whether a client should draw the strip, see [input bindings](#input-bindings); `xlr2` and `aux` are absent on every model but the Wave XLR Pro), `exclusiveGroup` (the id of the exclusive group the channel is in, or null), and `volume` (the channel's own volume, 0 to 1, which `setChannelVolume` sets; every channel has one, `xlr1`, `xlr2` and `aux` included; an older daemon reports null for a hardware input). An absent channel stays in the list and keeps its levels, so a client leaves it out of its strips rather than forgetting it. A capture channel is editable but cannot receive application assignments; `renamedSinceStart` says a user mix was renamed since the daemon started (its PipeWire device keeps the old name until a restart), and `layoutWarning` is a sentence for the layout editor when pipewire-pulse nears its open-file limit, or null. Every channel and mix also carries `appearance {icon, colour, hidden, defaultIcon}`: the first three as `setLayoutAppearance` set them (`icon` empty, `colour` null and `hidden` false by default), and `defaultIcon`, read-only, the built-in icon name the daemon chose for the item's kind, never empty (see [mixer-layout.md](mixer-layout.md#appearance) for the rule). A client draws `icon` when it is a text glyph or a name it can draw, nothing when it is `none`, and `defaultIcon` otherwise, which covers an empty `icon` and a name only a skin defines. The built-in names, their text characters and their path data are in `plugin/com.emaspa.openxlr.sdPlugin/icons.json`, generated from `src/OpenXLR.Core/Mixing/LayoutIcons.cs`. A client draws a hidden channel's sends and applications as usual and only leaves out its strip; for a hidden mix it leaves out the mix's master and the sends into it from its full mixer, and keeps the mix in output and monitor feed choices. The mixer state's `outputAppearance` maps the headphone outputs `phones1` and `phones2` to `{icon, colour, hidden, defaultIcon}` in the same form, `hidden` always false and `defaultIcon` `headset`; a model with one headphone output still carries both entries. Each mix carries `id`, `name`, `volume`, `muted`, `editable` (true for a user mix, which `renameMix`, `deleteMix` and `setLayoutOrder` take; false for Monitor A, Monitor B and Aux) and `kind` (`monitor`, `virtualMic` or `auxPort`; a monitor mix the user added is `monitor` and editable), which gives a client the mix's volume ceiling; `outputVolume` is the first selected output's volume, 0 to 1.5, or null with no output selected. In `devices`, every entry that is a sink carries `volume` (desktop scale, 1.0 = 100%) and `muted`; sources and the Wave XLR Pro pseudo-outputs omit both. A source carries `channels` and `positions` when PipeWire reports them, and any entry can carry `drivenUnit` (see below). A state is pushed whenever a sink's volume or mute changes |
+| `state` | on connect and on every change | `daemonVersion`, device state, capabilities, mixer state, the device list, the app registry, profile names, `activeProfile` (the profile last recalled or saved for the active device; not cleared by later manual changes), `recallOnConnect` (the profile recalled when the device connects, or null), `warning` (one sentence the user should see, or null: the mixer waiting for the audio server, which did not answer when the daemon built the graph (see `mixerWaiting`), mixer settings that cannot be written to disk, which the daemon keeps retrying with backoff, a device set aside after three hung USB transfers in one run, a device that does not answer USB reads (named, with the error, until a read succeeds or the unit leaves the bus), hardware input strips left silent because the capture node's name matches two units or because several interfaces are attached and none is driven, a hardware strip bound to a source that is missing, named twice, lacks the selected port or is not linked yet, one sentence per strip with the strip's name in front, or additional interface choices that could not be read or saved). In the mixer state, each channel carries `hardware` (true for the fixed input channels), `captureSource` (exact external source name or null), `capturePair` (zero-based pair), `captureMonoChannel` (the one zero-based source port fed to both sides, or null for a pair), `captureConnected` (its capture route exists), `binding`, `bindingConnected`, `bindingWarning` and `unitInput` (see [input bindings](#input-bindings)), `present` (whether a client should draw the strip, see [input bindings](#input-bindings); `xlr2` and `aux` are absent on every model but the Wave XLR Pro), `exclusiveGroup` (the id of the exclusive group the channel is in, or null), `volume` (the channel's own volume, 0 to 1, which `setChannelVolume` sets; every channel has one, `xlr1`, `xlr2` and `aux` included; an older daemon reports null for a hardware input), and on a microphone channel, `xlr1` and `xlr2`, `eq` (see [microphone EQ](#microphone-eq); absent on every other channel and from an older daemon). An absent channel stays in the list and keeps its levels, so a client leaves it out of its strips rather than forgetting it. A capture channel is editable but cannot receive application assignments; `renamedSinceStart` says a user mix was renamed since the daemon started (its PipeWire device keeps the old name until a restart), and `layoutWarning` is a sentence for the layout editor when pipewire-pulse nears its open-file limit, or null. Every channel and mix also carries `appearance {icon, colour, hidden, defaultIcon}`: the first three as `setLayoutAppearance` set them (`icon` empty, `colour` null and `hidden` false by default), and `defaultIcon`, read-only, the built-in icon name the daemon chose for the item's kind, never empty (see [mixer-layout.md](mixer-layout.md#appearance) for the rule). A client draws `icon` when it is a text glyph or a name it can draw, nothing when it is `none`, and `defaultIcon` otherwise, which covers an empty `icon` and a name only a skin defines. The built-in names, their text characters and their path data are in `plugin/com.emaspa.openxlr.sdPlugin/icons.json`, generated from `src/OpenXLR.Core/Mixing/LayoutIcons.cs`. A client draws a hidden channel's sends and applications as usual and only leaves out its strip; for a hidden mix it leaves out the mix's master and the sends into it from its full mixer, and keeps the mix in output and monitor feed choices. The mixer state's `outputAppearance` maps the headphone outputs `phones1` and `phones2` to `{icon, colour, hidden, defaultIcon}` in the same form, `hidden` always false and `defaultIcon` `headset`; a model with one headphone output still carries both entries. Each mix carries `id`, `name`, `volume`, `muted`, `editable` (true for a user mix, which `renameMix`, `deleteMix` and `setLayoutOrder` take; false for Monitor A, Monitor B and Aux) and `kind` (`monitor`, `virtualMic` or `auxPort`; a monitor mix the user added is `monitor` and editable), which gives a client the mix's volume ceiling; `outputVolume` is the first selected output's volume, 0 to 1.5, or null with no output selected. In `devices`, every entry that is a sink carries `volume` (desktop scale, 1.0 = 100%) and `muted`; sources and the Wave XLR Pro pseudo-outputs omit both. A source carries `channels` and `positions` when PipeWire reports them, and any entry can carry `drivenUnit` (see below). A state is pushed whenever a sink's volume or mute changes |
 | `diagnostics` | in answer to `getDiagnostics` | `blocks`, mapping vendor block names to hex strings or read errors. An XLR Dock adds `paths`, the card number and the path each of its gain, mute and headphone controls takes (`Alsa` through the card's mixer, `Block` through the dock's config block when the card lacks the control, `None` when the USB handle is closed too, so the control is unavailable), and `alsa`, the values read through the card. `usbFault` carries the last USB fault of this run and `error` a dump that failed |
 | `meters` | 15 Hz while the mixer is built | live stereo levels per channel and mix |
 | `plugins` | in answer to `listPlugins` | the installed LV2, CLAP and VST3 plugins with their controls, within the message size limit above and always including the plugins the saved chains use; `supported` is false, with `unsupportedFeatures` listed, for a plugin that needs a host feature the PipeWire chain lacks. `audioIns` and `audioOuts` are the plugin's own port counts, or for VST3 its main buses' default width; a VST3 entry also carries `widths`, the chain widths in channels (1 and 2 are the ones the host carries) its main buses accepted when the helper asked the way the host asks at load, so a plugin that reports 2 and lists 1 in `widths` can be inserted on a mono input. An entry without `widths` (LV2, CLAP, or a description an older helper wrote) fits a mono input with one port each way and a stereo mix with two or more |
@@ -102,7 +102,7 @@ The state message in full. At the top level: `daemonVersion`, `daemonBuildId`, `
 `connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 or Wave:1 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3 and Wave:1), `capabilities` (`gain`,
 `mute`, `lowCut`, `expander`, `voiceTune`, `hpVolume`, `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`, `compressor`, `outputRouting`,
-`auxInput`, `xlrInputs`, `xlrJacks` (false on the Wave:3 and Wave:1, whose one input is the microphone's own capsule rather than an XLR jack), `hpOutputs`, `physicalControls`, `retainsSettings`,
+`auxInput`, `xlrInputs`, `xlrJacks` (false on the Wave:3 and Wave:1, whose one input is the microphone's own capsule rather than an XLR jack), `hpOutputs`, `physicalControls`, `retainsSettings`, `hardwareEq` (the unit's DSP runs the [microphone EQ](#microphone-eq) and the driver can write it; false on every model today),
 `builtInDefaults`, and `gainMaxDb`, the highest gain in dB that `gain` and
 `gain2` take, from 0: 80 on the Wave XLR Pro and the MK.2 family, 75 on the
 Wave XLR and the first XLR Dock, 40 on the Wave:3 and Wave:1; a higher value is held
@@ -128,7 +128,8 @@ signal has no hardware low cut or ClipGuard in front of it: XLR 1 is bound
 to a source, or the driven unit lacks the control, so `lowCutHz` and
 `softClipGuard` act on it), `auxPortEnabled`, `lowCutHz`, `softClipGuard`, `softClipGuardAvailable`,
 `softClipGuardError`, `compensateMixLatency`, `mixDelayMilliseconds`,
-`mixLatencyError` (see [plugin latency](#plugin-latency)), `inserts`
+`mixLatencyError` (see [plugin latency](#plugin-latency)), `eqLimits` (see
+[microphone EQ](#microphone-eq)), `inserts`
 (chains by insert key, `xlr1`, `xlr2` or `mix:<id>`; each entry carries
 `insert`, `error`, `meters`, `nativeHostRunning`, `nativeUiBlocked`,
 `nativeUiBlockReason`, `filterChainError` and `latencyMilliseconds`),
@@ -219,6 +220,9 @@ that final acknowledgement (or an `error` without a request id):
 | `setNativeEditorRule` | `kind`, `plugin`, `name?`, `blocked?` | set `blocked:true` to use OpenXLR controls, `false` to allow the native editor, or null/absent to remove the override and follow release defaults. Saved atomically before success; answered with `nativeEditorRules` |
 | `showInsertUi` | `channel`, `insertId` | open an enabled insert's native editor when the optional host is installed and the editor policy allows it; a blocked editor is refused without changing the audio instance |
 | `soundCheck` | `channel`, `action` | Sound Check on `xlr1` or `xlr2`; no other channel takes it. `record` starts a session if none runs and records up to ten seconds, replacing an earlier sample; `loop` plays the sample into the channel in place of the microphone and needs at least a tenth of a second recorded; `live` goes back to the microphone and keeps the sample; `stop` ends the session and discards the sample. One session at a time: `record`, `loop` and `live` for the other channel are refused, and its `stop` does nothing. Every action but `stop` is refused at once when the native plugin host is not installed. Never saved. See [Sound Check](#sound-check) |
+| `setEq` | `channel`, `eq` | replace a microphone's whole EQ: `eq` is `{enabled, bands}` with exactly four bands, each `{enabled, type, frequency, gain, q}` with every field. `channel` is `xlr1` or `xlr2`; any other channel is refused. See [microphone EQ](#microphone-eq) |
+| `setEqEnabled` | `channel`, `value` | the EQ's own switch, a boolean. Off bypasses inside the running stage, so on and off compare at once |
+| `setEqBand` | `channel`, `band`, at least one of `enabled`, `type`, `frequency`, `gain`, `q` | change part of one band, 1 to 4; an absent field keeps its value. Values outside the ranges are refused, not clamped, and what is taken is snapped onto the EQ's steps. Switching the EQ on, here or through `setEq`, is refused at once when the native plugin host is not installed |
 | `adjustOutputVolume` | optional `device`, `value` | change a PipeWire output by desktop percentage points (`0.05` is 5%). Finite steps from -0.5 to 0.5, final volume clamped to 0 through 1.5. Omit `device` for the current desktop default |
 | `setOutputDeviceVolume` | optional `device`, `value` | set a PipeWire output's desktop volume; `value` finite, 0 to 1.5 on the desktop scale (1.0 is 100%), rejected outside that range. A monitor mix sink is set through its mix master; a selected monitor output follows the linked monitor-volume behaviour. Omit `device` for the current desktop default; device names are accepted and rejected as for `adjustOutputVolume` |
 | `toggleOutputMute` | optional `device` | toggle an output's mute; omit `device` for the current desktop default. On one of the selected monitor outputs it toggles the mute of the mixes feeding that output (what pressing a Deck dial on the monitor does), so the mixer window, dial rings and keys agree; on a monitor mix sink it toggles that mix; on any other output it toggles the sink's mute at the audio server |
@@ -754,7 +758,7 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
 - `mixer.json`: every mixer decision: the layout (`userChannels`,
   `userMixes`, `appearance`, see [mixer-layout.md](mixer-layout.md)), levels, mutes,
   device choices, the app registry, enforced defaults, the software low
-  cut, the insert chains, and `inputBindings`, the hardware strips bound to
+  cut, the insert chains, the microphone EQs (`eq`), and `inputBindings`, the hardware strips bound to
   a source. The bindings are machine wiring and never part of a profile. A
   file written before `inputBindings` existed carries XLR 1's source as
   `primaryInput`; the daemon reads it as XLR 1's binding and the next save
@@ -981,6 +985,66 @@ is rebuilt, or ten minutes after it started. The microphone is then wired
 back, and the state keeps `channel` with `mode` `idle` and the reason in
 `error`, so a client shows it on that microphone only, until a `stop` for
 that channel clears it or a new `record` replaces it.
+
+### Microphone EQ
+
+XLR 1 and XLR 2 each have a four-band EQ with the controls, ranges, steps
+and curves of Wave Link's. It runs in the native plugin host at the head of
+the input's route, before the software low cut, ClipGuard and the inserts,
+so the channel volume, the sends, the meters and Sound Check's loop all see
+the equalised signal; the Wave XLR Pro's zero-latency hardware path and the
+other units' hardware monitor mix carry the raw microphone. It adds no
+latency. It is off until switched on.
+
+A channel's `eq` in the mixer state is
+`{enabled, bands, backend, available, error}`. `bands` holds four
+`{enabled, type, frequency, gain, q}`:
+
+- `type`: `lowCut` (high pass), `lowShelf`, `peak` (a bell, which Wave Link
+  calls Band Pass), `notch`, `highShelf` or `highCut` (low pass).
+- `frequency`: 20 to 20000 Hz, in whole hertz.
+- `gain`: -12 to +12 dB, in quarter decibels. It is kept for every type and
+  ignored by `lowCut`, `notch` and `highCut`, so a band changed to one of
+  those and back keeps its gain.
+- `q`: linear, 0.1 to 10, on Wave Link's grid, where log10(q) moves in steps
+  of 0.016 from -1. A value is snapped to the nearest point; a value already
+  on the grid comes back unchanged.
+
+The defaults are Wave Link's: a 36 Hz `lowCut`, `peak` bands at 310 Hz and
+2172 Hz, and a 15049 Hz `highCut` that is off, every `q` 0.7047 and every
+`gain` 0, with the EQ off. `backend` is `software` while a stage runs for
+the channel and null while none does: the EQ is off and was off when the
+route was built, or its stage could not start. `available` is false when
+the native plugin host is not installed, or after the stage failed three
+times in five minutes, and `error` then says why; switching the EQ off and
+on again tries once more. The mixer state's `eqLimits` gives the same ranges
+for clients to draw from: `{bands, types, frequency {min, max, step}, gain
+{min, max, step}, q {min, max, log10Step}}`.
+
+The daemon snaps every value it takes, whichever client sent it, so the
+files, every client and the curve hold the same numbers. A band's curve is
+the one in Robert Bristow-Johnson's Audio EQ Cookbook, and the bands are in
+series.
+
+Switching the EQ on starts its stage and links it in at the head of the
+route, then removes the old link. The microphone is never silent, and the
+chain behind it keeps running, so no plugin restarts and no editor closes.
+Every other change is written to the running stage: a band's values, a band
+on or off, the EQ's own switch. A frequency, gain or Q change keeps the
+filter's state, and a band or the EQ switched, or a band's type changed,
+crossfades over 5 ms. Switching the EQ off bypasses inside the stage, which
+stays until the route is next built for another reason or the daemon
+restarts; a microphone whose EQ is off when its route is built gets no
+stage. A stage that dies is started again by the sweep; while it cannot be,
+the microphone plays without the EQ.
+
+The EQ is saved in `mixer.json` under `eq`, by channel id, with the debounced
+save the faders use. A microphone absent there has the defaults with the EQ
+off. A profile saved now carries `mixer.eq` for every microphone; a recall
+replaces the EQ of each channel it names and leaves the others, and a
+profile without `eq`, as every older one is, leaves every EQ alone. A recall
+that changes only values writes them to the running stages and starts
+nothing; one that switches an EQ on splices its stage in.
 
 ### Output key targets
 

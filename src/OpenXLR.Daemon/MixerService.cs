@@ -774,6 +774,15 @@ public sealed class MixerService : IHostedService, IDisposable
                         return "setInsertParam: need 'channel', 'insertId', and 'symbol'";
                     _mixer.SetInsertParam(cmd.Channel, cmd.InsertId, cmd.Symbol, cmd.Value.GetDouble());
                     break;
+                case "setEq":
+                    _mixer.SetEq(cmd.Channel!, MicEq.Read(cmd.Eq, out _)!);   // checked by CommandValidation
+                    break;
+                case "setEqEnabled":
+                    _mixer.SetEqEnabled(cmd.Channel!, cmd.Value.GetBoolean());
+                    break;
+                case "setEqBand":
+                    _mixer.SetEqBand(cmd.Channel!, cmd.Band!.Value, new EqBandChange(cmd.Enabled, cmd.Type, cmd.Frequency, cmd.Gain, cmd.Q));
+                    break;
                 case "showInsertUi":
                     if (cmd.Channel is null || cmd.InsertId is null) return "showInsertUi: need 'channel' and 'insertId'";
                     _mixer.ShowInsertUi(cmd.Channel, cmd.InsertId, insert => EditorPolicy.BlockReason(insert.Kind, insert.Plugin));

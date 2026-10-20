@@ -48,7 +48,8 @@ The daemon drives it after every other supported device.
 
 Hardware EQ is not mapped on the Wave FX devices. On the XLR Dock MK.2
 and the Wave XLR MK.2 there is none to map: Wave Link runs their
-equalizer on the computer ([findings](mk2-eq-findings.md)). The Pro's ducking, mix
+equalizer on the computer ([findings](mk2-eq-findings.md)), and OpenXLR's
+[microphone EQ](#software-controls) runs in software on every model. The Pro's ducking, mix
 maximizer, channel booster and remaining hardware mix matrix are also
 unmapped. Wave Link configures those onboard effects on supported systems;
 OpenXLR's LV2, CLAP and VST3 inserts process audio on the Linux host.
@@ -101,6 +102,19 @@ When the backend has no mapped hardware control, OpenXLR provides:
   LADSPA package. If that plugin is unavailable, enabling ClipGuard is
   rejected, the control stays disabled, and the existing microphone
   route remains live.
+- Microphone EQ: four bands on XLR 1 and XLR 2 with Wave Link's band
+  types (high pass, low shelf, bell, notch, high shelf, low pass), ranges
+  and steps (20 Hz to 20 kHz in hertz, -12 to +12 dB in quarter decibels,
+  Q 0.1 to 10 on Wave Link's log grid) and defaults, off until switched
+  on. The curves are the Audio EQ Cookbook's, which Wave Link's are; a test
+  holds the daemon's maths and the running filters to the same table. It
+  runs in the native plugin host at the head of the input, before the low
+  cut, ClipGuard and the inserts, with no added latency. Switching it on
+  splices it in without restarting the chain behind it. After that every
+  change reaches the running filters without a new node: a frequency, gain
+  or Q change keeps the filter state, and a switch or a type change
+  crossfades over 5 ms. It is saved with the mixer and in profiles. The window's editor is still to
+  come; the [control API](api.md#microphone-eq) drives it meanwhile.
 - Gain lock: the daemon rejects every gain change while the lock is set,
   from any client, and stores the lock per device in `gainlock.json`.
   Shown only for devices without a physical gain dial, which would

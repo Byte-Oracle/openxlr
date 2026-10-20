@@ -45,6 +45,7 @@ internal static class SavedMixerValidation
             AppOverrides = Mapping(settings.AppOverrides, "appOverrides", notes),
             KnownApps = Apps(settings.KnownApps, notes),
             Inserts = Inserts(settings.Inserts, notes),
+            Eq = Eq(settings.Eq, notes),
             Appearance = Appearance(settings.Appearance, notes),
         };
     }
@@ -59,6 +60,7 @@ internal static class SavedMixerValidation
         if (scene.MonitorOutputs is not null) Names(scene.MonitorOutputs, "monitorOutputs");
         if (scene.MonitorFeeds is not null) Mapping(scene.MonitorFeeds, "monitorFeeds");
         if (scene.Inserts is not null) Inserts(scene.Inserts);
+        if (scene.Eq is not null) Eq(scene.Eq);
         Require(scene.OutputVolume is null || double.IsFinite(scene.OutputVolume.Value), NonFinite, "outputVolume");
     }
 
@@ -177,6 +179,23 @@ internal static class SavedMixerValidation
         return kept;
     }
 
+    /// <summary>
+    /// Microphone EQs, each checked and snapped onto the EQ's steps. An entry
+    /// that cannot be read is dropped and named; the others, including one
+    /// for a channel that is not a microphone today, are kept.
+    /// </summary>
+    private static Dictionary<string, MicEq> Eq(Dictionary<string, MicEq>? entries, List<string> notes)
+    {
+        if (entries is null) { notes.Add($"eq: {NullEntry}"); return []; }
+        var kept = new Dictionary<string, MicEq>();
+        foreach ((string channel, MicEq eq) in entries)
+        {
+            if (MicEq.Check(eq) is string problem) notes.Add($"eq.{channel}: {problem}");
+            else kept[channel] = MicEq.Snap(eq);
+        }
+        return kept;
+    }
+
     // The live mixer refuses a control value past the cap, so a file holding
     // more was not written by this daemon; the first entries are kept.
     private static Dictionary<string, double> Capped(Dictionary<string, double> levels, string field, List<string> notes)
@@ -213,6 +232,12 @@ internal static class SavedMixerValidation
                 Require(insert.Params.Count <= InsertDefinition.MaxParams, TooMany, $"inserts.{channel}.params");
             }
         }
+    }
+
+    private static void Eq(IReadOnlyDictionary<string, MicEq> entries)
+    {
+        foreach ((string channel, MicEq eq) in entries)
+            if (MicEq.Check(eq) is string problem) throw new JsonException($"Invalid saved mixer field 'eq.{channel}': {problem}.");
     }
 
     private static void Require([DoesNotReturnIf(false)] bool valid, string problem, string field)
