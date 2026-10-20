@@ -11,7 +11,7 @@ internal static class FlatpakSetup
     internal static void InstallRules(string source, string hostConfig)
     {
         string directory = Path.Combine(hostConfig, "wireplumber", "wireplumber.conf.d");
-        if (InstallationReceipt.HasLinkedParent(directory, hostConfig))
+        if (new DirectoryInfo(directory).LinkTarget is not null || InstallationReceipt.HasLinkedParent(directory, hostConfig))
             throw new IOException("The WirePlumber configuration directory is a symbolic link.");
         Directory.CreateDirectory(directory);
         foreach (string rule in Rules)

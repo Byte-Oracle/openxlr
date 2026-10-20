@@ -68,6 +68,27 @@ public sealed class FlatpakRuntimeTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Theory]
+    [InlineData("wireplumber")]
+    [InlineData("wireplumber/wireplumber.conf.d")]
+    public void SessionRulesNeverFollowConfigurationDirectoryLinks(string linkedDirectory)
+    {
+        string root = Directory.CreateTempSubdirectory("openxlr-rule-links-").FullName;
+        string source = Directory.CreateDirectory(Path.Combine(root, "source")).FullName;
+        string config = Directory.CreateDirectory(Path.Combine(root, "config")).FullName;
+        string other = Directory.CreateDirectory(Path.Combine(root, "other")).FullName;
+        try
+        {
+            foreach (string rule in OpenXLR.UI.FlatpakSetup.Rules) File.WriteAllText(Path.Combine(source, rule), "rule");
+            string link = Path.Combine(config, linkedDirectory);
+            Directory.CreateDirectory(Path.GetDirectoryName(link)!);
+            Directory.CreateSymbolicLink(link, other);
+            Assert.Throws<IOException>(() => OpenXLR.UI.FlatpakSetup.InstallRules(source, config));
+            Assert.Empty(Directory.EnumerateFileSystemEntries(other));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     [Fact]
     public async Task RestartWaitsForThePreviousDaemonToStop()
     {

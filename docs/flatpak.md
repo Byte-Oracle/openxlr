@@ -35,7 +35,7 @@ Tray hosts can request the complete menu with an empty item list.
 On first opening the mixer, the four WirePlumber rules are installed in
 the host user's `~/.config/wireplumber/wireplumber.conf.d`. Identical files
 are kept. Different files and symbolic links are reported and never
-overwritten. These include the capture-hold rule that prevents a silent
+overwritten. Configuration directory links are refused too. These include the capture-hold rule that prevents a silent
 Wave:3 microphone after playback starts. The rules take effect at the next login. For a custom host
 `XDG_CONFIG_HOME`, grant its `wireplumber/wireplumber.conf.d` directory and set
 `OPENXLR_HOST_CONFIG_HOME` to that host `XDG_CONFIG_HOME` with a Flatpak override. App
