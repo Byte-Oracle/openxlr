@@ -18,8 +18,9 @@ keeps working when sections are renumbered.
 ## 1. First run
 
 OpenXLR is two programs. The daemon (`openxlr-daemon`, a systemd user
-service) talks to the interface over USB, builds the PipeWire mixer and
-keeps running whether or not a window is open. The mixer window
+service) builds the PipeWire mixer, talks to an Elgato interface over USB
+when one is attached, and keeps running whether or not a window is open.
+The mixer window
 (`openxlr`) shows and changes what the daemon holds; closing it changes
 nothing.
 
@@ -49,6 +50,23 @@ happen on your system:
 The window's header shows the connected interface with a green dot.
 "No device" means the daemon cannot open the interface: replug it once
 after installing so the udev rule applies ([section 5.1](#no-device)).
+
+<a name="without-elgato"></a>
+**Without Elgato hardware.** The mixer works with any microphone, headset,
+webcam or audio interface PipeWire can record from. With no Elgato device
+attached the header reads **No interface.** followed by a link, **Choose a
+microphone for XLR 1**. Pick your microphone and its port there, then Save
+([Use another microphone on XLR 1 or XLR 2](#input-bindings)). The strip is
+then named Mic 1 and carries that microphone into every mix, with its
+volume, meter, EQ, inserts, Sound Check, software low cut and ClipGuard
+(ClipGuard needs `swh-plugins`). XLR 2 stays hidden until you bind it in
+Options, AUDIO, **Input bindings**.
+More sources can join as capture channels ([Additional capture
+inputs](#capture-inputs)). Set the microphone's gain and phantom power on
+the device or its own interface; OpenXLR has no controls for them.
+Application channels, virtual microphones, monitor mixes and mix inserts
+work as the rest of this manual describes. Profiles are kept under
+`generic` and hold the mixer alone.
 
 Gain controls in the window, the terminal mixer and the Stream Deck dials
 cover the connected interface's own range: 0 to 80 dB on the Wave XLR Pro
@@ -83,7 +101,9 @@ downloads or installs an update.
 
 **Channels** are where audio enters the mixer. Three carry the
 interface's inputs (XLR 1, XLR 2 where the device has one, Aux In for
-the Pro's Line In and USB Aux input). Only the Wave XLR Pro has the
+the Pro's Line In and USB Aux input). XLR 1 and XLR 2 can take any other
+capture source instead ([input bindings](#input-bindings)). Only the Wave
+XLR Pro has the
 second jack and the aux stage, so on every other model the window, the
 terminal mixer and the Omarchy bar leave those two strips out rather than
 offering a fader that reaches nothing. The channels keep their levels, so
@@ -2353,6 +2373,10 @@ Restart OpenDeck after installing or updating the plugin.
 
 <a name="no-device"></a>
 ### 5.1 "No device" in the header
+
+Without an Elgato device this is expected: the mixer runs without one. Bind
+your microphone to XLR 1 ([Without Elgato hardware](#without-elgato)). The
+rest of this section is for an Elgato device the daemon does not see.
 
 - The interface must be replugged once after installing so the udev
   rule (`/usr/lib/udev/rules.d/70-openxlr.rules`) applies to it.

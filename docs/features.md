@@ -2,13 +2,20 @@
 
 What OpenXLR does, area by area, and how. The README has the summary.
 
+The mixer, the microphone processing, the window, the terminal mixer and
+the OpenDeck plugin work with any capture source PipeWire offers; [hardware control](#hardware-control) is
+for Elgato devices. [Hardware support](hardware-support.md#other-microphones)
+says what a microphone of another brand gets and what it does not.
+
 The experimental [Flatpak mode](flatpak.md) runs the daemon with the window
 and requests login startup through the desktop portal.
 
 ## Hardware control
 
-Controls are reached over each device's USB protocol; the per-control
-verification state is in [hardware-support.md](hardware-support.md).
+Elgato devices are controlled over each device's USB protocol; the
+per-control verification state is in [hardware-support.md](hardware-support.md).
+Another brand's microphone or interface gets no hardware controls from
+OpenXLR.
 
 Wave XLR Pro:
 - Per XLR input: gain (0 to 80 dB), mute, low cut, expander, voice tune
@@ -88,7 +95,11 @@ an XLR Dock beside it has run this way; two units of one model have not. See [Mu
 
 ## Software controls
 
-When the backend has no mapped hardware control, OpenXLR provides:
+These run on the computer. The microphone EQ is on XLR 1 and XLR 2
+whatever feeds them. The low cut and ClipGuard are on XLR 1 when it is
+bound to another source, or when the interface's backend has no mapped
+hardware control for them. Gain lock is for Elgato devices without a
+physical gain dial.
 
 - Low cut: a high-pass at 80 or 120 Hz (the two values Wave Link
   offers), a filter-chain node inserted between the mic and its channel,
@@ -141,8 +152,9 @@ When the backend has no mapped hardware control, OpenXLR provides:
   otherwise come up at whatever gain its firmware chooses, which is the
   one thing the lock is there to prevent.
 
-The software low cut and limiter appear when the backend does not expose
-the corresponding hardware control. On the original Wave XLR, hardware
+The software low cut and limiter appear when XLR 1 is bound to another
+source or the backend does not expose the corresponding hardware control.
+On the original Wave XLR, hardware
 processing configured in Wave Link can still be active; OpenXLR cannot
 read or disable those unmapped settings.
 
@@ -311,7 +323,8 @@ capture source. The window binds either strip from a chip on the strip, from
 Options and, with no interface attached, from a link in the header; the API
 binds either too. The chip names the source and lights while the strip is
 linked, and a line under it says why a strip is silent. The existing sends,
-software DSP, inserts, Sound Check and meters process that microphone. A
+volume, microphone EQ, software DSP, inserts, Sound Check and meters
+process that microphone. A
 missing source stays selected and silent until it returns. The dialog names
 each port by its channel position and warns about a Bluetooth headset's
 headset profile. It also lists other Elgato interfaces' sources: choosing
@@ -530,7 +543,9 @@ restoration (Wave XLR, the first XLR Dock) get their last settings back
 on every fresh connect without a profile, and can be reset to the
 firmware defaults recorded after a power cycle. The Wave XLR Pro, which
 keeps its own settings, can be reset to OpenXLR's baseline instead:
-gain 30 dB, everything off, levels at half, the crossfade on PC. App routing and the
+gain 30 dB, everything off, levels at half, the crossfade on PC. With no
+Elgato device connected, profiles are kept under `generic` and hold the
+mixer scene alone, and recall on connect does not apply. App routing and the
 enforced system defaults are global and not part of a profile, so
 recalling one does not rewire the desktop.
 
