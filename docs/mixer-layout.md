@@ -27,6 +27,9 @@ next save replaces it. An empty mix list removes every user mix. An empty
 application list falls back to System so incoming applications have a
 destination.
 
+The settings must be a regular file. Pipes, devices and sockets are refused
+without reading them or replacing an earlier `mixer.json.corrupt` backup.
+
 Hardware inputs, Monitor A (`monitor`), Monitor B (`monitor2`) and Aux
 (`auxout`) remain structural. The `ignore` application target is reserved.
 Invalid or duplicate entries are ignored; ids compare without regard to case,
