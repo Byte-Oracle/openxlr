@@ -116,6 +116,34 @@ public sealed class EffectPresetFileTests : IDisposable
     }
 
     [Fact]
+    public async Task APresetStorePipeCannotBlockTheWindow()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        string path = OpenXLR.Core.OpenXlrPaths.ConfigFile("effect-chain-presets.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var created = OpenXLR.Core.ProcessRunner.Run("mkfifo", [path]);
+        Assert.True(created.Ok, created.Stderr);
+        var read = Task.Run(() => Record.Exception(() => EffectChainPresets.Read()));
+        try { Assert.IsType<IOException>(await read.WaitAsync(TimeSpan.FromSeconds(3))); }
+        finally
+        {
+            // Release an ordinary blocking open if the regression is present.
+            using var keeper = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+            await read.WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        Assert.True(File.Exists(path));
+
+        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        var owner = new InsertsViewModel(client, "mix:monitor", 2);
+        owner.Apply(new JsonArray(new JsonObject { ["insert"] = Chain().Inserts[0]!.DeepClone() }));
+        owner.ReadPresets();
+        Assert.False(string.IsNullOrWhiteSpace(owner.WorkflowError));
+        var model = new PluginPresetViewModel(owner.Items[0]);
+        model.Refresh();
+        Assert.False(string.IsNullOrWhiteSpace(model.Error));
+    }
+
+    [Fact]
     public async Task SizeLimitsAndCancellationAreEnforcedOnStreams()
     {
         await using var oversized = new MemoryStream(new byte[EffectPresetFiles.MaximumBytes + 1]);
