@@ -36,6 +36,11 @@ public sealed partial class MonitorVolumeIntegrationTests
         string stage = pw.DumpNodes().Single(n => n.Name.StartsWith("OpenXLR_ins_chat_", StringComparison.Ordinal)
             && n.Name.EndsWith("_stage_0", StringComparison.Ordinal)).Name;
         string identity = MixNodeSerial(stage);
+        // The host reports the plugin's latency once audio runs, and the
+        // stage's ports appear after the build returns. Each of those makes
+        // one later sweep report a change, so the links are broken only
+        // once the graph has settled.
+        double latency = WaitForSettledMix(mixer, "mix:chat");
 
         var input = MixLinks().First(pair => pair.From.StartsWith("OpenXLR_mix_chat:", StringComparison.Ordinal)
             && pair.To.StartsWith(stage + ":", StringComparison.Ordinal));
@@ -45,7 +50,9 @@ public sealed partial class MonitorVolumeIntegrationTests
         BreakAndHealMixLink(pw, mixer, output.From, output.To);
 
         Assert.Equal(identity, MixNodeSerial(stage));
-        Assert.True(Assert.Single(mixer.Snapshot().Inserts["mix:chat"]).NativeHostRunning);
+        InsertStatus healed = Assert.Single(mixer.Snapshot().Inserts["mix:chat"]);
+        Assert.True(healed.NativeHostRunning);
+        Assert.Equal(latency, healed.LatencyMilliseconds);
         Assert.False(mixer.EnsureFilterRoutes());
         CaptureLevel(0.1, "OpenXLR_mix_chat", "OpenXLR_post_chat");
     }
@@ -55,22 +62,22 @@ public sealed partial class MonitorVolumeIntegrationTests
     {
         string folder = Directory.CreateTempSubdirectory("openxlr-post-retry-").FullName;
         string? previousPath = Environment.GetEnvironmentVariable("PATH");
-        string realLink = previousPath!.Split(Path.PathSeparator).Select(p => Path.Combine(p, "pw-link")).First(File.Exists);
-        string marker = Path.Combine(folder, "reject");
-        File.WriteAllText(marker, "1");
-        File.WriteAllText(Path.Combine(folder, "real"), realLink);
-        ExecutableScript.Write(Path.Combine(folder, "pw-link"), """
-            #!/bin/sh
-            folder=$(dirname "$0")
-            if [ "$#" -eq 2 ] && [ "$1" = 'OpenXLR_mix_chat:monitor_FR' ] && [ "$2" = 'OpenXLR_post_chat:playback_FR' ] && [ -f "$folder/reject" ]; then
-                echo 'transient test refusal' >&2
-                exit 1
-            fi
-            exec "$(cat "$folder/real")" "$@"
-            """);
-        Environment.SetEnvironmentVariable("PATH", folder + Path.PathSeparator + previousPath);
         try
         {
+            string realLink = (previousPath ?? "").Split(Path.PathSeparator).Select(p => Path.Combine(p, "pw-link")).First(File.Exists);
+            string marker = Path.Combine(folder, "reject");
+            File.WriteAllText(marker, "1");
+            File.WriteAllText(Path.Combine(folder, "real"), realLink);
+            ExecutableScript.Write(Path.Combine(folder, "pw-link"), """
+                #!/bin/sh
+                folder=$(dirname "$0")
+                if [ "$#" -eq 2 ] && [ "$1" = 'OpenXLR_mix_chat:monitor_FR' ] && [ "$2" = 'OpenXLR_post_chat:playback_FR' ] && [ -f "$folder/reject" ]; then
+                    echo 'transient test refusal' >&2
+                    exit 1
+                fi
+                exec "$(cat "$folder/real")" "$@"
+                """);
+            Environment.SetEnvironmentVariable("PATH", folder + Path.PathSeparator + previousPath);
             var pw = new PipeWireAdapter();
             using var registry = pw.WatchGraph();
             using var mixer = new Mixer(pw);
@@ -96,6 +103,23 @@ public sealed partial class MonitorVolumeIntegrationTests
             Environment.SetEnvironmentVariable("PATH", previousPath);
             Directory.Delete(folder, true);
         }
+    }
+
+    /// <summary>
+    /// Sweep until the insert on <paramref name="chain"/> has reported its
+    /// latency and a sweep finds nothing left to change; the figure it settled on.
+    /// </summary>
+    private static double WaitForSettledMix(Mixer mixer, string chain)
+    {
+        double? latency = null;
+        Assert.True(SpinWait.SpinUntil(() =>
+        {
+            // Read before the sweep, so a report that lands during it is
+            // still seen by the sweep that has to come after.
+            latency = Assert.Single(mixer.Snapshot().Inserts[chain]).LatencyMilliseconds;
+            return !mixer.EnsureFilterRoutes() && latency is not null;
+        }, TimeSpan.FromSeconds(8)), "The insert chain did not settle: " + JsonSerializer.Serialize(mixer.Snapshot()));
+        return latency!.Value;
     }
 
     private static void BreakAndHealMixLink(PipeWireAdapter pw, Mixer mixer, string from, string to)
