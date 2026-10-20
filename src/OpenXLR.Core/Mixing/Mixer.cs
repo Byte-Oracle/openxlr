@@ -301,9 +301,16 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         // feed device once put a hot mic straight into the monitor outputs
         // (a feedback howl through the speakers), so a strip's monitor sends
         // start muted after its source changes and the user unmutes
-        // deliberately. Only the strip whose source changed is muted.
+        // deliberately. Only the strip whose source changed is muted: a
+        // capture input or a bound strip when its own source changes, never
+        // because the interface changed. A strip on the interface whose pair
+        // one of the two units does not have (Aux In or XLR 2 on a one-input
+        // unit) was or will be silent, so no live microphone is patched in
+        // and its mutes stay as they are.
         foreach (ChannelDefinition ch in strips.Where(Rewires))
-            if (_stripSources.TryGetValue(ch.Id, out string? before) && next.TryGetValue(ch.Id, out string? after) && before != after)
+            if (_stripSources.TryGetValue(ch.Id, out string? before) && next.TryGetValue(ch.Id, out string? after) && before != after
+                && (ch.InputPair is not int pair || _bindings.ContainsKey(ch.Id)
+                    || CarriesPairLocked(sources, before, pair) && CarriesPairLocked(sources, after, pair)))
                 MuteInputMonitorsLocked(ch.Id);
 
         // Build the replacement graph under unique node names while the old
@@ -802,6 +809,17 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// fragment that names the nodes of two cards feeds nothing: it would be
     /// a guess between two microphones.
     /// </summary>
+    /// <summary>
+    /// Whether a capture node has the ports of a strip's pair. A node no
+    /// longer in the graph counts as having them: what it carried is not known.
+    /// </summary>
+    private bool CarriesPairLocked(IReadOnlyList<AudioNode> sources, string node, int pair)
+    {
+        if (sources.FirstOrDefault(d => d.Name == node) is not { } source) return true;
+        int first = 2 * pair;
+        return source.Channels is int ports ? ports > first : _pw.HasCaptureChannel(node, first);
+    }
+
     private string? ResolveInputLocked(IReadOnlyList<AudioNode> sources)
     {
         IReadOnlyList<string> fragments = _inputModelFallback ? [.. _inputHints, "Wave_XLR"] : _inputHints;

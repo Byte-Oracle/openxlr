@@ -46,7 +46,14 @@ public interface IDeviceEqPort
 /// A unit that can run the microphone EQ, as the mixer sees it: its name,
 /// its firmware, and whether it runs it now and why not.
 /// </summary>
-public sealed record UnitEqSupport(string Name, string? Firmware, bool Ready, string? Reason = null, string? Note = null);
+public sealed record UnitEqSupport(string Name, string? Firmware, bool Ready, string? Reason = null, string? Note = null)
+{
+    /// <summary>
+    /// The microphone inputs the unit has. An input past them is no EQ
+    /// carrier: its channel's EQ runs in software, with nothing failed.
+    /// </summary>
+    public int Inputs { get; init; } = 1;
+}
 
 /// <summary>One input of one unit, by the unit's instance id and the input's number (1 or 2).</summary>
 internal readonly record struct EqUnitInput(string Unit, int Input)

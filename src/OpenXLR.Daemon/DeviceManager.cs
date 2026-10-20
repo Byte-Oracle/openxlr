@@ -46,8 +46,13 @@ public sealed class DeviceManager : BackgroundService
     private string? _unansweredId;
     private volatile string? _unansweredWarning;
     private readonly Func<IReadOnlyList<IAudioDevice>> _detect;
+    // What the primary drives: the model OPENXLR_DEVICE names, or the unit
+    // and model the last setActiveDevice chose. Only these two choose; a
+    // unit taken while the chosen one is away is a stand-in.
     private ushort? _preferredPid;
     private string? _preferredInstance;   // the unit chosen in the picker, by instance id
+    // Units enabled as additional interfaces: never taken over as a stand-in.
+    private Func<string, bool> _additional = _ => false;
     // Set on an additional interface's manager: its last settings, defaults
     // and gain lock are kept under the unit's instance id, not the model's.
     private string? _stateStorageId;
@@ -60,6 +65,14 @@ public sealed class DeviceManager : BackgroundService
     public event Action<string>? ClaimingDevice;
 
     internal void SetSessionStorageId(string id) => _stateStorageId = id;
+
+    /// <summary>
+    /// Which attached units are enabled as additional interfaces. The primary
+    /// takes one of them only when setActiveDevice names it, never as a
+    /// stand-in while its chosen unit is away. Read under the device lock, so
+    /// it must not wait for anything.
+    /// </summary>
+    internal void SetAdditionalUnits(Func<string, bool> enabled) => _additional = enabled;
 
     /// <summary>Stop driving for good: save pending settings, release the unit and restore its card profile.</summary>
     internal void SuspendSession()
@@ -86,15 +99,17 @@ public sealed class DeviceManager : BackgroundService
     internal void StopConnecting() => _noNewConnections = true;
 
     /// <summary>The detection source is injectable so the reconnect and set-aside logic can be driven by a fake device.</summary>
+    /// <param name="preferredModel">The product id OPENXLR_DEVICE names; read from the environment when null. Tests pass it.</param>
     internal DeviceManager(ILogger<DeviceManager> log, IConfiguration config, Func<IReadOnlyList<IAudioDevice>> detect,
-        IHostApplicationLifetime? lifetime = null, TimeProvider? time = null)
+        IHostApplicationLifetime? lifetime = null, TimeProvider? time = null, ushort? preferredModel = null)
     {
         _time = time ?? TimeProvider.System;
         lifetime?.ApplicationStopping.Register(StopConnecting);
         _detect = detect;
         _log = log;
         string? want = Environment.GetEnvironmentVariable("OPENXLR_DEVICE");
-        if (want is not null && ushort.TryParse(want, System.Globalization.NumberStyles.HexNumber, null, out ushort pid))
+        if (preferredModel is not null) _preferredPid = preferredModel;
+        else if (want is not null && ushort.TryParse(want, System.Globalization.NumberStyles.HexNumber, null, out ushort pid))
             _preferredPid = pid;
         bool launchDefault = config.GetValue("mixer", false) ||
                              Environment.GetEnvironmentVariable("OPENXLR_BUILD_MIXER") == "1";
@@ -134,6 +149,8 @@ public sealed class DeviceManager : BackgroundService
             _preferredInstance = target.InstanceId;
             if (_device is not null && _device.Info.InstanceId != target.InstanceId)
             {
+                // The one way the primary moves on purpose, said in the journal.
+                _log.LogInformation("setActiveDevice: driving {target} instead of {current}", target.DisplayName, _device.Info.DisplayName);
                 // Settings still waiting for the debounce belong to the old
                 // device; write them before its snapshot goes. Drop disposes
                 // the transport even when disconnect fails, so its USB
@@ -469,9 +486,12 @@ public sealed class DeviceManager : BackgroundService
                     _log.LogInformation("{instance} is back on the bus after being set aside; driving it again", aside);
                 }
             }
-            if (_device is { Connected: true }) return;
+            if (_device is { Connected: true } && !StandInGivesWayLocked(all)) return;
             if (_noNewConnections || Environment.TickCount64 < _reconnectNotBefore) return;
             List<IAudioDevice> usable = [.. all.Where(d => !_hung.IsSetAside(d.Info.InstanceId))];
+            // A stand-in is never a unit enabled as an additional interface:
+            // enabling one leaves the primary where it was.
+            List<IAudioDevice> free = [.. usable.Where(d => !_additional(d.Info.InstanceId))];
             // The chosen unit first. While it is away and other units are
             // attached, none of them is taken over: one may be driven as an
             // additional interface. A lone unit is driven whatever its id,
@@ -481,8 +501,8 @@ public sealed class DeviceManager : BackgroundService
                 : _preferredInstance is not null && all.Count > 1
                     ? null
                     : _preferredPid is ushort pid
-                        ? usable.FirstOrDefault(d => d.Info.ProductId == pid) ?? usable.FirstOrDefault()
-                        : usable.FirstOrDefault();
+                        ? free.FirstOrDefault(d => d.Info.ProductId == pid) ?? free.FirstOrDefault()
+                        : free.FirstOrDefault();
             if (dev is null) return;                    // nothing usable attached; try again next tick
             ClaimingDevice?.Invoke(dev.Info.InstanceId);
             try { dev.Connect(); }
@@ -543,6 +563,35 @@ public sealed class DeviceManager : BackgroundService
                 DeviceArrived?.Invoke(DevId(dev));
             }
         }
+    }
+
+    /// <summary>
+    /// Whether the primary is the unit its choice names: the one the last
+    /// setActiveDevice chose, else a unit of the model OPENXLR_DEVICE names,
+    /// else whichever it drives.
+    /// </summary>
+    private bool IsChosenLocked(DeviceInfo info)
+        => _preferredInstance is { } instance ? info.InstanceId == instance
+            : _preferredPid is not ushort pid || info.ProductId == pid;
+
+    /// <summary>
+    /// A connected stand-in, driven while the chosen unit was away or set
+    /// aside, is let go once the chosen unit is attached and usable again, so
+    /// a moment off the bus never leaves the primary on another unit. True
+    /// when it was let go and the connect below takes the chosen one.
+    /// </summary>
+    private bool StandInGivesWayLocked(IReadOnlyList<IAudioDevice> all)
+    {
+        IAudioDevice standIn = _device!;
+        if (IsChosenLocked(standIn.Info) || _noNewConnections || Environment.TickCount64 < _reconnectNotBefore) return false;
+        IAudioDevice? chosen = all.FirstOrDefault(d => IsChosenLocked(d.Info) && !_hung.IsSetAside(d.Info.InstanceId)
+            && (_preferredInstance is not null || !_additional(d.Info.InstanceId)));
+        if (chosen is null) return false;
+        _log.LogInformation("{chosen} is attached again: driving it instead of {standIn}", chosen.Info.DisplayName, standIn.Info.DisplayName);
+        FlushLastState(force: true);
+        Drop();
+        RestoreCardProfile();
+        return true;
     }
 
     // Last-settings memory for devices that have none of their own (see
@@ -1096,7 +1145,8 @@ public sealed class DeviceManager : BackgroundService
             State = _last ?? (_unansweredId == id && _lastGoodId == id ? _lastGood : null),
         };
         UnitEqSupport? eq = dev.EqSupport is { } support
-            ? new UnitEqSupport(dev.Info.Model, dev.Firmware, support.Ready, support.Reason, support.Note) : null;
+            ? new UnitEqSupport(dev.Info.Model, dev.Firmware, support.Ready, support.Reason, support.Note) { Inputs = dev.Capabilities.XlrInputs }
+            : null;
         _published = new Published(msg, dev.Info, eq);
         return msg;
     }
@@ -1167,7 +1217,9 @@ public sealed class DeviceManager : BackgroundService
     /// </summary>
     internal void PostEq(int input, DeviceEq eq, string owner)
     {
-        if (_published.Info is null) return;
+        // An input the unit does not have holds no EQ: nothing to write and
+        // nothing that failed.
+        if (_published.Info is null || input < 1 || input > (_published.Message.Capabilities?.XlrInputs ?? 1)) return;
         bool wake;
         lock (_eqGate)
         {
@@ -1235,6 +1287,12 @@ public sealed class DeviceManager : BackgroundService
             bool failed = false;
             foreach ((int input, EqSlot slot, DeviceEq eq) in due)
             {
+                if (input > dev.Capabilities.XlrInputs)
+                {
+                    // Posted while the unit before this one was driven.
+                    lock (_eqGate) _eqSlots.Remove(input);
+                    continue;
+                }
                 bool wrote;
                 try { wrote = dev.SetEq(input, eq); }
                 catch (UsbHungException) { throw; }

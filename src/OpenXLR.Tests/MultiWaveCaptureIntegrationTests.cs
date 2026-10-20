@@ -106,6 +106,73 @@ public sealed partial class MonitorVolumeIntegrationTests
         WaitForRecovery(() => { mixer.EnsureInputFeeds(); return IncomingRouteLinks(Xlr1).Length == 0; });
     }
 
+    /// <summary>
+    /// A primary switch from a Pro to a one-input unit without Aux In and
+    /// back. XLR 1 moves to the other unit's microphone, so its monitor sends
+    /// come up muted by the console rule. Aux In and XLR 2 have no pair on the
+    /// one-input unit: nothing new is patched into them either way, so their
+    /// monitor sends keep what the user set. A capture input on either unit's
+    /// node keeps its own source through both switches, so its sends stay
+    /// as they were too.
+    /// </summary>
+    [MonitorPipeWireFact]
+    public void APrimarySwitchToAUnitWithoutAuxInLeavesAuxInsMonitorSendAlone()
+    {
+        const string pro = "alsa_input.usb-Elgato_Systems_Elgato_Wave_XLR_Pro_SWITCHPRO-00.pro-input-0";
+        const string dock = "alsa_input.usb-Elgato_Systems_Elgato_Wave_XLR_Dock_MK.2_SWITCHDOCK-00.analog-stereo";
+        var pw = new PipeWireAdapter(); using var registry = pw.WatchGraph(); using var mixer = new Mixer(pw);
+        List<uint> modules = [];
+        try
+        {
+            modules.Add(LoadModule("module-null-sink", "sink_name=switch_pro_parent", "channels=6", "sink_properties=device.description=Switch-pro-parent"));
+            modules.Add(LoadModule("module-null-sink", "sink_name=switch_dock_parent", "channels=2", "sink_properties=device.description=Switch-dock-parent"));
+            WaitForRecovery(() => ProcessRunner.Run("pactl", ["list", "sources", "short"]).StdoutText is var listed
+                && listed.Contains("switch_pro_parent.monitor", StringComparison.Ordinal) && listed.Contains("switch_dock_parent.monitor", StringComparison.Ordinal));
+            modules.Add(LoadModule("module-remap-source", $"source_name={pro}", "master=switch_pro_parent.monitor", "channels=6", "source_properties=device.description=Switch-pro"));
+            modules.Add(LoadModule("module-remap-source", $"source_name={dock}", "master=switch_dock_parent.monitor", "channels=2", "source_properties=device.description=Switch-dock"));
+            WaitForRecovery(() => pw.ListDevices().Count(d => d.Name is pro or dock) == 2);
+
+            mixer.SetInputJacks(2, true);
+            mixer.SetInputDeviceHint(["Wave_XLR_Pro_SWITCHPRO-"], hardwareOutputRouting: false, modelFallback: false);
+            mixer.Build(MixerConfig.Default());
+            mixer.CreateCaptureChannel("Pro input 2", pro, 0, _ => null, monoChannel: 2);
+            mixer.CreateCaptureChannel("Dock input", dock, 0, _ => null, monoChannel: 0);
+            string[] captures = [.. mixer.Snapshot().Channels.Where(c => c.CaptureSource is pro or dock).Select(c => c.Id)];
+            Assert.Equal(2, captures.Length);
+            string[] all = ["xlr1", "xlr2", "aux", .. captures];
+            WaitForRecovery(() => { mixer.EnsureInputFeeds(); return all.All(c => IncomingRouteLinks($"OpenXLR_ch_{c}").Length == 2); });
+            foreach (string channel in all) mixer.SetChannelMuted(channel, "monitor", false);
+            bool Muted(string channel) => mixer.IsChannelMutedIn(channel, "monitor");
+
+            // The daemon hands the mixer the dock's jacks first, then its node.
+            mixer.SetInputJacks(1, false);
+            mixer.SetInputDeviceHint(["Wave_XLR_Dock_MK.2_SWITCHDOCK-"], hardwareOutputRouting: false, modelFallback: false);
+            WaitForRecovery(() => { mixer.EnsureInputFeeds(); return GraphLinksInto("OpenXLR_ch_xlr1").Any(l => l.From.StartsWith(dock + ":", StringComparison.Ordinal)); });
+            Assert.True(Muted("xlr1"));
+            Assert.False(Muted("aux"));
+            Assert.False(Muted("xlr2"));
+            Assert.Empty(IncomingRouteLinks("OpenXLR_ch_aux"));
+            Assert.All(captures, c => Assert.False(Muted(c)));
+
+            // And back to the Pro: Aux In plays again, its send as the user left it.
+            mixer.SetChannelMuted("xlr1", "monitor", false);
+            mixer.SetInputJacks(2, true);
+            mixer.SetInputDeviceHint(["Wave_XLR_Pro_SWITCHPRO-"], hardwareOutputRouting: false, modelFallback: false);
+            WaitForRecovery(() => { mixer.EnsureInputFeeds(); return IncomingRouteLinks("OpenXLR_ch_aux").Length == 2; });
+            Assert.True(Muted("xlr1"));
+            Assert.False(Muted("aux"));
+            Assert.False(Muted("xlr2"));
+            Assert.All(captures, c => Assert.False(Muted(c)));
+            Assert.All(captures, c => Assert.Equal(2, IncomingRouteLinks($"OpenXLR_ch_{c}").Length));
+            Assert.DoesNotContain("aux|monitor", mixer.ExportSettings().ChannelMuted);
+        }
+        finally
+        {
+            mixer.TearDown();
+            foreach (uint module in Enumerable.Reverse(modules)) UnloadModule(module);
+        }
+    }
+
     [MonitorPipeWireFact]
     public void SelectedMonoPortsFeedBothSidesAndNeverFallBackToAnotherPort()
     {

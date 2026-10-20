@@ -161,7 +161,9 @@ read or disable those unmapped settings.
 Two behaviours apply on multi-device switching: the mixer's hardware
 input channels follow the active device, and after a switch the
 hardware channels' monitor sends come up muted, so the newly patched mic
-does not reach the speakers until unmuted.
+does not reach the speakers until unmuted. Aux In and XLR 2 keep their
+monitor sends when either device lacks that input, as a one-input unit does,
+since no new microphone reaches them.
 
 ## Submixer
 

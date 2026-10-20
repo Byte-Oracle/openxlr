@@ -56,6 +56,10 @@ public sealed class WaveInterfaces : BackgroundService
         _detect = detect;
         _primary = primary; _deviceLog = deviceLog; _configuration = configuration;
         _primary.ClaimingDevice += ReservePrimary;
+        // Enabling a unit as additional never hands it the primary role: the
+        // primary takes it only when setActiveDevice names it. The set is
+        // replaced, never changed in place, so this reads it without a lock.
+        _primary.SetAdditionalUnits(id => Volatile.Read(ref _enabled).Contains(id));
         try
         {
             if (File.Exists(PathName))

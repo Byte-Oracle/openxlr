@@ -162,10 +162,23 @@ public sealed partial class Mixer
     {
         if (_eqPort is null || !IsMicrophoneId(channel) || EqProcessingLocked(channel) != MicEqProcessing.Device) return null;
         if (_soundCheckClaim == channel || _soundCheck is not null && _soundCheckChannel == channel) return null;
-        if (!carried.TryGetValue(channel, out UnitInputStatus? unit)
-            || !_unitEq.TryGetValue(unit.Unit, out UnitEqSupport? support) || !support.Ready) return null;
+        if (!EqCarrierLocked(channel, carried, out UnitInputStatus? unit, out UnitEqSupport? support) || !support.Ready) return null;
         var target = new EqUnitInput(unit.Unit, unit.Input);
         return _eqDeviceFailed.ContainsKey(target.Key) ? null : target;
+    }
+
+    /// <summary>
+    /// The unit input a channel carries, while that unit's model has a
+    /// hardware EQ and the unit has that input. An input a one-input unit
+    /// does not have (XLR 2 while the primary was a two-input unit a moment
+    /// ago) carries no EQ at all, so nothing is posted and nothing fails.
+    /// </summary>
+    private bool EqCarrierLocked(string channel, IReadOnlyDictionary<string, UnitInputStatus> carried,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out UnitInputStatus? unit,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out UnitEqSupport? support)
+    {
+        support = null;
+        return carried.TryGetValue(channel, out unit) && _unitEq.TryGetValue(unit.Unit, out support) && unit.Input <= support.Inputs;
     }
 
     /// <summary>Whether a route built now would put a software EQ stage at the channel's head.</summary>
@@ -244,8 +257,8 @@ public sealed partial class Mixer
             }
             // An input whose EQ runs in software holds its unit's EQ off, so
             // one Wave Link left on cannot double it; said once per connection.
-            if (want is null && !_eqReleasing.ContainsKey(id) && carried.TryGetValue(id, out UnitInputStatus? unit)
-                && _unitEq.TryGetValue(unit.Unit, out UnitEqSupport? support) && support.Ready
+            if (want is null && !_eqReleasing.ContainsKey(id) && EqCarrierLocked(id, carried, out UnitInputStatus? unit, out UnitEqSupport? support)
+                && support.Ready
                 && port.Status(unit.Unit, unit.Input).Phase == DeviceEqPhase.None)
                 port.Post(unit.Unit, unit.Input, DeviceEq.Off, ChannelNameLocked(ch));
         }
@@ -562,8 +575,7 @@ public sealed partial class Mixer
     /// <summary>The unit a microphone carries, while that unit's model has a hardware EQ.</summary>
     private MicEqDevice? EqDeviceStateLocked(string channel, IReadOnlyDictionary<string, UnitInputStatus> carried)
     {
-        if (!carried.TryGetValue(channel, out UnitInputStatus? unit) || !_unitEq.TryGetValue(unit.Unit, out UnitEqSupport? support))
-            return null;
+        if (!EqCarrierLocked(channel, carried, out UnitInputStatus? unit, out UnitEqSupport? support)) return null;
         string? failure = _eqDeviceFailed.GetValueOrDefault(new EqUnitInput(unit.Unit, unit.Input).Key);
         return new MicEqDevice(unit.Unit, unit.Input, support.Name, support.Firmware, support.Ready && failure is null,
             failure is null ? support.Reason : EqDeviceFailedReason, failure is null ? support.Note : $"The {support.Name} {failure}, so the EQ runs in software.")
