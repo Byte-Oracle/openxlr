@@ -198,7 +198,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   [Templates](skins.md#templates) and [Mix banks](manual.md#mix-banks)
 - Skins can draw MONITOR as a one-row toolbar that keeps every output and
   its feed in its picker, APPLICATIONS as a list for a narrow column or as
-  columns of the chips with a skin's number per column, and
+  columns of tiles of one width with a skin's number per column, a long
+  name scrolling to its end under the pointer, and
   open the submixer in its own window once when the skin is put on, unless
   you have already chosen where it goes. A skin switch ends a fader drag,
   keeps focus on the same channel, mix and control, keeps the page's

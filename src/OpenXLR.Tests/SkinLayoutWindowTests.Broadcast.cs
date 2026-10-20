@@ -538,10 +538,11 @@ internal static partial class SkinLayoutWindowTests
         TextBlock name = board.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsEffectivelyVisible && t.Text == LongName);
         AssertInside(name, name.GetVisualAncestors().OfType<Border>().First(b => b.Name == "MatrixRowName"));
 
-        // The applications in columns of chips inside their section (CheckApplicationColumns has the rest).
-        Border[] chips = ApplicationChips(window);
+        // The applications in columns of tiles inside their section (CheckApplicationColumns has the rest).
+        Border[] chips = ApplicationTiles(window);
         Assert.Equal(model.ActiveApps.Count, chips.Length);
         Assert.Empty(ApplicationLines(window));
+        Assert.Empty(ApplicationChips(window));
         foreach (Border chip in chips) AssertInside(chip, Card("ApplicationsTile"));
         ApplicationIconWindowTests.Check(window, where);
 

@@ -1765,6 +1765,10 @@ carry the input gain, mute and plugins; **Arrange** lists it with a button
 that shows it again, under the matrix. APPLICATIONS sits under the matrix,
 its applications in columns of six: the seventh starts the next column to
 the right, and columns that do not fit the window's width continue below.
+Every application's tile is the same width, with its channel picker lined
+up with the ones above and below it. A name too long for its tile is cut
+off at the edge; rest the pointer on the tile and the name glides to its
+end, and back when the pointer leaves. Its tooltip shows the whole name.
 Nothing starts folded, and every header action stays in the header row.
 When the matrix is wider than the window it scrolls sideways inside its
 card, the row heads with it; a window narrower than about 1000 pixels
