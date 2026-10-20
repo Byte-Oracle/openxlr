@@ -35,75 +35,96 @@ public sealed partial class Mixer
     /// Record, loop, go back to the live microphone, or stop. The sample is
     /// kept only in the helper's memory and enters the channel ahead of its
     /// software processing and inserts, so the chain can be tuned while the
-    /// same take repeats. Nothing here is saved.
+    /// same take repeats. Nothing here is saved. A unit that runs the
+    /// channel's EQ hands it to software before the take, so the take is raw
+    /// and the loop hears every edit; it takes it back when the session ends.
     /// </summary>
     public void SoundCheck(string channel, string action)
     {
+        if (action == "record") ReleaseDeviceEqForSoundCheck(channel);
         lock (_gate)
         {
-            if (!IsSoundCheckChannel(channel) || !HasChannel(channel))
-                throw new ArgumentException("Sound Check needs the XLR 1 or XLR 2 channel.");
-            if (action is not ("record" or "loop" or "live" or "stop"))
-                throw new ArgumentException("Unknown Sound Check action.");
-            if (action == "stop")
+            try { SoundCheckLocked(channel, action); }
+            finally
             {
-                // Stop only ends this microphone's session or clears its
-                // notice; closing the other microphone's window leaves a
-                // running session alone.
-                string? owner = _soundCheckChannel ?? _soundCheckErrorChannel;
-                if (owner is null || owner == channel) StopSoundCheckLocked(restore: true);
-                return;
+                // The claim held the EQ in software while the unit let it go;
+                // the session now does, or, when none started, the unit takes
+                // the EQ back.
+                if (_soundCheckClaim == channel)
+                {
+                    _soundCheckClaim = null;
+                    if (_soundCheck is null) SyncDeviceEqLocked();
+                }
             }
-            if (_soundCheckChannel is not null && _soundCheckChannel != channel)
-                throw new InvalidOperationException("Stop Sound Check on the other microphone first.");
-            // Each strip records from its own source: the interface's pair or
-            // the port the strip is bound to. The refusal is the strip's own
-            // bindingConnected, with its bindingWarning when it has one.
-            ChannelDefinition input = _config.Channels.Single(c => c.Id == channel);
-            if (!_built || !BindingConnectedLocked(input) || !_stripSources.TryGetValue(channel, out string? device))
-                throw new InvalidOperationException(BindingWarningLocked(input) is { } why
-                    ? $"The microphone is not connected. {ChannelNameLocked(input)}: {why}"
-                    : "The microphone is not connected.");
-            if (action == "record" && _soundCheck is null)
+        }
+    }
+
+    private void SoundCheckLocked(string channel, string action)
+    {
+        if (!IsSoundCheckChannel(channel) || !HasChannel(channel))
+            throw new ArgumentException("Sound Check needs the XLR 1 or XLR 2 channel.");
+        if (action is not ("record" or "loop" or "live" or "stop"))
+            throw new ArgumentException("Unknown Sound Check action.");
+        if (action == "stop")
+        {
+            // Stop only ends this microphone's session or clears its
+            // notice; closing the other microphone's window leaves a
+            // running session alone.
+            string? owner = _soundCheckChannel ?? _soundCheckErrorChannel;
+            if (owner is null || owner == channel) StopSoundCheckLocked(restore: true);
+            return;
+        }
+        if (_soundCheckChannel is not null && _soundCheckChannel != channel)
+            throw new InvalidOperationException("Stop Sound Check on the other microphone first.");
+        // Each strip records from its own source: the interface's pair or
+        // the port the strip is bound to. The refusal is the strip's own
+        // bindingConnected, with its bindingWarning when it has one.
+        ChannelDefinition input = _config.Channels.Single(c => c.Id == channel);
+        if (!_built || !BindingConnectedLocked(input) || !_stripSources.TryGetValue(channel, out string? device))
+            throw new InvalidOperationException(BindingWarningLocked(input) is { } why
+                ? $"The microphone is not connected. {ChannelNameLocked(input)}: {why}"
+                : "The microphone is not connected.");
+        if (action == "record" && _soundCheck is null)
+        {
+            // The wait for the unit is over, confirmed or not.
+            if (_soundCheckClaim == channel && _eqReleasing.Remove(channel)) ApplySoftwareEqLocked(channel);
+            FilterHandle filter = _pw.CreateSoundCheck(channel, out int rate);
+            PortLink? feed = null;
+            try
             {
-                FilterHandle filter = _pw.CreateSoundCheck(channel, out int rate);
-                PortLink? feed = null;
+                feed = RouteInputLocked(device, filter.SinkName, input);
+                if (feed.Pairs.Count != 1) throw new InvalidOperationException("The microphone's capture port is unavailable.");
+                _soundCheck = filter;
+                _soundCheckInput = feed;
+                _soundCheckChannel = channel;
+                _soundCheckDevice = device;
+                _soundCheckRate = rate;
+                _soundCheckStarted = Stopwatch.GetTimestamp();
+                _soundCheckError = _soundCheckErrorChannel = null;
+                // A reused direct feed would bypass the loop, so the
+                // channel's feed is rebuilt from the helper's output.
+                if (_inputFeeds.Remove(channel, out PortLink? previous)) _pw.Unlink(previous);
+                WireInputFeedsLocked([channel]);
+            }
+            catch (Exception failure)
+            {
                 try
                 {
-                    feed = RouteInputLocked(device, filter.SinkName, input);
-                    if (feed.Pairs.Count != 1) throw new InvalidOperationException("The microphone's capture port is unavailable.");
-                    _soundCheck = filter;
-                    _soundCheckInput = feed;
-                    _soundCheckChannel = channel;
-                    _soundCheckDevice = device;
-                    _soundCheckRate = rate;
-                    _soundCheckStarted = Stopwatch.GetTimestamp();
-                    _soundCheckError = _soundCheckErrorChannel = null;
-                    // A reused direct feed would bypass the loop, so the
-                    // channel's feed is rebuilt from the helper's output.
-                    if (_inputFeeds.Remove(channel, out PortLink? previous)) _pw.Unlink(previous);
-                    WireInputFeedsLocked([channel]);
+                    if (_soundCheck is not null) StopSoundCheckLocked(restore: true);
+                    else { if (feed is not null) _pw.Unlink(feed); _pw.StopFilter(filter); }
                 }
-                catch (Exception failure)
+                catch (Exception rollback)
                 {
-                    try
-                    {
-                        if (_soundCheck is not null) StopSoundCheckLocked(restore: true);
-                        else { if (feed is not null) _pw.Unlink(feed); _pw.StopFilter(filter); }
-                    }
-                    catch (Exception rollback)
-                    {
-                        throw new AggregateException("Sound Check could not start, and restoring the microphone also failed.", failure, rollback);
-                    }
-                    throw;
+                    throw new AggregateException("Sound Check could not start, and restoring the microphone also failed.", failure, rollback);
                 }
+                throw;
             }
-            if (_soundCheck?.NativeHost is not { } host)
-                throw new InvalidOperationException("Record a sample first.");
-            if (action == "loop" && SoundCheckSnapshotLocked().Seconds < 0.1)
-                throw new InvalidOperationException("Record at least a tenth of a second before looping.");
-            host.SetControl("command", action switch { "record" => 1, "loop" => 2, _ => 0 });
         }
+        if (_soundCheck?.NativeHost is not { } host)
+            throw new InvalidOperationException("Record a sample first.");
+        if (action == "loop" && SoundCheckSnapshotLocked().Seconds < 0.1)
+            throw new InvalidOperationException("Record at least a tenth of a second before looping.");
+        host.SetControl("command", action switch { "record" => 1, "loop" => 2, _ => 0 });
     }
 
     private SoundCheckState SoundCheckSnapshotLocked()
@@ -129,6 +150,9 @@ public sealed partial class Mixer
         _soundCheck = null;
         _soundCheckInput = null;
         _soundCheckChannel = _soundCheckDevice = null;
+        // The unit takes the EQ back before the strip is wired again, so the
+        // route is built without a software stage.
+        if (restore) SyncDeviceEqLocked();
         if (channel is not null && _inputFeeds.Remove(channel, out PortLink? feed)) _pw.Unlink(feed);
         if (restore && channel is not null && _built) WireInputFeedsLocked([channel]);
     }

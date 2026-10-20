@@ -22,6 +22,8 @@ public interface ILayoutInfo
     bool HasBindableStrip(string id) => Mixer.IsBindableStrip(id) && HasChannel(id);
     /// <summary>A microphone input, which carries the microphone EQ: XLR 1 or XLR 2.</summary>
     bool IsMicrophoneChannel(string id) => Mixer.IsMicrophoneId(id) && HasChannel(id);
+    /// <summary>Whether a microphone's EQ runs on its unit now, so switching it on needs no native helper.</summary>
+    bool EqRunsOnDevice(string id) => false;
     /// <summary>An insert chain key: an XLR input id or "mix:&lt;id&gt;".</summary>
     bool IsInsertKey(string key);
     /// <summary>The channels an insert chain carries: one on an XLR input, two on a mix.</summary>

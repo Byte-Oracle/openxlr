@@ -405,6 +405,7 @@ public sealed class WebSocketHub
             case "setEq":
             case "setEqEnabled":
             case "setEqBand":
+            case "setEqProcessing":
                 error = _mixer.Apply(cmd);                     // broadcasts on success
                 stateOnError = true;
                 break;

@@ -94,6 +94,13 @@ public sealed record MixerSettings
     public Dictionary<string, MicEq> Eq { get; init; } = [];
 
     /// <summary>
+    /// Where each microphone's EQ runs when its unit can run it, by channel
+    /// id: <c>software</c>, or <c>device</c> for a channel absent here.
+    /// Machine wiring like <see cref="InputBindings"/>, never profile state.
+    /// </summary>
+    public Dictionary<string, string> EqProcessing { get; init; } = [];
+
+    /// <summary>
     /// Every plugin the saved chains name. A client that reconnects while the
     /// daemon is still starting asks for the catalogue before the chains are
     /// restored, and this is what they will hold.

@@ -68,14 +68,19 @@ makes an already selected headset hear Monitor A and Chat summed.
 channel's own volume, which scales every send of the channel at once, and
 `GET /api/v1/channels/game` reads it back as `volume`. Every channel takes
 one, `xlr1`, `xlr2` and `aux` included.
-The [microphone EQ](api.md#microphone-eq) takes three commands.
+The [microphone EQ](api.md#microphone-eq) takes four commands.
 `{"cmd":"setEqBand","channel":"xlr1","band":2,"frequency":250,"gain":-3.5,"q":1.4}`
 moves XLR 1's second band, `{"cmd":"setEqEnabled","channel":"xlr1","value":true}`
 switches its EQ on, and `setEq` replaces the whole EQ in one call, for a
 preset:
 `{"cmd":"setEq","channel":"xlr1","eq":{"enabled":true,"bands":[{"enabled":true,"type":"lowCut","frequency":80,"gain":0,"q":0.7047},{"enabled":true,"type":"peak","frequency":250,"gain":-3.5,"q":1.4},{"enabled":true,"type":"peak","frequency":3500,"gain":2.5,"q":1},{"enabled":false,"type":"highCut","frequency":15049,"gain":0,"q":0.7047}]}}`.
 `GET /api/v1/channels/xlr1` reads the EQ back as `eq`, with every value as
-the daemon snapped it, and `GET /api/v1/mixer` carries `eqLimits`.
+the daemon snapped it, and `GET /api/v1/mixer` carries `eqLimits`. On a
+Wave XLR MK.2 or XLR Dock MK.2 from firmware 1.0.15 the unit's own DSP runs
+the EQ, `eq.backend` reads `device` and `eq.device` names the unit;
+`{"cmd":"setEqProcessing","channel":"xlr1","value":"software"}` moves XLR 1's
+EQ to this computer and `"value":"device"` back to the unit (see
+[where the EQ runs](api.md#where-the-eq-runs)).
 Both transports share the dispatcher,
 validation and broadcasts. HTTP returns
 `{"apiVersion":"1","ok":true,"messages":[]}` after a successful mutation.

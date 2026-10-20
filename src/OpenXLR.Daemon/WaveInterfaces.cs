@@ -42,6 +42,9 @@ public sealed class WaveInterfaces : BackgroundService
     private static string PathName => OpenXlrPaths.ConfigFile("wave-interfaces.json");
     public event Action? Changed;
 
+    /// <summary>An additional unit's EQ status settled; see <see cref="DeviceManager.EqStatusChanged"/>.</summary>
+    public event Action? EqStatusChanged;
+
     /// <summary>A preferences file that could not be read or written, or a failed USB scan; null otherwise.</summary>
     public string? Warning => Volatile.Read(ref _preferencesError) ?? Volatile.Read(ref _discoveryError);
 
@@ -103,10 +106,13 @@ public sealed class WaveInterfaces : BackgroundService
             string id = device.Info.InstanceId;
             bool active = id == primary;
             StateMessage? state = active ? _primary.Snapshot() : _sessions.TryGetValue(id, out var session) ? session.Snapshot() : null;
+            // A driven unit's capabilities are the ones its connect decided,
+            // the hardware EQ among them; a unit not driven shows its model's.
             return new WaveInterfaceState(id, device.Info.DisplayName + (device.Info.Location is { } location ? $" ({location.Port})" : ""),
                 active, enabled.Contains(id), state?.Connected ?? false, device.Info.NodeNameFragment,
                 device.Info.FragmentsAmong(available.Select(d => d.Info)) is [_, string model] ? model : "",
-                device.Capabilities, state?.State, active ? _primary.Warning : _sessions.GetValueOrDefault(id)?.Warning);
+                state is { Connected: true, Capabilities: { } driven } ? driven : device.Capabilities,
+                state?.State, active ? _primary.Warning : _sessions.GetValueOrDefault(id)?.Warning);
         }).ToList();
         // An enabled unit that is unplugged or moved stays listed, so it can
         // be disabled and its slot freed without plugging it back in.
@@ -188,6 +194,17 @@ public sealed class WaveInterfaces : BackgroundService
         })];
     }
 
+    /// <summary>The manager driving an additional unit, or null; never the primary's.</summary>
+    internal DeviceManager? Session(string id) => id == Volatile.Read(ref _reserved) ? null : _sessions.GetValueOrDefault(id);
+
+    /// <summary>Each driven additional unit whose model has a hardware EQ, by instance id.</summary>
+    internal IEnumerable<(string Id, OpenXLR.Core.Mixing.UnitEqSupport Support)> EqSupport()
+    {
+        string? primary = _primary.PublishedInfo?.InstanceId;
+        foreach ((string id, DeviceManager session) in _sessions.ToArray())
+            if (id != primary && session.PublishedEqSupport is { } support) yield return (id, support);
+    }
+
     /// <summary>The capture channels whose source one of these fragments names.</summary>
     internal static IReadOnlyList<string> CaptureChannelsFrom(IEnumerable<OpenXLR.Core.Mixing.ChannelStatus> channels, IReadOnlyList<string> fragments)
         => [.. channels.Where(c => c.CaptureSource is { } source && fragments.Any(f => source.Contains(f, StringComparison.OrdinalIgnoreCase)))
@@ -264,6 +281,7 @@ public sealed class WaveInterfaces : BackgroundService
                         () => [.. Volatile.Read(ref _available).Where(d => d.Info.InstanceId == id && id != Volatile.Read(ref _reserved))]);
                     session.SetSessionStorageId(id);
                     session.StateChanged += _ => Changed?.Invoke();
+                    session.EqStatusChanged += () => EqStatusChanged?.Invoke();
                     session.DeviceArrived += arrived =>
                     {
                         _ = Task.Run(() =>

@@ -20,6 +20,7 @@ public sealed class MixerService : IHostedService, IDisposable
     private readonly StartupDefaults? _startupDefaults;
     private readonly Mixer _mixer;
     private readonly PipeWireAdapter _pipeWire;
+    private readonly DeviceEqPort _eqPort;
     private IDisposable? _graphWatch;
     private readonly ServiceProgress _progress = new();
     private volatile bool _checkingProgress;
@@ -80,7 +81,7 @@ public sealed class MixerService : IHostedService, IDisposable
 
     public MixerService(ILogger<MixerService> log, IConfiguration config, DeviceManager devices,
         IHostApplicationLifetime? lifetime = null, NativeEditorPolicy? editorPolicy = null,
-        StartupDefaults? startupDefaults = null)
+        StartupDefaults? startupDefaults = null, WaveInterfaces? waveInterfaces = null)
     {
         _log = log;
         _config = config;
@@ -96,6 +97,14 @@ public sealed class MixerService : IHostedService, IDisposable
         EditorPolicy = editorPolicy ?? new NativeEditorPolicy();
         _pipeWire = new PipeWireAdapter(_progress.Mark, note => _log.LogInformation("{msg}", note));
         _mixer = new(_pipeWire) { InputNote = note => _log.LogWarning("hardware input: {note}", note) };
+        _eqPort = new DeviceEqPort(devices, waveInterfaces);
+        // A unit confirming or refusing an EQ is followed at once, off the
+        // device lock: a hand-over from the unit waits for its confirmation.
+        _eqPort.StatusChanged += () => ThreadPool.QueueUserWorkItem(_ =>
+        {
+            try { if (_mixer.Built && _mixer.SyncDeviceEq()) Changed?.Invoke(); }
+            catch (Exception ex) { _log.LogDebug("EQ hand-over: {msg}", ex.Message); }
+        });
         _saves = new SettingsSaver(
             () => _mixer.ExportSettings().Save(),
             error =>
@@ -330,7 +339,11 @@ public sealed class MixerService : IHostedService, IDisposable
         _mixer.SetInputBindings(saved?.InputBindings);
         UpdateInputDeviceHint();
         _mixer.Build(MixerConfig.FromSettings(saved), output);
-
+        // Units run their microphone's EQ only while the submixer runs: in
+        // hardware-control mode no channel carries an input and nothing is
+        // written to any unit.
+        _mixer.SetDeviceEqPort(_eqPort);
+        _mixer.SetUnitEqSupport(_eqPort.Units());
         // Restore the user's saved levels, mutes, device picks, and per-app
         // assignments. Env vars, when set, still win for the device picks.
         if (saved is not null)
@@ -467,6 +480,11 @@ public sealed class MixerService : IHostedService, IDisposable
             if (GraphLost()) return true;
             stop.ThrowIfCancellationRequested();
             if (UpdateInputDeviceHint()) Changed?.Invoke();
+            stop.ThrowIfCancellationRequested();
+            // Which driven units run the microphone EQ, and each microphone's
+            // EQ put where it runs: a unit that connected or left, a firmware
+            // update, a binding that moved.
+            if (_mixer.SetUnitEqSupport(_eqPort.Units()) | _mixer.SyncDeviceEq()) Changed?.Invoke();
             stop.ThrowIfCancellationRequested();
             // Which input jacks the device actually has, so a client
             // does not offer a strip the hardware cannot feed.
@@ -782,6 +800,9 @@ public sealed class MixerService : IHostedService, IDisposable
                     break;
                 case "setEqBand":
                     _mixer.SetEqBand(cmd.Channel!, cmd.Band!.Value, new EqBandChange(cmd.Enabled, cmd.Type, cmd.Frequency, cmd.Gain, cmd.Q));
+                    break;
+                case "setEqProcessing":
+                    _mixer.SetEqProcessing(cmd.Channel!, cmd.Value.GetString()!);   // checked by CommandValidation
                     break;
                 case "showInsertUi":
                     if (cmd.Channel is null || cmd.InsertId is null) return "showInsertUi: need 'channel' and 'insertId'";

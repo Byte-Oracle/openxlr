@@ -43,8 +43,10 @@ internal sealed record InputRoute(ChannelDefinition Channel, string? Input, bool
 
     /// <summary>
     /// Whether the route wants an EQ stage at its head, between the source
-    /// and the chain. It is not part of the chain's structure: the stage is
-    /// spliced in and out by relinking, so it never builds a chain again.
+    /// and the chain: a microphone whose EQ is on and runs in software, so a
+    /// stage is never spliced behind a unit that already equalises. It is not
+    /// part of the chain's structure: the stage is spliced in and out by
+    /// relinking, so it never builds a chain again.
     /// </summary>
     public bool Eq { get; init; }
 
@@ -81,7 +83,7 @@ public sealed partial class Mixer
         return new InputRoute(ch, input, bound, looped, lc ? _lowCutHz : 0, cg, inserts, anyInsert)
         {
             Source = looped ? _soundCheck!.SourceName : input,
-            Eq = IsMicrophoneId(ch.Id) && EqLocked(ch.Id).Enabled,
+            Eq = IsMicrophoneId(ch.Id) && SoftwareEqLocked(ch.Id).Enabled,
         };
     }
 

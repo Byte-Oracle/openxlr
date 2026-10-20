@@ -46,6 +46,7 @@ internal static class SavedMixerValidation
             KnownApps = Apps(settings.KnownApps, notes),
             Inserts = Inserts(settings.Inserts, notes),
             Eq = Eq(settings.Eq, notes),
+            EqProcessing = EqProcessing(settings.EqProcessing, notes),
             Appearance = Appearance(settings.Appearance, notes),
         };
     }
@@ -192,6 +193,23 @@ internal static class SavedMixerValidation
         {
             if (MicEq.Check(eq) is string problem) notes.Add($"eq.{channel}: {problem}");
             else kept[channel] = MicEq.Snap(eq);
+        }
+        return kept;
+    }
+
+    /// <summary>
+    /// Where each microphone's EQ runs: an entry that is neither
+    /// <c>device</c> nor <c>software</c> is dropped and named, and the channel
+    /// takes the default.
+    /// </summary>
+    private static Dictionary<string, string> EqProcessing(Dictionary<string, string>? entries, List<string> notes)
+    {
+        if (entries is null) { notes.Add($"eqProcessing: {NullEntry}"); return []; }
+        var kept = new Dictionary<string, string>();
+        foreach ((string channel, string value) in entries)
+        {
+            if (MicEqProcessing.IsValid(value)) kept[channel] = value;
+            else notes.Add($"eqProcessing.{channel}: must be 'device' or 'software'");
         }
         return kept;
     }

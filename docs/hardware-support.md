@@ -51,10 +51,10 @@ mapped OpenXLR controls. Elgato describes all four as running on the
 device: a four-band equalizer, ducking that lowers the other mixes while
 you speak and is applied per mix, a maximizer per mix, and a booster
 worth up to 12 dB above the normal ceiling on any input. The MK.2
-models have no ducking. They do have a four-band equalizer on the device
-on firmware 1.0.15, switched on by a master enable bit, and Wave Link
-3.5 writes it there; OpenXLR does not drive it yet
-([findings](mk2-eq-findings.md)). The full hardware mix matrix is also
+models have no ducking. They run a four-band equalizer on the device from
+firmware 1.0.15, switched on by a master enable bit, and OpenXLR's
+microphone EQ runs there on those units, as Wave Link 3.5 does
+([findings](mk2-eq-findings.md), and the MK.2 section below). The full hardware mix matrix is also
 unfinished.
 Elgato's [Pro feature guide](https://www.elgato.com/us/en/explorer/products/wave/wave-xlr-pro-give-your-setup-superpowers/)
 distinguishes those onboard effects from VST processing on the computer.
@@ -162,10 +162,11 @@ each of them works.
 
 The XLR Dock MK.2 for the Stream Deck+ is built on the same Wave FX
 platform (80 dB gain, phantom, ClipGuard 2.0, onboard expander, voice
-tune and compressor). Elgato also lists an EQ. On firmware 1.0.15 Wave
-Link writes it to both MK.2 models, and the Wave XLR MK.2 was heard
-applying it on its own; on the dock's firmware 1.0.0 Wave Link ran it on
-the computer ([findings](mk2-eq-findings.md)). Its `lsusb -v` dump
+tune and compressor). Elgato also lists an EQ. From firmware 1.0.15 both
+MK.2 models run it on the device: Wave Link 3.5 writes it there, the Wave
+XLR MK.2 was heard applying it on its own, and OpenXLR's microphone EQ
+runs there too. On the dock's firmware 1.0.0 Wave Link ran it on the
+computer ([findings](mk2-eq-findings.md)). Its `lsusb -v` dump
 ([issue #1](https://github.com/emaspa/openxlr/issues/1)) shows the same
 five interfaces as the Wave XLR MK.2, including the vendor-specific
 interface 3 that carries the control protocol. Interface 3 has two
@@ -245,15 +246,19 @@ read.
 | Gain, mute, low cut, expander, voice tune + strength | verified | Wave XLR MK.2: community tester, reads and writes. Dock: all of them on the author's unit |
 | Headphone volume, low impedance, crossfade | verified | Wave XLR MK.2: community tester. Dock: all three on the author's unit (the mic leaves the direct monitor at the PC end of the crossfade) |
 | Phantom 48V, ClipGuard, compressor | verified | at the Pro's bit positions; community tester, 0.1.12. Dock: phantom confirmed with a condenser mic going silent when switched off, ClipGuard and compressor by ear |
+| Microphone EQ on the unit, firmware 1.0.15 or later | coded | four bands and a switch in the settings block, written whole per change as Wave Link 3.5 writes it; the encoder reproduces 67 of Wave Link's captured writes byte for byte. The dock's filters were measured from Linux against the software EQ's curves, within about 1 dB for every type. OpenXLR driving it has not been run on hardware yet. On older firmware, or when the version or the EQ fields cannot be read, the EQ runs in software |
 
 Every exposed control listed above was confirmed on the dock on
 2026-09-05, the DSP ones by ear through the monitor mix and phantom with a condenser microphone.
-Hardware EQ is not driven. Its layout in the settings block is known on
-firmware 1.0.15 ([findings](mk2-eq-findings.md#the-equalizer-in-block-0x0004)),
-and a Linux check with its master enable bit set is still owed. Wave
+The [microphone EQ](api.md#where-the-eq-runs) runs on the unit from
+firmware 1.0.15, read from block 0x0000 bytes 5 to 7 at connect and shown
+in the state's `device.firmware`; its layout in the settings block is in
+the [findings](mk2-eq-findings.md#the-equalizer-in-block-0x0004). Wave
 Link 3.5 leaves that EQ on when it quits, so a unit it has driven can
-reach OpenXLR with it running; byte 2 of the settings block in a
-diagnostics dump shows it. Blocks 0x0002 and 0x0006 exist and are not decoded.
+reach OpenXLR with it running. On connect OpenXLR writes the microphone's
+own EQ over it, or switches it off on an input whose EQ runs in software.
+The diagnostics archive carries block 0x0000 and the EQ decoded from the
+settings block. Blocks 0x0002 and 0x0006 exist and are not decoded.
 
 ## Wave:3 (0fd9:0070), beta
 
