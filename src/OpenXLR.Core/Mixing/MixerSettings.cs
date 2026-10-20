@@ -141,6 +141,7 @@ public sealed record MixerSettings
         try
         {
             if (!File.Exists(path)) return null;
+            RegularFile.Require(path);
             MixerSettings? settings = JsonSerializer.Deserialize<MixerSettings>(File.ReadAllText(path), Json);
             if (settings is null) return null;
             settings = SavedMixerValidation.Sanitize(settings, out IReadOnlyList<string> dropped);
@@ -155,6 +156,7 @@ public sealed record MixerSettings
             string copy = path + ".corrupt";
             try
             {
+                RegularFile.Require(path);
                 OpenXlrPaths.WriteAtomic(copy, File.ReadAllBytes(path));
                 warning += $"; copy kept as {copy}";
             }

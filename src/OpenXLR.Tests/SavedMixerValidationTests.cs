@@ -159,6 +159,76 @@ public sealed class SavedMixerValidationTests
     }
 
     [Fact]
+    public async Task APipeCannotBlockMixerRestorationOrReplaceAnExistingCorruptBackup()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        string root = Directory.CreateTempSubdirectory("openxlr-mixer-file-").FullName;
+        string path = Path.Combine(root, "mixer.json");
+        try
+        {
+            Assert.True(ProcessRunner.Run("mkfifo", [path]).Ok);
+            string backup = path + ".corrupt";
+            File.WriteAllText(backup, "keep the earlier backup");
+            using var keeper = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+            var read = Task.Run(() =>
+            {
+                MixerSettings? settings = MixerSettings.Load(path, out string? warning);
+                return (Settings: settings, Warning: warning);
+            });
+            (MixerSettings? Settings, string? Warning) result;
+            try { result = await read.WaitAsync(TimeSpan.FromSeconds(3)); }
+            finally
+            {
+                // On failure, release the pipe reader and give a legacy backup
+                // read a regular file, so neither ordinary open can hang cleanup.
+                if (!read.IsCompleted)
+                {
+                    File.Delete(path);
+                    File.WriteAllText(path, "{}");
+                }
+                keeper.Dispose();
+                await read.WaitAsync(TimeSpan.FromSeconds(3));
+            }
+            Assert.Null(result.Settings);
+            Assert.Contains("not a regular file", result.Warning);
+            Assert.DoesNotContain("copy kept as", result.Warning);
+            Assert.Equal("keep the earlier backup", File.ReadAllText(backup));
+            Assert.True(File.Exists(path));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OrdinaryMixerFilesKeepBomDecodingLegacyAssignmentsAndExactCorruptBytes(bool utf16)
+    {
+        InConfig(root =>
+        {
+            string path = Path.Combine(root, "mixer.json");
+            System.Text.Encoding encoding = utf16 ? System.Text.Encoding.Unicode : new System.Text.UTF8Encoding(true);
+            var saved = new MixerSettings
+            {
+                AppOverrides = Enumerable.Range(0, Mixer.MaxAppOverrides + 1).ToDictionary(i => $"app{i}", _ => "music"),
+                KnownApps = [new("player", "Música", "music")],
+            };
+            string json = JsonSerializer.Serialize(saved, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            File.WriteAllText(path, json, encoding);
+            var loaded = Assert.IsType<MixerSettings>(MixerSettings.Load(path, out string? warning));
+            Assert.Null(warning);
+            Assert.Equal(Mixer.MaxAppOverrides + 1, loaded.AppOverrides.Count);
+            Assert.Equal("Música", Assert.Single(loaded.KnownApps).Label);
+
+            File.WriteAllText(path, "{broken", encoding);
+            byte[] original = File.ReadAllBytes(path);
+            Assert.Null(MixerSettings.Load(path, out warning));
+            Assert.Contains("copy kept as", warning);
+            Assert.Equal(original, File.ReadAllBytes(path + ".corrupt"));
+            Assert.Equal(original, File.ReadAllBytes(path));
+        });
+    }
+
+    [Fact]
     [System.Runtime.Versioning.SupportedOSPlatform("linux")]
     public void ACorruptBackupCannotOverwriteASymbolicLinkTarget()
     {
