@@ -863,23 +863,30 @@
                       <skin:LevelMeter Level="{Binding MeterL}" AutomationProperties.Name="{loc:Text Key=LeftLevel}"/>
                       <skin:LevelMeter Level="{Binding MeterR}" AutomationProperties.Name="{loc:Text Key=RightLevel}"/>
                     </StackPanel>
-                    <!-- an application or capture channel's own volume, over every send
-                         below it; the row is as tall in every tile, empty in a hardware
-                         one, while any shown tile has a volume -->
+                    <!-- the channel's own volume, over every send below it; the row is as
+                         tall in every tile, and empty only in a tile whose channel the
+                         daemon reports no volume for, while any shown tile has one. On the
+                         channel the Wave XLR Pro's direct path carries to the jacks, a mark
+                         beside the label and the fader's tooltip say the volume reaches the
+                         mixes only. -->
                     <Grid Name="ChannelSendArea">
                       <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" SharedSizeGroup="ChannelVolumeRow"/>
                         <RowDefinition Height="Auto"/>
                       </Grid.RowDefinitions>
                       <StackPanel Name="ChannelVolume" Spacing="1" IsVisible="{Binding HasVolume}" Margin="0,0,0,8">
-                        <Grid ColumnDefinitions="*,Auto">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
                           <TextBlock Text="{loc:Text Key=Volume}" Classes="h" FontSize="11"
                                      TextTrimming="CharacterEllipsis" Margin="0,0,4,0"/>
-                          <TextBlock Grid.Column="1" Text="{Binding VolumeText}" Classes="val" FontSize="11"/>
+                          <TextBlock Grid.Column="1" Name="ChannelVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12"
+                                     Margin="0,-1,4,0" HorizontalAlignment="Left" VerticalAlignment="Center" Cursor="Help"
+                                     IsVisible="{Binding DirectMonitored}" ToolTip.Tip="{Binding VolumeTip}"
+                                     AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
+                          <TextBlock Grid.Column="2" Text="{Binding VolumeText}" Classes="val" FontSize="11"/>
                         </Grid>
                         <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}"
                                 AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
-                                ToolTip.Tip="{loc:Text Key=ChannelVolumeTip}"/>
+                                ToolTip.Tip="{Binding VolumeTip}"/>
                       </StackPanel>
                       <ItemsControl Grid.Row="1" ItemsSource="{Binding Sends}">
                         <ItemsControl.ItemTemplate>

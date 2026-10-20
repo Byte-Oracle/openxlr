@@ -9,8 +9,10 @@
 
   <!-- The submixer as a matrix: a head per mix across the top, a row per
        channel under it, and in each row the channel's head and one cell per
-       mix. Every cell is Ox.Matrix.CellWidth wide and every row
-       Ox.Matrix.RowHeight tall, so the columns line up. The row heads are the
+       mix. Every cell is Ox.Matrix.CellWidth wide, so the columns line up,
+       and every row Ox.Matrix.RowHeight tall, except a row whose head stacks
+       an input's gain over its volume, which takes what the two faders need,
+       its cells with it. The row heads are the
        INPUTS panel's own controls; the cells and column heads are bound to
        the mixer's own sends and mixes. Every colour, size and radius is an
        Ox.* token. -->
@@ -23,6 +25,16 @@
       <Setter Property="Width" Value="{DynamicResource Ox.Matrix.CellWidth}"/>
       <Setter Property="Height" Value="{DynamicResource Ox.Matrix.RowHeight}"/>
       <Setter Property="Padding" Value="4,0"/>
+    </Style>
+    <!-- a row whose head stacks a gain over the channel's volume is as tall as the two
+         need and never shorter than the row height; its cells follow the head -->
+    <Style Selector="Border.matrixHead.stacked">
+      <Setter Property="Height" Value="NaN"/>
+      <Setter Property="MinHeight" Value="{DynamicResource Ox.Matrix.RowHeight}"/>
+    </Style>
+    <Style Selector="Border.matrixCell.stacked">
+      <Setter Property="Height" Value="NaN"/>
+      <Setter Property="MinHeight" Value="{DynamicResource Ox.Matrix.RowHeight}"/>
     </Style>
     <!-- a muted send: the cell tinted and its mute lettered in the muted colour, or the cell faded -->
     <Style Selector="Border.matrixCell.tinted">
@@ -73,7 +85,7 @@
       <!-- XLR 1: its binding under its name, its hardware gain over its meter, its mute and its chain, under the
            INPUTS panel's rules; the gain and mute only while it carries the interface's microphone -->
       <DataTemplate x:Key="xlr1" x:DataType="layout:MatrixRowViewModel">
-        <Border Classes="tile matrixHead" Name="MatrixRowHead">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Stacked}">
           <DockPanel>
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
@@ -110,23 +122,40 @@
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
                 </StackPanel>
-                <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center">
-                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
-                                     IsVisible="{Binding CarriesUnit}">
-                    <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
-                            Value="{Binding Main.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
-                            AutomationProperties.Name="{Binding Main.UnitInput1.GainName}"/>
-                  </layout:MeterFader>
-                  <!-- an additional interface's gain in its place, while this row carries that interface's input -->
-                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
-                                     IsVisible="{Binding CarriesExtraUnit}">
-                    <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
-                            Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
-                            AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
-                  </layout:MeterFader>
-                </Grid>
+                <StackPanel layout:StripPanel.Part="gain" Name="MatrixLevels" Spacing="2" VerticalAlignment="Center">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding HasGainFader}">
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                       IsVisible="{Binding CarriesUnit}">
+                      <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
+                              Value="{Binding Main.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
+                              AutomationProperties.Name="{Binding Main.UnitInput1.GainName}"/>
+                    </layout:MeterFader>
+                    <!-- an additional interface's gain, while this row carries that interface's input -->
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                       IsVisible="{Binding CarriesExtraUnit}">
+                      <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
+                              Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
+                              AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
+                    </layout:MeterFader>
+                  </Grid>
+                  <!-- the channel's own volume, under the gain where the row has one, the meter under it
+                       otherwise; while the Wave XLR Pro's direct path carries this channel to the jacks, a
+                       mark says it reaches the mixes only -->
+                  <Grid Name="MatrixVolumeLine" ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding ShowsVolume}">
+                    <layout:MeterFader ShowsMeter="{Binding VolumeShowsMeter}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                      <Slider Name="MatrixVolume" Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                              Value="{Binding Channel.Volume, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                              ToolTip.Tip="{Binding Channel.VolumeTip}"/>
+                    </layout:MeterFader>
+                    <TextBlock Grid.Column="1" Name="MatrixVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center"
+                               Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
+                               AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
+                  </Grid>
+                </StackPanel>
                 <Panel layout:StripPanel.Part="mute" VerticalAlignment="Center">
                   <ToggleButton Classes="mute mutemini matrixMute" IsVisible="{Binding CarriesUnit}" IsChecked="{Binding Main.Mute, Mode=TwoWay}"
                                 IsEnabled="{Binding !Main.PhantomSettling}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
@@ -151,7 +180,7 @@
       </DataTemplate>
       <!-- XLR 2: the same with the second input's properties, shown only on an interface with two -->
       <DataTemplate x:Key="xlr2" x:DataType="layout:MatrixRowViewModel">
-        <Border Classes="tile matrixHead" Name="MatrixRowHead">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Stacked}">
           <DockPanel>
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
@@ -188,23 +217,40 @@
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
                 </StackPanel>
-                <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center">
-                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
-                                     IsVisible="{Binding CarriesUnit}">
-                    <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
-                            Value="{Binding Main.Gain2Db, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
-                            AutomationProperties.Name="{loc:Text Key=XLR2Gain}"/>
-                  </layout:MeterFader>
-                  <!-- an additional interface's gain in its place, while this row carries that interface's input -->
-                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
-                                     IsVisible="{Binding CarriesExtraUnit}">
-                    <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
-                            Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
-                            AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
-                  </layout:MeterFader>
-                </Grid>
+                <StackPanel layout:StripPanel.Part="gain" Name="MatrixLevels" Spacing="2" VerticalAlignment="Center">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding HasGainFader}">
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                       IsVisible="{Binding CarriesUnit}">
+                      <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
+                              Value="{Binding Main.Gain2Db, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
+                              AutomationProperties.Name="{loc:Text Key=XLR2Gain}"/>
+                    </layout:MeterFader>
+                    <!-- an additional interface's gain, while this row carries that interface's input -->
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                       IsVisible="{Binding CarriesExtraUnit}">
+                      <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
+                              Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
+                              AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
+                    </layout:MeterFader>
+                  </Grid>
+                  <!-- the channel's own volume, under the gain where the row has one, the meter under it
+                       otherwise; while the Wave XLR Pro's direct path carries this channel to the jacks, a
+                       mark says it reaches the mixes only -->
+                  <Grid Name="MatrixVolumeLine" ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding ShowsVolume}">
+                    <layout:MeterFader ShowsMeter="{Binding VolumeShowsMeter}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                      <Slider Name="MatrixVolume" Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                              Value="{Binding Channel.Volume, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                              ToolTip.Tip="{Binding Channel.VolumeTip}"/>
+                    </layout:MeterFader>
+                    <TextBlock Grid.Column="1" Name="MatrixVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center"
+                               Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
+                               AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
+                  </Grid>
+                </StackPanel>
                 <Panel layout:StripPanel.Part="mute" VerticalAlignment="Center">
                   <ToggleButton Classes="mute mutemini matrixMute" IsVisible="{Binding CarriesUnit}" IsChecked="{Binding Main.Mute2, Mode=TwoWay}"
                                 IsEnabled="{Binding !Main.PhantomSettling2}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
@@ -229,7 +275,7 @@
       </DataTemplate>
       <!-- Aux In: its level over its meter and the level lock, where the interface has the stage -->
       <DataTemplate x:Key="aux" x:DataType="layout:MatrixRowViewModel">
-        <Border Classes="tile matrixHead" Name="MatrixRowHead">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Stacked}">
           <DockPanel>
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
@@ -253,26 +299,44 @@
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
                 </StackPanel>
-                <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center" IsVisible="{Binding Main.CapAuxInput}">
-                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
-                    <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="-60" Maximum="0"
-                            Value="{Binding Main.AuxLevelDb, Mode=TwoWay}"
-                            AutomationProperties.Name="{loc:Text Key=USBAuxIn}"/>
-                  </layout:MeterFader>
-                  <ToggleButton Grid.Column="1" Content="{loc:Text Key=Lock}" IsChecked="{Binding Main.AuxLevelLock, Mode=TwoWay}"
-                                Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                                AutomationProperties.Name="{loc:Text Key=LevelLock}" ToolTip.Tip="{loc:Text Key=LevelLock}"/>
-                </Grid>
+                <StackPanel layout:StripPanel.Part="gain" Name="MatrixLevels" Spacing="2" VerticalAlignment="Center">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding HasGainFader}">
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                      <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="-60" Maximum="0"
+                              Value="{Binding Main.AuxLevelDb, Mode=TwoWay}"
+                              AutomationProperties.Name="{loc:Text Key=USBAuxIn}"/>
+                    </layout:MeterFader>
+                    <ToggleButton Grid.Column="1" Content="{loc:Text Key=Lock}" IsChecked="{Binding Main.AuxLevelLock, Mode=TwoWay}"
+                                  Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                                  AutomationProperties.Name="{loc:Text Key=LevelLock}" ToolTip.Tip="{loc:Text Key=LevelLock}"/>
+                  </Grid>
+                  <!-- the channel's own volume, under the gain where the row has one, the meter under it
+                       otherwise; while the Wave XLR Pro's direct path carries this channel to the jacks, a
+                       mark says it reaches the mixes only -->
+                  <Grid Name="MatrixVolumeLine" ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding ShowsVolume}">
+                    <layout:MeterFader ShowsMeter="{Binding VolumeShowsMeter}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                      <Slider Name="MatrixVolume" Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                              Value="{Binding Channel.Volume, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                              ToolTip.Tip="{Binding Channel.VolumeTip}"/>
+                    </layout:MeterFader>
+                    <TextBlock Grid.Column="1" Name="MatrixVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center"
+                               Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
+                               AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
+                  </Grid>
+                </StackPanel>
               </layout:StripPanel>
             </Border>
           </DockPanel>
         </Border>
       </DataTemplate>
       <!-- an application or capture channel: its name, its meter and its own volume, the meter under the volume as under a
-           microphone's gain; a capture channel carrying the interface's microphone draws the interface's gain and mute instead -->
+           microphone's gain; a capture channel carrying the interface's microphone draws the interface's gain and mute too,
+           the gain over the volume -->
       <DataTemplate x:Key="channel" x:DataType="layout:MatrixRowViewModel">
-        <Border Classes="tile matrixHead" Name="MatrixRowHead">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Stacked}">
           <DockPanel>
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
@@ -299,31 +363,41 @@
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
                 </StackPanel>
-                <Grid layout:StripPanel.Part="gain" ColumnDefinitions="*,Auto" ColumnSpacing="4" VerticalAlignment="Center">
-                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
-                                     IsVisible="{Binding ShowsOwnVolume}">
-                    <Slider Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
-                            Value="{Binding Channel.Volume, Mode=TwoWay}"
-                            AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"/>
-                  </layout:MeterFader>
-                  <!-- the interface's gain in its place, while this capture channel carries the interface's microphone -->
-                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
-                                     IsVisible="{Binding CarriesUnit}">
-                    <Slider Name="MatrixUnitGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Unit.GainMaxDb, FallbackValue=80}"
-                            Value="{Binding Unit.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Unit.GainLocked, FallbackValue=False}"
-                            AutomationProperties.Name="{Binding Unit.GainName}"/>
-                  </layout:MeterFader>
-                  <!-- an additional interface's gain in its place, while this row carries that interface's input -->
-                  <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
-                                     LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
-                                     IsVisible="{Binding CarriesExtraUnit}">
-                    <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
-                            Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
-                            AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
-                  </layout:MeterFader>
-                </Grid>
+                <StackPanel layout:StripPanel.Part="gain" Name="MatrixLevels" Spacing="2" VerticalAlignment="Center">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding HasGainFader}">
+                    <!-- the interface's gain, while this capture channel carries the interface's microphone -->
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                       IsVisible="{Binding CarriesUnit}">
+                      <Slider Name="MatrixUnitGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Unit.GainMaxDb, FallbackValue=80}"
+                              Value="{Binding Unit.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Unit.GainLocked, FallbackValue=False}"
+                              AutomationProperties.Name="{Binding Unit.GainName}"/>
+                    </layout:MeterFader>
+                    <!-- an additional interface's gain, while this row carries that interface's input -->
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                       IsVisible="{Binding CarriesExtraUnit}">
+                      <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
+                              Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
+                              AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
+                    </layout:MeterFader>
+                  </Grid>
+                  <!-- the channel's own volume, under the gain where the row has one, the meter under it
+                       otherwise; while the Wave XLR Pro's direct path carries this channel to the jacks, a
+                       mark says it reaches the mixes only -->
+                  <Grid Name="MatrixVolumeLine" ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding ShowsVolume}">
+                    <layout:MeterFader ShowsMeter="{Binding VolumeShowsMeter}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                      <Slider Name="MatrixVolume" Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                              Value="{Binding Channel.Volume, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                              ToolTip.Tip="{Binding Channel.VolumeTip}"/>
+                    </layout:MeterFader>
+                    <TextBlock Grid.Column="1" Name="MatrixVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center"
+                               Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
+                               AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
+                  </Grid>
+                </StackPanel>
                 <Panel layout:StripPanel.Part="mute" VerticalAlignment="Center">
                   <ToggleButton Classes="mute mutemini matrixMute" IsVisible="{Binding CarriesUnit}" IsChecked="{Binding Unit.Mute, Mode=TwoWay}"
                                 IsEnabled="{Binding !Unit.PhantomSettling, FallbackValue=False}" Padding="5,2" FontSize="11" VerticalAlignment="Center"
@@ -428,7 +502,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="layout:MatrixCellViewModel">
-                    <Border Classes="tile matrixCell" Name="MatrixCell" Classes.tinted="{Binding Tinted}"
+                    <Border Classes="tile matrixCell" Name="MatrixCell" Classes.tinted="{Binding Tinted}" Classes.stacked="{Binding Row.Stacked}"
                             Classes.dimmed="{Binding Dimmed}" Classes.empty="{Binding IsEmpty}" Classes.revealed="{Binding Send.Revealed}">
                       <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding HasSend}">
                         <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Send.Muted, Mode=TwoWay}"

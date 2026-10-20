@@ -56,7 +56,7 @@ public sealed class MixMatrixTests
     {
         var model = new MainViewModel(new DaemonClient());
         string State(string volume) => $$"""
-            {"channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"volume":0.5},{"id":"game","name":"Game"{{volume}}}],
+            {"channels":[{"id":"xlr1","name":"XLR 1","hardware":true{{volume}}},{"id":"game","name":"Game"{{volume}}}],
              "mixes":[{"id":"monitor","name":"Monitor A"}]}
             """;
         ApplyMixer.Invoke(model, [JsonNode.Parse(State(""))]);
@@ -77,8 +77,60 @@ public sealed class MixMatrixTests
         Assert.Contains(SkinStripParts.Gain, row.Spec.Parts);
         Assert.DoesNotContain(SkinStripParts.Meter, row.Spec.Parts);
         Assert.Contains(SkinStripParts.Gain, strip.Spec.Parts);
-        // A hardware input never takes one, whatever a state says.
-        Assert.False(model.Channels.Single(c => c.Id == "xlr1").HasVolume);
+        Assert.False(row.Stacked);
+        // XLR 1 takes one too.
+        Assert.True(model.Channels.Single(c => c.Id == "xlr1").HasVolume);
+    }
+
+    [Fact]
+    public void AHardwareRowStacksItsGainOverItsVolumeAndABoundOneKeepsTheVolume()
+    {
+        var model = new MainViewModel(new DaemonClient());
+        string State(string xlr1, string aux) => $$"""
+            {"channels":[{"id":"xlr1","name":"XLR 1","hardware":true{{xlr1}}},{"id":"aux","name":"Aux In","hardware":true{{aux}}},
+                         {"id":"game","name":"Game","volume":1}],
+             "mixes":[{"id":"monitor","name":"Monitor A"}]}
+            """;
+        // A daemon that gave volumes to application channels only: XLR 1's
+        // head is the gain alone, as it always was.
+        ApplyMixer.Invoke(model, [JsonNode.Parse(State("", ""))]);
+        model.RefreshBindings();
+        using var matrix = new MixMatrixViewModel(model);
+        MatrixRowViewModel Row(string id) => matrix.Rows.Single(r => r.Channel.Id == id);
+        Assert.True(Row("xlr1").CarriesUnit);
+        Assert.True(Row("xlr1").HasGainFader);
+        Assert.False(Row("xlr1").ShowsVolume);
+        Assert.False(Row("xlr1").Stacked);
+        Assert.Contains(SkinStripParts.Gain, Row("xlr1").Spec.Parts);
+
+        // With a volume, the gain stands over it: two faders in the gain
+        // part, the meter under the gain only.
+        ApplyMixer.Invoke(model, [JsonNode.Parse(State(",\"volume\":0.7", ",\"volume\":0.9"))]);
+        model.RefreshBindings();
+        Assert.True(Row("xlr1").ShowsVolume);
+        Assert.True(Row("xlr1").Stacked);
+        Assert.False(Row("xlr1").VolumeShowsMeter);
+        Assert.DoesNotContain(SkinStripParts.Meter, Row("xlr1").Spec.Parts);
+        Assert.Equal(0.7, Row("xlr1").Channel.Volume);
+        // Aux In stacks its level over its volume where the interface has the
+        // stage, and keeps the volume, with the meter under it, where it has not.
+        model.CapAuxInput = true;
+        Assert.True(Row("aux").Stacked);
+        model.CapAuxInput = false;
+        Assert.False(Row("aux").HasGainFader);
+        Assert.False(Row("aux").Stacked);
+        Assert.True(Row("aux").VolumeShowsMeter);
+        Assert.Contains(SkinStripParts.Gain, Row("aux").Spec.Parts);
+
+        // Bound to another source, XLR 1 has no gain: the volume alone, with
+        // the meter under it, where an application row has its own.
+        ApplyMixer.Invoke(model, [JsonNode.Parse(State(",\"volume\":0.7,\"binding\":{\"kind\":\"source\",\"source\":\"alsa_input.webcam\"}", ",\"volume\":0.9"))]);
+        model.RefreshBindings();
+        Assert.False(Row("xlr1").CarriesUnit);
+        Assert.False(Row("xlr1").Stacked);
+        Assert.True(Row("xlr1").VolumeShowsMeter);
+        Assert.Contains(SkinStripParts.Gain, Row("xlr1").Spec.Parts);
+        Assert.Equal(0.7, Row("xlr1").Channel.Volume);
     }
 
     [Fact]

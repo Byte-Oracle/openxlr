@@ -53,8 +53,9 @@ internal sealed record ChannelEntry
     public List<string> MutedIn { get; init; } = [];
 
     /// <summary>
-    /// The channel's own volume, which scales every send it makes; null for a
-    /// hardware input, and for every channel of a daemon that has none.
+    /// The channel's own volume, which scales every send it makes; null for
+    /// every channel of a daemon that has none, and for a hardware input of a
+    /// daemon that gave volumes to application and capture channels only.
     /// </summary>
     public double? Volume { get; init; }
     public bool Hardware { get; init; }
@@ -102,14 +103,14 @@ internal sealed record ChannelEntry
     public bool IsMuted(string mix) => MutedIn.Contains(mix);
 
     /// <summary>
-    /// Step the channel volume by <paramref name="by"/>, within 0 to 1. Only an
-    /// application or capture channel has one; any other selection says so.
+    /// Step the channel volume by <paramref name="by"/>, within 0 to 1. A mix
+    /// master, or a channel the daemon reports no volume for, says so.
     /// </summary>
     public static void StepVolume(App app, ChannelEntry? channel, double by)
     {
         if (channel?.Volume is not double volume)
         {
-            app.Say("Only an application or capture channel has a channel volume");
+            app.Say("This channel has no channel volume");
             return;
         }
         app.Link.Send("setChannelVolume", body =>

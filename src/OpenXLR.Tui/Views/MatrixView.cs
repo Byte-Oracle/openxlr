@@ -123,8 +123,8 @@ internal sealed class MatrixView : View
             // A microphone strip whose source is silent is named in the warning colour.
             Rgb nameColour = channel.Hardware && !channel.BindingConnected ? theme.TextWarning
                 : channel.Hardware ? theme.TextPrimary : theme.TextDetail;
-            // An application or capture channel's own volume stands between
-            // its name and its meter, since it scales every cell in the row.
+            // A channel's own volume stands between its name and its meter,
+            // since it scales every cell in the row.
             int volumeWidth = channel.Volume is null ? 0 : 5;
             screen.Text(x0, nameLine, channel.Name, nameColour, rowBack, bold: selectedRow,
                 maxWidth: meterX - x0 - 1 - volumeWidth);

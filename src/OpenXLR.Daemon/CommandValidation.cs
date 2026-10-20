@@ -143,8 +143,8 @@ public static class CommandValidation
                 return cmd.Cmd == "setLevel" ? Finite(cmd, "value") : null;
             case "setChannelVolume":
                 if (cmd.Channel is null) return "setChannelVolume: need 'channel'";
-                if (TooLong(cmd.Channel, 36) || !layout.HasEditableChannel(cmd.Channel))
-                    return $"setChannelVolume: '{Short(cmd.Channel)}' is not an application or capture channel";
+                if (TooLong(cmd.Channel, 36) || !layout.HasChannel(cmd.Channel))
+                    return $"setChannelVolume: unknown channel '{Short(cmd.Channel)}'";
                 return Finite(cmd, "value");
             case "setMixVolume":
             case "setMixMuted":

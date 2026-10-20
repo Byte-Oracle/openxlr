@@ -6,16 +6,20 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
+using OpenXLR.UI.Localization;
 using OpenXLR.UI.Skinning;
 using static OpenXLR.Tests.WindowLayoutTests;
 
 namespace OpenXLR.Tests;
 
 /// <summary>
-/// The classic channel tiles keep their send rows level: while any shown tile
-/// has a Volume row, a tile without one leaves an empty space exactly that
-/// tall, so Monitor A sits at one height across the panel. Run from the window
-/// layout and skin tests, on their UI thread, with preferences of its own.
+/// The classic channel tiles keep their send rows level: every tile has a
+/// Volume row, XLR 1, XLR 2 and Aux In included, so no tile holds an empty
+/// space; against a daemon that gave volumes to application and capture
+/// channels only, while any shown tile has a Volume row, a tile without one
+/// leaves an empty space exactly that tall, so Monitor A sits at one height
+/// across the panel. Run from the window layout and skin tests, on their UI
+/// thread, with preferences of its own.
 /// </summary>
 internal static class ChannelTileAlignmentWindowTests
 {
@@ -27,16 +31,19 @@ internal static class ChannelTileAlignmentWindowTests
 
     /// <summary>
     /// Three hardware strips, two applications and a capture channel, each with
-    /// the icon its kind gets, as a current daemon reports them.
+    /// the icon its kind gets, as a current daemon reports them: every channel
+    /// with a volume, or, with <paramref name="hardwareVolume"/> false, as a
+    /// daemon that gave volumes to application and capture channels only.
     /// </summary>
-    private static string Fixture(bool hideApps = false, string mixes = Mixes)
+    private static string Fixture(bool hideApps = false, string mixes = Mixes, bool hardwareVolume = true)
     {
         string hidden = hideApps ? ",\"hidden\":true" : "";
+        string hw = hardwareVolume ? "\"volume\":0.9," : "";
         return "{" + mixes + $$$"""
-            ,"channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"appearance":{"defaultIcon":"mic"},
+            ,"channels":[{"id":"xlr1","name":"XLR 1","hardware":true,{{{hw}}}"appearance":{"defaultIcon":"mic"},
                           "levels":{"monitor":1,"monitor2":1,"stream":1,"chat":1,"auxout":1}},
-                         {"id":"xlr2","name":"XLR 2","hardware":true,"appearance":{"defaultIcon":"mic"}},
-                         {"id":"aux","name":"Aux In","hardware":true,"appearance":{"defaultIcon":"jack"}},
+                         {"id":"xlr2","name":"XLR 2","hardware":true,{{{hw}}}"appearance":{"defaultIcon":"mic"}},
+                         {"id":"aux","name":"Aux In","hardware":true,{{{hw}}}"appearance":{"defaultIcon":"jack"}},
                          {"id":"game","name":"Game","volume":1,"levels":{"monitor":1,"stream":1},"appearance":{"defaultIcon":"game"{{{hidden}}}}},
                          {"id":"music","name":"Music","volume":0.8,"levels":{"monitor":0.8},"appearance":{"defaultIcon":"music"{{{hidden}}}}},
                          {"id":"cam","name":"Camera","captureSource":"alsa_input.usb","captureConnected":true,"volume":0.5,
@@ -46,7 +53,11 @@ internal static class ChannelTileAlignmentWindowTests
     }
 
     /// <summary>The same channels from a daemon that reports no channel volume.</summary>
-    private static readonly string OlderDaemon = Fixture().Replace("\"volume\":1,", "").Replace("\"volume\":0.8,", "").Replace("\"volume\":0.5,", "");
+    private static readonly string OlderDaemon = Fixture(hardwareVolume: false)
+        .Replace("\"volume\":1,", "").Replace("\"volume\":0.8,", "").Replace("\"volume\":0.5,", "");
+
+    /// <summary>The same channels from a daemon that gave volumes to application and capture channels only.</summary>
+    private static readonly string PreviousDaemon = Fixture(hardwareVolume: false);
 
     /// <summary>
     /// The default skin through every case: both control sizes at a narrow and
@@ -68,9 +79,54 @@ internal static class ChannelTileAlignmentWindowTests
             >= scroller.TranslatePoint(default, window)!.Value.Y + scroller.Bounds.Height);
 
         SweepSizes(window, "default");
+        // Every tile has its Volume row, so none holds an empty space.
+        AssertEveryTileHasItsVolume(window, "from a current daemon");
 
-        // Every channel with a volume hidden: nothing is reserved above XLR 1's sends.
-        Apply(model, Fixture(hideApps: true));
+        // While the Wave XLR Pro's direct path carries XLR 1 to the jacks, a
+        // mark beside its Volume label and the fader's tooltip say the volume
+        // reaches the mixes only; the rows stay level.
+        ChannelViewModel xlr1 = model.Channels.Single(c => c.Id == "xlr1");
+        TextBlock note = Tile(window, "xlr1").GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "ChannelVolumeNote");
+        Slider xlr1Volume = Tile(window, "xlr1").GetVisualDescendants().OfType<Slider>().First(s => s.DataContext is ChannelViewModel);
+        Assert.False(note.IsEffectivelyVisible);
+        Assert.Equal(Localizer.Text("ChannelVolumeTip"), ToolTip.GetTip(xlr1Volume));
+        StopConnecting(window);
+        xlr1.DirectMonitored = true;
+        foreach (bool touch in new[] { false, true })
+        {
+            SkinService.ApplyControlSizing(touch);
+            foreach (double width in new[] { 640d, 1040 })
+            {
+                Layout(window, width, 900);
+                string where = $"with the direct path, {(touch ? "touch" : "standard")} at {width}";
+                Assert.Equal(6, AssertSendRowsLineUp(window, where).Length);
+                note = Tile(window, "xlr1").GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "ChannelVolumeNote");
+                xlr1Volume = Tile(window, "xlr1").GetVisualDescendants().OfType<Slider>().First(s => s.DataContext is ChannelViewModel);
+                Assert.True(note.IsEffectivelyVisible, where);
+                AssertInside(note, Tile(window, "xlr1"));
+                Assert.Equal(Localizer.Text("ChannelVolumeMixesOnly"), Avalonia.Automation.AutomationProperties.GetName(note));
+                Assert.Equal(Localizer.Text("ChannelVolumeDirectTip"), ToolTip.GetTip(note));
+                Assert.Equal(Localizer.Text("ChannelVolumeDirectTip"), ToolTip.GetTip(xlr1Volume));
+                if (width == 1040) Capture(window, $"tiles-direct-{(touch ? "touch" : "standard")}-1040");
+            }
+        }
+        SkinService.ApplyControlSizing(false);
+        xlr1.DirectMonitored = false;
+        Layout(window, 1040, 900);
+        Assert.False(Tile(window, "xlr1").GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "ChannelVolumeNote").IsEffectivelyVisible);
+
+        // A daemon that gave volumes to application and capture channels only:
+        // the hardware tiles keep an empty space as tall as the Volume row.
+        Apply(model, PreviousDaemon);
+        foreach (double width in new[] { 640d, 1040 })
+        {
+            Layout(window, width, 900);
+            Assert.Equal(6, AssertSendRowsLineUp(window, $"against the previous daemon at {width}").Length);
+        }
+        Capture(window, "tiles-aligned-previous-1040");
+
+        // From that daemon, every channel with a volume hidden: nothing is reserved above XLR 1's sends.
+        Apply(model, Fixture(hideApps: true, hardwareVolume: false));
         Layout(window, 1040, 900);
         Assert.Equal(["xlr1", "xlr2", "aux"], AssertSendRowsLineUp(window, "with the volume channels hidden"));
         // Show hidden brings them back faded, Volume row and all, and the hardware tiles make room again.
@@ -99,12 +155,18 @@ internal static class ChannelTileAlignmentWindowTests
             Assert.Equal(6, AssertSendRowsLineUp(window, $"against an older daemon at {width}").Length);
         }
 
-        // The compact view shows one tile: a hardware one reserves nothing, an application one keeps its Volume row.
-        Apply(model, Fixture());
+        // The compact view shows one tile with its Volume row, XLR 1's too; from
+        // the previous daemon a hardware one reserves nothing.
+        Apply(model, PreviousDaemon);
         Assert.Null(model.ChooseMixerView(MainViewModel.CompactView));
         model.SelectedCompactChannel = model.Channels.Single(c => c.Id == "xlr1");
         Layout(window, 640, 900);
+        Assert.Equal(["xlr1"], AssertSendRowsLineUp(window, "in the compact view on XLR 1 from the previous daemon"));
+        Apply(model, Fixture());
+        model.SelectedCompactChannel = model.Channels.Single(c => c.Id == "xlr1");
+        Layout(window, 640, 900);
         Assert.Equal(["xlr1"], AssertSendRowsLineUp(window, "in the compact view on XLR 1"));
+        AssertEveryTileHasItsVolume(window, "in the compact view on XLR 1");
         model.SelectedCompactChannel = model.Channels.Single(c => c.Id == "game");
         Layout(window, 640, 900);
         Assert.Equal(["game"], AssertSendRowsLineUp(window, "in the compact view on Game"));
@@ -117,6 +179,7 @@ internal static class ChannelTileAlignmentWindowTests
         {
             Layout(popped, width, 700);
             Assert.Equal(6, AssertSendRowsLineUp(popped, $"in the popped-out mixer at {width}").Length);
+            AssertEveryTileHasItsVolume(popped, $"in the popped-out mixer at {width}");
         }
         popped.Close();
         Dispatcher.UIThread.RunJobs();
@@ -158,7 +221,9 @@ internal static class ChannelTileAlignmentWindowTests
             foreach (double width in new[] { 640d, 1040, 1800 })
             {
                 Layout(window, width, 900);
-                Assert.Equal(6, AssertSendRowsLineUp(window, $"{skin}, {(touch ? "touch" : "standard")} controls, at {width}").Length);
+                string where = $"{skin}, {(touch ? "touch" : "standard")} controls, at {width}";
+                Assert.Equal(6, AssertSendRowsLineUp(window, where).Length);
+                AssertEveryTileHasItsVolume(window, where);
                 if (width == 1040) Capture(window, $"tiles-aligned-{skin}-{(touch ? "touch" : "standard")}-1040");
             }
         }
@@ -217,6 +282,24 @@ internal static class ChannelTileAlignmentWindowTests
             }
         }
         return [.. tiles.Select(t => ((ChannelViewModel)t.DataContext!).Id)];
+    }
+
+    /// <summary>Every shown tile draws its Volume row, so no tile holds the empty space kept for a tile without one.</summary>
+    private static void AssertEveryTileHasItsVolume(TopLevel root, string where)
+    {
+        Border[] tiles = [.. root.GetVisualDescendants().OfType<Border>()
+            .Where(b => b.DataContext is ChannelViewModel && b.Classes.Contains("tile") && b.IsEffectivelyVisible)];
+        Assert.NotEmpty(tiles);
+        foreach (Border tile in tiles)
+        {
+            var channel = (ChannelViewModel)tile.DataContext!;
+            Assert.True(channel.HasVolume, $"{channel.Name} {where}");
+            StackPanel volume = tile.GetVisualDescendants().OfType<StackPanel>().Single(p => p.Name == "ChannelVolume");
+            Assert.True(volume.IsEffectivelyVisible && volume.Bounds.Height > 0, $"{channel.Name} {where}");
+            Slider fader = volume.GetVisualDescendants().OfType<Slider>().Single();
+            Assert.Equal(channel.Volume, fader.Value, 3);
+            Assert.Equal(Localizer.Format("ChannelVolumeName", channel.Name), Avalonia.Automation.AutomationProperties.GetName(fader));
+        }
     }
 
     private static Border Tile(TopLevel root, string id) => root.GetVisualDescendants().OfType<Border>()

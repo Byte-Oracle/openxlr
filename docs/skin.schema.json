@@ -671,7 +671,7 @@
           "type": "number",
           "minimum": 28,
           "maximum": 120,
-          "description": "the height of a row: its head and every cell in it"
+          "description": "the height of a row: its head and every cell in it; a row whose head stacks a gain over the channel volume is as tall as the two faders need, never less"
         },
         "Ox.Matrix.MutedBackground": {
           "$ref": "#/$defs/brush",

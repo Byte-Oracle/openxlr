@@ -478,6 +478,15 @@ public sealed partial class MainViewModel : ViewModelBase
     private bool _outLineOut;
     public bool OutLineOut { get => _outLineOut; set { if (Set(ref _outLineOut, value) && !_applying) _ = _client.SetControlAsync("outLineOut", value); } }
 
+    private bool _hpMixMicDirect;
+    /// <summary>
+    /// The Wave XLR Pro carries its first input straight to its headphone
+    /// jacks (its zero-latency direct path), as the device reports it. The
+    /// daemon drives the path; the window only reads it, to say on the
+    /// carrying channel that its volume does not reach that path.
+    /// </summary>
+    public bool HpMixMicDirect { get => _hpMixMicDirect; private set => Set(ref _hpMixMicDirect, value); }
+
     // USB Aux input stage.
     private double _auxLevelDb;
     public double AuxLevelDb
@@ -808,6 +817,9 @@ public sealed partial class MainViewModel : ViewModelBase
                 if (!SliderSync.RecentlyTouched("aux")) AuxLevelDb = s["auxLevelDb"]?.GetValue<double>() ?? 0;
                 AuxLevelLock = s["auxLevelLock"]?.GetValue<bool>() ?? false;
             }
+
+            // Read outside the state block, so a unit that left takes its path with it.
+            HpMixMicDirect = node["state"]?["hpMixMicDirect"]?.GetValue<bool>() ?? false;
 
             ApplyDetected(node["detected"]);
             ApplyProfiles(node["profiles"]);
@@ -1713,11 +1725,30 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     private bool _applyingVolume;
     private bool _hasVolume;
     /// <summary>
-    /// The daemon reports a channel volume for this channel: an application
-    /// or capture channel. A hardware input has none, and neither does a
-    /// channel of a daemon that predates channel volumes.
+    /// The daemon reports a channel volume for this channel. Every channel
+    /// has one, hardware inputs too, except on a daemon that predates channel
+    /// volumes, or one that gave them to application and capture channels
+    /// only.
     /// </summary>
     public bool HasVolume { get => _hasVolume; private set => Set(ref _hasVolume, value); }
+
+    private bool _directMonitored;
+    /// <summary>
+    /// The Wave XLR Pro's direct microphone path carries this channel's input
+    /// to the headphone jacks: the device reports the path on and this channel
+    /// carries the unit's first input. The headphones then hear the
+    /// microphone through the hardware, which the channel volume does not
+    /// reach; the volume still changes every mix. Set by
+    /// <see cref="MainViewModel"/>.
+    /// </summary>
+    public bool DirectMonitored
+    {
+        get => _directMonitored;
+        internal set { if (Set(ref _directMonitored, value)) Raise(nameof(VolumeTip)); }
+    }
+
+    /// <summary>The volume fader's tooltip, which says what the volume does not reach while the direct path is on.</summary>
+    public string VolumeTip => _directMonitored ? Localizer.Text("ChannelVolumeDirectTip") : Localizer.Text("ChannelVolumeTip");
 
     private double _volume = 1.0;
     /// <summary>The channel's own volume, which scales every send it makes (0..1).</summary>
@@ -1805,7 +1836,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
                 ? CaptureConnected ? Localizer.Format("CaptureConnectedPort", port + 1) : Localizer.Format("CaptureOfflinePort", port + 1)
                 : CaptureConnected ? Localizer.Format("CaptureConnectedPair", capturePair) : Localizer.Format("CaptureOfflinePair", capturePair);
         double? volume = n["volume"]?.GetValue<double>();
-        HasVolume = volume is not null && !IsHardware;
+        HasVolume = volume is not null;
         _applyingVolume = true;
         try
         {

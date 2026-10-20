@@ -184,7 +184,7 @@ every save. Every field is optional on read; an absent one is empty or off.
 | `mixVolumes` | mix id to master level |
 | `mixMuted` | mix ids whose master is muted |
 | `levels` | `channel\|mix` to send level |
-| `channelVolumes` | application or capture channel id to its own volume, 0 to 1; an absent channel is at 100% |
+| `channelVolumes` | channel id to its own volume, 0 to 1, the hardware inputs included; an absent channel is at 100% |
 | `channelMuted` | `channel\|mix` cells whose send is muted |
 | `monitorOutputs` | the selected outputs, in order; the first one is what `@monitor` resolves to |
 | `monitorOutput` | the older single selection, read only when `monitorOutputs` is empty |

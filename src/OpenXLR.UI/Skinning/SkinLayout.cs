@@ -222,8 +222,9 @@ public static class SkinMatrixParts
     /// <summary>
     /// A row head's parts, in their default order: the channel's icon and
     /// name, a microphone strip's input binding, its own meter, the input's
-    /// hardware gain or Aux In's level (an application or capture channel's
-    /// own volume), the input's hardware mute and the input's plugin chain. A
+    /// hardware gain or Aux In's level over the channel's own volume (the
+    /// volume alone on a channel without one), the input's hardware mute and
+    /// the input's plugin chain. A
     /// channel without one of them, an application channel without mute or
     /// chain, simply does not draw it. The binding stands under the name, in
     /// the name column, wherever the order puts it.

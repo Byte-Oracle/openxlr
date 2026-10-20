@@ -38,10 +38,10 @@ public sealed class ChannelVolumeTests
     [Fact]
     public void RecallTakesSavedValuesAndPutsOldDescribedChannelsBackAtFullVolume()
     {
-        var volumes = new Dictionary<string, double> { ["game"] = 0.3, ["music"] = 0.4, ["late"] = 0.5, ["cam"] = 0.6 };
-        Mixer.RecallChannelVolumes(volumes, ["game", "music", "late", "cam"],
+        var volumes = new Dictionary<string, double> { ["game"] = 0.3, ["music"] = 0.4, ["late"] = 0.5, ["cam"] = 0.6, ["xlr2"] = 0.6, ["aux"] = 0.3 };
+        Mixer.RecallChannelVolumes(volumes, ["xlr1", "xlr2", "aux", "game", "music", "late", "cam"],
             new Dictionary<string, double> { ["game"] = 0.7, ["cam"] = 1.5, ["xlr1"] = 0.2, ["gone"] = 0.1, ["music"] = double.NaN },
-            ["game|monitor", "music|monitor", "music|chat", "xlr1|monitor", "bad"]);
+            ["game|monitor", "music|monitor", "music|chat", "xlr1|monitor", "xlr2|monitor", "aux|stream", "bad"]);
         // A saved value is taken and clamped to 0..1.
         Assert.Equal(0.7, volumes["game"]);
         Assert.Equal(1.0, volumes["cam"]);
@@ -50,8 +50,13 @@ public sealed class ChannelVolumeTests
         Assert.False(volumes.ContainsKey("music"));
         // A channel the data says nothing about keeps its volume.
         Assert.Equal(0.5, volumes["late"]);
-        // Hardware inputs and channels that do not exist are not given one.
-        Assert.False(volumes.ContainsKey("xlr1"));
+        // A hardware input takes its saved volume like any channel.
+        Assert.Equal(0.2, volumes["xlr1"]);
+        // A file written before the hardware inputs took a volume describes
+        // their sends without one: they play at full volume, as they did.
+        Assert.False(volumes.ContainsKey("xlr2"));
+        Assert.False(volumes.ContainsKey("aux"));
+        // A channel that does not exist is not given one.
         Assert.False(volumes.ContainsKey("gone"));
 
         // A profile saved before channel volumes carries none at all.
@@ -62,7 +67,7 @@ public sealed class ChannelVolumeTests
     }
 
     [Fact]
-    public void OnlyApplicationAndCaptureChannelsTakeAVolumeAndItIsSaved()
+    public void EveryChannelTakesAVolumeAndItIsSaved()
     {
         using var mixer = new Mixer();
         Set(mixer, "_config", new MixerConfig
@@ -87,7 +92,7 @@ public sealed class ChannelVolumeTests
         try
         {
             // Nothing is changed before a value is set: every channel is at unity.
-            Assert.Equal(new Dictionary<string, double> { ["game"] = 1, ["cam"] = 1 }, mixer.ExportSettings().ChannelVolumes);
+            Assert.Equal(new Dictionary<string, double> { ["xlr1"] = 1, ["game"] = 1, ["cam"] = 1 }, mixer.ExportSettings().ChannelVolumes);
 
             mixer.SetChannelVolume("game", 0.5);
             mixer.SetChannelVolume("cam", 7);
@@ -97,10 +102,11 @@ public sealed class ChannelVolumeTests
             // for its leg and the sweep pushes the stored volume when it comes.
             Assert.Contains("game|monitor", Field<HashSet<string>>(mixer, "_pendingCells"));
             Assert.Contains("game|chat", Field<HashSet<string>>(mixer, "_pendingCells"));
-            Assert.DoesNotContain("xlr1|monitor", Field<HashSet<string>>(mixer, "_pendingCells"));
+            Assert.Contains("xlr1|monitor", Field<HashSet<string>>(mixer, "_pendingCells"));
+            Assert.Contains("xlr1|chat", Field<HashSet<string>>(mixer, "_pendingCells"));
 
             MixerSettings settings = mixer.ExportSettings();
-            Assert.Equal(new Dictionary<string, double> { ["game"] = 0.5, ["cam"] = 1 }, settings.ChannelVolumes);
+            Assert.Equal(new Dictionary<string, double> { ["xlr1"] = 0.1, ["game"] = 0.5, ["cam"] = 1 }, settings.ChannelVolumes);
             Assert.Equal(settings.ChannelVolumes, mixer.ExportScene().ChannelVolumes);
             // The send levels themselves are untouched.
             Assert.All(settings.Levels.Values, level => Assert.Equal(0.8, level));
@@ -147,7 +153,34 @@ public sealed class ChannelVolumeTests
     }
 
     [Fact]
-    public void TheCommandTakesAnApplicationOrCaptureChannelAndAFiniteValue()
+    public void AStripKeepsItsVolumeWhenItsBindingChangesAndAProfileRecallsIt()
+    {
+        using var mixer = new Mixer();
+        Set(mixer, "_config", MixerConfig.Default());
+        mixer.SetChannelVolume("xlr1", 0.4);
+        mixer.SetChannelVolume("aux", 0.6);
+        // A binding moves the strip's source, not its level.
+        mixer.SetInputBinding("xlr1", new SourceBinding("alsa_input.usb-webcam", 0, 0));
+        Assert.Equal(0.4, mixer.ExportSettings().ChannelVolumes["xlr1"]);
+        mixer.SetInputBindings(null);
+        Assert.Equal(0.4, mixer.ExportSettings().ChannelVolumes["xlr1"]);
+        Assert.Equal(0.6, mixer.ExportSettings().ChannelVolumes["aux"]);
+
+        // A profile carries the strips' volumes; one saved before they had
+        // any recalls each strip it describes at full volume.
+        MixerScene scene = mixer.ExportScene();
+        Assert.Equal(0.4, scene.ChannelVolumes!["xlr1"]);
+        Assert.Equal(0.6, scene.ChannelVolumes["aux"]);
+        var volumes = new Dictionary<string, double> { ["xlr1"] = 0.1, ["aux"] = 0.1 };
+        Mixer.RecallChannelVolumes(volumes, ["xlr1", "aux"], scene.ChannelVolumes, scene.Levels.Keys);
+        Assert.Equal(0.4, volumes["xlr1"]);
+        Assert.Equal(0.6, volumes["aux"]);
+        Mixer.RecallChannelVolumes(volumes, ["xlr1", "aux"], new Dictionary<string, double> { ["game"] = 0.5 }, ["xlr1|monitor", "aux|monitor"]);
+        Assert.Empty(volumes);
+    }
+
+    [Fact]
+    public void TheCommandTakesAnyChannelAndAFiniteValue()
     {
         using var mixer = new Mixer();
         Set(mixer, "_config", MixerConfig.Default() with
@@ -158,10 +191,13 @@ public sealed class ChannelVolumeTests
         string? Check(string json) => CommandValidation.Check(Cmd(json), mixer, _ => null);
         Assert.Null(Check("""{"cmd":"setChannelVolume","channel":"game","value":0.5}"""));
         Assert.Null(Check("""{"cmd":"setChannelVolume","channel":"cam","value":2}"""));   // clamped by the mixer
-        Assert.Contains("not an application or capture channel", Check("""{"cmd":"setChannelVolume","channel":"xlr1","value":0.5}"""));
-        Assert.Contains("not an application or capture channel", Check("""{"cmd":"setChannelVolume","channel":"aux","value":0.5}"""));
-        Assert.Contains("not an application or capture channel", Check("""{"cmd":"setChannelVolume","channel":"nope","value":0.5}"""));
-        Assert.Contains("not an application or capture channel", Check("{\"cmd\":\"setChannelVolume\",\"channel\":\"" + new string('g', 37) + "\",\"value\":0.5}"));
+        // The hardware inputs take one too, after the interface's gain.
+        Assert.Null(Check("""{"cmd":"setChannelVolume","channel":"xlr1","value":0.5}"""));
+        Assert.Null(Check("""{"cmd":"setChannelVolume","channel":"xlr2","value":0.5}"""));
+        Assert.Null(Check("""{"cmd":"setChannelVolume","channel":"aux","value":0.5}"""));
+        Assert.Contains("unknown channel 'nope'", Check("""{"cmd":"setChannelVolume","channel":"nope","value":0.5}"""));
+        Assert.Contains("unknown channel", Check("{\"cmd\":\"setChannelVolume\",\"channel\":\"" + new string('g', 37) + "\",\"value\":0.5}"));
+        Assert.Contains("finite number", Check("""{"cmd":"setChannelVolume","channel":"xlr1","value":"loud"}"""));
         Assert.Contains("need 'channel'", Check("""{"cmd":"setChannelVolume","value":0.5}"""));
         Assert.Contains("finite number", Check("""{"cmd":"setChannelVolume","channel":"game","value":"loud"}"""));
         Assert.Contains("finite number", Check("""{"cmd":"setChannelVolume","channel":"game"}"""));

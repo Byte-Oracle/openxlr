@@ -34,9 +34,10 @@ public enum InputStripKind
 /// input controls go on the channel that carries the interface's microphone
 /// (<see cref="ChannelViewModel.ShownUnitInput"/>): its XLR strip, or a
 /// capture channel on the unit's own node while the strip is bound to
-/// another source. An application or capture channel otherwise has only
-/// what it has: its name, its meter and the channel's own volume. Nothing
-/// here holds a value of its own.
+/// another source. Every channel also has its own volume, after the
+/// interface's gain on a strip that carries one; an application or capture
+/// channel otherwise has only its name and its meter. Nothing here holds a
+/// value of its own.
 /// </summary>
 public sealed class InputRackViewModel : IDisposable
 {
@@ -80,16 +81,9 @@ public sealed class InputRackViewModel : IDisposable
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
         // A capture channel carrying the interface's microphone also has its switches.
         InputStripKind.Capture => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
-        // An application channel's gain is its channel volume.
+        // An application channel's gain part holds its channel volume alone.
         _ => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
     };
-
-    /// <summary>
-    /// Whether this kind's gain part is the channel volume rather than the
-    /// interface's gain: an application or capture channel. It is drawn only
-    /// once the daemon reports a volume for the channel.
-    /// </summary>
-    public static bool IsChannelVolumeKind(InputStripKind kind) => kind is InputStripKind.Application or InputStripKind.Capture;
 
     /// <summary>What a channel is, as the rack draws it.</summary>
     public static InputStripKind KindOf(ChannelViewModel channel) => channel switch
@@ -180,13 +174,14 @@ public sealed class InputStripViewModel : ViewModelBase
     /// Whether this channel has the part now. The gain and the switches belong
     /// to the interface's input, so a strip bound to another source has
     /// neither, except XLR 1's software low cut and ClipGuard, and a capture
-    /// channel carrying the interface's microphone has both. A channel's own
-    /// volume shows once the daemon reports one.
+    /// channel carrying the interface's microphone has both. The gain part
+    /// also holds the channel's own volume, which every channel has once the
+    /// daemon reports one, so a bound strip keeps the part for its volume.
     /// </summary>
     private bool Available(string part) => (Kind, part) switch
     {
         (InputStripKind.Xlr1, SkinStripParts.HardwareControls) => CarriesUnit || CarriesExtraUnit || Main.ShowSoftLowCut || Main.ShowSoftClipGuard,
-        (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit,
+        (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         (InputStripKind.Xlr2 or InputStripKind.Capture, SkinStripParts.HardwareControls) => CarriesUnit || CarriesExtraUnit,
         (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         _ => true,
@@ -204,7 +199,7 @@ public sealed class InputStripViewModel : ViewModelBase
     /// <summary>The strip draws an additional interface's gain and switches.</summary>
     public bool CarriesExtraUnit => Channel.CarriesExtraUnit;
 
-    /// <summary>A capture channel carrying the interface's microphone draws its own volume beside the interface's gain.</summary>
+    /// <summary>The strip draws the channel's own volume, under the interface's gain or Aux In level where it has one.</summary>
     public bool ShowsVolume => Channel.HasVolume;
 
     internal void RefreshSpec()

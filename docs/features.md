@@ -121,8 +121,8 @@ does not reach the speakers until unmuted.
 
 The submixer shows the channel strips under its own header and the mix
 masters below them under OUTPUT MIXES, so channel sends and mix master
-controls can be distinguished at a glance. XLR 1, XLR 2 and Aux In leave an
-empty space where an application's Volume row is, so the send rows line up
+controls can be distinguished at a glance. Every strip has a Volume row
+above its sends, the hardware inputs included, so the send rows line up
 across the strips.
 
 The **Flow** window shows inputs, channels, mixes and outputs in four columns.
@@ -144,12 +144,17 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   microphone), and Aux (what a second computer on the USB Aux port
   receives)
 - Per-channel, per-mix send levels and mutes; per-mix masters
-- A volume for each application and capture channel that scales every
-  send of the channel at once, like the channel level in Wave Link 3.
-  It is folded into the send streams the mixer already has, so it adds
-  no node and no delay. The window draws it in the channel tiles, in
-  the input rack and in the mix matrix's row heads with the channel's
-  meter under it; the terminal mixer and the OpenDeck dials change it too
+- A volume for every channel that scales every send of the channel at
+  once, like the channel level in Wave Link 3. It is folded into the send
+  streams the mixer already has, so it adds no node and no delay. XLR 1,
+  XLR 2 and Aux In have one too, after the interface's gain, so a strip
+  bound to a webcam or USB microphone without a gain control still has a
+  level, and a strip with plugins has one after them. The window draws it
+  in the channel tiles, in the input rack and in the mix matrix's row
+  heads, under the gain on a hardware row; the terminal mixer and the
+  OpenDeck dials change it too. The Wave XLR Pro's zero-latency headphone
+  path is hardware and does not follow it, and the window says so on the
+  channel it carries
 - Bidirectional Linux volume and mute controls for every monitor mix,
   with an explicit 150% boost button for monitor masters and output volume
 - An editable layout: Edit layout in the SUBMIXER card adds, renames,

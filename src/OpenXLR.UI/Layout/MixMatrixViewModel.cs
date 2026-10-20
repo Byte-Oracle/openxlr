@@ -117,11 +117,11 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
     {
         InputStripKind.Xlr1 or InputStripKind.Xlr2 => SkinMatrixParts.RowHead,
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
-        // A capture channel's gain is its channel volume, or the interface's
-        // gain while it carries the interface's microphone, which also brings
-        // the interface's mute.
+        // A capture channel's gain part holds its channel volume, under the
+        // interface's gain while it carries the interface's microphone, which
+        // also brings the interface's mute.
         InputStripKind.Capture => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute],
-        // An application channel's gain is its channel volume.
+        // An application channel's gain part holds its channel volume alone.
         _ => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
     };
 
@@ -418,6 +418,8 @@ public sealed class MatrixRowViewModel : ViewModelBase
         channel.PropertyChanged += OnChannelChanged;
         channel.Sends.CollectionChanged += OnSendsChanged;
         channel.Appearance.PropertyChanged += OnAppearanceChanged;
+        // Aux In's level comes and goes with the interface's stage.
+        if (Kind == InputStripKind.AuxIn) matrix.Main.PropertyChanged += OnMainChanged;
     }
 
     public MixMatrixViewModel Matrix { get; }
@@ -451,15 +453,16 @@ public sealed class MatrixRowViewModel : ViewModelBase
     /// <summary>
     /// Whether this channel has the part now. The gain and the mute belong to
     /// the interface's input: an XLR row bound to another source has neither,
-    /// and a capture channel carrying the interface's microphone has both, its
-    /// gain the interface's in place of its own volume. An application or
-    /// capture channel's own volume shows once the daemon reports one.
+    /// and a capture channel carrying the interface's microphone has both.
+    /// The gain part also holds the channel's own volume, which every channel
+    /// has once the daemon reports one, so a row keeps the part for its
+    /// volume when it has no gain.
     /// </summary>
     private bool Available(string part) => (Kind, part) switch
     {
-        (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain or SkinStripParts.Mute) => CarriesUnit || CarriesExtraUnit,
-        (InputStripKind.Capture, SkinStripParts.Mute) => CarriesUnit || CarriesExtraUnit,
-        (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
+        (InputStripKind.Xlr1 or InputStripKind.Xlr2 or InputStripKind.Capture, SkinStripParts.Mute) => CarriesUnit || CarriesExtraUnit,
+        (InputStripKind.AuxIn, SkinStripParts.Gain) => Main.CapAuxInput || Channel.HasVolume,
+        (_, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         _ => true,
     };
 
@@ -467,6 +470,10 @@ public sealed class MatrixRowViewModel : ViewModelBase
     {
         Spec = CreateSpec();
         Raise(nameof(Spec));
+        Raise(nameof(HasGainFader));
+        Raise(nameof(ShowsVolume));
+        Raise(nameof(VolumeShowsMeter));
+        Raise(nameof(Stacked));
     }
 
     /// <summary>The interface's input this row carries, whose gain and mute its head draws, or null.</summary>
@@ -481,8 +488,30 @@ public sealed class MatrixRowViewModel : ViewModelBase
     /// <summary>The head draws an additional interface's gain and mute.</summary>
     public bool CarriesExtraUnit => Channel.CarriesExtraUnit;
 
-    /// <summary>A capture or application row draws its own volume: it carries no interface's input.</summary>
-    public bool ShowsOwnVolume => !CarriesUnit && !CarriesExtraUnit;
+    /// <summary>
+    /// The head's gain part draws a gain: the interface's while the row
+    /// carries its input, an additional interface's, or Aux In's level where
+    /// the interface has the stage.
+    /// </summary>
+    public bool HasGainFader => CarriesUnit || CarriesExtraUnit || Kind == InputStripKind.AuxIn && Main.CapAuxInput;
+
+    /// <summary>The head's gain part draws the channel's own volume: the daemon reports one.</summary>
+    public bool ShowsVolume => Channel.HasVolume;
+
+    /// <summary>
+    /// The channel's meter runs under the volume fader: the skin puts meters
+    /// under faders and no gain fader above already carries it.
+    /// </summary>
+    public bool VolumeShowsMeter => MeterUnderFader && !HasGainFader;
+
+    /// <summary>
+    /// The head stacks a gain over the channel's volume, two faders in one
+    /// part, the gain first as the signal meets it. The row is then as tall as
+    /// the two need and at least the skin's row height, and its cells follow;
+    /// every other row keeps the row height. A row with one of the two keeps
+    /// one fader where it always was.
+    /// </summary>
+    public bool Stacked => HasGainFader && ShowsVolume && Spec.Parts.Contains(SkinStripParts.Gain, StringComparer.Ordinal);
 
     /// <summary>The head draws the strip's binding chip under the name: XLR 1 or XLR 2, unless the skin hides it.</summary>
     public bool ShowsBinding => Kind is InputStripKind.Xlr1 or InputStripKind.Xlr2
@@ -574,12 +603,17 @@ public sealed class MatrixRowViewModel : ViewModelBase
                 break;
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
             case nameof(ChannelViewModel.ShownUnitInput):
-                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); Raise(nameof(ShowsOwnVolume)); RefreshSpec();
+                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); RefreshSpec();
                 break;
             case nameof(ChannelViewModel.ExtraUnitInput):
-                Raise(nameof(ExtraUnit)); Raise(nameof(CarriesExtraUnit)); Raise(nameof(ShowsOwnVolume)); RefreshSpec();
+                Raise(nameof(ExtraUnit)); Raise(nameof(CarriesExtraUnit)); RefreshSpec();
                 break;
         }
+    }
+
+    private void OnMainChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.CapAuxInput)) RefreshSpec();
     }
 
     private void OnSendsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -600,6 +634,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
         Channel.PropertyChanged -= OnChannelChanged;
         Channel.Sends.CollectionChanged -= OnSendsChanged;
         Channel.Appearance.PropertyChanged -= OnAppearanceChanged;
+        if (Kind == InputStripKind.AuxIn) Matrix.Main.PropertyChanged -= OnMainChanged;
         foreach (MatrixCellViewModel cell in Cells) cell.Detach();
         Cells.Clear();
     }

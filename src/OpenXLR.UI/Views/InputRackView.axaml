@@ -76,7 +76,7 @@
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
               </StackPanel>
-              <StackPanel layout:StripPanel.Part="gain" Classes="dev">
+              <StackPanel layout:StripPanel.Part="gain" Classes="dev" Spacing="4">
                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" IsVisible="{Binding CarriesUnit}">
                   <Slider Name="RackGain" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
                           Value="{Binding Main.GainDb, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
@@ -91,6 +91,17 @@
                 <Panel IsVisible="{Binding CarriesExtraUnit}">
                   <views:WaveUnitControls Name="RackExtraGain" Part="Gain" DataContext="{Binding ExtraUnit}"/>
                 </Panel>
+                <!-- the channel's own volume, after the interface's gain; while the Wave XLR Pro's
+                     direct path carries this channel to the jacks, a mark says it reaches the mixes only -->
+                <Grid Name="RackVolume" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" IsVisible="{Binding ShowsVolume}">
+                  <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Channel.Volume, Mode=TwoWay}"
+                          AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                          ToolTip.Tip="{Binding Channel.VolumeTip}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Channel.VolumeText}" Classes="val" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="2" Name="RackVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center"
+                             Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
+                             AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
+                </Grid>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" Spacing="4">
                 <!-- the interface's switches, while XLR 1 carries its microphone -->
@@ -169,7 +180,7 @@
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
               </StackPanel>
-              <StackPanel layout:StripPanel.Part="gain" Classes="dev">
+              <StackPanel layout:StripPanel.Part="gain" Classes="dev" Spacing="4">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding CarriesUnit}">
                   <Slider vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
                           Value="{Binding Main.Gain2Db, Mode=TwoWay}" IsEnabled="{Binding !Main.GainLocked}"
@@ -180,6 +191,17 @@
                 <Panel IsVisible="{Binding CarriesExtraUnit}">
                   <views:WaveUnitControls Name="RackExtraGain" Part="Gain" DataContext="{Binding ExtraUnit}"/>
                 </Panel>
+                <!-- the channel's own volume, after the interface's gain; while the Wave XLR Pro's
+                     direct path carries this channel to the jacks, a mark says it reaches the mixes only -->
+                <Grid Name="RackVolume" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" IsVisible="{Binding ShowsVolume}">
+                  <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Channel.Volume, Mode=TwoWay}"
+                          AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                          ToolTip.Tip="{Binding Channel.VolumeTip}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Channel.VolumeText}" Classes="val" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="2" Name="RackVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center"
+                             Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
+                             AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
+                </Grid>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" Spacing="4">
                 <StackPanel Spacing="4" IsVisible="{Binding CarriesUnit}">
@@ -241,11 +263,21 @@
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
               </StackPanel>
-              <StackPanel layout:StripPanel.Part="gain" Classes="dev" IsVisible="{Binding Main.CapAuxInput}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <StackPanel layout:StripPanel.Part="gain" Classes="dev" Spacing="4">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding Main.CapAuxInput}">
                   <Slider vm:FaderInput.Step="1" Minimum="-60" Maximum="0" Value="{Binding Main.AuxLevelDb, Mode=TwoWay}"
                           AutomationProperties.Name="{loc:Text Key=USBAuxIn}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Main.AuxLevelText}" Classes="val" VerticalAlignment="Center"/>
+                </Grid>
+                <!-- the channel's own volume, after the Aux In level -->
+                <Grid Name="RackVolume" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" IsVisible="{Binding ShowsVolume}">
+                  <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Channel.Volume, Mode=TwoWay}"
+                          AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                          ToolTip.Tip="{Binding Channel.VolumeTip}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Channel.VolumeText}" Classes="val" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="2" Name="RackVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center"
+                             Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
+                             AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
                 </Grid>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" IsVisible="{Binding Main.CapAuxInput}">
@@ -296,11 +328,16 @@
                 <Panel IsVisible="{Binding CarriesExtraUnit}">
                   <views:WaveUnitControls Name="RackExtraGain" Part="Gain" DataContext="{Binding ExtraUnit}"/>
                 </Panel>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding ShowsVolume}">
+                <!-- the channel's own volume, after the interface's gain; while the Wave XLR Pro's
+                     direct path carries this channel to the jacks, a mark says it reaches the mixes only -->
+                <Grid Name="RackVolume" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" IsVisible="{Binding ShowsVolume}">
                   <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Channel.Volume, Mode=TwoWay}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
-                          ToolTip.Tip="{loc:Text Key=ChannelVolumeTip}"/>
+                          ToolTip.Tip="{Binding Channel.VolumeTip}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Channel.VolumeText}" Classes="val" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="2" Name="RackVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center"
+                             Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
+                             AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
                 </Grid>
               </StackPanel>
               <!-- the interface's switches, while this capture channel carries its microphone -->
