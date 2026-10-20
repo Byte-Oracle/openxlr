@@ -2111,7 +2111,10 @@ insert. The touch strip shows a knob, a level meter, the value and a
 mute overlay. The title sits beside the icon without overlapping it, and a
 title too long for its space scrolls. A dial without a usable target shows
 OpenXLR as its title, with "set up" or "offline" as the value, until it is
-configured. Pressing the dial mutes (or, for a gain, mutes the input;
+configured. A headphone dial uses the output selector as mute only when
+the device supports output routing. On volume-only jacks, such as the XLR
+Dock, it shows the volume and pressing it sends no command.
+Pressing other dials mutes (or, for a gain, mutes the input;
 for the crossfade, recentres; for a channel volume, mutes or unmutes the
 channel in every mix, as a dial on its sends in all mixes does). A dial can hold several targets, cycled
 by tap or press as chosen in its settings. A turn leads: the strip

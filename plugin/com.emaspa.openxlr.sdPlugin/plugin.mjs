@@ -673,7 +673,8 @@ function dialValue(target, inst) {
       if (reported == null) return null;
       const db = dialNow(target, reported);
       const p = Math.round(((60 + db) / 60) * 100);
-      const jackOff = (target === "hp" ? s?.outHp1 : s?.outHp2) === false;
+      const selector = target === "hp" ? "outHp1" : "outHp2";
+      const jackOff = supported(selector) && s?.[selector] === false;
       return { label: target === "hp" ? "Phones 1" : "Phones 2", pct: p,
                text: jackOff ? "MUTED" : `${p}%`, muted: jackOff };
     }
@@ -853,10 +854,11 @@ function onDialPress(context, inst) {
   } else if (t.startsWith("output:")) {
     cmd({ cmd: "toggleOutputMute", device: t.slice(7) || null });
   } else if (t === "hp" || t === "hp2") {
-    // no per-jack mute register exists; the output selector is the mute
+    // Only units with an output selector can use it as headphone mute.
     const control = t === "hp" ? "outHp1" : "outHp2";
     const on = dev()?.[control];
-    if (on != null) cmd({ cmd: "set", control, value: !on });
+    if (supported(t) && supported(control) && typeof on === "boolean")
+      cmd({ cmd: "set", control, value: !on });
   } else if (t === "crossfade") {
     cmd({ cmd: "set", control: "crossfade", value: 100 });   // back to centre
   }
