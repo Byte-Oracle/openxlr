@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.emaspa.openxlr</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>OpenXLR</name>
+  <summary>Control your XLR interface and mix audio with PipeWire</summary>
+  <description>
+    <p>OpenXLR controls Elgato XLR interfaces and mixes microphone and application audio with PipeWire. Independent monitor and streaming mixes, plugin chains and profiles help manage your audio setup.</p>
+    <p>This experimental Flatpak needs a host udev rule for USB controls. The Wave XLR Pro UCM profile remains a manual setup step. Distro packages include more complete system integration.</p>
+  </description>
+  <launchable type="desktop-id">io.github.emaspa.openxlr.desktop</launchable>
+  <url type="homepage">https://github.com/emaspa/openxlr</url>
+  <url type="bugtracker">https://github.com/emaspa/openxlr/issues</url>
+  <url type="help">https://github.com/emaspa/openxlr/blob/main/docs/flatpak.md</url>
+  <developer id="io.github.emaspa"><name>OpenXLR contributors</name></developer>
+  <content_rating type="oars-1.1"/>
+  <supports><control>pointing</control><control>keyboard</control></supports>
+</component>
