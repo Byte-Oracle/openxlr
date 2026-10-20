@@ -9,7 +9,7 @@ CFLAGS += -std=c11 $(WARN)
 CXXFLAGS += -std=c++17 $(WARN) -fno-exceptions -fno-rtti
 LDLIBS += $(shell pkg-config --libs $(PKGS)) -ldl -lm -pthread
 
-OBJECTS = host.o lv2.o clap.o vst3.o sound-check.o
+OBJECTS = host.o lv2.o clap.o vst3.o sound-check.o eq.o
 HEADERS = host.h icon.h $(wildcard clap/include/clap/*.h clap/include/clap/*/*.h) \
           $(wildcard vst3/pluginterfaces/*/*.h)
 
@@ -113,3 +113,20 @@ test-sound-check: tests/sound-check
 clean: clean-sound-check
 clean-sound-check:
 	rm -f tests/sound-check tests/sound-check.o
+
+# The microphone EQ: the backend driven directly, its response measured
+# against tools/eq-reference.py's table, with no audio server.
+tests/eq.o: tests/eq.c eq.c host.c $(HEADERS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+tests/eq: tests/eq.o lv2.o clap.o vst3.o
+	$(CXX) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+.PHONY: test-eq clean-eq
+test: test-eq
+test-eq: tests/eq
+	./tests/eq tests/eq-reference.txt
+
+clean: clean-eq
+clean-eq:
+	rm -f tests/eq tests/eq.o

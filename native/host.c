@@ -837,14 +837,18 @@ static void *monitor_audio(void *data) {
 
 // --- main -------------------------------------------------------------------
 
-// Sound Check lives in sound-check.o, which only the helper links. The test
-// programs that compile this file into themselves leave it out, and the weak
-// reference then reads as an unknown backend instead of failing their link.
+// Sound Check and the microphone EQ live in sound-check.o and eq.o, which
+// only the helper links. The test programs that compile this file into
+// themselves leave them out, and the weak references then read as unknown
+// backends instead of failing their link.
 extern const Backend sound_check_backend __attribute__((weak));
+extern const Backend eq_backend __attribute__((weak));
 
 static const Backend *backend_named(const char *name) {
   if (!strcmp(name, "soundcheck"))
     return &sound_check_backend;
+  if (!strcmp(name, "eq"))
+    return &eq_backend;
   if (!strcmp(name, "lv2"))
     return &lv2_backend;
   if (!strcmp(name, "clap"))
@@ -876,6 +880,7 @@ int main(int argc, char **argv) {
           "       openxlr-lv2-host vst3 BUNDLE CLASS-ID NODE CHANNELS RATE "
           "[SYMBOL=VALUE ...]\n"
           "       openxlr-lv2-host soundcheck NODE 1 RATE\n"
+          "       openxlr-lv2-host eq NODE 1 RATE [SYMBOL=VALUE ...]\n"
           "       openxlr-lv2-host scan-clap FILE\n"
           "       openxlr-lv2-host scan-vst3 BUNDLE\n",
           stderr);
