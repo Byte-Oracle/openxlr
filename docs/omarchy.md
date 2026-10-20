@@ -8,8 +8,12 @@ the same changes. The plugin source is in
 ## The bar and mixer
 
 The bar uses Omarchy's body font, regular weight and bar text colour, like
-the clock. Input labels are `XLR 1` and `XLR 2`. A hardware-muted input's
-label and meter dim to 45% opacity; their weight and size stay the same.
+the clock. Input labels are the daemon's names for the two microphone
+strips: `XLR 1` and `XLR 2` on an XLR jack, `Mic 1` and `Mic 2` on a
+Wave:3's capsule or on another microphone a strip is bound to. An input's
+label and meter dim to 45% opacity while the interface's mute applies to
+it, which is only while the strip carries the interface's input; their
+weight and size stay the same.
 Glyph cells and labels share the font's line height and vertical centre.
 
 An input appears when its RMS level has been above the -60 dBFS floor at
@@ -51,14 +55,20 @@ does. It fits the card to the screen and clamps its position inside the
 screen margins on every bar edge. Banks stack when they cannot fit side
 by side; paging never leaves part of a neighbouring strip visible.
 
-The bracketed key mutes that send or master. An XLR strip also has a
-`Mic on` or `Mic muted` button for its hardware mute, which affects every
-destination. Those are separate controls. While XLR 1 takes another
-PipeWire source, the button reads `Generic mic` and stays disabled, because
-the interface's hardware mute no longer acts on that strip; the bracketed
-send mutes still work. The tooltip
-then starts with `Generic mic:`, the source's description and its port,
-and `not linked` while the route into XLR 1 is missing. A fader sends its value on
+The bracketed key mutes that send or master. The channel that carries one
+of the interface's inputs also has a `Mic on` or `Mic muted` button for
+that input's hardware mute, which affects every destination. Those are
+separate controls. The daemon names that channel in each channel's
+`unitInput`. It is XLR 1 or XLR 2 while the strip takes the interface, or a
+capture channel on the interface's own input while the strip is bound to
+another microphone. A strip bound to an additional interface that OpenXLR
+drives, such as a Wave:3, has that unit's button, which sends
+`setWaveControl`; it stays disabled while the unit is unplugged. A daemon that does not send the field leaves the button on
+XLR 1 and XLR 2. A bound strip has no hardware mute button, and its
+bracketed send mutes work as usual. Its kind line shows the source's
+description in place of `INPUT`, with `OFF` while the source is silent.
+The tooltip adds the source's description and port to that input's line,
+or the daemon's sentence saying why it is silent. A fader sends its value on
 release; focused faders also take the arrow keys in one-percentage-point
 steps. Controls wait for the daemon's reply before accepting another edit.
 A rejected edit leaves the daemon's value on screen and shows its error.
@@ -242,6 +252,11 @@ Before merging, check on an Omarchy machine:
 - Check XLR 1 and 2 hardware mute, send mute, independent stereo levels,
   custom channel names, monitor sums and different feeds on two outputs.
   Compare edits with the window and terminal, including 150% monitor gain.
+- Bind XLR 1 to another microphone from the window and keep the
+  interface's microphone as a capture channel. The bar label reads
+  `Mic 1`, the interface's mute leaves it undimmed, its popout strip names
+  the source and has no mic button, and the capture channel's mic button
+  mutes the interface. Unplug the source and check `OFF` and the tooltip.
 - Drag and release a fader, change it with keys, and change the same value
   from another client. Check rejected commands and rapid edits.
 - With an idle test daemon, stop and restart it, rotate its token, and

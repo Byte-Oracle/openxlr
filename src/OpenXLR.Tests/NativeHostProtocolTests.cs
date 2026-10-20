@@ -122,6 +122,12 @@ public sealed class NativeHostProtocolTests
                     _, symbol, value = line.split()
                     print('control', symbol, value)
             """, meters: new HashSet<string>(["peak", "rms"], StringComparer.Ordinal));
+        // The helper reads "show" only after it has printed the flood, and
+        // ShowUi's one-second budget is for an editor reply, not for a loaded
+        // runner reading ten thousand lines. Wait for the flood's last line,
+        // which the reader takes in order, before asking for the editor.
+        Assert.True(SpinWait.SpinUntil(() => host.Meters.ContainsKey("rms"), TimeSpan.FromSeconds(30)),
+            "the helper's output flood was not read");
         host.ShowUi();
         // Five thousand names the catalogue never declared take no slot, so
         // a meter first reported after the flood still lands. Without the

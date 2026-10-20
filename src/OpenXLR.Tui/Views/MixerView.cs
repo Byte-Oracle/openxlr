@@ -61,15 +61,19 @@ internal sealed class MixerView : View
             int index = _channelScroll + i;
             ChannelEntry channel = channels[index];
             Rect strip = Slot(channelBank, i, channelCount);
-            string kind = channel.Hardware ? "INPUT" : channel.CaptureSource is not null ? "CAPTURE" : "APP";
-            // An XLR strip is the interface, so its key is the input's own mute;
+            // A strip bound to another microphone names its source where the
+            // kind goes, in the warning colour while that source is silent.
+            string kind = channel.SourceBound ? state.SourceName(state.BoundSource(channel)!)
+                : channel.Hardware ? "INPUT" : channel.CaptureSource is not null ? "CAPTURE" : "APP";
+            // The channel carrying the interface's microphone keys its mute;
             // its send into the chosen mix shows as a word where the level goes.
-            string? hardwareMute = HardwareMute(channel, state);
+            UnitControl? hardwareMute = state.UnitMute(channel);
             bool keyMuted = hardwareMute is null ? channel.IsMuted(selectedMix.Id) : state.Flag(hardwareMute);
             DrawStrip(screen, strip, app, channel.Appearance.Label(channel.Name), kind, channel.Level(selectedMix.Id), 1,
                 keyMuted, app.Link.StereoMeter("ch", channel.Id), _row == index + 1, false,
                 sendMuted: hardwareMute is not null && channel.IsMuted(selectedMix.Id), mono: channel.Mono,
-                last: i == channelCount - 1, accent: channel.Appearance.Accent);
+                last: i == channelCount - 1, accent: channel.Appearance.Accent,
+                kindAlert: channel.Hardware && !channel.BindingConnected);
         }
         for (int i = 0; i < masterCount; i++)
         {
@@ -90,12 +94,12 @@ internal sealed class MixerView : View
             : $"{selectedChannel.Name} > {selectedMix.Name}";
         double value = selectedChannel?.Level(selectedMix.Id) ?? selectedMix.Volume;
         bool muted = selectedChannel is null ? selectedMix.Muted
-            : HardwareMute(selectedChannel, state) is { } control ? state.Flag(control) : selectedChannel.IsMuted(selectedMix.Id);
+            : state.UnitMute(selectedChannel) is { } control ? state.Flag(control) : selectedChannel.IsMuted(selectedMix.Id);
         // A channel volume scales every send of the channel, so it is shown
         // with the send it scales.
         string volume = selectedChannel?.Volume is double v ? $"   channel volume {Widgets.Percent(v)}" : "";
         screen.TextPad(area.X + 1, area.Bottom - 1,
-            $" {focus}   {Widgets.Percent(value)}   {(muted ? "MUTED" : "ON")}{volume}", area.Width - 2,
+            $" {focus}   {Widgets.Percent(value)}   {(muted ? "MUTED" : "ON")}{volume}{Feed(selectedChannel, state)}", area.Width - 2,
             theme.TextPrimary, theme.Selection, bold: true);
     }
 
@@ -126,16 +130,17 @@ internal sealed class MixerView : View
     }
 
     /// <summary>
-    /// The device control behind an XLR input's mute, or null for any other
-    /// channel. A generic microphone has no hardware mute the daemon accepts,
-    /// so its strip's key is the send mute like every other channel's.
+    /// What feeds a selected microphone strip bound to another source, for the
+    /// line under the desk: the source and its port, or why it is silent.
     /// </summary>
-    private static string? HardwareMute(ChannelEntry channel, Snapshot state) =>
-        state.Generic ? null : channel.Id == "xlr1" ? "mute" : channel.Id == "xlr2" ? "mute2" : null;
+    internal static string Feed(ChannelEntry? channel, Snapshot state) =>
+        channel is not { SourceBound: true } ? ""
+        : channel.BindingWarning is { Length: > 0 } warning ? $"   {warning}"
+        : $"   from {state.BindingLabel(channel)}{(channel.BindingConnected ? "" : ", not linked")}";
 
     private static void DrawStrip(Screen screen, Rect area, App app, string name, string kind,
         double value, double ceiling, bool muted, MeterReading meter, bool focused, bool master,
-        bool sendMuted = false, bool mono = false, bool last = false, Rgb? accent = null)
+        bool sendMuted = false, bool mono = false, bool last = false, Rgb? accent = null, bool kindAlert = false)
     {
         Theme theme = app.Theme;
         Rgb back = focused ? theme.SelectedFace : master ? theme.Tile : theme.Card;
@@ -161,7 +166,7 @@ internal sealed class MixerView : View
         Rgb ink = accent ?? theme.TextPrimary;
         Widgets.Center(screen, area.X, area.Y, area.Width - 1, first, ink, plate, true);
         Widgets.Center(screen, area.X, area.Y + 1, area.Width - 1, second.Length > 0 ? second : kind,
-            second.Length > 0 ? ink : theme.TextMuted, plate);
+            second.Length > 0 ? ink : kindAlert ? theme.TextWarning : theme.TextMuted, plate);
         if (sendMuted)
             Widgets.Center(screen, area.X, area.Y + 2, area.Width - 1, "muted", theme.MuteBackChecked, back, true);
         else
@@ -277,8 +282,8 @@ internal sealed class MixerView : View
             {
                 case ' ':
                     if (channel is null) app.Link.Send("setMixMuted", body => { body["mix"] = mix.Id; body["value"] = !mix.Muted; });
-                    else if (HardwareMute(channel, state) is { } control)
-                        app.Link.Send("set", body => { body["control"] = control; body["value"] = !state.Flag(control); });
+                    else if (state.UnitMute(channel) is { } control)
+                        Snapshot.Send(app.Link, control, !state.Flag(control));
                     else app.Link.Send("setChannelMuted", body =>
                     {
                         body["channel"] = channel.Id;

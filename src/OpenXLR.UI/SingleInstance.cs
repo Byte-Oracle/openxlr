@@ -53,7 +53,8 @@ internal sealed class SingleInstance : IDisposable
 
     private SingleInstance(Socket listener, string path) { _listener = listener; _path = path; }
 
-    public static string DefaultPath => Path.Combine(Path.GetDirectoryName(OpenXlrPaths.TokenPath)!, "ui.sock");
+    public static string DefaultPath => Path.Combine(Path.GetDirectoryName(OpenXlrPaths.TokenPath)!,
+        FlatpakEnvironment.IsFlatpak ? "flatpak-ui.sock" : "ui.sock");
 
     /// <summary>
     /// The listening primary, or null when a running window took the request

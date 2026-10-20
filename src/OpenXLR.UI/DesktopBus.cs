@@ -55,7 +55,7 @@ internal sealed class DesktopBus(DBusConnection connection)
         => Call(destination, path, iface, method, signature, body, static (_, _) => true, cancel);
 
     internal async Task<Dictionary<string, VariantValue>> Request(string method, string signature,
-        Func<string, Body> body, CancellationToken cancel)
+        Func<string, Body> body, CancellationToken cancel, string iface = Shortcuts)
     {
         string token = "openxlr_" + Guid.NewGuid().ToString("N");
         string path = "/org/freedesktop/portal/desktop/request/" + connection.UniqueName![1..].Replace('.', '_') + "/" + token;
@@ -75,12 +75,13 @@ internal sealed class DesktopBus(DBusConnection connection)
         }, emitOnCapturedContext: false, flags: ObserverFlags.EmitOnConnectionClosed | ObserverFlags.EmitOnReaderFailed);
         try
         {
-            string actual = await Call(Portal, PortalPath, Shortcuts, method, signature, body(token),
+            string actual = await Call(Portal, PortalPath, iface, method, signature, body(token),
                 static (message, _) => message.GetBodyReader().ReadObjectPath().ToString(), cancel);
             if (actual != path) throw new InvalidOperationException("the desktop portal returned an unexpected request path");
             var result = await done.Task.WaitAsync(TimeSpan.FromMinutes(2), cancel);
             if (result.Code != 0) throw new InvalidOperationException(result.Code == 1
-                ? "Shortcut configuration was cancelled." : "The desktop refused the shortcut request.");
+                ? (iface == Shortcuts ? "Shortcut configuration was cancelled." : "Background configuration was cancelled.")
+                : (iface == Shortcuts ? "The desktop refused the shortcut request." : "The desktop refused the background request."));
             return result.Data;
         }
         catch

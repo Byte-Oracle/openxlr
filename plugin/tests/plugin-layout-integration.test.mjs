@@ -307,6 +307,29 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     host.receive({event:"dialRotate",context:"output-dial",payload:{ticks:1}});
     assert.equal(daemon.messages.length, beforeLegacyDial);
 
+    // Volume-only headphone jacks have no output selector to use as mute.
+    for (const routing of [false, undefined, true]) {
+      state.connected = true;
+      state.capabilities = {hpVolume:true, hpOutputs:2, outputRouting:routing};
+      state.state = {hpVolumeDb:-12, hp2VolumeDb:-30, outHp1:false, outHp2:false};
+      daemon.receive(state);
+      for (const [target, value, control] of [["hp", "80%", "outHp1"], ["hp2", "50%", "outHp2"]]) {
+        dialTarget("headphone-dial", target);
+        assert.equal(feedbackOf("headphone-dial").value, routing === true ? "MUTED" : value);
+        assert.equal(feedbackOf("headphone-dial").muteOverlay.enabled, routing === true);
+        const sent = daemon.messages.length;
+        host.receive({event:"dialDown",context:"headphone-dial"});
+        if (routing === true) assert.deepEqual(daemon.messages.at(-1), {cmd:"set",control,value:true});
+        else assert.equal(daemon.messages.length, sent, "unsupported headphone mute must send nothing");
+      }
+    }
+    state.capabilities = {hpVolume:true, hpOutputs:1, outputRouting:true};
+    daemon.receive(state);
+    dialTarget("missing-headphone-dial", "hp2");
+    const beforeMissingHeadphone = daemon.messages.length;
+    host.receive({event:"dialDown",context:"missing-headphone-dial"});
+    assert.equal(daemon.messages.length, beforeMissingHeadphone, "a missing second jack cannot be toggled");
+
     // The gain dial stops at the device's highest gain, 40 dB on the Wave:3,
     // and draws its needle against that range.
     state.capabilities = {gain:true, mute:true, gainMaxDb:40};

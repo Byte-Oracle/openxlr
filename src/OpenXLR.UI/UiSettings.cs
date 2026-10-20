@@ -718,7 +718,7 @@ public static class StartupIntegration
     /// applied, so Options reports it instead of saving a preference the
     /// system does not have.
     /// </summary>
-    public static bool SetDaemonAtLogin(bool enabled) => SetDaemonAtLogin(enabled, PackagedUnit);
+    public static bool SetDaemonAtLogin(bool enabled) => !FlatpakEnvironment.IsFlatpak && SetDaemonAtLogin(enabled, PackagedUnit);
 
     internal static bool SetDaemonAtLogin(bool enabled, string? packagedUnit)
     {
@@ -779,6 +779,7 @@ public static class StartupIntegration
     /// </summary>
     public static bool SetWindowAtLogin(bool enabled)
     {
+        if (FlatpakEnvironment.IsFlatpak) return false;
         if (!SetWindowAtLogin(enabled, UiBinary)) return false;
         RememberAutostartExecutable(enabled ? UiBinary : null);
         return true;
@@ -952,13 +953,9 @@ public static class StartupIntegration
                     RestrictSUIDSGID=true
                     UMask=0077
                     KeyringMode=private
-                    ProtectClock=true
                     ProtectHostname=true
-                    ProtectKernelLogs=true
-                    ProtectKernelModules=true
                     LockPersonality=true
                     RestrictNamespaces=true
-                    CapabilityBoundingSet=
 
                     [Install]
                     WantedBy=default.target
@@ -971,9 +968,10 @@ public static class StartupIntegration
     /// (v0.1.13); 3 the notify type, watchdog and start limit (v0.1.22); 4 the
     /// comment line, the quoted path and UMask (v0.1.23); 5 the second sandbox
     /// block (v0.1.24); 6 KillMode (v0.1.33). Generation 7 adds LimitMEMLOCK
-    /// (v0.1.37) and equals <see cref="SourceUnit(string)"/>.
+    /// (v0.1.37). These older bodies still carry capability restrictions that
+    /// the current user unit omits, so upgrades can adopt their owned files.
     /// </summary>
-    internal static IEnumerable<string> LegacySourceUnits(string daemon) => Enumerable.Range(0, 7).Select(g => SourceUnit(daemon, g));
+    internal static IEnumerable<string> LegacySourceUnits(string daemon) => Enumerable.Range(0, 8).Select(g => SourceUnit(daemon, g));
 
     internal static string SourceUnit(string daemon, int generation)
     {
@@ -1024,7 +1022,9 @@ public static class StartupIntegration
     /// effect. False when systemd does not manage it (source builds run by
     /// hand), so the caller can tell the user to restart it themselves.
     /// </summary>
-    public static bool RestartDaemon() => Systemctl("restart", "openxlr-daemon.service");
+    public static bool RestartDaemon() => FlatpakEnvironment.IsFlatpak
+        ? FlatpakSession.Current?.Restart() == true
+        : Systemctl("restart", "openxlr-daemon.service");
 
     private static bool Systemctl(params string[] args)
     {

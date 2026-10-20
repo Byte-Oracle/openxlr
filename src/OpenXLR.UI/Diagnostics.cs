@@ -50,7 +50,7 @@ public static class Diagnostics
             await File.WriteAllTextAsync(Path.Combine(work, "PRIVACY.txt"), """
                 This archive is created locally and is never uploaded automatically.
                 It contains OpenXLR state, USB control blocks, PipeWire topology,
-                recent openxlr-daemon journal entries, application audio metadata,
+                recent openxlr-daemon journal entries or Flatpak logs, application audio metadata,
                 configuration files, plugin names and paths, the plugin catalogue,
                 Wine/yabridge versions and status, latest scan results, the saved
                 output of plugin scans that failed, and system
@@ -82,7 +82,9 @@ public static class Diagnostics
             await WriteCmd(Clean, work, "sources.txt", "pactl", "list", "short", "sources");
             await WriteCmd(Clean, work, "modules.txt", "pactl", "list", "short", "modules");
             await WriteCmd(Clean, work, "lsusb.txt", "lsusb");
-            await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
+            if (FlatpakEnvironment.IsFlatpak)
+                CopyDaemonLogs(Clean, OpenXlrPaths.StateDir, work);
+            else await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
                 "--since", "2 hours ago", "--no-pager");
 
             // Configs may include remembered application identities and device
@@ -493,10 +495,31 @@ public static class Diagnostics
         return text;
     }
 
-    private static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest)
+    internal const int DaemonLogCopyLimit = 1152 * 1024;
+
+    internal static void CopyDaemonLogs(Func<string, string> clean, string dir, string dest)
+    {
+        foreach (string name in new[] { "daemon.log", "daemon.log.old" })
+        {
+            if (new FileInfo(Path.Combine(dir, name)).LinkTarget is not null)
+            {
+                File.WriteAllText(Path.Combine(dest, name), "Log unavailable: symbolic links are not collected.");
+                continue;
+            }
+            CopyRedactedIfExists(text => clean(RedactSecretValues(text)), dir, name, dest, DaemonLogCopyLimit);
+        }
+    }
+
+    private static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest, int? maximum = null)
     {
         string src = Path.Combine(dir, file);
         if (File.Exists(src))
-            File.WriteAllText(Path.Combine(dest, file), clean(File.ReadAllText(src)));
+        {
+            string text;
+            try { text = maximum is { } limit ? RegularFile.ReadText(src, limit) : File.ReadAllText(src); }
+            catch (Exception ex) when (maximum is not null && (ex is IOException or UnauthorizedAccessException))
+            { text = "Log unavailable: " + ex.Message; }
+            File.WriteAllText(Path.Combine(dest, file), clean(text));
+        }
     }
 }

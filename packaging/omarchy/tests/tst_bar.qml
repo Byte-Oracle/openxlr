@@ -41,10 +41,14 @@ TestCase {
             mixer: {
                 channels: [
                     {
-                        id: "xlr1"
+                        id: "xlr1",
+                        name: "XLR 1",
+                        hardware: true
                     },
                     {
-                        id: "xlr2"
+                        id: "xlr2",
+                        name: "XLR 2",
+                        hardware: true
                     }
                 ],
                 mixes: [
@@ -200,5 +204,63 @@ TestCase {
         fakeLink.ready = true;
         fakeLink.levels = ({});
         compare(findChild(bar, "input-xlr1").visible, false);
+    }
+    function test_labelsAreTheDaemonsChannelNames(): void {
+        // A Wave:3's capsule, or a strip bound to another microphone, is Mic 1.
+        var snapshot = snapshotFor(false);
+        snapshot.mixer.channels[0].name = "Mic 1";
+        fakeLink.snapshot = snapshot;
+        fakeLink.levels = {
+            "ch:xlr1": [0.4, 0.4]
+        };
+        wait(0);
+        compare(findChild(findChild(bar, "input-xlr1"), "label").text, "Mic 1");
+    }
+    function test_theInterfacesMuteDimsOnlyTheStripThatCarriesItsInput(): void {
+        // XLR 1 is bound to another microphone and the interface's first input
+        // plays on a capture channel: its mute leaves XLR 1 undimmed. XLR 2
+        // still carries input 2 and dims with mute2.
+        var snapshot = snapshotFor(true);
+        snapshot.state.mute2 = true;
+        snapshot.mixer.channels[0].name = "Mic 1";
+        snapshot.mixer.channels[0].binding = {
+            kind: "source",
+            source: "alsa_input.usb-Yeti",
+            pair: 0,
+            monoChannel: 0
+        };
+        snapshot.mixer.channels[1].unitInput = {
+            unit: "0fd9:00b4@0123456789abcdef",
+            input: 2,
+            primary: true
+        };
+        snapshot.mixer.channels.push({
+            id: "cap1",
+            name: "Pro mic",
+            captureSource: "alsa_input.usb-Elgato_Wave_XLR_Pro",
+            unitInput: {
+                unit: "0fd9:00b4@0123456789abcdef",
+                input: 1,
+                primary: true
+            }
+        });
+        fakeLink.snapshot = snapshot;
+        fakeLink.levels = {
+            "ch:xlr1": [0.4, 0.4],
+            "ch:xlr2": [0.4, 0.4]
+        };
+        wait(0);
+        compare(findChild(bar, "input-xlr1").muted, false);
+        compare(findChild(bar, "input-xlr1").opacity, 1);
+        compare(findChild(bar, "input-xlr2").muted, true);
+        // Back on the jack, XLR 1 carries input 1 and its mute dims it again.
+        var unbound = snapshotFor(true);
+        unbound.mixer.channels[0].unitInput = {
+            unit: "0fd9:00b4@0123456789abcdef",
+            input: 1,
+            primary: true
+        };
+        fakeLink.snapshot = unbound;
+        compare(findChild(bar, "input-xlr1").muted, true);
     }
 }

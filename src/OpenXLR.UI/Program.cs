@@ -18,8 +18,9 @@ class Program
         // A window is already open: it shows itself, this process is done.
         Instance = SingleInstance.TryBecomePrimary();
         if (Instance is null) return;
+        FlatpakSession.Start();
         try { BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }
-        finally { Instance.Dispose(); }
+        finally { FlatpakSession.Current?.Dispose(); Instance.Dispose(); }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

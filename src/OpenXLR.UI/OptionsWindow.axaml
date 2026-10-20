@@ -36,10 +36,13 @@
       <StackPanel Spacing="6">
         <TextBlock Text="{loc:Text Key=ATLOGIN}" Classes="h"/>
         <CheckBox Content="{loc:Text Key=StartAudioInTheBackground}"
+                  IsEnabled="{Binding CanConfigureStartup}"
                   IsChecked="{Binding StartDaemonAtLogin, Mode=TwoWay}"/>
         <CheckBox Content="{loc:Text Key=StartTheOpenXLRApp}"
+                  IsEnabled="{Binding CanConfigureStartup}"
                   IsChecked="{Binding OpenWindowAtLogin, Mode=TwoWay}"/>
         <TextBlock Text="{Binding StartupHint}" FontSize="11" Foreground="{DynamicResource Ox.Text.Secondary}" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding FlatpakSetup}" IsVisible="{Binding IsFlatpak}" Classes="hint" TextWrapping="Wrap"/>
         <TextBlock Text="{Binding StartupError}" FontSize="11" Foreground="{DynamicResource Ox.Text.Warning}" TextWrapping="Wrap"
                    IsVisible="{Binding StartupError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
       </StackPanel>

@@ -1,5 +1,7 @@
 # OpenXLR manual
 
+The experimental Flatpak has its own [startup and hardware setup](flatpak.md).
+
 This manual follows `main`. A released package can lag behind it; read the
 manual at that release's tag for matching behaviour. The app's Manual links
 open this page on GitHub `main`.
@@ -294,11 +296,6 @@ microphone directly and the channel's software send is held back. With no
 such channel the path is off, and a microphone bound to XLR 1 reaches the
 jacks through the software mix, a few milliseconds later.
 
-For now the terminal mixer, the Stream Deck and the Omarchy bar do not show
-the interface's gain, phantom power, hardware effects and headphone
-controls while XLR 1 is bound to another source. The interface's own dial
-and buttons keep working, and the [API](api.md) reaches every control.
-
 A strip can also take another Elgato interface's microphone, such as a
 Wave:3's capsule while a Wave XLR Pro is the primary interface. The dialog
 lists every attached interface's sources except the primary's own, which
@@ -347,10 +344,13 @@ the interface; the port list is only used for another source. Disabling the
 software mixer leaves the interface as it is and remembers the bindings for
 when the mixer is enabled again.
 
-The [terminal mixer](#terminal) makes the same choice for XLR 1 on its
-Options tab. On the [Stream Deck](#stream-deck) and the
-[Omarchy bar](#omarchy), XLR 1's sends and send mutes keep working; the
-hardware keys and the bar's mic button show Generic mic instead.
+The [terminal mixer](#terminal) binds XLR 1 and XLR 2 from its Inputs tab.
+It, the [Stream Deck](#stream-deck) and the [Omarchy bar](#omarchy) follow
+the interface's microphone the same way the window does. The terminal mixer
+heads the interface's controls with the channel that carries them, and that
+channel's key is the interface's mute. Stream Deck keys and dials for those
+controls name that channel. The bar puts its mic button on that channel's
+strip. A bound strip keeps its sends and send mutes everywhere.
 
 <a name="monitor"></a>
 ### 3.2 Choose what you hear and how loud
@@ -2080,16 +2080,23 @@ hand over; unmute a member first.
 The key's LED is green for an engaged feature, red for a mute, and grey
 when the daemon is offline or the target does not exist on the
 connected interface.
-With [another microphone as XLR 1](#generic-microphone)
-keys and dials for hardware controls go grey and show Generic mic over
-their name: mute, gain, phantom, the
-processing toggles, headphones, the crossfade, the output selectors, the
-aux level and lock, the gain lock and the Aux port. A press only flashes
-an alert. The interface stays driven, and its own dial and buttons keep
-working. To mute the microphone, use a send mute key for XLR 1 in each mix
-you want it out of, or press a dial set to XLR 1 in all mixes, which mutes
-every send at once. The sends, the software low cut and ClipGuard and the
-inserts keep working. A key's icon can be chosen in its settings, and a
+Keys and dials for an interface input, such as its mute, gain, phantom
+power and processing toggles, act on the interface whatever feeds the
+strips. Their
+label names the channel that carries that input: XLR 1 on a Wave XLR Pro's
+jack, Mic 1 on a Wave:3's capsule, or, while XLR 1 is
+[bound to another microphone](#generic-microphone), the capture channel
+that carries the interface's microphone, such as Wave XLR Pro input 1. A
+key shortens a long name. With no channel carrying the input the
+label reads Input 1 or Input 2. A gain dial's meter shows the carrying
+channel, and stays empty while there is none. The targets keep their fixed
+names in the key's settings, such as XLR 1 mute, because they are the
+interface's first and second inputs, and they act on the primary interface
+only; an additional interface's controls are not deck targets. A strip bound to another microphone
+has no hardware mute. Use a send mute key for it in each mix you want it
+out of, or press a dial set to it in all mixes, which mutes every send at
+once. With no interface connected the hardware keys and dials go grey, and
+a press only flashes an alert. A key's icon can be chosen in its settings, and a
 title typed there replaces the built-in label. An icon name the plugin does
 not know shows the target's default icon. A key or dial whose target is a
 channel or a mix with an icon or colour from the layout editor
@@ -2106,7 +2113,10 @@ insert. The touch strip shows a knob, a level meter, the value and a
 mute overlay. The title sits beside the icon without overlapping it, and a
 title too long for its space scrolls. A dial without a usable target shows
 OpenXLR as its title, with "set up" or "offline" as the value, until it is
-configured. Pressing the dial mutes (or, for a gain, mutes the input;
+configured. A headphone dial uses the output selector as mute only when
+the device supports output routing. On volume-only jacks, such as the XLR
+Dock, it shows the volume and pressing it sends no command.
+Pressing other dials mutes (or, for a gain, mutes the input;
 for the crossfade, recentres; for a channel volume, mutes or unmutes the
 channel in every mix, as a dial on its sends in all mixes does). A dial can hold several targets, cycled
 by tap or press as chosen in its settings. A turn leads: the strip
@@ -2249,6 +2259,15 @@ Audio is interrupted during the restart. The window stays responsive, and
 the button is disabled until the service command finishes. If it fails,
 check `journalctl --user -u openxlr-daemon`. A daemon started by hand must
 be restarted by hand.
+
+An older user unit can fail before starting the daemon with
+`218/CAPABILITIES` and `Failed to drop capabilities`. Update the package
+and run `systemctl --user daemon-reload` followed by
+`systemctl --user restart openxlr-daemon`. Source installs can regenerate
+their owned unit by disabling and enabling Start audio at login in Options.
+The current unit keeps its other restrictions but does not ask the user
+manager to change its capability bounding set. Review any personal override
+before removing it; OpenXLR never deletes an override it did not create.
 
 A USB transfer that never returns fails after a few
 seconds instead of stalling the daemon; the device is dropped and
@@ -2651,13 +2670,16 @@ The mixer opens as a desk of vertical channel strips; the Matrix section
 shows the same sends as one grid, every channel against every mix. The left bank shows
 sends into the selected mix; the right bank holds the mix masters. Each
 strip has a name plate, a percentage, a fader, separate left and right
-meters and a mute key. On the two XLR strips the key is the input's own
-mute, the same control as Mute on the Inputs page, since those strips are
-the interface; when an XLR send into the chosen mix is muted, the word
-muted stands where its percentage would be, and the matrix is where that
-send is toggled. With another microphone as XLR 1 the interface's mute
-no longer acts on that strip, so the XLR 1 key mutes its send into the
-chosen mix like any other channel's. Up and down choose a channel, starting with the
+meters and a mute key. On the channel that carries an interface input,
+XLR 1 and XLR 2 unless a strip is bound elsewhere, the key is that input's
+own mute, the same control as Mute on the Inputs page. When that channel's
+send into the chosen mix is muted, the word muted stands where its
+percentage would be, and the matrix is where that send is toggled. A strip
+[bound to another microphone](#generic-microphone) is not the interface,
+so its key mutes its send into the chosen mix like any other channel's.
+Its name plate shows the source where INPUT would be, in the warning colour
+while the source is silent, and the line under the desk names the source
+and port of the selected bound strip, or says why it is silent. Up and down choose a channel, starting with the
 masters. Left and right choose the destination mix. The line above the
 key hints names the exact send or master under the cursor, and the
 channel's own [volume](#channel-volume) when the channel has one. Monitor
@@ -2684,13 +2706,13 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 | Section | What is on it |
 |---|---|
 | 1 Mixer | channel sends, mix masters, stereo meters and level history; channel and user mix creation, renaming, removal and ordering |
-| 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. An XLR input is mono, so it carries one bar rather than a pair of the same reading |
-| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each XLR input; software processing, headphones, direct monitor blend, hardware output routing and USB Aux return |
+| 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. An XLR input is mono, so it carries one bar rather than a pair of the same reading. A strip bound to another microphone shows its source, or why it is silent, on the row under its name, and a silent one's name is in the warning colour |
+| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; software processing, headphones, direct monitor blend, hardware output routing and USB Aux return |
 | 4 Outputs | selected monitor sinks and their feeds, shared output volume, each sink's volume and mute, and the system default sink and source |
 | 5 Apps | every known application and its channel assignment, including the desktop's own routing |
 | 6 Inserts | the chain on each input and mix, its order, bypass and status; add a plugin from the catalogue, narrowed by typing, of those that fit the chain's width; open a plugin's native editor or edit its generated controls when the editor is blocked or refused |
 | 7 Profiles | load, save over, save as, delete and recall on connect; interface selection and recorded device defaults |
-| 8 Options | the primary microphone picker, the skin picker, connection status, daemon version and fresh state request |
+| 8 Options | the skin picker, connection status, daemon version and fresh state request |
 
 The bottom line shows the current section's keys, with help and quit at
 its right end when there is room.
@@ -2729,28 +2751,54 @@ Controls below the visible hardware cards appear as the selection moves.
 | Insert controls | `-`, `+`, `[`, `]`, Home, End | lower or raise a number, take a fine step, or set the minimum or maximum; Ctrl+Left/Right also takes a fine step |
 | Profiles, on a profile | Enter, `s`, `r`, `d` | load, overwrite, recall on connect, or delete |
 | Options | Enter, `R` | use a skin or reload the skin list |
-| Options, primary microphone | Left/Right, Enter | choose a source or a port, then apply it |
+| Inputs, Bindings | Left/Right, Enter | choose a strip's source or port, then apply it |
 | Text prompts | Enter, Escape | accept or cancel |
 
 Anything that cannot be undone, such as deleting a channel or resetting
 the device, asks you to type `yes` first. To create a profile, select
 Save settings as and press Enter.
 
-Options starts with the primary microphone, the choice the window makes
-in [Use another microphone as XLR 1](#generic-microphone).
-Source lists Automatic Elgato interface and every capture source the
-daemon accepts, leaving out OpenXLR's own nodes and monitor taps. Port is
-the microphone's port, numbered from 1; Automatic takes none. Neither
-changes anything until you press Enter on Apply, and the row says not
-applied until then. A saved source that is unplugged stays listed as
-missing. While XLR 1 takes another source the header reads Generic mic with the
-source's description and port instead of no interface, and its lamp is
-lit while the route into XLR 1 exists. A wide terminal's rail shows the
-source, the XLR 1 meter and the port, or not linked. On Inputs, XLR 1's
-hardware rows say not on a generic mic and its gain says set on the mic;
-Source and Route rows name the microphone and say whether it is linked.
-The software low cut and ClipGuard keep working, and the gain lock, which
-guards a hardware gain, does not.
+On Inputs, each of the interface's inputs is a card headed by the channel
+that carries it. While the input plays on its own strip the heading is the
+strip's name, XLR 1, or Mic 1 on a Wave:3. While XLR 1 is bound elsewhere
+and a capture channel carries the interface's microphone, the heading reads
+Input 1 on that channel, such as Input 1 on Wave XLR Pro input 1. With no
+channel carrying it, it reads Input 1, not in the mixer. The controls work
+in every case, so a hot preamp can still be turned down.
+
+The Bindings card chooses what feeds XLR 1 and XLR 2, the choice the window
+makes in [Use another microphone on XLR 1 or XLR 2](#generic-microphone).
+Each strip has four rows. The source lists the interface's own input first,
+Interface jack (XLR 1) or Built-in microphone on a Wave:3 or Wave:1. Every
+capture source the daemon accepts follows, leaving out OpenXLR's own nodes,
+monitor taps and the primary interface's own nodes. Another Elgato
+interface's microphone is listed too, and for one OpenXLR does not drive
+yet an Also drive unit row appears, on by default, that enables it as an
+additional interface after the binding. If enabling it fails, the strip
+stays bound and the bottom line says so. The port
+is numbered from 1 and carries its channel position when PipeWire reports
+one, such as 2 (FR); the interface's own input takes none. Apply sends the
+choice. The feed row says whether the strip is linked to its source, or
+why not. Neither the source nor the port changes anything until you press
+Enter on Apply, and the Apply row says not applied until then. A saved
+source that is unplugged stays listed as missing, and a strip on an Elgato
+interface whose source was renamed shows the source it plays from now.
+Choosing a Bluetooth
+headset adds a row saying it stays in headset mode while bound. The terminal
+mixer does not offer the window's capture channel for the interface's own
+microphone; bind from the window when you want to keep it in the mixer.
+
+A strip on a driven additional interface gets a card of that unit's own
+controls, such as Wave:3 input 1 on Mic 2, with the gain, mute, low cut,
+ClipGuard and phantom power the unit has. On the Mixer tab that strip's key
+is the unit's mute. Stop driving the unit and the card goes, and the key is
+a send mute again.
+
+The header names the connected interface, and its lamp is the interface's
+connection. A wide terminal's rail shows each interface input's gain and
+the meter of the channel that carries it. The label is the strip's name, or
+In 1 when a capture channel carries the input. With no interface connected
+the rail says Offline and keeps a bound XLR 1's meter.
 
 On an insert, `e` first asks the daemon for the plugin's own editor. If
 compatibility rules block it or the daemon refuses to open it, the terminal
@@ -2811,10 +2859,15 @@ Click it for
 the mixer, and use the arrows to choose the mix whose sends you are editing.
 The bracketed mute key affects that send or master; each XLR strip's
 separate mic button affects its hardware mute in every destination.
-With [another microphone as XLR 1](#generic-microphone)
-the tooltip names the source and its port, and the mic button reads
-Generic mic and stays disabled, since the interface's mute no longer acts
-on that strip; the bracketed send mutes keep working.
+Input labels are the daemon's strip names: XLR 1 on an XLR jack, Mic 1 on
+a Wave:3's capsule or another microphone. The mic button belongs to the
+channel that carries the interface's input. A strip
+[bound to another microphone](#generic-microphone) has no mic button and
+is not dimmed by the interface's mute. Its kind line and the tooltip name
+its source, or say why it is silent, and its bracketed send mutes work as
+usual. A capture channel that carries the interface's microphone gets the
+mic button instead, and so does a strip bound to an additional interface
+OpenXLR drives, whose button mutes that interface.
 
 Each bank shows whole strips. Use its lower arrows and range indicator to
 reach the remaining channels or masters. The header uses friendly output

@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private readonly DesktopKeys _desktopKeys;
     private readonly PlasmaVolumeRange? _volumeRange;
     private TrayIcon? _tray;
+    private FlatpakTray? _flatpakTray;
     private bool _reallyExit;
     private bool _hideToTrayPending;
     private readonly CancellationTokenSource _lifetime = new();
@@ -60,6 +61,24 @@ public partial class MainWindow : Window
         {
             if (_automaticUpdateCheckStarted) return;
             _automaticUpdateCheckStarted = true;
+            if (FlatpakEnvironment.IsFlatpak && !System.IO.File.Exists(OpenXlrPaths.ConfigFile("flatpak-notice")))
+            {
+                string setupError = FlatpakSetup.Prepare();
+                string setup = Localizer.Text("FlatpakSetup") + setupError;
+                if (await Dialogs.ConfirmAsync(this, "OpenXLR Flatpak", setup, Localizer.Text("Close")))
+                {
+                    try
+                    {
+                        var settings = UiSettings.Load();
+                        if (!await FlatpakBackground.ConfigureAsync(settings.StartDaemonAtLogin, settings.OpenWindowAtLogin, _lifetime.Token))
+                            throw new InvalidOperationException(Localizer.Text("FlatpakBackgroundUnavailable"));
+                        if (setupError.Length == 0) OpenXlrPaths.WriteAtomic(OpenXlrPaths.ConfigFile("flatpak-notice"), "1\n");
+                    }
+                    catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { /* show again next time */ }
+                    catch (Exception ex)
+                    { await Dialogs.ConfirmAsync(this, "OpenXLR Flatpak", ex.Message, Localizer.Text("Close")); }
+                }
+            }
             await _vm.Updates.CheckAsync(manual: false, cancellation: _lifetime.Token);
         };
 
@@ -75,7 +94,8 @@ public partial class MainWindow : Window
         // learns whether a host exists after the constructor returns. So the
         // option does what it says and the manual says what happens on a
         // desktop with no tray.
-        StartsHidden = UiSettings.Load().StartMinimized;
+        StartsHidden = UiSettings.Load().StartMinimized || (FlatpakEnvironment.IsFlatpak
+            && Environment.GetCommandLineArgs().Contains("--background", StringComparer.Ordinal));
 
         Closing += (_, e) =>
         {
@@ -194,6 +214,11 @@ public partial class MainWindow : Window
 
     private void SetupTray()
     {
+        if (FlatpakEnvironment.IsFlatpak)
+        {
+            _flatpakTray = new FlatpakTray(ShowMixer, Quit);
+            return;
+        }
         try
         {
             var menu = new NativeMenu();
@@ -228,6 +253,8 @@ public partial class MainWindow : Window
 
     private void DisposeTray()
     {
+        _flatpakTray?.Dispose();
+        _flatpakTray = null;
         if (_tray is null) return;
         if (Avalonia.Application.Current is { } app)
             TrayIcon.GetIcons(app)?.Remove(_tray);

@@ -69,6 +69,27 @@ internal sealed record ChannelEntry
     /// </summary>
     public bool Present { get; init; } = true;
 
+    /// <summary>What feeds the channel, or null from a daemon that predates input bindings.</summary>
+    public BindingEntry? Binding { get; init; }
+
+    /// <summary>The channel's feed exists; always true for an application channel.</summary>
+    public bool BindingConnected { get; init; } = true;
+
+    /// <summary>Why the channel's source is silent, or null.</summary>
+    public string? BindingWarning { get; init; }
+
+    /// <summary>The driven unit's microphone input this channel carries, or null.</summary>
+    public UnitInputEntry? UnitInput { get; init; }
+
+    /// <summary>XLR 1 or XLR 2, the strips a binding can move to another source.</summary>
+    public bool Bindable => Hardware && Id is "xlr1" or "xlr2";
+
+    /// <summary>A microphone strip fed by one port of another capture source.</summary>
+    public bool SourceBound => Hardware && Binding is { Kind: "source", Source.Length: > 0 };
+
+    /// <summary>A hardware strip on the interface's own input, which an older daemon always is.</summary>
+    public bool UnitBound => Hardware && (Binding is null || Binding.Kind == "unit");
+
     /// <summary>
     /// True for the XLR microphone inputs, which are mono. The daemon still
     /// sends a pair for every channel and repeats the one reading in both
@@ -144,18 +165,80 @@ internal sealed record DeviceEntry
     public double? Volume { get; init; }
     public bool? Muted { get; init; }
 
+    /// <summary>A source's channel count, when PipeWire reports it.</summary>
+    public int? Channels { get; init; }
+
+    /// <summary>A source's channel positions in port order, such as MONO, FL or AUX2.</summary>
+    public List<string>? Positions { get; init; }
+
+    /// <summary>The attached supported interface that publishes this node, or null.</summary>
+    public string? DrivenUnit { get; init; }
+
     /// <summary>Kind 0 is a sink in the daemon's own listing.</summary>
     public bool IsSink => Kind == 0;
 }
 
 /// <summary>
-/// The capture source and its zero-based mono port feeding XLR 1 in generic
-/// microphone mode. The daemon leaves the field out in automatic mode.
+/// What feeds a channel: <c>unit</c> (the interface's capture pair),
+/// <c>source</c> (one port of an exact capture node) or <c>apps</c>.
 /// </summary>
-internal sealed record PrimaryInputEntry
+internal sealed record BindingEntry
 {
-    public string Source { get; init; } = string.Empty;
-    public int Channel { get; init; }
+    public string Kind { get; init; } = string.Empty;
+    public string? Source { get; init; }
+    public int? Pair { get; init; }
+    public int? MonoChannel { get; init; }
+
+    /// <summary>The supported unit whose node a strip is bound to, which the strip follows when the node is renamed.</summary>
+    public string? Unit { get; init; }
+}
+
+/// <summary>
+/// An attached supported unit, or one enabled as additional: the primary
+/// (<see cref="Active"/>) and the units driven beside it, with their own
+/// controls, which <c>setWaveControl</c> writes.
+/// </summary>
+internal sealed record WaveInterfaceEntry
+{
+    public string Id { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public bool Active { get; init; }
+    public bool Enabled { get; init; }
+    public bool Connected { get; init; }
+    public Dictionary<string, JsonElement>? Capabilities { get; init; }
+    public Dictionary<string, JsonElement>? State { get; init; }
+
+    /// <summary>Driven as an additional interface and answering now.</summary>
+    public bool Driven => !Active && Enabled && Connected;
+
+    public bool Can(string capability) =>
+        Capabilities?.TryGetValue(capability, out JsonElement value) == true && value.ValueKind == JsonValueKind.True;
+
+    public int Count(string capability) =>
+        Capabilities?.TryGetValue(capability, out JsonElement value) == true && value.ValueKind == JsonValueKind.Number
+            ? value.GetInt32() : 0;
+
+    public bool Flag(string control) =>
+        State?.TryGetValue(control, out JsonElement value) == true && value.ValueKind == JsonValueKind.True;
+
+    public double Number(string control) =>
+        State?.TryGetValue(control, out JsonElement value) == true && value.ValueKind == JsonValueKind.Number
+            ? value.GetDouble() : 0;
+}
+
+/// <summary>
+/// One of a unit's input-stage controls: <see cref="Device"/> null for the
+/// primary, which <c>set</c> writes, or an additional unit's id, which
+/// <c>setWaveControl</c> writes.
+/// </summary>
+internal sealed record UnitControl(string? Device, string Control);
+
+/// <summary>Which input stage of which driven unit a channel carries.</summary>
+internal sealed record UnitInputEntry
+{
+    public string Unit { get; init; } = string.Empty;
+    public int Input { get; init; }
+    public bool Primary { get; init; }
 }
 
 /// <summary>An interface attached to the machine, whether or not it is the active one.</summary>
@@ -219,12 +302,6 @@ internal sealed record MixerSnapshot
     public List<StreamEntry> Streams { get; init; } = [];
     public Dictionary<string, List<InsertEntry>> Inserts { get; init; } = [];
     public string? LayoutWarning { get; init; }
-
-    /// <summary>The generic microphone binding, or null while XLR 1 follows the Elgato interface.</summary>
-    public PrimaryInputEntry? PrimaryInput { get; init; }
-
-    /// <summary>True when the generic microphone's route into XLR 1 exists.</summary>
-    public bool PrimaryInputConnected { get; init; }
 }
 
 /// <summary>
@@ -247,6 +324,7 @@ internal sealed record Snapshot
     public string? ActiveProfile { get; init; }
     public string? RecallOnConnect { get; init; }
     public List<DetectedDevice> Detected { get; init; } = [];
+    public List<WaveInterfaceEntry> WaveInterfaces { get; init; } = [];
 
     public static JsonSerializerOptions Options { get; } = new()
     {
@@ -261,18 +339,118 @@ internal sealed record Snapshot
     }
 
     /// <summary>
-    /// True in generic microphone mode: XLR 1 is fed by a PipeWire source the
-    /// user picked and the daemon drives no Elgato unit, so <see cref="Connected"/>
-    /// is false and there are no capabilities, while the mixer runs as usual.
+    /// The channel that carries the primary unit's microphone input 1 or 2,
+    /// or null when none does. The daemon names it in <c>unitInput</c>. While
+    /// no channel names one, which is the case with no unit connected and
+    /// with a daemon that predates input bindings, a strip still on the
+    /// interface stands for its input, as it always has.
     /// </summary>
-    [JsonIgnore]
-    public bool Generic => Mixer.PrimaryInput is { Source.Length: > 0 };
+    public ChannelEntry? Carrier(int input)
+    {
+        List<ChannelEntry> channels = Mixer.Channels;
+        if (channels.FirstOrDefault(channel => channel.UnitInput is { Primary: true } unit && unit.Input == input) is { } named)
+            return named;
+        // The daemon names the other input but not this one: no channel carries it.
+        if (channels.Any(channel => channel.UnitInput is { Primary: true })) return null;
+        return Strip(input) is { UnitBound: true } strip ? strip : null;
+    }
 
-    /// <summary>The generic microphone as a person reads it: its description and its port, numbered from 1.</summary>
+    /// <summary>XLR 1 or XLR 2 by input number, or null when the mixer has no such strip.</summary>
+    public ChannelEntry? Strip(int input) =>
+        Mixer.Channels.FirstOrDefault(channel => channel.Hardware && channel.Id == (input == 2 ? "xlr2" : "xlr1"));
+
+    /// <summary>
+    /// The device control behind a channel's microphone mute: <c>mute</c> or
+    /// <c>mute2</c> of the primary on the channel carrying its input 1 or 2,
+    /// or of an additional unit on the channel its <c>unitInput</c> names
+    /// while that unit is driven. Null for every other channel and while the
+    /// unit is not connected. A strip bound to another microphone is not an
+    /// interface, so its key is a send mute like any other channel's.
+    /// </summary>
+    public UnitControl? UnitMute(ChannelEntry channel)
+    {
+        if (Connected && Carrier(1) is { } first && first.Id == channel.Id) return new(null, "mute");
+        if (Connected && Carrier(2) is { } second && second.Id == channel.Id) return new(null, "mute2");
+        if (channel.UnitInput is { Primary: false } other && Additional(other.Unit) is { Driven: true } unit
+            && unit.Can("mute"))
+            return new(unit.Id, other.Input == 2 ? "mute2" : "mute");
+        return null;
+    }
+
+    /// <summary>An additional unit by its id, or null.</summary>
+    public WaveInterfaceEntry? Additional(string id) =>
+        WaveInterfaces.FirstOrDefault(unit => !unit.Active && unit.Id == id);
+
+    /// <summary>The primary unit's id, the unit in the header, or null.</summary>
     [JsonIgnore]
-    public string? GenericLabel => Mixer.PrimaryInput is { Source.Length: > 0 } input
-        ? $"{SourceName(input.Source)}, port {input.Channel + 1}"
-        : null;
+    public string? PrimaryUnit => WaveInterfaces.FirstOrDefault(unit => unit.Active)?.Id;
+
+    /// <summary>A unit control's current on or off value.</summary>
+    public bool Flag(UnitControl control) => control.Device is null
+        ? Flag(control.Control)
+        : Additional(control.Device)?.Flag(control.Control) == true;
+
+    /// <summary>Write a unit control: <c>set</c> on the primary, <c>setWaveControl</c> on an additional unit.</summary>
+    public static void Send(DaemonLink link, UnitControl control, bool value)
+    {
+        if (control.Device is null)
+            link.Send("set", body => { body["control"] = control.Control; body["value"] = value; });
+        else
+            link.Send("setWaveControl", body =>
+            {
+                body["device"] = control.Device;
+                body["control"] = control.Control;
+                body["value"] = value;
+            });
+    }
+
+    /// <summary>
+    /// The source a bindable strip plays from: the name it was bound to, or,
+    /// for a strip bound to a supported unit whose node was renamed (driven,
+    /// or its card profile switched), the one node that unit publishes now.
+    /// </summary>
+    public string? BoundSource(ChannelEntry strip)
+    {
+        if (!strip.SourceBound) return null;
+        string source = strip.Binding!.Source!;
+        if (Devices.Any(device => !device.IsSink && device.Name == source)) return source;
+        return strip.Binding.Unit is { } unit
+            && Devices.Where(device => !device.IsSink && !device.IsOwn && device.DrivenUnit == unit).ToArray() is [var renamed]
+            ? renamed.Name : source;
+    }
+
+    /// <summary>
+    /// What a heading over the interface's input calls it: the strip's own
+    /// name while the input plays there, the channel that carries it
+    /// otherwise, or that it is not in the mixer.
+    /// </summary>
+    public string InputHeading(int input)
+    {
+        ChannelEntry? carrier = Carrier(input);
+        ChannelEntry? strip = Strip(input);
+        if (carrier is not null && carrier.Id == strip?.Id) return carrier.Name;
+        if (carrier is not null) return $"Input {input} on {carrier.Name}";
+        // No mixer to place it in: the strip names the interface would give it.
+        if (strip is null && !Mixer.Channels.Any(channel => channel.UnitInput is not null))
+            return $"{(Capabilities.TryGetValue("xlrJacks", out JsonElement jacks) && jacks.ValueKind == JsonValueKind.False ? "Mic" : "XLR")} {input}";
+        return $"Input {input}, not in the mixer";
+    }
+
+    /// <summary>
+    /// What feeds a bindable strip, as a person reads it: the interface's own
+    /// input, or the source's description with its port.
+    /// </summary>
+    public string BindingLabel(ChannelEntry strip) => strip.SourceBound
+        ? $"{SourceName(BoundSource(strip)!)}, port {(strip.Binding!.MonoChannel ?? 0) + 1}"
+        : UnitInputLabel(strip);
+
+    /// <summary>The interface's own input behind a strip: its XLR jack, or a USB microphone's capsule.</summary>
+    public string UnitInputLabel(ChannelEntry strip) =>
+        UnitXlrJacks ? $"Interface jack ({(strip.Id == "xlr2" ? "XLR 2" : "XLR 1")})" : "Built-in microphone";
+
+    /// <summary>False on a Wave:3 or Wave:1, whose input is the microphone's own capsule.</summary>
+    public bool UnitXlrJacks =>
+        !(Capabilities.TryGetValue("xlrJacks", out JsonElement jacks) && jacks.ValueKind == JsonValueKind.False);
 
     /// <summary>A source's description from the device list, or its node name when it is not listed.</summary>
     public string SourceName(string source) =>
@@ -281,13 +459,22 @@ internal sealed record Snapshot
             : source;
 
     /// <summary>
-    /// The capture sources XLR 1 can take, as the window lists them: every
-    /// source but OpenXLR's own nodes, and none the daemon would refuse
-    /// (an OpenXLR name, a monitor tap, a control character, over 256 characters).
+    /// The capture sources a microphone strip can take, as the window lists
+    /// them: every source but OpenXLR's own nodes and the primary unit's,
+    /// which is the interface's own input listed first, and none the daemon
+    /// would refuse (an OpenXLR name, a monitor tap, a control character,
+    /// over 256 characters). Another supported unit's node is offered.
     /// </summary>
     [JsonIgnore]
-    public List<DeviceEntry> PrimaryInputChoices =>
-        [.. Devices.Where(device => !device.IsSink && !device.IsOwn && Selectable(device.Name))];
+    public List<DeviceEntry> BindingChoices =>
+        [.. Devices.Where(device => !device.IsSink && !device.IsOwn && Selectable(device.Name)
+            && (device.DrivenUnit is null || device.DrivenUnit != PrimaryUnit))];
+
+    /// <summary>The attached supported unit behind a source that is not driven yet, which a binding can offer to drive.</summary>
+    public WaveInterfaceEntry? UndrivenUnit(string? source) =>
+        source is not null && Devices.FirstOrDefault(device => !device.IsSink && device.Name == source)?.DrivenUnit is { } id
+        && WaveInterfaces.FirstOrDefault(unit => unit.Id == id) is { Active: false, Enabled: false, Connected: true } unit
+            ? unit : null;
 
     private static bool Selectable(string name) =>
         name.Length is > 0 and <= 256 && !string.IsNullOrWhiteSpace(name) && !name.Any(char.IsControl)

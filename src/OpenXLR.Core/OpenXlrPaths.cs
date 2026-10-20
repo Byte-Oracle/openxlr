@@ -44,6 +44,11 @@ public static class OpenXlrPaths
     /// <summary>The configuration directory, ~/.config/openxlr.</summary>
     public static string ConfigDir => Path.Combine(ConfigHome, "openxlr");
 
+    /// <summary>Runtime history such as logs, separate from atomic preferences.</summary>
+    public static string StateDir => Path.Combine(
+        Environment.GetEnvironmentVariable("XDG_STATE_HOME") is { Length: > 0 } state
+            ? state : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "state"), "openxlr");
+
     /// <summary>A file directly under the configuration directory.</summary>
     public static string ConfigFile(string name) => Path.Combine(ConfigDir, name);
 

@@ -1,21 +1,60 @@
 namespace OpenXLR.Tui;
 
 /// <summary>
-/// The hardware: the XLR inputs with their processing, the headphone outputs,
-/// the direct monitor blend and the USB Aux return. A control the active
-/// device does not advertise is drawn faded rather than hidden, so the same
-/// page describes every interface.
+/// The hardware: the interface's microphone inputs with their processing,
+/// what feeds XLR 1 and XLR 2, the headphone outputs, the direct monitor
+/// blend and the USB Aux return. A control the active device does not
+/// advertise is drawn faded rather than hidden, so the same page describes
+/// every interface.
+///
+/// An input's group is headed by the channel that carries it, which is its
+/// own strip until that strip is bound to another microphone. A binding
+/// choice is a draft until Apply sends it, because each change mutes the
+/// strip in the monitor mixes; stepping through the sources never rewires
+/// the microphone on the way.
 /// </summary>
 internal sealed class InputsView : View
 {
     private readonly RowList _list = new();
+    private readonly Dictionary<string, (string? Source, int Port, bool Drive)> _drafts = [];
+    // The request in flight, which is the link's own task, so a reply has
+    // completed it by the time the link reports the change and a frame is
+    // drawn. Driving a unit is a second request, sent once the binding is in.
+    private Task<string?>? _applying;
+    private string _applyingStrip = string.Empty;
+    private string _applyingLabel = string.Empty;
+    private string? _driveAfter;
+    private bool _driving;
 
     public override string Title => "Inputs";
 
-    public override string Keys => "Up/Down control  Space toggle  Left/Right or -/+ change  [/] fine";
+    public override string Keys => "Up/Down control  Space toggle  Left/Right or -/+ change  [/] fine  Enter apply";
 
     public override void Draw(Screen screen, Rect area, App app)
     {
+        if (_applying is { IsCompleted: true } done)
+        {
+            string? error = done.IsCompletedSuccessfully ? done.Result : "The daemon did not answer";
+            _applying = null;
+            if (error is { Length: > 0 })
+            {
+                app.Say(_driving ? $"The strip is bound, but the interface was not driven: {error}" : error);
+                _driveAfter = null;
+            }
+            else if (_driveAfter is { } unit)
+            {
+                _driveAfter = null;
+                _driving = true;
+                _applying = app.Link.Request("setWaveInterfaceEnabled", body =>
+                {
+                    body["device"] = unit;
+                    body["value"] = true;
+                });
+            }
+            else app.Say(_applyingLabel);
+            // The binding is in once its own request succeeded, whatever driving the unit says.
+            if (_driving || error is null) _drafts.Remove(_applyingStrip);
+        }
         Snapshot? state = State(app);
         if (state is null)
         {
@@ -31,29 +70,23 @@ internal sealed class InputsView : View
         return state is not null && _list.Handle(key, Build(app, state));
     }
 
-    /// <summary>What a hardware row says in generic microphone mode, where no Elgato unit is driven.</summary>
-    internal const string GenericOff = "not on a generic mic";
-
-    private static List<Row> Build(App app, Snapshot state)
+    private List<Row> Build(App app, Snapshot state)
     {
         List<Row> rows = [];
         DaemonLink link = app.Link;
         int inputs = Math.Max(1, state.Count("xlrInputs"));
         int gainMax = state.Count("gainMaxDb") is int max and > 0 ? max : 80;
-        // A generic microphone has no USB controls here: its gain and phantom
-        // power are set on the microphone or its own interface. The rows stay
-        // in place, faded with that reason, so the page reads the same.
-        string off = state.Generic ? GenericOff : "not on this device";
+        const string off = "not on this device";
 
         for (int input = 1; input <= inputs; input++)
         {
             string suffix = input == 1 ? string.Empty : input.ToString();
-            rows.Add(new HeadingRow($"XLR {input}"));
+            rows.Add(new HeadingRow(state.InputHeading(input)) { Dial = true });
             rows.Add(new NumberRow($"Gain", state.Number($"gain{suffix}Db"), 0, gainMax, 1,
                 value => $"{value:0} dB", value => Set(link, $"gain{suffix}", (int)Math.Round(value)))
             {
                 Enabled = state.Can("gain"), FineStep = 1, DisabledText = off,
-                Note = state.Generic ? "set on the mic" : state.Flag("gainLocked") ? "locked" : null,
+                Note = state.Flag("gainLocked") ? "locked" : null,
             });
             rows.Add(new ToggleRow("Mute", state.Flag($"mute{suffix}"),
                 value => Set(link, $"mute{suffix}", value)) { Enabled = state.Can("mute"), DisabledText = off });
@@ -76,16 +109,13 @@ internal sealed class InputsView : View
                 value => Set(link, $"clipGuard{suffix}", value)) { Enabled = state.Can("clipGuard"), DisabledText = off });
             rows.Add(new ToggleRow("Compressor", state.Flag($"compressor{suffix}"),
                 value => Set(link, $"compressor{suffix}", value)) { Enabled = state.Can("compressor"), DisabledText = off });
-            if (input == 1 && state.GenericLabel is { } generic)
-            {
-                rows.Add(new TextRow("Source", generic));
-                rows.Add(new TextRow("Route", state.Mixer.PrimaryInputConnected ? "linked to XLR 1"
-                    : "not linked, XLR 1 is silent"));
-            }
         }
 
-        // The software low cut and ClipGuard run in the mixer, so they work on
-        // a generic microphone too; the gain lock guards a hardware gain.
+        AdditionalInputs(rows, link, state);
+        Bindings(rows, app, state);
+
+        // The software low cut and ClipGuard run in the mixer, so they act on
+        // any microphone on XLR 1; the gain lock guards the interface's gain.
         rows.Add(new HeadingRow("Software"));
         rows.Add(new ToggleRow("Gain lock", state.Flag("gainLocked"),
             value => Set(link, "gainLock", value)) { Enabled = state.Can("gain"), DisabledText = off });
@@ -131,6 +161,117 @@ internal sealed class InputsView : View
         }
 
         return rows;
+    }
+
+    /// <summary>
+    /// What feeds XLR 1 and XLR 2: the interface's own input or one port of
+    /// another capture source, each with its port, Apply and the strip's
+    /// connection. The sources are the ones the window offers, which leaves
+    /// out an attached supported interface's nodes for now.
+    /// </summary>
+    private void Bindings(List<Row> rows, App app, Snapshot state)
+    {
+        List<ChannelEntry> strips = [.. state.Mixer.Channels.Where(channel => channel.Bindable)];
+        if (strips.Count == 0) return;
+        rows.Add(new HeadingRow("Bindings"));
+        List<DeviceEntry> sources = state.BindingChoices;
+        foreach (ChannelEntry strip in strips)
+        {
+            string? bound = state.BoundSource(strip);
+            int boundPort = (strip.Binding?.MonoChannel ?? 0) + 1;
+            // The interface's own input: an XLR jack, or a USB microphone's capsule.
+            List<(string? Name, string Label)> choices = [(null, state.UnitInputLabel(strip))];
+            foreach (DeviceEntry source in sources)
+            {
+                string label = source.Description is { Length: > 0 } description ? description : source.Name;
+                // Two microphones of one model share a description; the node name tells them apart.
+                if (sources.Count(other => other.Description == source.Description) > 1) label = $"{label} ({source.Name})";
+                choices.Add((source.Name, label));
+            }
+            // A saved source that is unplugged, or that the list leaves out, stays chosen, as the daemon keeps it.
+            if (bound is not null && !choices.Any(choice => choice.Name == bound))
+                choices.Add((bound, $"{bound} (missing)"));
+
+            (string? chosen, int port, bool drive) = _drafts.TryGetValue(strip.Id, out var draft) ? draft : (bound, boundPort, true);
+            int at = choices.FindIndex(choice => choice.Name == chosen);
+            if (at < 0) (at, chosen, port) = (0, null, 1);   // a drafted source that has since gone
+            DeviceEntry? device = sources.FirstOrDefault(source => source.Name == chosen);
+            int ports = device?.Channels is int count and > 0 ? Math.Min(count, 64) : 64;
+            port = Math.Clamp(port, 1, ports);
+            string id = strip.Id;
+            string name = strip.Name;
+            rows.Add(new ChoiceRow(name, [.. choices.Select(choice => choice.Label)], at,
+                index => _drafts[id] = (choices[index].Name, 1, drive)));
+            rows.Add(new NumberRow($"{name} port", port, 1, ports, 1, value => PortLabel(device, (int)value),
+                value => _drafts[id] = (chosen, (int)value, drive))
+            { Enabled = chosen is not null, Integer = true, FineStep = 1, DisabledText = "the interface takes no port" });
+            if (chosen?.StartsWith("bluez_input.", StringComparison.Ordinal) == true)
+                rows.Add(new TextRow("Bluetooth", "stays in headset mode while bound"));
+            // Another supported unit that is not driven yet: drive it as an
+            // additional interface too, on by default, since otherwise its
+            // gain is out of reach.
+            WaveInterfaceEntry? undriven = state.UndrivenUnit(chosen);
+            if (undriven is not null)
+                rows.Add(new ToggleRow("Also drive unit", drive, value => _drafts[id] = (chosen, port, value))
+                { Note = undriven.Name });
+            bool changed = chosen != bound || chosen is not null && port != boundPort;
+            string done = chosen is null ? $"{name} takes {choices[0].Label}" : $"{name} takes {choices[at].Label}, port {port}";
+            string? driveUnit = undriven is not null && drive ? undriven.Id : null;
+            rows.Add(new ActionRow($"Apply to {name}", _applying is null ? "apply" : "sending",
+                () => Apply(app, id, chosen, port, driveUnit, done))
+            { Note = changed ? "not applied" : null });
+            rows.Add(new TextRow($"{name} feed", strip.BindingWarning is { Length: > 0 } warning ? warning
+                : strip.BindingConnected ? $"linked, {state.BindingLabel(strip)}" : "not linked"));
+        }
+    }
+
+    /// <summary>A port numbered from 1, with the channel PipeWire names for it when it reports one.</summary>
+    private static string PortLabel(DeviceEntry? device, int port) =>
+        device?.Positions is { } positions && port >= 1 && port <= positions.Count && device.Channels == positions.Count
+            ? $"{port} ({positions[port - 1]})" : $"{port}";
+
+    private void Apply(App app, string strip, string? source, int port, string? driveUnit, string label)
+    {
+        if (_applying is not null) return;
+        _applyingStrip = strip;
+        _applyingLabel = label;
+        _driveAfter = driveUnit;
+        _driving = false;
+        _applying = app.Link.Request("setInputBinding", body =>
+        {
+            body["channel"] = strip;
+            body["source"] = source;
+            if (source is not null) body["captureMonoChannel"] = port - 1;
+        });
+    }
+
+    /// <summary>
+    /// The controls of an additional unit whose microphone a channel carries,
+    /// such as a Wave:3 that XLR 1 is bound to, written with setWaveControl.
+    /// </summary>
+    private static void AdditionalInputs(List<Row> rows, DaemonLink link, Snapshot state)
+    {
+        foreach (ChannelEntry channel in state.Mixer.Channels)
+        {
+            if (channel.UnitInput is not { Primary: false } carried || state.Additional(carried.Unit) is not { Driven: true } unit)
+                continue;
+            string suffix = carried.Input == 2 ? "2" : string.Empty;
+            UnitControl Control(string name) => new(unit.Id, name + suffix);
+            int gainMax = unit.Count("gainMaxDb") is int max and > 0 ? max : 80;
+            rows.Add(new HeadingRow($"{unit.Name} input {carried.Input} on {channel.Name}") { Dial = unit.Can("gain") });
+            if (unit.Can("gain"))
+                rows.Add(new NumberRow("Gain", unit.Number($"gain{suffix}Db"), 0, gainMax, 1, value => $"{value:0} dB",
+                    value => link.Send("setWaveControl", body =>
+                    {
+                        body["device"] = unit.Id;
+                        body["control"] = $"gain{suffix}";
+                        body["value"] = (int)Math.Round(value);
+                    }))
+                { FineStep = 1, Note = unit.Flag("gainLocked") ? "locked" : null });
+            foreach ((string label, string name) in new[] { ("Mute", "mute"), ("Low cut", "lowCut"), ("ClipGuard", "clipGuard"), ("Phantom power", "phantom") })
+                if (unit.Can(name))
+                    rows.Add(new ToggleRow(label, unit.Flag(name + suffix), value => Snapshot.Send(link, Control(name), value)));
+        }
     }
 
     /// <summary>The headphone scale the window shows: -60 dB is 0% and 0 dB is 100%.</summary>

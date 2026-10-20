@@ -1,0 +1,3 @@
+#!/bin/sh
+export LV2_PATH="$HOME/.lv2:${LV2_PATH:-/app/lib/lv2:/app/extensions/Plugins/lv2}"
+exec /app/lib/openxlr/ui/OpenXLR.UI "$@"
