@@ -367,6 +367,70 @@ public sealed class TuiSkinTests : IDisposable
 
     // --- the saved choice ---
 
+    private string PreferencePath()
+    {
+        string config = Path.Combine(_root, "preferences-config");
+        Directory.CreateDirectory(Path.Combine(config, "openxlr"));
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", config);
+        return Path.Combine(config, "openxlr", "ui.json");
+    }
+
+    [Fact]
+    public void OversizedPreferencesCannotBeAppliedOrOverwritten()
+    {
+        string path = PreferencePath();
+        string text = "{\"skin\":\"nord\"}" + new string(' ', OpenXlrPaths.MaxPreferenceBytes);
+        File.WriteAllText(path, text);
+
+        Assert.Null(UiSettingsFile.ReadSkin());
+        Assert.False(UiSettingsFile.WriteSkin("opendeck"));
+        Assert.Equal(text, File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void APreferenceWriteCannotGrowBeyondTheReadLimit()
+    {
+        string path = PreferencePath();
+        const string prefix = "{\"skin\":\"nord\",\"padding\":\"";
+        const string suffix = "\"}";
+        string text = prefix + new string('x', OpenXlrPaths.MaxPreferenceBytes - prefix.Length - suffix.Length) + suffix;
+        File.WriteAllText(path, text);
+        Assert.Equal("nord", UiSettingsFile.ReadSkin());
+
+        Assert.False(UiSettingsFile.WriteSkin("opendeck"));
+
+        Assert.Equal(text, File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void PreferencesAtTheReadLimitAndWithLegacyEncodingsStillLoad()
+    {
+        string path = PreferencePath();
+        const string text = "{\"skin\":\"nord\",\"appearanceMode\":\"dark\"}";
+        File.WriteAllText(path, text.PadRight(OpenXlrPaths.MaxPreferenceBytes));
+        Assert.Equal("nord", UiSettingsFile.ReadSkin());
+        foreach (var encoding in new System.Text.Encoding[] { new System.Text.UTF8Encoding(true), System.Text.Encoding.Unicode })
+        {
+            File.WriteAllText(path, text, encoding);
+            Assert.Equal("nord", UiSettingsFile.ReadSkin());
+            Assert.Equal("dark", UiSettingsFile.ReadAppearanceMode());
+        }
+    }
+
+    [Fact]
+    public async Task APreferencePipeCannotBlockTheTerminal()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        string path = PreferencePath();
+        var created = ProcessRunner.Run("mkfifo", [path]);
+        Assert.True(created.Ok, created.Stderr);
+        using var keeper = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+        var read = Task.Run(UiSettingsFile.ReadSkin);
+        try { Assert.Null(await read.WaitAsync(TimeSpan.FromSeconds(3))); }
+        finally { keeper.Dispose(); await read.WaitAsync(TimeSpan.FromSeconds(3)); }
+        Assert.True(File.Exists(path));
+    }
+
     [Fact]
     public void ChoosingASkinKeepsEverythingElseTheWindowSaved()
     {

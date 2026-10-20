@@ -424,7 +424,7 @@ internal static class UiSettingsFile
         {
             JsonObject root = Read();
             root[key] = value;
-            OpenXlrPaths.WriteAtomic(Path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+            OpenXlrPaths.WriteAtomicJson(Path, root, new JsonSerializerOptions { WriteIndented = true }, OpenXlrPaths.MaxPreferenceBytes);
             return true;
         }
         catch (IOException) { return false; }
@@ -438,7 +438,7 @@ internal static class UiSettingsFile
     private static JsonObject Read()
     {
         if (!File.Exists(Path)) return new JsonObject();
-        return JsonNode.Parse(File.ReadAllText(Path)) as JsonObject
+        return JsonNode.Parse(RegularFile.ReadText(Path, OpenXlrPaths.MaxPreferenceBytes)) as JsonObject
             ?? throw new JsonException("ui.json does not hold a JSON object.");
     }
 }

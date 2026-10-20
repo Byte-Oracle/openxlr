@@ -32,6 +32,9 @@ internal static class OpenXlrPaths
 public static class OpenXlrPaths
 #endif
 {
+    /// <summary>The byte limit for the shared preference files.</summary>
+    public const int MaxPreferenceBytes = 4 * 1024 * 1024;
+
     private const UnixFileMode PrivateDir = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
     private const UnixFileMode PrivateFile = UnixFileMode.UserRead | UnixFileMode.UserWrite;
 
@@ -157,7 +160,16 @@ public static class OpenXlrPaths
 
     /// <summary>Serialize a value and write it as a private file atomically.</summary>
     public static void WriteAtomicJson<T>(string path, T value, JsonSerializerOptions options)
-        => WriteAtomic(path, JsonSerializer.Serialize(value, options));
+        => WriteAtomicJson(path, value, options, int.MaxValue);
+
+    /// <summary>Refuse serialized JSON above the byte limit before replacing the existing file.</summary>
+    public static void WriteAtomicJson<T>(string path, T value, JsonSerializerOptions options, int maximumBytes)
+    {
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(value, options);
+        if (bytes.Length > maximumBytes)
+            throw new IOException($"JSON file exceeds the {maximumBytes} byte limit.");
+        WriteAtomic(path, bytes);
+    }
 
     /// <summary>
     /// Open a new private file for writing (0600 from the first byte), for
