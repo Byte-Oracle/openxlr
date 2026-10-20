@@ -40,6 +40,8 @@ class PackageTests(unittest.TestCase):
         permissions = manifest['finish-args']
         self.assertIn('--device=usb', permissions)
         self.assertIn('--filesystem=xdg-run/pipewire-0:ro', permissions)
+        self.assertIn('--filesystem=xdg-config/wireplumber/wireplumber.conf.d:create', permissions)
+        self.assertNotIn('--filesystem=xdg-config/wireplumber:create', permissions)
         for permission in permissions:
             self.assertNotIn(permission, ('--device=all', '--filesystem=host', '--filesystem=home', '--socket=session-bus', '--socket=system-bus', '--talk-name=org.kde.KWin'))
             self.assertNotIn('org.freedesktop.Flatpak', permission)

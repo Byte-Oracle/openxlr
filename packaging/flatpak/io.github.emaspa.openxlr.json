@@ -27,7 +27,7 @@
     "--device=usb",
     "--filesystem=xdg-run/pipewire-0:ro",
     "--filesystem=xdg-run/openxlr:create",
-    "--filesystem=xdg-config/wireplumber:create",
+    "--filesystem=xdg-config/wireplumber/wireplumber.conf.d:create",
     "--persist=.lv2",
     "--persist=.clap",
     "--persist=.vst3",
