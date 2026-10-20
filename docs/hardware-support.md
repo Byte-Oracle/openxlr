@@ -499,8 +499,10 @@ the packages include. Aux In cannot be bound.
 As a capture input (Edit layout, **Add capture input**), the source gets a
 channel of its own with sends, a volume, meters and its place in profiles,
 fed from a stereo pair, or from one mono port through the API. A capture
-input has no insert chain, EQ or Sound Check of its own yet. The inserts on
-the mixes it feeds process it.
+input hosts an insert chain of its own, set through the
+[API](api.md) or the saved layout for now; the window shows it in a later
+release. It has no EQ or Sound Check of its own yet, and the inserts on the
+mixes it feeds process it too.
 
 Everything after the inputs works the same with or without Elgato
 hardware: application channels and routing, virtual microphones, monitor
