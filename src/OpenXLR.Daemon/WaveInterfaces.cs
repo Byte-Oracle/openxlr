@@ -163,7 +163,7 @@ public sealed class WaveInterfaces : BackgroundService
     internal IReadOnlyList<string> OwnSourceFragments(string id)
     {
         IReadOnlyList<DeviceInfo> attached = [.. Volatile.Read(ref _available).Select(d => d.Info)];
-        if (attached.FirstOrDefault(d => d.InstanceId == id) is not { } unit || _primary.ActiveInfo?.InstanceId == id) return [];
+        if (attached.FirstOrDefault(d => d.InstanceId == id) is not { } unit || _primary.PublishedInfo?.InstanceId == id) return [];
         bool shared = attached.Any(other => other.InstanceId != id
             && other.ModelNameFragment.Contains(unit.ModelNameFragment, StringComparison.OrdinalIgnoreCase));
         if (!shared) return unit.NodeNameFragments;
@@ -178,11 +178,11 @@ public sealed class WaveInterfaces : BackgroundService
     /// </summary>
     internal IReadOnlyList<OpenXLR.Core.Mixing.AttachedUnit> AttachedUnits()
     {
-        string? primary = _primary.ActiveInfo?.InstanceId;
+        string? primary = _primary.PublishedInfo?.InstanceId;
         return [.. Volatile.Read(ref _available).Select(device =>
         {
             string id = device.Info.InstanceId;
-            bool driven = id != primary && _sessions.TryGetValue(id, out DeviceManager? session) && session.ActiveInfo is not null;
+            bool driven = id != primary && _sessions.TryGetValue(id, out DeviceManager? session) && session.PublishedInfo is not null;
             return new OpenXLR.Core.Mixing.AttachedUnit(id, driven ? OwnSourceFragments(id) : [],
                 device.Capabilities.XlrInputs, device.Capabilities.XlrJacks, driven);
         })];
