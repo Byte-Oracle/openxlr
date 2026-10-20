@@ -674,7 +674,7 @@ function dialValue(target, inst) {
       const db = dialNow(target, reported);
       const p = Math.round(((60 + db) / 60) * 100);
       const selector = target === "hp" ? "outHp1" : "outHp2";
-      const jackOff = deviceTargetSupported(selector) && s?.[selector] === false;
+      const jackOff = supported(selector) && s?.[selector] === false;
       return { label: target === "hp" ? "Phones 1" : "Phones 2", pct: p,
                text: jackOff ? "MUTED" : `${p}%`, muted: jackOff };
     }
@@ -857,7 +857,7 @@ function onDialPress(context, inst) {
     // Only units with an output selector can use it as headphone mute.
     const control = t === "hp" ? "outHp1" : "outHp2";
     const on = dev()?.[control];
-    if (deviceTargetSupported(t) && deviceTargetSupported(control) && typeof on === "boolean")
+    if (supported(t) && supported(control) && typeof on === "boolean")
       cmd({ cmd: "set", control, value: !on });
   } else if (t === "crossfade") {
     cmd({ cmd: "set", control: "crossfade", value: 100 });   // back to centre
