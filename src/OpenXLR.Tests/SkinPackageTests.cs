@@ -141,6 +141,21 @@ public sealed class SkinPackageTests : IDisposable
     }
 
     /// <summary>
+    /// A shipped skin describes itself in its own words: no built-in
+    /// description names Wave Link or Elgato.
+    /// </summary>
+    [Fact]
+    public void NoBuiltInSkinDescriptionNamesWaveLinkOrElgato()
+    {
+        foreach (SkinEntry entry in SkinCatalog.BuiltIn())
+        {
+            string description = entry.Package.Description ?? "";
+            Assert.DoesNotContain("Wave Link", description, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Elgato", description, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    /// <summary>
     /// Broadcast is the reference layout skin an
     /// author copies: its whole layout is taken, with the input rack, two
     /// banks of upright strips starting on Monitor A and Stream, MONITOR's

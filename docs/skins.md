@@ -34,8 +34,7 @@ every package has them and there is nothing to install:
 - **Nyan Pink**, a dark plum palette with candy pink faders, cyan details
   and segmented green, amber and red meters. It keeps the classic mixer
   arrangement and the saved section order.
-- **Wave**, inspired by Wave Link 3: dark charcoal cards, blue faders and
-  green meters. Inputs form rows and mixes form columns in the existing
+- **Wave**: dark charcoal cards, blue faders and green meters. Inputs form rows and mixes form columns in the existing
   mix matrix, with the monitor toolbar above
   and headphone controls below. It uses the same routing and controls as
   the other skins; no Elgato artwork or additional software is needed.

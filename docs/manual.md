@@ -1679,8 +1679,7 @@ the application, so a package brings them with it:
   described below;
 - **Nyan Pink**, dark plum cards, candy pink faders and cyan details,
   using the classic arrangement and your saved section order;
-- **Wave**, inspired by Wave Link 3, with dark charcoal cards, blue faders
-  and green meters. Its matrix puts inputs down the side and mixes across
+- **Wave**, with dark charcoal cards, blue faders and green meters. Its matrix puts inputs down the side and mixes across
   the top, with the monitor toolbar
   above and headphone controls below. Input bindings, gain, mute and
   effects stay available in the row heads. Choosing it changes appearance
