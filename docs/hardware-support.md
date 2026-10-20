@@ -54,9 +54,9 @@ worth up to 12 dB above the normal ceiling on any input. The MK.2
 models have no ducking, and on the XLR Dock MK.2 the equalizer is not
 onboard either: Wave Link 3.5 runs it on the computer and the dock only
 stores the band values
-([findings](xlr-dock-mk2-eq-findings.md)). The Wave XLR MK.2 has not
-been tested and is likely the same. The full hardware mix matrix is also
-unfinished.
+([findings](mk2-eq-findings.md)). The Wave XLR MK.2 measured the
+same way: it stores four bands and does not apply them. The full
+hardware mix matrix is also unfinished.
 Elgato's [Pro feature guide](https://www.elgato.com/us/en/explorer/products/wave/wave-xlr-pro-give-your-setup-superpowers/)
 distinguishes those onboard effects from VST processing on the computer.
 OpenXLR exposes Voice Tune and the other DSP controls listed above; its
@@ -165,7 +165,7 @@ The XLR Dock MK.2 for the Stream Deck+ is built on the same Wave FX
 platform (80 dB gain, phantom, ClipGuard 2.0, onboard expander, voice
 tune and compressor). Elgato also lists an EQ, but on this dock Wave Link
 runs it on the computer
-([findings](xlr-dock-mk2-eq-findings.md)). Its `lsusb -v` dump
+([findings](mk2-eq-findings.md)). Its `lsusb -v` dump
 ([issue #1](https://github.com/emaspa/openxlr/issues/1)) shows the same
 five interfaces as the Wave XLR MK.2, including the vendor-specific
 interface 3 that carries the control protocol. Interface 3 has two
