@@ -330,6 +330,12 @@ public sealed class MixMatrixTests
         headset.Sync(true);
         Assert.Equal(1, Column("monitor").Outputs);
         Assert.Equal(1, Column("monitor2").Outputs);
+        // A selected output whose device is missing hears nothing.
+        var missing = new MonitorOutputItem("gone", "gone", () => { }, (_, _) => { }, isPresent: false);
+        missing.SyncFeed(feeds, "monitor");
+        missing.Sync(true);
+        model.MonitorOutputs.Add(missing);
+        Assert.Equal(1, Column("monitor").Outputs);
 
         // Controls first in the skin's order put the controls row above the lines.
         matrix.Configure(SkinMatrixOptions.Default with

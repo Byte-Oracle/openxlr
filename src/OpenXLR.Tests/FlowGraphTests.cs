@@ -41,6 +41,17 @@ public sealed class FlowGraphTests
         Assert.Equal(2, graph.Routes.Count(r => r.To == "out:headset"));
         output.Sync(false);
         Assert.DoesNotContain(FlowGraph.From(vm).Nodes, n => n.Key == "out:headset");
+
+        // A selected output whose device is missing is drawn, but nothing reaches it.
+        vm.Mixes[0].ApplyFromDaemon(System.Text.Json.Nodes.JsonNode.Parse("""{"volume":1,"muted":false,"kind":"monitor"}""")!);
+        Assert.True(FlowGraph.From(vm).Nodes.Single(n => n.Key == "mix:monitor").Active);
+        var missing = new MonitorOutputItem("gone", "Gone (not connected)", () => { }, (_, _) => { }, isPresent: false);
+        missing.Sync(true);
+        missing.SyncFeed([new("monitor", "Monitor A")], "monitor");
+        vm.MonitorOutputs.Add(missing);
+        graph = FlowGraph.From(vm);
+        Assert.False(graph.Nodes.Single(n => n.Key == "out:gone").Active);
+        Assert.All(graph.Routes.Where(r => r.To == "out:gone"), r => Assert.False(r.Active));
     }
 
     [Fact]

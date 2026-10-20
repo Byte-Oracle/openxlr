@@ -1071,6 +1071,9 @@
   <data name="MonitorOutput" xml:space="preserve">
     <value>Monitor output</value>
   </data>
+  <data name="MonitorOutputMissing" xml:space="preserve">
+    <value>{0} (not connected)</value>
+  </data>
   <data name="MonitorOutputsMore" xml:space="preserve">
     <value>{0} + {1} more</value>
   </data>

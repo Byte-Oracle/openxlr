@@ -48,6 +48,7 @@ public sealed class WindowLayoutTests
                 ProfileSliderWindowTests.Check();
                 EditorRulesReconnectWindowTests.Check();
                 UserMonitorWindowTests.Check();
+                MonitorOutputPickerWindowTests.Check();
                 InputBindingWindowTests.Check();
                 InputBindingWindowTests.CheckDrivenUnit();
                 VolumeRangeWindowTests.Check();

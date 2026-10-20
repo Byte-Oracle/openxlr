@@ -377,7 +377,12 @@ affects only the display; the daemon continues processing audio.
    here too; ticking one switches the hardware's output routing.
    A ticked device that comes up with one side of its stereo feed
    missing, or that goes away and comes back, is linked again on the
-   next sweep (about one second). A mono device needs only its one
+   next sweep (about one second). While it is away it stays ticked in
+   the list as "(not connected)" and stays selected, even across a
+   daemon restart. OpenXLR never moves the monitor to another output in
+   its place. Only a recalled profile, loaded by hand or on connect,
+   changes the selection, to the outputs that profile saved. Ticking
+   another device adds it. Untick the missing one to drop it. A mono device needs only its one
    channel. The microphone channels recover the same way when the
    interface returns, and a microphone feed missing one side keeps its
    working side while the other is repaired.
