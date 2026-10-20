@@ -1,6 +1,7 @@
 using OpenXLR.UI.Localization;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -15,7 +16,7 @@ namespace OpenXLR.UI;
 /// <see cref="StateReceived"/> for every pushed state. State is handed over as a
 /// JsonNode so the UI can bind to it without duplicating the daemon's records.
 /// </summary>
-public sealed class DaemonClient : IAsyncDisposable
+public sealed class DaemonClient : IAsyncDisposable, IEqCommands
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
@@ -351,6 +352,37 @@ public sealed class DaemonClient : IAsyncDisposable
 
     public Task SetMixMutedAsync(string mix, bool muted)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "setMixMuted", ["mix"] = mix, ["value"] = muted });
+
+    /// <summary>Replace a microphone's whole EQ: its switch and four bands, every field.</summary>
+    public Task SetEqAsync(string channel, MicEq eq)
+        => SendAsync(new Dictionary<string, object>
+        {
+            ["cmd"] = "setEq", ["channel"] = channel,
+            ["eq"] = new Dictionary<string, object>
+            {
+                ["enabled"] = eq.Enabled,
+                ["bands"] = eq.Bands.Select(b => new Dictionary<string, object>
+                {
+                    ["enabled"] = b.Enabled, ["type"] = b.Type, ["frequency"] = b.Frequency, ["gain"] = b.Gain, ["q"] = b.Q,
+                }).ToArray(),
+            },
+        });
+
+    /// <summary>A microphone EQ's own switch.</summary>
+    public Task SetEqEnabledAsync(string channel, bool enabled)
+        => SendAsync(new Dictionary<string, object> { ["cmd"] = "setEqEnabled", ["channel"] = channel, ["value"] = enabled });
+
+    /// <summary>The fields of one band (1 to 4) that the change carries; the others keep their values.</summary>
+    public Task SetEqBandAsync(string channel, int band, EqBandChange change)
+    {
+        var payload = new Dictionary<string, object> { ["cmd"] = "setEqBand", ["channel"] = channel, ["band"] = band };
+        if (change.Enabled is bool enabled) payload["enabled"] = enabled;
+        if (change.Type is string type) payload["type"] = type;
+        if (change.Frequency is double frequency) payload["frequency"] = frequency;
+        if (change.Gain is double gain) payload["gain"] = gain;
+        if (change.Q is double q) payload["q"] = q;
+        return SendAsync(payload);
+    }
 
     // --- layout editing: each call resolves to null on success or the daemon's error ---
 

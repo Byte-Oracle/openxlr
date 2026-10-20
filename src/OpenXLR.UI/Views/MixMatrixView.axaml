@@ -27,8 +27,8 @@
       <Setter Property="Height" Value="{DynamicResource Ox.Matrix.RowHeight}"/>
       <Setter Property="Padding" Value="4,0"/>
     </Style>
-    <!-- a row whose head stacks a gain over the channel's volume is as tall as the two
-         need and never shorter than the row height; its cells follow the head -->
+    <!-- a row whose head stacks a gain over the channel's volume, or the EQ over the chain, is as
+         tall as the two need and never shorter than the row height; its cells follow the head -->
     <Style Selector="Border.matrixHead.stacked">
       <Setter Property="Height" Value="NaN"/>
       <Setter Property="MinHeight" Value="{DynamicResource Ox.Matrix.RowHeight}"/>
@@ -126,7 +126,7 @@
       <!-- XLR 1: its binding under its name, its hardware gain over its meter, its mute and its chain, under the
            INPUTS panel's rules; the gain and mute only while it carries the interface's microphone -->
       <DataTemplate x:Key="xlr1" x:DataType="layout:MatrixRowViewModel">
-        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Stacked}">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Tall}">
           <DockPanel>
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
@@ -227,11 +227,21 @@
                                 AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
                                 ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
                 </Panel>
-                <Button layout:StripPanel.Part="effects" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
-                        Classes.fxOn="{Binding Main.Inserts.IsProcessing}" Classes.fxOff="{Binding Main.Inserts.IsOff}"
-                        Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                        IsVisible="{Binding Main.HasMixer}" Click="OnXlrInserts"
-                        AutomationProperties.Name="{Binding Main.Inserts.ButtonText}" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
+                <!-- the microphone's EQ over its plugin chain, in the order the signal meets them; one over the
+                     other, so the part takes no more of the source column's width than the chain alone did -->
+                <StackPanel layout:StripPanel.Part="effects" Name="MatrixEffectsPart" Spacing="2" VerticalAlignment="Center">
+                  <Button Name="MatrixEq" Classes="matrixEq fx" Content="{loc:Text Key=Eq}"
+                          Classes.fxOn="{Binding Channel.Eq.IsLit, FallbackValue=False}" Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}"
+                          Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                          MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowsEq}" Click="OnEq"
+                          AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
+                  <Button Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
+                          Classes.fxOn="{Binding Main.Inserts.IsProcessing}" Classes.fxOff="{Binding Main.Inserts.IsOff}"
+                          Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                          MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                          IsVisible="{Binding Main.HasMixer}" Click="OnXlrInserts"
+                          AutomationProperties.Name="{Binding Main.Inserts.ButtonText}" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
+                </StackPanel>
               </layout:StripPanel>
             </Border>
           </DockPanel>
@@ -239,7 +249,7 @@
       </DataTemplate>
       <!-- XLR 2: the same with the second input's properties, shown only on an interface with two -->
       <DataTemplate x:Key="xlr2" x:DataType="layout:MatrixRowViewModel">
-        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Stacked}">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Tall}">
           <DockPanel>
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
@@ -340,11 +350,21 @@
                                 AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
                                 ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
                 </Panel>
-                <Button layout:StripPanel.Part="effects" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
-                        Classes.fxOn="{Binding Main.Inserts2.IsProcessing}" Classes.fxOff="{Binding Main.Inserts2.IsOff}"
-                        Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                        IsVisible="{Binding Main.HasMixer}" Click="OnXlrInserts"
-                        AutomationProperties.Name="{Binding Main.Inserts2.ButtonText}" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
+                <!-- the microphone's EQ over its plugin chain, in the order the signal meets them; one over the
+                     other, so the part takes no more of the source column's width than the chain alone did -->
+                <StackPanel layout:StripPanel.Part="effects" Name="MatrixEffectsPart" Spacing="2" VerticalAlignment="Center">
+                  <Button Name="MatrixEq" Classes="matrixEq fx" Content="{loc:Text Key=Eq}"
+                          Classes.fxOn="{Binding Channel.Eq.IsLit, FallbackValue=False}" Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}"
+                          Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                          MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowsEq}" Click="OnEq"
+                          AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
+                  <Button Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
+                          Classes.fxOn="{Binding Main.Inserts2.IsProcessing}" Classes.fxOff="{Binding Main.Inserts2.IsOff}"
+                          Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                          MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                          IsVisible="{Binding Main.HasMixer}" Click="OnXlrInserts"
+                          AutomationProperties.Name="{Binding Main.Inserts2.ButtonText}" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
+                </StackPanel>
               </layout:StripPanel>
             </Border>
           </DockPanel>
@@ -352,7 +372,7 @@
       </DataTemplate>
       <!-- Aux In: its level over its meter and the level lock, where the interface has the stage -->
       <DataTemplate x:Key="aux" x:DataType="layout:MatrixRowViewModel">
-        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Stacked}">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Tall}">
           <DockPanel>
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
@@ -413,7 +433,7 @@
            microphone's gain; a capture channel carrying the interface's microphone draws the interface's gain and mute too,
            the gain over the volume -->
       <DataTemplate x:Key="channel" x:DataType="layout:MatrixRowViewModel">
-        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Stacked}">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Tall}">
           <DockPanel>
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
@@ -597,7 +617,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="layout:MatrixCellViewModel">
-                    <Border Classes="tile matrixCell" Name="MatrixCell" Classes.tinted="{Binding Tinted}" Classes.stacked="{Binding Row.Stacked}"
+                    <Border Classes="tile matrixCell" Name="MatrixCell" Classes.tinted="{Binding Tinted}" Classes.stacked="{Binding Row.Tall}"
                             Classes.dimmed="{Binding Dimmed}" Classes.empty="{Binding IsEmpty}" Classes.revealed="{Binding Send.Revealed}">
                       <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding HasSend}">
                         <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Send.Muted, Mode=TwoWay}"

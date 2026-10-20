@@ -581,9 +581,10 @@ internal static partial class SkinLayoutWindowTests
             Border head = row.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MatrixRowHead");
             // The name and source columns, inside the tile's own border where the skin draws one.
             Assert.Equal(nameWidth + cellWidth + head.BorderThickness.Left + head.BorderThickness.Right, head.Bounds.Width, 0.5);
-            // A head that stacks a gain over the volume takes what the two need,
-            // never less than the row height; every other head is the row height.
-            if (model.Stacked) Assert.True(head.Bounds.Height >= rowHeight - 0.5, $"{model.Channel.Id} is {head.Bounds.Height} tall {where}");
+            // A head that stacks a gain over the volume, or the EQ over the chain,
+            // takes what the two need, never less than the row height; every
+            // other head is the row height.
+            if (model.Tall) Assert.True(head.Bounds.Height >= rowHeight - 0.5, $"{model.Channel.Id} is {head.Bounds.Height} tall {where}");
             else Assert.Equal(rowHeight, head.Bounds.Height, 0.5);
             Border source = head.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MatrixSource");
             AssertPartsApart(source);

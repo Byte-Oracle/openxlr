@@ -66,9 +66,9 @@ public partial class MainWindow
         window.Closing += (_, e) =>
         {
             restoreMain = e.CloseReason == WindowCloseReason.WindowClosing;
-            // Plugin windows opened from the detached panel close with it;
+            // Plugin and EQ windows opened from the detached panel close with it;
             // note them so they open again under the main window.
-            if (!_reallyExit && restoreMain) handover = InsertWindows.Handover(window);
+            if (!_reallyExit && restoreMain) handover = [.. InsertWindows.Handover(window), .. EqWindows.Handover(window)];
         };
         window.Closed += (_, _) =>
         {

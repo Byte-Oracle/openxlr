@@ -1209,7 +1209,7 @@ public sealed partial class MainViewModel : ViewModelBase
         {
             string[] mixIds = [.. Mixes.Select(m => m.Id)];
             SyncList(Channels, channels, c => c["id"]!.GetValue<string>(),
-                (c, vm) => { vm.SyncSends(mixIds); vm.ApplyFromDaemon(c); },
+                (c, vm) => { vm.SyncSends(mixIds); vm.ApplyFromDaemon(c); vm.ApplyEq(c["eq"], mixer["eqLimits"]); },
                 c => new ChannelViewModel(_client, c["id"]!.GetValue<string>(), c["name"]!.GetValue<string>(), mixIds),
                 removed => { removed.SyncSends([]); removed.Detach(); });
             // Send rows carry the mix's name, not its id.
@@ -1620,7 +1620,43 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
 
     private string _name;
     /// <summary>Display name; the daemon renames application channels live.</summary>
-    public string Name { get => _name; set { if (Set(ref _name, value)) Raise(nameof(BindingChipName)); } }
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            if (!Set(ref _name, value)) return;
+            Raise(nameof(BindingChipName));
+            if (_eq is not null) _eq.ChannelName = value;
+        }
+    }
+
+    private MicEqViewModel? _eq;
+    /// <summary>
+    /// The microphone EQ, on a channel the daemon reports one for (XLR 1 and
+    /// XLR 2); null on every other channel and from a daemon without the EQ,
+    /// so no client draws an EQ button there.
+    /// </summary>
+    public MicEqViewModel? Eq { get => _eq; private set { if (Set(ref _eq, value)) Raise(nameof(HasEq)); } }
+
+    public bool HasEq => _eq is not null;
+
+    /// <summary>Take the channel's <c>eq</c> and the mixer's <c>eqLimits</c> from a state push.</summary>
+    internal void ApplyEq(JsonNode? eq, JsonNode? limits)
+    {
+        if (eq is not JsonObject)
+        {
+            if (_eq is { } gone)
+            {
+                Eq = null;
+                EqWindows.Close(gone);
+                gone.Dispose();
+            }
+            return;
+        }
+        if (_eq is null) Eq = new MicEqViewModel(_client, Id, Name);
+        _eq!.Apply(eq, limits);
+    }
 
     private bool _isHardware;
     /// <summary>A hardware input (XLR 1, XLR 2, Aux In): structural, not editable.</summary>
@@ -1775,6 +1811,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     {
         _detached = true;
         SliderSync.Forget($"chvol:{Id}");
+        ApplyEq(null, null);
     }
 
     /// <summary>Keep existing send controls in the current mix order.</summary>

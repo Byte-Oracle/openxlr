@@ -2409,4 +2409,217 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="Mic1Gain" xml:space="preserve">
     <value>Gan. Mic 1</value>
   </data>
+  <data name="Eq" xml:space="preserve">
+    <value>EQ</value>
+  </data>
+  <data name="EqButtonTip" xml:space="preserve">
+    <value>El ecualizador de cuatro bandas del micrófono, al principio de la entrada, antes del corte de graves, ClipGuard y los plugins. Se ilumina mientras está activo y se pone rojo si no puede funcionar. Abre el editor.</value>
+  </data>
+  <data name="EqButtonNameOn" xml:space="preserve">
+    <value>EQ de {0}, activo</value>
+  </data>
+  <data name="EqButtonNameOff" xml:space="preserve">
+    <value>EQ de {0}, desactivado</value>
+  </data>
+  <data name="EqButtonNameUnavailable" xml:space="preserve">
+    <value>EQ de {0}, no disponible</value>
+  </data>
+  <data name="EqWindowTitle" xml:space="preserve">
+    <value>EQ de {0}</value>
+  </data>
+  <data name="EqSwitch" xml:space="preserve">
+    <value>EQ activo</value>
+  </data>
+  <data name="EqSwitchTip" xml:space="preserve">
+    <value>Activa o desactiva el EQ. Desactivado, las bandas conservan sus valores para la próxima vez.</value>
+  </data>
+  <data name="EqCompare" xml:space="preserve">
+    <value>Comparar</value>
+  </data>
+  <data name="EqCompareTip" xml:space="preserve">
+    <value>Mientras esté activo, oyes el micrófono sin el EQ, y con él de nuevo al desactivarlo. El EQ sigue activado.</value>
+  </data>
+  <data name="EqCopy" xml:space="preserve">
+    <value>Copiar</value>
+  </data>
+  <data name="EqCopyTip" xml:space="preserve">
+    <value>Copia este EQ, su interruptor y sus cuatro bandas, para pegarlo en otro micrófono.</value>
+  </data>
+  <data name="EqPaste" xml:space="preserve">
+    <value>Pegar</value>
+  </data>
+  <data name="EqPasteTip" xml:space="preserve">
+    <value>Sustituye este EQ por el copiado.</value>
+  </data>
+  <data name="EqReset" xml:space="preserve">
+    <value>Restablecer</value>
+  </data>
+  <data name="EqResetTip" xml:space="preserve">
+    <value>Devuelve las cuatro bandas a sus valores iniciales. El EQ sigue activado o desactivado.</value>
+  </data>
+  <data name="EqResetConfirm" xml:space="preserve">
+    <value>¿Devolver las cuatro bandas del EQ de {0} a sus valores iniciales? El EQ sigue activado o desactivado como está.</value>
+  </data>
+  <data name="EqColumnOn" xml:space="preserve">
+    <value>Activa</value>
+  </data>
+  <data name="EqColumnType" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="EqColumnFrequency" xml:space="preserve">
+    <value>Frecuencia (Hz)</value>
+  </data>
+  <data name="EqColumnGain" xml:space="preserve">
+    <value>Ganancia (dB)</value>
+  </data>
+  <data name="EqColumnQ" xml:space="preserve">
+    <value>Q</value>
+  </data>
+  <data name="EqGraphName" xml:space="preserve">
+    <value>Respuesta del EQ</value>
+  </data>
+  <data name="EqUnavailable" xml:space="preserve">
+    <value>El EQ no puede funcionar.</value>
+  </data>
+  <data name="EqStatusOff" xml:space="preserve">
+    <value>Desactivado. Los cambios se conservan y se aplican al activar el EQ.</value>
+  </data>
+  <data name="EqStatusComparing" xml:space="preserve">
+    <value>Omitido para comparar. El EQ vuelve al desactivar Comparar.</value>
+  </data>
+  <data name="EqStatusSoftware" xml:space="preserve">
+    <value>Activo, funciona en este ordenador al principio de la entrada, antes del corte de graves, ClipGuard y los plugins.</value>
+  </data>
+  <data name="EqStatusDevice" xml:space="preserve">
+    <value>Activo, funciona en la interfaz.</value>
+  </data>
+  <data name="EqStatusStarting" xml:space="preserve">
+    <value>Activo, iniciándose.</value>
+  </data>
+  <data name="EqBandValues" xml:space="preserve">
+    <value>{0}, {1}, {2}, Q {3}</value>
+  </data>
+  <data name="EqBandValuesNoGain" xml:space="preserve">
+    <value>{0}, {1}, Q {2}</value>
+  </data>
+  <data name="EqBandName" xml:space="preserve">
+    <value>Banda {0}, {1}</value>
+  </data>
+  <data name="EqBandNameOff" xml:space="preserve">
+    <value>Banda {0}, desactivada, {1}</value>
+  </data>
+  <data name="EqHandleTip" xml:space="preserve">
+    <value>Arrastra para mover la frecuencia y la ganancia. Desplaza la rueda para Q, haz doble clic para activar o desactivar la banda y clic derecho para elegir su tipo.</value>
+  </data>
+  <data name="EqHandleTipNoGain" xml:space="preserve">
+    <value>Arrastra en horizontal para la frecuencia y en vertical para Q. Desplaza la rueda para Q, haz doble clic para activar o desactivar la banda y clic derecho para elegir su tipo.</value>
+  </data>
+  <data name="EqBandSwitchName" xml:space="preserve">
+    <value>Banda {0} activa</value>
+  </data>
+  <data name="EqBandTypeName" xml:space="preserve">
+    <value>Tipo de la banda {0}</value>
+  </data>
+  <data name="EqBandFrequencyName" xml:space="preserve">
+    <value>Frecuencia de la banda {0} en hercios</value>
+  </data>
+  <data name="EqBandGainName" xml:space="preserve">
+    <value>Ganancia de la banda {0} en decibelios</value>
+  </data>
+  <data name="EqBandQName" xml:space="preserve">
+    <value>Q de la banda {0}</value>
+  </data>
+  <data name="EqBandOn" xml:space="preserve">
+    <value>Banda activa</value>
+  </data>
+  <data name="EqReadout" xml:space="preserve">
+    <value>Banda {0}: {1}, {2}, Q {3}</value>
+  </data>
+  <data name="EqReadoutNoGain" xml:space="preserve">
+    <value>Banda {0}: {1}, Q {2}</value>
+  </data>
+  <data name="EqHertz" xml:space="preserve">
+    <value>{0} Hz</value>
+  </data>
+  <data name="EqKilohertz" xml:space="preserve">
+    <value>{0} kHz</value>
+  </data>
+  <data name="EqDecibels" xml:space="preserve">
+    <value>{0} dB</value>
+  </data>
+  <data name="EqTypeLowCut" xml:space="preserve">
+    <value>Paso alto</value>
+  </data>
+  <data name="EqTypeLowShelf" xml:space="preserve">
+    <value>Estante de graves</value>
+  </data>
+  <data name="EqTypePeak" xml:space="preserve">
+    <value>Campana</value>
+  </data>
+  <data name="EqTypeNotch" xml:space="preserve">
+    <value>Muesca</value>
+  </data>
+  <data name="EqTypeHighShelf" xml:space="preserve">
+    <value>Estante de agudos</value>
+  </data>
+  <data name="EqTypeHighCut" xml:space="preserve">
+    <value>Paso bajo</value>
+  </data>
+  <data name="EqTypeLowCutTip" xml:space="preserve">
+    <value>Elimina lo que queda por debajo de su frecuencia. Q da forma al codo. La ganancia no actúa aquí y se conserva.</value>
+  </data>
+  <data name="EqTypeLowShelfTip" xml:space="preserve">
+    <value>Sube o baja todo lo que queda por debajo de su frecuencia según la ganancia.</value>
+  </data>
+  <data name="EqTypePeakTip" xml:space="preserve">
+    <value>Sube o baja el sonido alrededor de su frecuencia según la ganancia, en una anchura que fija Q. Algunos editores llaman a este filtro paso banda.</value>
+  </data>
+  <data name="EqTypeNotchTip" xml:space="preserve">
+    <value>Recorta una banda estrecha en su frecuencia. Q fija lo estrecha que es. La ganancia no actúa aquí y se conserva.</value>
+  </data>
+  <data name="EqTypeHighShelfTip" xml:space="preserve">
+    <value>Sube o baja todo lo que queda por encima de su frecuencia según la ganancia.</value>
+  </data>
+  <data name="EqTypeHighCutTip" xml:space="preserve">
+    <value>Elimina lo que queda por encima de su frecuencia. Q da forma al codo. La ganancia no actúa aquí y se conserva.</value>
+  </data>
+  <data name="EqRegionRumble" xml:space="preserve">
+    <value>Retumbo</value>
+  </data>
+  <data name="EqRegionBody" xml:space="preserve">
+    <value>Cuerpo</value>
+  </data>
+  <data name="EqRegionRoom" xml:space="preserve">
+    <value>Sala</value>
+  </data>
+  <data name="EqRegionPresence" xml:space="preserve">
+    <value>Presencia</value>
+  </data>
+  <data name="EqRegionSibilance" xml:space="preserve">
+    <value>Sibilancia</value>
+  </data>
+  <data name="EqRegionAir" xml:space="preserve">
+    <value>Aire</value>
+  </data>
+  <data name="EqRegionRumbleTip" xml:space="preserve">
+    <value>De 20 a 80 Hz: golpes en la mesa, tráfico y ruido del soporte, que en una voz se sienten más que se oyen. Un paso alto aquí los limpia.</value>
+  </data>
+  <data name="EqRegionBodyTip" xml:space="preserve">
+    <value>De 80 a 300 Hz: el peso y la calidez de una voz. Demasiado suena retumbante, demasiado poco suena delgado.</value>
+  </data>
+  <data name="EqRegionRoomTip" xml:space="preserve">
+    <value>De 300 Hz a 1,4 kHz: el sonido encajonado y el de la sala. Un pequeño recorte aquí suele abrir una voz.</value>
+  </data>
+  <data name="EqRegionPresenceTip" xml:space="preserve">
+    <value>De 1,4 a 5 kHz: la claridad y lo adelantada que suena una voz. Un pequeño realce ayuda a que las palabras destaquen.</value>
+  </data>
+  <data name="EqRegionSibilanceTip" xml:space="preserve">
+    <value>De 5 a 12 kHz: los sonidos duros de s y t. Un recorte estrecho los suaviza.</value>
+  </data>
+  <data name="EqRegionAirTip" xml:space="preserve">
+    <value>De 12 a 20 kHz: el aliento y la apertura. Un estante de agudos suave añade brillo.</value>
+  </data>
+  <data name="FlowEq" xml:space="preserve">
+    <value>EQ, {0} de 4 bandas activas</value>
+  </data>
 </root>

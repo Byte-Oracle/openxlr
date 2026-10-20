@@ -483,6 +483,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
         Raise(nameof(ShowsVolume));
         Raise(nameof(VolumeShowsMeter));
         Raise(nameof(Stacked));
+        Raise(nameof(Tall));
     }
 
     /// <summary>The interface's input this row carries, whose gain and mute its head draws, or null.</summary>
@@ -550,6 +551,19 @@ public sealed class MatrixRowViewModel : ViewModelBase
     /// one fader where it always was.
     /// </summary>
     public bool Stacked => HasGainFader && ShowsVolume && Spec.Parts.Contains(SkinStripParts.Gain, StringComparer.Ordinal);
+
+    /// <summary>
+    /// The effects part draws the microphone's EQ button, over the chain's:
+    /// the daemon reports an EQ for the channel and the mixer is there.
+    /// </summary>
+    public bool ShowsEq => Channel.HasEq && Main.HasMixer;
+
+    /// <summary>
+    /// The head stacks two controls in one part, the gain over the volume or
+    /// the EQ over the chain, so the row is as tall as the two need and at
+    /// least the skin's row height, and its cells follow.
+    /// </summary>
+    public bool Tall => Stacked || ShowsEq && Spec.Parts.Contains(SkinStripParts.Effects, StringComparer.Ordinal);
 
     /// <summary>The head draws the strip's binding chip under the name: XLR 1 or XLR 2, unless the skin hides it.</summary>
     public bool ShowsBinding => Kind is InputStripKind.Xlr1 or InputStripKind.Xlr2
@@ -642,6 +656,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
                 foreach (MatrixCellViewModel cell in Cells) cell.RefreshNames();
                 break;
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
+            case nameof(ChannelViewModel.HasEq): Raise(nameof(ShowsEq)); Raise(nameof(Tall)); break;
             case nameof(ChannelViewModel.ShownUnitInput):
                 Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); WatchUnits(); RefreshSpec(); RaiseSwitches();
                 break;
@@ -656,6 +671,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
         switch (e.PropertyName)
         {
             case nameof(MainViewModel.CapAuxInput) when Kind == InputStripKind.AuxIn: RefreshSpec(); break;
+            case nameof(MainViewModel.HasMixer): Raise(nameof(ShowsEq)); Raise(nameof(Tall)); break;
             case nameof(MainViewModel.ShowSoftLowCut) or nameof(MainViewModel.ShowSoftClipGuard) when Kind == InputStripKind.Xlr1:
                 Raise(nameof(ShowsSoftware)); RaiseSwitches(); break;
             case nameof(MainViewModel.SoftLowCutHz) or nameof(MainViewModel.SoftClipGuard) when Kind == InputStripKind.Xlr1:

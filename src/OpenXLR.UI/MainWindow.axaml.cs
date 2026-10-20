@@ -328,6 +328,14 @@ public partial class MainWindow : Window
         InsertWindows.OpenChain(this, second ? _vm.Inserts2 : _vm.Inserts, second ? "xlr2" : "xlr1");
     }
 
+    /// <summary>The EQ button of XLR 1 or XLR 2 in INPUTS: the button's Tag names the channel.</summary>
+    private void OnEq(object? sender, RoutedEventArgs e)
+    {
+        string channel = (sender as Control)?.Tag as string ?? "xlr1";
+        if (_vm.Channels.FirstOrDefault(c => c.Id == channel)?.Eq is { } eq)
+            EqWindows.Show(TopLevel.GetTopLevel((Control)sender!) as Window ?? this, eq);
+    }
+
     private async void OnInsertControls(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not InsertViewModel insert) return;

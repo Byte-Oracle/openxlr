@@ -217,7 +217,7 @@
         },
         "Ox.Led.On": {
           "$ref": "#/$defs/flatColour",
-          "description": "a connected device, a plugin that is processing, the button of a chain with one, a matrix row's **Mic** button while one of its switches is on"
+          "description": "a connected device, a plugin that is processing, the button of a chain with one, a microphone's **EQ** button while its EQ runs, a matrix row's **Mic** button while one of its switches is on"
         },
         "Ox.Led.Off": {
           "$ref": "#/$defs/flatColour",
@@ -225,7 +225,7 @@
         },
         "Ox.Led.Alert": {
           "$ref": "#/$defs/flatColour",
-          "description": "a plugin bypassed or failed, the button of a chain with nothing processing, the phantom power lamp on a matrix row's **Mic** button while phantom power is on"
+          "description": "a plugin bypassed or failed, the button of a chain with nothing processing, a microphone's **EQ** button while its EQ cannot run, the phantom power lamp on a matrix row's **Mic** button while phantom power is on"
         },
         "Ox.Meter.Fill": {
           "$ref": "#/$defs/flatColour",
@@ -595,6 +595,90 @@
           "$ref": "#/$defs/brush",
           "description": "that node's outline"
         },
+        "Ox.Eq.Background": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the EQ graph's ground, and the number on a band's handle"
+        },
+        "Ox.Eq.Grid": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the graph's lines every 6 dB and at the region edges, and the readout's outline"
+        },
+        "Ox.Eq.GridLabel": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the axis labels, the readout and the 0 dB line"
+        },
+        "Ox.Eq.ZoneA": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the first, third and fifth regions, over the ground"
+        },
+        "Ox.Eq.ZoneB": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the second, fourth and sixth regions, over the ground"
+        },
+        "Ox.Eq.ZoneLabel": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the regions' names along the top"
+        },
+        "Ox.Eq.Curve": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the sum of the four bands while the EQ is on"
+        },
+        "Ox.Eq.CurveFill": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the fill between that sum and 0 dB"
+        },
+        "Ox.Eq.Band1": {
+          "$ref": "#/$defs/flatColour",
+          "description": "band 1: its handle, its own curve and its number in the rows"
+        },
+        "Ox.Eq.Band2": {
+          "$ref": "#/$defs/flatColour",
+          "description": "band 2, likewise"
+        },
+        "Ox.Eq.Band3": {
+          "$ref": "#/$defs/flatColour",
+          "description": "band 3, likewise"
+        },
+        "Ox.Eq.Band4": {
+          "$ref": "#/$defs/flatColour",
+          "description": "band 4, likewise"
+        },
+        "Ox.Eq.HandleOff": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the number on the handle of a band that is off, and the sum while the EQ is off or compared"
+        },
+        "Ox.Eq.HandleRing": {
+          "$ref": "#/$defs/flatColour",
+          "description": "the ring around the selected band's handle"
+        },
+        "Ox.Eq.CurveThickness": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 8,
+          "description": "the width of the sum's line"
+        },
+        "Ox.Eq.BandCurveThickness": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 6,
+          "description": "the width of each band's own curve"
+        },
+        "Ox.Eq.HandleSize": {
+          "type": "number",
+          "minimum": 12,
+          "maximum": 48,
+          "description": "the diameter of a band's handle; the pointer takes it within 20 units of its centre, or the compact control minimum under Touch sizing"
+        },
+        "Ox.Eq.LabelFontSize": {
+          "type": "number",
+          "minimum": 8,
+          "maximum": 24,
+          "description": "the size of the axis labels, the region names and the readout"
+        },
+        "Ox.Eq.CornerRadius": {
+          "$ref": "#/$defs/radius",
+          "description": "the graph's corners"
+        },
         "Ox.Mixer.ControlMinSize": {
           "type": "number",
           "minimum": 0,
@@ -677,7 +761,7 @@
           "type": "number",
           "minimum": 28,
           "maximum": 120,
-          "description": "the height of a row: its head and every cell in it; a row whose head stacks a gain over the channel volume is as tall as the two faders need, never less"
+          "description": "the height of a row: its head and every cell in it; a row whose head stacks a gain over the channel volume, or the **EQ** button over the chain's, is as tall as the two need, never less"
         },
         "Ox.Matrix.MutedBackground": {
           "$ref": "#/$defs/brush",

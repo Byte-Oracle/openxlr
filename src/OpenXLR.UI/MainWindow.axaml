@@ -401,8 +401,19 @@
             </StackPanel>
           </StackPanel>
           <StackPanel Grid.Row="2" Spacing="4">
-            <!-- XLR 1's own software low cut and ClipGuard, for a signal with no hardware ones in front of it -->
-            <WrapPanel Name="SoftwareControls" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding ShowSoftwareControls}">
+            <!-- XLR 1's own EQ, software low cut and ClipGuard, in the order the signal meets them; the
+                 low cut and ClipGuard for a signal with no hardware ones in front of it -->
+            <WrapPanel Name="SoftwareControls" ItemSpacing="6" LineSpacing="4">
+              <WrapPanel.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                  <Binding Path="ShowSoftwareControls"/>
+                  <Binding Path="Xlr1Strip.HasEq" FallbackValue="False"/>
+                </MultiBinding>
+              </WrapPanel.IsVisible>
+              <Button Name="Xlr1Eq" Content="{loc:Text Key=Eq}" Classes="fx" Classes.fxOn="{Binding Xlr1Strip.Eq.IsLit, FallbackValue=False}"
+                      Classes.fxOff="{Binding Xlr1Strip.Eq.IsFaulty, FallbackValue=False}" IsVisible="{Binding Xlr1Strip.HasEq, FallbackValue=False}"
+                      Tag="xlr1" Click="OnEq" AutomationProperties.Name="{Binding Xlr1Strip.Eq.ButtonName, FallbackValue=''}"
+                      ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
               <ToggleButton Content="{Binding SoftLowCutText}" IsVisible="{Binding ShowSoftLowCut}"
                             IsChecked="{Binding SoftLowCutOn, Mode=OneWay}" Click="OnCycleSoftLowCut"
                             ToolTip.Tip="{loc:Text Key=HostSideLowCutForThisDeviceIts}"/>
@@ -519,8 +530,14 @@
               </Grid>
             </StackPanel>
           </StackPanel>
-          <!-- XLR 2 plugin inserts: same chain concept, its own mono filter-chain -->
+          <!-- XLR 2 plugin inserts: same chain concept, its own mono filter-chain, after its EQ -->
           <StackPanel Grid.Row="2" Spacing="4" Margin="0,4,0,0" IsVisible="{Binding HasMixer}">
+            <WrapPanel Name="Software2Controls" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding Xlr2Strip.HasEq, FallbackValue=False}">
+              <Button Name="Xlr2Eq" Content="{loc:Text Key=Eq}" Classes="fx" Classes.fxOn="{Binding Xlr2Strip.Eq.IsLit, FallbackValue=False}"
+                      Classes.fxOff="{Binding Xlr2Strip.Eq.IsFaulty, FallbackValue=False}"
+                      Tag="xlr2" Click="OnEq" AutomationProperties.Name="{Binding Xlr2Strip.Eq.ButtonName, FallbackValue=''}"
+                      ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
+            </WrapPanel>
             <Grid ColumnDefinitions="90,*,Auto">
               <TextBlock Text="{loc:Text Key=Inserts}" Classes="h" VerticalAlignment="Center"
                          ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>

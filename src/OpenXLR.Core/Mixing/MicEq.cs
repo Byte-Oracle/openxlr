@@ -1,6 +1,17 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 
+// Shared with the window, which draws and edits the EQ with the same model
+// and snapping the daemon uses.
+#if OPENXLR_UI
+namespace OpenXLR.UI;
+#elif OPENXLR_TUI
+namespace OpenXLR.Tui;
+#else
 namespace OpenXLR.Core.Mixing;
+#endif
 
 /// <summary>
 /// One band of the microphone EQ. <see cref="Gain"/> is kept for every

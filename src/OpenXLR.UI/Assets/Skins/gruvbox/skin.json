@@ -136,6 +136,20 @@
     "Ox.Flow.Output": "#a9b665",
     "Ox.Flow.Muted": "#a2968b",
     "Ox.Flow.NodeHoverBackground": "#3c3836",
-    "Ox.Flow.NodeHoverBorderBrush": "#7daea3"
+    "Ox.Flow.NodeHoverBorderBrush": "#7daea3",
+    "Ox.Eq.Background": "#161616",
+    "Ox.Eq.Grid": "#504945",
+    "Ox.Eq.GridLabel": "#bdae93",
+    "Ox.Eq.ZoneA": "#00000000",
+    "Ox.Eq.ZoneB": "#0fd4be98",
+    "Ox.Eq.ZoneLabel": "#a2968b",
+    "Ox.Eq.Curve": "#d4be98",
+    "Ox.Eq.CurveFill": "#337daea3",
+    "Ox.Eq.Band1": "#7daea3",
+    "Ox.Eq.Band2": "#a9b665",
+    "Ox.Eq.Band3": "#e1875c",
+    "Ox.Eq.Band4": "#d3869b",
+    "Ox.Eq.HandleOff": "#a2968b",
+    "Ox.Eq.HandleRing": "#d4be98"
   }
 }

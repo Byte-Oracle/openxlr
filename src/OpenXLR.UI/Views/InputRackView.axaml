@@ -141,10 +141,18 @@
               </StackPanel>
               <StackPanel layout:StripPanel.Part="effects" Spacing="4">
                 <StackPanel Spacing="4" IsVisible="{Binding Main.HasMixer}">
-                  <Button Content="{Binding Main.Inserts.ButtonText}" Classes="fx" Classes.fxOn="{Binding Main.Inserts.IsProcessing}" Classes.fxOff="{Binding Main.Inserts.IsOff}"
-                          Padding="12,3" FontSize="12" HorizontalAlignment="Left"
-                          MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                          Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
+                  <!-- the microphone's EQ, then its plugin chain, in the order the signal meets them -->
+                  <WrapPanel Name="RackEffects" ItemSpacing="6" LineSpacing="4">
+                    <Button Name="RackEq" Content="{loc:Text Key=Eq}" Classes="fx" Classes.fxOn="{Binding Channel.Eq.IsLit, FallbackValue=False}"
+                            Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}"
+                            Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                            IsVisible="{Binding Channel.HasEq}" Click="OnEq"
+                            AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
+                    <Button Content="{Binding Main.Inserts.ButtonText}" Classes="fx" Classes.fxOn="{Binding Main.Inserts.IsProcessing}" Classes.fxOff="{Binding Main.Inserts.IsOff}"
+                            Padding="12,3" FontSize="12"
+                            MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                            Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR1BeforeItReachesThe}"/>
+                  </WrapPanel>
                   <ItemsControl ItemsSource="{Binding Main.Inserts.Items}" IsVisible="{Binding Main.Inserts.HasItems}"
                                 ItemTemplate="{StaticResource InsertRow}"/>
                 </StackPanel>
@@ -230,10 +238,18 @@
               </StackPanel>
               <StackPanel layout:StripPanel.Part="effects" Spacing="4">
                 <StackPanel Spacing="4" IsVisible="{Binding Main.HasMixer}">
-                  <Button Content="{Binding Main.Inserts2.ButtonText}" Classes="fx" Classes.fxOn="{Binding Main.Inserts2.IsProcessing}" Classes.fxOff="{Binding Main.Inserts2.IsOff}"
-                          Padding="12,3" FontSize="12" HorizontalAlignment="Left"
-                          MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                          Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
+                  <!-- the microphone's EQ, then its plugin chain, in the order the signal meets them -->
+                  <WrapPanel Name="RackEffects" ItemSpacing="6" LineSpacing="4">
+                    <Button Name="RackEq" Content="{loc:Text Key=Eq}" Classes="fx" Classes.fxOn="{Binding Channel.Eq.IsLit, FallbackValue=False}"
+                            Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}"
+                            Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                            IsVisible="{Binding Channel.HasEq}" Click="OnEq"
+                            AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
+                    <Button Content="{Binding Main.Inserts2.ButtonText}" Classes="fx" Classes.fxOn="{Binding Main.Inserts2.IsProcessing}" Classes.fxOff="{Binding Main.Inserts2.IsOff}"
+                            Padding="12,3" FontSize="12"
+                            MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                            Click="OnXlrInserts" ToolTip.Tip="{loc:Text Key=PluginsProcessingXLR2BeforeItReachesThe}"/>
+                  </WrapPanel>
                   <ItemsControl ItemsSource="{Binding Main.Inserts2.Items}" IsVisible="{Binding Main.Inserts2.HasItems}"
                                 ItemTemplate="{StaticResource InsertRow}"/>
                 </StackPanel>
