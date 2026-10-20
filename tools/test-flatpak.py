@@ -310,6 +310,7 @@ def private_host():
     private.mkdir()
     command = ['flatpak', 'run', '--user', '--unshare=network', '--nodevice=usb',
                '--nofilesystem=xdg-config/wireplumber', '--nofilesystem=xdg-run/openxlr',
+               '--nofilesystem=xdg-config/wireplumber/wireplumber.conf.d',
                '--filesystem=' + str(runtime), '--filesystem=' + str(ROOT) + ':ro',
                '--env=OPENXLR_ACCEPTANCE_RUNTIME=' + str(runtime),
                '--env=XDG_RUNTIME_DIR=' + str(private), '--env=XDG_CONFIG_HOME=' + str(private / 'config'),
