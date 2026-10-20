@@ -576,7 +576,7 @@ public sealed class InsertViewModel : ViewModelBase
             // slider; applying it would make the thumb jitter (the mixer's
             // faders use the same guard).
             if (SliderSync.RecentlyTouched(_owner.ParameterKey(Id, p.Symbol))) continue;
-            if (_params.TryGetValue(p.Symbol, out double v)) p.ApplyFromDaemon(v);
+            p.ApplyFromDaemon(_params.GetValueOrDefault(p.Symbol, p.Default));
         }
     }
 

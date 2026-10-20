@@ -597,8 +597,10 @@ channel, with its level and lock in the INPUTS card.
    values are described below.
 
 The generated controls cover the parameters the daemon read from the
-plugin. A plugin's own editor can be opened as well, with the native
-host described in [section 3.13](#plugin-editors). CLAP and VST3 plugins
+plugin. After recalling a profile, preset or A/B slot, a control without a
+saved value shows the plugin's declared default. A plugin's own editor can
+be opened as well, with the native host described in
+[section 3.13](#plugin-editors). CLAP and VST3 plugins
 appear in the same picker and always run in that host. VST2 plugins cannot be loaded.
 
 <a name="effect-presets"></a>
