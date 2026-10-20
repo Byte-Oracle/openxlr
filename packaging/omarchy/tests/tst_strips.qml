@@ -30,15 +30,7 @@ TestCase {
         property var levels: ({
                 "ch:xlr1": [0.4, 0.4]
             })
-        property var snapshot: ({
-                connected: true,
-                state: {
-                    mute: false
-                },
-                capabilities: {
-                    mute: true
-                }
-            })
+        property var snapshot: testCase.unboundSnapshot()
         function send(command: var): void {
             testCase.sent.push(command);
         }
@@ -54,11 +46,93 @@ TestCase {
             family: "monospace"
         }
     }
+    // XLR 1 on the interface's jack, carrying its first input.
+    function unboundSnapshot(): var {
+        return {
+            connected: true,
+            state: {
+                mute: false
+            },
+            capabilities: {
+                mute: true
+            },
+            mixer: {
+                channels: [
+                    {
+                        id: "xlr1",
+                        name: "XLR 1",
+                        hardware: true,
+                        binding: {
+                            kind: "unit",
+                            pair: 0
+                        },
+                        unitInput: {
+                            unit: "0fd9:00b4@0123456789abcdef",
+                            input: 1,
+                            primary: true
+                        }
+                    }
+                ]
+            }
+        };
+    }
+    // XLR 1 bound to a Yeti Nano; the interface's first input plays on a capture channel.
+    function boundSnapshot(): var {
+        return {
+            connected: true,
+            state: {
+                mute: true
+            },
+            capabilities: {
+                mute: true
+            },
+            devices: [
+                {
+                    name: "alsa_input.usb-Yeti",
+                    description: "Yeti Nano",
+                    kind: 1
+                }
+            ],
+            mixer: {
+                channels: [
+                    {
+                        id: "xlr1",
+                        name: "Mic 1",
+                        hardware: true,
+                        binding: {
+                            kind: "source",
+                            source: "alsa_input.usb-Yeti",
+                            pair: 0,
+                            monoChannel: 1
+                        },
+                        bindingConnected: true
+                    },
+                    {
+                        id: "cap1",
+                        name: "Pro mic",
+                        captureSource: "alsa_input.usb-Elgato_Wave_XLR_Pro",
+                        captureConnected: true,
+                        binding: {
+                            kind: "source",
+                            source: "alsa_input.usb-Elgato_Wave_XLR_Pro",
+                            pair: 0,
+                            monoChannel: 0
+                        },
+                        unitInput: {
+                            unit: "0fd9:00b4@0123456789abcdef",
+                            input: 1,
+                            primary: true
+                        }
+                    }
+                ]
+            }
+        };
+    }
     function init(): void {
         sent = [];
         fakeLink.ready = true;
         fakeLink.pending = false;
-        fakeLink.snapshot = { connected: true, state: { mute: false }, capabilities: { mute: true } };
+        fakeLink.snapshot = unboundSnapshot();
         strip = createTemporaryObject(stripComponent, testCase);
         verify(strip !== null);
     }
@@ -101,23 +175,93 @@ TestCase {
         compare(sent[1].control, "mute");
         compare(sent[1].value, true);
     }
-    function test_aGenericMicrophoneKeepsTheSendMuteAndExplainsTheHardwareMute(): void {
-        fakeLink.snapshot = {
-            connected: false,
-            devices: [{ name: "alsa_input.usb-Yeti", description: "Yeti Nano", kind: 1 }],
-            mixer: { primaryInput: { source: "alsa_input.usb-Yeti", channel: 0 }, primaryInputConnected: true }
-        };
+    function test_aBoundStripNamesItsSourceAndHasOnlyItsSendMutes(): void {
+        var bound = boundSnapshot();
+        fakeLink.snapshot = bound;
+        strip.entry = bound.mixer.channels[0];
         var hardware = findChild(strip, "hardwareMute");
-        compare(hardware.text, "Generic mic");
+        compare(findChild(strip, "kind").text, "Yeti Nano");
+        compare(strip.hardwareControl, "");
+        compare(hardware.visible, false);
         verify(!hardware.enabled);
-        mouseClick(hardware);
         mouseClick(findChild(strip, "sendMute"));
         compare(sent.length, 1);
         compare(sent[0].cmd, "setChannelMuted");
         compare(sent[0].channel, "xlr1");
-        fakeLink.snapshot = { connected: true, state: { mute: false }, capabilities: { mute: true } };
-        compare(hardware.text, "Mic on");
+        bound.mixer.channels[0].bindingConnected = false;
+        fakeLink.snapshot = JSON.parse(JSON.stringify(bound));
+        strip.entry = fakeLink.snapshot.mixer.channels[0];
+        compare(findChild(strip, "kind").text, "Yeti Nano OFF");
+    }
+    function test_theInterfacesMuteFollowsItsInputToTheCaptureChannel(): void {
+        var bound = boundSnapshot();
+        fakeLink.snapshot = bound;
+        strip.entry = bound.mixer.channels[1];
+        var hardware = findChild(strip, "hardwareMute");
+        compare(strip.hardwareControl, "mute");
+        compare(hardware.visible, true);
         verify(hardware.enabled);
+        compare(hardware.text, "Mic muted");
+        compare(findChild(strip, "kind").text, "CAPTURE");
+        mouseClick(hardware);
+        compare(sent.length, 1);
+        compare(sent[0].cmd, "set");
+        compare(sent[0].control, "mute");
+        compare(sent[0].value, false);
+        // No interface connected: the button stays, disabled, and sends nothing.
+        bound.connected = false;
+        fakeLink.snapshot = JSON.parse(JSON.stringify(bound));
+        verify(!hardware.enabled);
+        mouseClick(hardware);
+        compare(sent.length, 1);
+    }
+    function test_aStripOnADrivenAdditionalUnitMutesThatUnit(): void {
+        var snapshot = unboundSnapshot();
+        snapshot.waveInterfaces = [
+            {
+                id: "0fd9:0070@fedcba9876543210",
+                active: false,
+                enabled: true,
+                connected: true,
+                capabilities: {
+                    mute: true
+                },
+                state: {
+                    mute: false
+                }
+            }
+        ];
+        var mic2 = {
+            id: "xlr2",
+            name: "Mic 2",
+            hardware: true,
+            binding: {
+                kind: "source",
+                source: "alsa_input.usb-Elgato_Wave_3",
+                pair: 0,
+                monoChannel: 0,
+                unit: "0fd9:0070@fedcba9876543210"
+            },
+            bindingConnected: true,
+            unitInput: {
+                unit: "0fd9:0070@fedcba9876543210",
+                input: 1,
+                primary: false
+            }
+        };
+        snapshot.mixer.channels.push(mic2);
+        fakeLink.snapshot = snapshot;
+        strip.entry = mic2;
+        var hardware = findChild(strip, "hardwareMute");
+        compare(hardware.visible, true);
+        verify(hardware.enabled);
+        compare(hardware.text, "Mic on");
+        mouseClick(hardware);
+        compare(sent.length, 1);
+        compare(sent[0].cmd, "setWaveControl");
+        compare(sent[0].device, "0fd9:0070@fedcba9876543210");
+        compare(sent[0].control, "mute");
+        compare(sent[0].value, true);
     }
     function test_offlineAndPendingStripsCannotSend(): void {
         fakeLink.ready = false;

@@ -9,6 +9,7 @@ import { channelName, mixName, mixShortName, layoutChoices, controllableOutputs,
 import fs from "node:fs";
 import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
+import { deviceTargetSupported, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
 
 // ---------- launch arguments ----------
 const arg = (name) => {
@@ -20,7 +21,9 @@ const pluginUUID = arg("-pluginUUID");
 const registerEvent = arg("-registerEvent");
 
 // ---------- static naming ----------
-// Toggle targets on the device state block, with short key labels.
+// Toggle targets on the device state block, with short key labels. The
+// labels of the two inputs' controls are the names an older plugin drew; the
+// key face now names the channel that carries the input (unit-inputs.mjs).
 const DEVICE_TOGGLES = {
   mute: "XLR 1\nMute", mute2: "XLR 2\nMute",
   phantom: "XLR 1\n48V", phantom2: "XLR 2\n48V",
@@ -36,17 +39,9 @@ const DEVICE_TOGGLES = {
 };
 // Targets whose ON state means "muted" (shown red instead of lit green).
 const MUTE_LIKE = new Set(["mute", "mute2"]);
-// Targets only an Elgato unit can act on: its USB controls, the software gain
-// lock that guards its gain, and the USB Aux port. In generic microphone mode
-// the daemon drives no unit and refuses or ignores all of them.
-const HARDWARE_TARGETS = new Set([
-  ...Object.keys(DEVICE_TOGGLES).filter((t) => t !== "softClipGuard"),
-  "gain", "gain2", "hp", "hp2", "auxLevel", "crossfade", "auxPort",
-]);
-const DIAL_NAMES = {
-  gain: "XLR 1 gain", gain2: "XLR 2 gain", hp: "Phones 1", hp2: "Phones 2",
-  auxLevel: "Aux In level", crossfade: "Mic ↔ PC",
-};
+// Dials on the interface's own controls, which a turn or press of an
+// unsupported one answers with an alert.
+const DEVICE_DIALS = new Set(["gain", "gain2", "hp", "hp2", "auxLevel", "crossfade"]);
 
 // ---------- daemon connection ----------
 let daemon = null;
@@ -260,7 +255,7 @@ function isLegacyDefaultTitle(inst, title) {
   if (title === "offline" || title === "OpenXLR") return true;
   const t = inst.settings.target ?? "";
   if (t === "softLowCut" && title.startsWith("Low Cut")) return true;
-  return title === defaultTitle(t);
+  return title === defaultTitle(t) || (Object.hasOwn(DEVICE_TOGGLES, t) && title === DEVICE_TOGGLES[t]);
 }
 
 // A dial can hold a stack of targets; long-pressing the strip cycles them.
@@ -374,20 +369,6 @@ function outputDevices() {
 // ---------- state readers ----------
 const dev = () => daemonState?.state ?? null;
 const mixer = () => daemonState?.mixer ?? null;
-// Generic microphone mode: XLR 1 takes one port of a PipeWire source the user
-// picked, and no Elgato unit is driven. The mixer keys keep working; the
-// hardware keys say why they do nothing instead of looking unsupported.
-const genericMic = () => {
-  const input = mixer()?.primaryInput;
-  return input && typeof input.source === "string" && input.source ? input : null;
-};
-const genericBlocked = (target) => !!target && HARDWARE_TARGETS.has(target) && genericMic() !== null;
-// "Generic mic" over the key's own name, kept to what fits on one line.
-function genericTitle(target) {
-  const lines = (DIAL_NAMES[target] ?? defaultTitle(target)).split("\n");
-  const joined = lines.join(" ");
-  return `Generic mic\n${joined.length <= 11 ? joined : lines.at(-1)}`;
-}
 const mixOf = (id) => mixer()?.mixes?.find((x) => x.id === id);
 const chOf = (id) => mixer()?.channels?.find((x) => x.id === id);
 // The device's highest gain (40 dB on the Wave:3); 80 from a daemon that does not say.
@@ -396,34 +377,13 @@ const gainMaxDb = () => {
   return Number.isInteger(max) && max > 0 ? max : 80;
 };
 
-function deviceTargetSupported(target) {
-  const c = daemonState?.capabilities;
-  if (!c) return false;
-  const secondXlr = new Set([
-    "gain2", "mute2", "phantom2", "lowCut2", "expander2",
-    "voiceTune2", "clipGuard2", "compressor2",
-  ]).has(target);
-  if (secondXlr && (c.xlrInputs ?? 1) < 2) return false;
-  if (target === "hp2" && (c.hpOutputs ?? 1) < 2) return false;
-  const capability = {
-    gain: "gain", gain2: "gain", mute: "mute", mute2: "mute",
-    phantom: "phantom", phantom2: "phantom", lowCut: "lowCut", lowCut2: "lowCut",
-    expander: "expander", expander2: "expander",
-    voiceTune: "voiceTune", voiceTune2: "voiceTune",
-    clipGuard: "clipGuard", clipGuard2: "clipGuard",
-    compressor: "compressor", compressor2: "compressor",
-    lowImpedance: "lowImpedance", hp: "hpVolume", hp2: "hpVolume",
-    crossfade: "crossfade",
-    outHp1: "outputRouting", outHp2: "outputRouting",
-    outLineOut: "outputRouting", auxLevel: "auxInput", auxLevelLock: "auxInput",
-  }[target];
-  return capability ? c[capability] === true : target === "gainLocked";
-}
+// The connected interface has the target. A binding never changes this.
+const supported = (target) => deviceTargetSupported(daemonState?.capabilities, target);
 
 // A toggle target's current boolean, or null when unknown. Insert targets
 // need the key's saved meta for id fallback, so they take the instance.
 function toggleValue(target, inst) {
-  if (!target || genericBlocked(target)) return null;
+  if (!target) return null;
   const output = outputKey(target);
   if (output) {
     if (!mixer()) return null;
@@ -488,7 +448,7 @@ function toggleValue(target, inst) {
     const group = groupOf(target.slice(6));
     return group ? groupOpenMember(group) !== null : null;
   }
-  if (Object.hasOwn(DEVICE_TOGGLES, target) && !deviceTargetSupported(target)) return null;
+  if (Object.hasOwn(DEVICE_TOGGLES, target) && !supported(target)) return null;
   return dev()?.[target] ?? null;
 }
 
@@ -588,7 +548,7 @@ function toggleLabel(target, inst) {
     const open = group ? groupOpenMember(group) : null;
     return `${group?.name ?? "Group"}\n${open ? channelName(mixer(), open) : "None"}`;
   }
-  return DEVICE_TOGGLES[target] ?? target;
+  return unitKeyLabel(daemonState, target) ?? DEVICE_TOGGLES[target] ?? target;
 }
 
 const isMuteLike = (t) =>
@@ -699,16 +659,16 @@ function dialValue(target, inst) {
       return { label: "Monitor", pct: pct(v), maxPct: 150, text: muted ? "MUTED" : `${pct(v)}%`, muted };
     }
     case "gain": case "gain2": {
-      if (!deviceTargetSupported(target)) return null;
+      if (!supported(target)) return null;
       const reported = target === "gain" ? s?.gainDb : s?.gain2Db;
       const muted = target === "gain" ? s?.mute : s?.mute2;
       if (reported == null) return null;
       const db = dialNow(target, reported);
-      return { label: target === "gain" ? "XLR 1 gain" : "XLR 2 gain",
+      return { label: unitDialLabel(daemonState, target),
                pct: Math.round((db / gainMaxDb()) * 100), text: muted ? "MUTED" : `${db} dB`, muted };
     }
     case "hp": case "hp2": {
-      if (!deviceTargetSupported(target)) return null;
+      if (!supported(target)) return null;
       const reported = target === "hp" ? s?.hpVolumeDb : s?.hp2VolumeDb;
       if (reported == null) return null;
       const db = dialNow(target, reported);
@@ -719,14 +679,14 @@ function dialValue(target, inst) {
                text: jackOff ? "MUTED" : `${p}%`, muted: jackOff };
     }
     case "auxLevel": {
-      if (!deviceTargetSupported(target)) return null;
+      if (!supported(target)) return null;
       if (s?.auxLevelDb == null) return null;
       const db = dialNow(target, s.auxLevelDb);
       const p = Math.round(((60 + db) / 60) * 100);
       return { label: "Aux In level", pct: p, text: `${p}%`, muted: false };
     }
     case "crossfade": {
-      if (!deviceTargetSupported(target)) return null;
+      if (!supported(target)) return null;
       if (s?.crossfade == null) return null;
       const v = dialNow(target, s.crossfade);
       const text = v === 100 ? "centre" : v < 100 ? `mic +${100 - v}` : `pc +${v - 100}`;
@@ -781,8 +741,7 @@ function onKeyDown(context, inst) {
 function onDialRotate(context, inst, ticks) {
   const t = activeTarget(inst);
   if (!t || !daemonState) return;
-  if (["gain", "gain2", "hp", "hp2", "auxLevel", "crossfade"].includes(t) &&
-      !deviceTargetSupported(t)) {
+  if (DEVICE_DIALS.has(t) && !supported(t)) {
     send({ event: "showAlert", context });
     return;
   }
@@ -860,7 +819,7 @@ function onDialRotate(context, inst, ticks) {
 function onDialPress(context, inst) {
   const t = activeTarget(inst);
   if (!t) return;
-  if (genericBlocked(t)) { send({ event: "showAlert", context }); return; }
+  if (DEVICE_DIALS.has(t) && !supported(t)) { send({ event: "showAlert", context }); return; }
   if (t.startsWith("insparam|")) {
     // the press is the insert's bypass, like a dial's mute
     const [, ch, id] = t.split("|");
@@ -1111,8 +1070,8 @@ function meterKeyFor(t) {
   if (!t) return null;
   if (t.startsWith("send:") || t.startsWith("chvol:")) return `ch:${t.split(":")[1]}`;
   if (t.startsWith("mixvol:")) return `mix:${t.slice(7)}`;
-  if (t === "gain") return "ch:xlr1";
-  if (t === "gain2") return "ch:xlr2";
+  // A gain shows the channel it is heard on, wherever the layout put it.
+  if (t === "gain" || t === "gain2") return unitMeterKey(mixer(), t);
   if (t === "auxLevel") return "ch:aux";
   if (t.startsWith("insparam|")) {
     const ch = t.split("|")[1];
@@ -1156,9 +1115,13 @@ function refreshMeters() {
   if (!meterLevels) return;
   for (const [context, inst] of instances) {
     if (inst.action !== "com.emaspa.openxlr.dial") continue;
-    const key = meterKeyFor(activeTarget(inst));
-    if (!key || !(key in meterLevels)) continue;
-    const lr = meterLevels[key];
+    const target = activeTarget(inst);
+    const key = meterKeyFor(target);
+    // A gain whose input is not in the mixer has nothing to meter: its bar
+    // empties rather than keeping the level of a channel it no longer feeds.
+    const silent = !key && (target === "gain" || target === "gain2");
+    if (!silent && (!key || !(key in meterLevels))) continue;
+    const lr = silent ? [0, 0] : meterLevels[key];
     const level = Math.max(lr[0] ?? 0, lr[1] ?? 0);
     const bucket = Math.round(level * 65);
     if (lastMeter.get(context) === bucket) continue;
@@ -1230,7 +1193,7 @@ function refresh(context) {
     const v = toggleValue(t, inst);
     const badge = t === "softLowCut" ? (mixer()?.lowCutHz ? String(mixer().lowCutHz) : "OFF") : "";
     const label = emptyTitle.has(context)
-      ? (!daemonUp ? "offline" : genericBlocked(t) ? genericTitle(t)
+      ? (!daemonUp ? "offline"
         : isInsertTarget(t) || isProfileTarget(t) ? toggleLabel(t, inst) : defaultTitle(t)) : "";
     // The user can pick a glyph per key (a monitor output may be headphones
     // rather than speakers); "auto" or unset keeps the target's default.
@@ -1243,12 +1206,6 @@ function refresh(context) {
     send({ event: "setImage", context,
            payload: { image: keySvg(v === true, isMuteLike(t), v !== null && daemonUp, glyphName, badge, label, offColor, appearance) } });
   } else if (inst.action === "com.emaspa.openxlr.dial") {
-    if (genericBlocked(t)) {
-      send({ event: "setFeedback", context, payload: {
-        title: marqueeTitle(context, DIAL_NAMES[t], "Generic mic"), value: "n/a",
-        unit: { enabled: false }, icon: dialIcon(t), needle: needleSvg(0), muteOverlay: { enabled: false } } });
-      return;
-    }
     const d = dialValue(t, inst);
     const isDb = t === "gain" || t === "gain2";
     send({ event: "setFeedback", context, payload: d

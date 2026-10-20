@@ -1,0 +1,111 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { deviceTargetSupported, unitCarrier, unitDialLabel, unitInputName, unitInputOf, unitKeyLabel, unitMeterKey }
+  from "../com.emaspa.openxlr.sdPlugin/unit-inputs.mjs";
+
+const unit = "0fd9:00b4@0123456789abcdef";
+const pro = {gain:true, mute:true, phantom:true, lowCut:true, expander:true, voiceTune:true, clipGuard:true,
+  compressor:true, hpVolume:true, crossfade:true, outputRouting:true, auxInput:true, lowImpedance:true,
+  xlrInputs:2, hpOutputs:2, xlrJacks:true};
+
+// XLR 1 takes a Yeti Nano; the Pro's own first input plays on a capture channel.
+function bound() {
+  return {connected:true, capabilities:pro, mixer:{channels:[
+    {id:"xlr1", name:"Mic 1", hardware:true,
+      binding:{kind:"source", source:"alsa_input.usb-Blue_Yeti_Nano", pair:0, monoChannel:0}},
+    {id:"xlr2", name:"XLR 2", hardware:true, binding:{kind:"unit", pair:1},
+      unitInput:{unit, input:2, primary:true}},
+    {id:"music", name:"Music", binding:{kind:"apps"}},
+    {id:"cap1", name:"Wave XLR Pro input 1", captureSource:"alsa_input.usb-Elgato_Wave_XLR_Pro",
+      binding:{kind:"source", source:"alsa_input.usb-Elgato_Wave_XLR_Pro", pair:0, monoChannel:0},
+      unitInput:{unit, input:1, primary:true}},
+  ]}};
+}
+
+test("the carrier is the channel the daemon names, and only it", () => {
+  const state = bound();
+  assert.equal(unitCarrier(state.mixer, 1).id, "cap1");
+  assert.equal(unitCarrier(state.mixer, 2).id, "xlr2");
+  // The daemon names input 2 but not input 1: nothing carries input 1, not
+  // even the strip that used to.
+  delete state.mixer.channels[3].unitInput;
+  assert.equal(unitCarrier(state.mixer, 1), null);
+  // An additional unit's input is not the header unit's.
+  state.mixer.channels[3].unitInput = {unit:"0fd9:0070@fedcba9876543210", input:1, primary:false};
+  assert.equal(unitCarrier(state.mixer, 1), null);
+});
+
+test("without unitInput a strip on the interface still carries its input", () => {
+  // A daemon that predates bindings, or no unit connected: the strips stand in.
+  const old = {mixer:{channels:[{id:"xlr1", name:"XLR 1", hardware:true}, {id:"xlr2", name:"XLR 2", hardware:true}]}};
+  assert.equal(unitCarrier(old.mixer, 1).id, "xlr1");
+  assert.equal(unitCarrier(old.mixer, 2).id, "xlr2");
+  // A bound strip never stands in for the interface.
+  old.mixer.channels[0].binding = {kind:"source", source:"alsa_input.webcam", pair:0, monoChannel:0};
+  assert.equal(unitCarrier(old.mixer, 1), null);
+  assert.equal(unitCarrier(null, 1), null);
+  assert.equal(unitCarrier({channels:"nonsense"}, 1), null);
+});
+
+test("key faces and dial titles name the carrying channel", () => {
+  const state = bound();
+  assert.equal(unitKeyLabel(state, "mute"), "Wave XLR P…\nMute");
+  assert.equal(unitKeyLabel(state, "phantom2"), "XLR 2\n48V");
+  assert.equal(unitDialLabel(state, "gain"), "Wave XLR Pro input 1 gain");
+  assert.equal(unitDialLabel(state, "gain2"), "XLR 2 gain");
+  state.mixer.channels[3].name = "Pro mic";
+  assert.equal(unitKeyLabel(state, "clipGuard"), "Pro mic\nClipGuard");
+
+  // Not in the mixer: the input by number, never a strip it does not feed.
+  delete state.mixer.channels[3].unitInput;
+  assert.equal(unitInputName(state, 1), "Input 1");
+  assert.equal(unitKeyLabel(state, "mute"), "Input 1\nMute");
+  assert.equal(unitDialLabel(state, "gain"), "Input 1 gain");
+
+  // Back on the jack the strip's own name returns; a Wave:3's capsule is Mic 1.
+  const jack = {mixer:{channels:[{id:"xlr1", name:"XLR 1", hardware:true, binding:{kind:"unit", pair:0},
+    unitInput:{unit, input:1, primary:true}}]}};
+  assert.equal(unitKeyLabel(jack, "mute"), "XLR 1\nMute");
+  jack.mixer.channels[0].name = "Mic 1";
+  assert.equal(unitDialLabel(jack, "gain"), "Mic 1 gain");
+
+  // No mixer to look in: the name the interface gives its strips.
+  assert.equal(unitInputName({capabilities:pro}, 1), "XLR 1");
+  assert.equal(unitInputName({capabilities:{...pro, xlrJacks:false}}, 1), "Mic 1");
+  assert.equal(unitInputName(null, 2), "XLR 2");
+
+  // Anything else is not a unit input control.
+  for (const target of ["hp", "crossfade", "gainLocked", "softClipGuard", "sendmute:xlr1:monitor", undefined]) {
+    assert.equal(unitKeyLabel(state, target), null);
+    assert.equal(unitDialLabel(state, target), null);
+    assert.equal(unitInputOf(target), null);
+  }
+});
+
+test("a gain dial meters the channel its input plays on", () => {
+  const state = bound();
+  assert.equal(unitMeterKey(state.mixer, "gain"), "ch:cap1");
+  assert.equal(unitMeterKey(state.mixer, "gain2"), "ch:xlr2");
+  delete state.mixer.channels[3].unitInput;
+  assert.equal(unitMeterKey(state.mixer, "gain"), null);
+  assert.equal(unitMeterKey(state.mixer, "hp"), null);
+});
+
+test("hardware targets follow the unit's capabilities whatever XLR 1 takes", () => {
+  const state = bound();
+  for (const target of ["gain", "mute", "phantom", "lowCut", "expander", "voiceTune", "clipGuard", "compressor",
+                        "gain2", "mute2", "phantom2", "hp", "hp2", "crossfade", "lowImpedance", "outHp1",
+                        "outLineOut", "auxLevel", "auxLevelLock", "gainLocked"])
+    assert.equal(deviceTargetSupported(state.capabilities, target), true, target);
+  // One input and one headphone output: the second ones are not there.
+  const wave = {gain:true, mute:true, hpVolume:true, xlrInputs:1, hpOutputs:1, xlrJacks:false};
+  for (const target of ["gain2", "mute2", "phantom2", "lowCut2", "compressor2", "hp2"])
+    assert.equal(deviceTargetSupported(wave, target), false, target);
+  assert.equal(deviceTargetSupported(wave, "gain"), true);
+  assert.equal(deviceTargetSupported(wave, "phantom"), false);
+  // No unit connected: the daemon sends no capabilities and nothing is there.
+  for (const capabilities of [undefined, null, "nonsense"])
+    for (const target of ["gain", "mute", "gainLocked", "hp"])
+      assert.equal(deviceTargetSupported(capabilities, target), false);
+  assert.equal(deviceTargetSupported(pro, "sendmute:xlr1:monitor"), false);
+});

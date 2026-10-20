@@ -262,31 +262,34 @@ internal sealed class App
         }
         int bottom = screen.Height - 2;
         // Each input is its gain line, its bar and a blank row, so one
-        // input's bar does not run into the next input's name.
+        // input's bar does not run into the next input's name. The bar is the
+        // channel that carries the input, wherever the layout put it.
         Snapshot? state = Link.State;
-        if (state?.Mixer.PrimaryInput is { Source.Length: > 0 } input)
-        {
-            // Generic mode has no gain to read; the source, its port and the
-            // XLR 1 meter are what there is to see.
-            screen.Text(3, bottom - 10, "GENERIC MIC", theme.TextMuted, theme.Card);
-            screen.Text(3, bottom - 8, state.SourceName(input.Source), theme.TextDetail, theme.Card, maxWidth: 12);
-            Widgets.Meter(screen, 3, bottom - 7, 11, Link.Meter("ch", "xlr1"), theme, theme.Card);
-            screen.Text(3, bottom - 5, state.Mixer.PrimaryInputConnected ? $"port {input.Channel + 1}" : "not linked",
-                state.Mixer.PrimaryInputConnected ? theme.TextDetail : theme.TextWarning, theme.Card, maxWidth: 12);
-        }
-        else if (state is not null && state.Connected)
+        screen.Text(3, bottom - 10, "INTERFACE", theme.TextMuted, theme.Card);
+        if (state is not null && state.Connected)
         {
             int inputs = Math.Min(2, Math.Max(1, state.Count("xlrInputs")));
             for (int i = 0; i < inputs; i++)
             {
                 string suffix = i == 0 ? string.Empty : "2";
-                screen.Text(3, bottom - 8 + i * 3, $"XLR {i + 1} {state.Number($"gain{suffix}Db"),3:0} dB",
+                ChannelEntry? carrier = state.Carrier(i + 1);
+                // A strip's short name fits beside the gain; a capture channel's may not.
+                string label = carrier is { Hardware: true } strip ? strip.Name : $"In {i + 1}";
+                screen.Text(3, bottom - 8 + i * 3, $"{label} {state.Number($"gain{suffix}Db"),3:0} dB",
                     theme.TextDetail, theme.Card, maxWidth: 12);
-                Widgets.Meter(screen, 3, bottom - 7 + i * 3, 11, Link.Meter("ch", $"xlr{i + 1}"), theme, theme.Card);
+                Widgets.Meter(screen, 3, bottom - 7 + i * 3, 11, carrier is null ? 0 : Link.Meter("ch", carrier.Id), theme, theme.Card);
             }
         }
-        else screen.Text(3, bottom - 8, "Offline", theme.TextMuted, theme.Card);
-        if (state?.Generic != true) screen.Text(3, bottom - 10, "INTERFACE", theme.TextMuted, theme.Card);
+        else
+        {
+            screen.Text(3, bottom - 8, "Offline", theme.TextMuted, theme.Card);
+            // A microphone bound to XLR 1 plays without an interface.
+            if (state?.Strip(1) is { SourceBound: true, Present: true } bound)
+            {
+                screen.Text(3, bottom - 6, bound.Name, theme.TextDetail, theme.Card, maxWidth: 12);
+                Widgets.Meter(screen, 3, bottom - 5, 11, Link.Meter("ch", bound.Id), theme, theme.Card);
+            }
+        }
         screen.Text(3, bottom - 2, "SKIN", theme.TextMuted, theme.Card);
         screen.Text(3, bottom - 1, theme.Name, theme.TextDetail, theme.Card, maxWidth: 12);
     }
@@ -298,14 +301,12 @@ internal sealed class App
         screen.Fill(0, 0, screen.Width, 1, theme.Card);
 
         screen.Text(1, 0, "OpenXLR", theme.TextPrimary, theme.Card, bold: true);
-        // A generic microphone is the input, not a missing interface: name it,
-        // and light the lamp while its route into XLR 1 is up.
-        string device = state?.GenericLabel is { } generic
-            ? $"Generic mic: {generic}"
-            : state?.Device is { } descriptor && state.Connected
-                ? $"{descriptor.Vendor} {descriptor.Model}"
-                : state is null ? "waiting for the daemon" : "no interface";
-        bool live = state is not null && (state.Generic ? state.Mixer.PrimaryInputConnected : state.Connected);
+        // The lamp is the interface's connection; a microphone bound to a
+        // strip shows its own state on the strip and on the Inputs tab.
+        string device = state?.Device is { } descriptor && state.Connected
+            ? $"{descriptor.Vendor} {descriptor.Model}"
+            : state is null ? "waiting for the daemon" : "no interface";
+        bool live = state is not null && state.Connected;
         Widgets.Lamp(screen, 10, 0, live, theme, theme.Card, alert: state is not null && !live);
         string right = state?.DaemonVersion is { Length: > 0 } version ? $"v{version}" : Link.Status;
         int rightX = Math.Max(12, screen.Width - right.Length - 2);
@@ -392,6 +393,7 @@ internal sealed class App
             "Matrix    Up/Down channel; Left/Right mix; Space mute; -/+ [/] level.",
             "Inputs    Up/Down control; Left/Right or -/+ level; [/] fine.",
             "          Ctrl+Left/Right fine; Space toggle; Home/End limits.",
+            "          Bindings: pick a strip's source and port, Enter on Apply.",
             "Outputs   Space select; Left/Right feed; Enter main output.",
             "          -/+ sink volume; m sink mute. Arrows set defaults.",
             "Apps      Left/Right channel; i desktop routing; f forget.",
@@ -403,7 +405,6 @@ internal sealed class App
             "Profiles  Enter load; s overwrite; r recall; d delete.",
             "          Save settings as creates a profile. Arrows set recall.",
             "Options   Enter use skin; R reload skins; arrows move.",
-            "          Primary microphone: pick a source and port, Enter on Apply.",
             "Lists     Up/Down or PgUp/PgDn move; Enter or Space acts.",
             "Confirm   Enter accepts; Escape cancels. Deletion needs yes.",
             "Meters    RMS -60 to 0 dBFS; hold 1 s, fall 18 dB/s.",

@@ -8,7 +8,6 @@ function tokenPath(runtime, config, home) {
 }
 
 function mono(id) { return id === "xlr1" || id === "xlr2"; }
-function muteControl(id) { return id === "xlr2" ? "mute2" : "mute"; }
 function sendMuted(channel, mix) { return (channel.mutedIn || []).indexOf(mix) >= 0; }
 function level(channel, mix) { return clamp((channel.levels || {})[mix], 1); }
 function ceiling(mix) { return mix.kind === "monitor" ? 1.5 : 1; }
@@ -43,18 +42,114 @@ function outputName(snapshot, output) {
         ? device.description.trim() : output;
 }
 
-// Generic microphone mode: XLR 1 takes one port of a PipeWire source and the
-// daemon drives no Elgato unit, so there is no hardware mute to send.
-function genericInput(snapshot) {
-    var input = snapshot && snapshot.mixer ? snapshot.mixer.primaryInput : null;
-    return input && typeof input.source === "string" && input.source ? input : null;
+// The interface's gain, mute and phantom power belong to its input stage,
+// not to a strip. The daemon names the channel that carries each of the
+// primary unit's two inputs in that channel's unitInput: XLR 1 and XLR 2
+// while they take the interface, or a capture channel on the interface's own
+// node while a strip is bound to another microphone. While no channel names
+// one, as with no unit connected or an older daemon, a strip still on the
+// interface stands for its input, as it always has.
+function carriesPrimaryInput(channel) {
+    return !!channel && !!channel.unitInput && channel.unitInput.primary === true;
 }
-function genericLabel(snapshot) {
-    var input = genericInput(snapshot);
-    if (!input) return "";
-    var port = typeof input.channel === "number" && isFinite(input.channel) ? input.channel + 1 : 1;
-    var linked = snapshot.mixer.primaryInputConnected === true;
-    return "Generic mic: " + outputName(snapshot, input.source) + ", port " + port + (linked ? "" : ", not linked");
+function unitCarrier(mixer, input) {
+    var channels = mixer && Array.isArray(mixer.channels) ? mixer.channels : [];
+    var named = channels.filter(function (channel) {
+        return carriesPrimaryInput(channel) && channel.unitInput.input === input;
+    })[0];
+    if (named)
+        return named;
+    // The daemon names the other input but not this one: no channel carries it.
+    if (channels.some(carriesPrimaryInput))
+        return null;
+    var id = input === 2 ? "xlr2" : "xlr1";
+    var strip = channels.filter(function (channel) {
+        return !!channel && channel.hardware === true && channel.id === id;
+    })[0];
+    return strip && (!strip.binding || strip.binding.kind === "unit") ? strip : null;
+}
+// The unit control behind a channel's microphone mute: the primary's mute or
+// mute2 on the channel carrying its input 1 or 2 (device ""), or a driven
+// additional unit's on the channel its unitInput names (device: that unit's
+// id, written with setWaveControl). null for every other channel.
+function additionalUnit(snapshot, id) {
+    var units = snapshot && Array.isArray(snapshot.waveInterfaces) ? snapshot.waveInterfaces : [];
+    return units.filter(function (unit) { return !!unit && unit.active !== true && unit.id === id; })[0] || null;
+}
+function muteTarget(snapshot, id) {
+    var mixer = snapshot && snapshot.mixer ? snapshot.mixer : null;
+    var first = unitCarrier(mixer, 1);
+    if (first && first.id === id)
+        return { device: "", control: "mute" };
+    var second = unitCarrier(mixer, 2);
+    if (second && second.id === id)
+        return { device: "", control: "mute2" };
+    var channels = mixer && Array.isArray(mixer.channels) ? mixer.channels : [];
+    var channel = channels.filter(function (entry) { return !!entry && entry.id === id; })[0];
+    var input = channel && channel.unitInput && channel.unitInput.primary === false ? channel.unitInput : null;
+    var unit = input ? additionalUnit(snapshot, input.unit) : null;
+    return unit && unit.enabled === true ? { device: unit.id, control: input.input === 2 ? "mute2" : "mute" } : null;
+}
+function muteControl(snapshot, id) {
+    var target = muteTarget(snapshot, id);
+    return target ? target.control : "";
+}
+// The state and capabilities the target's unit reports, or {} for either.
+function targetState(snapshot, target) {
+    if (!target)
+        return {};
+    var holder = target.device === "" ? snapshot : additionalUnit(snapshot, target.device);
+    return (holder && holder.state) || {};
+}
+function hardwareMuted(snapshot, id) {
+    var target = muteTarget(snapshot, id);
+    return !!target && !!targetState(snapshot, target)[target.control];
+}
+// The mute can be written now: its unit is connected and has a mute.
+function muteAvailable(snapshot, id) {
+    var target = muteTarget(snapshot, id);
+    if (!target)
+        return false;
+    var holder = target.device === "" ? snapshot : additionalUnit(snapshot, target.device);
+    return !!holder && holder.connected === true && !!(holder.capabilities || {}).mute;
+}
+function muteCommandFor(snapshot, id, value) {
+    var target = muteTarget(snapshot, id);
+    if (!target)
+        return null;
+    return target.device === "" ? { cmd: "set", control: target.control, value: value }
+        : { cmd: "setWaveControl", device: target.device, control: target.control, value: value };
+}
+
+// A microphone strip bound to one port of another capture source.
+function sourceBound(channel) {
+    return !!channel && channel.hardware === true && !!channel.binding && channel.binding.kind === "source"
+        && typeof channel.binding.source === "string" && channel.binding.source !== "";
+}
+// What feeds a bound strip: the source's description and its port, or why
+// it is silent. "" for every other channel.
+function bindingNote(snapshot, channel) {
+    if (!sourceBound(channel))
+        return "";
+    if (typeof channel.bindingWarning === "string" && channel.bindingWarning)
+        return channel.bindingWarning;
+    var port = typeof channel.binding.monoChannel === "number" && isFinite(channel.binding.monoChannel)
+        ? channel.binding.monoChannel + 1 : 1;
+    return outputName(snapshot, channel.binding.source) + ", port " + port
+        + (channel.bindingConnected === false ? ", not linked" : "");
+}
+// The strip's line under its name: what kind of channel it is, or for a
+// bound strip its source, short, and OFF while that source is silent.
+function kindLine(snapshot, channel) {
+    if (sourceBound(channel))
+        return outputName(snapshot, channel.binding.source) + (channel.bindingConnected === false ? " OFF" : "");
+    var kind = channel.hardware ? "INPUT" : channel.captureSource ? "CAPTURE" : "APP";
+    return kind + (channel.captureSource && !channel.captureConnected ? " OFF" : "");
+}
+// A channel's name from the state, or "" when the state has no such channel.
+function channelName(channels, id) {
+    var channel = (channels || []).filter(function (entry) { return !!entry && entry.id === id; })[0];
+    return channel && typeof channel.name === "string" ? channel.name : "";
 }
 
 function pair(levels, key, isMono) {

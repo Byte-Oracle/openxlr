@@ -719,15 +719,35 @@ public sealed class StartupReceiptTests : IDisposable
     }
 
     [Fact]
-    public void TheNewestLegacyUnitGenerationIsTheCurrentTemplate()
+    public void ThePreviousUnitGenerationRemainsRecognisedAfterCapabilityRestrictionsChange()
     {
         const string daemon = "/My Projects/%/OpenXLR.Daemon";
-        Assert.Equal(StartupIntegration.SourceUnit(daemon), StartupIntegration.SourceUnit(daemon, 7));
+        Assert.NotEqual(StartupIntegration.SourceUnit(daemon), StartupIntegration.SourceUnit(daemon, 7));
         string[] legacy = [.. StartupIntegration.LegacySourceUnits(daemon)];
-        Assert.Equal(7, legacy.Distinct().Count());
+        Assert.Equal(8, legacy.Distinct().Count());
+        Assert.Contains(StartupIntegration.SourceUnit(daemon, 7), legacy);
         Assert.DoesNotContain(StartupIntegration.SourceUnit(daemon), legacy);
         Assert.Equal(2, StartupIntegration.LegacyAutostartEntries(daemon).Distinct().Count());
     }
+
+    [Fact]
+    public void UserUnitsNeverRequireDroppingTheManagersCapabilities()
+    {
+        string root = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(SourceFile())!, "../.."));
+        string[] units = [StartupIntegration.SourceUnit("/test/OpenXLR.Daemon"),
+            File.ReadAllText(Path.Combine(root, "packaging/openxlr-daemon.service")),
+            File.ReadAllText(Path.Combine(root, "packaging/nix/module.nix"))];
+        foreach (string unit in units)
+        {
+            foreach (string name in new[] { "CapabilityBoundingSet", "ProtectClock", "ProtectKernelModules", "ProtectKernelLogs" })
+                Assert.DoesNotContain(name + "=", unit.Replace(" ", ""));
+            Assert.Contains("NoNewPrivileges", unit);
+            Assert.Contains("KillMode", unit);
+            Assert.Contains("LimitMEMLOCK", unit);
+        }
+    }
+
+    private static string SourceFile([System.Runtime.CompilerServices.CallerFilePath] string path = "") => path;
 
     [Fact]
     public async Task DoctorReportsRecognizedStartupFilesAsInformationAndForeignOnesAsFindings()

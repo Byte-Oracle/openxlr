@@ -20,10 +20,13 @@ Rectangle {
     readonly property real maximum: master ? Mixer.ceiling(entry) : 1
     readonly property var meter: Mixer.pair(link.levels, (master ? "mix:" : "ch:") + entry.id, mono)
     readonly property bool available: link.ready && !link.pending
-    readonly property bool hardwareMuted: mono && link.snapshot && !!(link.snapshot.state || {})[Mixer.muteControl(entry.id)]
-    // A generic microphone has no hardware mute the daemon accepts; the send mute above still works.
-    readonly property bool generic: Mixer.genericInput(link.snapshot) !== null
-    readonly property string kind: master ? (entry.kind === "monitor" ? "MON" : entry.kind === "virtualMic" ? "MIC" : "AUX") : entry.hardware ? "INPUT" : entry.captureSource ? "CAPTURE" : "APP"
+    // An interface's microphone mute sits on the channel that carries its
+    // input: a capture channel while that input's strip is bound to another
+    // microphone, or a strip bound to a driven additional unit, whose mute it
+    // is. A strip bound to any other source has only its send mutes.
+    readonly property string hardwareControl: master ? "" : Mixer.muteControl(link.snapshot, entry.id)
+    readonly property bool hardwareMuted: hardwareControl !== "" && Mixer.hardwareMuted(link.snapshot, entry.id)
+    readonly property string kind: master ? (entry.kind === "monitor" ? "MON" : entry.kind === "virtualMic" ? "MIC" : "AUX") : Mixer.kindLine(link.snapshot, entry)
     width: 104
     height: 286
     color: face
@@ -50,12 +53,14 @@ Rectangle {
         x: 4
         y: 40
         width: parent.width - 8
-        text: root.kind + (root.entry.captureSource && !root.entry.captureConnected ? " OFF" : "")
+        objectName: "kind"
+        text: root.kind
         textFormat: Text.PlainText
         font.family: root.family
         font.pixelSize: 10
         color: root.foreground
         opacity: 0.65
+        elide: Text.ElideRight
         horizontalAlignment: Text.AlignHCenter
     }
     Text {
@@ -167,18 +172,14 @@ Rectangle {
         y: 261
         width: parent.width - 8
         height: 22
-        visible: root.mono
+        visible: root.hardwareControl !== ""
         foreground: root.foreground
         face: root.face
         family: root.family
-        text: root.generic ? "Generic mic" : root.hardwareMuted ? "Mic muted" : "Mic on"
-        marked: root.hardwareMuted && !root.generic
-        enabled: root.available && !root.generic && !!root.link.snapshot && !!root.link.snapshot.connected && !!(root.link.snapshot.capabilities || {}).mute
-        Accessible.name: root.entry.name + (root.generic ? " hardware mute, not on a generic microphone" : " hardware mute")
-        onClicked: root.link.send({
-            cmd: "set",
-            control: Mixer.muteControl(root.entry.id),
-            value: !root.hardwareMuted
-        })
+        text: root.hardwareMuted ? "Mic muted" : "Mic on"
+        marked: root.hardwareMuted
+        enabled: root.available && root.hardwareControl !== "" && Mixer.muteAvailable(root.link.snapshot, root.entry.id)
+        Accessible.name: root.entry.name + " hardware mute"
+        onClicked: root.link.send(Mixer.muteCommandFor(root.link.snapshot, root.entry.id, !root.hardwareMuted))
     }
 }

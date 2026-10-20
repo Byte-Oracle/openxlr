@@ -174,6 +174,9 @@ internal sealed class ActionRow(string label, string button, Action run) : Row(l
 /// <summary>A heading between groups of rows.</summary>
 internal sealed class HeadingRow(string label) : Row(label)
 {
+    /// <summary>The group opens with a gain, drawn as an arc on a wide terminal.</summary>
+    public bool Dial { get; init; }
+
     public override void DrawValue(Screen screen, int x, int y, int width, Theme theme, Rgb back, bool focused) { }
 
     public override bool Handle(KeyPress key) => false;
@@ -200,7 +203,7 @@ internal sealed class RowList
         {
             int end = start + 1;
             while (end < rows.Count && rows[end] is not HeadingRow) end++;
-            bool dial = rows[start].Label.StartsWith("XLR", StringComparison.Ordinal) && rows[start + 1] is NumberRow;
+            bool dial = rows[start] is HeadingRow { Dial: true } && start + 1 < end && rows[start + 1] is NumberRow;
             int height = end - start + 2 + (dial ? 4 : 0);
             int column = bottoms[0] <= bottoms[1] ? 0 : 1;
             int x = area.X + column * ((area.Width + 1) / 2);

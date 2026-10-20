@@ -1,0 +1,96 @@
+// The driven interface's microphone inputs as the deck names them. Gain,
+// mute, phantom power and the hardware effects belong to the interface's
+// input stage, not to a strip: they stay unit controls (`gain`, `mute2` and
+// the like), and their labels name the channel that carries that input,
+// which the daemon reports in each channel's `unitInput`. XLR 1 carries
+// input 1 until it is bound to another microphone; then a capture channel on
+// the interface's own node may carry it, or nothing does.
+
+// Unit controls on one of the two inputs, with the word under the channel's
+// name on a key face.
+const UNIT_CONTROLS = {
+  mute: [1, "Mute"], mute2: [2, "Mute"],
+  phantom: [1, "48V"], phantom2: [2, "48V"],
+  lowCut: [1, "Low Cut"], lowCut2: [2, "Low Cut"],
+  expander: [1, "Expander"], expander2: [2, "Expander"],
+  voiceTune: [1, "Voice Tune"], voiceTune2: [2, "Voice Tune"],
+  clipGuard: [1, "ClipGuard"], clipGuard2: [2, "ClipGuard"],
+  compressor: [1, "Comp"], compressor2: [2, "Comp"],
+};
+const UNIT_DIALS = { gain: 1, gain2: 2 };
+
+// The input a unit control acts on, 1 or 2, or null for any other target.
+export function unitInputOf(target) {
+  if (Object.hasOwn(UNIT_DIALS, target)) return UNIT_DIALS[target];
+  return Object.hasOwn(UNIT_CONTROLS, target) ? UNIT_CONTROLS[target][0] : null;
+}
+
+// The channel that carries the primary unit's input 1 or 2, or null. The
+// daemon names it in unitInput. While no channel names one, which is the case
+// with no unit connected and with a daemon that predates input bindings, a
+// strip still on the interface stands for its input, as it always has.
+export function unitCarrier(mixer, input) {
+  const channels = Array.isArray(mixer?.channels) ? mixer.channels : [];
+  const named = channels.find((c) => c?.unitInput?.primary === true && c.unitInput.input === input);
+  if (named) return named;
+  // The daemon names the other input but not this one: no channel carries it.
+  if (channels.some((c) => c?.unitInput?.primary === true)) return null;
+  const strip = channels.find((c) => c?.hardware === true && c.id === (input === 2 ? "xlr2" : "xlr1"));
+  return strip && (!strip.binding || strip.binding.kind === "unit") ? strip : null;
+}
+
+// What the deck calls input 1 or 2: the carrying channel's name, "Input 1"
+// while the input is not in the mixer, and with no mixer to look in the name
+// the interface gives its strips (Mic 1 on a Wave:3's capsule).
+export function unitInputName(state, input) {
+  const carrier = unitCarrier(state?.mixer, input);
+  if (typeof carrier?.name === "string" && carrier.name.trim()) return carrier.name;
+  if ((state?.mixer?.channels ?? []).length) return `Input ${input}`;
+  return `${state?.capabilities?.xlrJacks === false ? "Mic" : "XLR"} ${input}`;
+}
+
+// A name short enough for one line of a key face.
+const keyLine = (name) => name.length <= 11 ? name : `${name.slice(0, 10)}…`;
+
+// A unit control's key face, as two lines, or null for any other target.
+export function unitKeyLabel(state, target) {
+  if (!Object.hasOwn(UNIT_CONTROLS, target)) return null;
+  const [input, word] = UNIT_CONTROLS[target];
+  return `${keyLine(unitInputName(state, input))}\n${word}`;
+}
+
+// A gain dial's title, or null for any other target.
+export function unitDialLabel(state, target) {
+  return Object.hasOwn(UNIT_DIALS, target) ? `${unitInputName(state, UNIT_DIALS[target])} gain` : null;
+}
+
+// The meter a gain dial shows: the channel the gain is heard on, or null
+// when the input is not in the mixer.
+export function unitMeterKey(mixer, target) {
+  const carrier = Object.hasOwn(UNIT_DIALS, target) ? unitCarrier(mixer, UNIT_DIALS[target]) : null;
+  return carrier ? `ch:${carrier.id}` : null;
+}
+
+// Whether the driven unit has a hardware target, by its capabilities alone.
+// A binding never changes this: the unit stays driven whatever XLR 1 takes.
+// With no unit connected the daemon sends no capabilities and every hardware
+// target is unavailable.
+export function deviceTargetSupported(capabilities, target) {
+  const c = capabilities;
+  if (!c || typeof c !== "object") return false;
+  if (unitInputOf(target) === 2 && (c.xlrInputs ?? 1) < 2) return false;
+  if (target === "hp2" && (c.hpOutputs ?? 1) < 2) return false;
+  const capability = {
+    gain: "gain", gain2: "gain", mute: "mute", mute2: "mute",
+    phantom: "phantom", phantom2: "phantom", lowCut: "lowCut", lowCut2: "lowCut",
+    expander: "expander", expander2: "expander",
+    voiceTune: "voiceTune", voiceTune2: "voiceTune",
+    clipGuard: "clipGuard", clipGuard2: "clipGuard",
+    compressor: "compressor", compressor2: "compressor",
+    lowImpedance: "lowImpedance", hp: "hpVolume", hp2: "hpVolume",
+    crossfade: "crossfade",
+    outHp1: "outputRouting", outHp2: "outputRouting",
+    outLineOut: "outputRouting", auxLevel: "auxInput", auxLevelLock: "auxInput",
+  }[target];
+  return capability ? c[capability] === true : target === "gainLocked";
+}

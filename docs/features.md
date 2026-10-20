@@ -281,11 +281,15 @@ on a Wave XLR Pro the zero-latency path to the jacks follows it. With no
 channel carrying it, the INPUTS panel keeps the controls folded under a
 heading that says so, and the crossfade says where the interface's own
 microphone plays. With no interface connected, profiles live under
-`generic` and hold the mixer scene only. The terminal mixer names XLR 1's
-source in its header and picks it from its Options tab. Stream Deck keys
-and the Omarchy bar keep XLR 1's sends and send mutes working, and their
-hardware controls say Generic mic until they learn which channel carries
-the interface's input.
+`generic` and hold the mixer scene only. The terminal mixer binds both
+strips from its Inputs tab, offers to drive another Elgato interface it
+binds to, and heads the interface's controls with the channel that carries
+them, whose key is then the interface's mute; a strip on a driven
+additional interface gets that unit's controls. Stream
+Deck keys and dials for those controls name that channel, and a gain dial
+meters it. The Omarchy bar labels its readouts with the strips' names and
+puts its mic button on that channel, or on a strip bound to a driven
+additional interface for that unit's mute.
 
 ### External capture channels
 
