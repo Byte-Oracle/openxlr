@@ -48,5 +48,8 @@ hardware support table for current support claims.
 - [Pro protocol notebook](wave-xlr-pro-protocol.md): chronological captures
   and corrections; later verified mappings supersede early guesses.
 - [Pro capture plan](wave-xlr-pro-capture-plan.md): completed capture procedure.
+- [XLR Dock MK.2 equalizer findings](xlr-dock-mk2-eq-findings.md): captures
+  and measurements showing the dock's EQ runs in Wave Link, not on the
+  device.
 - [Linux audio research](wave-xlr-linux-audio-stack-research.md): August 2026
   survey and original design decisions.

@@ -344,19 +344,24 @@ while fixes to existing hosts remain part of normal maintenance.
 
 ## Devices
 
-- [ ] XLR Dock MK.2: blocks 0x0002 and 0x0006, which exist and are not
-  decoded.
+- [ ] XLR Dock MK.2: blocks 0x0000, 0x0002, 0x0006 and 0x0016, which
+  exist and are not decoded, and bytes 3 to 17 of the settings block,
+  several of which change the level (likely compressor and expander
+  parameters).
 - [ ] Pro: the remaining hardware mix matrix (which return feeds which
   jack, per-return levels), now that the headphone mix bytes are known
   (see the protocol notes, block 0x0001 bytes 12 and 13). Direct control
   of that matrix from the window is the long-term answer to the
   crossfade and mic-monitoring questions.
-- [ ] The four-band equalizer the Wave FX processor runs on the Pro, the
-  Wave XLR MK.2 and the XLR Dock MK.2. It is onboard DSP on all three,
-  and OpenXLR maps none of it, so a user who shapes their voice in Wave
-  Link on Windows loses that shape on Linux. Four bands means the
-  registers are wider than anything mapped so far, and the capture has to
-  separate the per-band frequency, gain and width bytes.
+- [ ] A built-in four-band equalizer for microphone inputs, with Wave
+  Link's controls, ranges and curves. On the XLR Dock MK.2 Wave Link runs
+  its equalizer on the computer and the dock does not apply the stored
+  bands ([findings](xlr-dock-mk2-eq-findings.md)), so for the MK.2
+  family the EQ is software, as it is on Windows. The Wave XLR MK.2
+  still needs a capture to confirm it.
+- [ ] The Pro's equalizer, which Elgato describes as onboard. Once a
+  capture maps it, the built-in equalizer drives it on the device
+  instead of in software.
 - [ ] Ducking on the Pro, which lowers the other mixes while you speak
   and is applied per mix. It is the one onboard effect that touches the
   mix matrix rather than the microphone path, so it is worth capturing

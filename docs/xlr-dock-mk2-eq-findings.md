@@ -1,0 +1,172 @@
+# XLR Dock MK.2 equalizer findings
+
+Recorded on 2026-10-20 on one XLR Dock MK.2. The question was whether the
+dock runs the four-band equalizer Wave Link shows for its microphone, so
+that OpenXLR could drive it. It does not. Wave Link 3.5 runs that
+equalizer on the computer. The dock keeps four bands of EQ values in its
+settings block, but writing them changes nothing we could measure on the
+USB recording or hear on the zero-latency headphone path.
+
+The other onboard processing is real. Low cut, compressor, expander,
+voice tune and ClipGuard act on the audio when their bits are written, as
+[hardware support](hardware-support.md) already records.
+
+The Wave XLR MK.2 (`0fd9:00b6`) was not tested. Wave Link names its mode
+for this family "Wave XLR MKII Host", so the same result is likely there,
+but it needs an owner's capture before anyone claims it.
+
+## The unit and the tools
+
+| Item | Value |
+|---|---|
+| Device | XLR Dock MK.2, `0fd9:00c7`, `bcdDevice 2.10` |
+| Firmware | 1.0.0 as Wave Link reports it; build string `2025-08-15-06:31-AG-Release` in block `0x0000`. Wave Link offers 1.0.15, which was not installed |
+| Control bank | `0x0103` on this unit (some units answer at `0x0203` instead, see hardware support) |
+| Windows side | Windows 11 in a virtual machine with the dock passed through over USB, Wave Link 3.5.0.4892, Wireshark 4.6.8 and USBPcap 1.5.4.0 |
+| Linux side | the dock back on the host, PipeWire, control transfers through libusb, pink noise and recording with `pw-play` and `pw-record`, spectra with NumPy |
+| Microphone | Elgato Wave DX (dynamic), phantom power off throughout |
+
+## How Wave Link drives the dock
+
+Captured on Windows, one action per capture, with Wave Link's own log on
+the same clock.
+
+- At connect Wave Link reads blocks `0x0000`, `0x0001`, `0x0002`,
+  `0x0004`, `0x0005`, `0x0006` and `0x0016` every 100 ms for about 2.7 s,
+  plus two reads addressed to interface 3 itself (`c1 00 0000 0003`, two
+  bytes, and `c1 02 0000 0003`, four bytes, once). After that it sends no
+  control transfer at all until it quits.
+- About 3 s after its first read it selects alternate setting 1 of
+  interface 3, the vendor interface. That setting has an interrupt IN
+  endpoint `0x84` of 204 bytes and an interrupt OUT endpoint `0x02` of
+  404 bytes. While Wave Link runs, `0x84` carries about 500 transfers a
+  second of 816 bytes and `0x02` about 480 a second of 1615 bytes, nearly
+  all different. The payloads look like sample data in both directions.
+  It selects setting 0 again when it quits.
+- Wave Link's log and plugin graph put the dock's input in a mode called
+  "Wave XLR MKII Host". The input gets Wave Link's own WaveEQ,
+  WaveCompressor, WaveExpander and VoiceFocus plugins as nodes in its
+  plugin host, and the log reports software mixing
+  (`Hardware mixing state changed to: False`). In its binaries, hardware
+  mixing and settings sync to the device are named for the Wave XLR Pro
+  only.
+
+Block lengths as Wave Link requests them:
+
+| Block | Bytes | What is known |
+|---|---|---|
+| `0x0000` | 117 | identity: serial, a firmware build string, version bytes not yet located |
+| `0x0001` | 6 | crossfade at byte 0 |
+| `0x0002` | 21 | not decoded |
+| `0x0004` | 38 | input settings, including the stored EQ bands below |
+| `0x0005` | 2 | headphones |
+| `0x0006` | 17 | not decoded; byte 15 changes between reads with nothing touched, bytes 10 to 13 read `80 bb 00 00` (48000, perhaps the sample rate) |
+| `0x0016` | 51 | not decoded, new |
+
+The firmware answers whatever length is asked for, so these are the
+lengths Wave Link uses, not proven block sizes.
+
+## What Wave Link sends when the EQ changes
+
+| Capture | Action in Wave Link | Vendor writes | Block `0x0004` afterwards |
+|---|---|---|---|
+| 01 | moved band 1 of the dock input's EQ for about 50 s | none | unchanged |
+| 02 | toggled the dock input's EQ off and on, twice | none | unchanged |
+| 03 | quit and relaunched Wave Link with the EQ on (41, 310, 2172 and 15049 Hz) | none | byte for byte as in the connect capture |
+| 04 | quit and relaunched with the EQ at 130, 792, 3193 and 6238 Hz, ±9.25 dB, then enabled the EQ by hand | none | byte for byte as in the connect capture |
+
+No `Set DeviceParameter` line appeared in Wave Link's log for any of these
+actions, and nothing in the `0x02` stream behaved like a parameter: 815
+of its byte offsets were constant zero padding and the other 800 changed
+on nearly every transfer.
+
+## The EQ values stored in block 0x0004
+
+Bytes 18 to 37 hold four groups of five bytes, one per band:
+
+| Bytes | Band | Stored value |
+|---|---|---|
+| 18 to 22 | 1 | `32 00 64 00 f6` |
+| 23 to 27 | 2 | `34 00 f4 01 f6` |
+| 28 to 32 | 3 | `34 00 cc 07 f6` |
+| 33 to 37 | 4 | `28 00 e9 13 f6` |
+
+Read as `[A] [gain] [frequency, 16-bit little endian, Hz] [Q]`, the four
+frequencies are 100, 500, 1996 and 5097 Hz. Those match an EQ state
+Wave Link held earlier the same morning, so something wrote Wave Link's
+EQ into the dock at some point. None of the captures above shows Wave
+Link 3.5 doing it, and the values stayed the same through every capture.
+The Q byte `f6` (-10) fits log10(0.705) × 64, which would match Wave
+Link's default Q of 0.705; that and the meaning of byte A (`32 34 34 28`
+for band types 1, 2, 2 and 4) are guesses.
+
+## Writing the bands from Linux
+
+Wave Link never writes these bytes, so the only way to test them was to
+write them ourselves and measure. Every write was a read-modify-write of
+the 38-byte block at bank `0x0103`, read back after writing, and the
+original bytes went back at the end of each run.
+
+The signal path: pink noise from the dock's headphone output into an
+earbud taped about 1 cm in front of the microphone, recorded from the
+dock's input. Both streams were created with `node.autoconnect = false`
+and linked by hand, because OpenXLR's application routing otherwise moves
+an untargeted stream into its own channels. For the runs the dock's
+compressor, expander, voice tune, low cut and ClipGuard were off and its
+gain was 55 dB. Each value was compared with a flat run taken just before
+it, so slow drift in the room cancels.
+
+Above 3 kHz the earbud was about 15 dB above the room and two identical
+runs agreed within about 0.1 dB. Below 3 kHz the room was as loud as the
+earbud, so results there are not evidence either way.
+
+| Write (block `0x0004`) | Measured effect, 3.8 to 9.7 kHz |
+|---|---|
+| band 4 gain (byte 34) `0x18`, processing bits off | within ±0.1 dB |
+| band 4 gain `0x18`, compressor, expander, voice tune and low cut bits on | within ±0.2 dB |
+| band 4 byte A (byte 33) with bit `0x10` set, gain `0x18` | within ±0.2 dB |
+| band 4 byte A `0xff` | within ±0.3 dB |
+| band 3 moved to 5000 Hz (bytes 30 and 31) with gain (byte 29) `0x18` | within ±0.4 dB |
+| band 4 gain `0x18` with Q (byte 37) `0x40` | up to 1 dB, not consistent across frequency |
+
+A screen inverted each of bytes 3 to 17 in turn with band 4 boosted.
+Inverting byte 11 (`ff` to `00`) showed one rise of 6.8 dB around 4.8 kHz,
+but a retest of byte 11 values (`00`, `f7`, `ef`, `fe`, `7f`, `f0`, `0f`)
+with band 4 boosted did not reproduce it. The room had become louder by
+then, so the retest's repeatability was only 2 to 5.6 dB. The retest did
+not set byte A at the same time as the screen did; that combination was
+covered by the listening test below. Bytes 4, 8, 9, 10, 12, 13, 14, 15
+and 17 changed the overall level by 5 to 19 dB, so they are live
+parameters, most likely for the compressor or expander. They are not
+mapped.
+
+Earlier, from the Windows side with Wave Link closed, writing the low cut
+bit made rumble audible on the dock's USB capture and setting it again
+removed it, which confirms that writes to this block reach the DSP. A
+band 3 gain of `0x0c` was heard as brighter in that session; the
+measurements above did not confirm it.
+
+## Listening on the zero-latency path
+
+The equalizer might act only on the dock's own headphone monitor, which
+the USB recording cannot show. With the crossfade moved fully to the
+microphone and the headphone level at its usual -20 dB, a timed sequence
+switched every 5 s while the listener made a steady "ssss" into the
+microphone: flat, band 4 moderate (byte 11 `00`, byte 33 `0x38`, byte 34
+`0x0c`), flat, the same again, flat, band 4 large (byte 34 `0x18`), flat,
+band 3 large (byte 11 `00`, byte 29 `0x18`). The listener heard no
+difference at any step.
+
+## What this means for OpenXLR
+
+- On this dock and firmware there is no hardware equalizer for OpenXLR
+  to drive. A microphone EQ belongs in software, as Wave Link does it.
+  OpenXLR plans a built-in four-band EQ for microphone inputs for that
+  reason.
+- The Wave XLR Pro may still run its equalizer on the device. Elgato's
+  feature guide describes it that way and Wave Link has hardware mixing
+  and settings sync for the Pro only, but its protocol has not been
+  captured for the EQ.
+- Still open: firmware 1.0.15, the Wave XLR MK.2 (`00b6`), bytes 3 to 17
+  of block `0x0004`, and a quiet-room rerun of byte 11 together with
+  byte A on the USB recording.
