@@ -2284,6 +2284,8 @@ An older user unit can fail before starting the daemon with
 and run `systemctl --user daemon-reload` followed by
 `systemctl --user restart openxlr-daemon`. Source installs can regenerate
 their owned unit by disabling and enabling Start audio at login in Options.
+That includes a unit you copied by hand from the reference file v0.1.37
+to v0.1.70 shipped, as long as you changed only its `ExecStart` line.
 The current unit keeps its other restrictions but does not ask the user
 manager to change its capability bounding set. Review any personal override
 before removing it; OpenXLR never deletes an override it did not create.

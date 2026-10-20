@@ -915,14 +915,80 @@ public static class StartupIntegration
         string value = starts[0][10..];
         if (ExecStartBinary(value) is { } daemon && (text == SourceUnit(daemon) || LegacySourceUnits(daemon).Contains(text, StringComparer.Ordinal))) return true;
         // The documented manual source install copies this exact reference
-        // unit and changes only ExecStart. Preserve every other byte.
+        // unit and changes only ExecStart. Preserve every other byte. A copy
+        // of an earlier release's reference unit is recognised the same way.
+        if (value.Length == 0 || value.Any(char.IsControl)) return false;
         using var stream = typeof(StartupIntegration).Assembly.GetManifestResourceStream("OpenXLR.StartupUnit");
-        if (stream is null) return false;
-        using var reader = new StreamReader(stream);
-        string template = reader.ReadToEnd();
-        string original = template.Split('\n').Single(l => l.StartsWith("ExecStart=", StringComparison.Ordinal));
-        return value.Length > 0 && !value.Any(char.IsControl) && text == template.Replace(original, starts[0], StringComparison.Ordinal);
+        using var reader = stream is null ? null : new StreamReader(stream);
+        string[] templates = reader is null ? LegacyReferenceUnits : [reader.ReadToEnd(), .. LegacyReferenceUnits];
+        return templates.Any(template =>
+        {
+            string original = template.Split('\n').Single(l => l.StartsWith("ExecStart=", StringComparison.Ordinal));
+            return text == template.Replace(original, starts[0], StringComparison.Ordinal);
+        });
     }
+
+    /// <summary>
+    /// Earlier bodies of packaging/openxlr-daemon.service, the reference unit
+    /// the source install guide has users copy by hand, each byte for byte as
+    /// releases shipped it. The one from v0.1.37 to v0.1.70 asks the user
+    /// manager to drop capabilities, which fails with 218/CAPABILITIES where
+    /// it cannot. Recognising it lets Start audio at login, turned off and on,
+    /// replace such a copy with the current unit.
+    /// </summary>
+    internal static readonly string[] LegacyReferenceUnits =
+    [
+        """
+        [Unit]
+        Description=OpenXLR audio daemon
+        After=pipewire-pulse.service wireplumber.service
+        StartLimitIntervalSec=300
+        StartLimitBurst=3
+
+        [Service]
+        Type=notify
+        NotifyAccess=main
+        WatchdogSec=60
+        WatchdogSignal=SIGTERM
+        TimeoutStartSec=120
+        # %h is your home directory; adjust the path to where you cloned the repo.
+        ExecStart=%h/openxlr/src/OpenXLR.Daemon/bin/Release/net10.0/OpenXLR.Daemon
+        Environment=OPENXLR_BUILD_MIXER=1
+        TimeoutStopSec=45
+        # Bridged Windows plugins lock their shared audio buffers into memory, and
+        # they inherit this allowance from the daemon. The 8 MiB most sessions
+        # default to is below what yabridge asks for, which costs a warning on every
+        # plugin load and dropouts while one runs.
+        LimitMEMLOCK=infinity
+        # SIGTERM goes to the daemon alone, so it can end the Wine session a bridged
+        # plugin leaves behind before the rest of the group is killed. Sending it to
+        # the whole group would take wineserver down first and leave winedevice.exe
+        # to the timeout above.
+        KillMode=mixed
+        Restart=on-failure
+        RestartSec=3
+        NoNewPrivileges=true
+        PrivateTmp=true
+        ProtectSystem=strict
+        ProtectControlGroups=true
+        ProtectKernelTunables=true
+        RestrictSUIDSGID=true
+        UMask=0077
+        # Verified on hardware with the device, the submix graph and both clients:
+        # none of these touches USB, PipeWire or the .NET runtime.
+        KeyringMode=private
+        ProtectClock=true
+        ProtectHostname=true
+        ProtectKernelLogs=true
+        ProtectKernelModules=true
+        LockPersonality=true
+        RestrictNamespaces=true
+        CapabilityBoundingSet=
+
+        [Install]
+        WantedBy=default.target
+        """ + "\n",
+    ];
 
     internal static string SourceUnit(string daemon) => $"""
                     # Written by the OpenXLR window for a source build (Options, Start at login).
