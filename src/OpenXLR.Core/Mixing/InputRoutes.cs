@@ -30,7 +30,7 @@ internal sealed record ChainStructure(int LowCutHz, bool ClipGuard, IReadOnlyLis
 internal readonly record struct ParamChange(string InsertId, string Symbol, double? Value);
 
 /// <summary>
-/// How one hardware input is wired, decided before anything is built: the
+/// How one input is wired, decided before anything is built: the
 /// node it is fed from (the loop helper while Sound Check runs on it), the
 /// microphone EQ at its head, and the software low cut, ClipGuard and inserts
 /// its chain carries. A route with none of those feeds the channel directly.
@@ -38,6 +38,8 @@ internal readonly record struct ParamChange(string InsertId, string Symbol, doub
 internal sealed record InputRoute(ChannelDefinition Channel, string? Input, bool Bound, bool Looped,
     int LowCutHz, bool ClipGuard, List<InsertDefinition> Inserts, bool ActiveInserts)
 {
+    public int Width => Channel.ChainWidth ?? 2;
+
     /// <summary>The node the channel's audio enters from: the loop helper while looped, else the input.</summary>
     public string? Source { get; init; }
 
@@ -64,7 +66,7 @@ public sealed partial class Mixer
     private readonly Dictionary<string, ChainStructure> _chainStructures = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// The route of one hardware strip fed from <paramref name="input"/>, or
+    /// The route of one input fed from <paramref name="input"/>, or
     /// with no input when only its chain is asked about.
     /// </summary>
     private InputRoute InputRouteLocked(ChannelDefinition ch, string? input)
@@ -79,7 +81,8 @@ public sealed partial class Mixer
         bool lc = ch.InputPair == 0 && _lowCutHz > 0 && (bound || _lowCutApplicable);
         bool cg = ch.InputPair == 0 && _softClipGuard && (bound || _clipGuardApplicable);
         List<InsertDefinition> inserts = IsInsertChannel(ch.Id) ? InsertsFor(ch.Id) : [];
-        bool anyInsert = inserts.Any(i => !i.Bypass && PluginCatalog.Find(i) is not null);
+        bool anyInsert = inserts.Any(i => !i.Bypass && PluginCatalog.Find(i) is { } plugin
+            && (ch.CaptureSource is null || plugin.Fits(ch.ChainWidth!.Value)));
         return new InputRoute(ch, input, bound, looped, lc ? _lowCutHz : 0, cg, inserts, anyInsert)
         {
             Source = looped ? _soundCheck!.SourceName : input,
@@ -132,7 +135,7 @@ public sealed partial class Mixer
         }
 
         var inputs = new List<string>();
-        foreach (ChannelDefinition ch in _config.Channels.Where(c => c.InputPair is not null))
+        foreach (ChannelDefinition ch in _config.Channels.Where(c => c.InputPair is not null || c.ChainWidth is not null))
         {
             InputRoute route = InputRouteLocked(ch, null);
             if (rebuildAll || ChainNeedsRebuildLocked(ch.Id, route.Structure, route.Chained)
@@ -184,8 +187,11 @@ public sealed partial class Mixer
         // The chain names LV2 stages i0, i1, ... in the order of the
         // non-bypassed, loadable inserts, so find this insert's stage index.
         int k = 0;
+        ChannelDefinition? capture = _config.Channels.FirstOrDefault(c => c.Id == key && c.CaptureSource is not null);
+        if (capture is not null && PluginCatalog.Find(list[idx])?.Fits(capture.ChainWidth!.Value) != true) return true;
         for (int j = 0; j < idx; j++)
-            if (!list[j].Bypass && PluginCatalog.Find(list[j]) is not null) k++;
+            if (!list[j].Bypass && PluginCatalog.Find(list[j]) is { } plugin
+                && (capture is null || plugin.Fits(capture.ChainWidth!.Value))) k++;
         try { _pw.SetFilterControl(chain, $"i{k}:{symbol}", value); }
         catch (InvalidOperationException) { return false; }
         return true;

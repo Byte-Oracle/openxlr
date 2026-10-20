@@ -108,7 +108,9 @@ public sealed class LayoutIconTests
         Assert.Equal("microphone", CoreDefaults.ForChannel("xlr1", true, null, "alsa_input.usb-046d_Logi_4K_Stream_Edition-03.analog-stereo"));
         Assert.Equal("headset", CoreDefaults.ForChannel("xlr2", true, null, "bluez_input.12_34_56_78_9A_BC.1"));
         Assert.Equal("jack", CoreDefaults.ForChannel("aux", true, null, xlrJack: false));
-        Assert.Equal("camera", CoreDefaults.ForChannel("cam", false, "bluez_input.12_34_56_78_9A_BC.1"));
+        // A capture input: a headset on a Bluetooth source, a microphone on one mono port.
+        Assert.Equal("headset", CoreDefaults.ForChannel("cam", false, "bluez_input.12_34_56_78_9A_BC.1"));
+        Assert.Equal("microphone", CoreDefaults.ForChannel("brio", false, "alsa_input.usb-cam", captureMonoChannel: 0));
         Assert.Equal("podcast", CoreDefaults.ForMix("recording", "virtualMic"));
         Assert.Equal("headset", CoreDefaults.ForMix("headphones", "monitor"));
         Assert.All(state.Channels.Select(c => c.Appearance.DefaultIcon).Concat(state.Mixes.Select(m => m.Appearance.DefaultIcon)),

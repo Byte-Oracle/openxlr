@@ -44,7 +44,7 @@ internal static class SavedMixerValidation
             MonitorFeeds = Mapping(settings.MonitorFeeds, "monitorFeeds", notes),
             AppOverrides = Mapping(settings.AppOverrides, "appOverrides", notes),
             KnownApps = Apps(settings.KnownApps, notes),
-            Inserts = Inserts(settings.Inserts, notes),
+            Inserts = Inserts(settings, notes),
             Eq = Eq(settings.Eq, notes),
             EqProcessing = EqProcessing(settings.EqProcessing, notes),
             Appearance = Appearance(settings.Appearance, notes),
@@ -158,12 +158,17 @@ internal static class SavedMixerValidation
         return kept;
     }
 
-    private static Dictionary<string, List<InsertDefinition>> Inserts(Dictionary<string, List<InsertDefinition>>? chains, List<string> notes)
+    private static Dictionary<string, List<InsertDefinition>> Inserts(MixerSettings settings, List<string> notes)
     {
+        Dictionary<string, List<InsertDefinition>>? chains = settings.Inserts;
         if (chains is null) { notes.Add($"inserts: {NullEntry}"); return []; }
+        MixerConfig layout = MixerConfig.FromSettings(settings);
+        HashSet<string> keys = [.. layout.Channels.Where(c => c.ChainWidth is not null).Select(c => c.Id),
+            .. layout.Mixes.Select(m => "mix:" + m.Id)];
         var kept = new Dictionary<string, List<InsertDefinition>>();
         foreach (var (channel, chain) in chains)
         {
+            if (!keys.Contains(channel)) { notes.Add($"inserts.{channel}: has no insert chain"); continue; }
             if (chain is null) { notes.Add($"inserts.{channel}: {NullEntry}"); continue; }
             var inserts = new List<InsertDefinition>();
             foreach (InsertDefinition insert in chain)

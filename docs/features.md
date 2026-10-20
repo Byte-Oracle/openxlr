@@ -361,6 +361,17 @@ microphone takes its place; the sweep links it again when the ports
 return. A mono source is linked to both sides of the channel. See
 [Additional capture inputs](manual.md#capture-inputs).
 
+Capture inputs host insert chains, set through the API: a mono chain on an
+input that takes one port, a stereo chain on a pair. An empty input on the
+first pair of a one-channel source becomes mono, with its links left as
+they were. Each chain sits before the channel's sends and meter and is built
+and healed on its own; a capture input without active inserts adds no node.
+Profiles carry capture chains, and an older profile that does not name one
+leaves it alone. When the source goes away its chain stops, and it starts
+again from the saved parameters on replug. The window and the terminal mixer
+still edit XLR and mix chains only, and the microphone EQ and Sound Check
+stay on XLR 1 and XLR 2.
+
 ### Separate mixer window
 
 The submixer can be moved into its own resizable window for a second or small
@@ -380,8 +391,9 @@ See [Exclusive groups](manual.md#exclusive-groups).
 
 ## Inserts
 
-LV2, CLAP and VST3 effects can form a mono chain on each XLR input and a
-stereo chain on every mix, including virtual microphones you add. The
+LV2, CLAP and VST3 effects can form a mono chain on each XLR input, a mono
+or stereo chain on each capture input through the API, and a stereo chain
+on every mix, including virtual microphones you add. The
 picker filters by format, name, category and compatible channel width; a
 VST3 effect that reports stereo buses but accepts a mono layout when asked
 is offered for the inputs, since the helper asks each plugin as it scans.

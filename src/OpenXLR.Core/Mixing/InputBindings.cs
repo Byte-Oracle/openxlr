@@ -398,7 +398,7 @@ public sealed partial class Mixer
 
     private bool BindingConnectedLocked(ChannelDefinition channel)
         => channel.InputPair is not null ? _stripSources.ContainsKey(channel.Id) && _inputFeeds.ContainsKey(channel.Id)
-            : channel.CaptureSource is null || _captureFeeds.ContainsKey(channel.Id);
+            : channel.CaptureSource is null || _captureFeeds.ContainsKey(channel.Id) || _inputFeeds.ContainsKey(channel.Id);
 
     private string? BindingWarningLocked(ChannelDefinition channel)
         => (channel.InputPair is not null ? _stripWarnings : _captureWarnings).GetValueOrDefault(channel.Id);
@@ -482,10 +482,15 @@ public sealed partial class Mixer
     private PortLink RouteInputLocked(string source, string target, ChannelDefinition channel, bool processed = false)
     {
         SourceBinding? binding = _bindings.GetValueOrDefault(channel.Id);
-        PortLink route = binding is not null && !processed
+        PortLink route = channel.CaptureSource is not null
+            ? _pw.LinkNodes(source, "", target, "playback",
+                fromPairOffset: processed ? 0 : channel.CapturePair,
+                fromChannel: processed ? null : channel.CaptureMonoChannel)
+            : binding is not null && !processed
             ? _pw.LinkNodes(source, "", target, "playback", fromChannel: binding.Port)
             : _pw.RouteInputToChannel(source, target, processed ? 0 : channel.InputPair!.Value);
-        if (binding is not null && (!route.Complete || route.Pairs.Count < (target == channel.SinkName ? 2 : 1)))
+        if ((binding is not null || channel.CaptureSource is not null)
+            && (!route.Complete || route.Pairs.Count < (target == channel.SinkName ? 2 : channel.ChainWidth ?? 1)))
         {
             // A half-connected microphone must retry instead of being kept
             // as a healthy route that carries audio on one side only.

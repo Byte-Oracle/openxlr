@@ -232,11 +232,11 @@ public static class CommandValidation
                             return "setInserts: the native plugin host is not installed on this machine";
                         if (!plugin.Supported)
                             return $"setInserts: '{plugin.Name}' needs {string.Join(", ", plugin.UnsupportedFeatures.Select(Tail))}, which the PipeWire chain does not provide";
-                        // The chain's width is the plugin's to fit: one channel on an
-                        // input, two on a mix. An insert already in the chain, the same
-                        // plugin under the same id, is left to the chain builder, so
-                        // removing it stays possible; an id kept while its plugin
-                        // changes is an addition and is held to the rule.
+                        // The chain's width is the plugin's to fit: one channel on a
+                        // mono input, two on a stereo input or a mix. An insert already
+                        // in the chain, the same plugin under the same id, is left to
+                        // the chain builder, so removing it stays possible; an id kept
+                        // while its plugin changes is an addition and is held to the rule.
                         bool alreadyThere = cmd.Channel is not null
                             && layout.InsertInChain(cmd.Channel, i.Id) is { } existing
                             && findPlugin(existing) is { } current
@@ -247,7 +247,9 @@ public static class CommandValidation
                             if (!plugin.Fits(width))
                                 return width == 1
                                     ? $"setInserts: '{plugin.Name}' has no mono layout for an input chain"
-                                    : $"setInserts: '{plugin.Name}' has no stereo layout for a mix chain";
+                                    : cmd.Channel.StartsWith("mix:", StringComparison.Ordinal)
+                                    ? $"setInserts: '{plugin.Name}' has no stereo layout for a mix chain"
+                                    : $"setInserts: '{plugin.Name}' has no stereo layout for an input chain";
                         }
                         if (i.Params.Count > MaxParamsPerInsert) return "setInserts: too many parameters";
                         foreach ((string symbol, double value) in i.Params)

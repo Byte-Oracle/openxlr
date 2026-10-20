@@ -714,8 +714,8 @@ zero, so the other mixes are aligned without it instead of waiting for a
 figure. The delays follow a plugin whose latency changes, and a
 bypassed plugin counts as zero, without restarting any plugin. If a mix's
 plugins add up to more than two seconds no mix is delayed, and Options says
-why. Plugins on XLR 1 and XLR 2 reach every mix alike and are not part of the
-alignment. Compensation does not cover the device's own latency or the
+why. Plugins on XLR 1, XLR 2 and capture inputs reach every mix alike and
+are not aligned against other inputs. Compensation does not cover the device's own latency or the
 hardware's direct monitoring. The setting is saved with the mixer and stays
 as it is when a profile is loaded.
 
@@ -2064,7 +2064,8 @@ whose id comes first alphabetically.
 
 Every channel and mix wears an icon. Until you pick one it wears the
 default for its kind: a microphone for XLR 1 and XLR 2, a jack for Aux In
-and the Aux port, a camera for a capture input, a gamepad, a note, a
+and the Aux port, a microphone for a mono capture input, a headset for a
+Bluetooth capture source, a camera for a stereo capture pair, a gamepad, a note, a
 browser window, a cog, a speech bubble and a burst for Game, Music,
 Browser, System, Voice Chat and SFX, a grid of tiles for any other
 application channel, headphones for every monitor mix, a broadcast mast
@@ -2764,8 +2765,8 @@ Capture channels can be renamed, reordered and deleted like application
 channels. Their layout row shows the connection state and pair; hover over
 it to see the exact source name. An offline input stays silent and reconnects
 with its saved faders when the same source returns. A different source or
-pair needs a new capture channel. Profile recall changes its sends, not its
-source binding. Application routing never targets capture inputs.
+pair needs a new capture channel. Profile recall changes its sends and any
+insert chain it names, while its source binding stays with the layout. Application routing never targets capture inputs.
 
 A capture channel on the primary interface's own source, at the first port
 or pair for its first microphone or the third port or second pair for its
@@ -2781,9 +2782,34 @@ chooses the primary interface, whose controls the main window shows and whose
 microphone feeds the XLR strips. Options, INTERFACE, **Additional
 interfaces** drives up to four more units with their own gain, mute and
 phantom power, and adds each one's microphone as a capture channel; see
-[Multiple Wave interfaces](wave-interfaces.md). The software input effects
-and XLR inserts stay on the primary's strips; additional capture inputs can
-use the effects on the mixes they feed.
+[Multiple Wave interfaces](wave-interfaces.md). The software low cut,
+ClipGuard and microphone EQ stay on the XLR strips.
+
+Capture channels can host LV2, CLAP and VST3 inserts through the
+[HTTP API](http-api.md). The desktop and terminal chain controls still show
+XLR and mix chains. A capture input on one mono port takes a mono chain;
+a stereo pair takes a stereo chain. A capture input on the first pair of a
+source that has just one channel, with no inserts, is changed to take that
+one port; the daemon saves the change and its audio links stay as they were.
+An input with saved inserts keeps its width.
+
+Each chain processes before the channel's sends, volume and meter. Replacing
+it keeps the combine and sends running; the new route is linked before the
+old one stops, with a brief overlap of dry and processed audio. A channel
+without active inserts has the same direct graph as before. An unplugged
+source stops its chain, which starts again from saved parameters when it
+returns. Its plugin editor closes and any plugin state outside those
+parameters is lost. A load failure leaves the direct feed playing with an
+error on the insert; repeated host deaths stop only that channel's chain.
+Deleting the capture input stops its chain and removes it from the settings.
+
+A saved profile includes every capture chain, empty ones too. Older profiles
+leave capture chains alone. Input insert latency is reported per plugin but
+is not compensated against other inputs. The Wave XLR Pro's direct path to
+its jacks carries the raw microphone, bypassing a capture chain just as it
+bypasses XLR 1's inserts. The existing 32 editable-channel and 16 inserts per
+chain limits apply; each native insert runs its own host, and Windows
+inserts also need Wine and the documented locked-memory allowance.
 
 <a name="desktop-keys"></a>
 ## Desktop keys and focused application routing
