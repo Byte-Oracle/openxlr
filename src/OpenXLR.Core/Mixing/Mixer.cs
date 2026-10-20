@@ -334,6 +334,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                         chain = _pw.CreateMicFilter(chainId + "_builtin", lc ? _lowCutHz : 0, cg);
                     }
 
+                    // A port lookup can fail after the helper is ready too.
+                    // Track the candidate before any routing so rollback owns it.
+                    nextChains[ch.Id] = chain;
                     PortLink into = RouteInputLocked(source, chain.SinkName, ch, looped);
                     if (into.Pairs.Count == 0)
                     {
@@ -342,9 +345,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                         // channel stays silent, and the chain built for it is
                         // not needed.
                         _pw.StopFilter(chain);
+                        nextChains.Remove(ch.Id);
                         continue;
                     }
-                    nextChains[ch.Id] = chain;
                     PortLink onward = RouteInputLocked(chain.SourceName, ch.SinkName, ch, processed: true);
                     if (onward.Pairs.Count == 0)
                     {
@@ -927,8 +930,17 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             if (_lowCutHz == hz) return;
+            int previous = _lowCutHz;
             _lowCutHz = hz;
-            if (_built) WireInputFeedsLocked();
+            try
+            {
+                if (_built) WireInputFeedsLocked();
+            }
+            catch
+            {
+                _lowCutHz = previous;
+                throw;
+            }
         }
     }
 

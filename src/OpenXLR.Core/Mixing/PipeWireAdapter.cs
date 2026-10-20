@@ -885,8 +885,18 @@ public sealed class PipeWireAdapter
         // Ports lag node registration; linking a port-less node silently
         // yields an empty PortLink. A dead holder is detected immediately, and
         // a half-created module is removed instead of being returned as usable.
-        bool sinkReady = WaitForPorts(sinkName, "playback", output: false, TimeSpan.FromSeconds(3), p);
-        bool sourceReady = sinkReady && WaitForPorts(srcName, "capture", output: true, TimeSpan.FromSeconds(3), p);
+        bool sinkReady, sourceReady;
+        try
+        {
+            sinkReady = WaitForPorts(sinkName, "playback", output: false, TimeSpan.FromSeconds(3), p);
+            sourceReady = sinkReady && WaitForPorts(srcName, "capture", output: true, TimeSpan.FromSeconds(3), p);
+        }
+        catch
+        {
+            // No caller owns the holder until its ports have been found.
+            StopFailedFilter(handle, stdoutTask, stderrTask);
+            throw;
+        }
         if (!sinkReady || !sourceReady)
         {
             string detail = StopFailedFilter(handle, stdoutTask, stderrTask);

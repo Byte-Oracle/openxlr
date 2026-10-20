@@ -164,6 +164,9 @@ Intermediate DSP and mix-delay nodes are hidden from desktop device pickers
 and ignore saved desktop volume and mute. Use the channel sends, mix
 masters and physical output controls for level and mute changes. Rebuilding a chain starts these
 internal stages at unity and unmuted.
+If a software low-cut change cannot rebuild its input chain, the previous
+frequency and chain remain active. The error is reported and the same change
+can be tried again; temporary filters from the refused rebuild are removed.
 Unmapped processing previously enabled in Wave Link may still be active
 on the original Wave XLR. See [hardware support](hardware-support.md).
 
