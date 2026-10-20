@@ -47,8 +47,8 @@ block of another length is still refused before writing anything.
 The daemon drives it after every other supported device.
 
 Hardware EQ is not mapped on the Wave FX devices. On the XLR Dock MK.2
-there is none to map: Wave Link runs the dock's equalizer on the
-computer ([findings](xlr-dock-mk2-eq-findings.md)). The Pro's ducking, mix
+and the Wave XLR MK.2 there is none to map: Wave Link runs their
+equalizer on the computer ([findings](mk2-eq-findings.md)). The Pro's ducking, mix
 maximizer, channel booster and remaining hardware mix matrix are also
 unmapped. Wave Link configures those onboard effects on supported systems;
 OpenXLR's LV2, CLAP and VST3 inserts process audio on the Linux host.

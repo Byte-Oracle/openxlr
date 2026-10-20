@@ -1,19 +1,21 @@
-# XLR Dock MK.2 equalizer findings
+# MK.2 equalizer findings
 
-Recorded on 2026-10-20 on one XLR Dock MK.2. The question was whether the
-dock runs the four-band equalizer Wave Link shows for its microphone, so
-that OpenXLR could drive it. It does not. Wave Link 3.5 runs that
-equalizer on the computer. The dock keeps four bands of EQ values in its
-settings block, but writing them changes nothing we could measure on the
-USB recording or hear on the zero-latency headphone path.
+Recorded on 2026-10-20 on one XLR Dock MK.2 and one Wave XLR MK.2. The
+question was whether these devices run the four-band equalizer Wave Link
+shows for their microphone, so that OpenXLR could drive it. They do not.
+Wave Link 3.5 runs that equalizer on the computer. Both devices keep four
+bands of EQ values in their settings block, but writing them changes
+nothing we could measure on the USB recording or hear on the
+zero-latency headphone path.
 
 The other onboard processing is real. Low cut, compressor, expander,
 voice tune and ClipGuard act on the audio when their bits are written, as
 [hardware support](hardware-support.md) already records.
 
-The Wave XLR MK.2 (`0fd9:00b6`) was not tested. Wave Link names its mode
-for this family "Wave XLR MKII Host", so the same result is likely there,
-but it needs an owner's capture before anyone claims it.
+The Wave XLR MK.2 was measured from Linux the same day (see
+[the Wave XLR MK.2](#the-wave-xlr-mk2)); Wave Link itself was only
+captured with the dock. Wave Link names its mode for this family "Wave
+XLR MKII Host".
 
 ## The unit and the tools
 
@@ -157,16 +159,62 @@ microphone: flat, band 4 moderate (byte 11 `00`, byte 33 `0x38`, byte 34
 band 3 large (byte 11 `00`, byte 29 `0x18`). The listener heard no
 difference at any step.
 
+## The Wave XLR MK.2
+
+| Item | Value |
+|---|---|
+| Device | Wave XLR MK.2, `0fd9:00b6`, `bcdDevice 4.00` |
+| Firmware | build string `2026-02-16-09:46-ZP-Release` in block `0x0000`; `c1 00 0000 0003` answers `02 05` (the dock answers `01 0d`) |
+| Control bank | `0x0203`; every block stalls at `0x0103` |
+| Blocks | `0x0000`, `0x0001`, `0x0002`, `0x0004`, `0x0005`, `0x0006` and `0x0016` answer at the dock's lengths |
+
+This unit holds an EQ that is not flat, which makes a clean test: if the
+device applied it, zeroing its gains would have to change the sound.
+Read with the dock's layout:
+
+| Band | A | Gain byte | Frequency | Q byte |
+|---|---|---|---|---|
+| 1 | `01` | `00` | 60 Hz | `f6` |
+| 2 | `03` | `0d` | 227 Hz | `00` |
+| 3 | `05` | `f4` | 860 Hz | `f2` |
+| 4 | `25` | `07` | 10237 Hz | `e8` |
+
+Byte 11 reads `f4` here and `ff` on the dock.
+
+The measurement used the same method as for the dock: pink noise from the
+MK.2's headphone output into an earbud taped in front of a Wave DX on
+its XLR input, processing off, gain 55 dB, the crossfade on the PC side
+and the headphone level raised for the run. From 3.4 to 10 kHz the
+earbud was 30 to 35 dB above the room and three repeats of each
+comparison agreed within 0.1 dB. Below 1.7 kHz the room was within
+10 dB of the earbud and the comparisons there are noise.
+
+| Comparison (block `0x0004`) | Measured effect |
+|---|---|
+| stored EQ against all four gains (bytes 19, 24, 29, 34) at zero | -0.02 dB at 10237 Hz, where band 4 stores `07` |
+| band 4 moved to 5000 Hz with gain `0x18`, against the same at gain 0 | 0.00 dB at 5000 Hz |
+| the same with byte 11 at `00` | -0.01 dB at 5000 Hz |
+| the same with byte 11 at `ff` | +0.01 dB at 5000 Hz |
+
+On the zero-latency path the listener set gain, crossfade and headphone
+level on the device until they heard themselves clearly (gain 47 dB,
+crossfade 100, headphone byte `2d`). A timed sequence then changed only
+the EQ bytes every 5 s: stored EQ, gains zeroed, stored, zeroed, band 4
+at 5 kHz with gain `0x18` and byte 11 `00`, zeroed, the same boost,
+stored. The listener heard absolutely no difference. With +13 raw steps
+at 227 Hz and -12 at 860 Hz stored, an applied EQ would have changed the
+voice audibly.
+
 ## What this means for OpenXLR
 
-- On this dock and firmware there is no hardware equalizer for OpenXLR
-  to drive. A microphone EQ belongs in software, as Wave Link does it.
+- On these two devices and firmware builds there is no hardware equalizer
+  for OpenXLR to drive. A microphone EQ belongs in software, as Wave Link does it.
   OpenXLR plans a built-in four-band EQ for microphone inputs for that
   reason.
 - The Wave XLR Pro may still run its equalizer on the device. Elgato's
   feature guide describes it that way and Wave Link has hardware mixing
   and settings sync for the Pro only, but its protocol has not been
   captured for the EQ.
-- Still open: firmware 1.0.15, the Wave XLR MK.2 (`00b6`), bytes 3 to 17
-  of block `0x0004`, and a quiet-room rerun of byte 11 together with
-  byte A on the USB recording.
+- Still open: dock firmware 1.0.15, a Wave Link capture with the Wave
+  XLR MK.2 attached, bytes 3 to 17 of block `0x0004`, and a quiet-room
+  rerun of byte 11 together with byte A on the dock's USB recording.

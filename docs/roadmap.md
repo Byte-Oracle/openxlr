@@ -355,10 +355,10 @@ while fixes to existing hosts remain part of normal maintenance.
   crossfade and mic-monitoring questions.
 - [ ] A built-in four-band equalizer for microphone inputs, with Wave
   Link's controls, ranges and curves. On the XLR Dock MK.2 Wave Link runs
-  its equalizer on the computer and the dock does not apply the stored
-  bands ([findings](xlr-dock-mk2-eq-findings.md)), so for the MK.2
-  family the EQ is software, as it is on Windows. The Wave XLR MK.2
-  still needs a capture to confirm it.
+  its equalizer on the computer, and neither the dock nor the Wave XLR
+  MK.2 applies the bands it stores
+  ([findings](mk2-eq-findings.md)), so for the MK.2 family the EQ is
+  software, as it is on Windows.
 - [ ] The Pro's equalizer, which Elgato describes as onboard. Once a
   capture maps it, the built-in equalizer drives it on the device
   instead of in software.
