@@ -116,6 +116,11 @@ An output is not tied to the monitor mixes: its feed picker can name any
 mix, and the API can name a sum of mixes ([section 3.2](#monitor)). A
 blend at other levels is a mix of its own, with the sends set there.
 
+The daemon repairs lost internal links into mix inserts and virtual
+microphones during its normal routing sweep. A temporarily refused stereo
+side is retried without restarting the running plugin or dropping the other
+side. This also applies to virtual microphones without inserts.
+
 Every channel has a **send** into every mix: a level and a mute. The
 SUBMIXER card shows them as a grid, channels down, mixes across. Each
 mix also has a **master** level and mute. A typical setup keeps Music
