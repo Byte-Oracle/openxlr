@@ -752,43 +752,73 @@ already in the take; changing those while it loops changes nothing.
 
 <a name="microphone-eq"></a>
 **Microphone EQ.** XLR 1 and XLR 2 each have a four-band EQ with the same
-band types, ranges and steps as Wave Link's, and the same curves. The
-daemon runs it; the editor in the window is still to come, so for now it is
-driven through the [control API](api.md#microphone-eq), from a script or
-any client that speaks it. Over HTTP, with the token from
-`$XDG_RUNTIME_DIR/openxlr/token`:
+band types, ranges and steps as Wave Link's, and the same curves. It comes
+first on the input, before the low cut, ClipGuard and your plugins, so
+ClipGuard also catches a boost, and Sound Check's loop goes through it.
 
-```sh
-token=$(cat "$XDG_RUNTIME_DIR/openxlr/token")
-send() { curl -s -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-  -d "$1" http://127.0.0.1:37890/api/v1/commands; echo; }
-send '{"cmd":"setEqBand","channel":"xlr1","band":2,"frequency":250,"gain":-3,"q":1.4}'
-send '{"cmd":"setEqEnabled","channel":"xlr1","value":true}'
-curl -s -H "Authorization: Bearer $token" http://127.0.0.1:37890/api/v1/channels/xlr1
-```
+Open it with **EQ**. In INPUTS it sits in the microphone's software row,
+beside the software low cut and ClipGuard where your interface needs them.
+In an input rack it comes before **Inserts**, and in the Broadcast and
+Wave matrix it sits over **FX** in the row head. **EQ** turns green while
+the EQ runs and red when it cannot run. Each microphone has one editor;
+clicking **EQ** again brings it to the front.
 
-The last command shows the EQ under `eq`, with each value as the daemon
-stored it: whole hertz, quarter decibels and Wave Link's Q steps.
+- The graph runs from 20 Hz to 20 kHz across and from -12 to +12 dB up the
+  side. The six regions of a voice are shaded in turn and named along the
+  top; point at a name to see what lives there. Each band draws its own
+  curve thin in its colour, and the sum of the four is the thick line.
+  While the EQ is off the sum is grey, and the bands still move, so you can
+  set them up before switching it on.
+- Each band has a numbered handle, hollow while the band is off. Drag a
+  handle sideways for its frequency and up or down for its gain. A high
+  pass, low pass or notch has no gain: its handle stays on the 0 dB line,
+  and dragging it up or down changes its Q instead. Scroll over a handle to
+  move its Q one step, double-click it to switch the band on or off, and
+  right-click it to pick its type. The selected band's values show in the
+  corner of the graph.
+- From the keyboard, Tab moves from handle to handle. The left and right
+  arrows move the frequency a twelfth of an octave, or a quarter of that
+  with Shift. The up and down arrows move the gain 1 dB, or 0.25 dB with
+  Shift, and the Q on a band without a gain. Page Up and Page Down step the
+  Q, Space switches the band, and Enter opens its type menu.
+- Under the graph each band has a row: its switch, its type, its frequency
+  in hertz, its gain in decibels and its Q. The gain is greyed out for a
+  type without one, which keeps it for when you change back. The graph and
+  the rows change the same values. In a narrow editor the fields lose their
+  arrow buttons; type a value, or step it with the arrow keys or the wheel.
+- **EQ on** switches the whole EQ. **Compare** bypasses it while it is
+  on, so you hear the microphone without it; the EQ comes back when you
+  turn **Compare** off or close the editor. **Copy** and **Paste** carry one
+  microphone's EQ, switch and bands, to the other. **Reset** asks first,
+  then puts the four bands back where they start and leaves the EQ on or
+  off.
+- The line at the bottom says what runs the EQ, or why it cannot run.
+
+The types are high pass, low shelf, bell, notch, high shelf and low pass.
+The bell raises or lowers the sound around its frequency; some editors call
+it band pass. Values snap to the EQ's steps: whole hertz, quarter decibels,
+and Q steps of 3.75 percent. The editor shows the values the daemon keeps.
 
 - The EQ is off until you switch it on. Its bands start where Wave Link's
   do: a 36 Hz high pass, bells at 310 Hz and 2172 Hz at 0 dB, and a low
   pass at 15049 Hz that is off.
-- It comes first on the input, before the low cut, ClipGuard and your
-  plugins, so ClipGuard also catches a boost. Sound Check's loop goes
-  through it.
 - The first switch on links the EQ into the input, the way a plugin chain
   is linked in, without restarting your plugins. After that every change
   goes to the running EQ: frequency, gain and Q move without resetting the
   filters, and switching a band, its type or the whole EQ crosses over in
-  5 ms. Off, it stays in the path bypassed until the input is next rebuilt,
-  so on and off compare at once.
+  5 ms. A drag sends each band's changes at most 50 times a second. Off, the
+  EQ stays in the path bypassed until the input is next rebuilt, so on, off
+  and **Compare** switch at once.
 - The hardware's zero-latency monitoring carries the microphone without the
   EQ, as it does without your plugins.
+- The Flow window lists the EQ first in the input's card while it is on.
 - The EQ is saved with the mixer and in profiles. A profile saved before
   the EQ existed leaves it as it is.
-- It needs the native plugin host the packages include. Without it, the
-  daemon refuses to switch the EQ on and says why, and the microphone keeps
-  its path.
+- It needs the native plugin host the packages include. Without it the
+  editor says so, the daemon refuses to switch the EQ on, and the
+  microphone keeps its path.
+- Scripts drive the same EQ through the [control API](api.md#microphone-eq)
+  with `setEq`, `setEqEnabled` and `setEqBand`.
 
 <a name="native-editor-compatibility"></a>
 **Native editor compatibility.** Open Options, PLUGINS, then "Native editors"
@@ -1802,8 +1832,9 @@ with it. A channel with no send into a mix has an empty cell there.
 
 The head at the start of each row carries the channel's icon and name and
 what INPUTS would show for it. XLR 1 and XLR 2 have their mute, their gain
-with the meter under it, and **FX**, which opens their plugin chain; the
-gain lock and phantom power's settling time still apply. Beside the name,
+with the meter under it, **FX**, which opens their plugin chain, and over it
+**EQ**, which opens their [EQ editor](#microphone-eq); the gain lock and
+phantom power's settling time still apply. Beside the name,
 **Mic** opens the switches INPUTS shows next to the mute: Low Cut,
 Expander, Voice Tune, Phantom, ClipGuard and Compressor, the ones your
 interface has, with the Voice Tune strength while Voice Tune is on. On an

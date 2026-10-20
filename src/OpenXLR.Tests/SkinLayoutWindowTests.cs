@@ -566,7 +566,7 @@ internal static partial class SkinLayoutWindowTests
         File.WriteAllText(Path.Combine(folder, "skin.json"), json);
     }
 
-    private static void Wear(string id)
+    internal static void Wear(string id)
     {
         SkinEntry entry = SkinCatalog.Find(id)!;
         Assert.Empty(entry.Errors);

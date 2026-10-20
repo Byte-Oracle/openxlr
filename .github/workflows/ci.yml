@@ -137,6 +137,9 @@ jobs:
       - name: Skins reach every window and the default comes back
         run: OPENXLR_TEST_SKIN=1 xvfb-run -a -s '-screen 0 2560x1440x24' dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~SkinWindowTests
 
+      - name: Microphone EQ editor in every skin against a fake daemon
+        run: OPENXLR_TEST_EQ=1 xvfb-run -a -s '-screen 0 2560x1440x24' dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~EqEditorWindowTests
+
       - name: Locked restore enforced on every packaging path
         run: tools/check-locked-restore.sh
 

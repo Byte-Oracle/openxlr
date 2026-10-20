@@ -22,6 +22,13 @@ public partial class InputRackView : UserControl
             InsertWindows.OpenChain(window, inserts, key);
     }
 
+    private void OnEq(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is InputStripViewModel { Channel.Eq: { } eq }
+            && TopLevel.GetTopLevel((Control)sender!) is Window window)
+            EqWindows.Show(window, eq);
+    }
+
     private void OnCycleSoftLowCut(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is InputStripViewModel strip) strip.Main.CycleSoftLowCut();

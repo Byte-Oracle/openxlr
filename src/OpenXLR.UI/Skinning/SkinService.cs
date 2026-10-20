@@ -245,10 +245,10 @@ public static class SkinService
             {
                 SolidColorBrush live = LiveBrush(token.Name);
                 live.Color = realized is ISolidColorBrush solid ? solid.Color : Colors.Transparent;
-                resources[token.Name] = live;
+                Put(resources, token.Name, live);
             }
             else if (realized is null) resources.Remove(token.Name);
-            else resources[token.Name] = realized;
+            else Put(resources, token.Name, realized);
 
             ApplyBridges(token, realized, resources, errors);
         }
@@ -288,7 +288,7 @@ public static class SkinService
                 if (themeKey is not null
                     && application.TryGetResource(themeKey, null, out object? theme) && theme is ControlTheme)
                 {
-                    resources[resourceKey] = theme;
+                    Put(resources, resourceKey, theme);
                     continue;
                 }
                 resources.Remove(resourceKey);
@@ -300,14 +300,38 @@ public static class SkinService
         }
     }
 
+    /// <summary>
+    /// Write a resource only when its value changes. Every write to the
+    /// application's resources makes every control of every open window look
+    /// its resources up again, so a skin switch that rewrote the values that
+    /// stay the same, a live brush whose colour changed in place or a size
+    /// that did not move, paid for each of them across the whole window.
+    /// </summary>
+    private static void Put(IResourceDictionary resources, object key, object value)
+    {
+        if (resources.TryGetValue(key, out object? existing) && Same(existing, value)) return;
+        resources[key] = value;
+    }
+
+    /// <summary>
+    /// The same object, or a value that draws the same: a number, a colour, a
+    /// radius, a thickness or a weight, or a flat colour brush of the same
+    /// colour. An image or a gradient is written again, so a brush is never
+    /// left holding a bitmap the last skin disposed.
+    /// </summary>
+    private static bool Same(object? existing, object value) => ReferenceEquals(existing, value)
+        || value is double or Color or CornerRadius or Thickness or FontWeight && Equals(existing, value)
+        || existing is ImmutableSolidColorBrush a && value is ImmutableSolidColorBrush b
+            && a.Color == b.Color && a.Opacity == b.Opacity && a.Transform is null && b.Transform is null;
+
     private static void ApplyBridges(SkinToken token, object? realized,
         IResourceDictionary resources, List<string> errors)
     {
         foreach (SkinBridge bridge in token.Bridges)
         {
             if (realized is null) { resources.Remove(bridge.Key); continue; }
-            if (!bridge.AsColor) { resources[bridge.Key] = realized; continue; }
-            if (realized is ISolidColorBrush solid) resources[bridge.Key] = solid.Color;
+            if (!bridge.AsColor) { Put(resources, bridge.Key, realized); continue; }
+            if (realized is ISolidColorBrush solid) Put(resources, bridge.Key, solid.Color);
             else errors.Add($"{token.Name}: the theme reads this as a flat colour, so a gradient or image is ignored.");
         }
     }
@@ -368,7 +392,7 @@ public static class SkinService
                     ? number.Value : token.Default;
                 value = Sized(token.Name, value);
                 if (value is null) application.Resources.Remove(token.Name);
-                else application.Resources[token.Name] = value;
+                else Put(application.Resources, token.Name, value);
             }
         Changed?.Invoke();
     }

@@ -283,7 +283,10 @@ while fixes to existing hosts remain part of normal maintenance.
   switches, the splice at the head of the input that leaves the chain
   running, the `setEq`, `setEqEnabled` and `setEqBand` commands, the
   state, `mixer.json` and profiles ([api.md](api.md#microphone-eq)).
-  Next the window's editor, with its response graph, then the terminal
+  The window's editor is on `main` too: a response graph with draggable
+  handles, a row of fields per band, the switch, a bypass to compare, copy
+  and paste between microphones, opened from INPUTS, an input rack and the
+  matrix row heads ([manual](manual.md#microphone-eq)). Next the terminal
   mixer and the OpenDeck plugin together with capture microphones, then
   the Wave XLR Pro's hardware EQ once its protocol is captured.
 

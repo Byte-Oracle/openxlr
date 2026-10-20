@@ -52,19 +52,25 @@ internal sealed record FlowGraph(IReadOnlyList<FlowNode> Nodes, IReadOnlyList<Fl
                 .Select(a => ($"app:{a.Identity}", a.Label, a.Active ? Localizer.Text("FlowSoftware") : a.StatusText,
                     FlowIcon.Application, a.Active)));
 
-            string processing = channel.Id switch
-            {
-                "xlr1" => Inserts(vm.Inserts), "xlr2" => Inserts(vm.Inserts2), _ => "",
-            };
+            // The input's processing in the order the signal meets it: the
+            // EQ at the head, XLR 1's software low cut and ClipGuard, then the
+            // plugin chain.
+            var stages = new List<string>();
+            if (channel.Eq is { Enabled: true } eq)
+                stages.Add(eq.IsFaulty ? Localizer.Format("OutputUnavailable", Localizer.Text("Eq"))
+                    : Localizer.Format("FlowEq", eq.Bands.Count(b => b.Enabled)));
             if (channel.Id == "xlr1")
             {
-                var stages = new List<string>();
                 if (vm.ShowSoftLowCut && vm.SoftLowCutOn) stages.Add(Localizer.Format("FlowLowCut", vm.SoftLowCutHz));
                 if (vm.ShowSoftClipGuard && vm.SoftClipGuard)
                     stages.Add(vm.SoftClipGuardAvailable ? "ClipGuard" : Localizer.Format("OutputUnavailable", "ClipGuard"));
-                if (processing.Length > 0) stages.Add(processing);
-                processing = string.Join("\n", stages);
             }
+            string chain = channel.Id switch
+            {
+                "xlr1" => Inserts(vm.Inserts), "xlr2" => Inserts(vm.Inserts2), _ => "",
+            };
+            if (chain.Length > 0) stages.Add(chain);
+            string processing = string.Join("\n", stages);
             var node = new FlowNode($"ch:{channel.Id}", channel.Name,
                 channel.IsHardware ? Localizer.Text("HardwareChannel") : channel.IsApplication ? Localizer.Text("ApplicationChannel") : Localizer.Text("CaptureChannel"),
                 FlowStage.Channel, FlowIcon.Channel, y, Processing: processing);

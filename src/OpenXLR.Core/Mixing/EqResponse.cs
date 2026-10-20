@@ -1,4 +1,15 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+// Shared with the window, whose graph draws this curve.
+#if OPENXLR_UI
+namespace OpenXLR.UI;
+#elif OPENXLR_TUI
+namespace OpenXLR.Tui;
+#else
 namespace OpenXLR.Core.Mixing;
+#endif
 
 /// <summary>One band's normalised biquad coefficients: a0 is 1.</summary>
 public readonly record struct EqCoefficients(double B0, double B1, double B2, double A1, double A2);

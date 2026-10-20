@@ -350,6 +350,29 @@ public static class SkinTokens
         Brush("Ox.Flow.NodeHoverBackground", "#414541"),
         Brush("Ox.Flow.NodeHoverBorderBrush", "#717971"),
 
+        // The microphone EQ's response graph. It draws in code, so its colours
+        // are held as live brushes, as the indicators are, and must be flat.
+        // The zones shade the six regions in turn over the background.
+        SolidBrush("Ox.Eq.Background", "#14161b"),
+        SolidBrush("Ox.Eq.Grid", "#2d313c"),
+        SolidBrush("Ox.Eq.GridLabel", "#8b93a7"),
+        SolidBrush("Ox.Eq.ZoneA", "#00000000"),
+        SolidBrush("Ox.Eq.ZoneB", "#0affffff"),
+        SolidBrush("Ox.Eq.ZoneLabel", "#6b7285"),
+        SolidBrush("Ox.Eq.Curve", "#e6e9f0"),
+        SolidBrush("Ox.Eq.CurveFill", "#335ba8f5"),
+        SolidBrush("Ox.Eq.Band1", "#5ba8f5"),
+        SolidBrush("Ox.Eq.Band2", "#3ecf7a"),
+        SolidBrush("Ox.Eq.Band3", "#e0a05a"),
+        SolidBrush("Ox.Eq.Band4", "#c958e5"),
+        SolidBrush("Ox.Eq.HandleOff", "#6b7285"),
+        SolidBrush("Ox.Eq.HandleRing", "#e6e9f0"),
+        Number("Ox.Eq.CurveThickness", 2.5, 1, 8),
+        Number("Ox.Eq.BandCurveThickness", 1.25, 0.5, 6),
+        Number("Ox.Eq.HandleSize", 18, 12, 48),
+        Number("Ox.Eq.LabelFontSize", 10, 8, 24),
+        Radius("Ox.Eq.CornerRadius", 6),
+
         // Mixer control sizing. Touch sizing raises these to TouchMinimums.
         Number("Ox.Mixer.ControlMinSize", null, 0, 64),
         Number("Ox.Mixer.SliderMinHeight", null, 0, 96),

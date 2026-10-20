@@ -113,8 +113,18 @@ When the backend has no mapped hardware control, OpenXLR provides:
   splices it in without restarting the chain behind it. After that every
   change reaches the running filters without a new node: a frequency, gain
   or Q change keeps the filter state, and a switch or a type change
-  crossfades over 5 ms. It is saved with the mixer and in profiles. The window's editor is still to
-  come; the [control API](api.md#microphone-eq) drives it meanwhile.
+  crossfades over 5 ms. It is saved with the mixer and in profiles. The
+  window's editor opens from an **EQ** button in INPUTS, an input rack and
+  the matrix row heads. Its response graph uses the daemon's curve maths
+  on a log frequency axis. Each band has a handle to drag for frequency
+  and gain, or for Q on a type without a gain; the wheel steps Q, a
+  double click switches the band and a right click picks its type. Under
+  the graph is a row of fields per band, and above it the EQ switch, a
+  bypass to compare, copy and paste between microphones and a reset. The
+  handles take the keyboard and carry names for screen readers. A drag
+  sends each band's changes at most every 20 ms, and the editor shows the
+  values the daemon keeps. The [control API](api.md#microphone-eq) drives
+  the same EQ.
 - Gain lock: the daemon rejects every gain change while the lock is set,
   from any client, and stores the lock per device in `gainlock.json`.
   Shown only for devices without a physical gain dial, which would

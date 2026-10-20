@@ -524,9 +524,9 @@ with a message saying why.
 
 | Token | Kind | Default | Range | What it paints |
 |---|---|---|---|---|
-| `Ox.Led.On` | colour | #3ecf7a |  | a connected device, a plugin that is processing, the button of a chain with one, a matrix row's **Mic** button while one of its switches is on |
+| `Ox.Led.On` | colour | #3ecf7a |  | a connected device, a plugin that is processing, the button of a chain with one, a microphone's **EQ** button while its EQ runs, a matrix row's **Mic** button while one of its switches is on |
 | `Ox.Led.Off` | colour | #4a4f5c |  | a device that is not there |
-| `Ox.Led.Alert` | colour | #ff3c4e |  | a plugin bypassed or failed, the button of a chain with nothing processing, the phantom power lamp on a matrix row's **Mic** button while phantom power is on |
+| `Ox.Led.Alert` | colour | #ff3c4e |  | a plugin bypassed or failed, the button of a chain with nothing processing, a microphone's **EQ** button while its EQ cannot run, the phantom power lamp on a matrix row's **Mic** button while phantom power is on |
 | `Ox.Meter.Fill` | colour | #3ecf7a |  | the quiet end of the scale |
 | `Ox.Meter.Warning` | colour | #3ecf7a |  | the middle of the scale |
 | `Ox.Meter.Hot` | colour | #3ecf7a |  | the loud end of the scale |
@@ -712,6 +712,38 @@ the same in every tile.
 | `Ox.Flow.NodeHoverBackground` | brush | #414541 |  | a node under the pointer |
 | `Ox.Flow.NodeHoverBorderBrush` | brush | #717971 |  | that node's outline |
 
+### Microphone EQ editor
+
+The EQ window's response graph: the six regions shaded in turn and named
+along the top, a grid every 6 dB and at the region edges, each band's own
+curve thin in its colour, the sum of the four thick over a light fill to
+0 dB, and a numbered handle per band, hollow while the band is off. The
+graph draws in code, so its colours are flat, like the indicators. The
+window's switches, type pickers, number fields and buttons are the
+ordinary controls in the skin's appearance for them.
+
+| Token | Kind | Default | Range | What it paints |
+|---|---|---|---|---|
+| `Ox.Eq.Background` | colour | #14161b |  | the EQ graph's ground, and the number on a band's handle |
+| `Ox.Eq.Grid` | colour | #2d313c |  | the graph's lines every 6 dB and at the region edges, and the readout's outline |
+| `Ox.Eq.GridLabel` | colour | #8b93a7 |  | the axis labels, the readout and the 0 dB line |
+| `Ox.Eq.ZoneA` | colour | #00000000 |  | the first, third and fifth regions, over the ground |
+| `Ox.Eq.ZoneB` | colour | #0affffff |  | the second, fourth and sixth regions, over the ground |
+| `Ox.Eq.ZoneLabel` | colour | #6b7285 |  | the regions' names along the top |
+| `Ox.Eq.Curve` | colour | #e6e9f0 |  | the sum of the four bands while the EQ is on |
+| `Ox.Eq.CurveFill` | colour | #335ba8f5 |  | the fill between that sum and 0 dB |
+| `Ox.Eq.Band1` | colour | #5ba8f5 |  | band 1: its handle, its own curve and its number in the rows |
+| `Ox.Eq.Band2` | colour | #3ecf7a |  | band 2, likewise |
+| `Ox.Eq.Band3` | colour | #e0a05a |  | band 3, likewise |
+| `Ox.Eq.Band4` | colour | #c958e5 |  | band 4, likewise |
+| `Ox.Eq.HandleOff` | colour | #6b7285 |  | the number on the handle of a band that is off, and the sum while the EQ is off or compared |
+| `Ox.Eq.HandleRing` | colour | #e6e9f0 |  | the ring around the selected band's handle |
+| `Ox.Eq.CurveThickness` | number | 2.5 | 1 to 8 | the width of the sum's line |
+| `Ox.Eq.BandCurveThickness` | number | 1.25 | 0.5 to 6 | the width of each band's own curve |
+| `Ox.Eq.HandleSize` | number | 18 | 12 to 48 | the diameter of a band's handle; the pointer takes it within 20 units of its centre, or the compact control minimum under Touch sizing |
+| `Ox.Eq.LabelFontSize` | number | 10 | 8 to 24 | the size of the axis labels, the region names and the readout |
+| `Ox.Eq.CornerRadius` | radius | 6 | 0 to 48 | the graph's corners |
+
 ### Mixer control sizing
 
 These size the main mixer's controls and strips. Options offers two
@@ -750,7 +782,7 @@ controls.
 |---|---|---|---|---|
 | `Ox.Matrix.NameWidth` | number | 140 | 56 to 400 | the width of a row head's name column, which holds the name, the binding line under it and the **Mic** button |
 | `Ox.Matrix.CellWidth` | number | 168 | 120 to 400 | the width of a cell, of a column head and of a row head's source controls |
-| `Ox.Matrix.RowHeight` | number | 40 | 28 to 120 | the height of a row: its head and every cell in it; a row whose head stacks a gain over the channel volume is as tall as the two faders need, never less |
+| `Ox.Matrix.RowHeight` | number | 40 | 28 to 120 | the height of a row: its head and every cell in it; a row whose head stacks a gain over the channel volume, or the **EQ** button over the chain's, is as tall as the two need, never less |
 | `Ox.Matrix.MutedBackground` | brush | #40a03434 | | the background of a cell whose send is muted, when the matrix tints muted cells. Translucent by default, so the cell's own surface shows through as a red tint |
 | `Ox.Matrix.MutedForeground` | brush | #f6dede | | the lettering of a muted send's mute in a tinted cell |
 
@@ -1235,7 +1267,7 @@ An input row's parts, in their default order, are `identity`, `binding`,
 | `meter` | the channel's own level meter, left and right |
 | `gain` | the input's hardware gain or Aux In's level, with the channel's own volume under it; on an application or capture channel, its own volume |
 | `hardware-controls` | the input's switches, or Aux In's level lock |
-| `effects` | the input's plugin chain: its button and the chain at a glance |
+| `effects` | the input's processing in software: the microphone's **EQ** button, which opens its EQ editor, then its plugin chain's button and the chain at a glance |
 | `fader` | the send's level into the bank's mix |
 | `value` | that level as a number |
 | `mute` | the send's mute in the bank's mix |
@@ -1476,7 +1508,7 @@ cell's are `mute`, `fader` and `value`.
 | `gain` | row head | the input's hardware gain, or Aux In's level and level lock, with the channel's own volume as a second fader under it; a channel without a gain shows its volume alone. A capture channel carrying the interface's microphone shows the interface's gain over its volume |
 | `mute` | row head, column head, cell | the input's hardware mute, the mix's mute, or the send's mute in the column's mix. A capture channel carrying the interface's microphone has the interface's mute |
 | `processing` | row head | the **Mic** button that opens the input's switches in a flyout. It is lettered in `Ox.Led.On` while a switch is on, and its lamp lights while phantom power is on. It stands at the end of the name column, wherever `parts` puts it, so the source controls keep their room. A row whose input has no switch, and a channel that carries no interface's input, does not draw it. A skin that lists every other part and not this one still gets it |
-| `effects` | row head, column head | the button that opens the input's or the mix's plugin chain |
+| `effects` | row head, column head | the button that opens the input's or the mix's plugin chain. On XLR 1 and XLR 2 the **EQ** button, which opens the microphone's EQ editor, stands over it in the same part, as the signal meets them, so the row grows to hold both and the source controls keep their width |
 | `master` | column head | the mix's master level as a short fader |
 | `outputs` | column head | the outputs line |
 | `fader` | cell | the send's level as a short fader. It cannot be hidden |
