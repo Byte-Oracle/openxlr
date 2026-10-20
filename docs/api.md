@@ -693,6 +693,11 @@ channel that carries a driven additional unit's input says so in its
 `unitInput`; the controls a client draws there are this entry's
 `capabilities` and `state`, written with `setWaveControl`.
 
+Unit-to-channel controls are updated from the last published device states
+before a changed state is broadcast. These updates are serialized outside
+the USB poll loops, so a read stalled on one interface does not block a
+command or state notification from another interface.
+
 ## Configuration files
 
 All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
