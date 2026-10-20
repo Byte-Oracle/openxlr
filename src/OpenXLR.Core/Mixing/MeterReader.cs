@@ -47,6 +47,15 @@ public sealed class MeterReader : IDisposable
         // followed by decay. 50 ms delivers fragments faster than the
         // 15 Hz poll, so bars track the signal.
         psi.ArgumentList.Add("--latency-msec=50");
+        // A meter reads one sink and must stay on it. The session manager
+        // treats a stream that it linked to the default output as following
+        // the default (target.node -1 in the default metadata) and moves it
+        // when the default changes, but it never marks a stream in a link
+        // group. Its own group, so the meter never shares a driver with
+        // anything else. node.dont-reconnect would also stop the marking, but
+        // WirePlumber 0.4 destroys such a stream when its target is not ready
+        // yet, and a meter starts right after its sink is created.
+        psi.ArgumentList.Add($"--property=node.link-group=openxlr-meter-{sinkName}");
         Add(id, psi);
     }
 

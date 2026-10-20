@@ -371,6 +371,10 @@ temporarily busy, it keeps one pending meter update and resumes with the
 current levels instead of replaying a backlog of older readings. This
 affects only the display; the daemon continues processing audio.
 
+Each meter reads its own channel or mix. Changing the system default
+output never moves a meter, also not the meter of the channel or mix
+that was the default.
+
 1. In the MONITOR card, tick every device the monitor mixes should play
    on: your speakers, a headset, or several at once. On the Wave XLR
    Pro its own outputs (Headphones 1, Headphones 2, Line Out) appear
