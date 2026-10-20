@@ -808,6 +808,113 @@ public sealed class StartupReceiptTests : IDisposable
         Assert.False(StartupIntegration.IsGeneratedStartupFile(Entry, StartupIntegration.AutostartEntry("/old/OpenXLR.UI") + "Exec=/foreign\n"));
     }
 
+    // packaging/openxlr-daemon.service as v0.1.37 to v0.1.70 shipped it. The
+    // source install guide had users copy it and edit only ExecStart.
+    private const string ReferenceUnitBeforeCapabilityChange = """
+        [Unit]
+        Description=OpenXLR audio daemon
+        After=pipewire-pulse.service wireplumber.service
+        StartLimitIntervalSec=300
+        StartLimitBurst=3
+
+        [Service]
+        Type=notify
+        NotifyAccess=main
+        WatchdogSec=60
+        WatchdogSignal=SIGTERM
+        TimeoutStartSec=120
+        # %h is your home directory; adjust the path to where you cloned the repo.
+        ExecStart=%h/openxlr/src/OpenXLR.Daemon/bin/Release/net10.0/OpenXLR.Daemon
+        Environment=OPENXLR_BUILD_MIXER=1
+        TimeoutStopSec=45
+        # Bridged Windows plugins lock their shared audio buffers into memory, and
+        # they inherit this allowance from the daemon. The 8 MiB most sessions
+        # default to is below what yabridge asks for, which costs a warning on every
+        # plugin load and dropouts while one runs.
+        LimitMEMLOCK=infinity
+        # SIGTERM goes to the daemon alone, so it can end the Wine session a bridged
+        # plugin leaves behind before the rest of the group is killed. Sending it to
+        # the whole group would take wineserver down first and leave winedevice.exe
+        # to the timeout above.
+        KillMode=mixed
+        Restart=on-failure
+        RestartSec=3
+        NoNewPrivileges=true
+        PrivateTmp=true
+        ProtectSystem=strict
+        ProtectControlGroups=true
+        ProtectKernelTunables=true
+        RestrictSUIDSGID=true
+        UMask=0077
+        # Verified on hardware with the device, the submix graph and both clients:
+        # none of these touches USB, PipeWire or the .NET runtime.
+        KeyringMode=private
+        ProtectClock=true
+        ProtectHostname=true
+        ProtectKernelLogs=true
+        ProtectKernelModules=true
+        LockPersonality=true
+        RestrictNamespaces=true
+        CapabilityBoundingSet=
+
+        [Install]
+        WantedBy=default.target
+        """ + "\n";
+
+    private static string ReferenceUnitCopy(string execStart) => ReferenceUnitBeforeCapabilityChange.Replace(
+        "ExecStart=%h/openxlr/src/OpenXLR.Daemon/bin/Release/net10.0/OpenXLR.Daemon\n", "ExecStart=" + execStart + "\n", StringComparison.Ordinal);
+
+    [Fact]
+    public void ACopyOfTheEarlierReferenceUnitIsRecognisedOnlyWhenJustItsExecStartChanged()
+    {
+        using var stream = typeof(StartupIntegration).Assembly.GetManifestResourceStream("OpenXLR.StartupUnit")!;
+        Assert.NotEqual(ReferenceUnitBeforeCapabilityChange, new StreamReader(stream).ReadToEnd());
+        string unit = StartupReceipt.StartupPaths[1];
+        Assert.True(StartupIntegration.IsGeneratedStartupFile(unit, ReferenceUnitBeforeCapabilityChange));
+        string copy = ReferenceUnitCopy("%h/src/My Clone/src/OpenXLR.Daemon/bin/Release/net10.0/OpenXLR.Daemon");
+        Assert.NotEqual(ReferenceUnitBeforeCapabilityChange, copy);
+        Assert.True(StartupIntegration.IsGeneratedStartupFile(unit, copy));
+        Assert.False(StartupIntegration.IsGeneratedStartupFile(unit, copy + "Environment=USER_CUSTOM=1\n"));
+        Assert.False(StartupIntegration.IsGeneratedStartupFile(unit, copy.Replace("CapabilityBoundingSet=\n", "", StringComparison.Ordinal)));
+        Assert.False(StartupIntegration.IsGeneratedStartupFile(unit, ReferenceUnitCopy("")));
+        Assert.False(StartupIntegration.IsGeneratedStartupFile(Entry, copy));
+    }
+
+    // The unit fails with 218/CAPABILITIES where the user manager cannot drop
+    // capabilities. Turning Start audio at login off takes the copy and its
+    // link down, so turning it on again writes the current unit; a packaged
+    // install replaces it with the package's unit.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AHandCopiedEarlierReferenceUnitIsReplacedFromOptions(bool packagedInstall)
+    {
+        string unit = StartupReceipt.StartupPaths[1];
+        string wants = StartupReceipt.StartupPaths[2];
+        Directory.CreateDirectory(Path.GetDirectoryName(wants)!);
+        File.WriteAllText(unit, ReferenceUnitCopy("%h/src/openxlr/src/OpenXLR.Daemon/bin/Release/net10.0/OpenXLR.Daemon"));
+        File.CreateSymbolicLink(wants, unit);
+        string packaged = Path.Combine(_home, "packaged.service");
+        File.WriteAllText(packaged, "package unit");
+        string log = Path.Combine(_home, "systemctl.log");
+        using (new FakeSystemctl(_home, log))
+        {
+            if (packagedInstall)
+            {
+                Assert.True(StartupIntegration.SetDaemonAtLogin(true, packaged));
+                Assert.Equal(packaged, new FileInfo(wants).LinkTarget);
+            }
+            else
+            {
+                Assert.True(StartupIntegration.SetDaemonAtLogin(false, null));
+                Assert.Null(new FileInfo(wants).LinkTarget);
+            }
+            Assert.False(File.Exists(unit));
+            Assert.Contains("--user daemon-reload", File.ReadAllLines(log));
+        }
+        Assert.True(StartupReceipt.Load().Files.Single(f => f.Path == unit).Removed);
+    }
+
     [Theory]
     [InlineData("not json")]
     [InlineData("{\"formatVersion\":99}")]
