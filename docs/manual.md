@@ -624,7 +624,9 @@ the chain's own window:
 
 The controls window of an effect has **Presets** too, for presets of that
 one plugin: loading one changes only that effect and leaves the rest of
-the chain as it is. Both windows share one list.
+the chain as it is. Both windows share one list. The saved list must be a
+regular file of at most 8 MiB; an unreadable or damaged list shows an error
+and is left unchanged.
 
 Hearing a slot or loading a preset rebuilds the chain, so audio through it
 stops for a moment. A preset holds the order, names, bypass, host choice

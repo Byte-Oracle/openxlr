@@ -69,6 +69,7 @@ public static class EffectChainPresets
         lock (Gate)
         {
             if (!File.Exists(FilePath)) return [];
+            RegularFile.Require(FilePath);
             using var file = File.OpenRead(FilePath);
             if (file.Length > MaxFileBytes) throw new InvalidDataException(Localizer.Text("PresetFileTooLarge"));
             byte[] bytes = new byte[checked((int)file.Length)];
