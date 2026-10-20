@@ -28,6 +28,7 @@ Log links are omitted, and credential-shaped fields are masked even when
 their values are not known in advance.
 Tray menu queries and event batches have a fixed item limit, so an invalid
 desktop request cannot create an unbounded list of menu items.
+Tray hosts can request the complete menu with an empty item list.
 
 ## Host setup
 

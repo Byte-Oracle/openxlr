@@ -202,6 +202,7 @@ internal sealed class FlatpakTray : IDisposable, IAsyncDisposable, IPathMethodHa
         {
             if (ReadMenuIds(ref reader) is not { } ids)
             { context.ReplyError("org.freedesktop.DBus.Error.InvalidArgs", "Too many tray entries."); return ValueTask.CompletedTask; }
+            if (ids.Length == 0) ids = [0, 1, 2, 3];
             using var reply = context.CreateReplyWriter("a(ia{sv})");
             var array = reply.WriteArrayStart(DBusType.Struct);
             foreach (int id in ids.Where(id => id is >= 0 and <= 3).Distinct())

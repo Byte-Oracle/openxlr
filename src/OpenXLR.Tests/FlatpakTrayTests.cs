@@ -39,6 +39,23 @@ public sealed class FlatpakTrayTests
                 return result;
             });
         Assert.Equal([1, 2, 3], ids);
+        foreach (int[] requested in new int[][] { [], [3, 3, 1, -1, 99] })
+        {
+            var entries = await bus.Call(FlatpakTray.Service, "/MenuBar", "com.canonical.dbusmenu", "GetGroupProperties", "aias",
+                (ref MessageWriter writer) => { writer.WriteArray(requested); writer.WriteArray(System.Array.Empty<string>()); },
+                static (message, _) =>
+                {
+                    var reader = message.GetBodyReader();
+                    var end = reader.ReadArrayStart(DBusType.Struct);
+                    var result = new List<int>();
+                    while (reader.HasNext(end))
+                    {
+                        reader.AlignStruct(); result.Add(reader.ReadInt32()); reader.ReadDictionaryOfStringToVariantValue();
+                    }
+                    return result;
+                });
+            Assert.Equal(requested.Length == 0 ? [0, 1, 2, 3] : new[] { 3, 1 }, entries);
+        }
         foreach (string method in new[] { "GetGroupProperties", "AboutToShowGroup" })
             await Assert.ThrowsAsync<DBusErrorReplyException>(() => bus.Empty(FlatpakTray.Service, "/MenuBar", "com.canonical.dbusmenu",
                 method, method == "GetGroupProperties" ? "aias" : "ai", (ref MessageWriter writer) =>
