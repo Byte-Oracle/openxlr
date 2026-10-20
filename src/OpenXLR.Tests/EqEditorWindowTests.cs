@@ -25,8 +25,9 @@ namespace OpenXLR.Tests;
 
 /// <summary>
 /// The microphone EQ editor on real windows against a fake daemon that keeps
-/// the EQ with the daemon's own model and snapping. The EQ button sits in the
-/// classic INPUTS panel, an input rack's effects part and the Broadcast and
+/// the EQ with the daemon's own model and snapping. The EQ button sits right
+/// after each microphone's binding chip in the classic INPUTS panel, at the
+/// chip's height and clear of it with a long source name, an input rack's effects part and the Broadcast and
 /// Wave matrix row heads, inside its head at 640, 1040 and 2400 or 2560
 /// pixels in Standard and Touch sizing, and it opens one editor per
 /// microphone. The editor fits from 640 to 2400 pixels; a drag with the real
@@ -51,6 +52,8 @@ public sealed class EqEditorWindowTests
         public bool WithEq = true;
         /// <summary>XLR 1's unit: null for none, <c>unit</c> when its DSP runs the EQ, <c>old</c> on firmware before 1.0.15.</summary>
         public string? Device;
+        /// <summary>A capture source's description for XLR 2 to take in place of the interface's second input; null for the jack.</summary>
+        public string? Xlr2Source;
         public readonly ConcurrentQueue<(long At, JsonNode Command)> Commands = new();
 
         /// <summary>Released to push a state without a command, as the daemon does on its own changes.</summary>
@@ -60,13 +63,16 @@ public sealed class EqEditorWindowTests
         {
             lock (_gate)
             {
-                string channels = Xlr("xlr1", 0, Input(1)) + "," + Xlr("xlr2", 1, Input(2));
+                string channels = Xlr("xlr1", 0, Input(1)) + "," + (Xlr2Source is null ? Xlr("xlr2", 1, Input(2))
+                    : """{"id":"xlr2","name":"XLR 2","hardware":true,"present":true,"levels":{"monitor":1},"binding":{"kind":"source","source":"longmic","pair":0,"monoChannel":0},"bindingConnected":true}""");
                 string limits = """
                     ,"eqLimits":{"bands":4,"types":["lowCut","lowShelf","peak","notch","highShelf","highCut"],
                       "frequency":{"min":20,"max":20000,"step":1},"gain":{"min":-12,"max":12,"step":0.25},
                       "q":{"min":0.1,"max":10,"log10Step":0.016}}
                     """;
                 JsonNode state = JsonNode.Parse(ProState(channels, mixerExtra: WithEq ? limits : "", withMix: true))!;
+                if (Xlr2Source is not null)
+                    state["devices"]!.AsArray().Add(new JsonObject { ["name"] = "longmic", ["description"] = Xlr2Source, ["kind"] = 1, ["channels"] = 1 });
                 state["mixer"]!["mixes"]!.AsArray().Add(JsonNode.Parse("""{"id":"stream","name":"Stream","kind":"virtualMic"}"""));
                 foreach (JsonNode? channel in state["mixer"]!["channels"]!.AsArray())
                 {
@@ -241,27 +247,34 @@ public sealed class EqEditorWindowTests
             Assert.Equal(DaemonEq.DefaultQ, eq1.Bands[0].Q);
             Assert.False(eq1.Enabled);
 
-            // Classic INPUTS: an EQ button in each microphone's software row, at every width and sizing.
-            foreach (bool touch in new[] { false, true })
+            // Classic INPUTS: each microphone's EQ right after its chip on the input line, at every
+            // width and sizing. The EQ took no row of its own, and the software row, which the Pro
+            // has no use for, stays closed.
+            Assert.Null(window.FindControl<WrapPanel>("Software2Controls"));
+            foreach (string skin in new[] { SkinPackage.DefaultId, "tokyo-night" })
             {
-                SkinService.ApplyControlSizing(touch);
-                foreach (double width in new[] { 640d, 1040, 2400 })
+                SkinLayoutWindowTests.Wear(skin);
+                foreach (bool touch in new[] { false, true })
                 {
-                    Layout(window, width, 1100);
-                    string where = $"classic, {Sizing(touch)} at {width}";
-                    foreach ((string name, string row) in new[] { ("Xlr1Eq", "SoftwareControls"), ("Xlr2Eq", "Software2Controls") })
+                    SkinService.ApplyControlSizing(touch);
+                    foreach (double width in skin == SkinPackage.DefaultId ? new[] { 640d, 1040, 2400 } : [640d, 1040])
                     {
-                        Button button = window.FindControl<Button>(name)!;
-                        Assert.True(button.IsEffectivelyVisible, $"{name} hidden, {where}");
-                        AssertInside(button, window.FindControl<WrapPanel>(row)!);
-                        AssertInside(button, window);
-                        Assert.Equal(Localizer.Text("Eq"), button.Content);
-                        Assert.DoesNotContain("fxOn", button.Classes);
+                        Layout(window, width, 1100);
+                        string where = $"classic {skin}, {Sizing(touch)} at {width}";
+                        CheckClassicEq(window, where);
+                        Assert.False(window.FindControl<WrapPanel>("SoftwareControls")!.IsEffectivelyVisible, where);
+                        foreach (string name in new[] { "Xlr1Eq", "Xlr2Eq" })
+                        {
+                            Button button = window.FindControl<Button>(name)!;
+                            Assert.Equal(Localizer.Text("Eq"), button.Content);
+                            Assert.DoesNotContain("fxOn", button.Classes);
+                        }
+                        Assert.Equal(Localizer.Format("EqButtonNameOff", "XLR 1"), AutomationProperties.GetName(window.FindControl<Button>("Xlr1Eq")!));
+                        if (width == 1040) Capture(window, $"eq-classic-{skin}-{Sizing(touch)}-1040");
                     }
-                    Assert.Equal(Localizer.Format("EqButtonNameOff", "XLR 1"), AutomationProperties.GetName(window.FindControl<Button>("Xlr1Eq")!));
-                    if (width == 1040) Capture(window, $"eq-classic-button-{Sizing(touch)}-1040");
                 }
             }
+            SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
             SkinService.ApplyControlSizing(false);
             Layout(window, 1040, 1100);
 
@@ -285,6 +298,7 @@ public sealed class EqEditorWindowTests
             await Tooltips(editor);
             await Skins(window, editor, main);
             await Hardware(window, editor, daemon, eq1);
+            await LongSource(window, daemon, main);
             Assert.DoesNotContain(daemon.Commands, c => !EqCommands.Contains(c.Command["cmd"]!.GetValue<string>()));
 
             // A state without the EQ, from an older daemon: no button anywhere, and the editors go.
@@ -294,8 +308,9 @@ public sealed class EqEditorWindowTests
             Pump(50);
             Assert.False(editor.IsVisible);
             Assert.False(second.IsVisible);
-            Assert.False(window.FindControl<Button>("Xlr1Eq")!.IsEffectivelyVisible);
-            Assert.False(window.FindControl<WrapPanel>("Software2Controls")!.IsEffectivelyVisible);
+            foreach (string name in new[] { "Xlr1Eq", "Xlr2Eq" })
+                Assert.False(window.FindControl<Button>(name)!.IsEffectivelyVisible);
+            Assert.False(window.FindControl<WrapPanel>("SoftwareControls")!.IsEffectivelyVisible);
             SkinLayoutWindowTests.Wear("broadcast");
             Layout(window, 1040, 1100);
             Assert.DoesNotContain(window.GetVisualDescendants().OfType<Button>(), b => b.Name == "MatrixEq" && b.IsEffectivelyVisible);
@@ -313,6 +328,78 @@ public sealed class EqEditorWindowTests
     }
 
     private static string Sizing(bool touch) => touch ? "touch" : "standard";
+
+    /// <summary>
+    /// XLR 2 bound to a source with a long description: the chip trims its
+    /// name and the EQ keeps its place after it, inside the window, at the
+    /// narrow width in both sizings.
+    /// </summary>
+    private static async Task LongSource(MainWindow window, EqDaemon daemon, MainViewModel main)
+    {
+        const string name = "USB Audio Device Analog Stereo Microphone With A Very Long Description, As Some Interfaces Report Theirs";
+        SkinLayoutWindowTests.Wear(SkinPackage.DefaultId);
+        daemon.Xlr2Source = name;
+        daemon.Pushes.Release();
+        ChannelViewModel xlr2 = main.Channels.Single(c => c.Id == "xlr2");
+        await Until(() => xlr2.IsSourceBound && xlr2.BindingLabel.StartsWith(name, StringComparison.Ordinal));
+        try
+        {
+            foreach (bool touch in new[] { false, true })
+            {
+                SkinService.ApplyControlSizing(touch);
+                foreach (double width in new[] { 640d, 1040 })
+                {
+                    Layout(window, width, 1100);
+                    string where = $"long source, {Sizing(touch)} at {width}";
+                    CheckClassicEq(window, where);
+                    TextBlock text = window.FindControl<Grid>("Xlr2ChipRow")!.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "ChipText");
+                    if (width == 640) Assert.True(text.TextLayout.TextLines.Any(l => l.HasCollapsed), $"the long name is not trimmed, {where}");
+                    if (width == 640) Capture(window, $"eq-classic-long-source-{Sizing(touch)}-640");
+                }
+            }
+        }
+        finally
+        {
+            SkinService.ApplyControlSizing(false);
+            daemon.Xlr2Source = null;
+            daemon.Pushes.Release();
+        }
+        await Until(() => xlr2.IsUnitBound);
+    }
+
+    /// <summary>
+    /// The classic INPUTS panel's EQ buttons: each on its microphone's input
+    /// line right after the binding chip, as tall as the chip and level with
+    /// it, with the chip's padding and lettering, clear of the chip and inside
+    /// the line and the window. A line that is not drawn is skipped.
+    /// </summary>
+    internal static void CheckClassicEq(Window window, string where)
+    {
+        foreach (string n in new[] { "1", "2" })
+        {
+            Grid line = window.FindControl<Grid>($"Xlr{n}Binding")!, row = window.FindControl<Grid>($"Xlr{n}ChipRow")!;
+            Button button = window.FindControl<Button>($"Xlr{n}Eq")!;
+            if (!line.IsEffectivelyVisible) continue;
+            Assert.True(button.IsEffectivelyVisible, $"XLR {n}'s EQ hidden, {where}");
+            Button chip = row.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "Chip");
+            foreach (Control part in new Control[] { chip, button })
+            {
+                AssertInside(part, line);
+                AssertInside(part, window);
+            }
+            AssertNoOverlap([chip, button]);
+            Point at = button.TranslatePoint(default, row)!.Value, chipAt = chip.TranslatePoint(default, row)!.Value;
+            Assert.True(at.X >= chipAt.X + chip.Bounds.Width, $"XLR {n}'s EQ at {at.X} starts inside the chip ending at {chipAt.X + chip.Bounds.Width}, {where}");
+            Assert.True(at.X - chipAt.X - chip.Bounds.Width <= 8, $"XLR {n}'s EQ stands {at.X - chipAt.X - chip.Bounds.Width} after its chip, {where}");
+            Assert.True(Math.Abs(chipAt.Y - at.Y) <= 0.5 && Math.Abs(chip.Bounds.Height - button.Bounds.Height) <= 0.5,
+                $"XLR {n}: the chip runs {chipAt.Y:0.#}+{chip.Bounds.Height:0.#}, its EQ {at.Y:0.#}+{button.Bounds.Height:0.#}, {where}");
+            Assert.Equal(chip.Padding, button.Padding);
+            Assert.Equal(chip.BorderThickness, button.BorderThickness);
+            Assert.Equal(chip.MinHeight, button.MinHeight);
+            Assert.Equal(chip.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "ChipText").FontSize, button.FontSize);
+            Assert.Equal(chip.CornerRadius, button.CornerRadius);
+        }
+    }
 
     /// <summary>
     /// Where the EQ runs: a badge in the editor's header while the unit's own

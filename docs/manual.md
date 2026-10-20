@@ -776,9 +776,9 @@ band types, ranges and steps as Wave Link's, and the same curves. It comes
 first on the input, before the low cut, ClipGuard and your plugins, so
 ClipGuard also catches a boost, and Sound Check's loop goes through it.
 
-Open it with **EQ**. In INPUTS it sits in the microphone's software row,
-beside the software low cut and ClipGuard where your interface needs them.
-In an input rack it comes before **Inserts**, and in the Broadcast and
+Open it with **EQ**. In INPUTS it sits on the microphone's input line,
+right after the chip that says what feeds it, and stands as tall as the
+chip. In an input rack it comes before **Inserts**, and in the Broadcast and
 Wave matrix it sits over **FX** in the row head. **EQ** turns green while
 the EQ runs and red when it cannot run. Each microphone has one editor;
 clicking **EQ** again brings it to the front.
