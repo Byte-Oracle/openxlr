@@ -19,18 +19,19 @@ internal sealed class PluginHostEnvironment(ManagedYabridge? bridge, bool scanne
     public bool WineTrace { get; } = scanner && Environment.GetEnvironmentVariable(WineTraceVariable) == "1";
     public string? WineDebug { get; } = Environment.GetEnvironmentVariable("WINEDEBUG")
         ?? (scanner && Environment.GetEnvironmentVariable(WineTraceVariable) == "1" ? WineTraceChannels : null);
-    public IReadOnlyDictionary<string, string>? Overlay { get; } = BuildOverlay(bridge, scanner);
+    public IReadOnlyDictionary<string, string> Overlay { get; } = BuildOverlay(bridge, scanner);
     public IReadOnlyCollection<string> RemovedVariables => CleanLaunch ? LoaderVariables : [];
     public int StderrCap => WineTrace ? PluginScanLogStore.TraceCaptureBytes : PluginScanLogStore.StreamCapBytes;
 
-    private static IReadOnlyDictionary<string, string>? BuildOverlay(ManagedYabridge? bridge, bool scanner)
+    private static IReadOnlyDictionary<string, string> BuildOverlay(ManagedYabridge? bridge, bool scanner)
     {
-        var overlay = bridge?.HostEnvironment();
-        if (!scanner || Environment.GetEnvironmentVariable(WineTraceVariable) != "1"
-            || Environment.GetEnvironmentVariable("WINEDEBUG") is not null) return overlay;
-        var result = overlay is null ? new Dictionary<string, string>() : new Dictionary<string, string>(overlay);
-        result["WINEDEBUG"] = WineTraceChannels;
-        return result;
+        // A bridged plugin starts Wine; keep its USB driver out of that prefix.
+        Dictionary<string, string> overlay = bridge?.HostEnvironment() ?? new(StringComparer.Ordinal);
+        WineDllOverrides.Apply(overlay);
+        if (scanner && Environment.GetEnvironmentVariable(WineTraceVariable) == "1"
+            && Environment.GetEnvironmentVariable("WINEDEBUG") is null)
+            overlay["WINEDEBUG"] = WineTraceChannels;
+        return overlay;
     }
 
     public void Apply(ProcessStartInfo start) => ProcessRunner.ApplyEnvironment(start, Overlay, RemovedVariables);
@@ -39,7 +40,7 @@ internal sealed class PluginHostEnvironment(ManagedYabridge? bridge, bool scanne
     {
         string runner = Environment.GetEnvironmentVariable("WINELOADER") ?? "wine";
         if (runner.Contains(Path.DirectorySeparatorChar)) return Path.GetFullPath(runner);
-        string path = Overlay?.GetValueOrDefault("PATH") ?? Environment.GetEnvironmentVariable("PATH") ?? "/usr/bin:/bin";
+        string path = Overlay.GetValueOrDefault("PATH") ?? Environment.GetEnvironmentVariable("PATH") ?? "/usr/bin:/bin";
         foreach (string directory in path.Split(Path.PathSeparator))
         {
             string candidate = Path.GetFullPath(Path.Combine(directory, runner));

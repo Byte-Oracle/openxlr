@@ -973,7 +973,7 @@ public sealed class PluginInstaller
             try
             {
                 ProcessResult result = ProcessRunner.Run(_yabridgectl, ["status"], TimeSpan.FromSeconds(5),
-                    stdoutCap: 64 * 1024, stderrCap: 16 * 1024, environment: _managed?.ControllerEnvironment());
+                    stdoutCap: 64 * 1024, stderrCap: 16 * 1024, environment: ControllerEnvironment());
                 status = new { result.ExitCode, result.TimedOut, result.Truncated, output = result.StdoutText, error = result.Stderr };
             }
             catch (Exception ex) { status = new { error = PluginScanDiagnostics.Clip(ex.Message, 2048) }; }
@@ -1071,8 +1071,19 @@ public sealed class PluginInstaller
     {
         if (_yabridgectl is null) return null;
         try { return ProcessRunner.Run(_yabridgectl, arguments, YabridgeTimeout, cLocale: false,
-            environment: _managed?.ControllerEnvironment()); }
+            environment: ControllerEnvironment()); }
         catch (Exception ex) { return new(-1, [], "it could not be started: " + ex.Message, TimedOut: false, Truncated: false); }
+    }
+
+    /// <summary>
+    /// yabridgectl checks the bridge after a sync by starting its host under
+    /// Wine, so the controller gets the same USB rule as a plugin host.
+    /// </summary>
+    private Dictionary<string, string> ControllerEnvironment()
+    {
+        Dictionary<string, string> environment = _managed?.ControllerEnvironment() ?? new(StringComparer.Ordinal);
+        WineDllOverrides.Apply(environment);
+        return environment;
     }
 
     private static string Tail(ProcessResult? result)

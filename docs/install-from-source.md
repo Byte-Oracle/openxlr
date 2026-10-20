@@ -269,6 +269,7 @@ shell export does not update an already running service.
 | `LADSPA_PATH` | LADSPA directories for the software limiter |
 | `OPENXLR_YABRIDGE` | `system` selects the existing bridge; an absolute path selects a complete companion; unset enables automatic discovery |
 | `WINEPREFIX` | Wine prefix used when locating Windows plugin folders; defaults to `~/.wine` |
+| `WINEDLLOVERRIDES` | passed to bridged plugins with `wineusb.sys=d` appended, which keeps Wine's USB driver off; a value that already names `wineusb.sys` is passed unchanged |
 | `LSP_WS_LIB_GLXSURFACE` | native helper defaults to `0` for LSP software rendering; explicit `1` tests OpenGL |
 | `DISPLAY`, `XAUTHORITY` | X11/XWayland session and authentication for native editors; the daemon can obtain these from the systemd user manager |
 | `OPENXLR_HOST_TRACE=1` | VST3 bus and initial processing diagnostics in the daemon log |

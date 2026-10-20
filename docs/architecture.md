@@ -147,7 +147,10 @@ package version, source commit and installation directory.
 `ManagedYabridge` selects a complete companion installation, or falls back
 to the system/user bridge. It prepends the companion to PATH only for the
 scanner, host and controller it starts. Plugin processes retain HOME,
-WINEPREFIX and their settings environment. The controller alone receives
+WINEPREFIX and their settings environment. The scanner, host, controller
+and Wine uninstaller get `wineusb.sys=d` appended to `WINEDLLOVERRIDES`,
+unless the inherited value already names that driver, so a prefix they
+start does not open every USB device. The controller alone receives
 a private configuration root and wrapper destination. Private wrappers
 are searched first and deduplicated by plugin id.
 

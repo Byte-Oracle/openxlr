@@ -93,9 +93,10 @@ public sealed class ManagedYabridgeTests : IDisposable
         Env("OPENXLR_TEST_LOG", log);
         Env("OPENXLR_TEST_WINDOWS", Path.Combine(_root, "windows"));
         Env("PATH", Package + ":" + Environment.GetEnvironmentVariable("PATH"));
+        Env("WINEDLLOVERRIDES", "mscoree=d");
         Script("wine", "echo wine-11.17\n");
         Script("yabridgectl", """
-            printf '%s|%s|%s|%s\n' "$*" "$XDG_CONFIG_HOME" "$OPENXLR_YABRIDGE_PLUGIN_HOME" "$PATH" >> "$OPENXLR_TEST_LOG"
+            printf '%s|%s|%s|%s|%s\n' "$*" "$XDG_CONFIG_HOME" "$OPENXLR_YABRIDGE_PLUGIN_HOME" "$PATH" "$WINEDLLOVERRIDES" >> "$OPENXLR_TEST_LOG"
             case "$1" in
               --version) echo 'yabridgectl 5.1.1' ;;
               list) printf '%s\n' "$OPENXLR_TEST_WINDOWS" ;;
@@ -107,10 +108,30 @@ public sealed class ManagedYabridgeTests : IDisposable
         string[] calls = File.ReadAllLines(log);
         Assert.StartsWith("set --path " + Package + "|", calls[0]);
         Assert.All(calls, call => Assert.Contains("|" + OpenXlrPaths.ConfigFile("bridge") + "|" + ManagedYabridge.PluginHome + "|" + Package + ":", call));
+        // yabridgectl starts its host under Wine to check a sync.
+        Assert.All(calls, call => Assert.EndsWith("|mscoree=d;wineusb.sys=d", call));
         Assert.Contains(Path.Combine(ManagedYabridge.PluginHome, "vst3"), outcome.Destinations!);
         Assert.Equal("openxlr", installer.Setup().BridgeProvider);
         Assert.Null(installer.Setup().WindowsEditorNote);
         Assert.False(Directory.Exists(Path.Combine(_root, "config", "yabridgectl")));
+    }
+
+    [Fact]
+    public void SystemControllerAlsoStartsWineWithoutTheUsbDriver()
+    {
+        Env("OPENXLR_YABRIDGE", "system");
+        Env("WINEDLLOVERRIDES", "");
+        string log = Path.Combine(_root, "system-calls");
+        Env("OPENXLR_TEST_LOG", log);
+        Script("system-yabridgectl", """
+            printf '%s|%s\n' "$*" "${WINEDLLOVERRIDES-unset}" >> "$OPENXLR_TEST_LOG"
+            echo 'yabridgectl 5.1.1'
+            """);
+        string home = Directory.CreateDirectory(Path.Combine(_root, "home")).FullName;
+        var installer = new PluginInstaller(home, home, home, Path.Combine(Package, "system-yabridgectl"), null,
+            winePrefix: Path.Combine(_root, "wine"));
+        _ = installer.Setup();
+        Assert.Equal("--version|wineusb.sys=d", File.ReadAllLines(log)[0]);
     }
 
     [Fact]

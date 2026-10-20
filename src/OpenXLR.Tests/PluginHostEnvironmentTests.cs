@@ -45,6 +45,7 @@ public sealed class PluginHostEnvironmentTests : IDisposable
         Set("OPENXLR_TEST_KEEP", "unchanged");
         Set("WINEPREFIX", Path.Combine(_root, "prefix"));
         Set("WINELOADER", "/custom/wine");
+        Set("WINEDLLOVERRIDES", "mscoree,mshtml=");
         string bridge = Path.Combine(_root, "bridge");
         if (managed)
         {
@@ -59,7 +60,7 @@ public sealed class PluginHostEnvironmentTests : IDisposable
         Set("OPENXLR_TEST_ENV_OUTPUT", output);
         string python = """
             import os, json, sys
-            names = ['LD_LIBRARY_PATH', 'LD_PRELOAD', 'LD_AUDIT', 'OPENXLR_TEST_KEEP', 'WINEPREFIX', 'WINELOADER', 'PATH', 'WINEDEBUG']
+            names = ['LD_LIBRARY_PATH', 'LD_PRELOAD', 'LD_AUDIT', 'OPENXLR_TEST_KEEP', 'WINEPREFIX', 'WINELOADER', 'PATH', 'WINEDEBUG', 'WINEDLLOVERRIDES']
             with open(os.environ['OPENXLR_TEST_ENV_OUTPUT'], 'w') as f:
                 json.dump({name: os.environ.get(name) for name in names}, f)
             """;
@@ -99,6 +100,8 @@ public sealed class PluginHostEnvironmentTests : IDisposable
             Assert.Equal("unchanged", hosted["OPENXLR_TEST_KEEP"]!.GetValue<string>());
             Assert.Equal(Environment.GetEnvironmentVariable("WINEPREFIX"), hosted["WINEPREFIX"]!.GetValue<string>());
             Assert.Equal("/custom/wine", hosted["WINELOADER"]!.GetValue<string>());
+            Assert.Equal("mscoree,mshtml=;wineusb.sys=d", hosted["WINEDLLOVERRIDES"]!.GetValue<string>());
+            Assert.Equal("mscoree,mshtml=", Environment.GetEnvironmentVariable("WINEDLLOVERRIDES"));
             Assert.Equal(managed, hosted["PATH"]!.GetValue<string>().StartsWith(bridge + ":", StringComparison.Ordinal));
             Assert.Equal("/openxlr-test-preload.so", Environment.GetEnvironmentVariable("LD_PRELOAD"));
         }
@@ -108,6 +111,43 @@ public sealed class PluginHostEnvironmentTests : IDisposable
             File.Delete(scanner + ".body");
             if (existed) File.Move(backup, scanner);
         }
+    }
+
+    [Theory]
+    [InlineData(null, "wineusb.sys=d")]
+    [InlineData("", "wineusb.sys=d")]
+    [InlineData("  ", "wineusb.sys=d")]
+    [InlineData("mscoree=d", "mscoree=d;wineusb.sys=d")]
+    [InlineData("mscoree,mshtml=;d3d11=n,b;", "mscoree,mshtml=;d3d11=n,b;wineusb.sys=d")]
+    // Wine only lets ".dll" be left off, so this entry names another module.
+    [InlineData("wineusb=b", "wineusb=b;wineusb.sys=d")]
+    [InlineData("wineusb.sys=b", "wineusb.sys=b")]
+    [InlineData("mscoree=d;WineUSB.SYS=n,b", "mscoree=d;WineUSB.SYS=n,b")]
+    [InlineData("hid.dll, wineusb.sys =b", "hid.dll, wineusb.sys =b")]
+    [InlineData("*wineusb.sys=b", "*wineusb.sys=b")]
+    public void UsbDriverIsSwitchedOffUnlessTheUserNamesIt(string? inherited, string expected)
+        => Assert.Equal(expected, WineDllOverrides.WithUsbOff(inherited));
+
+    [Theory]
+    [InlineData(false, null)]
+    [InlineData(true, null)]
+    [InlineData(false, "wineusb.sys=n")]
+    [InlineData(true, "d3d11=n;wineusb.sys=b")]
+    public void ScannerAndLiveHostCarryTheUsbOverrideAndKeepTheUserValue(bool managed, string? inherited)
+    {
+        Set("WINEDLLOVERRIDES", inherited);
+        Set(PluginHostEnvironment.WineTraceVariable, null);
+        var bridge = managed ? new ManagedYabridge(_root, "test", new string('a', 40)) : null;
+        foreach (bool scanner in new[] { false, true })
+        {
+            var policy = new PluginHostEnvironment(bridge, scanner);
+            Assert.Equal(inherited ?? "wineusb.sys=d", policy.Overlay["WINEDLLOVERRIDES"]);
+            Assert.Equal(managed, policy.Overlay.ContainsKey("PATH"));
+            var start = new System.Diagnostics.ProcessStartInfo("/bin/true");
+            policy.Apply(start);
+            Assert.Equal(inherited ?? "wineusb.sys=d", start.Environment["WINEDLLOVERRIDES"]);
+        }
+        Assert.Equal(inherited, Environment.GetEnvironmentVariable("WINEDLLOVERRIDES"));
     }
 
     [Theory]
