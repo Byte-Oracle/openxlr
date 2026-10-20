@@ -294,7 +294,10 @@ public sealed partial class MonitorVolumeIntegrationTests
                 pw.UnloadModule(camNode);
                 camNode = pw.CreateVirtualMic(camRenamed, "primary_signal.monitor", "Test webcam mono");
                 WaitForRecovery(() => pw.ListDevices().Any(d => d.Name == camRenamed));
-                for (int i = 0; i < 3; i++) mixer.SweepOnce();
+                // Three whole passes that see the renamed node. A call made
+                // while the daemon's own timer pass runs does nothing, and that
+                // pass may have read the devices before the camera went.
+                for (int ran = 0; ran < 3;) if (mixer.SweepOnce()) ran++;
                 Assert.False(Strip("xlr1").BindingConnected);
                 Assert.Empty(IncomingRouteLinks("OpenXLR_ch_xlr1"));
                 Assert.Contains("not connected", Strip("xlr1").BindingWarning);

@@ -453,14 +453,18 @@ public sealed class MixerService : IHostedService, IDisposable
             | _mixer.SetUnitXlrJacks(_devices.ActiveCapabilities?.XlrJacks);
     }
 
-    internal void SweepOnce()
+    /// <summary>
+    /// One pass of the sweep. False when it did not run because the daemon is
+    /// stopping or another pass (the timer's or a caller's) is still running.
+    /// </summary>
+    internal bool SweepOnce()
     {
-        if (_stopping.IsCancellationRequested || Interlocked.CompareExchange(ref _sweepRunning, 1, 0) != 0) return;
+        if (_stopping.IsCancellationRequested || Interlocked.CompareExchange(ref _sweepRunning, 1, 0) != 0) return false;
         try
         {
             CancellationToken stop = _stopping.Token;
             stop.ThrowIfCancellationRequested();
-            if (GraphLost()) return;
+            if (GraphLost()) return true;
             stop.ThrowIfCancellationRequested();
             if (UpdateInputDeviceHint()) Changed?.Invoke();
             stop.ThrowIfCancellationRequested();
@@ -546,6 +550,7 @@ public sealed class MixerService : IHostedService, IDisposable
             _progress.Mark();
             Volatile.Write(ref _sweepRunning, 0);
         }
+        return true;
     }
 
     private static string Run(string exe, params string[] args)
