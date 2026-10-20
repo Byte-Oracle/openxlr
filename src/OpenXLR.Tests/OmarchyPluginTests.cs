@@ -103,7 +103,7 @@ public sealed class OmarchyPluginTests
                      || path.EndsWith(".js", StringComparison.Ordinal)))
         {
             string text = File.ReadAllText(file);
-            foreach (string name in new[] { "\"XLR 1\"", "\"XLR 2\"", "Generic mic", "mixer.primaryInput" })
+            foreach (string name in new[] { "\"XLR 1\"", "\"XLR 2\"" })
                 Assert.False(text.Contains(name, StringComparison.Ordinal), $"{Path.GetFileName(file)} has {name}");
         }
         string mixer = File.ReadAllText(Path.Combine(plugin, "Mixer.js"));

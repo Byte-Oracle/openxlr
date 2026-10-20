@@ -436,6 +436,30 @@ followed. The gain word read with the dial on gain needs Wave Link to
 switch the dial first, so it stays open until an owner who has done
 that reports.
 
+## Input bindings
+
+XLR 1 and XLR 2 can take another capture source while the interface stays
+driven ([manual](manual.md#input-bindings)). The private PipeWire suite
+covers the routing, hotplug, restart and Sound Check cases with simulated
+nodes. On real units, so far:
+
+| Check | State | Notes |
+|---|---|---|
+| A Wave:3's controls while it is driven as an additional interface beside a Wave XLR Pro | verified on hardware | the controls a strip bound to that Wave:3 shows. Gain, mute, ClipGuard, headphone level and the crossfade, written through `setWaveControl` and read back in the block; writes to the Pro leave the Wave:3 alone and the other way round. Not yet checked on a bound strip |
+| A Wave:3 recording with its sink already playing | verified on hardware | on the maintainer's port, playback first and then capture still recorded, so a strip bound to this unit does not depend on the capture-hold rule there. An owner's unit on another port needed the rule |
+| XLR 1 bound to another microphone with a Wave XLR Pro primary: audio on XLR 1, XLR 2 and Aux In, the keep-the-microphone capture channel | not yet checked | |
+| The Pro's gain, mute, phantom, low cut, ClipGuard, voice tune and dial on the capture channel that carries its input, headphone and output controls unchanged | not yet checked | |
+| The Pro's zero-latency monitor path following the carrying channel, off with a second monitor output | not yet checked | |
+| Software low cut, ClipGuard, inserts and Sound Check on a bound XLR 1 | not yet checked | |
+| The crossfade's line naming where the interface's own microphone plays | not yet checked | |
+| XLR 2 on another source while XLR 1 is bound; both strips on one port | not yet checked | |
+| Unplugging and replugging the bound source, and the primary interface while a strip is bound | not yet checked | |
+| Bindings and the capture channel after a daemon restart; no interface attached, binding from the header and `generic` profiles | not yet checked | |
+| A Wave:3 primary with XLR 1 on another microphone: its controls in the window, the crossfade line | not yet checked | |
+| An XLR Dock primary with XLR 1 bound elsewhere: dock controls, live capture on return to the jack | not yet checked | |
+| A Bluetooth headset bound to XLR 1: the headset profile switch and back | not yet checked | |
+| Stream Deck keys and the Omarchy bar naming the channel that carries the interface's microphone | not yet checked | |
+
 ## Every device gets
 
 - Capability-driven UI: controls, channels, and mixes the device does

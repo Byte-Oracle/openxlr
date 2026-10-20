@@ -607,10 +607,8 @@ public sealed class MixerService : IHostedService, IDisposable
             switch (cmd.Cmd)
             {
                 case "setInputBinding":
-                case "setPrimaryInput":
                 {
-                    // setPrimaryInput is the earlier form, with channel "xlr1".
-                    string strip = cmd.Cmd == "setPrimaryInput" ? "xlr1" : cmd.Channel!;
+                    string strip = cmd.Channel!;
                     // A supported unit's node is a source like any other, and
                     // the binding remembers the unit: its node is renamed when
                     // the unit is driven or its card profile switches, and the

@@ -178,10 +178,8 @@ XLR 1 and XLR 2 can each take one port of any external capture source:
 `{"cmd":"setInputBinding","channel":"xlr2","source":null}` returns the strip
 to the interface. The reply follows the saved change. Read each channel's
 `binding`, `bindingConnected`, `bindingWarning` and `unitInput` from
-`/api/v1/mixer` or `/api/v1/state`. `setPrimaryInput` with the same fields
-and no `channel` is the earlier form for XLR 1, and `mixer.primaryInput` and
-`mixer.primaryInputConnected` still report XLR 1. A binding never stops
-the daemon driving the interface. A source of another supported Elgato
+`/api/v1/mixer` or `/api/v1/state`. A binding never stops the daemon
+driving the interface. A source of another supported Elgato
 interface is accepted; enable that unit with `setWaveInterfaceEnabled` to
 have the strip's `unitInput` name it. See [input bindings](api.md#input-bindings)
 for the interface, missing-source and profile behaviour. While no interface

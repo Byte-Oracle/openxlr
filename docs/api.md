@@ -123,10 +123,6 @@ is the unit's instance id, see [additional interface state](#additional-interfac
 and `waveInterfaces`. The
 mixer state carries `mixes`, `channels`, `monitorOutput` (the first selected
 output), `monitorOutputs`, `monitorFeeds`, `outputVolume`,
-`primaryInput` (XLR 1's source binding as `source` and `channel`, the
-zero-based port, or absent while XLR 1 takes the interface; the same as
-XLR 1's `binding`, kept for the clients that read it),
-`primaryInputConnected` (XLR 1's feed exists, as its `bindingConnected`),
 `softLowCutApplicable` and `softClipGuardApplicable` (true when XLR 1's
 signal has no hardware low cut or ClipGuard in front of it: XLR 1 is bound
 to a source, or the driven unit lacks the control, so `lowCutHz` and
@@ -231,7 +227,6 @@ that final acknowledgement (or an `error` without a request id):
 | `assignStream` | `streamId`, `channel` | route one live stream by its PipeWire id; also remembered for the app; `ignore` works here too |
 | `forgetApp` | `identity` | drop an app and its remembered channel |
 | `setInputBinding` | `channel`, `source?`, `captureMonoChannel?` | bind a hardware strip to one port of a PipeWire capture source by exact node name. `channel` is `xlr1` or `xlr2`; Aux In stays on the interface. With `source` null or absent the strip returns to the interface's capture pair and takes no port. With a source, `capturePair` must be 0 and `captureMonoChannel` is the zero-based port, 0 to 63, default 0. OpenXLR nodes, monitor taps, control characters and names over 256 characters are refused. A node of an attached supported interface (a `devices` entry with `drivenUnit`) is accepted, and the binding records that unit, see [a strip on another interface](#a-strip-on-another-interface). The source may be offline. Saved before the acknowledgement, rolled back on a failed save. The strip's monitor sends start muted after a change; no other strip changes. Channel ids, software processing and inserts stay as they are. See [input bindings](#input-bindings) |
-| `setPrimaryInput` | `source?`, `captureMonoChannel?` | the earlier form of `setInputBinding` with `channel: "xlr1"`, kept for the clients that still send it |
 | `setEnforcedDefaults` | `sink`, `source` | system defaults to hold; `sink: "@monitor"` follows the first selected monitor output |
 | `setActiveDevice` | `device` | switch to another attached interface: one unit by its instance id from `detected`, or the first unit of a model by `vvvv:pppp` |
 | `setWaveInterfaceEnabled` | `device`, `value` | drive an attached unit, by its instance id from `waveInterfaces`, as an additional interface (`true`) or stop driving it (`false`); at most four. Refused for a unit that is not attached, and for a Wave XLR Pro whose capture node name another attached unit shares. Enabling creates no mixer channel; disabling an attached unit deletes the capture channels whose source is one of its own nodes, as `deleteChannel` does, found by its `captureHint` and, when not empty, its `captureModelHint`; nothing is deleted while `captureHint` is a model name another attached unit shares. See [additional interface state](#additional-interface-state) |

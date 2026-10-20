@@ -2564,8 +2564,6 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             Dictionary<string, UnitInputStatus> unitInputs = UnitInputsLocked();
             return WithAppearanceLocked(new MixerState
             {
-                PrimaryInputConnected = _stripSources.ContainsKey("xlr1") && _inputFeeds.ContainsKey("xlr1"),
-                PrimaryInput = PrimaryInputLocked(),
                 SoftLowCutApplicable = SoftLowCutApplicableLocked,
                 SoftClipGuardApplicable = SoftClipGuardApplicableLocked,
                 ExclusiveGroups = ExclusiveGroupsModel.Copy(_config.ExclusiveGroups),

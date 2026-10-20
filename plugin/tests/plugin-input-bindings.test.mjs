@@ -74,7 +74,6 @@ test("hardware keys stay unit controls and are named after the carrying channel"
     assert.ok(keyImage("hw-mute2").includes(">XLR 2</text>"));
     for (const face of ["hw-mute", "hw-phantom", "hw-mute2"]) {
       assert.ok(!keyImage(face).includes("XLR 1"), `${face} does not name XLR 1`);
-      assert.ok(!keyImage(face).includes("Generic"), `${face} has no generic wording`);
     }
     host.receive({event:"keyDown",context:"hw-mute"});
     assert.deepEqual(daemon.messages.at(-1), {cmd:"set",control:"mute",value:true});

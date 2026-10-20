@@ -7,18 +7,18 @@ namespace OpenXLR.Tests;
 public sealed partial class MonitorVolumeIntegrationTests
 {
     [MonitorPipeWireFact]
-    public void IncompleteCaptureLinksStayDisconnectedAndRetryBothSides() => CheckIncompleteCaptureLinks(primary: false);
+    public void IncompleteCaptureLinksStayDisconnectedAndRetryBothSides() => CheckIncompleteCaptureLinks(strip: false);
 
     [MonitorPipeWireFact]
-    public void IncompletePrimaryMicrophoneLinksStayDisconnectedAndRetryBothSides() => CheckIncompleteCaptureLinks(primary: true);
+    public void IncompleteStripBindingLinksStayDisconnectedAndRetryBothSides() => CheckIncompleteCaptureLinks(strip: true);
 
-    private static void CheckIncompleteCaptureLinks(bool primary)
+    private static void CheckIncompleteCaptureLinks(bool strip)
     {
         var pw = new PipeWireAdapter();
         using var registry = pw.WatchGraph();
         using var mixer = new Mixer(pw);
-        string channel = primary ? "xlr1" : "partial";
-        mixer.Build(new MixerConfig { Channels = primary
+        string channel = strip ? "xlr1" : "partial";
+        mixer.Build(new MixerConfig { Channels = strip
             ? [new("system", "System"), new("xlr1", "Microphone") { InputPair = 0 }] : [new("system", "System")],
             Mixes = [new("monitor", "Monitor", MixKind.Monitor)] });
         pw.CreateNullSink("test_capture_partial", "Partial test input");
@@ -46,7 +46,7 @@ public sealed partial class MonitorVolumeIntegrationTests
             try
             {
                 Environment.SetEnvironmentVariable("PATH", directory + Path.PathSeparator + path);
-                if (primary) mixer.SetInputBinding("xlr1", new("test_source_partial"));
+                if (strip) mixer.SetInputBinding("xlr1", new("test_source_partial"));
                 else mixer.CreateCaptureChannel("Partial", "test_source_partial", 0, _ => null);
             }
             finally { Environment.SetEnvironmentVariable("PATH", path); }
@@ -61,7 +61,7 @@ public sealed partial class MonitorVolumeIntegrationTests
         }
         finally { Directory.Delete(directory, true); }
 
-        bool Connected() => primary ? mixer.Snapshot().PrimaryInputConnected
+        bool Connected() => strip ? mixer.Snapshot().Channels.Single(c => c.Id == "xlr1").BindingConnected
             : mixer.Snapshot().Channels.Single(c => c.Id == "partial").CaptureConnected;
 
         int Links()
