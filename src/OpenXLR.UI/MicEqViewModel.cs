@@ -38,6 +38,10 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
     private bool? _awaitingEnabled;
     private long _awaitingEnabledSince;
     private string? _backend, _error;
+    // The unit the channel carries, while its model has a hardware EQ.
+    private bool _hasDevice, _deviceReady;
+    private string? _deviceName, _deviceFirmware, _deviceReason, _deviceNote, _minimumFirmware;
+    private string _processing = "device";
     private string _channelName;
     private EqBandViewModel? _selected;
 
@@ -140,8 +144,51 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
     /// <summary>An edit made at <paramref name="since"/> still waits for its echo: a different report is older than it.</summary>
     internal bool Waiting(long since) => _time.GetElapsedTime(since) < EchoWait;
 
-    /// <summary>Which backend runs the EQ: <c>software</c>, later <c>device</c>, null while nothing runs it.</summary>
+    /// <summary>Which backend runs the EQ: <c>device</c> on the unit's own DSP, <c>software</c>, null while nothing runs it.</summary>
     public string? Backend => _backend;
+
+    /// <summary>The unit's own DSP runs the EQ, on or off.</summary>
+    public bool OnDevice => _backend == "device";
+
+    /// <summary>The unit that runs it, or the one the channel carries; null when the daemon names none.</summary>
+    public string? DeviceName => _deviceName;
+
+    /// <summary>The channel's choice of where its EQ runs: <c>device</c> or <c>software</c>.</summary>
+    public string Processing => _processing;
+
+    /// <summary>The badge's tooltip: which unit runs the EQ.</summary>
+    public string DeviceBadgeTip => _deviceName is { } name ? Localizer.Format("EqHardwareBadgeTip", name) : Localizer.Text("EqHardwareBadgeTipUnnamed");
+
+    /// <summary>
+    /// Why a unit that the channel carries does not run the EQ, while its
+    /// model can: older firmware, a version or block it cannot read, a write
+    /// it did not keep, or the user's choice. Null while the unit runs it or
+    /// the channel carries no such unit.
+    /// </summary>
+    public string? DeviceNote
+    {
+        get
+        {
+            if (!_hasDevice || OnDevice) return null;
+            string name = _deviceName ?? Localizer.Text("EqTheInterface");
+            if (_deviceReady) return _processing == "software" ? Localizer.Format("EqDeviceBySoftware", name) : null;
+            return _deviceReason switch
+            {
+                "firmwareOld" => Localizer.Format("EqDeviceFirmwareOld", name, _deviceFirmware ?? "?", _minimumFirmware ?? "1.0.15"),
+                "firmwareUnknown" => Localizer.Format("EqDeviceFirmwareUnknown", name, _minimumFirmware ?? "1.0.15"),
+                "unsupportedBlock" => Localizer.Format("EqDeviceUnsupported", name),
+                "failed" => Localizer.Format("EqDeviceFailed", name),
+                _ => _deviceNote,
+            };
+        }
+    }
+
+    public bool HasDeviceNote => DeviceNote is not null;
+
+    /// <summary>The EQ button's tooltip, which says where the EQ runs.</summary>
+    public string ButtonTip => OnDevice
+        ? Localizer.Format("EqButtonTipDevice", _deviceName ?? Localizer.Text("EqTheInterface"))
+        : HasDeviceNote ? Localizer.Text("EqButtonTip") + " " + DeviceNote : Localizer.Text("EqButtonTip");
 
     /// <summary>False when the EQ cannot run, and <see cref="Error"/> says why.</summary>
     public bool Available => _available;
@@ -168,7 +215,7 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
         : _backend switch
         {
             "software" => Localizer.Text("EqStatusSoftware"),
-            "device" => Localizer.Text("EqStatusDevice"),
+            "device" => _deviceName is { } name ? Localizer.Format("EqStatusDeviceNamed", name) : Localizer.Text("EqStatusDevice"),
             _ => Localizer.Text("EqStatusStarting"),
         };
 
@@ -184,6 +231,13 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
         Raise(nameof(Backend));
         Raise(nameof(Available));
         Raise(nameof(Error));
+        Raise(nameof(OnDevice));
+        Raise(nameof(DeviceName));
+        Raise(nameof(Processing));
+        Raise(nameof(DeviceBadgeTip));
+        Raise(nameof(DeviceNote));
+        Raise(nameof(HasDeviceNote));
+        Raise(nameof(ButtonTip));
         Changed?.Invoke();
     }
 
@@ -211,6 +265,16 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
         _backend = eq["backend"]?.GetValue<string>();
         _available = eq["available"]?.GetValue<bool>() ?? true;
         _error = eq["error"]?.GetValue<string>();
+        // An older daemon sends neither: no unit, the EQ where it always ran.
+        _processing = eq["processing"]?.GetValue<string>() ?? "device";
+        JsonNode? device = eq["device"];
+        _hasDevice = device is not null;
+        _deviceReady = device?["ready"]?.GetValue<bool>() ?? false;
+        _deviceName = device?["name"]?.GetValue<string>();
+        _deviceFirmware = device?["firmware"]?.GetValue<string>();
+        _deviceReason = device?["reason"]?.GetValue<string>();
+        _deviceNote = device?["note"]?.GetValue<string>();
+        _minimumFirmware = device?["minimumFirmware"]?.GetValue<string>();
         _reportedEnabled = enabled;
         if (_awaitingEnabled is bool expected && expected != enabled && Waiting(_awaitingEnabledSince))
         {

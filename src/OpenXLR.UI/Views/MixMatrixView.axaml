@@ -234,7 +234,7 @@
                           Classes.fxOn="{Binding Channel.Eq.IsLit, FallbackValue=False}" Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}"
                           Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                           MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowsEq}" Click="OnEq"
-                          AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
+                          AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{Binding Channel.Eq.ButtonTip, FallbackValue=''}"/>
                   <Button Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
                           Classes.fxOn="{Binding Main.Inserts.IsProcessing}" Classes.fxOff="{Binding Main.Inserts.IsOff}"
                           Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
@@ -357,7 +357,7 @@
                           Classes.fxOn="{Binding Channel.Eq.IsLit, FallbackValue=False}" Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}"
                           Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                           MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowsEq}" Click="OnEq"
-                          AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
+                          AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{Binding Channel.Eq.ButtonTip, FallbackValue=''}"/>
                   <Button Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
                           Classes.fxOn="{Binding Main.Inserts2.IsProcessing}" Classes.fxOff="{Binding Main.Inserts2.IsOff}"
                           Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"

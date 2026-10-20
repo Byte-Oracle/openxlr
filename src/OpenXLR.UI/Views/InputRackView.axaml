@@ -147,7 +147,7 @@
                             Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}"
                             Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                             IsVisible="{Binding Channel.HasEq}" Click="OnEq"
-                            AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
+                            AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{Binding Channel.Eq.ButtonTip, FallbackValue=''}"/>
                     <Button Content="{Binding Main.Inserts.ButtonText}" Classes="fx" Classes.fxOn="{Binding Main.Inserts.IsProcessing}" Classes.fxOff="{Binding Main.Inserts.IsOff}"
                             Padding="12,3" FontSize="12"
                             MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
@@ -244,7 +244,7 @@
                             Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}"
                             Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                             IsVisible="{Binding Channel.HasEq}" Click="OnEq"
-                            AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{loc:Text Key=EqButtonTip}"/>
+                            AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{Binding Channel.Eq.ButtonTip, FallbackValue=''}"/>
                     <Button Content="{Binding Main.Inserts2.ButtonText}" Classes="fx" Classes.fxOn="{Binding Main.Inserts2.IsProcessing}" Classes.fxOff="{Binding Main.Inserts2.IsOff}"
                             Padding="12,3" FontSize="12"
                             MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
