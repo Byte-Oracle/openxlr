@@ -561,9 +561,10 @@ The setup has four parts:
   30 ms and 0.2 s.
 
 Ducking is off until you switch it on. In the window, open **Ducking**
-from either of two places: the bottom row of the **Mixer layout** window,
-beside **Exclusive groups**, or **Options**, card AUDIO, under the software
-mixer switch. Both open the same window, on any device:
+from the SUBMIXER header beside **Edit layout**, from the bottom row of the
+**Mixer layout** window beside **Exclusive groups**, or from **Options**,
+card AUDIO, under the software mixer switch. All three open the same
+window, on any device:
 
 1. Tick **Lower other audio while the key microphone is loud**.
 2. Pick the **Key microphone**. It leaves the channel list, since the key

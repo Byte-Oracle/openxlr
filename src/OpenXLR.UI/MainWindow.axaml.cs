@@ -271,6 +271,9 @@ public partial class MainWindow : Window
     private void OnEditLayout(object? sender, RoutedEventArgs e)
         => new MixerSetupWindow { DataContext = _vm }.ShowDialog(this);
 
+    private void OnDucking(object? sender, RoutedEventArgs e)
+        => DuckingWindow.Open(this, _vm.Ducking);
+
     private void OnAbout(object? sender, RoutedEventArgs e)
         => new AboutWindow().ShowDialog(this);
 
