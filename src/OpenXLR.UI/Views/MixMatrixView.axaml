@@ -57,7 +57,7 @@
   </UserControl.Styles>
 
   <UserControl.Resources>
-    <!-- The target over an XLR row's name and binding line. It draws no face, so
+    <!-- The target over an input row's name and binding line. It draws no face, so
          the row's own lettering shows through it whatever button appearance the
          skin chose, and outlines itself under the pointer and with focus. -->
     <ControlTheme x:Key="MatrixBindingTarget" TargetType="Button">
@@ -448,17 +448,18 @@
                              IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
                   <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
                              TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
-                  <!-- a capture input's source under its name, as an XLR row draws its binding: lit
-                       while linked. It changes nothing, so it is no target; its tooltip says why the
-                       input is silent. A skin whose order leaves the part out gets the connection line. -->
+                  <!-- a capture input's source under its name, opening its binding dialog.
+                       A skin whose order leaves the part out gets the connection line. -->
                   <Grid Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="4"
-                        Name="MatrixCaptureBinding" IsVisible="{Binding ShowsBinding}"
-                        AutomationProperties.Name="{Binding Channel.CaptureChipName}" ToolTip.Tip="{Binding Channel.BindingTip}">
+                        Name="MatrixCaptureBinding" IsVisible="{Binding ShowsBinding}" IsHitTestVisible="False">
                     <skin:StatusLed IsOn="{Binding Channel.CaptureConnected}" VerticalAlignment="Center"
                                     AutomationProperties.AccessibilityView="Raw"/>
                     <TextBlock Grid.Column="1" Text="{Binding Channel.BindingLabel}" Classes="hint" FontSize="11"
                                TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                   </Grid>
+                  <Button Grid.Column="1" Grid.ColumnSpan="2" Grid.RowSpan="2" Name="MatrixBinding" Theme="{StaticResource MatrixBindingTarget}"
+                          IsVisible="{Binding ShowsBinding}" Click="OnBinding"
+                          AutomationProperties.Name="{Binding Channel.BindingChipName}" ToolTip.Tip="{Binding Channel.BindingTip}"/>
                   <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Channel.CaptureLabel}" Classes="hint" FontSize="11"
                              TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Channel.CaptureLabel}"
                              IsVisible="{Binding ShowsCaptureLabel}"/>

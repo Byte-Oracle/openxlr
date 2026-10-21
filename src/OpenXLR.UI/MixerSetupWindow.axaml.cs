@@ -55,7 +55,13 @@ public partial class MixerSetupWindow : Window
         var name = new TextBox { Name = "CaptureName", MaxLength = 60, PlaceholderText = Localizer.Text("ChannelNamePlaceholder") };
         var source = new ComboBox { Name = "CaptureSource", PlaceholderText = Localizer.Text("CaptureSourcePlaceholder"), ItemsSource = vm.Inputs.Where(d => !d.IsOwn).ToArray(),
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
-        var pair = new ComboBox { Name = "CapturePair", ItemsSource = Enumerable.Range(1, 32).Select(n => Localizer.Format("CapturePairNumber", n)).ToArray(), SelectedIndex = 0 };
+        ComboBox port = InputBindingDialog.PortPicker("CapturePort");
+        AutomationProperties.SetName(port, Localizer.Text("InputBindingPort"));
+        source.SelectionChanged += (_, _) =>
+        {
+            AudioDeviceItem? device = source.SelectedItem as AudioDeviceItem;
+            InputBindingDialog.FillCapturePorts(port, device, mono: device?.Channels == 1 ? 0 : null);
+        };
         var add = new Button { Name = "CreateCapture", Content = Localizer.Text("AddInput"), IsDefault = true };
         var cancel = new Button { Content = Localizer.Text("Cancel"), IsCancel = true };
         var dialog = new Window
@@ -65,7 +71,7 @@ public partial class MixerSetupWindow : Window
             Content = new ScrollViewer { Content = new StackPanel
             {
                 Margin = new Avalonia.Thickness(18), Spacing = 12,
-                Children = { name, source, pair,
+                Children = { name, source, port,
                     new TextBlock { Text = Localizer.Text("AddCaptureInputHint"), TextWrapping = TextWrapping.Wrap, Classes = { "hint" } },
                     new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8, Children = { cancel, add } } },
             } },
@@ -73,14 +79,14 @@ public partial class MixerSetupWindow : Window
         bool accepted = false;
         add.Click += (_, _) =>
         {
-            if (string.IsNullOrWhiteSpace(name.Text) || source.SelectedItem is not AudioDeviceItem || pair.SelectedIndex < 0) return;
+            if (string.IsNullOrWhiteSpace(name.Text) || source.SelectedItem is not AudioDeviceItem || port.SelectedItem is not InputBindingDialog.PortChoice) return;
             accepted = true;
             dialog.Close();
         };
         cancel.Click += (_, _) => dialog.Close();
         await dialog.ShowDialog(this);
-        if (accepted && source.SelectedItem is AudioDeviceItem selected)
-            await Run(vm.CreateCaptureChannel(name.Text!.Trim(), selected.Name, pair.SelectedIndex));
+        if (accepted && source.SelectedItem is AudioDeviceItem selected && port.SelectedItem is InputBindingDialog.PortChoice chosen)
+            await Run(vm.CreateCaptureChannel(name.Text!.Trim(), selected.Name, chosen.Pair, chosen.MonoChannel));
     }
 
     private async void OnAddMix(object? sender, RoutedEventArgs e)

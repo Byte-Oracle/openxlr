@@ -402,6 +402,14 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands
         return EditLayoutAsync(payload);
     }
 
+    public Task<string?> SetCaptureSourceAsync(string channel, string source, int pair, int? monoChannel)
+    {
+        var payload = new Dictionary<string, object> { ["cmd"] = "setCaptureSource", ["channel"] = channel,
+            ["source"] = source, ["capturePair"] = pair };
+        if (monoChannel is int mono) payload["captureMonoChannel"] = mono;
+        return EditLayoutAsync(payload);
+    }
+
     public Task<string?> CreateCaptureChannelAsync(string name, string source, int pair, int? monoChannel = null)
     {
         var payload = new Dictionary<string, object> { ["cmd"] = "createCaptureChannel", ["name"] = name, ["source"] = source, ["capturePair"] = pair };

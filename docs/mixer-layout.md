@@ -302,9 +302,12 @@ stereo pair from 0 to 31 and defaults to 0. Mono sources feed both sides.
 Optional `captureMonoChannel`, 0 to 63 and only with pair 0, takes that one
 port of a multichannel source and feeds it to both sides; the third port is
 the Wave XLR Pro's second microphone. A missing pair or port stays silent.
-The source must be present when creating the channel. OpenXLR's own
-devices and sink monitor sources are not capture inputs, to avoid direct
-feedback: a name starting with `OpenXLR` or ending in `.monitor` is refused.
+The source must be present in the daemon's `devices` list when creating the
+channel. After creating a source externally, wait for the daemon to list it;
+separate PipeWire registry subscriptions can observe its arrival at different
+times. OpenXLR's own devices and sink monitor sources are not capture inputs,
+to avoid direct feedback: a name starting with `OpenXLR` or ending in
+`.monitor` is refused.
 
 Capture channels share the editable-channel limit of 32. They start muted in
 all mixes. Their hidden combine sink supports the existing sends, faders,
@@ -329,8 +332,32 @@ or `captureUnit` without a source is dropped.
 Invalid capture bindings are discarded, not converted into application channels.
 The binding belongs to the layout, not a profile. Rename, reorder and delete
 use the existing channel commands. Renaming leaves the capture graph running.
-To use a different source or pair, create a new capture channel and remove the
-old one.
+
+`setCaptureSource {channel, source, capturePair?, captureMonoChannel?}` changes
+that channel's source or ports in place. It accepts only a capture input id,
+with the same source and port limits as creation, and may name an offline
+source. An omitted pair is 0; an omitted mono port selects a stereo pair.
+The channel keeps its id, name, send levels, channel volume, insert chain,
+exclusive group and appearance. All its monitor-kind sends are muted; other
+send mutes stay as they were. Sound Check on this channel ends with a reason.
+A change between mono and stereo is refused while the chain holds any insert,
+even a bypassed or unavailable one. Remove those inserts first. An empty
+pair-0 chain on a one-channel source follows the existing mono migration.
+Changing ports on the same source also rewires and mutes the monitor sends.
+Submitting an unchanged binding only saves it, as does one whose only change
+is a newly learned unit; neither mutes anything.
+
+The command writes the existing `captureSource`, `capturePair`,
+`captureMonoChannel` and `captureUnit` fields, without adding layout or state
+fields. A selected source belonging to an attached supported unit records
+that unit. A different source clears the previous unit when no new unit is
+known; first sight can learn it later. Selecting the same saved source while
+its unit is absent keeps the remembered unit. The state reports the result in
+`binding`, `microphone`, `chainWidth` and the existing connection fields.
+The binding and monitor mutes are saved before the graph changes. A failed
+save restores both and leaves any Sound Check take running. Rebinding rebuilds
+only this input's route and keeps the combine and its sends; a running plugin
+editor may close when its chain restarts. Profiles never restore this wiring.
 
 Disconnected sources retain their exact binding and faders. They reconnect
 when that node and pair return. With `captureUnit`, a missing exact name

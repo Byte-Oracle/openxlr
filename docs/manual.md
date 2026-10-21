@@ -2883,15 +2883,28 @@ by hand if you want a clean slate.
 
 Open **Edit layout**, then **Add capture input**. Enter a channel name,
 choose an available microphone, capture card or another Wave interface, and
-select its stereo pair. Pair 1 works for ordinary mono and stereo sources.
+select one mono port or a stereo pair. The picker names ports when PipeWire
+reports their positions, such as FL and FR. A mono source starts on port 1;
+one port gives the input a mono chain and Sound Check. A stereo pair gives it
+a stereo chain.
 The new channel starts muted in every mix. Open only the sends you need.
 
 Capture channels can be renamed, reordered and deleted like application
 channels. Their layout row shows the connection state and pair; hover over
 it to see the exact source name. An offline input stays silent and reconnects
-with its saved faders when the same source returns. A different source or
-pair needs a new capture channel. Profile recall changes its sends and any
+with its saved faders when the same source returns. Profile recall changes its sends and any
 insert chain it names, while its source binding stays with the layout. Application routing never targets capture inputs.
+
+Click the source chip in classic INPUTS or the input rack, or the source line
+under its name in the matrix, to change its source or ports. The dialog keeps
+the channel's name, sends, volume, inserts and group. After a change its
+monitor sends start muted and Sound Check ends. Unmute the monitor sends you
+want to hear. To switch between mono and stereo, remove the chain's inserts
+first, including bypassed inserts. A failed save leaves the old binding,
+mutes and Sound Check take in place. Rebinding can close a plugin editor as
+the input's chain restarts. An offline source stays selected and silent until
+it returns. Capture source editing is available in the window and API; the
+terminal mixer and Stream Deck do not offer this picker.
 
 A capture channel on the primary interface's own source, at the first port
 or pair for its first microphone or the third port or second pair for its
@@ -2931,9 +2944,9 @@ confirmation offers deletion only.
 Capture channels host LV2, CLAP and VST3 inserts in the window and through
 the [HTTP API](http-api.md). In the classic window, INPUTS shows one block
 per capture input after Aux In, in layout order. Each block has its name, a
-read-only source chip with a connection light and any warning, its volume,
-and an **Inserts** button with the chain below it. The chip does not change
-the source. An input rack shows the source in its `binding` part and the
+source chip with a connection light and any warning, its volume,
+and an **Inserts** button with the chain below it. The chip opens the source
+dialog. An input rack shows the source in its `binding` part and the
 chain in `effects`. Broadcast and Wave put the source under the channel's
 name and the chain behind the row head's **FX** button. A skin can leave
 these parts out. The Flow window lists the plugins inside the capture

@@ -109,7 +109,11 @@ public sealed partial class MonitorVolumeIntegrationTests
                 WaitForRecovery(() => interfaces.Snapshot().Count == 2 && mixer.Built);
                 string id = wave3.Info.InstanceId;
                 ChannelStatus Channel(string key) => mixer.Snapshot()!.Channels.Single(c => c.Id == key);
-                async Task Ok(string command) => Assert.True((await hub.ExecuteForApiAsync(command)).Ok, command);
+                async Task Ok(string command)
+                {
+                    ApiCommandResult result = await hub.ExecuteForApiAsync(command);
+                    Assert.True(result.Ok, command + "\n" + System.Text.Json.JsonSerializer.Serialize(result.Messages));
+                }
                 void SweepUntil(Func<bool> condition) => CaptureChainFixture.Wait(() => { mixer.SweepOnce(); return condition(); });
                 void FedFrom(string key, string source, bool chained)
                 {
@@ -141,6 +145,22 @@ public sealed partial class MonitorVolumeIntegrationTests
                     new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)));
                 FedFrom("legacy", original, true);
                 int? combine = pw.FindNodeId("OpenXLR_ch_legacy");
+                // Rebinding through the command clears the old owner, then
+                // learns the selected supported unit just as creation does.
+                uint plain = pw.CreateVirtualMic("capture_rebind_plain", "capture_unit_signal.monitor", "Plain microphone");
+                WaitForRecovery(() => mixer.Devices()!.Any(d => d.Name == "capture_rebind_plain" && d.Kind == AudioNodeKind.Source && !d.IsOwn));
+                await Ok("""{"cmd":"setCaptureSource","channel":"legacy","source":"capture_rebind_plain","captureMonoChannel":0}""");
+                FedFrom("legacy", "capture_rebind_plain", true);
+                Assert.Null(Channel("legacy").Binding.Unit);
+                Assert.Null(Channel("legacy").UnitInput);
+                Assert.Null(MixerSettings.Load()!.UserChannels!.Single(c => c.Id == "legacy").CaptureUnit);
+                await Ok($$"""{"cmd":"setCaptureSource","channel":"legacy","source":"{{original}}","captureMonoChannel":0}""");
+                FedFrom("legacy", original, true);
+                Assert.Equal(id, Channel("legacy").Binding.Unit);
+                Assert.Equal(id, MixerSettings.Load()!.UserChannels!.Single(c => c.Id == "legacy").CaptureUnit);
+                Assert.Equal(insert.Plugin, Assert.Single(mixer.Snapshot()!.Inserts["legacy"]).Insert.Plugin);
+                Assert.Equal(combine, pw.FindNodeId("OpenXLR_ch_legacy"));
+                pw.UnloadModule(plain);
                 pw.UnloadModule(node);
                 SweepUntil(() => !Channel("legacy").BindingConnected && CaptureChainFixture.Nodes(pw, "legacy").Length == 0);
                 node = pw.CreateVirtualMic(renamed, "capture_unit_signal.monitor", "Wave:3 stereo");
@@ -197,7 +217,9 @@ public sealed partial class MonitorVolumeIntegrationTests
                 // Clearing the primary's additional preference never deletes its inputs.
                 const string primarySource = "alsa_input.usb-Elgato_Systems_Elgato_Wave_XLR_unitP-00.analog-stereo";
                 pw.CreateVirtualMic(primarySource, "capture_unit_signal.monitor", "Primary microphone");
-                WaitForRecovery(() => pw.ListDevices().Any(d => d.Name == primarySource));
+                // Creation checks the daemon's registry, which can lag behind
+                // this test adapter's independent subscription.
+                WaitForRecovery(() => mixer.Devices()!.Any(d => d.Name == primarySource && d.Kind == AudioNodeKind.Source && !d.IsOwn));
                 await Ok($$"""{"cmd":"createCaptureChannel","name":"Primary mic","source":"{{primarySource}}","captureMonoChannel":0}""");
                 Assert.Equal(primary.Info.InstanceId, Channel("primary-mic").Binding.Unit);
                 await Ok($$"""{"cmd":"setWaveInterfaceEnabled","device":"{{primary.Info.InstanceId}}","value":false}""");

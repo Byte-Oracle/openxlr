@@ -890,6 +890,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     public bool HasMix(string id) { lock (_gate) return _config.Mixes.Any(m => m.Id == id); }
     public bool HasApplicationChannel(string id) { lock (_gate) return _config.Channels.Any(c => c.Id == id && c.IsApplication); }
     public bool HasEditableChannel(string id) { lock (_gate) return _config.Channels.Any(c => c.Id == id && c.InputPair is null); }
+    public bool HasCaptureChannel(string id) { lock (_gate) return _config.Channels.Any(c => c.Id == id && c.CaptureSource is not null); }
     public bool HasEditableMix(string id) { lock (_gate) return _config.Mixes.Any(m => m.Id == id && m.IsEditable); }
     public bool IsMonitorFeed(string feed) { lock (_gate) return NormalizeFeedLocked(feed) is not null; }
 

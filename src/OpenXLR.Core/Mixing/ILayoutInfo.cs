@@ -12,6 +12,8 @@ public interface ILayoutInfo
     bool HasApplicationChannel(string id) => HasChannel(id);
     /// <summary>An editable application or capture channel.</summary>
     bool HasEditableChannel(string id) => HasApplicationChannel(id);
+    /// <summary>An editable input fed by an external capture source.</summary>
+    bool HasCaptureChannel(string id) => false;
     /// <summary>A user mix (not the structural Monitor A/B or Aux mixes).</summary>
     bool HasEditableMix(string id) => HasMix(id);
     /// <summary>A valid feed for an output: any mix, or several distinct ones joined with '+' (see <see cref="MonitorFeed"/>).</summary>

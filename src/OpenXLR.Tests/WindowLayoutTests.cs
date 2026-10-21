@@ -52,6 +52,7 @@ public sealed class WindowLayoutTests
                 InputBindingWindowTests.Check();
                 InputBindingWindowTests.CheckDrivenUnit();
                 DuckingWindowTests.Check();
+                InputBindingWindowTests.CheckCaptureInputs();
                 CaptureInputWindowTests.ThreeCaptureInputsFitClassicWidths();
                 VolumeRangeWindowTests.Check();
                 LocalizationRenderingTests.Check();
@@ -334,9 +335,11 @@ public sealed class WindowLayoutTests
                 var sourcePicker = captureDialog.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "CaptureSource");
                 Assert.Single(sourcePicker.Items);
                 Assert.Equal("test_source", ((AudioDeviceItem)sourcePicker.Items[0]!).Name);
-                var pairPicker = captureDialog.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "CapturePair");
-                Assert.Equal(32, pairPicker.Items.Count);
-                Assert.Equal(0, pairPicker.SelectedIndex);
+                sourcePicker.SelectedIndex = 0;
+                var portPicker = captureDialog.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "CapturePort");
+                Assert.Equal(32, portPicker.Items.OfType<InputBindingDialog.PortChoice>().Count(p => p.Stereo));
+                Assert.Equal(64, portPicker.Items.OfType<InputBindingDialog.PortChoice>().Count(p => !p.Stereo));
+                Assert.Equal(0, portPicker.SelectedIndex);
                 var addCapture = captureDialog.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "CreateCapture");
                 addCapture.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
                 Assert.True(captureDialog.IsVisible); // incomplete input cannot submit
@@ -809,15 +812,78 @@ public sealed class WindowLayoutTests
             """));
     }
 
+    /// <summary>
+    /// Put the window at this size and lay it out. The size goes to the
+    /// native surface, and a mapped X11 window takes it only when the server
+    /// answers with its ConfigureNotify, so the loop runs until the server
+    /// has answered every request and the window asks for nothing more: a
+    /// window with a minimum, or sized to its content, asks the surface for
+    /// its own size next, and the loop takes that answer too. A fixed wait
+    /// was wrong both ways: a busy runner answers later than any fixed time,
+    /// and a window still at its old size answers the wrong questions, with
+    /// its controls stacked for a width it no longer has.
+    /// </summary>
     internal static void Layout(Window window, double width, double height)
     {
-        // Resize the native surface, then let its size notification run.
+        var asked = new Size(width, height);
+        IntPtr display = XServer.DisplayOf(window);
         window.PlatformImpl!.GetType().GetMethod("Resize", [typeof(Size), typeof(WindowResizeReason)])!
-            .Invoke(window.PlatformImpl, [new Size(width, height), WindowResizeReason.User]);
+            .Invoke(window.PlatformImpl, [asked, WindowResizeReason.User]);
         using var stop = new CancellationTokenSource();
-        DispatcherTimer.RunOnce(stop.Cancel, TimeSpan.FromMilliseconds(100));
-        Dispatcher.UIThread.MainLoop(stop.Token);
+        bool waiting = true, settled = false;
+        // A round trip brings every answer the server owes into the client's
+        // queue, which the loop reads after each batch of jobs; so a job that
+        // finds the queue full looks again after it, and a job that finds it
+        // empty after a layout, where a window that wants another size asks
+        // for it, knows the size is final.
+        void Settle() => Dispatcher.UIThread.Post(() =>
+        {
+            if (!waiting) return;
+            if (XServer.HasAnswers(display)) { Settle(); return; }
+            window.UpdateLayout();
+            if (XServer.HasAnswers(display)) { Settle(); return; }
+            settled = true;
+            stop.Cancel();
+        }, DispatcherPriority.Background);
+        Settle();
+        try
+        {
+            using var watchdog = DispatcherTimer.RunOnce(stop.Cancel, TimeSpan.FromSeconds(30));
+            Dispatcher.UIThread.MainLoop(stop.Token);
+        }
+        finally { waiting = false; }
+        Assert.True(settled, $"{window.GetType().Name} is {window.ClientSize} and wants {window.DesiredSize} after asking for {asked}.");
         window.UpdateLayout();
+    }
+
+    /// <summary>The X connection behind a window, and the round trip that settles it.</summary>
+    private static class XServer
+    {
+        [System.Runtime.InteropServices.DllImport("libX11.so.6")]
+        private static extern int XSync(IntPtr display, int discard);
+
+        [System.Runtime.InteropServices.DllImport("libX11.so.6")]
+        private static extern int XPending(IntPtr display);
+
+        /// <summary>The display the window's platform object talks to, or zero off X11.</summary>
+        internal static IntPtr DisplayOf(Window window)
+        {
+            object impl = window.PlatformImpl!;
+            object? info = impl.GetType().GetField("_x11", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(impl);
+            return info?.GetType().GetProperty("Display")?.GetValue(info) is IntPtr display ? display : IntPtr.Zero;
+        }
+
+        /// <summary>
+        /// True while the client holds events it has not read. The round trip
+        /// first makes the server answer every request sent so far, so a
+        /// ConfigureNotify still owed is in the queue when this returns.
+        /// </summary>
+        internal static bool HasAnswers(IntPtr display)
+        {
+            if (display == IntPtr.Zero) return false;
+            XSync(display, 0);
+            return XPending(display) != 0;
+        }
     }
 
     /// <summary>The shared monitor action remains visible and named under every skin and width.</summary>

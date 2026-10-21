@@ -402,6 +402,8 @@ public sealed partial class MainViewModel
     /// refusal.
     /// </summary>
     public Task<string?> SetInputBinding(string channel, string? source, int port) => _client.SetInputBindingAsync(channel, source, port);
+    public Task<string?> SetCaptureSource(string channel, string source, int pair, int? monoChannel)
+        => _client.SetCaptureSourceAsync(channel, source, pair, monoChannel);
 
     /// <summary>Drive an attached unit as an additional interface, or stop; resolves to null or the daemon's refusal.</summary>
     public Task<string?> SetWaveInterfaceEnabled(string unit, bool enabled) => _client.SetWaveInterfaceEnabledAsync(unit, enabled);

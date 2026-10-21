@@ -127,8 +127,8 @@ public sealed partial class SkinWindowTests
                     Layout(window, 1040, 1200);
                     Button xlr = window.GetVisualDescendants().OfType<BindingChip>().First(c => c.IsEffectivelyVisible).FindControl<Button>("Chip")!;
                     Button capture = window.GetVisualDescendants().OfType<CaptureSourceChip>().First(c => c.IsEffectivelyVisible).FindControl<Button>("Chip")!;
-                    Assert.False(capture.Focusable);
-                    Assert.False(capture.IsHitTestVisible);
+                    Assert.True(capture.Focusable);
+                    Assert.True(capture.IsHitTestVisible);
                     Assert.Equal(xlr.Bounds.Height, capture.Bounds.Height);
                     Assert.Equal(xlr.Padding, capture.Padding);
                     Assert.Equal(xlr.CornerRadius, capture.CornerRadius);
@@ -146,7 +146,7 @@ public sealed partial class SkinWindowTests
             }
             static TextBlock ChipText(Button chip) => chip.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "ChipText");
             static bool HasBevel(Button chip) => chip.GetVisualDescendants().Any(c => c.Name == "Bevel");
-            // Older state on the same row models removes the effects, leaving the read-only binding.
+            // Older state on the same row models removes the effects, leaving the binding.
             var old = CaptureInputWindowTests.State();
             foreach (var channel in old["mixer"]!["channels"]!.AsArray()) channel!.AsObject().Remove("chainWidth");
             CaptureInputWindowTests.Apply(main, old);

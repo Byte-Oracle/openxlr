@@ -385,14 +385,22 @@ additional interface for that unit's mute.
 
 Additional microphones, headsets, capture cards and other attached Wave
 interfaces feed their own channels from their PipeWire sources. Pick the
-source and a stereo pair in the layout editor, or one port of it through the
-API and the additional interfaces window; the channel then has the
+source and a named mono port or stereo pair in the layout editor; the API
+and additional interfaces window can add inputs too. The channel has the
 same sends, mutes, meters and profile entries as any other. The binding
 names the source node, never a registry id, so it survives a replug. While
 the source or the pair is absent the channel stays silent and no other
 microphone takes its place; the sweep links it again when the ports
 return. A mono source is linked to both sides of the channel. See
 [Additional capture inputs](manual.md#capture-inputs).
+
+The source chip in classic INPUTS, the input rack and the matrix opens the
+binding dialog. Changing a capture input's source or ports keeps its id,
+sends, volume, insert chain and group, mutes its monitor sends and ends its
+Sound Check session. Switching between mono and stereo needs an empty chain.
+The API exposes the same edit as `setCaptureSource`. A different source
+replaces the remembered Elgato unit too, so the old unit cannot take over
+when the new source is missing.
 
 Capture inputs host insert chains, set in the window or through the API:
 a mono chain on an input that takes one port, a stereo chain on a pair. An

@@ -27,6 +27,85 @@ public sealed partial class Mixer
     private readonly Dictionary<string, PortLink> _captureFeeds = [];
 
     /// <summary>
+    /// Change a capture input's wiring without replacing its channel or
+    /// settings. Monitor sends start muted, as on a rebound hardware strip.
+    /// A missing source stays selected and silent until it returns.
+    /// </summary>
+    public void SetCaptureSource(string channel, string source, int pair, Func<MixerSettings, string?> save,
+        int? monoChannel = null, string? unit = null)
+    {
+        ArgumentNullException.ThrowIfNull(save);
+        if (!CaptureBinding.IsValid(source, pair, monoChannel) || !SourceBinding.IsUnitId(unit))
+            throw new ArgumentException("Select an external capture source, a pair from 0 to 31, and with pair 0 an optional mono port from 0 to 63.");
+        lock (_gate)
+        {
+            ChannelDefinition previous = _config.Channels.FirstOrDefault(c => c.Id == channel && c.CaptureSource is not null)
+                ?? throw new ArgumentException($"'{channel}' is not a capture input.");
+            ChannelDefinition next = previous with
+            {
+                CaptureSource = source, CapturePair = pair, CaptureMonoChannel = monoChannel,
+                CaptureUnit = unit ?? (source == previous.CaptureSource ? previous.CaptureUnit : null),
+            };
+            if (next.ChainWidth != previous.ChainWidth && InsertsFor(channel).Count > 0)
+                throw new InvalidOperationException("Remove the capture input's inserts before changing between a mono port and a stereo pair.");
+            if (_built) next = CaptureBinding.MigrateMono(next, _pw.ListDevices(), InsertsFor(channel));
+            if (next == previous) { PersistLocked(save); return; }
+            MixerConfig before = _config;
+            if (next with { CaptureUnit = previous.CaptureUnit } == previous)
+            {
+                // The same wiring with a newly learned unit: nothing is
+                // patched in, so the monitors keep their mutes.
+                _config = _config with { Channels = [.. _config.Channels.Select(c => c.Id == channel ? next : c)] };
+                try { PersistLocked(save); }
+                catch { _config = before; throw; }
+                if (_hardwareMicChannel is not null && _hardwareMicChannel != DirectPathChannelLocked())
+                    SetHardwareMicChannelLocked(null);
+                return;
+            }
+            var previousMutes = new HashSet<string>(_muted);
+            try
+            {
+                _config = _config with { Channels = [.. _config.Channels.Select(c => c.Id == channel ? next : c)] };
+                MuteInputMonitorsLocked(channel);
+                // Save before discarding the take or changing the graph, so a
+                // refused save leaves Sound Check and the old source intact.
+                PersistLocked(save);
+            }
+            catch
+            {
+                _config = before;
+                _muted.Clear();
+                _muted.UnionWith(previousMutes);
+                if (_built) ReapplyMixesLocked(_config.Mixes);
+                throw;
+            }
+            if (_soundCheckChannel == channel)
+                StopSoundCheckLocked(restore: false, error: "Sound Check stopped because the capture input's source changed.");
+            if (_hardwareMicChannel is not null && _hardwareMicChannel != DirectPathChannelLocked())
+                SetHardwareMicChannelLocked(null);
+            if (_built) RebindCaptureFeedLocked(next);
+        }
+    }
+
+    private void RebindCaptureFeedLocked(ChannelDefinition channel)
+    {
+        // The same node with a different port is different wiring too. Keep
+        // the old links until the replacement has been attempted, then drop
+        // them even if it failed: the previous microphone must not play on.
+        _captureFeeds.Remove(channel.Id, out PortLink? previous);
+        _inputFeeds.Remove(channel.Id, out PortLink? previousRoute);
+        _stripSources.Remove(channel.Id);
+        try { WireInputFeedsLocked([channel.Id]); }
+        finally
+        {
+            PortLink? retained = _captureFeeds.GetValueOrDefault(channel.Id) ?? _inputFeeds.GetValueOrDefault(channel.Id);
+            if (previous is not null)
+                UnlinkDiscardedInputFeed(previous, retained);
+            if (previousRoute is not null) UnlinkDiscardedInputFeed(previousRoute, retained);
+        }
+    }
+
+    /// <summary>
     /// Adopt a mono port only after saved chains have been restored, and
     /// remember an attached unit while the exact source is present. The
     /// caller saves the changed layout; existing links need no change.

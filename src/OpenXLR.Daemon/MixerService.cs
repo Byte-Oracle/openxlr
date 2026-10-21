@@ -665,6 +665,7 @@ public sealed class MixerService : IHostedService, IDisposable
                     Changed?.Invoke();
                     return null;
                 }
+                case "setCaptureSource":
                 case "createCaptureChannel":
                 case "createChannel":
                 case "renameChannel":
@@ -684,6 +685,7 @@ public sealed class MixerService : IHostedService, IDisposable
                         Func<MixerSettings, string?> save = settings => settings.Save();
                         switch (cmd.Cmd)
                         {
+                            case "setCaptureSource": _mixer.SetCaptureSource(cmd.Channel!, cmd.Source!, cmd.CapturePair, save, cmd.CaptureMonoChannel, _devices.SupportedUnitFor(cmd.Source!)?.Id); break;
                             case "createCaptureChannel": _mixer.CreateCaptureChannel(cmd.Name!, cmd.Source!, cmd.CapturePair, save, cmd.CaptureMonoChannel, _devices.SupportedUnitFor(cmd.Source!)?.Id); break;
                             case "createChannel": _mixer.CreateApplicationChannel(cmd.Name!, save, cmd.Icon); break;
                             case "renameChannel": _mixer.RenameApplicationChannel(cmd.Channel!, cmd.Name!, save); break;
@@ -703,7 +705,7 @@ public sealed class MixerService : IHostedService, IDisposable
                     // Grouping the channel that carries the Pro's input 1 takes
                     // it off the hardware mic path; a capture channel made,
                     // removed or moved can change which channel carries it.
-                    if (cmd.Cmd is "setExclusiveGroup" or "deleteExclusiveGroup" or "createCaptureChannel" or "deleteChannel" or "setLayoutOrder")
+                    if (cmd.Cmd is "setExclusiveGroup" or "deleteExclusiveGroup" or "createCaptureChannel" or "setCaptureSource" or "deleteChannel" or "setLayoutOrder")
                         SyncOutputSelectors();
                     Changed?.Invoke();
                     return null;

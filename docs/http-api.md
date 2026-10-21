@@ -216,6 +216,11 @@ The source must be present. Success is returned after the layout is saved.
 source for both sides.
 State channel entries expose `captureSource`, `capturePair`, `captureMonoChannel` and `captureConnected`;
 a disconnected source retains its binding and reconnects when it returns.
+`{"cmd":"setCaptureSource","channel":"headset-mic","source":"alsa_input.usb-replacement","captureMonoChannel":0}`
+rebinds that capture input without replacing its sends, volume, inserts or
+group. It mutes its monitor sends and ends Sound Check. A width change needs
+an empty chain. The reply follows the saved binding; unlike creation, the
+source may be offline. See [capture inputs](mixer-layout.md#capture-inputs).
 
 `{"cmd":"routeFocusedApp","channel":"music"}` uses the same focused-application
 routing as PC and OpenDeck keys. Enable **Desktop keys** in the running window.
