@@ -198,6 +198,56 @@ public sealed class DeviceEqWriterTests
         return 0;
     });
 
+    /// <summary>
+    /// The Wave XLR Pro: XLR 1's and XLR 2's posts both land in the one
+    /// settings block, each in its own struct, verified by the poll; phantom
+    /// power switched on XLR 2 holds both until it settles; the gain written
+    /// meanwhile stays; no commit goes with an EQ write; and the journal says
+    /// once per input that the EQ Wave Link left was replaced.
+    /// </summary>
+    [Fact]
+    public void TheProsTwoInputsAreWrittenInTheirOwnStructsAndHeldWhilePhantomSettles() => WithConfigDir(() =>
+    {
+        var time = new ManualTime();
+        var usb = new ProHardwareEqTests.Unit();
+        var log = new Lines();
+        var pro = new WaveXlrProDevice(usb);
+        using DeviceManager manager = Manager(pro, time, log);
+        Assert.Equal(2, manager.PublishedEqSupport!.Inputs);
+        Assert.Equal("1.0.14", manager.PublishedEqSupport.MinimumFirmware);
+        Assert.Equal("1.0.14", manager.PublishedEqSupport.Firmware);
+        using JsonDocument gain = JsonDocument.Parse("30"), on = JsonDocument.Parse("true");
+        manager.PostEq(1, Eq(true, 12), "XLR 1");
+        manager.PostEq(2, Eq(true, 48), "XLR 2");
+        manager.SweepOnce();
+        byte[] block = usb.Blocks[0x0004];
+        Assert.Equal(Eq(true, 12), WaveFxEq.Decode(block.AsSpan(0, 38)));
+        Assert.Equal(Eq(true, 48), WaveFxEq.Decode(block.AsSpan(38, 38)));
+        Assert.Equal(new DeviceEqStatus(DeviceEqPhase.Verified, Eq(true, 48)), manager.EqStatus(2));
+        Assert.Equal(DeviceEqPhase.Verified, manager.EqStatus(1).Phase);
+        Assert.Single(log.Written, l => l == "XLR 1's EQ was written to the Wave XLR Pro, replacing the one it held.");
+        Assert.Single(log.Written, l => l == "XLR 2's EQ was written to the Wave XLR Pro, replacing the one it held.");
+
+        Assert.Null(manager.Apply("phantom2", on.RootElement));
+        Assert.Null(manager.Apply("gain2", gain.RootElement));
+        manager.PostEq(2, DeviceEq.Off, "XLR 2");
+        manager.PostEq(1, Eq(false, 12), "XLR 1");
+        SweepFor(manager, time, 1000);
+        Assert.Equal(0x01, usb.Blocks[0x0004][40] & 0x01);
+        Assert.Equal(0x01, usb.Blocks[0x0004][2] & 0x01);
+        SweepFor(manager, time, 1500);
+        block = usb.Blocks[0x0004];
+        Assert.Equal(30, block[38]);
+        Assert.Equal(0x02, block[39] & 0x02);
+        Assert.Equal(0x04, block[40]);
+        Assert.Equal(0x00, block[2] & 0x01);
+        Assert.Equal(Eq(false, 48), WaveFxEq.Decode(block.AsSpan(38, 38)));
+        Assert.Equal(ProHardwareEqTests.IdleBlock[^8..], Convert.ToHexString(block[76..]).ToLowerInvariant());
+        Assert.Equal(new DeviceEqStatus(DeviceEqPhase.Verified, DeviceEq.Off), manager.EqStatus(2));
+        Assert.DoesNotContain(usb.Calls, c => c.Type == 0x41 && c.Block == 3);
+        return 0;
+    });
+
     [Fact]
     public void AUnitThatDropsAWriteGetsOneRewriteThenTheInputFails() => WithConfigDir(() =>
     {

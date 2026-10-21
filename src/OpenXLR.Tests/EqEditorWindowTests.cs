@@ -53,6 +53,8 @@ public sealed class EqEditorWindowTests
         public bool WithEq = true;
         /// <summary>XLR 1's unit: null for none, <c>unit</c> when its DSP can run the EQ, <c>old</c> when it cannot.</summary>
         public string? Device;
+        /// <summary>XLR 2's unit: null for none, <c>pro</c> for the Wave XLR Pro's second input on 1.0.14, <c>proOld</c> on 1.0.13.</summary>
+        public string? Device2;
         /// <summary>Why an <c>old</c> unit cannot run the EQ, as the daemon names it.</summary>
         public string Reason = "firmwareOld";
         /// <summary>Each microphone's choice of where its EQ runs.</summary>
@@ -86,7 +88,7 @@ public sealed class EqEditorWindowTests
                     channel!["volume"] = 0.8;
                     if (!WithEq) continue;
                     string id = channel["id"]!.GetValue<string>();
-                    channel["eq"] = Json(Eqs[id], id == "xlr1" ? Device : null, Processing[id], Reason);
+                    channel["eq"] = Json(Eqs[id], id == "xlr1" ? Device : Device2, Processing[id], Reason);
                     if (Legacy)
                     {
                         // It ran every EQ in software.
@@ -108,11 +110,17 @@ public sealed class EqEditorWindowTests
             {
                 ["enabled"] = b.Enabled, ["type"] = b.Type, ["frequency"] = b.Frequency, ["gain"] = b.Gain, ["q"] = b.Q,
             })]),
-            ["backend"] = device == "unit" && processing == "device" ? "device" : eq.Enabled ? "software" : null,
+            ["backend"] = device is "unit" or "pro" && processing == "device" ? "device" : eq.Enabled ? "software" : null,
             ["available"] = true,
             ["error"] = null,
             ["processing"] = processing,
-            ["device"] = device is null ? null : new JsonObject
+            ["device"] = device is null ? null : device.StartsWith("pro", StringComparison.Ordinal) ? new JsonObject
+            {
+                ["unit"] = "0fd9:00b4@00112233445566aa", ["input"] = 2, ["name"] = "Wave XLR Pro",
+                ["firmware"] = device == "pro" ? "1.0.14" : "1.0.13", ["ready"] = device == "pro",
+                ["reason"] = device == "pro" ? null : "firmwareOld", ["minimumFirmware"] = "1.0.14",
+                ["note"] = device == "pro" ? null : "This Wave XLR Pro has firmware 1.0.13. From 1.0.14 the unit runs the EQ itself; Elgato's updater is in Wave Link on Windows or macOS.",
+            } : new JsonObject
             {
                 ["unit"] = "0fd9:00c7@0123456789abcdef", ["input"] = 1, ["name"] = "Wave XLR Dock MK.2",
                 ["firmware"] = device == "unit" ? "1.0.15" : "1.0.0", ["ready"] = device == "unit",
@@ -319,6 +327,7 @@ public sealed class EqEditorWindowTests
             await Tooltips(editor);
             await Skins(window, editor, main);
             await Hardware(window, editor, daemon, eq1);
+            await ProHardware(window, second, daemon, eq2);
             await LongSource(window, daemon, main);
             Assert.DoesNotContain(daemon.Commands, c => !EqCommands.Contains(c.Command["cmd"]!.GetValue<string>()));
 
@@ -565,6 +574,55 @@ public sealed class EqEditorWindowTests
         Assert.False(note.IsVisible);
         Assert.False(choice.IsVisible);
         Assert.Equal(Localizer.Text("EqButtonTip"), ToolTip.GetTip(window.FindControl<Button>("Xlr1Eq")!));
+    }
+
+    /// <summary>
+    /// XLR 2 on the Wave XLR Pro's second input: the badge, the EQ button's
+    /// tooltip and the switch name the Pro, and the footer fits from 640 to
+    /// 2400 pixels; on firmware before 1.0.14 the note gives the Pro's own
+    /// minimum, not the MK.2 family's. XLR 1's editor is not involved.
+    /// </summary>
+    private static async Task ProHardware(MainWindow window, EqWindow editor, EqDaemon daemon, MicEqViewModel eq)
+    {
+        Border badge = editor.FindControl<Border>("EqHardwareBadge")!;
+        TextBlock note = editor.FindControl<TextBlock>("EqDeviceNote")!;
+        WrapPanel choice = editor.FindControl<WrapPanel>("EqProcessing")!;
+        ToggleButton onUnit = editor.FindControl<ToggleButton>("EqOnUnit")!;
+        Assert.False(badge.IsVisible);
+        daemon.Device2 = "pro";
+        daemon.Pushes.Release();
+        await Until(() => eq.OnDevice);
+        Pump(30);
+        Layout(editor, 1040, 760);
+        Assert.True(badge.IsEffectivelyVisible);
+        Assert.True(choice.IsEffectivelyVisible);
+        Assert.True(onUnit.IsChecked);
+        Assert.False(note.IsVisible);
+        Assert.Equal(Localizer.Format("EqHardwareBadgeTip", "Wave XLR Pro"), ToolTip.GetTip(badge));
+        Assert.Equal(Localizer.Format("EqButtonTipDevice", "Wave XLR Pro"), ToolTip.GetTip(window.FindControl<Button>("Xlr2Eq")!));
+        Assert.Equal(Localizer.Format("EqProcessingDeviceTip", "Wave XLR Pro"), ToolTip.GetTip(onUnit));
+        Assert.Equal(Localizer.Text("EqButtonTip"), ToolTip.GetTip(window.FindControl<Button>("Xlr1Eq")!));
+        CheckFooter(editor, "on the Wave XLR Pro");
+        Layout(editor, 820, 600);
+        Capture(editor, "eq-editor-on-the-pro");
+
+        daemon.Device2 = "proOld";
+        daemon.Pushes.Release();
+        await Until(() => !eq.OnDevice && eq.HasDeviceNote);
+        Pump(30);
+        Assert.False(badge.IsVisible);
+        Assert.True(note.IsEffectivelyVisible);
+        Assert.Equal(Localizer.Format("EqDeviceFirmwareOld", "Wave XLR Pro", "1.0.13", "1.0.14"), note.Text);
+        CheckFooter(editor, "the Wave XLR Pro on older firmware");
+        Layout(editor, 820, 600);
+        Capture(editor, "eq-editor-pro-older-firmware");
+
+        daemon.Device2 = null;
+        daemon.Pushes.Release();
+        await Until(() => !eq.HasDeviceNote && !eq.HasProcessingChoice);
+        Pump(30);
+        Assert.False(badge.IsVisible);
+        Assert.False(choice.IsVisible);
     }
 
     /// <summary>

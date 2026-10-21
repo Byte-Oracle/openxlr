@@ -53,6 +53,9 @@ public sealed record DeviceEqSupport(bool Ready, string? Reason = null, string? 
     public const string FirmwareOld = "firmwareOld";
     public const string FirmwareUnknown = "firmwareUnknown";
     public const string UnsupportedBlock = "unsupportedBlock";
+
+    /// <summary>The first firmware the model runs the EQ on, as major.minor.patch; null where the gate did not run.</summary>
+    public string? MinimumFirmware { get; init; }
 }
 
 /// <summary>
@@ -69,7 +72,9 @@ public sealed record DeviceEqSupport(bool Ready, string? Reason = null, string? 
 /// Every other byte and bit belongs to another control (gain, the flag
 /// byte at 1, ClipGuard at byte 2 bit 2, voice tune strength, unmapped live
 /// parameters) and is never touched here. The Wave XLR Pro's block holds
-/// two structs of the same shape at 0 and 38, so the codec takes a span.
+/// two structs of the same shape, XLR 1's at 0 and XLR 2's at 38, from
+/// firmware 1.0.14, so the codec takes a span and <see cref="InputBase"/>
+/// says where an input's struct starts.
 /// </summary>
 public static class WaveFxEq
 {
@@ -83,6 +88,9 @@ public static class WaveFxEq
     private const byte BandOnMask = 0x01;
     private const byte TypeMask = 0x0E;
     private const byte OwnedFlagBits = BandOnMask | TypeMask;
+
+    /// <summary>Where input 1 or 2's struct starts in a settings block that holds one per input.</summary>
+    public static int InputBase(int input) => (input - 1) * StructLength;
 
     /// <summary>The ranges a band must decode into, the ranges the EQ itself takes.</summary>
     public const int MaxType = 5, MinGain = -48, MaxGain = 48, MinFrequency = 20, MaxFrequency = 20000, MinQ = -64, MaxQ = 64;
@@ -143,6 +151,44 @@ public static class WaveFxEq
     public static Version? FirmwareVersion(ReadOnlySpan<byte> identity)
         => identity.Length >= 8 ? new Version(identity[5], identity[6], identity[7]) : null;
 
-    /// <summary>The first firmware these units run the EQ on: 1.0.15, measured on both models.</summary>
-    public static Version EqFirmware { get; } = new(1, 0, 15);
+    /// <summary>The first firmware the Wave XLR MK.2 and the XLR Dock MK.2 run the EQ on: 1.0.15, measured on both models.</summary>
+    public static Version Mk2EqFirmware { get; } = new(1, 0, 15);
+
+    /// <summary>
+    /// The first firmware the Wave XLR Pro is driven on: 1.0.14, the version
+    /// Wave Link was captured writing its EQ to. Whether an older one runs it
+    /// is not known.
+    /// </summary>
+    public static Version ProEqFirmware { get; } = new(1, 0, 14);
+
+    /// <summary>A version as the state reports it, major.minor.patch.</summary>
+    public static string Format(Version version) => $"{version.Major}.{version.Minor}.{version.Build}";
+
+    /// <summary>
+    /// The firmware gate both families share: the EQ runs on the unit from
+    /// <paramref name="minimum"/>, a newer version included, when the EQ
+    /// fields the unit holds decode. An unknown or older version leaves it to
+    /// software, and so does a block that does not decode; each says why.
+    /// <paramref name="blockDecodes"/> is asked only once the version passes.
+    /// </summary>
+    public static DeviceEqSupport Gate(string model, Version? version, Version minimum, Func<bool> blockDecodes)
+    {
+        string least = Format(minimum);
+        DeviceEqSupport support;
+        if (version is null)
+            support = new(false, DeviceEqSupport.FirmwareUnknown,
+                $"The firmware version of this {model} could not be read, so its EQ runs in software.");
+        else if (version < minimum)
+            support = new(false, DeviceEqSupport.FirmwareOld,
+                $"This {model} has firmware {Format(version)}. From {least} the unit runs the EQ itself; Elgato's updater is in Wave Link on Windows or macOS.");
+        else if (!blockDecodes())
+            support = new(false, DeviceEqSupport.UnsupportedBlock,
+                $"This {model} holds EQ settings OpenXLR does not recognise, so its EQ runs in software. Collect diagnostics for a device report.");
+        else support = new(true);
+        return support with { MinimumFirmware = least };
+    }
+
+    /// <summary>What a connection note adds when the EQ fields do not decode.</summary>
+    public const string UnsupportedBlockNote =
+        "the EQ fields of the settings block do not decode, so the microphone EQ runs in software. Collect diagnostics for a device report.";
 }

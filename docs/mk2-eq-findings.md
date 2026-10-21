@@ -513,12 +513,13 @@ stored +3.25 dB shelf at 227 Hz and -3 dB bell at 860 Hz did nothing.
   `0x0103` stalls and `0x0203` answers every block, as that fallback
   expects; the daemon itself has not been run against this dock since its
   update.
-- The Wave XLR Pro may run its equalizer on the device too. Elgato's
-  feature guide describes it that way, Wave Link has hardware mixing
-  and settings sync for the Pro only, and `waveapi.dll` carries an EQ tree
-  per Pro XLR input with the same fields as WaveEQ. Its protocol has not
-  been captured for the EQ; those trees and the per-input taps are the
-  leads for that capture.
+- The Wave XLR Pro runs its equalizer on the device too, in this layout
+  once per input: Wave Link 3.5 was captured writing it on firmware 1.0.14
+  on 2026-10-21, XLR 1's struct at block offset 0 and XLR 2's at 38, with
+  no commit (see the
+  [protocol notes, section 10](wave-xlr-pro-protocol.md#10-captures-16-to-20-2026-10-21-the-microphone-eq-in-block-0x0004)).
+  OpenXLR drives it there; it has not been measured or heard on Linux
+  yet.
 - Still open, beyond the list at the top: bytes 3 to 17 of block
   `0x0004`, byte 1 bit 3, and the dock's 1.0.0 report of band 3 sounding
   brighter with both switches off.

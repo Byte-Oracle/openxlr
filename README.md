@@ -94,9 +94,10 @@ SUPPORT, Collect diagnostics).
   offers software processing in PipeWire. Gain lock is a daemon policy
   for devices without physical gain controls. The XLR Dock MK.2 and the
   Wave XLR MK.2 run the microphone EQ on their own processor from
-  firmware 1.0.15. The Pro's hardware EQ, ducking, mix maximizer and
-  channel booster are not exposed; plugin effects run on the computer,
-  separate from the device's onboard processing.
+  firmware 1.0.15, and the Wave XLR Pro on both inputs from firmware
+  1.0.14 (not yet confirmed by ear on Linux). The Pro's ducking, mix
+  maximizer and channel booster are not exposed; plugin effects run on
+  the computer, separate from the device's onboard processing.
 - **Submixer** built from PipeWire nodes (null sinks, remap sources,
   filter chains), no kernel modules. Channels for XLR 1 and XLR 2, which
   take an Elgato device's inputs or any other capture source, for the
