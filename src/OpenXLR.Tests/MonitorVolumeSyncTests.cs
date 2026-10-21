@@ -16,6 +16,7 @@ public sealed class MonitorVolumeSyncTests
         public Mixer Mixer { get; }
         public string[] Writes => File.ReadAllLines(Path.Combine(_dir, "writes"));
         public int Dumps => File.ReadAllLines(Path.Combine(_dir, "reads")).Length;
+        public int NativeSnapshots => Writes.Count(line => line == "--format=json list sinks");
         public long Now { get; set; }
 
         public Sinks()
@@ -30,6 +31,17 @@ public sealed class MonitorVolumeSyncTests
             ExecutableScript.Write(Path.Combine(_dir, "pactl"), """
                 dir=${0%/*}
                 echo "$*" >> "$dir/writes"
+                if [ "$1" = --format=json ]; then
+                    if [ -f "$dir/native-malformed" ]; then printf '{'; exit; fi
+                    if [ -f "$dir/native-failed" ]; then exit 1; fi
+                    if [ -f "$dir/native-missing" ]; then printf '[]'; exit; fi
+                    serial=$(/bin/cat "$dir/native-serial")
+                    current=$(/bin/cat "$dir/mute")
+                    case "$current" in 'Mute: yes') muted=true ;; *) muted=false ;; esac
+                    if [ -f "$dir/native-index-only" ]; then properties='{}'; else properties="{\"object.serial\":\"$serial\"}"; fi
+                    printf '[{"index":%s,"name":"external","mute":%s,"properties":%s}]' "$serial" "$muted" "$properties"
+                    exit
+                fi
                 if [ "$1" = get-sink-mute ]; then
                     /bin/cat "$dir/mute"
                     exit
@@ -55,6 +67,7 @@ public sealed class MonitorVolumeSyncTests
                 fi
                 """);
             Environment.SetEnvironmentVariable("PATH", _dir);
+            NativeSerial(1);
             Adapter.SetSinkMuted("OpenXLR_mix_monitor", false);
             File.WriteAllText(Path.Combine(_dir, "writes"), "");
             Mixer = new(Adapter) { Clock = () => Now };
@@ -72,6 +85,20 @@ public sealed class MonitorVolumeSyncTests
         public void DirectMute(bool muted) => File.WriteAllText(Path.Combine(_dir, "mute"), muted ? "Mute: yes\n" : "Mute: no\n");
         public void FailMuteWrites(int count) => File.WriteAllText(Path.Combine(_dir, "fail"), count.ToString(CultureInfo.InvariantCulture));
         public void PressDuringNextMuteWrite() => File.WriteAllText(Path.Combine(_dir, "press-before-write"), "");
+        public void NativeSerial(int serial) => File.WriteAllText(Path.Combine(_dir, "native-serial"), serial.ToString(CultureInfo.InvariantCulture));
+        public void NativeMissing(bool missing)
+        {
+            string path = Path.Combine(_dir, "native-missing");
+            if (missing) File.WriteAllText(path, "");
+            else File.Delete(path);
+        }
+        public void NativeIndexOnly() => File.WriteAllText(Path.Combine(_dir, "native-index-only"), "");
+        public void FailNativeSnapshot(bool malformed, bool fail)
+        {
+            string path = Path.Combine(_dir, malformed ? "native-malformed" : "native-failed");
+            if (fail) File.WriteAllText(path, "");
+            else File.Delete(path);
+        }
         public void GraphUnavailable(bool unavailable)
         {
             string path = Path.Combine(_dir, "graph-unavailable");
@@ -82,6 +109,7 @@ public sealed class MonitorVolumeSyncTests
 
         public void Dump(double volume, bool muted = false, bool internalSink = false, bool? externalMuted = null, int externalSerial = 1)
         {
+            if (externalMuted is not null) NativeSerial(externalSerial);
             string amplitude = Math.Pow(volume, 3).ToString("R", CultureInfo.InvariantCulture);
             string monitor = $$$$"""
                 {"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"OpenXLR_mix_monitor","media.class":"Audio/Sink"},
@@ -516,6 +544,145 @@ public sealed class MonitorVolumeSyncTests
         sinks.Dump(1, externalMuted: true);
         sinks.Mixer.SyncDeviceVolumes();
 
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SelectingAnAlreadyReplacedNativeSinkDoesNotLoseItsFirstKey(bool staleRegistry)
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false, externalSerial: staleRegistry ? 1 : 2);
+        sinks.NativeSerial(2);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true, externalSerial: 2);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Fact]
+    public void AStaleRegistryIdentityAfterSelectionDoesNotReplaceTheNativeBaseline()
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false, externalSerial: 2);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        sinks.Dump(1, externalMuted: true, externalSerial: 1);
+        sinks.NativeSerial(2);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.False(sinks.Mixer.MonitorMuted);
+
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true, externalSerial: 2);
+        Assert.True(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void UnchangedNativeIdentitiesUseNoAdditionalSnapshotHelpers(bool indexOnly)
+    {
+        using var sinks = new Sinks();
+        if (indexOnly) sinks.NativeIndexOnly();
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        Assert.Equal(1, sinks.NativeSnapshots);
+        for (int sweep = 0; sweep < 5; sweep++) Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        Assert.Equal(1, sinks.NativeSnapshots);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ARefusedNativeSnapshotDoesNotLoseAKeyAfterSelection(bool malformed)
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false);
+        sinks.FailNativeSnapshot(malformed, true);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
+        sinks.FailNativeSnapshot(malformed, false);
+
+        Assert.True(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Fact]
+    public void ASelectionSnapshotThatMissesAnAddressableSinkKeepsItsFirstKey()
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false);
+        sinks.NativeMissing(true);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes()); // Registry Props can precede native-list discovery too.
+        sinks.NativeMissing(false);
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true);
+
+        Assert.True(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Fact]
+    public void ADisconnectedOutputDoesNotStartAnIdentityHelperOnEverySweep()
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        sinks.NativeMissing(true);
+        sinks.Dump(1);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        int snapshots = sinks.NativeSnapshots;
+        for (int sweep = 0; sweep < 5; sweep++) Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.Equal(snapshots, sinks.NativeSnapshots);
+
+        sinks.NativeMissing(false);
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false, externalSerial: 2);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
+        Assert.False(sinks.Mixer.MonitorMuted);
+    }
+
+    [Fact]
+    public void FailedIdentitySnapshotsBackOffWithoutForgettingAnUnconsumedKey()
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false);
+        sinks.FailNativeSnapshot(malformed: false, fail: true);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        int snapshots = sinks.NativeSnapshots;
+        for (int sweep = 0; sweep < 5; sweep++) Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.Equal(snapshots, sinks.NativeSnapshots);
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
+        sinks.FailNativeSnapshot(malformed: false, fail: false);
+        sinks.Now = 1_000;
+
+        Assert.True(sinks.Mixer.SyncDeviceVolumes());
         Assert.True(sinks.Mixer.MonitorMuted);
         Assert.False(sinks.Adapter.GetSinkMuted("external"));
     }

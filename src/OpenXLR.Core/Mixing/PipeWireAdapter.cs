@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 
 namespace OpenXLR.Core.Mixing;
@@ -354,6 +355,47 @@ public sealed class PipeWireAdapter
             }
         }
         return result;
+    }
+
+    /// <summary>Read selected native identities and mute flags together, before registry echoes arrive.</summary>
+    internal IReadOnlyDictionary<string, (string Identity, bool Muted)> NativeSinkMutes(IReadOnlySet<string> names)
+        => names.Count == 0 ? new Dictionary<string, (string, bool)>(StringComparer.Ordinal)
+            : ParseNativeSinkMutes(RunBytes("pactl", 4 * 1024 * 1024, "--format=json", "list", "sinks"), names);
+
+    internal static IReadOnlyDictionary<string, (string Identity, bool Muted)> ParseNativeSinkMutes(byte[] json, IReadOnlySet<string> names)
+    {
+        using JsonDocument document = JsonDocument.Parse(json, new JsonDocumentOptions { AllowDuplicateProperties = false, MaxDepth = 16 });
+        if (document.RootElement.ValueKind != JsonValueKind.Array) throw new JsonException("Expected a native sink array.");
+        var result = new Dictionary<string, (string, bool)>(StringComparer.Ordinal);
+        foreach (JsonElement sink in document.RootElement.EnumerateArray())
+        {
+            if (sink.ValueKind != JsonValueKind.Object || !sink.TryGetProperty("name", out var name) || name.ValueKind != JsonValueKind.String)
+                throw new JsonException("A native sink has no name.");
+            string key = name.GetString()!;
+            if (!names.Contains(key)) continue;
+            if (!sink.TryGetProperty("mute", out var mute) || mute.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                throw new JsonException("A native sink has no mute flag.");
+            string? identity = null;
+            if (sink.TryGetProperty("properties", out var props))
+            {
+                if (props.ValueKind != JsonValueKind.Object) throw new JsonException("A native sink has invalid properties.");
+                if (props.TryGetProperty("object.serial", out var serial) && NativeRegistryId(serial) is { } serialId) identity = "serial:" + serialId;
+                else if (props.TryGetProperty("object.id", out var node) && NativeRegistryId(node) is { } nodeId) identity = "node:" + nodeId;
+            }
+            // A Pulse index is not a PipeWire node id. It is compared only
+            // with later native snapshots, in its own namespace.
+            if (identity is null && sink.TryGetProperty("index", out var index) && NativeRegistryId(index) is { } pulseId) identity = "pulse:" + pulseId;
+            if (identity is null) throw new JsonException("A native sink has no identity.");
+            if (!result.TryAdd(key, (identity, mute.GetBoolean()))) throw new JsonException("More than one native sink has the selected name.");
+        }
+        return result;
+
+        static string? NativeRegistryId(JsonElement value)
+        {
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetUInt64(out ulong number)) return number.ToString(CultureInfo.InvariantCulture);
+            return value.ValueKind == JsonValueKind.String && ulong.TryParse(value.GetString(), NumberStyles.None, CultureInfo.InvariantCulture, out number)
+                ? number.ToString(CultureInfo.InvariantCulture) : null;
+        }
     }
 
     internal static IReadOnlyList<OwnSinkLevel> OwnSinkLevels(byte[] json)
@@ -2052,23 +2094,25 @@ public sealed class PipeWireAdapter
         catch (JsonException) { return []; }
     }
 
-    private byte[] RunBytes(string exe, params string[] args)
+    private byte[] RunBytes(string exe, params string[] args) => RunBytes(exe, ProcessRunner.DefaultStdoutCap, args);
+
+    private byte[] RunBytes(string exe, int stdoutCap, params string[] args)
     {
-        try { return RunBytesCore(exe, args, _stopDeadline); }
+        try { return RunBytesCore(exe, args, _stopDeadline, stdoutCap); }
         finally { _progress?.Invoke(); }
     }
 
-    private static byte[] RunBytesCore(string exe, string[] args, CancellationToken stopDeadline)
+    private static byte[] RunBytesCore(string exe, string[] args, CancellationToken stopDeadline, int stdoutCap)
     {
-        // Bounded: 5 s, 64 MiB of output (a large graph dump is 2 MB), the
+        // Bounded: 5 s and the caller's output cap (64 MiB for graph dumps), the
         // process tree killed past either, so a runaway helper never grows
         // the daemon's heap.
-        ProcessResult r = ProcessRunner.Run(exe, args, cancel: stopDeadline);
+        ProcessResult r = ProcessRunner.Run(exe, args, stdoutCap: stdoutCap, cancel: stopDeadline);
         if (r.Cancelled) throw StoppedHelper(exe, args);
         if (r.TimedOut)
             throw new InvalidOperationException($"{exe} {string.Join(' ', args)} timed out after {ProcessRunner.DefaultTimeout.TotalSeconds:0} seconds");
         if (r.Truncated)
-            throw new InvalidOperationException($"{exe} {string.Join(' ', args)} produced more than {ProcessRunner.DefaultStdoutCap} bytes");
+            throw new InvalidOperationException($"{exe} {string.Join(' ', args)} produced more than {stdoutCap} bytes");
         if (r.Incomplete)
             throw new InvalidOperationException($"{exe} {string.Join(' ', args)}: output ended before the helper closed it");
         if (r.ExitCode != 0)

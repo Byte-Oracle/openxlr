@@ -2976,6 +2976,8 @@ monitoring state; another mute press resumes monitoring. **OpenXLR Monitor A**
 and **OpenXLR Monitor B** keep their individual mix mute controls.
 Selecting an output preserves its existing native mute state; a mute key
 pressed immediately after selection already controls the monitoring pause.
+Reconnecting an output keeps its previous mute state. Delayed device
+information does not count as another mute press.
 
 Native mute flags are observed on the next mixer sweep. A desktop command
 that changes several flags in the same sweep is treated as one press;
