@@ -102,7 +102,7 @@ The state message in full. At the top level: `daemonVersion`, `daemonBuildId`, `
 `connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 or Wave:1 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3, the Wave:1 and the MK.2 family), `capabilities` (`gain`,
 `mute`, `lowCut`, `expander`, `voiceTune`, `hpVolume`, `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`, `compressor`, `outputRouting`,
-`auxInput`, `xlrInputs`, `xlrJacks` (false on the Wave:3 and Wave:1, whose one input is the microphone's own capsule rather than an XLR jack), `hpOutputs`, `physicalControls`, `retainsSettings`, `hardwareEq` (the unit's DSP runs the [microphone EQ](#microphone-eq) and the driver can write it: true on the Wave XLR MK.2 and the XLR Dock MK.2 from firmware 1.0.15 and on the Wave XLR Pro from firmware 1.0.14, false on every other model and on older firmware),
+`auxInput`, `xlrInputs`, `xlrJacks` (false on the Wave:3 and Wave:1, whose one input is the microphone's own capsule rather than an XLR jack), `hpOutputs`, `physicalControls`, `retainsSettings`, `hardwareEq` (the unit's DSP runs the [microphone EQ](#microphone-eq) and the driver can write it: true on the Wave XLR MK.2 and the XLR Dock MK.2 from firmware 1.0.15 and on the Wave XLR Pro from firmware 1.0.14, false on every other model and on older firmware), `ducking` (the unit runs [ducking](#ducking) itself: true on the Wave XLR Pro only),
 `builtInDefaults`, and `gainMaxDb`, the highest gain in dB that `gain` and
 `gain2` take, from 0: 80 on the Wave XLR Pro and the MK.2 family, 75 on the
 Wave XLR and the first XLR Dock, 40 on the Wave:3 and Wave:1; a higher value is held
@@ -116,7 +116,7 @@ written above it; false on every other model), `lowImpedance`,
 `outLineOut`, `hpMixMonitorReturn`, `hpMixMicDirect`, `auxReturnEnabled`,
 `auxLevelDb`, `auxLevelLock`, plus the daemon-stamped `gainLocked`,
 `phantomSettling`, `phantomSettling2`, `phantomSettleSeconds` and
-`phantomSettleSeconds2`),
+`phantomSettleSeconds2`), `ducking` (see [ducking](#ducking)),
 `mixer`, `mixerWaiting`, `devices`, `profiles`, `activeProfile`, `recallOnConnect` and
 `detected` (`usbId`, `name`, `active` for every attached interface; `usbId`
 is the unit's instance id, see [additional interface state](#additional-interface-state))
@@ -239,6 +239,8 @@ that final acknowledgement (or an `error` without a request id):
 | `setWaveControl` | `device`, `control`, `value` | the `set` command for one unit by instance id: an additional interface, or the primary when `device` is the primary's id. Same control names, capabilities, gain lock and phantom settling as `set`; an error for a unit that is not driven |
 | `saveProfile` / `loadProfile` / `deleteProfile` | `name` | named scenes, scoped to the connected interface, or to `generic` while none is connected (see below); loading restores saved gain even while locked and leaves the lock enabled |
 | `setRecallOnConnect` | `name` | the profile recalled whenever the active device connects fresh (daemon start, replug, switch to it); empty clears it. With none chosen, a device whose capabilities say `retainsSettings: false` gets the last settings the daemon saw on it instead. Refused while no interface is connected |
+| `setDucking` | `value` | the Wave XLR Pro's [ducking](#ducking): an object with any of `enabled`, `key`, `targets`, `sensitivity`, `amount`, `speed`; the fields it leaves out keep their values. Refused on a model without `capabilities.ducking` |
+| `setDuckingProcessing` | `value` | where [ducking](#ducking) runs: `device` or `software`; `software` is refused until ducking runs there. Refused on a model without `capabilities.ducking` |
 | `resetDevice` | none | write the recorded defaults back to a device using connect-time restoration and forget its last settings (an error until the daemon has seen the device connect after a power cycle once); on the Wave XLR Pro, which keeps its own settings, write OpenXLR's baseline instead: gain 30 dB on both inputs, every processing stage and phantom off, headphones and aux level at half, the crossfade fully on PC, routing untouched, refused while the gain lock is on. The capabilities say `builtInDefaults` when a model has a baseline |
 | `getDiagnostics` | none | vendor block dump for bug reports |
 
@@ -823,6 +825,9 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
   after a change and restored on every fresh connect
 - `devices/<vid-pid>/defaults.json`: the settings such a device answered
   with after a power cycle, what `resetDevice` writes back
+- `devices/<vid-pid>/ducking.json`: the Wave XLR Pro's [ducking](#ducking)
+  choice, written by `setDucking` and written to the unit on every connect;
+  an additional interface's is under its instance id
 - `gainlock.json`: which devices have the gain lock set
 - `$XDG_RUNTIME_DIR/openxlr/token` (or `token` here without a runtime
   directory): the control API token for this daemon run, 0600, see the
@@ -1198,6 +1203,75 @@ additional interface's input that no microphone carries, or in
 hardware-control mode: the unit keeps the EQ it last held.
 Another channel taking the same unit's audio, a capture channel on its node,
 hears the unit's EQ, as it hears the unit's low cut.
+
+### Ducking
+
+Ducking lowers outputs while a key microphone is loud. It is one setup
+with a choice of where it runs, shaped like the
+[microphone EQ](#where-the-eq-runs): `processing` is the choice and
+`backend` what runs it now. Today only the unit runs it, the Wave XLR Pro
+(`capabilities.ducking`, false on every other model), so `processing` is
+always `device` and the state carries `ducking` only while such a unit is
+driven.
+
+OpenXLR sums its channels on the computer and streams two finished mixes
+to the Pro: the jacks' monitor feed on USB playback pair 2/3 and the Aux
+mix on pair 10/11. Those are the two targets, `monitor` (Headphones 1,
+Headphones 2 and Line Out, while they are monitor outputs) and `aux` (the
+USB Aux port). The unit lowers a target's whole mix. It cannot duck single
+channels or the stream mix.
+
+The state message's `ducking` is `{enabled, key, targets, sensitivity,
+amount, speed, processing, backend, device}`:
+
+- `enabled`, and `key`, the microphone whose level ducks: `xlr1` or
+  `xlr2`.
+- `targets`: any of `monitor` and `aux`.
+- `sensitivity` (`low`, `medium`, `high`; a higher one reacts to a softer
+  voice), `amount` (`low` 6 dB, `medium` 12 dB, `high` 24 dB) and `speed`
+  (`slow`, `medium`, `fast`).
+- `processing`: where the setup runs, `device`, the only value until
+  ducking runs in software.
+- `backend`: `device` while the unit runs the setup, on or off, since the
+  unit holds the switch; null while nothing runs it.
+- `device`: the unit's side, `{unit, name, firmware, ready, reason, note,
+  held, readback}`. `unit` is the instance id `waveInterfaces` gives,
+  `name` the model and `firmware` null, since the Pro's is not read.
+  `ready` is true while the unit can run the setup. When it is false,
+  `reason` says why in a word a client can explain and `note` in a
+  sentence; today the one reason is `keyNotSupported`, a setup keyed by
+  anything but XLR 1, the only key Wave Link was seen to write. A client
+  shows `note` for a reason it does not know. A setup the unit cannot run
+  is given to the unit as ducking off. `held` is true when the last read
+  of the unit matched what OpenXLR wrote, byte for byte. `readback` is
+  that read decoded: `sensitivity`, `amount` and `speed` as the unit holds
+  them (`custom` when its entries disagree or hold a value no preset
+  writes), `pairs`, the USB playback pairs ducked in any of its mix
+  sections (0 to 7, pair n is channels 2n and 2n+1), and `entries`, the
+  block 0x0008 entries whose ducked flag is set (0 to 3 the hardware
+  inputs, 4 to 11 the pairs). Wave Link leaves flags on entries 4, 7 and 8
+  with no ducking at all; OpenXLR keeps them, so `entries` reads
+  `[4, 7, 8]` on such a unit with ducking off.
+
+`setDucking` takes `value`, an object with any of `enabled`, `key`,
+`targets`, `sensitivity`, `amount` and `speed`; a field left out keeps
+its value, an unknown one is refused. For example
+`{"cmd":"setDucking","value":{"enabled":true,"targets":["monitor"],"amount":"high"}}`.
+`setDuckingProcessing` takes `value` `device` or `software`, as
+`setEqProcessing` does; `software` is refused until ducking runs there.
+The daemon saves the setup first, in `devices/<vid-pid>/ducking.json`
+(see [configuration files](#configuration-files)), then writes it to the
+unit. A model without `capabilities.ducking` refuses both commands.
+
+The daemon brings the unit to the setup on every connect, on either
+command, and when a poll finds the unit changed by another program, then
+at most every 5 s, said once in the journal. It logs every write with
+the bytes it changed. While ducking is off, or the unit cannot run the
+setup, it leaves the presets as the unit holds them and clears only the
+ducked flags, which removes any ducking Wave Link left behind. The bytes
+are in the
+[protocol notes](wave-xlr-pro-protocol.md#11-ducking-captures-of-2026-10-21).
+A profile does not carry ducking, and `resetDevice` leaves it alone.
 
 ### Output key targets
 

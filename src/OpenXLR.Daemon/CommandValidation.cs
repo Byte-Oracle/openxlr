@@ -1,4 +1,5 @@
 using System.Text.Json;
+using OpenXLR.Core.Devices;
 using OpenXLR.Core.Mixing;
 
 namespace OpenXLR.Daemon;
@@ -65,6 +66,10 @@ public static class CommandValidation
             case "setWaveInterfaceEnabled":
             case "setWaveControl":
                 return CheckWave(cmd);
+            case "setDucking":
+                return CheckDucking(cmd, out _);
+            case "setDuckingProcessing":
+                return CheckDuckingProcessing(cmd);
             case "setEq":
             case "setEqEnabled":
             case "setEqBand":
@@ -322,6 +327,85 @@ public static class CommandValidation
                 return MicEq.Check(probe) is string problem ? $"setEqBand: {problem}" : null;
         }
     }
+
+    /// <summary>
+    /// <c>setDucking</c>: <c>value</c> is an object with at least one of
+    /// <c>enabled</c> (boolean), <c>key</c> (<c>xlr1</c> or <c>xlr2</c>), <c>targets</c>
+    /// (distinct entries of <c>monitor</c> and <c>aux</c>, possibly none),
+    /// <c>sensitivity</c> and <c>amount</c> (<c>low</c>, <c>medium</c>,
+    /// <c>high</c>) and <c>speed</c> (<c>slow</c>, <c>medium</c>,
+    /// <c>fast</c>). Any other field is refused, so a misspelt one is not
+    /// silently ignored.
+    /// </summary>
+    internal static string? CheckDucking(Command cmd, out DuckingChange? change)
+    {
+        change = null;
+        if (cmd.Value.ValueKind != JsonValueKind.Object) return "setDucking: value must be an object";
+        bool? enabled = null;
+        string? key = null, sensitivity = null, amount = null, speed = null;
+        List<string>? targets = null;
+        int fields = 0;
+        foreach (JsonProperty field in cmd.Value.EnumerateObject())
+        {
+            fields++;
+            switch (field.Name)
+            {
+                case "enabled":
+                    if (field.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) return "setDucking: enabled must be a boolean";
+                    enabled = field.Value.GetBoolean();
+                    break;
+                case "key":
+                    if (Word(field.Value, ProDucking.Keys) is not { } k) return "setDucking: key must be xlr1 or xlr2";
+                    key = k;
+                    break;
+                case "targets":
+                    if (field.Value.ValueKind != JsonValueKind.Array || field.Value.GetArrayLength() > ProDucking.Targets.Count)
+                        return "setDucking: targets must be a list of monitor and aux";
+                    targets = [];
+                    foreach (JsonElement t in field.Value.EnumerateArray())
+                    {
+                        if (Word(t, ProDucking.Targets) is not { } target || targets.Contains(target))
+                            return "setDucking: targets must be distinct entries of monitor and aux";
+                        targets.Add(target);
+                    }
+                    break;
+                case "sensitivity":
+                    if (Word(field.Value, ProDucking.Sensitivities) is not { } sv) return "setDucking: sensitivity must be low, medium or high";
+                    sensitivity = sv;
+                    break;
+                case "amount":
+                    if (Word(field.Value, ProDucking.Amounts) is not { } a) return "setDucking: amount must be low, medium or high";
+                    amount = a;
+                    break;
+                case "speed":
+                    if (Word(field.Value, ProDucking.Speeds) is not { } sp) return "setDucking: speed must be slow, medium or fast";
+                    speed = sp;
+                    break;
+                default:
+                    return $"setDucking: unknown field '{Short(field.Name)}'";
+            }
+        }
+        if (fields == 0) return "setDucking: value needs at least one of enabled, key, targets, sensitivity, amount and speed";
+        change = new DuckingChange(enabled, key, targets, sensitivity, amount, speed);
+        return null;
+    }
+
+    /// <summary>
+    /// <c>setDuckingProcessing</c>: where ducking runs, <c>device</c> or
+    /// <c>software</c>. Ducking does not run in software yet, so that value
+    /// is refused with the reason.
+    /// </summary>
+    internal static string? CheckDuckingProcessing(Command cmd)
+    {
+        if (cmd.Value.ValueKind != JsonValueKind.String || cmd.Value.GetString() is not ("device" or "software"))
+            return "setDuckingProcessing: value must be 'device' or 'software'";
+        return cmd.Value.GetString() == "software"
+            ? "setDuckingProcessing: ducking does not run in software yet; the unit runs it" : null;
+    }
+
+    /// <summary>The listed word a JSON string holds, or null.</summary>
+    private static string? Word(JsonElement value, IReadOnlyList<string> words)
+        => value.ValueKind == JsonValueKind.String && value.GetString() is { } word && words.Contains(word) ? word : null;
 
     internal static string? CheckEditorRule(Command cmd)
         => cmd.Kind is not ("lv2" or "clap" or "vst3") || string.IsNullOrWhiteSpace(cmd.Plugin)
