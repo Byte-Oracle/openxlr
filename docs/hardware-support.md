@@ -46,7 +46,7 @@ the commit block every selector write needs.
 | Mic and PC crossfade | verified | direct monitor inside the device |
 | Physical output routing | verified | HP1, HP2, Line Out, USB Aux; verified by listening on both jacks |
 | USB Aux input level + lock, aux return | verified | return routing latches at stream open; the daemon bounces the stream |
-| Ducking, keyed by XLR 1 | captured on Windows, not yet checked on Linux | blocks 0x0008 and 0x0001 as Wave Link 3.5 writes them (captures of 2026-10-21); the unit ducked by itself on Windows. By-ear acceptance on Linux pending. Lowers the monitor feed (USB pair 2/3) and the Aux mix (pair 10/11), not single channels; other keys unknown |
+| Ducking on the unit, keyed by XLR 1 | captured on Windows, not yet checked on Linux | blocks 0x0008 and 0x0001 as Wave Link 3.5 writes them (captures of 2026-10-21); the unit ducked by itself on Windows. The unit runs [ducking](manual.md#ducking) when the setup fits it: XLR 1 as the key, each ducked mix heard only on the jacks and Line Out (USB pair 2/3) or the USB Aux port (pair 10/11), and every channel heard in it ducked. Any other setup runs in software. Nothing has been checked by ear on Linux yet, on the unit or in software; other keys are unknown |
 | Reset to OpenXLR's baseline | verified | the device keeps its settings, so the reset writes a known set (gain 30 dB, everything off, levels at half, crossfade on PC) instead of recorded firmware defaults |
 | Microphone EQ on the unit, firmware 1.0.14 or later | coded | both inputs, captured from Wave Link 3.5 on firmware 1.0.14; the encoder reproduces the captured writes byte for byte. OpenXLR driving it has not been heard on Linux yet, and the Pro's filters have not been measured. On older firmware, or when the version or the EQ fields cannot be read, both inputs' EQ runs in software |
 
@@ -88,8 +88,10 @@ whose high bit Wave Link sets on a ducked pair. With XLR 1 loud the unit
 lowered the ducked pairs by the configured depth with no host write. The
 daemon writes the same bytes, without the commit block, on the two pairs
 OpenXLR streams to: 2/3 for the jacks and Line Out, 10/11 for the USB Aux
-port. Nobody has listened to it on Linux yet. The captures never show how
-the key is encoded, so XLR 1 is the only key OpenXLR offers. Details are in the
+port. It does so only when the one ducking setup fits what the unit can
+do; otherwise the computer runs it and the unit is written off. Nobody has
+listened to it on Linux yet. The captures never show how the key is
+encoded, so the unit runs only a setup keyed by XLR 1. Details are in the
 [protocol notes](wave-xlr-pro-protocol.md#11-ducking-captures-of-2026-10-21). The MK.2
 models have no ducking. They run a four-band equalizer on the device from
 firmware 1.0.15, switched on by a master enable bit, and OpenXLR's

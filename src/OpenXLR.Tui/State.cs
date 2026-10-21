@@ -244,26 +244,26 @@ internal sealed record WaveInterfaceEntry
 }
 
 /// <summary>
-/// Ducking as the daemon reports it: the setup (on or off, the outputs it
-/// lowers, the three presets), what runs it (<see cref="Backend"/>, only
-/// <c>device</c> today) and the unit's side in <see cref="Device"/>.
+/// Ducking as the daemon reports it: the switch and the three presets,
+/// what runs it (<see cref="Backend"/>: <c>device</c>, <c>software</c> or
+/// nothing) and the unit's side in <see cref="Device"/>. The key, channels
+/// and mixes are the daemon's to keep here.
 /// </summary>
 internal sealed record DuckingEntry
 {
     public bool Enabled { get; init; }
-    public List<string> Targets { get; init; } = [];
     public string Sensitivity { get; init; } = "medium";
     public string Amount { get; init; } = "medium";
     public string Speed { get; init; } = "medium";
     public string? Backend { get; init; }
     public DuckingDeviceEntry? Device { get; init; }
 
-    /// <summary>A short word for the switch row while something is wrong, or null.</summary>
+    /// <summary>A short word for the switch row: where it runs, or what is wrong; null while off.</summary>
     [JsonIgnore]
-    public string? Note => Device is null ? null
-        : !Device.Ready ? "not on the unit"
-        : Enabled && !Device.Held ? "not held yet"
-        : null;
+    public string? Note => !Enabled ? null
+        : Backend == "software" ? "in software"
+        : Backend == "device" ? Device is { Held: false } ? "not held yet" : "on the unit"
+        : "not running";
 }
 
 /// <summary>The unit's side of ducking: whether it runs the setup, why not, and whether it held the last write.</summary>
@@ -439,7 +439,7 @@ internal sealed record Snapshot
     public List<DetectedDevice> Detected { get; init; } = [];
     public List<WaveInterfaceEntry> WaveInterfaces { get; init; } = [];
 
-    /// <summary>The unit's hardware ducking, on a unit whose capabilities say <c>ducking</c>; null elsewhere.</summary>
+    /// <summary>The ducking setup and where it runs; null from a daemon that predates it.</summary>
     public DuckingEntry? Ducking { get; init; }
 
     public static JsonSerializerOptions Options { get; } = new()

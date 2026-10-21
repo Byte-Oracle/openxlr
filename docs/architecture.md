@@ -99,9 +99,14 @@ modules or custom drivers:
   policy, keyed `duck:<mix>`. A failed stage gets a bus-monitor bypass on
   that sweep and is retried on a later one; repeated failures leave the
   bypass carrying audio. `ReadMeters` adds `duck:<mix>` with one reduction
-  value in dB for each mix fed by a running stage. The daemon does not
-  call the internal plan API yet, so a normal start creates no duck buses
-  or stages and publishes no duck meters.
+  value in dB for each mix fed by a running stage. The daemon drives the
+  plan from the saved ducking setup: buses and stages exist only while
+  ducking runs in software with at least one ducked cell, so a start with
+  ducking off, or run by the Wave XLR Pro, creates none. Placement and the
+  hand-over to the unit are in [api.md](api.md#where-ducking-runs); the
+  daemon reaches the unit through `DeviceDuckingPort`, which posts targets
+  to the device manager and reads back a cached status without USB
+  transfers, as the EQ's port does.
 - For every virtual-microphone mix, a post sink fed from the mix
   (directly or through the mix's insert chain) and a remap source
   (`module-remap-source`) reading its monitor: the virtual microphone an

@@ -92,12 +92,12 @@ public interface IAudioDevice : IDisposable
     DuckingReadback? ReadDucking() => null;
 
     /// <summary>
-    /// Bring the unit's ducking to a setting through a read of each block it
+    /// Bring the unit's ducking to a target through a read of each block it
     /// lives in, an edit of the fields ducking owns and a write of each block
     /// that changed.
     /// </summary>
     /// <exception cref="InvalidOperationException">The unit has no hardware ducking.</exception>
-    DuckingWrite SetDucking(DuckingSettings settings) => throw new InvalidOperationException("this unit has no hardware ducking");
+    DuckingWrite SetDucking(OpenXLR.Core.Mixing.ProDuckingTarget target) => throw new InvalidOperationException("this unit has no hardware ducking");
 
     // Physical output routing and aux input. Default no-ops; devices with
     // OutputRouting / AuxInput capabilities override them.

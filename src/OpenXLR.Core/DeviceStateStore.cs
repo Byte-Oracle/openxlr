@@ -28,7 +28,6 @@ public static class DeviceStateStore
     private static string Dir(string deviceId) => Path.Combine(Root, deviceId.Replace(':', '-'));
     private static string LastPath(string deviceId) => Path.Combine(Dir(deviceId), "last-state.json");
     private static string DefaultsPath(string deviceId) => Path.Combine(Dir(deviceId), "defaults.json");
-    private static string DuckingPath(string deviceId) => Path.Combine(Dir(deviceId), "ducking.json");
 
     /// <summary>The settings the daemon last saw on this device, or null.</summary>
     public static DeviceState? LoadLast(string deviceId) => Load(LastPath(deviceId));
@@ -58,27 +57,6 @@ public static class DeviceStateStore
         PhantomSettleSeconds = 0,
         PhantomSettleSeconds2 = 0,
     };
-
-    /// <summary>
-    /// The ducking choice saved for a unit with hardware ducking, or null when
-    /// none was saved. A file that cannot be read or holds a value the unit
-    /// does not take is treated as none, which is ducking off.
-    /// </summary>
-    public static DuckingSettings? LoadDucking(string deviceId)
-    {
-        try
-        {
-            DuckingSettings? saved = JsonSerializer.Deserialize<DuckingSettings>(RegularFile.ReadText(DuckingPath(deviceId), MaxStateBytes), Json);
-            return saved is not null && saved.Targets is not null && ProDucking.Valid(saved) is null ? saved : null;
-        }
-        catch (FileNotFoundException) { return null; }
-        catch (DirectoryNotFoundException) { return null; }
-        catch (JsonException) { return null; }
-        catch (IOException) { return null; }
-    }
-
-    public static void SaveDucking(string deviceId, DuckingSettings settings)
-        => OpenXlrPaths.WriteAtomicJson(DuckingPath(deviceId), settings, Json);
 
     private static DeviceState? Load(string path)
     {

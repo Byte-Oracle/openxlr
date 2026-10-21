@@ -67,7 +67,7 @@ public static class CommandValidation
             case "setWaveControl":
                 return CheckWave(cmd);
             case "setDucking":
-                return CheckDucking(cmd, out _);
+                return CheckDucking(cmd, layout, out _);
             case "setDuckingProcessing":
                 return CheckDuckingProcessing(cmd);
             case "setEq":
@@ -337,22 +337,28 @@ public static class CommandValidation
         }
     }
 
+    /// <summary>The longest channel or mix list a <c>setDucking</c> may carry.</summary>
+    public const int MaxDuckingIds = 64;
+
     /// <summary>
     /// <c>setDucking</c>: <c>value</c> is an object with at least one of
-    /// <c>enabled</c> (boolean), <c>key</c> (<c>xlr1</c> or <c>xlr2</c>), <c>targets</c>
-    /// (distinct entries of <c>monitor</c> and <c>aux</c>, possibly none),
-    /// <c>sensitivity</c> and <c>amount</c> (<c>low</c>, <c>medium</c>,
-    /// <c>high</c>) and <c>speed</c> (<c>slow</c>, <c>medium</c>,
-    /// <c>fast</c>). Any other field is refused, so a misspelt one is not
-    /// silently ignored.
+    /// <c>enabled</c> (boolean), <c>key</c> (a microphone channel id),
+    /// <c>channels</c> (distinct channel ids, possibly none), <c>mixes</c>
+    /// (distinct mix ids, possibly none), <c>sensitivity</c> and
+    /// <c>amount</c> (<c>low</c>, <c>medium</c>, <c>high</c>) and
+    /// <c>speed</c> (<c>slow</c>, <c>medium</c>, <c>fast</c>). Any other
+    /// field is refused, so a misspelt one is not silently ignored. Ids are
+    /// checked against the layout when one is given; the key's absence from
+    /// <c>channels</c> is checked here when both come in one command, and by
+    /// the mixer against the merged setup otherwise.
     /// </summary>
-    internal static string? CheckDucking(Command cmd, out DuckingChange? change)
+    internal static string? CheckDucking(Command cmd, ILayoutInfo? layout, out DuckingChange? change)
     {
         change = null;
         if (cmd.Value.ValueKind != JsonValueKind.Object) return "setDucking: value must be an object";
         bool? enabled = null;
         string? key = null, sensitivity = null, amount = null, speed = null;
-        List<string>? targets = null;
+        List<string>? channels = null, mixes = null;
         int fields = 0;
         foreach (JsonProperty field in cmd.Value.EnumerateObject())
         {
@@ -364,19 +370,19 @@ public static class CommandValidation
                     enabled = field.Value.GetBoolean();
                     break;
                 case "key":
-                    if (Word(field.Value, ProDucking.Keys) is not { } k) return "setDucking: key must be xlr1 or xlr2";
+                    if (field.Value.ValueKind != JsonValueKind.String || field.Value.GetString() is not { Length: > 0 and <= 36 } k
+                        || layout is not null && !layout.IsSoundCheckChannel(k))
+                        return "setDucking: key must be a microphone channel";
                     key = k;
                     break;
-                case "targets":
-                    if (field.Value.ValueKind != JsonValueKind.Array || field.Value.GetArrayLength() > ProDucking.Targets.Count)
-                        return "setDucking: targets must be a list of monitor and aux";
-                    targets = [];
-                    foreach (JsonElement t in field.Value.EnumerateArray())
-                    {
-                        if (Word(t, ProDucking.Targets) is not { } target || targets.Contains(target))
-                            return "setDucking: targets must be distinct entries of monitor and aux";
-                        targets.Add(target);
-                    }
+                case "channels":
+                    if (Ids(field.Value, id => layout?.HasChannel(id) ?? true) is not { } c)
+                        return "setDucking: channels must be distinct channel ids other than the key";
+                    channels = c;
+                    break;
+                case "mixes":
+                    if (Ids(field.Value, id => layout?.HasMix(id) ?? true) is not { } m) return "setDucking: mixes must be distinct mix ids";
+                    mixes = m;
                     break;
                 case "sensitivity":
                     if (Word(field.Value, ProDucking.Sensitivities) is not { } sv) return "setDucking: sensitivity must be low, medium or high";
@@ -394,23 +400,34 @@ public static class CommandValidation
                     return $"setDucking: unknown field '{Short(field.Name)}'";
             }
         }
-        if (fields == 0) return "setDucking: value needs at least one of enabled, key, targets, sensitivity, amount and speed";
-        change = new DuckingChange(enabled, key, targets, sensitivity, amount, speed);
+        if (fields == 0) return "setDucking: value needs at least one of enabled, key, channels, mixes, sensitivity, amount and speed";
+        if (key is not null && channels?.Contains(key) == true) return "setDucking: channels must be distinct channel ids other than the key";
+        change = new DuckingChange(enabled, key, channels, mixes, sensitivity, amount, speed);
         return null;
+
+        static List<string>? Ids(JsonElement value, Func<string, bool> known)
+        {
+            if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() > MaxDuckingIds) return null;
+            var ids = new List<string>();
+            foreach (JsonElement item in value.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.String || item.GetString() is not { Length: > 0 and <= 36 } id
+                    || ids.Contains(id) || !known(id))
+                    return null;
+                ids.Add(id);
+            }
+            return ids;
+        }
     }
 
     /// <summary>
-    /// <c>setDuckingProcessing</c>: where ducking runs, <c>device</c> or
-    /// <c>software</c>. Ducking does not run in software yet, so that value
-    /// is refused with the reason.
+    /// <c>setDuckingProcessing</c>: where ducking should run, <c>device</c>
+    /// or <c>software</c>, as <c>setEqProcessing</c> takes it. A unit that
+    /// cannot run the setup leaves it in software whatever the choice.
     /// </summary>
     internal static string? CheckDuckingProcessing(Command cmd)
-    {
-        if (cmd.Value.ValueKind != JsonValueKind.String || cmd.Value.GetString() is not ("device" or "software"))
-            return "setDuckingProcessing: value must be 'device' or 'software'";
-        return cmd.Value.GetString() == "software"
-            ? "setDuckingProcessing: ducking does not run in software yet; the unit runs it" : null;
-    }
+        => cmd.Value.ValueKind == JsonValueKind.String && MicEqProcessing.IsValid(cmd.Value.GetString())
+            ? null : "setDuckingProcessing: value must be 'device' or 'software'";
 
     /// <summary>The listed word a JSON string holds, or null.</summary>
     private static string? Word(JsonElement value, IReadOnlyList<string> words)

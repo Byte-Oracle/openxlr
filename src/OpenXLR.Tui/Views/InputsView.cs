@@ -127,18 +127,11 @@ internal sealed class InputsView : View
 
         if (state.Can("ducking") && state.Ducking is { } ducking)
         {
-            // The unit lowers what OpenXLR sends to these outputs while XLR 1 is loud.
+            // The key microphone lowers the chosen channels in the chosen mixes,
+            // on the unit when the setup fits it and in software otherwise.
             rows.Add(new HeadingRow("Ducking"));
-            rows.Add(new ToggleRow("Duck on XLR 1", ducking.Enabled, value => Duck(link, "enabled", value))
+            rows.Add(new ToggleRow("Duck while talking", ducking.Enabled, value => Duck(link, "enabled", value))
             { Note = ducking.Note });
-            foreach ((string target, string label) in new[] { ("monitor", "Phones and Line Out"), ("aux", "USB Aux out") })
-                rows.Add(new ToggleRow(label, ducking.Targets.Contains(target), value =>
-                {
-                    var targets = new JsonArray();
-                    foreach (string t in new[] { "monitor", "aux" })
-                        if (t == target ? value : ducking.Targets.Contains(t)) targets.Add(t);
-                    Duck(link, "targets", targets);
-                }));
             string[] levels = ["low", "medium", "high"], speeds = ["slow", "medium", "fast"];
             rows.Add(new ChoiceRow("Sensitivity", levels, Math.Max(0, Array.IndexOf(levels, ducking.Sensitivity)),
                 index => Duck(link, "sensitivity", levels[index])));
@@ -359,7 +352,7 @@ internal sealed class InputsView : View
 
     private static double Decibels(double percent) => -60.0 + Math.Clamp(percent, 0, 100) * 0.6;
 
-    /// <summary>One field of the unit's ducking; the daemon keeps the others.</summary>
+    /// <summary>One field of the ducking setup; the daemon keeps the others.</summary>
     private static void Duck(DaemonLink link, string field, JsonNode? value) =>
         link.Send("setDucking", body => body["value"] = new JsonObject { [field] = value });
 

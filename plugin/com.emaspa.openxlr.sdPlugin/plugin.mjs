@@ -9,7 +9,7 @@ import { channelName, mixName, mixShortName, layoutChoices, controllableOutputs,
 import fs from "node:fs";
 import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
-import { channelUnitControl, channelUnitTarget, deviceTargetSupported, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
+import { channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
 
 // ---------- launch arguments ----------
 const arg = (name) => {
@@ -452,9 +452,9 @@ function toggleValue(target, inst) {
     const group = groupOf(target.slice(6));
     return group ? groupOpenMember(group) !== null : null;
   }
+  // Ducking is the mixer's setup, present on any device, not a field of the state block.
+  if (target === "ducking") return duckingEnabled(daemonState);
   if (Object.hasOwn(DEVICE_TOGGLES, target) && !supported(target)) return null;
-  // The unit's own ducking is a setting of its own, not a field of the state block.
-  if (target === "ducking") return daemonState?.ducking?.enabled ?? null;
   return dev()?.[target] ?? null;
 }
 

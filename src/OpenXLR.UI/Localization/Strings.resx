@@ -2709,16 +2709,7 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>Ducking</value>
   </data>
   <data name="DuckingEnabled" xml:space="preserve">
-    <value>Lower the outputs while XLR 1 is loud</value>
-  </data>
-  <data name="DuckingOutputs" xml:space="preserve">
-    <value>Outputs</value>
-  </data>
-  <data name="DuckingMonitorOutputs" xml:space="preserve">
-    <value>Headphones and Line Out</value>
-  </data>
-  <data name="DuckingAuxOutput" xml:space="preserve">
-    <value>USB Aux out</value>
+    <value>Lower other audio while the key microphone is loud</value>
   </data>
   <data name="DuckingSensitivity" xml:space="preserve">
     <value>Sensitivity</value>
@@ -2754,7 +2745,7 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>Fast</value>
   </data>
   <data name="DuckingHint" xml:space="preserve">
-    <value>The Wave XLR Pro does this itself. It lowers the whole mix OpenXLR sends to each chosen output, chat included. The stream mix keeps its level. XLR 1 is the only key the unit is known to take.</value>
+    <value>Ducking lowers the chosen channels in the chosen mixes while the key microphone is loud. The Wave XLR Pro runs it itself when the setup fits what the unit can do; otherwise this computer runs it.</value>
   </data>
   <data name="DuckingNotHeld" xml:space="preserve">
     <value>The unit does not hold this setting yet; OpenXLR writes it again within a few seconds.</value>
@@ -2765,11 +2756,11 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="DuckingStatusDevice" xml:space="preserve">
     <value>On, running on the {0}'s own processor.</value>
   </data>
+  <data name="DuckingStatusSoftware" xml:space="preserve">
+    <value>On, running on this computer.</value>
+  </data>
   <data name="DuckingHardwareBadgeTip" xml:space="preserve">
     <value>Ducking runs on the {0}'s own processor.</value>
-  </data>
-  <data name="DuckingKeyNotSupported" xml:space="preserve">
-    <value>Does not run: the {0} ducks only with XLR 1 as the key.</value>
   </data>
   <data name="DuckingNotRunning" xml:space="preserve">
     <value>Nothing runs this setup.</value>

@@ -21,6 +21,7 @@ public sealed class MixerService : IHostedService, IDisposable
     private readonly Mixer _mixer;
     private readonly PipeWireAdapter _pipeWire;
     private readonly DeviceEqPort _eqPort;
+    private int _duckingPortHooked;
     private IDisposable? _graphWatch;
     private readonly ServiceProgress _progress = new();
     private volatile bool _checkingProgress;
@@ -105,6 +106,8 @@ public sealed class MixerService : IHostedService, IDisposable
             try { if (_mixer.Built && _mixer.SyncDeviceEq()) Changed?.Invoke(); }
             catch (Exception ex) { _log.LogDebug("EQ hand-over: {msg}", ex.Message); }
         });
+        DuckingPort = new DeviceDuckingPort(devices);
+        _offlineDucking = new(LoadOfflineDucking);
         _saves = new SettingsSaver(
             () => _mixer.ExportSettings().Save(),
             error =>
@@ -278,6 +281,62 @@ public sealed class MixerService : IHostedService, IDisposable
     /// <summary>Whether the submix graph is up (built a few seconds after start).</summary>
     public bool Built => _mixer.Built;
 
+    /// <summary>The primary unit's ducking, as the mixer's port reaches it. Tests replace it before the start.</summary>
+    internal IDaemonDuckingPort DuckingPort { get; init; }
+
+    // The saved setup, shown while no graph is built: in hardware-control
+    // mode, or while the mixer waits for the audio server. Read once.
+    private readonly Lazy<DuckingSetup> _offlineDucking;
+
+    private static DuckingSetup LoadOfflineDucking()
+    {
+        try
+        {
+            MixerSettings? saved = MixerSettings.Load(MixerSettings.DefaultPath, out _);
+            MixerConfig layout = MixerConfig.FromSettings(saved);
+            return saved?.Ducking is { } setup ? DuckingSetup.Prune(setup, layout) : DuckingSetup.Default(layout);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return DuckingSetup.Default(MixerConfig.Default());
+        }
+    }
+
+    /// <summary>
+    /// The ducking state, present whenever the daemon runs. Without a graph
+    /// it is the saved setup, nothing running, and the primary unit's
+    /// verdict that the software mixer is off.
+    /// </summary>
+    public DuckingState Ducking()
+    {
+        if (_mixer.Built) return DuckingState.From(_mixer.DuckingSnapshot());
+        DuckingSetup setup = _offlineDucking.Value;
+        DuckingDeviceState? device = null;
+        if (DuckingPort.Primary() is { } primary)
+        {
+            DuckingVerdict verdict = DuckingPlacement.Evaluate(setup, new DuckingView(false, false, [], []), primary.Support);
+            DeviceDuckingStatus status = DuckingPort.Status(primary.Unit);
+            device = new(primary.Unit, primary.Support.Name, primary.Support.Firmware, verdict.Ready, verdict.Reason, verdict.Note,
+                [.. verdict.Outputs], status.Phase == DeviceDuckingPhase.Verified, status.Readback);
+        }
+        bool installed = _pipeWire.DuckHostInstalled;
+        return DuckingState.From(new DuckingStateSnapshot(setup.Copy(), null, installed, installed ? null : Mixer.DuckingNeedsHost, device));
+    }
+
+    /// <summary>The primary unit's ducking support handed to the mixer; true when it changed what the mixer knows.</summary>
+    private bool SyncUnitDucking()
+    {
+        (string Unit, UnitDuckingSupport Support)? primary = DuckingPort.Primary();
+        return _mixer.SetUnitDuckingSupport(primary?.Unit, primary?.Support);
+    }
+
+    /// <summary>A <c>setDucking</c> the validation already passed, as the change it carries.</summary>
+    private static DuckingChange DuckingChangeOf(Command cmd)
+    {
+        CommandValidation.CheckDucking(cmd, null, out DuckingChange? change);
+        return change ?? throw new ArgumentException("setDucking: value must be an object");
+    }
+
     public Task StartAsync(CancellationToken ct)
     {
         if (!SubmixerEnabled)
@@ -377,6 +436,24 @@ public sealed class MixerService : IHostedService, IDisposable
             }
             _waitingForAudio = false;
         }
+        // Ducking, like the EQ, reaches a unit only in software mixer mode,
+        // so hardware-control mode writes nothing to it. The port is attached
+        // once the saved setup and a waiting profile are in place, so the
+        // unit's first post is the setup it should hold. A unit
+        // confirming or refusing a target is followed at once, off the device
+        // lock: a hand-over from the unit waits for its confirmation.
+        if (Interlocked.Exchange(ref _duckingPortHooked, 1) == 0)
+            DuckingPort.StatusChanged += () => ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    if (!_stopping.IsCancellationRequested && _mixer.Built && (SyncUnitDucking() | _mixer.SyncDucking()))
+                        Changed?.Invoke();
+                }
+                catch (Exception ex) { _log.LogDebug("ducking hand-over: {msg}", ex.Message); }
+            });
+        _mixer.SetDeviceDuckingPort(DuckingPort);
+        SyncUnitDucking();
         SyncOutputSelectors();
 
         if (_mixer.MigrateCaptureInputs(source => _devices.SupportedUnitFor(source)?.Id)) ScheduleSave();
@@ -542,6 +619,11 @@ public sealed class MixerService : IHostedService, IDisposable
             changed |= _mixer.EnsureFilterRoutes();
             stop.ThrowIfCancellationRequested();
             changed |= _mixer.EnsureMonitorRoutes() | _mixer.SyncDeviceList();
+            stop.ThrowIfCancellationRequested();
+            // Where ducking runs, after routing and the device status are
+            // current: the unit when the setup fits it, software otherwise.
+            // EnsureFilterRoutes above keeps repairing its buses and stages.
+            changed |= SyncUnitDucking() | _mixer.SyncDucking();
             if (changed) Changed?.Invoke();
             stop.ThrowIfCancellationRequested();
             SyncOutputSelectors();
@@ -617,6 +699,8 @@ public sealed class MixerService : IHostedService, IDisposable
         // phases instead of starting the rest of its repair work.
         await sweep;
         await meters;
+        // Nothing is written to a unit at stop: it keeps the ducking it holds.
+        _mixer.SetDeviceDuckingPort(null);
         try { await _defaultDefense.WaitAsync(TimeSpan.FromSeconds(4)); }   // one in-flight pactl call at most, 3 s
         catch (Exception ex) when (ex is TimeoutException or OperationCanceledException) { _log.LogWarning("default defense did not stop in time"); }
         if (_mixer.Built)
@@ -833,6 +917,20 @@ public sealed class MixerService : IHostedService, IDisposable
                 case "setEqProcessing":
                     _mixer.SetEqProcessing(cmd.Channel!, cmd.Value.GetString()!);   // checked by CommandValidation
                     break;
+                case "setDucking":
+                case "setDuckingProcessing":
+                    // Saved in mixer.json before it applies; a failed save
+                    // leaves the setup and both backends as they were.
+                    _saves.RunSaved(() =>
+                    {
+                        DuckingSetup current = _mixer.DuckingSnapshot().Setup;
+                        DuckingSetup next = cmd.Cmd == "setDuckingProcessing"
+                            ? current with { Processing = cmd.Value.GetString()! }
+                            : DuckingChangeOf(cmd).ApplyTo(current);
+                        _mixer.SetDuckingSetup(next, settings => settings.Save());
+                    });
+                    Changed?.Invoke();
+                    return null;
                 case "showInsertUi":
                     if (cmd.Channel is null || cmd.InsertId is null) return "showInsertUi: need 'channel' and 'insertId'";
                     _mixer.ShowInsertUi(cmd.Channel, cmd.InsertId, insert => EditorPolicy.BlockReason(insert.Kind, insert.Plugin));

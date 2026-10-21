@@ -538,39 +538,81 @@ For a summed feed, it stays on while at least one feeding mix and the
 microphone's send to that mix are both unmuted.
 
 <a name="ducking"></a>
-#### Lower what you hear while you speak (Wave XLR Pro)
+#### Lower what you hear while you speak
 
-The Wave XLR Pro can lower its own outputs while XLR 1 is loud and bring
-them back when you stop, with no work on the computer. OpenXLR sets it up
-under **Options**, card INTERFACE, **Ducking**:
+Ducking lowers chosen channels in chosen mixes while a key microphone is
+loud, and brings them back when you stop. Talk into XLR 1 and the music
+in your headphones dips; your own voice keeps its level. It works on every
+device, and with no device at all, as long as the software mixer runs.
 
-1. Tick **Lower the outputs while XLR 1 is loud**.
-2. Under **Outputs**, choose what is lowered: **Headphones and Line Out**
-   (the monitor feed OpenXLR sends to the Pro's jacks) and **USB Aux out**
-   (the Aux mix on the USB Aux port).
-3. Pick the **Sensitivity** (how quiet a voice already counts: Low reacts
-   only to a loud voice, High to a soft one), the **Amount** (6, 12 or
-   24 dB lower) and the **Speed** (how fast it lowers and recovers).
+The setup has four parts:
 
-OpenXLR sums its channels on the computer and hands the Pro one finished
-mix per output. So the unit lowers that whole mix, applications and chat
-alike. Lowering Music and leaving Chat alone, as Wave Link does with its own
-channels, is not possible this way. The stream and chat mixes go to other
-programs as virtual microphones and stay as they are. Your own voice keeps
-its level when every monitor output is a Pro jack, because it then rides
-the unit's direct path. With another device in the monitor set it travels
-in the software mix and dips with the rest. XLR 1 is the only key, since
-nobody knows yet how the unit encodes the others.
+- The **key**: the microphone whose level ducks, XLR 1 by default. XLR 2
+  or a capture input on one mono port can be the key too.
+- The **channels** to lower. By default every application channel: Game,
+  Music, Browser, System, Voice Chat and SFX. The key is never lowered.
+- The **mixes** to lower them in. By default Monitor A, what you hear.
+  Add Stream to dip the music your viewers hear while you talk.
+- Three presets, with the Wave XLR Pro's own numbers. **Sensitivity** is
+  how quiet a voice already counts: Low reacts only to a loud voice
+  (-3 dBFS), Medium at -12 dBFS, High to a soft one (-24 dBFS). **Amount**
+  is how far the channels drop: 6, 12 or 24 dB. **Speed** is how fast they
+  drop and come back: Slow 100 ms and 2 s, Medium 80 ms and 1.2 s, Fast
+  30 ms and 0.2 s.
 
-OpenXLR saves the choice for the unit and writes it every time the unit
-connects. With ducking off, it clears any ducking Wave Link left on the
-unit. If another program changes the setting while OpenXLR runs, OpenXLR
-writes its own back within a few seconds. The **Hardware processing**
-badge beside the heading shows while the Pro runs ducking, as on the EQ
-editor, and the line under the controls says whether it is on, or that
-the unit has not taken the setting yet. Profiles do not include it. The bytes come
-from Wave Link captures on Windows, and nobody has listened to the result
-on Linux yet ([hardware support](hardware-support.md#wave-xlr-pro-0fd900b4)).
+Ducking is off until you switch it on. For now the window and the
+terminal mixer show the switch and the three presets only on a Wave XLR
+Pro: under **Options**, card INTERFACE, **Ducking**, and on the terminal
+mixer's Inputs tab. On any device a Stream Deck key switches it on and
+off, and `setDucking` over the [API](api.md#ducking) sets the key,
+channels and mixes. OpenXLR saves the setup with the rest of the mixer,
+and profiles carry it.
+
+**Where it runs.** On most devices this computer runs it: OpenXLR adds a
+small stage for each ducked mix that lowers only the chosen channels.
+The Wave XLR Pro can run ducking on its own processor instead, with no
+work on the computer, and does so when the setup fits what the unit can
+do. The unit only lowers a whole output, the mix OpenXLR sends to its
+jacks and Line Out or to its USB Aux port, and only with XLR 1 as the key.
+When the setup does not fit, the computer runs it and the state says why
+(see [where ducking runs](api.md#where-ducking-runs)):
+
+- the key is not XLR 1;
+- a ducked mix also plays somewhere the unit cannot lower, such as
+  speakers on the computer or a virtual microphone like Stream;
+- the jacks play two mixes together and only one of them is ducked;
+- a channel that plays in a ducked mix is not on the list, so lowering
+  the whole output would lower it too;
+- XLR 1 is heard in the ducked mix through its software send, so the unit
+  would lower your voice as well;
+- the unit did not keep the setting written to it. Switch ducking off and
+  on to try again.
+
+Moving from one to the other never ducks twice. There can be a moment
+without ducking while it moves. To keep it on this computer whatever the
+device, choose software processing (`setDuckingProcessing`).
+
+On the Pro, OpenXLR writes the setting every time the unit connects, which
+clears any ducking Wave Link left on it. If another program changes the
+setting while OpenXLR runs, OpenXLR writes its own back within a few
+seconds. In hardware-control mode OpenXLR writes nothing and the unit
+keeps what it holds. The **Hardware processing** badge beside the heading
+shows while the Pro runs ducking, as on the EQ editor. The unit's bytes
+come from Wave Link captures on Windows, and nobody has listened to the
+result on Linux yet
+([hardware support](hardware-support.md#wave-xlr-pro-0fd900b4)).
+
+A muted key does not duck: XLR 1 muted in every mix it is sent to lowers
+nothing. On this computer, [Sound Check](#sound-check)'s loop plays through
+the key channel, so a looped take ducks the music, which is a quick way to
+try a sensitivity. On the Pro the unit hears the live microphone, so the
+loop does not duck.
+
+Each mix ducked on this computer adds a hidden bus with one send for every
+channel, nine with the default layout, and a small helper process. Ducking
+all five mixes of the default layout adds 45 sends, which a stock
+pipewire-pulse may refuse for lack of open files; the error says so (see
+[open-file limit](#open-files)).
 
 <a name="audio-flow"></a>
 ### Audio flow
@@ -2386,7 +2428,7 @@ its live state, so what a key displays is what the mixer window shows.
 **Toggle** (a key) switches one thing: a hardware control (mute,
 phantom, low cut, expander, voice tune, ClipGuard, compressor, low
 impedance, the Pro's output selectors, the aux level lock, the gain
-lock, the Pro's [ducking](#ducking) on or off), the software low cut (cycling Off, 80, 120), a mix or send mute,
+lock, [ducking](#ducking) on or off on any device), the software low cut (cycling Off, 80, 120), a mix or send mute,
 the monitor output (switching the monitor mixes to one specific device),
 an output's feed (cycling Monitor A, Monitor B, Monitor A+B and the remaining mixes, lit
 when not on A),

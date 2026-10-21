@@ -25,11 +25,11 @@ Wave XLR Pro:
 - Mic/PC direct-monitor crossfade (inside the device, no host latency)
 - Physical output routing: Headphones 1, Headphones 2, Line Out and USB
   Aux are each switched in the device's hardware mixer
-- Ducking on the device: while XLR 1 is loud the unit lowers what OpenXLR
-  sends to its headphone jacks and Line Out, its USB Aux port, or both, by
-  6, 12 or 24 dB at a chosen sensitivity and speed. Each output's whole mix
-  is lowered; the stream mix is not. Saved per unit and written on every
-  connect, which clears ducking Wave Link left while OpenXLR's is off.
+- Ducking on the device: when the [ducking](#submixer) setup fits the
+  unit (XLR 1 as the key, each ducked mix heard only on the jacks and Line
+  Out or the USB Aux port, every channel in it ducked), the unit lowers
+  that whole output itself, by 6, 12 or 24 dB at a chosen sensitivity and
+  speed. Written on every connect, which clears ducking Wave Link left.
   Mapped from Wave Link on Windows, listening checks on Linux pending
 
 Wave XLR MK.2 and XLR Dock MK.2: gain, mute, phantom power, low cut,
@@ -217,6 +217,15 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   OpenDeck dials change it too. The Wave XLR Pro's zero-latency headphone
   path is hardware and does not follow it, and the window says so on the
   channel it carries
+- Ducking on every device: a key microphone (XLR 1, XLR 2 or a mono
+  capture input) lowers chosen channels in chosen mixes while it is loud,
+  by 6, 12 or 24 dB with the Wave XLR Pro's sensitivity and speed presets.
+  The key is never lowered. A native stage per ducked mix runs it on this
+  computer with no added latency; the Wave XLR Pro runs it on its own
+  processor instead when the setup fits, and the state says why when it
+  does not. Saved with the mixer, carried by profiles, and reported as a
+  `duck:<mix>` reduction meter while software runs
+  ([manual](manual.md#ducking))
 - Bidirectional Linux volume and mute controls for every monitor mix,
   with an explicit 150% boost button for monitor masters and output volume
 - A MONITOR mute that pauses every selected output while recording and

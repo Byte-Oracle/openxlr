@@ -525,12 +525,12 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     public DuckingReadback? ReadDucking() => _ducking;
 
     /// <summary>
-    /// Bring the unit's ducking to a setting: both blocks read fresh, the
+    /// Bring the unit's ducking to a target: both blocks read fresh, the
     /// fields ProDucking owns edited, and each block written back only when
     /// it changed, 0x0008 first as Wave Link does. No commit: Wave Link sends
     /// none for ducking and the unit keeps the bits without one.
     /// </summary>
-    public DuckingWrite SetDucking(DuckingSettings settings)
+    public DuckingWrite SetDucking(OpenXLR.Core.Mixing.ProDuckingTarget target)
     {
         // Under the lock, as SetEq's read-modify-write is, so no other write lands between the reads and the writes.
         lock (_lock)
@@ -538,7 +538,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
             byte[] b8 = Read(ProDucking.Block, ProDucking.Length);
             byte[] b1 = Read(BlockCrossfade, CrossfadeLen);
             byte[] new8 = (byte[])b8.Clone(), new1 = (byte[])b1.Clone();
-            ProDucking.Apply(new8, new1, settings);
+            ProDucking.Apply(new8, new1, target);
             bool wrote8 = !new8.AsSpan().SequenceEqual(b8), wrote1 = !new1.AsSpan().SequenceEqual(b1);
             if (wrote8) Write(ProDucking.Block, new8);
             if (wrote1) Write(BlockCrossfade, new1);

@@ -180,6 +180,14 @@ few releases, and they get to settle in users' hands first.
   sections folded under it, on a dark neutral palette, with a copy to
   start from in `docs/examples/skins`.
   [skins.md](skins.md#layout)
+- [ ] Ducking on every device: a key microphone lowers chosen channels in
+  chosen mixes while it is loud, with the Wave XLR Pro's presets. A native
+  stage per ducked mix runs it on this computer; the Pro runs it on its
+  own processor when the setup fits, and the state says why when it does
+  not. One setup in `mixer.json`, carried by profiles
+  ([manual](manual.md#ducking)). Built in the daemon; open: acceptance on
+  the desk by ear, and the Ducking window that replaces the switch and
+  presets in Options.
 - [ ] Inputs from more than one attached Wave interface at once. The
   daemon drives one interface today; a second one is reachable only as a
   capture source.
@@ -391,14 +399,14 @@ while fixes to existing hosts remain part of normal maintenance.
   acceptance on both MK.2 units and by ear on the Pro, the Pro's curves
   against the software EQ's, and whether its EQ reaches the zero-latency
   headphone path.
-- [ ] Ducking on the Pro, which lowers the other mixes while you speak
-  and is applied per mix. Mapped from Wave Link 3.5 on Windows and driven
-  by the daemon, keyed by XLR 1, on the two USB pairs OpenXLR streams to
-  (the jacks' monitor feed and the USB Aux mix), from Options, the
-  terminal mixer and a deck key ([manual](manual.md#ducking)). Still
-  open: by-ear acceptance on Linux, the encoding of keys other than
-  XLR 1, and ducking single channels, which needs each channel on its own
-  pair and the rest of the mix matrix above.
+- [ ] Ducking on the Pro's own processor. Mapped from Wave Link 3.5 on
+  Windows; the daemon gives the unit the one ducking setup whenever it
+  fits, keyed by XLR 1, on the two USB pairs OpenXLR streams to (the
+  jacks' monitor feed and the USB Aux mix), and runs anything else in
+  software ([manual](manual.md#ducking)). Still open: by-ear acceptance on
+  Linux, the encoding of keys other than XLR 1, and per-channel hardware
+  ducking, which needs each channel on its own pair: the hardware mixing
+  track, starting with the remaining mix matrix above.
 - [ ] The Pro's mix maximizer and channel booster, the other two onboard
   effects with no mapped control. The booster adds up to 12 dB above the
   normal ceiling on any input; the maximizer is per mix.

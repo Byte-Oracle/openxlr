@@ -90,6 +90,11 @@ from firmware 1.0.14, the unit's own DSP runs the EQ, `eq.backend` reads `device
 `{"cmd":"setEqProcessing","channel":"xlr1","value":"software"}` moves XLR 1's
 EQ to this computer and `"value":"device"` back to the unit (see
 [where the EQ runs](api.md#where-the-eq-runs)).
+[Ducking](api.md#ducking) is one setup on any device:
+`{"cmd":"setDucking","value":{"enabled":true,"channels":["music","game"],"mixes":["monitor"],"amount":"high"}}`
+lowers Music and Game in Monitor A by 24 dB while XLR 1 is loud. The fields
+it leaves out keep their values. `GET /api/v1/state` reads the setup back as
+`ducking`, with `backend` saying whether the unit or this computer runs it.
 Both transports share the dispatcher,
 validation and broadcasts. HTTP returns
 `{"apiVersion":"1","ok":true,"messages":[]}` after a successful mutation.

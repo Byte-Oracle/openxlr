@@ -10,6 +10,14 @@ public sealed record ProDuckingTarget(bool Enabled, string Sensitivity, string A
             && Amount == other.Amount && Speed == other.Speed && Pairs.SetEquals(other.Pairs);
 
     public override int GetHashCode() => HashCode.Combine(Enabled, Sensitivity, Amount, Speed, Pairs.Count);
+
+    /// <summary>The unit's ducking switched off, which writes no preset.</summary>
+    public static ProDuckingTarget Off { get; } = new(false, ProDucking.Medium, ProDucking.Medium, ProDucking.Medium, new HashSet<int>());
+
+    /// <summary>For the journal: off, or the pairs and presets.</summary>
+    public override string ToString() => Enabled
+        ? $"on, pairs {(Pairs.Count == 0 ? "none" : string.Join(" ", Pairs.Order()))}, sensitivity {Sensitivity}, amount {Amount}, speed {Speed}"
+        : "off";
 }
 
 /// <summary>Where the last ducking post stands on the primary unit.</summary>

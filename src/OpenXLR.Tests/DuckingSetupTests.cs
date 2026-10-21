@@ -40,7 +40,7 @@ public sealed class DuckingSetupTests
         Assert.True(plan.Cells.SetEquals(["music|monitor", "music|stream", "game|monitor", "game|stream"]));
         Assert.Empty((setup with { Channels = [] }).ToPlan().Cells);
         Assert.Empty((setup with { Mixes = [] }).ToPlan().Cells);
-        byte[] bytes = ProDucking.PresetBytes(new() { Sensitivity = sensitivity, Amount = amount, Speed = speed });
+        byte[] bytes = ProDucking.PresetBytes(sensitivity, amount, speed);
         Assert.Equal(unchecked((sbyte)bytes[0]), plan.ThresholdDb);
     }
 
