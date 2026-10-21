@@ -55,6 +55,16 @@ public sealed partial class MonitorVolumeIntegrationTests
 
     [MonitorPipeWireFact]
     public void CreatingAnEarlierMonitorPinsExistingImplicitOutputsAndRollsBackThatPin()
+        => CheckEarlierMonitor(null);
+
+    [MonitorPipeWireFact]
+    public void CreatingAnEarlierMonitorPreservesFallbackAndPartiallyValidSavedFeeds()
+    {
+        CheckEarlierMonitor("removed");
+        CheckEarlierMonitor("removed+monitor2");
+    }
+
+    private static void CheckEarlierMonitor(string? savedFeed)
     {
         var pw = new PipeWireAdapter();
         using var registry = pw.WatchGraph();
@@ -65,13 +75,16 @@ public sealed partial class MonitorVolumeIntegrationTests
             outputs.CreateNullSink("edit_new_default", "New default output");
             mixer.Build(MonitorConfig().WithoutMix("monitor"));
             mixer.SetMonitorOutputs(["edit_new_default"]);
+            if (savedFeed is not null)
+                mixer.ApplySettings(mixer.ExportSettings() with { MonitorFeeds = new() { ["edit_new_default"] = savedFeed } });
             AssertEditableMonitorFeeds(mixer, "edit_new_default", "monitor2");
             Assert.Throws<IOException>(() => mixer.CreateMix("A speakers", _ => "disk full", MixKind.Monitor));
-            Assert.False(mixer.ExportSettings().MonitorFeeds.ContainsKey("edit_new_default"));
+            Assert.Equal(savedFeed, mixer.ExportSettings().MonitorFeeds.GetValueOrDefault("edit_new_default"));
             Assert.Equal("monitor2", mixer.Snapshot().DefaultMonitorMix);
             mixer.CreateMix("A speakers", _ => null, MixKind.Monitor);
             Assert.Equal("a-speakers", mixer.Snapshot().DefaultMonitorMix);
-            Assert.Equal("monitor2", mixer.ExportSettings().MonitorFeeds["edit_new_default"]);
+            Assert.Equal(savedFeed == "removed+monitor2" ? savedFeed : "monitor2",
+                mixer.ExportSettings().MonitorFeeds["edit_new_default"]);
             AssertEditableMonitorFeeds(mixer, "edit_new_default", "monitor2");
             string[] order = [.. mixer.Config.Mixes.Where(m => m.IsEditable).Select(m => m.Id).Reverse()];
             mixer.SetLayoutOrder(["test"], order, _ => null);

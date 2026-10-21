@@ -479,8 +479,10 @@ unity, as a direct port link from the mix; a blend at other levels is a mix
 of its own, with the sends set there. An output without an entry, or with
 an empty or unknown one, hears the default monitor mix: `monitor` when it
 exists, otherwise the monitor whose id sorts first. Display order never changes
-this default, which the state reports as `defaultMonitorMix`. Deleting a mix drops
-it from every feed. The jacks of one interface share a return bus, so they
+this default, which the state reports as `defaultMonitorMix`. Creating a monitor
+whose id sorts earlier keeps existing fallback outputs on their previous monitor
+by saving that feed explicitly, including outputs with stale unknown feed ids.
+Deleting a mix drops it from every feed. The jacks of one interface share a return bus, so they
 are written with one feed.
 
 `outputRoutes`, the per-route level list that 0.1.40 and 0.1.41 wrote, is

@@ -277,13 +277,16 @@ public sealed partial class Mixer
             var previousAppearance = _appearance;
             string? previousDefault = PrimaryMonitorLocked()?.Id;
             var previousFeeds = new Dictionary<string, string>(_monitorFeeds);
+            string[] fallbackOutputs = [.. _monitorOutputs.Where(output =>
+                !_monitorFeeds.TryGetValue(output, out string? feed)
+                || !MonitorFeed.Parts(feed).Any(part => _config.Mixes.Any(m => m.Id == part)))];
             try
             {
                 _mixModules[id] = _pw.CreateNullSink(mix.SinkName, $"OpenXLR {name}");
                 _config = next;   // leg discovery and the cell faders go by the mix list
                 // A new lower id must not silently change existing outputs.
                 if (previousDefault is not null && PrimaryMonitorLocked()?.Id != previousDefault)
-                    foreach (string output in _monitorOutputs.Where(output => !_monitorFeeds.ContainsKey(output)))
+                    foreach (string output in fallbackOutputs)
                         _monitorFeeds[output] = previousDefault;
                 _mixVolume[id] = 1.0;
                 foreach (ChannelDefinition ch in _config.Channels)
