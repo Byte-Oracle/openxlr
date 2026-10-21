@@ -138,6 +138,99 @@ public sealed partial class MonitorVolumeIntegrationTests
         }
     }
 
+    /// <summary>
+    /// A direct path another program left on is switched off while no Pro
+    /// jack is a monitor output: at startup, when it is turned on again
+    /// meanwhile, and when the monitor moves from a jack to another device.
+    /// Each is one write, and the return pair is only asserted for a jack.
+    /// </summary>
+    [MonitorPipeWireFact]
+    public async Task ADirectPathLeftOnIsSwitchedOffWhileNoProJackIsMonitored()
+    {
+        const string jack = DirectSink + "#hp1";
+        const string katana = "direct_katana";
+        var pw = new PipeWireAdapter();
+        using var registry = pw.WatchGraph();
+        var modules = new List<uint>();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["mixer"] = "true", ["monitorOutput"] = katana,
+        }).Build();
+        var pro = new DirectPro(new() { GainDb = 30, HpMixMicDirect = true, HpMixMonitorReturn = false });
+        DeviceManager? devices = null;
+        MixerService? mixer = null;
+        try
+        {
+            modules.Add(LoadModule("module-null-sink", "sink_name=pro_direct_parent", "channels=6", "sink_properties=device.description=Pro-direct-parent"));
+            WaitForRecovery(() => ProcessRunner.Run("pactl", ["list", "sources", "short"]).StdoutText.Contains("pro_direct_parent.monitor", StringComparison.Ordinal));
+            modules.Add(LoadModule("module-remap-source", $"source_name={DirectSource}", "master=pro_direct_parent.monitor", "channels=6",
+                "source_properties=device.description=Pro-direct-capture"));
+            modules.Add(LoadModule("module-null-sink", $"sink_name={DirectSink}", "channels=12",
+                "channel_map=" + string.Join(',', Enumerable.Range(0, 12).Select(i => "aux" + i)), "sink_properties=device.description=Pro-direct-raw"));
+            modules.Add(LoadModule("module-null-sink", $"sink_name={katana}", "sink_properties=device.description=Katana"));
+            WaitForRecovery(() => pw.ListDevices().Any(d => d.Name == DirectSource) && pw.ListDevices().Any(d => d.Name == katana));
+            WaitForInputPorts(DirectSink, 12);
+
+            devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => [pro]);
+            devices.SweepOnce();
+            Assert.True(pro.Connected);
+            Assert.True(devices.Snapshot().State!.HpMixMicDirect);
+            mixer = new MixerService(NullLogger<MixerService>.Instance, config, devices);
+            await mixer.StartAsync(CancellationToken.None);
+            Assert.True(mixer.Built);
+            MixerService service = mixer;
+            void Run(Command command) => Assert.Null(service.Apply(command));
+            void Sweep() { devices.SweepOnce(); service.SweepOnce(); }
+
+            // Startup with the monitor on another device: the path goes off
+            // once and stays off, and the return pair is left as it was.
+            Assert.Equal([katana], service.Snapshot()!.MonitorOutputs);
+            Assert.False(pro.MicDirect);
+            Assert.False(devices.Snapshot().State!.HpMixMicDirect);
+            for (int i = 0; i < 3; i++) Sweep();
+            Assert.Equal(1, pro.MicDirectWrites);
+            Assert.False(pro.MonitorReturn);
+
+            // Turned on again from elsewhere, it goes off on the next sweep
+            // that reads it (the timer's own pass may hold the first one off).
+            pro.LeaveMicDirectOn();
+            PrimaryWait(() => { Sweep(); return !pro.MicDirect; });
+            for (int i = 0; i < 3; i++) Sweep();
+            Assert.Equal(2, pro.MicDirectWrites);
+
+            // Every monitor output a jack: the path follows XLR 1's Monitor send as before.
+            PrimaryWait(() => { Sweep(); return service.Devices()!.Any(d => d.Name == jack)
+                && service.Snapshot()!.Channels.Single(c => c.Id == "xlr1").BindingConnected; });
+            Run(new() { Cmd = "setMonitorOutputs", Devices = [jack] });
+            Run(new() { Cmd = "setChannelMuted", Channel = "xlr1", Mix = "monitor", Value = JsonSerializer.SerializeToElement(false) });
+            Assert.True(pro.MicDirect);
+            Assert.True(pro.MonitorReturn);
+
+            // The monitor moves to the other device: the path goes off, the
+            // return pair stays asserted.
+            Run(new() { Cmd = "setMonitorOutputs", Devices = [katana] });
+            Assert.False(pro.MicDirect);
+            Assert.True(pro.MonitorReturn);
+            int writes = pro.MicDirectWrites;
+            for (int i = 0; i < 3; i++) Sweep();
+            Assert.Equal(writes, pro.MicDirectWrites);
+        }
+        finally
+        {
+            if (mixer is not null)
+            {
+                if (mixer.Built) await mixer.StopAsync(CancellationToken.None);
+                mixer.Dispose();
+            }
+            devices?.SuspendSession();
+            devices?.Dispose();
+            foreach (uint module in Enumerable.Reverse(modules)) UnloadModule(module);
+            File.Delete(MixerSettings.DefaultPath);
+            string state = Path.Combine(OpenXlrPaths.ConfigDir, "devices", "0fd9-00b4");
+            if (Directory.Exists(state)) Directory.Delete(state, true);
+        }
+    }
+
     /// <summary>The graph mute of one send, or null while its leg is not found.</summary>
     private static bool? LegMuted(PipeWireAdapter pw, string channel, string mix)
     {
@@ -154,9 +247,10 @@ public sealed partial class MonitorVolumeIntegrationTests
     /// A Wave XLR Pro as far as the daemon's output routing goes: the
     /// selectors and the headphone mix hold what was last written.
     /// </summary>
-    private sealed class DirectPro : IAudioDevice
+    private sealed class DirectPro(DeviceState? initial = null) : IAudioDevice
     {
-        private DeviceState _state = new() { GainDb = 30 };
+        private DeviceState _state = initial ?? new() { GainDb = 30 };
+        public int MicDirectWrites;
         public DeviceInfo Info { get; } = new("Elgato", "Wave XLR Pro", 0x0fd9, 0x00b4) { Location = new(1, 52, "1-" + DirectSerial, DirectSerial) };
         public DeviceCapabilities Capabilities { get; } = new()
         {
@@ -164,6 +258,9 @@ public sealed partial class MonitorVolumeIntegrationTests
         };
         public bool Connected { get; private set; }
         public bool MicDirect { get { lock (this) return _state.HpMixMicDirect; } }
+        public bool MonitorReturn { get { lock (this) return _state.HpMixMonitorReturn; } }
+        /// <summary>What Wave Link does to the unit from elsewhere: the daemon only reads it.</summary>
+        public void LeaveMicDirectOn() => Write(s => s with { HpMixMicDirect = true });
         public DeviceState ReadState() { lock (this) return _state; }
         private void Write(Func<DeviceState, DeviceState> change) { lock (this) _state = change(_state); }
         public void Connect() => Connected = true;
@@ -174,7 +271,7 @@ public sealed partial class MonitorVolumeIntegrationTests
         public void SetOutUsbAux(bool on) => Write(s => s with { OutUsbAux = on, AuxReturnEnabled = on });
         public void SetOutLineOut(bool on) => Write(s => s with { OutLineOut = on });
         public void SetHpMixMonitorReturn(bool on) => Write(s => s with { HpMixMonitorReturn = on });
-        public void SetHpMixMicDirect(bool on) => Write(s => s with { HpMixMicDirect = on });
+        public void SetHpMixMicDirect(bool on) { Interlocked.Increment(ref MicDirectWrites); Write(s => s with { HpMixMicDirect = on }); }
         public void SetGainDb(int db) => Write(s => s with { GainDb = db });
         public void SetMute(bool on) { } public void SetLowCut(bool on) { } public void SetExpander(bool on) { }
         public void SetVoiceTune(bool on) { } public void SetVoiceTuneStrength(int value) { } public void SetHpVolumeDb(double db) { }

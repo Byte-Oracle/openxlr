@@ -347,7 +347,9 @@ channel that carries the Pro's first input: while the jacks are the only
 monitor output and that channel is unmuted in their mix, the jacks hear the
 microphone directly and the channel's software send is held back. With no
 such channel the path is off, and a microphone bound to XLR 1 reaches the
-jacks through the software mix, a few milliseconds later. The path is
+jacks through the software mix, a few milliseconds later. This holds while
+the jacks are not in use too, so a path another program such as Wave Link
+left on is switched off. The path is
 hardware, so that channel's [volume](#volume-direct-monitor) does not
 change what the jacks hear of it while the path is on.
 
