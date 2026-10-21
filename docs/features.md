@@ -400,9 +400,10 @@ button through their `binding` and `effects` parts. The chain window keeps
 presets, A/B, copy and paste, native editors and latency readouts; its picker
 filters by the input's width. Flow cards include the chain, and microphone
 capture inputs draw a one-bar meter. Older daemons without a chain width show
-no capture Inserts button. The terminal mixer still edits XLR and mix
-chains only. Sound Check also runs on mono capture inputs; the microphone
-EQ stays on XLR 1 and XLR 2.
+no capture Inserts button. The terminal mixer edits capture chains too, at
+their published mono or stereo width, and shows mono capture microphones
+with one meter bar. Sound Check also runs on mono capture inputs; the
+microphone EQ stays on XLR 1 and XLR 2.
 
 ### Separate mixer window
 
@@ -671,6 +672,9 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   the selection visible. F1 or `?` lists all keys. A plugin is added from
   a picker over the catalogue, narrowed by typing, of the plugins that fit
   the chain's width
+- Capture microphones in Inputs show their source, connection and carried
+  unit controls. Inserts includes mono and stereo capture chains, using the
+  width the daemon reports; an older daemon keeps XLR and mix chains only
 - Insert editing opens the plugin's native editor. A blocked or refused
   editor falls back to terminal controls with the reason shown. Controls
   follow the catalogue's order, defaults, switches, named scale points and

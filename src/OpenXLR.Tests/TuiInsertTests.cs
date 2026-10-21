@@ -475,6 +475,106 @@ public sealed class TuiInsertTests
         Assert.Contains("Saved EQ", frame, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(1, 150, 42)]
+    [InlineData(2, 150, 42)]
+    [InlineData(1, 80, 24)]
+    [InlineData(2, 80, 24)]
+    public async Task CaptureChainsUseTheirKeysNamesAndPublishedWidths(int width, int columns, int lines)
+    {
+        await using Session session = new();
+        session.State["mixer"]!["channels"] = new JsonArray
+        {
+            new JsonObject { ["id"] = "capture", ["name"] = "Guest", ["captureSource"] = "unplugged",
+                ["microphone"] = width == 1, ["chainWidth"] = width },
+            new JsonObject { ["id"] = "apps", ["name"] = "Apps", ["chainWidth"] = null },
+        };
+        session.State["mixer"]!["inserts"]!["capture"] = new JsonArray(session.Entry.DeepClone());
+        session.Echo();
+        session.ReceiveCatalogue();
+        session.Sent.Clear();
+        session.Screen.Resize(columns, lines);
+        session.Draw();
+        session.Edit();
+        Assert.Contains("STUDIO EQ / GUEST", session.Draw(), StringComparison.Ordinal);
+        session.Key(' ');
+        Parameter(session, "enabled", 0, "capture");
+        session.Sent.Clear();
+        session.Key(Key.Escape);
+        session.Key('a');
+        string frame = session.Draw();
+        Assert.Contains("ADD TO GUEST", frame, StringComparison.Ordinal);
+        Assert.Contains("Both widths", frame, StringComparison.Ordinal);
+        Assert.Equal(width == 1, frame.Contains("Unused", StringComparison.Ordinal));
+        Assert.Equal(width == 2, frame.Contains("Same id, other format", StringComparison.Ordinal));
+        session.Key(Key.Enter);
+        JsonNode command = session.Command();
+        Assert.Equal("setInserts", command["cmd"]!.GetValue<string>());
+        Assert.Equal("capture", command["channel"]!.GetValue<string>());
+        Assert.Equal(2, command["inserts"]!.AsArray().Count);
+        session.State["mixer"]!["channels"]![0]!["name"] = "Visitor";
+        session.Echo();
+        Assert.Contains("Visitor", session.Draw(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OlderStateKeepsOnlyXlrAndMixChainsWithoutGuessingCaptureWidths()
+    {
+        await using Session session = new();
+        session.State["mixer"]!["channels"] = new JsonArray
+        {
+            new JsonObject { ["id"] = "xlr1", ["name"] = "Mic 1" },
+            new JsonObject { ["id"] = "capture", ["name"] = "Guest", ["captureSource"] = "usb", ["captureMonoChannel"] = 0 },
+        };
+        session.State["mixer"]!["inserts"]!["capture"] = new JsonArray(session.Entry.DeepClone());
+        session.Echo();
+        session.ReceiveCatalogue();
+        session.Sent.Clear();
+        session.Draw();
+        session.Key('a');
+        Assert.Contains("ADD TO MIC 1", session.Draw(), StringComparison.Ordinal);
+        Assert.Contains("Unused", session.Draw(), StringComparison.Ordinal);
+        session.Key(Key.Escape);
+        session.Key(Key.Right);
+        session.Key('a');
+        string frame = session.Draw();
+        Assert.Contains("ADD TO STREAM", frame, StringComparison.Ordinal);
+        Assert.DoesNotContain("Unused", frame, StringComparison.Ordinal);
+        Assert.DoesNotContain("Guest", frame, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AnOpenCapturePickerKeepsItsKeyAcrossReorderingAndClosesOnRemoval()
+    {
+        await using Session session = new();
+        JsonArray channels = new()
+        {
+            new JsonObject { ["id"] = "guest", ["name"] = "Guest", ["chainWidth"] = 1 },
+            new JsonObject { ["id"] = "line", ["name"] = "Line", ["chainWidth"] = 2 },
+        };
+        session.State["mixer"]!["channels"] = channels;
+        session.Echo();
+        session.Draw();
+        session.Key('a');
+        JsonNode guest = channels[0]!;
+        channels.RemoveAt(0);
+        channels.Add(guest);
+        guest["name"] = "Visitor";
+        session.Echo();
+        Assert.Contains("ADD TO VISITOR", session.Draw(), StringComparison.Ordinal);
+        session.Key(Key.Enter);
+        Assert.Equal("guest", session.Command()["channel"]!.GetValue<string>());
+        session.Sent.Clear();
+        session.Key(Key.Right);
+        session.Key('a');
+        channels.Remove(guest);
+        session.Echo();
+        string frame = session.Draw();
+        Assert.DoesNotContain("ADD TO", frame, StringComparison.Ordinal);
+        Assert.Contains("The channel no longer has an insert chain", frame, StringComparison.Ordinal);
+        Assert.Empty(session.Sent);
+    }
+
     [Fact]
     public async Task TheFilterKeepsTheLettersAndDigitsThatOtherwiseQuitOrSwitchSections()
     {

@@ -2890,7 +2890,7 @@ draws one meter bar and a stereo pair draws two; XLR 1 and XLR 2 keep their
 two. An older daemon that does not report a chain width shows no capture
 Inserts button. A capture microphone's chain window also offers
 [Sound Check](#sound-check). EQ remains on XLR 1 and XLR 2, and the terminal
-mixer still edits only XLR and mix chains.
+mixer edits capture chains too, using the width the daemon reports.
 
 A capture input on one mono port takes a mono chain; a stereo pair takes a
 stereo chain. A capture input on the first pair of a source that has just
@@ -3066,8 +3066,8 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 | Section | What is on it |
 |---|---|
 | 1 Mixer | channel sends, mix masters, stereo meters and level history; channel and user mix creation, renaming, removal and ordering |
-| 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. An XLR input is mono, so it carries one bar rather than a pair of the same reading. A strip bound to another microphone shows its source, or why it is silent, on the row under its name, and a silent one's name is in the warning colour |
-| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing and USB Aux return |
+| 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. A microphone input, including a mono capture input, carries one bar rather than a pair of the same reading. A strip bound to another microphone shows its source, or why it is silent, on the row under its name, and a silent one's name is in the warning colour |
+| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing and USB Aux return |
 | 4 Outputs | selected monitor sinks and their feeds, shared output volume, each sink's volume and mute, and the system default sink and source |
 | 5 Apps | every known application and its channel assignment, including the desktop's own routing |
 | 6 Inserts | the chain on each input and mix, its order, bypass and status; add a plugin from the catalogue, narrowed by typing, of those that fit the chain's width; open a plugin's native editor or edit its generated controls when the editor is blocked or refused |
@@ -3104,7 +3104,7 @@ Controls below the visible hardware cards appear as the selection moves.
 | Outputs, on a sink | `-`, `+`, `m` | change its volume or toggle its mute |
 | Apps | Left/Right, `i`, `f` | assign a channel, leave routing to the desktop, or forget the assignment |
 | Inserts | Space, Ctrl+Up/Down, `d`, `e` | bypass, reorder, remove, or open the plugin's native editor, with generated controls when blocked or refused |
-| Inserts | `a` | add a plugin: the picker lists the installed plugins that fit the chain, mono for an input and stereo for a mix |
+| Inserts | `a` | add a plugin: the picker lists plugins that fit the reported chain width: mono for a microphone, stereo for a capture pair or mix |
 | Plugin picker | letters and digits, Backspace, Up/Down, Enter, Escape | narrow the list by name, category or format; choose; add the plugin after the chain's last one; go back. While the picker is open `q` and the digits are filter text |
 | Insert controls | Escape, `r`, `e` | return to the chain, reset every declared control to its default, or try the native editor again |
 | Insert controls | Up/Down, PageUp/PageDown, Left/Right, Space, Enter | select a control, change a number or choice, or toggle a switch |
@@ -3121,10 +3121,23 @@ Save settings as and press Enter.
 On Inputs, each of the interface's inputs is a card headed by the channel
 that carries it. While the input plays on its own strip the heading is the
 strip's name, XLR 1, or Mic 1 on a Wave:3. While XLR 1 is bound elsewhere
-and a capture channel carries the interface's microphone, the heading reads
-Input 1 on that channel, such as Input 1 on Wave XLR Pro input 1. With no
+and a mono capture input carries the interface's microphone, its controls
+sit with that channel, headed by the unit and input number. A capture input
+on a stereo pair, or any capture channel from a daemon that does not report
+`microphone`, keeps the card headed Input 1 on that channel. With no
 channel carrying it, it reads Input 1, not in the mixer. The controls work
 in every case, so a hot preamp can still be turned down.
+
+Each mono capture input has a source and connection card in Inputs,
+including an unplugged microphone and a microphone without hardware
+controls. A supported unit's renamed capture node is followed by
+`binding.unit`. Its gain and switches appear there while the unit is
+driven, for both the primary and additional interfaces. A stereo capture
+input stays in the mixer and Inserts tabs. Inserts lists capture chains
+in layout order and filters plugins by `chainWidth`, even while the source
+is unplugged. Microphone meters read `microphone`; an older daemon without
+these fields keeps XLR-only mono meters and XLR and mix insert targets.
+Sound Check remains a window control.
 
 The Bindings card chooses what feeds XLR 1 and XLR 2, the choice the window
 makes in [Use another microphone on XLR 1 or XLR 2](#input-bindings).
