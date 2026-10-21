@@ -61,6 +61,29 @@ public sealed class SourcePickerTests
     }
 
     [Fact]
+    public void HardwareSourcesAreNamedWithoutTheirAlsaProfile()
+    {
+        string[] names = PipeWireAdapter.ShortSourceNames([
+            ("Elgato Wave XLR Dock MK.2 Analog Stereo", "Analog Stereo"),
+            ("Ryzen HD Audio Controller Stereo analogico", "Stereo analogico"),
+            ("Wave XLR Pro mic (raw, driven by OpenXLR)", "Pro"),
+            ("Webcam Analog Stereo", "Analog Stereo"),
+            ("Webcam Digital Stereo (IEC958)", "Digital Stereo (IEC958)"),
+            ("Katana Analog Stereo", null),
+            ("Analog Stereo", "Analog Stereo"),
+        ]);
+        Assert.Equal([
+            "Elgato Wave XLR Dock MK.2",
+            "Ryzen HD Audio Controller",
+            "Wave XLR Pro mic (raw, driven by OpenXLR)",
+            "Webcam Analog Stereo",
+            "Webcam Digital Stereo (IEC958)",
+            "Katana Analog Stereo",
+            "Analog Stereo",
+        ], names);
+    }
+
+    [Fact]
     public void PortChoicesAreNamedAndCappedAtTheChannelCount()
     {
         Assert.Equal(["1 (MONO)"], InputBindingDialog.PortChoices(new("wave3", "Wave:3", false, true, 1, "MONO")).Select(p => p.Label));
