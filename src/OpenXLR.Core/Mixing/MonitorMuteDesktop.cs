@@ -50,31 +50,37 @@ public sealed partial class Mixer
         return previous != _monitorMuted;
     }
 
-    /// <summary>Application sinks stay open to recording; their native mute is monitoring intent.</summary>
+    /// <summary>Application sinks stay open to recording; the default sink's native mute is monitoring intent.</summary>
     private bool ReadDesktopMonitorMuteLocked(ref IReadOnlyList<OwnSinkLevel> levels)
     {
         _desktopMuteConsumed = false;
         var applications = _config.Channels.Where(c => c.IsApplication).Select(c => c.SinkName).ToHashSet(StringComparer.Ordinal);
+        // Reading the default costs a helper call, so only a muted or retried application sink pays it.
+        string? defaultSink = levels.Any(s => applications.Contains(s.Name) && (s.Muted || _desktopMuteRetries.ContainsKey(s.Name)))
+            ? _pw.GetDefaultSink() : null;
         var present = levels.Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
         foreach (string missing in _desktopMuteRetries.Keys.Where(n => n.StartsWith("OpenXLR_", StringComparison.Ordinal)
-                     && !present.Contains(n)).ToArray()) _desktopMuteRetries.Remove(missing);
+                     && (!present.Contains(n) || n != defaultSink)).ToArray()) _desktopMuteRetries.Remove(missing);
         bool pulse = false;
-        foreach (OwnSinkLevel sink in levels.Where(s => applications.Contains(s.Name) && (s.Muted || _desktopMuteRetries.ContainsKey(s.Name))))
+        bool skipRepair = false;
+        foreach (OwnSinkLevel sink in levels.Where(s => s.Name == defaultSink && applications.Contains(s.Name)
+                     && (s.Muted || _desktopMuteRetries.ContainsKey(s.Name))))
         {
             try
             {
-                if (!_pw.GetSinkMuted(sink.Name)) { _desktopMuteRetries.Remove(sink.Name); continue; }
+                if (!_pw.GetSinkMuted(sink.Name)) { _desktopMuteRetries.Remove(sink.Name); skipRepair = true; continue; }
                 pulse |= ConsumeDesktopMuteLocked(sink.Name);
+                skipRepair = pulse;
             }
             catch (InvalidOperationException) { /* Retry a source that disappeared during its read. */ }
         }
         bool changed = pulse && ToggleDesktopMonitorIntentLocked();
         _desktopMuteConsumed |= pulse;
-        if (pulse || levels.Any(s => s.Muted && applications.Contains(s.Name)))
+        if (skipRepair)
             levels = [.. levels.Select(s =>
             {
                 // Do not overwrite another key arriving after the consume.
-                if (applications.Contains(s.Name)) return s with { Muted = false };
+                if (s.Name == defaultSink) return s with { Muted = false };
                 MixDefinition? mix = pulse ? MonitorMixForSinkLocked(s.Name) : null;
                 if (mix is null) return s;
                 bool wanted = _mixMuted.Contains(mix.Id);
@@ -129,7 +135,9 @@ public sealed partial class Mixer
         bool changed = ApplyDesktopMonitorIntentLocked();
         HashSet<string> selected = PhysicalMonitorOutputsLocked();
         ForgetUnselectedDesktopOutputsLocked(selected);
-        var nodes = _pw.ObservedSinkMutes(selected);
+        IReadOnlyDictionary<string, (string Identity, bool Muted)> nodes;
+        try { nodes = _pw.ObservedSinkMutes(selected); }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException) { return changed; }
         // Reconnection restores the original flag; it is not a native key.
         foreach ((string name, (string? identity, bool muted)) in _outputMutes.ToArray())
         {
@@ -161,6 +169,12 @@ public sealed partial class Mixer
         {
             if (_desktopMuteResets.ContainsKey(name)) continue;
             if (_outputMutes[name].Muted == muted) { _desktopMuteRetries.Remove(name); continue; }
+            if (!muted)
+            {
+                _outputMutes[name] = (nodes[name].Identity, false);
+                _desktopMuteRetries.Remove(name);
+                continue;
+            }
             pulse |= ConsumeDesktopMuteLocked(name);
         }
         if (pulse && !_desktopMuteConsumed) changed |= ToggleDesktopMonitorIntentLocked();

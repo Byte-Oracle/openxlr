@@ -2966,16 +2966,20 @@ Mix and channel mutes keep their values, and recording and streaming continue.
 On a monitor mix sink it toggles that mix. On any other output it toggles the
 sink's mute at the audio server.
 
-If Linux's native mute key targets a selected physical output or an internal
-application sink such as **OpenXLR System**, OpenXLR treats the press as a
-monitoring toggle. It restores physical outputs' previous mute flags and keeps
-application routing sinks open so recording and streaming continue. The mute
+If Linux's native mute key targets a selected physical output, or an internal
+application sink such as **OpenXLR System** while it is the default output,
+OpenXLR treats the press as a monitoring toggle. It restores physical outputs'
+previous mute flags and keeps application routing sinks open so recording and
+streaming continue. A mute on an internal application sink that is not the
+default output is undone without pausing monitoring. The mute
 icon in the Linux applet can return to its previous state while monitoring
 remains paused. The **Mute** button in OpenXLR's MONITOR header shows the
 monitoring state; another mute press resumes monitoring. **OpenXLR Monitor A**
 and **OpenXLR Monitor B** keep their individual mix mute controls.
 Selecting an output preserves its existing native mute state; a mute key
 pressed immediately after selection already controls the monitoring pause.
+Unmuting an already muted output in the desktop applet leaves it unmuted
+without changing the monitoring pause; the next mute press toggles the pause.
 
 Native mute flags are observed on the next mixer sweep. A desktop command
 that changes several flags in the same sweep is treated as one press;
