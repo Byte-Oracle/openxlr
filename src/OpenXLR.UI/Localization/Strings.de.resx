@@ -2494,7 +2494,7 @@ Von OpenXLR gesteuertes Interface wählen</value>
     <value>An, läuft auf diesem Computer am Anfang des Eingangs, vor Hochpass, ClipGuard und Plugins.</value>
   </data>
   <data name="EqStatusDevice" xml:space="preserve">
-    <value>An, läuft auf dem Interface.</value>
+    <value>An, läuft auf dem Interface noch vor USB, also vor den Plugins und allem anderen auf diesem Computer.</value>
   </data>
   <data name="EqHardwareBadge" xml:space="preserve">
     <value>Hardware-Verarbeitung</value>
@@ -2509,7 +2509,7 @@ Von OpenXLR gesteuertes Interface wählen</value>
     <value>Interface</value>
   </data>
   <data name="EqStatusDeviceNamed" xml:space="preserve">
-    <value>An, läuft auf dem eigenen Prozessor von {0}.</value>
+    <value>An, läuft auf dem eigenen Prozessor von {0} noch vor USB, also vor den Plugins und allem anderen auf diesem Computer.</value>
   </data>
   <data name="EqDeviceFirmwareOld" xml:space="preserve">
     <value>Läuft in Software: {0} hat Firmware {1}, und das Gerät rechnet den EQ ab Firmware {2} selbst. Elgatos Updater ist in Wave Link unter Windows oder macOS.</value>
