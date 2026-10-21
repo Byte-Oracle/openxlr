@@ -58,7 +58,6 @@ public sealed partial class MainViewModel : ViewModelBase
                 DeviceConnected = false; RefreshBindings(); Status = Localizer.Text("StatusDaemonNotRunning");
                 ResetWaveInterfaces();
                 Inserts.ResetForNewConnection(); Inserts2.ResetForNewConnection();
-                Inserts.SoundCheck.Reset(); Inserts2.SoundCheck.Reset();
                 foreach (MixViewModel mv in Mixes) mv.Inserts.ResetForNewConnection();
                 foreach (ChannelViewModel channel in Channels) channel.Inserts?.ResetForNewConnection();
             }
@@ -1159,7 +1158,12 @@ public sealed partial class MainViewModel : ViewModelBase
 
     private void ApplyMixer(JsonNode? mixer)
     {
-        if (mixer is null) { Inserts.SoundCheck.Apply(null); Inserts2.SoundCheck.Apply(null); HasMixer = false; RenamedSinceStart = false; LayoutWarning = ""; ExclusiveGroups = []; return; }
+        if (mixer is null)
+        {
+            Inserts.SoundCheck.Apply(null); Inserts2.SoundCheck.Apply(null);
+            foreach (ChannelViewModel channel in Channels) channel.Inserts?.SoundCheck.Apply(null);
+            HasMixer = false; RenamedSinceStart = false; LayoutWarning = ""; ExclusiveGroups = []; return;
+        }
         HasMixer = true;
         ApplyOutputAppearance(mixer["outputAppearance"]);
         ExclusiveGroups = [.. (mixer["exclusiveGroups"] as JsonArray ?? []).OfType<JsonObject>()
@@ -1219,6 +1223,7 @@ public sealed partial class MainViewModel : ViewModelBase
                     vm.ApplyFromDaemon(c);
                     vm.ApplyEq(c["eq"], mixer["eqLimits"]);
                     vm.Inserts?.Apply(mixer["inserts"]?[vm.Id]);
+                    vm.Inserts?.SoundCheck.Apply(mixer["soundCheck"]);
                     vm.Inserts?.EnsurePluginsLoaded();
                 },
                 c => new ChannelViewModel(_client, c["id"]!.GetValue<string>(), c["name"]!.GetValue<string>(), mixIds),
@@ -1932,6 +1937,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         Microphone = n["microphone"]?.GetValue<bool>() ?? Id is "xlr1" or "xlr2";
         ApplyChainWidth(CaptureSource is not null && n["chainWidth"]?.GetValue<int>() is 1 or 2
             ? n["chainWidth"]!.GetValue<int>() : null);
+        if (Inserts is not null) Inserts.CanSoundCheck = Microphone;
         int capturePair = CapturePair + 1;
         CaptureLabel = CaptureSource is null ? ""
             : n["captureMonoChannel"]?.GetValue<int>() is int port

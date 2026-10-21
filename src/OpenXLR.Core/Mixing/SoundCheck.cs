@@ -16,7 +16,10 @@ public sealed partial class Mixer
         "Sound Check needs the OpenXLR native plugin host, which this installation does not include. Install a package that ships it, or build with -p:EnableNativeLv2Host=true.";
 
     /// <summary>The microphone channels Sound Check can run on.</summary>
-    public static bool IsSoundCheckChannel(string? channel) => channel is "xlr1" or "xlr2";
+    public bool IsSoundCheckChannel(string channel)
+    {
+        lock (_gate) return _config.Channels.Any(c => c.Id == channel && c.Microphone);
+    }
 
     /// <summary>The longest a session runs before it ends by itself.</summary>
     internal static readonly TimeSpan SoundCheckSessionLimit = TimeSpan.FromMinutes(10);
@@ -61,8 +64,8 @@ public sealed partial class Mixer
 
     private void SoundCheckLocked(string channel, string action)
     {
-        if (!IsSoundCheckChannel(channel) || !HasChannel(channel))
-            throw new ArgumentException("Sound Check needs the XLR 1 or XLR 2 channel.");
+        if (!IsSoundCheckChannel(channel))
+            throw new ArgumentException("Sound Check needs a microphone channel.");
         if (action is not ("record" or "loop" or "live" or "stop"))
             throw new ArgumentException("Unknown Sound Check action.");
         if (action == "stop")
@@ -75,15 +78,20 @@ public sealed partial class Mixer
             return;
         }
         if (_soundCheckChannel is not null && _soundCheckChannel != channel)
-            throw new InvalidOperationException("Stop Sound Check on the other microphone first.");
-        // Each strip records from its own source: the interface's pair or
-        // the port the strip is bound to. The refusal is the strip's own
-        // bindingConnected, with its bindingWarning when it has one.
+            throw new InvalidOperationException($"Stop Sound Check on {ChannelNameLocked(_config.Channels.Single(c => c.Id == _soundCheckChannel))} first.");
+        // Each input records from its own source, before the loop helper or
+        // any processing: the interface's pair, the port a strip is bound
+        // to, or a capture input's pair or mono port. A capture input with no
+        // insert has no wired route yet, so its source is looked up here. The
+        // refusal is the input's own bindingWarning when it has one.
         ChannelDefinition input = _config.Channels.Single(c => c.Id == channel);
-        if (!_built || !BindingConnectedLocked(input) || !_stripSources.TryGetValue(channel, out string? device))
+        string? device = !_built ? null
+            : input.CaptureSource is not null ? ResolveCaptureSourceLocked(input, _pw.ListDevices())
+            : BindingConnectedLocked(input) ? _stripSources.GetValueOrDefault(channel) : null;
+        if (device is null)
             throw new InvalidOperationException(BindingWarningLocked(input) is { } why
                 ? $"The microphone is not connected. {ChannelNameLocked(input)}: {why}"
-                : "The microphone is not connected.");
+                : $"The microphone is not connected. {ChannelNameLocked(input)}.");
         if (action == "record" && _soundCheck is null)
         {
             // The wait for the unit is over, confirmed or not.
@@ -105,6 +113,8 @@ public sealed partial class Mixer
                 // channel's feed is rebuilt from the helper's output.
                 if (_inputFeeds.Remove(channel, out PortLink? previous)) _pw.Unlink(previous);
                 WireInputFeedsLocked([channel]);
+                if (_soundCheck != filter)
+                    throw new InvalidOperationException(_soundCheckError ?? "Sound Check could not connect its audio path.");
             }
             catch (Exception failure)
             {

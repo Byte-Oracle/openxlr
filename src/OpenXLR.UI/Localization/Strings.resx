@@ -1923,7 +1923,7 @@ Select the interface OpenXLR drives</value>
     <value>Stop and discard</value>
   </data>
   <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
-    <value>Stop or close this window to restore the microphone and discard the sample. The session also ends on device loss, daemon restart or after ten minutes. Your effect edits are kept.</value>
+    <value>Stop or close this window to restore the microphone and discard the sample. The session also ends on a source change, device loss, channel deletion, daemon restart or after ten minutes. Your effect edits are kept.</value>
   </data>
   <data name="StoreA" xml:space="preserve">
     <value>Store A</value>

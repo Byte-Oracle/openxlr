@@ -53,9 +53,9 @@ public static class CommandValidation
             case "removePluginSearchPath":
                 return CheckPluginSearchPath(cmd);
             case "soundCheck":
-                if (!Mixer.IsSoundCheckChannel(cmd.Channel) || !layout.HasChannel(cmd.Channel!)
+                if (cmd.Channel is null || !layout.IsSoundCheckChannel(cmd.Channel)
                     || cmd.Action is not ("record" or "loop" or "live" or "stop"))
-                    return "soundCheck: need channel 'xlr1' or 'xlr2' and action 'record', 'loop', 'live' or 'stop'";
+                    return "soundCheck: need a microphone channel and action 'record', 'loop', 'live' or 'stop'";
                 // Stop always goes through, so a session can be ended whatever
                 // the helper's state; anything else needs the helper.
                 return cmd.Action != "stop" && !(nativeHostInstalled ?? PluginCatalog.HostInstalled)

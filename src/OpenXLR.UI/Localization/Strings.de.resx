@@ -1921,7 +1921,7 @@ Von OpenXLR gesteuertes Interface wählen</value>
     <value>Stoppen und verwerfen</value>
   </data>
   <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
-    <value>Stoppe oder schließe dieses Fenster, um das Live-Mikrofon wiederherzustellen und die Aufnahme zu verwerfen. Die Sitzung endet auch bei Geräteverlust, Daemon-Neustart oder nach zehn Minuten. Deine Effektänderungen bleiben erhalten.</value>
+    <value>Stoppe oder schließe dieses Fenster, um das Live-Mikrofon wiederherzustellen und die Aufnahme zu verwerfen. Die Sitzung endet auch bei einem Quellenwechsel, Geräteverlust, Löschen des Kanals, Daemon-Neustart oder nach zehn Minuten. Deine Effektänderungen bleiben erhalten.</value>
   </data>
   <data name="StoreA" xml:space="preserve">
     <value>A speichern</value>

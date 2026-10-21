@@ -4,7 +4,7 @@ using OpenXLR.Core.Mixing;
 namespace OpenXLR.Tests;
 
 [Collection("xdg-config")]
-public sealed class SoundCheckIntegrationTests
+public sealed partial class SoundCheckIntegrationTests
 {
     [MonitorPipeWireFact]
     public async Task TheDrySampleLoopsThroughLiveProcessingAndStopRestoresTheMicrophone()
@@ -41,7 +41,7 @@ public sealed class SoundCheckIntegrationTests
                 return mixer.Snapshot().SoundCheck.Seconds >= .5;
             }, TimeSpan.FromSeconds(5)), System.Text.Json.JsonSerializer.Serialize(mixer.Snapshot().SoundCheck) + pw.Run("pw-link", "-l") + (first.IsCompleted ? (await first).Stderr : "generator running"));
             Assert.Equal(channel, mixer.SoundCheckChannel);
-            Assert.Contains("other microphone", Assert.Throws<InvalidOperationException>(() => mixer.SoundCheck("xlr2", "record")).Message);
+            Assert.Equal("Stop Sound Check on Microphone first.", Assert.Throws<InvalidOperationException>(() => mixer.SoundCheck("xlr2", "record")).Message);
             mixer.SoundCheck(channel, "loop");
             Assert.True(SpinWait.SpinUntil(() => mixer.Snapshot().SoundCheck.Mode == "looping", TimeSpan.FromSeconds(3)));
             // Closing the other microphone's window sends a stop for it; this

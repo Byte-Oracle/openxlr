@@ -394,7 +394,8 @@ presets, A/B, copy and paste, native editors and latency readouts; its picker
 filters by the input's width. Flow cards include the chain, and microphone
 capture inputs draw a one-bar meter. Older daemons without a chain width show
 no capture Inserts button. The terminal mixer still edits XLR and mix
-chains only, and the microphone EQ and Sound Check stay on XLR 1 and XLR 2.
+chains only. Sound Check also runs on mono capture inputs; the microphone
+EQ stays on XLR 1 and XLR 2.
 
 ### Separate mixer window
 
@@ -474,13 +475,15 @@ for another machine.
 See [effect presets](effect-presets.md) and the
 [manual](manual.md#effect-presets).
 
-Sound Check, on XLR 1 and XLR 2, records up to ten seconds from the
-microphone and loops that dry take through the channel's software
-processing and insert chain in place of the live input, so the effects can
+Sound Check, on XLR 1, XLR 2 and mono capture inputs, records up to ten
+seconds from the microphone and loops that dry take through the channel's
+software processing and insert chain in place of the live input, so the effects can
 be tuned while the same words repeat. The sample stays in the native
 helper's memory and is discarded on stop; a session ends by itself on a
-device change, a lost audio path or after ten minutes. It needs the native
-plugin host. See [Sound Check](manual.md#sound-check).
+source change, a lost audio path, capture channel deletion, a mixer rebuild
+or after ten minutes. It works without any insert, and one session runs at
+a time across all microphones. Stereo capture inputs have no Sound Check. It needs
+the native plugin host. See [Sound Check](manual.md#sound-check).
 
 "Install file" and "Install folder" accept extracted Linux plugins or
 Windows plugin folders. Linux bundles are copied into `~/.lv2`, `~/.clap`

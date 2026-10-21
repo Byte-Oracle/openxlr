@@ -740,14 +740,17 @@ hardware's direct monitoring. The setting is saved with the mixer and stays
 as it is when a profile is loaded.
 
 <a name="sound-check"></a>
-**Sound Check.** In the XLR 1 or XLR 2 chain window, press "Sound Check".
+**Sound Check.** In the chain window of XLR 1, XLR 2 or a capture input on
+one mono port, press "Sound Check". Stereo capture inputs have no Sound Check.
 Press **Record** and speak; recording stops by itself after ten seconds.
 **Loop sample** then plays that take into the channel over and over in
-place of your microphone, through the low cut, ClipGuard and every insert
-as they are set, so you can change controls, bypass plugins or reorder the
-chain and hear the result on the same words. The loop needs at least a
+place of your microphone, through every insert and the channel's software
+processing as they are set, so you can change controls, bypass plugins or
+reorder the chain and hear the result on the same words. The loop needs at least a
 tenth of a second recorded. The interface's own gain and processing are
-already in the take; changing those while it loops changes nothing.
+already in the take; changing those while it loops changes nothing. The
+loop works without any insert. Capture inputs have no EQ, low cut or
+ClipGuard of their own; Sound Check does not add them.
 
 - **Hear live mic** goes back to the microphone and keeps the take, so
   **Loop sample** can play it again. **Record** replaces it.
@@ -757,14 +760,20 @@ already in the take; changing those while it loops changes nothing.
   included, so mute the channel in a call or a recording you are not
   testing on.
 - Sound Check runs on one microphone at a time. Stop it on one before
-  starting it on the other.
+  starting it on another, including between XLR and capture inputs. A
+  refusal names the channel whose session is running.
 - The take stays in memory and is never written to a file or a profile.
-  A session ends by itself when the interface changes, when its audio path
-  is lost, when the mixer is rebuilt and after ten minutes; the window then
-  says why, and **Stop and discard** clears the message.
+  A session ends by itself when its source changes, when its audio path
+  is lost, when its capture channel is deleted, when the mixer is rebuilt
+  and after ten minutes. If the channel still exists, the window says why,
+  and **Stop and discard** clears the message.
 - On a Wave XLR Pro with the headphone jacks following a monitor mix, the
-  interface's zero-latency microphone path is switched off while XLR 1 is
-  under Sound Check, so you hear the loop and not your voice.
+  interface's zero-latency microphone path is switched off while the channel
+  carrying its first input is under Sound Check, including a capture input,
+  so you hear the loop and not your voice.
+- With a capture input's microphone unplugged, **Record** is refused with
+  the channel's name and the reason. When the source lacks the port the
+  input takes, the refusal says the capture port is unavailable.
 - Sound Check needs the native plugin host the packages include. A source
   build without `-p:EnableNativeLv2Host=true` refuses it with that reason.
 - A loop can click at the point where it starts over; record with a short
@@ -2845,8 +2854,9 @@ native editors and latency readouts as an XLR chain. Its picker offers only
 plugins that fit the input's width. A capture input on one microphone port
 draws one meter bar and a stereo pair draws two; XLR 1 and XLR 2 keep their
 two. An older daemon that does not report a chain width shows no capture
-Inserts button. Sound Check and EQ remain on XLR 1 and XLR 2, and the
-terminal mixer still edits only XLR and mix chains.
+Inserts button. A capture microphone's chain window also offers
+[Sound Check](#sound-check). EQ remains on XLR 1 and XLR 2, and the terminal
+mixer still edits only XLR and mix chains.
 
 A capture input on one mono port takes a mono chain; a stereo pair takes a
 stereo chain. A capture input on the first pair of a source that has just
