@@ -2529,6 +2529,21 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="EqStatusStarting" xml:space="preserve">
     <value>Activo, iniciándose.</value>
   </data>
+  <data name="EqProcessingLabel" xml:space="preserve">
+    <value>Dónde funciona el EQ</value>
+  </data>
+  <data name="EqProcessingDevice" xml:space="preserve">
+    <value>En la unidad</value>
+  </data>
+  <data name="EqProcessingSoftware" xml:space="preserve">
+    <value>En software</value>
+  </data>
+  <data name="EqProcessingDeviceTip" xml:space="preserve">
+    <value>Ejecuta el EQ en el procesador propio de {0}, antes del USB. Todos los canales que toman el audio de esta unidad lo oyen, y la unidad lo conserva cuando OpenXLR se detiene.</value>
+  </data>
+  <data name="EqProcessingSoftwareTip" xml:space="preserve">
+    <value>Ejecuta el EQ en este ordenador, al principio de la entrada. El EQ propio de la unidad se desactiva y conserva sus bandas.</value>
+  </data>
   <data name="EqBandValues" xml:space="preserve">
     <value>{0}, {1}, {2}, Q {3}</value>
   </data>
@@ -2653,7 +2668,10 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>De 12 a 20 kHz: el aliento y la apertura. Un estante de agudos suave añade brillo.</value>
   </data>
   <data name="FlowEq" xml:space="preserve">
-    <value>EQ, {0} de 4 bandas activas</value>
+    <value>EQ en software, {0} de 4 bandas activas</value>
+  </data>
+  <data name="FlowEqDevice" xml:space="preserve">
+    <value>EQ en {1}, {0} de 4 bandas activas</value>
   </data>
   <data name="CaptureSourceChipName" xml:space="preserve">
     <value>Fuente de {0}: {1}</value>

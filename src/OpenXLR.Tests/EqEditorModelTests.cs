@@ -27,7 +27,7 @@ namespace OpenXLR.Tests;
 [Collection("xdg-config")]
 public sealed class EqEditorModelTests
 {
-    /// <summary>The three commands as the editor sends them.</summary>
+    /// <summary>The four commands as the editor sends them.</summary>
     private sealed class Recorder : IEqCommands
     {
         public readonly ConcurrentQueue<(string Command, string Channel, object Value)> Sent = new();
@@ -35,6 +35,8 @@ public sealed class EqEditorModelTests
         public Task SetEqAsync(string channel, MicEq eq) { Sent.Enqueue(("setEq", channel, eq)); return Task.CompletedTask; }
 
         public Task SetEqEnabledAsync(string channel, bool enabled) { Sent.Enqueue(("setEqEnabled", channel, enabled)); return Task.CompletedTask; }
+
+        public Task SetEqProcessingAsync(string channel, string value) { Sent.Enqueue(("setEqProcessing", channel, value)); return Task.CompletedTask; }
 
         public Task SetEqBandAsync(string channel, int band, EqBandChange change)
         {
@@ -586,5 +588,124 @@ public sealed class EqEditorModelTests
         eq.Apply(OnUnit(true, "software", "software", "1.0.15", ready: true), null);
         Assert.Equal("software", eq.Processing);
         Assert.Equal(Localizer.Format("EqDeviceBySoftware", "Wave XLR Dock MK.2"), eq.DeviceNote);
+    }
+
+    [Fact]
+    public void TheFooterOffersWhereTheEqRunsOnlyWhileAUnitCanRunItAndSendsTheChoice()
+    {
+        var time = new ManualTime();
+        var (eq, sent) = Model(time: time);
+        var raised = new List<string>();
+        eq.PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
+
+        // An older daemon reports neither the choice nor a unit: no switch, and choosing does nothing.
+        eq.Apply(State(true, Defaults), null);
+        Assert.False(eq.HasProcessingChoice);
+        eq.ChooseProcessing("software");
+        Assert.Empty(sent.Sent);
+        Assert.True(eq.ProcessOnDevice);
+        // A unit but no choice in the state, which no daemon sends: still no switch.
+        JsonNode noChoice = OnUnit(true, "device", "device", "1.0.15", ready: true);
+        noChoice.AsObject().Remove("processing");
+        eq.Apply(noChoice, null);
+        Assert.False(eq.HasProcessingChoice);
+        // The choice without a unit, as on a Wave XLR Pro: no switch either.
+        JsonNode noUnit = State(true, Defaults);
+        noUnit["processing"] = "device";
+        noUnit["device"] = null;
+        eq.Apply(noUnit, null);
+        Assert.False(eq.HasProcessingChoice);
+
+        // On the unit: the switch shows it, with the unit named in its tooltip, and no note.
+        eq.Apply(OnUnit(true, "device", "device", "1.0.15", ready: true), null);
+        Assert.True(eq.HasProcessingChoice);
+        Assert.True(eq.ProcessOnDevice);
+        Assert.False(eq.ProcessInSoftware);
+        Assert.Equal(Localizer.Format("EqProcessingDeviceTip", "Wave XLR Dock MK.2"), eq.ProcessOnDeviceTip);
+        Assert.Null(eq.EditorNote);
+
+        // The chosen side again sends nothing and stays lit; the other side sends setEqProcessing.
+        raised.Clear();
+        eq.ChooseProcessing("device");
+        Assert.Empty(sent.Sent);
+        Assert.True(eq.ProcessOnDevice);
+        // Both sides are told again, so a toggle the press switched off lights up again.
+        Assert.Contains(nameof(MicEqViewModel.ProcessOnDevice), raised);
+        Assert.Contains(nameof(MicEqViewModel.ProcessInSoftware), raised);
+        eq.ChooseProcessing("elsewhere");
+        Assert.Empty(sent.Sent);
+        eq.ChooseProcessing("software");
+        Assert.True(sent.Sent.TryDequeue(out var choice));
+        Assert.Equal(("setEqProcessing", "xlr1", (object)"software"), choice);
+        Assert.Empty(sent.Sent);
+        Assert.True(eq.ProcessInSoftware);
+        Assert.False(eq.ProcessOnDevice);
+
+        // A report from before the choice does not move the switch back, for a second at most.
+        eq.Apply(OnUnit(true, "device", "device", "1.0.15", ready: true), null);
+        Assert.True(eq.ProcessInSoftware);
+        time.Advance(MicEqViewModel.EchoWait - TimeSpan.FromMilliseconds(1));
+        eq.Apply(OnUnit(true, "device", "device", "1.0.15", ready: true), null);
+        Assert.True(eq.ProcessInSoftware);
+        // The echo settles it, and software by choice needs no note under the switch.
+        eq.Apply(OnUnit(true, "software", "software", "1.0.15", ready: true), null);
+        Assert.Equal("software", eq.Processing);
+        Assert.Null(eq.EditorNote);
+        Assert.False(eq.HasEditorNote);
+        Assert.Equal(Localizer.Text("EqStatusSoftware"), eq.Status);
+        // The button's tooltip, which has no switch beside it, still says so.
+        Assert.Equal(Localizer.Format("EqDeviceBySoftware", "Wave XLR Dock MK.2"), eq.DeviceNote);
+
+        // A choice the daemon never confirms gives way to its report after the echo wait.
+        eq.ChooseProcessing("device");
+        Assert.True(sent.Sent.TryDequeue(out choice));
+        Assert.Equal(("setEqProcessing", "xlr1", (object)"device"), choice);
+        eq.Apply(OnUnit(true, "software", "software", "1.0.15", ready: true), null);
+        Assert.True(eq.ProcessOnDevice);
+        time.Advance(MicEqViewModel.EchoWait);
+        eq.Apply(OnUnit(true, "software", "software", "1.0.15", ready: true), null);
+        Assert.True(eq.ProcessInSoftware);
+
+        // A unit that is not ready: the switch stays, showing the choice, and the note under it says why.
+        foreach ((string reason, string firmware, string expected) in new[]
+        {
+            ("firmwareOld", "1.0.0", Localizer.Format("EqDeviceFirmwareOld", "Wave XLR Dock MK.2", "1.0.0", "1.0.15")),
+            ("firmwareUnknown", "", Localizer.Format("EqDeviceFirmwareUnknown", "Wave XLR Dock MK.2", "1.0.15")),
+            ("unsupportedBlock", "1.0.15", Localizer.Format("EqDeviceUnsupported", "Wave XLR Dock MK.2")),
+            ("failed", "1.0.15", Localizer.Format("EqDeviceFailed", "Wave XLR Dock MK.2")),
+        })
+        {
+            eq.Apply(OnUnit(true, "software", "device", firmware, ready: false, reason), null);
+            Assert.True(eq.HasProcessingChoice, reason);
+            Assert.True(eq.ProcessOnDevice, reason);
+            Assert.Equal(expected, eq.EditorNote);
+            Assert.True(eq.HasEditorNote);
+            Assert.Equal(Localizer.Text("EqStatusSoftware"), eq.Status);
+            // Kept in software by choice, the reason the unit cannot run it still shows.
+            eq.Apply(OnUnit(true, "software", "software", firmware, ready: false, reason), null);
+            Assert.Equal(expected, eq.EditorNote);
+        }
+
+        // The unit goes: so does the switch.
+        eq.Apply(noUnit, null);
+        Assert.False(eq.HasProcessingChoice);
+        Assert.Null(eq.EditorNote);
+    }
+
+    [Fact]
+    public void TheFlowWindowsEqStepSaysWhereTheEqRuns()
+    {
+        var model = new MainViewModel(new DaemonClient());
+        static string Mixer(string backend, string processing) => """
+            {"channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"volume":1,"eq":EQ}],"mixes":[{"id":"monitor","name":"Monitor A"}]}
+            """.Replace("EQ", OnUnit(true, backend, processing, "1.0.15", ready: true).ToJsonString());
+        ApplyMixer.Invoke(model, [JsonNode.Parse(Mixer("device", "device"))]);
+        ChannelViewModel xlr1 = model.Channels.Single(c => c.Id == "xlr1");
+        Assert.True(xlr1.Eq!.OnDevice);
+        string Step() => FlowGraph.From(model).Nodes.Single(n => n.Key == "ch:xlr1").Processing.Split('\n')[0];
+        Assert.Equal(Localizer.Format("FlowEqDevice", 3, "Wave XLR Dock MK.2"), Step());
+        Assert.Contains("Wave XLR Dock MK.2", Step());
+        ApplyMixer.Invoke(model, [JsonNode.Parse(Mixer("software", "software"))]);
+        Assert.Equal(Localizer.Format("FlowEq", 3), Step());
     }
 }

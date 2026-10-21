@@ -142,8 +142,11 @@ physical gain dial.
   software switches the leaving one off first, so a voice is never
   equalised twice. The editor shows a Hardware processing badge while the
   unit runs it, and a note when the unit's firmware is older than 1.0.15.
-  `setEqProcessing` keeps one microphone in software instead
-  ([api.md](api.md#where-the-eq-runs)).
+  A switch in its footer, **On the unit** or **In software**, sets where
+  each microphone's EQ runs. The terminal mixer's Inputs tab offers the
+  same choice and says what runs each EQ, and `setEqProcessing` sets it
+  from a script ([api.md](api.md#where-the-eq-runs)). The Flow window says
+  where the EQ runs.
 - Gain lock: the daemon rejects every gain change while the lock is set,
   from any client, and stores the lock per device in `gainlock.json`.
   Shown only for devices without a physical gain dial, which would

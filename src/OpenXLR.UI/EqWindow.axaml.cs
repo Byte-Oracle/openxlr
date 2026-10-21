@@ -23,6 +23,10 @@ public partial class EqWindow : Window
     /// <summary>The response graph.</summary>
     public EqGraph Graph => this.FindControl<EqGraph>("EqGraph")!;
 
+    private void OnProcessOnUnit(object? sender, RoutedEventArgs e) => (DataContext as MicEqViewModel)?.ChooseProcessing("device");
+
+    private void OnProcessInSoftware(object? sender, RoutedEventArgs e) => (DataContext as MicEqViewModel)?.ChooseProcessing("software");
+
     private void OnCopy(object? sender, RoutedEventArgs e) => (DataContext as MicEqViewModel)?.Copy();
 
     private void OnPaste(object? sender, RoutedEventArgs e) => (DataContext as MicEqViewModel)?.Paste();

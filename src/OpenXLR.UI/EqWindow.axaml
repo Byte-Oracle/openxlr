@@ -38,12 +38,24 @@
       </WrapPanel>
     </Grid>
 
-    <!-- what runs the EQ, or why nothing does -->
-    <TextBlock DockPanel.Dock="Bottom" Name="EqStatus" Text="{Binding Status}" Classes="hint" Classes.warn="{Binding HasError}"
-               TextWrapping="Wrap" Margin="0,8,0,0"/>
-    <!-- why the unit the microphone is on does not run the EQ itself -->
-    <TextBlock DockPanel.Dock="Bottom" Name="EqDeviceNote" Text="{Binding DeviceNote}" IsVisible="{Binding HasDeviceNote}"
-               Classes="hint" TextWrapping="Wrap" Margin="0,8,0,0"/>
+    <!-- The footer: where the EQ runs while the microphone is on a unit that can
+         run it, why the unit does not, and what runs it now. -->
+    <StackPanel DockPanel.Dock="Bottom" Name="EqFooter">
+      <WrapPanel Name="EqProcessing" IsVisible="{Binding HasProcessingChoice}" ItemSpacing="6" LineSpacing="4" Margin="0,8,0,0">
+        <TextBlock Name="EqProcessingLabel" Text="{loc:Text Key=EqProcessingLabel}" VerticalAlignment="Center"/>
+        <!-- two sides of one switch: the lit side is the daemon's choice, and a press asks for its side -->
+        <ToggleButton Name="EqOnUnit" Content="{loc:Text Key=EqProcessingDevice}" IsChecked="{Binding ProcessOnDevice, Mode=OneWay}"
+                      Click="OnProcessOnUnit" ToolTip.Tip="{Binding ProcessOnDeviceTip}"/>
+        <ToggleButton Name="EqInSoftware" Content="{loc:Text Key=EqProcessingSoftware}" IsChecked="{Binding ProcessInSoftware, Mode=OneWay}"
+                      Click="OnProcessInSoftware" ToolTip.Tip="{loc:Text Key=EqProcessingSoftwareTip}"/>
+      </WrapPanel>
+      <!-- why the unit the microphone is on does not run the EQ itself -->
+      <TextBlock Name="EqDeviceNote" Text="{Binding EditorNote}" IsVisible="{Binding HasEditorNote}"
+                 Classes="hint" TextWrapping="Wrap" Margin="0,8,0,0"/>
+      <!-- what runs the EQ, or why nothing does -->
+      <TextBlock Name="EqStatus" Text="{Binding Status}" Classes="hint" Classes.warn="{Binding HasError}"
+                 TextWrapping="Wrap" Margin="0,8,0,0"/>
+    </StackPanel>
 
     <!-- a row of fields per band: the graph and these edit the same values -->
     <StackPanel DockPanel.Dock="Bottom" Name="EqBands" Spacing="4" Margin="0,10,0,0">

@@ -53,12 +53,16 @@ internal sealed record FlowGraph(IReadOnlyList<FlowNode> Nodes, IReadOnlyList<Fl
                     FlowIcon.Application, a.Active)));
 
             // The input's processing in the order the signal meets it: the
-            // EQ at the head, XLR 1's software low cut and ClipGuard, then the
-            // plugin chain.
+            // EQ at the head, on the unit before USB or on this computer,
+            // XLR 1's software low cut and ClipGuard, then the plugin chain.
             var stages = new List<string>();
             if (channel.Eq is { Enabled: true } eq)
+            {
+                int bands = eq.Bands.Count(b => b.Enabled);
                 stages.Add(eq.IsFaulty ? Localizer.Format("OutputUnavailable", Localizer.Text("Eq"))
-                    : Localizer.Format("FlowEq", eq.Bands.Count(b => b.Enabled)));
+                    : eq.OnDevice ? Localizer.Format("FlowEqDevice", bands, eq.DeviceName ?? Localizer.Text("EqTheInterface"))
+                    : Localizer.Format("FlowEq", bands));
+            }
             if (channel.Id == "xlr1")
             {
                 if (vm.ShowSoftLowCut && vm.SoftLowCutOn) stages.Add(Localizer.Format("FlowLowCut", vm.SoftLowCutHz));

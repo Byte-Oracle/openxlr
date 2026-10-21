@@ -812,7 +812,9 @@ clicking **EQ** again brings it to the front.
   microphone's EQ, switch and bands, to the other. **Reset** asks first,
   then puts the four bands back where they start and leaves the EQ on or
   off.
-- The line at the bottom says what runs the EQ, or why it cannot run.
+- The line at the bottom says what runs the EQ, or why it cannot run. On
+  a unit that can run the EQ itself, **Where the EQ runs** sits above it;
+  see below.
 
 The types are high pass, low shelf, bell, notch, high shelf and low pass.
 The bell raises or lowers the sound around its frequency; some editors call
@@ -831,7 +833,8 @@ and Q steps of 3.75 percent. The editor shows the values the daemon keeps.
   and **Compare** switch at once.
 - In software, the hardware's zero-latency monitoring carries the
   microphone without the EQ, as it does without your plugins.
-- The Flow window lists the EQ first in the input's card while it is on.
+- The Flow window lists the EQ first in the input's card while it is on,
+  naming the unit that runs it or saying it runs in software.
 - The EQ is saved with the mixer and in profiles. A profile saved before
   the EQ existed leaves it as it is.
 - In software it needs the native plugin host the packages include.
@@ -848,17 +851,29 @@ says the same. Everything else stays as described above: the same values,
 the same curve, **Compare**, Copy and Paste, profiles. Nothing is added to
 the input's route, and the plugin host is not needed.
 
-- On older firmware the EQ runs on this computer. A note above the
-  editor's bottom line names the unit's firmware and the version it needs.
-  Elgato's updater is in Wave Link on Windows or macOS. The same note
-  appears when the firmware version or the unit's EQ settings cannot be
-  read, or when the unit did not keep an EQ written to it; switch the EQ
-  off and on to try the unit again.
+- While the microphone is on such a unit, the editor's footer shows
+  **Where the EQ runs** with **On the unit** and **In software**. **On the
+  unit** is the default. **In software** runs the EQ on this computer
+  instead and switches the unit's own EQ off, which keeps its bands. Use
+  it to compare the two, or to keep the unit plain. The lit side is the
+  choice the daemon keeps, and pressing it again changes nothing. The
+  mixer saves the choice per microphone; profiles do not carry it, and a
+  recall never changes it. The terminal mixer's Inputs tab shows the same
+  choice.
+- On older firmware the EQ runs on this computer, and the switch keeps
+  your choice for when the unit is updated. A note under the switch names
+  the unit's firmware and the version it needs. Elgato's updater is in
+  Wave Link on Windows or macOS. The same note appears when the firmware
+  version or the unit's EQ settings cannot be read, or when the unit did
+  not keep an EQ written to it; switch the EQ off and on, or choose **In
+  software** and back, to try the unit again.
 - Only the microphone the unit carries is equalised there: XLR 1 or XLR 2
   on the unit's own input, an additional interface's input, or a strip
   bound to the unit's own capture node. A microphone bound to any other
-  source uses the EQ on this computer. A capture channel that takes the
-  same unit's audio hears the unit's EQ, as it hears its low cut.
+  source uses the EQ on this computer. On the unit, the EQ is in the
+  unit's own signal, so every channel and program that takes that unit's
+  audio hears it, a capture channel on its node included, as they hear its
+  low cut.
 - Sound Check moves the EQ to this computer while it records and loops,
   so the take is the raw microphone and the loop follows every edit; the
   unit takes it back when Sound Check stops.
@@ -871,15 +886,17 @@ the input's route, and the plugin host is not needed.
   off before the new one comes on, so your voice is never equalised twice;
   you may hear a moment without the EQ.
 - When OpenXLR stops, or you unplug the unit, the unit keeps running the
-  EQ it last held, as it keeps its gain and low cut. Switch the EQ off in
-  the editor first if you want the unit plain without OpenXLR. Moving a
-  microphone to another source, or keeping it in software, switches only
-  the unit's EQ off and keeps its bands.
-- Whether the unit's EQ also reaches its own zero-latency headphone
-  monitoring has not been measured yet.
-- `setEqProcessing` in the [control API](api.md#where-the-eq-runs) keeps a
-  microphone's EQ on this computer instead, for instance to compare the
-  two; the editor's switch for it is still to come.
+  EQ it last held, as it keeps its gain and low cut. So does a unit no
+  channel carries, with the submixer turned off for instance. Switch the
+  EQ off in the editor, or choose **In software**, first if you want the
+  unit plain without OpenXLR. Moving a microphone to another source, or
+  keeping it in software, switches only the unit's EQ off and keeps its
+  bands.
+- A measurement on the XLR Dock MK.2 suggests the unit's EQ also acts on
+  its own zero-latency headphone monitoring, which an EQ in software never
+  reaches, but this is not settled.
+- `setEqProcessing` in the [control API](api.md#where-the-eq-runs) sets the
+  same choice from a script.
 
 <a name="native-editor-compatibility"></a>
 **Native editor compatibility.** Open Options, PLUGINS, then "Native editors"

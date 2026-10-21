@@ -2540,6 +2540,21 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="EqStatusStarting" xml:space="preserve">
     <value>On, starting.</value>
   </data>
+  <data name="EqProcessingLabel" xml:space="preserve">
+    <value>Where the EQ runs</value>
+  </data>
+  <data name="EqProcessingDevice" xml:space="preserve">
+    <value>On the unit</value>
+  </data>
+  <data name="EqProcessingSoftware" xml:space="preserve">
+    <value>In software</value>
+  </data>
+  <data name="EqProcessingDeviceTip" xml:space="preserve">
+    <value>Run the EQ on the {0}'s own processor, before USB. Every channel that takes this unit's audio hears it, and the unit keeps it after OpenXLR stops.</value>
+  </data>
+  <data name="EqProcessingSoftwareTip" xml:space="preserve">
+    <value>Run the EQ on this computer, at the head of the input. The unit's own EQ is switched off and keeps its bands.</value>
+  </data>
   <data name="EqBandValues" xml:space="preserve">
     <value>{0}, {1}, {2}, Q {3}</value>
   </data>
@@ -2664,7 +2679,10 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>12 to 20 kHz: breath and openness. A gentle high shelf adds sparkle.</value>
   </data>
   <data name="FlowEq" xml:space="preserve">
-    <value>EQ, {0} of 4 bands on</value>
+    <value>EQ in software, {0} of 4 bands on</value>
+  </data>
+  <data name="FlowEqDevice" xml:space="preserve">
+    <value>EQ on the {1}, {0} of 4 bands on</value>
   </data>
   <data name="CaptureSourceChipName" xml:space="preserve">
     <value>{0} source: {1}</value>
