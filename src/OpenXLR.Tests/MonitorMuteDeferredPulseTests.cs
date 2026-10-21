@@ -283,6 +283,136 @@ public sealed class MonitorMuteDeferredPulseTests
         Assert.Equal(!replacement, fixture.Mixer.MonitorMuted);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void ABlanketMuteWithAPhysicalDefaultKeepsTheIndividualMonitorMixMutes(bool lateRegistry, bool refusedConsume)
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.SetDefault("external");
+        fixture.Mixer.SetMixMuted("monitor_b", true);
+        foreach (string name in new[] { "OpenXLR_ch_system", "OpenXLR_ch_browser", "OpenXLR_mix_monitor", "OpenXLR_mix_monitor_b", "external" })
+            fixture.SetNative(name, true);
+        if (refusedConsume) fixture.DeferNextPulse("external");
+        fixture.Publish(externalRegistryMuted: lateRegistry ? false : null);
+        fixture.Mixer.SyncOwnSinkLevels(out _);
+        Assert.Equal(!refusedConsume, fixture.Mixer.MonitorMuted);
+        CheckMixes();
+        fixture.Mixer.SyncDeviceVolumes();
+        Assert.True(fixture.Mixer.MonitorMuted);
+        CheckMixes();
+        fixture.Sweep();
+        Assert.True(fixture.Mixer.MonitorMuted);
+        fixture.Mixer.SetMonitorMuted(false);
+        fixture.Sweep();
+        Assert.False(fixture.Mixer.MonitorMuted);
+        CheckMixes();
+
+        void CheckMixes()
+        {
+            Assert.Equal(["monitor_b"], fixture.Mixer.ExportSettings().MixMuted);
+            Assert.False(fixture.Native("OpenXLR_mix_monitor"));
+            Assert.True(fixture.Native("OpenXLR_mix_monitor_b"));
+        }
+    }
+
+    [Fact]
+    public void ASecondPhysicalKeyCancelsAnUncountedBlanketActionWithoutChangingMixChoices()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.SetDefault("external");
+        fixture.Mixer.SetMixMuted("monitor_b", true);
+        fixture.SetNative("OpenXLR_ch_browser", true);
+        fixture.SetNative("OpenXLR_mix_monitor", true);
+        fixture.SetNative("external", true);
+        fixture.DeferNextPulse("external");
+        fixture.Publish();
+        fixture.Mixer.SyncOwnSinkLevels(out _);
+        Assert.False(fixture.Mixer.MonitorMuted);
+        fixture.SetNative("external", false);
+        fixture.Publish();
+        fixture.Mixer.SyncDeviceVolumes();
+        Assert.False(fixture.Mixer.MonitorMuted);
+        Assert.Equal(["monitor_b"], fixture.Mixer.ExportSettings().MixMuted);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ANonDefaultApplicationMuteWithoutAPhysicalPulseKeepsAnIndependentNativeMixEdit(bool staleRegistry)
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.SetDefault("external");
+        fixture.SetNative("OpenXLR_ch_browser", true);
+        fixture.SetNative("OpenXLR_mix_monitor", true);
+        fixture.Sweep(externalRegistryMuted: staleRegistry);
+        Assert.False(fixture.Mixer.MonitorMuted);
+        Assert.False(fixture.Native("OpenXLR_ch_browser"));
+        Assert.Equal(["monitor"], fixture.Mixer.ExportSettings().MixMuted);
+        Assert.True(fixture.Native("OpenXLR_mix_monitor"));
+    }
+
+    [Fact]
+    public void ADeferredPhysicalBlanketAcknowledgementKeepsANewerManualMixChoice()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.SetDefault("external");
+        fixture.Mixer.SetMixMuted("monitor_b", true);
+        fixture.SetNative("OpenXLR_ch_browser", true);
+        fixture.SetNative("OpenXLR_mix_monitor", true);
+        fixture.SetNative("external", true);
+        fixture.DeferNextPulse("external");
+        fixture.Publish();
+        fixture.Mixer.SyncOwnSinkLevels(out _);
+        fixture.Mixer.SetMixMuted("monitor", true);
+        fixture.Mixer.SetMixMuted("monitor_b", false);
+        fixture.Mixer.SyncDeviceVolumes();
+        fixture.Sweep();
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.Equal(["monitor"], fixture.Mixer.ExportSettings().MixMuted);
+        Assert.True(fixture.Native("OpenXLR_mix_monitor"));
+        Assert.False(fixture.Native("OpenXLR_mix_monitor_b"));
+    }
+
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, true)]
+    public void AnOldPhysicalAcknowledgementKeepsALaterIndependentNativeMixEdit(bool credited, bool refusedAgain, bool identityVerification)
+    {
+        using var fixture = new IndependentSinks();
+        if (credited) fixture.DeferBlanketPhysicalPulse();
+        else
+        {
+            fixture.Mixer.SetMonitorOutputs(["external"]);
+            fixture.SetDefault("external");
+            fixture.SetNative("external", true);
+            fixture.DeferNextPhysicalPulse(identityVerification);
+            fixture.Publish(identityVerification ? 2 : 1);
+            fixture.Mixer.SyncDeviceVolumes();
+            Assert.False(fixture.Mixer.MonitorMuted);
+        }
+        fixture.SetNative("OpenXLR_ch_browser", true);
+        fixture.SetNative("OpenXLR_mix_monitor", true);
+        if (refusedAgain) fixture.DeferNextPulse("external");
+        fixture.Sweep(identityVerification ? 2 : 1);
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.Equal(["monitor"], fixture.Mixer.ExportSettings().MixMuted);
+        Assert.True(fixture.Native("OpenXLR_mix_monitor"));
+        fixture.Sweep(identityVerification ? 2 : 1);
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.Equal(["monitor"], fixture.Mixer.ExportSettings().MixMuted);
+    }
+
     private sealed class IndependentSinks : IDisposable
     {
         private readonly string _directory = Directory.CreateTempSubdirectory("openxlr-deferred-pulse-").FullName;

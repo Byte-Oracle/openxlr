@@ -56,6 +56,14 @@ public sealed partial class Mixer
         return !_desktopMuteOffsets.Remove(name);
     }
 
+    private bool ObservePendingDesktopMuteLocked(string name)
+    {
+        bool fresh = !_desktopMuteOffsets.Contains(name) && !_desktopMuteRetries.ContainsKey(name);
+        _desktopMutePending.Add(name);
+        _desktopMuteRetries.TryAdd(name, (0, 0));
+        return fresh;
+    }
+
     private bool CountDesktopMutePulseLocked(bool pulse)
     {
         bool changed = pulse && !_desktopMuteConsumed && ToggleDesktopMonitorIntentLocked();
@@ -118,6 +126,13 @@ public sealed partial class Mixer
         }
         bool changed = CountDesktopMutePulseLocked(pulse);
         bool restoreMonitorMutes = pulse || applicationAction;
+        if (levels.Any(s => s.Muted && s.Name != defaultSink && applications.Contains(s.Name)))
+        {
+            // A desktop blanket action can target a physical default instead.
+            // Read it before adopting monitor flags from that same action.
+            changed |= ReadOutputMonitorMuteLocked(confirmNative: true, out bool physicalAction);
+            restoreMonitorMutes |= physicalAction;
+        }
         if (skipRepair || restoreMonitorMutes)
             levels = [.. levels.Select(s =>
             {
@@ -199,14 +214,17 @@ public sealed partial class Mixer
     }
 
     /// <summary>External output mute changes control OpenXLR listening, never its recording mixes.</summary>
-    private bool ReadOutputMonitorMuteLocked()
+    private bool ReadOutputMonitorMuteLocked() => ReadOutputMonitorMuteLocked(confirmNative: false, out _);
+
+    private bool ReadOutputMonitorMuteLocked(bool confirmNative, out bool observedAction)
     {
-        try { return ReadOutputMonitorMuteBatchLocked(); }
+        try { return ReadOutputMonitorMuteBatchLocked(confirmNative, out observedAction); }
         finally { _desktopMutePending.Clear(); }
     }
 
-    private bool ReadOutputMonitorMuteBatchLocked()
+    private bool ReadOutputMonitorMuteBatchLocked(bool confirmNative, out bool observedAction)
     {
+        observedAction = false;
         bool changed = ApplyDesktopMonitorIntentLocked();
         HashSet<string> selected = PhysicalMonitorOutputsLocked();
         ForgetUnselectedDesktopOutputsLocked(selected);
@@ -241,7 +259,7 @@ public sealed partial class Mixer
                             bool muted = _pw.GetSinkMuted(name);
                             if (!muted && baseline.Muted && baseline.Identity is not null)
                                 _outputMutes[name] = baseline with { UnmuteObserved = true };
-                            else if (muted != baseline.Muted) _desktopMutePending.Add(name);
+                            else if (muted != baseline.Muted) observedAction |= ObservePendingDesktopMuteLocked(name);
                         }
                         catch (InvalidOperationException) { /* No observed action to count until a read succeeds. */ }
                     }
@@ -281,7 +299,7 @@ public sealed partial class Mixer
         foreach (string name in observed.Keys.ToArray())
         {
             var previous = _outputMutes[name];
-            if (!verify.Contains(name) && (previous.Muted != observed[name] || _desktopMuteConsumed || _desktopMuteRetries.ContainsKey(name) || _desktopMuteOffsets.Contains(name)))
+            if (!verify.Contains(name) && (confirmNative || previous.Muted != observed[name] || _desktopMuteConsumed || _desktopMuteRetries.ContainsKey(name) || _desktopMuteOffsets.Contains(name)))
             {
                 try { observed[name] = _pw.GetSinkMuted(name); }
                 catch (InvalidOperationException) { observed.Remove(name); failed.Add(name); }
@@ -290,16 +308,25 @@ public sealed partial class Mixer
         bool pulse = false;
         if (failed.Count > 0 && ReadNativeMuteStatesLocked(failed) is { } fallback)
             foreach (string name in failed)
-                if (fallback.TryGetValue(name, out var state) && state.Identity == _outputMutes[name].Identity)
+                if (!_desktopMuteResets.ContainsKey(name) && fallback.TryGetValue(name, out var state) && state.Identity == _outputMutes[name].Identity)
                 {
                     if (AcceptDesktopOutputUnmuteLocked(name, state.Muted)) continue;
-                    if (state.Muted != _outputMutes[name].Muted) _desktopMutePending.Add(name);
-                    else pulse |= ReadDesktopMutePulseLocked(name, false);
+                    if (state.Muted != _outputMutes[name].Muted) observedAction |= ObservePendingDesktopMuteLocked(name);
+                    else
+                    {
+                        bool cancellation = ReadDesktopMutePulseLocked(name, false);
+                        pulse |= cancellation;
+                        observedAction |= cancellation;
+                    }
                 }
         foreach ((string name, bool muted) in observed)
         {
             if (_desktopMuteResets.ContainsKey(name) || AcceptDesktopOutputUnmuteLocked(name, muted)) continue;
-            pulse |= ReadDesktopMutePulseLocked(name, _outputMutes[name].Muted != muted);
+            bool moved = _outputMutes[name].Muted != muted;
+            bool credited = _desktopMuteOffsets.Contains(name);
+            // An old acknowledgement must not replace a newer native mix edit.
+            observedAction |= moved ? !credited && !_desktopMuteRetries.ContainsKey(name) : credited;
+            pulse |= ReadDesktopMutePulseLocked(name, moved);
         }
         changed |= CountDesktopMutePulseLocked(pulse);
         foreach ((string name, (bool muted, int failures, long retryAt)) in _desktopMuteResets.ToArray())

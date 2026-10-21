@@ -90,6 +90,7 @@ public sealed partial class MonitorVolumeIntegrationTests
         mixer.SetLevel("test", "monitor", 1);
         mixer.SetLevel("test", "chat", 1);
         SettleSends(mixer);
+        WaitForChatPost(mixer);
         pw.SetDefaultSink(first);
         pw.SetSinkMuted(first, firstWasMuted);
         pw.SetSinkMuted(closed, true);
@@ -137,6 +138,66 @@ public sealed partial class MonitorVolumeIntegrationTests
     }
 
     [MonitorPipeWireFact]
+    public void InitiallyRefusedRecordingMixLinksRecoverWhileMonitoringRemainsPaused()
+    {
+        string directory = Directory.CreateTempSubdirectory("openxlr-paused-post-retry-").FullName;
+        string? path = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            string realLink = (path ?? "").Split(Path.PathSeparator).Select(p => Path.Combine(p, "pw-link")).First(File.Exists);
+            string marker = Path.Combine(directory, "reject");
+            File.WriteAllText(marker, "1");
+            File.WriteAllText(Path.Combine(directory, "real"), realLink);
+            ExecutableScript.Write(Path.Combine(directory, "pw-link"), """
+                #!/bin/sh
+                folder=$(dirname "$0")
+                if [ "$#" -eq 2 ] && [ -f "$folder/reject" ]; then
+                    case "$1:$2" in
+                      OpenXLR_mix_chat:monitor_FL:OpenXLR_post_chat:playback_FL|OpenXLR_mix_chat:monitor_FR:OpenXLR_post_chat:playback_FR)
+                        echo 'transient recording route refusal' >&2
+                        exit 1 ;;
+                    esac
+                fi
+                exec "$(cat "$folder/real")" "$@"
+                """);
+            Environment.SetEnvironmentVariable("PATH", directory + Path.PathSeparator + path);
+            var pw = new PipeWireAdapter();
+            using var registry = pw.WatchGraph();
+            using var mixer = new Mixer(pw);
+            mixer.Build(MonitorConfig());
+            pw.CreateNullSink("mute_paused_post_repair", "Paused post-link recovery output");
+            mixer.SetMonitorOutputs(["mute_paused_post_repair"]);
+            mixer.SetLevel("test", "monitor", 1);
+            mixer.SetLevel("test", "chat", 1);
+            SettleSends(mixer);
+            foreach (string side in new[] { "FL", "FR" })
+                Assert.DoesNotContain(("OpenXLR_mix_chat:monitor_" + side, "OpenXLR_post_chat:playback_" + side), MixLinks());
+            mixer.SetMonitorMuted(true);
+            File.Delete(marker);
+            WaitForChatPost(mixer);
+            Assert.True(mixer.MonitorMuted);
+            CaptureLevel(0, "OpenXLR_ch_test", "mute_paused_post_repair");
+            CaptureLevel(0.1, "OpenXLR_ch_test", "OpenXLR_post_chat");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", path);
+            Directory.Delete(directory, true);
+        }
+    }
+
+    private static void WaitForChatPost(Mixer mixer)
+    {
+        Assert.True(SpinWait.SpinUntil(() =>
+        {
+            mixer.EnsureFilterRoutes();
+            var links = MixLinks();
+            return new[] { "FL", "FR" }.All(side =>
+                links.Contains(("OpenXLR_mix_chat:monitor_" + side, "OpenXLR_post_chat:playback_" + side)));
+        }, TimeSpan.FromSeconds(4)), "The recording mix did not grow both post links.");
+    }
+
+    [MonitorPipeWireFact]
     public void TheFirstPhysicalMuteKeyImmediatelyAfterSelectionPausesMonitoring()
     {
         var pw = new PipeWireAdapter();
@@ -163,23 +224,32 @@ public sealed partial class MonitorVolumeIntegrationTests
 
     [MonitorPipeWireFact]
     public void ABlanketDesktopMuteIsOnePulseAndPreservesMutedMixesAndOutputs()
+        => CheckBlanketDesktopMute(applicationDefault: true);
+
+    [MonitorPipeWireFact]
+    public void ABlanketDesktopMuteWithAPhysicalDefaultPreservesMutedMixesAndOutputs()
+        => CheckBlanketDesktopMute(applicationDefault: false);
+
+    private static void CheckBlanketDesktopMute(bool applicationDefault)
     {
         var pw = new PipeWireAdapter();
         using var registry = pw.WatchGraph();
         using var mixer = new Mixer(pw);
         mixer.Build(MonitorConfig());
-        pw.CreateNullSink("mute_blanket_first", "Monitor blanket first");
-        pw.CreateNullSink("mute_blanket_closed", "Monitor blanket closed");
-        pw.SetSinkMuted("mute_blanket_closed", true);
-        pw.SetDefaultSink("OpenXLR_ch_test");
-        mixer.SetMonitorOutputs(["mute_blanket_first", "mute_blanket_closed"]);
+        string first = applicationDefault ? "mute_blanket_app_first" : "mute_blanket_physical_first";
+        string closed = first + "_closed";
+        pw.CreateNullSink(first, "Monitor blanket first");
+        pw.CreateNullSink(closed, "Monitor blanket closed");
+        pw.SetSinkMuted(closed, true);
+        pw.SetDefaultSink(applicationDefault ? "OpenXLR_ch_test" : first);
+        mixer.SetMonitorOutputs([first, closed]);
         mixer.SetMixMuted("monitor2", true);
         mixer.SyncOwnSinkLevels(out _);
         mixer.SyncDeviceVolumes();
 
         foreach (bool paused in new[] { true, false })
         {
-            foreach (string sink in pw.OwnSinkLevels().Select(s => s.Name).Concat(["mute_blanket_first", "mute_blanket_closed"]))
+            foreach (string sink in pw.OwnSinkLevels().Select(s => s.Name).Concat([first, closed]))
                 pw.SetSinkMuted(sink, true);
             Assert.True(mixer.SyncOwnSinkLevels(out _));
             mixer.SyncDeviceVolumes();
@@ -187,8 +257,8 @@ public sealed partial class MonitorVolumeIntegrationTests
             Assert.Equal(["monitor2"], mixer.ExportSettings().MixMuted);
             Assert.True(pw.GetSinkMuted("OpenXLR_mix_monitor2"));
             Assert.False(pw.GetSinkMuted("OpenXLR_mix_monitor"));
-            Assert.False(pw.GetSinkMuted("mute_blanket_first"));
-            Assert.True(pw.GetSinkMuted("mute_blanket_closed"));
+            Assert.False(pw.GetSinkMuted(first));
+            Assert.True(pw.GetSinkMuted(closed));
             Assert.False(mixer.SyncOwnSinkLevels(out _));
             Assert.False(mixer.SyncDeviceVolumes());
         }
