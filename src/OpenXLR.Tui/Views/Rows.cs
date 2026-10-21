@@ -141,6 +141,83 @@ internal sealed class ChoiceRow(string label, IReadOnlyList<string> options, int
     }
 }
 
+/// <summary>
+/// A row of keys, each on or off: left and right move between them and
+/// space or enter flips the one under the cursor. The keys that do not fit
+/// scroll, with a mark at the end that hides some, so a long list of
+/// channels needs one line however narrow the terminal is.
+/// </summary>
+internal sealed class ToggleStripRow(
+    string label, IReadOnlyList<(string Text, bool On)> items, int cursor, Action<int> move, Action<int> toggle) : Row(label)
+{
+    private int Cursor => Math.Clamp(cursor, 0, Math.Max(0, items.Count - 1));
+
+    private static string Face((string Text, bool On) item) => item.On ? $"✓ {item.Text}" : item.Text;
+
+    public override void DrawValue(Screen screen, int x, int y, int width, Theme theme, Rgb back, bool focused)
+    {
+        if (items.Count == 0)
+        {
+            screen.Text(x, y, " none ", theme.ControlDisabled, back, maxWidth: width);
+            return;
+        }
+        // One cell at each end for the scroll marks, and a space between keys.
+        int room = Math.Max(1, width - 2);
+        int Span(int from, int to)
+        {
+            int cells = 0;
+            for (int at = from; at <= to; at++) cells += Face(items[at]).Length + 2 + (at > from ? 1 : 0);
+            return cells;
+        }
+        int first = 0;
+        while (first < Cursor && Span(first, Cursor) > room) first++;
+        int left = x + 1;
+        int last = first - 1;
+        for (int at = first; at < items.Count; at++)
+        {
+            string text = Face(items[at]);
+            // A name longer than the whole row is cut rather than drawn past it.
+            if (text.Length + 2 > room) text = text[..Math.Max(0, room - 2)];
+            int face = text.Length + 2;
+            if (left + face > x + 1 + room && at > first) break;
+            Widgets.Key(screen, left, y, text, items[at].On, theme, focused && at == Cursor);
+            left += face + 1;
+            last = at;
+        }
+        Rgb mark = focused ? theme.Accent : theme.TextMuted;
+        if (first > 0) screen.Set(x, y, '‹', mark, back);
+        if (last < items.Count - 1) screen.Set(x + width - 1, y, '›', mark, back);
+    }
+
+    public override bool Handle(KeyPress key)
+    {
+        if (items.Count == 0) return false;
+        switch (key.Key)
+        {
+            case Key.Left: if (Cursor > 0) move(Cursor - 1); return true;
+            case Key.Right: if (Cursor < items.Count - 1) move(Cursor + 1); return true;
+            case Key.Home: move(0); return true;
+            case Key.End: move(items.Count - 1); return true;
+            case Key.Enter: toggle(Cursor); return true;
+            case Key.Char when key.Char == ' ': toggle(Cursor); return true;
+            default: return false;
+        }
+    }
+}
+
+/// <summary>A short bar with its reading, which no key changes.</summary>
+internal sealed class BarRow(string label, double fraction, string reading) : Row(label)
+{
+    public override void DrawValue(Screen screen, int x, int y, int width, Theme theme, Rgb back, bool focused)
+    {
+        int bar = Math.Clamp(width - reading.Length - 1, 0, 12);
+        Widgets.Meter(screen, x, y, bar, fraction, theme, back);
+        screen.Text(x + bar + 1, y, reading, theme.TextDetail, back, maxWidth: Math.Max(0, width - bar - 1));
+    }
+
+    public override bool Handle(KeyPress key) => false;
+}
+
 /// <summary>A reading with no control of its own.</summary>
 internal sealed class TextRow(string label, string value) : Row(label)
 {

@@ -244,18 +244,26 @@ internal sealed record WaveInterfaceEntry
 }
 
 /// <summary>
-/// Ducking as the daemon reports it: the switch and the three presets,
-/// what runs it (<see cref="Backend"/>: <c>device</c>, <c>software</c> or
-/// nothing) and the unit's side in <see cref="Device"/>. The key, channels
-/// and mixes are the daemon's to keep here.
+/// Ducking as the daemon reports it: the switch, the key microphone, the
+/// channels it lowers and the mixes it lowers them in, the three presets,
+/// where it should run (<see cref="Processing"/>), what runs it now
+/// (<see cref="Backend"/>: <c>device</c>, <c>software</c> or nothing) and
+/// the unit's side in <see cref="Device"/>. A daemon that predates the
+/// channels and mixes leaves them null, and they are not offered.
 /// </summary>
 internal sealed record DuckingEntry
 {
     public bool Enabled { get; init; }
+    public string Key { get; init; } = "xlr1";
+    public List<string>? Channels { get; init; }
+    public List<string>? Mixes { get; init; }
     public string Sensitivity { get; init; } = "medium";
     public string Amount { get; init; } = "medium";
     public string Speed { get; init; } = "medium";
+    public string? Processing { get; init; }
     public string? Backend { get; init; }
+    public bool Available { get; init; } = true;
+    public string? Error { get; init; }
     public DuckingDeviceEntry? Device { get; init; }
 
     /// <summary>A short word for the switch row: where it runs, or what is wrong; null while off.</summary>
@@ -263,15 +271,56 @@ internal sealed record DuckingEntry
     public string? Note => !Enabled ? null
         : Backend == "software" ? "in software"
         : Backend == "device" ? Device is { Held: false } ? "not held yet" : "on the unit"
+        : !Available ? "cannot run"
         : "not running";
+
+    /// <summary>The depth of the chosen amount in dB, which the reduction bar fills to.</summary>
+    [JsonIgnore]
+    public double Depth => Amount switch { "low" => 6, "high" => 24, _ => 12 };
+
+    /// <summary>True while the unit runs it, or would once switched on.</summary>
+    [JsonIgnore]
+    public bool OnUnit => Backend == "device"
+        || Backend is null && Processing == "device" && Device is { Ready: true };
+
+    /// <summary>
+    /// Where the key is heard, in a few words: the unit listens to its own
+    /// input before anything on this computer, so an insert on XLR 1 does not
+    /// change what ducks; software listens after the microphone's EQ and inserts.
+    /// </summary>
+    [JsonIgnore]
+    public string KeyHeard => OnUnit ? "XLR 1 before inserts" : "after the EQ and inserts";
+
+    /// <summary>
+    /// Why the unit does not run it, while the unit is the choice and cannot;
+    /// null otherwise. The daemon's sentence names the channel or mix, which
+    /// the window shows; a terminal row has room for the reason alone.
+    /// </summary>
+    [JsonIgnore]
+    public string? Why => Processing != "device" || Backend == "device" || Device is not { Ready: false } device ? null
+        : device.Reason switch
+        {
+            "mixerOff" => "the software mixer is off",
+            "keyNotSupported" => "the unit ducks only with XLR 1",
+            "mixElsewhere" => "a ducked mix plays elsewhere too",
+            "sharedOutput" => "the jacks play a mix not ducked",
+            "partialMix" => "a channel in the mix is not ducked",
+            "keyInMix" => "the key is heard in a ducked mix",
+            "failed" => "the unit did not keep the ducking",
+            "unsupportedBlock" => "the unit did not answer a read",
+            _ => device.Note ?? device.Reason,
+        };
 }
 
 /// <summary>The unit's side of ducking: whether it runs the setup, why not, and whether it held the last write.</summary>
 internal sealed record DuckingDeviceEntry
 {
+    public string Unit { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
     public bool Ready { get; init; } = true;
     public string? Reason { get; init; }
     public string? Note { get; init; }
+    public List<string> Outputs { get; init; } = [];
     public bool Held { get; init; } = true;
 }
 
@@ -439,7 +488,7 @@ internal sealed record Snapshot
     public List<DetectedDevice> Detected { get; init; } = [];
     public List<WaveInterfaceEntry> WaveInterfaces { get; init; } = [];
 
-    /// <summary>The ducking setup and where it runs; null from a daemon that predates it.</summary>
+    /// <summary>The ducking setup and where it runs, present whenever the daemon runs; null from one that predates it.</summary>
     public DuckingEntry? Ducking { get; init; }
 
     public static JsonSerializerOptions Options { get; } = new()

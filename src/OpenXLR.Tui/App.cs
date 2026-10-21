@@ -394,6 +394,7 @@ internal sealed class App
             "Inputs    Up/Down control; Left/Right or -/+ level; [/] fine.",
             "          Ctrl+Left/Right fine; Space toggle; Home/End limits.",
             "          Bindings: pick a strip's source and port, Enter on Apply.",
+            "          Ducking: Left/Right pick a channel or mix, Space ducks it.",
             "Outputs   Space select; Left/Right feed; Enter main output.",
             "          -/+ sink volume; m sink mute. Arrows set defaults.",
             "Apps      Left/Right channel; i desktop routing; f forget.",

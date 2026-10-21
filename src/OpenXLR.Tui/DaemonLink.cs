@@ -24,6 +24,7 @@ internal sealed class DaemonLink : IAsyncDisposable
     private readonly CancellationTokenSource _stopping = new();
     private readonly Lock _meterGate = new();
     private readonly Dictionary<string, MeterTrace> _meters = [];
+    private readonly Dictionary<string, (double Decibels, double At)> _reductions = [];
     private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
     private ClientWebSocket? _socket;
     private Task? _pump;
@@ -71,6 +72,20 @@ internal sealed class DaemonLink : IAsyncDisposable
         {
             return _meters.TryGetValue($"{prefix}:{id}", out MeterTrace? trace)
                 ? trace.Read(_clock.Elapsed.TotalSeconds) : default;
+        }
+    }
+
+    /// <summary>
+    /// The largest ducking reduction now, in dB, across the mixes a software
+    /// stage runs in; 0 while none reports, and once a reading is a second old.
+    /// </summary>
+    public double DuckReduction()
+    {
+        lock (_meterGate)
+        {
+            double now = _clock.Elapsed.TotalSeconds;
+            return _reductions.Values.Where(reading => now - reading.At < 1)
+                .Select(reading => reading.Decibels).DefaultIfEmpty(0).Max();
         }
     }
 
@@ -369,12 +384,20 @@ internal sealed class DaemonLink : IAsyncDisposable
                         .Take(2).Select(item => item.GetDouble()).ToArray();
                     if (pair.Length == 0) continue;
                     present.Add(entry.Name);
+                    // A ducking stage reports its reduction in dB, not a level on the meter scale.
+                    if (entry.Name.StartsWith("duck:", StringComparison.Ordinal))
+                    {
+                        _reductions[entry.Name] = (Math.Clamp(pair[0], 0, 120), now);
+                        continue;
+                    }
                     if (!_meters.TryGetValue(entry.Name, out MeterTrace? trace))
                         _meters[entry.Name] = trace = new MeterTrace();
                     trace.Push(pair[0], pair.Length > 1 ? pair[1] : pair[0], now);
                 }
                 foreach (string missing in _meters.Keys.Where(key => !present.Contains(key)).ToArray())
                     _meters.Remove(missing);
+                foreach (string missing in _reductions.Keys.Where(key => !present.Contains(key)).ToArray())
+                    _reductions.Remove(missing);
             }
         }
         catch (JsonException) { }
