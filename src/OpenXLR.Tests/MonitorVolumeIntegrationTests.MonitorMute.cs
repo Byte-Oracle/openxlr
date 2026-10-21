@@ -204,4 +204,85 @@ public sealed partial class MonitorVolumeIntegrationTests
         mixer.SetMonitorMuted(false);
         CaptureLevel(0.1, "OpenXLR_ch_test", "mute_returning");
     }
+
+    [MonitorPipeWireFact]
+    public void RapidNativeKeyBurstsKeepTheirParityOnApplicationAndPhysicalOutputs()
+    {
+        var pw = new PipeWireAdapter();
+        using var registry = pw.WatchGraph();
+        using var mixer = new Mixer(pw);
+        mixer.Build(MonitorConfig());
+        pw.CreateNullSink("mute_burst_output", "Burst output");
+        mixer.SetMonitorOutputs(["mute_burst_output"]);
+        mixer.SetMixMuted("monitor2", true);
+        mixer.SetLevel("test", "monitor", 1);
+        foreach (string sink in new[] { "OpenXLR_ch_test", "mute_burst_output" })
+        {
+            mixer.SyncOwnSinkLevels(out _);
+            mixer.SyncDeviceVolumes();
+            foreach (int count in new[] { 2, 3, 2, 3 })
+            {
+                bool expected = mixer.MonitorMuted ^ (count % 2 != 0);
+                for (int press = 0; press < count; press++) pw.ToggleSinkMuted(sink);
+                Assert.True(SpinWait.SpinUntil(() =>
+                {
+                    mixer.SyncOwnSinkLevels(out _);
+                    mixer.SyncDeviceVolumes();
+                    return mixer.MonitorMuted == expected && !pw.GetSinkMuted(sink);
+                }, TimeSpan.FromSeconds(3)), $"Lost a {count}-press burst on {sink}.");
+                Assert.True(mixer.Snapshot().Mixes.Single(m => m.Id == "monitor2").Muted);
+            }
+            CaptureLevel(0.1, "OpenXLR_ch_test", "mute_burst_output");
+        }
+    }
+
+    [MonitorPipeWireFact]
+    public void MonitoringPauseLeavesBoundMicrophoneCaptureAndApplicationRecordingIndependent()
+    {
+        var pw = new PipeWireAdapter();
+        using var registry = pw.WatchGraph();
+        using var mixer = new Mixer(pw);
+        pw.CreateNullSink("mute_mic_signal", "Bound microphone signal");
+        pw.CreateNullSink("mute_capture_signal", "Capture signal");
+        pw.CreateVirtualMic("mute_mic_source", "mute_mic_signal.monitor", "Bound microphone");
+        pw.CreateVirtualMic("mute_capture_source", "mute_capture_signal.monitor", "Capture microphone");
+        pw.CreateNullSink("mute_multi_output", "Multiple input output");
+        mixer.SetInputBinding("xlr1", new("mute_mic_source", 0, 0));
+        var levels = new Dictionary<string, double> { ["monitor"] = 1, ["chat"] = 1 };
+        mixer.Build(MonitorConfig() with
+        {
+            Channels = [new("xlr1", "Bound mic") { InputPair = 0, Levels = levels },
+                new("capture", "Capture") { CaptureSource = "mute_capture_source", CaptureMonoChannel = 0, Levels = levels },
+                new("test", "Application") { Levels = levels }],
+        });
+        mixer.SetMonitorOutputs(["mute_multi_output"]);
+        Assert.True(SpinWait.SpinUntil(() =>
+        {
+            mixer.EnsureInputFeeds();
+            mixer.SyncStreams();
+            mixer.EnsureCellLevels();
+            return mixer.Snapshot().Channels.Where(c => c.Id is "xlr1" or "capture").All(c => c.BindingConnected);
+        }, TimeSpan.FromSeconds(5)));
+        mixer.SetMonitorMuted(true);
+        foreach (string source in new[] { "mute_mic_signal", "mute_capture_signal", "OpenXLR_ch_test" })
+        {
+            CaptureLevel(0, source, "mute_multi_output");
+            CaptureLevel(0.1, source, "OpenXLR_post_chat");
+        }
+        Assert.True(ProcessRunner.Run("pactl", ["set-source-mute", "mute_capture_source", "1"]).Ok);
+        mixer.SyncOwnSinkLevels(out _);
+        mixer.SyncDeviceVolumes();
+        Assert.True(mixer.MonitorMuted);
+        CaptureLevel(0, "mute_capture_signal", "OpenXLR_post_chat");
+        CaptureLevel(0.1, "OpenXLR_ch_test", "OpenXLR_post_chat");
+        Assert.True(ProcessRunner.Run("pactl", ["set-source-mute", "mute_capture_source", "0"]).Ok);
+        // Desktop-routed applications deliberately bypass OpenXLR's feeds.
+        CaptureLevel(0.1, "mute_multi_output", "mute_multi_output");
+        mixer.ToggleMonitorMuted();
+        mixer.ToggleMonitorMuted();
+        Assert.True(mixer.MonitorMuted);
+        mixer.ToggleMonitorMuted();
+        CaptureLevel(0.1, "mute_mic_signal", "mute_multi_output");
+        CaptureLevel(0.1, "mute_capture_signal", "mute_multi_output");
+    }
 }

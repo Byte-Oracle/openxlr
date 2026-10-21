@@ -764,6 +764,10 @@ public sealed class MixerService : IHostedService, IDisposable
                     _mixer.SetMonitorMuted(cmd.Value.GetBoolean());
                     SyncOutputSelectors();
                     break;
+                case "toggleMonitorMuted":
+                    _mixer.ToggleMonitorMuted();
+                    SyncOutputSelectors();
+                    break;
                 case "setMonitorFeed":
                     if (cmd.Device is null || cmd.Mix is null) return "setMonitorFeed: need 'device' and 'mix'";
                     if (_mixer.SetMonitorFeed(cmd.Device, cmd.Mix) is string feedErr) return $"setMonitorFeed: {feedErr}";

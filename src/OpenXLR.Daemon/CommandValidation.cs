@@ -193,6 +193,8 @@ public static class CommandValidation
                 return null;
             case "setRecallOnConnect":
                 return TooLong(cmd.Name, MaxText) ? "setRecallOnConnect: name too long" : null;
+            case "toggleMonitorMuted":
+                return null;   // no arguments; toggle the current state under the mixer lock
             case "resetDevice":
                 return null;   // no arguments; the device manager checks the device
             case "setMonitorFeed":

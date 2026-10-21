@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 // routing and output selection are sent at once beside the queue: holding
 // them back would apply them later to whatever application or output is
 // current by then.
-const ORDERED = new Set(["adjustOutputVolume", "toggleOutputMute"]);
+const ORDERED = new Set(["adjustOutputVolume", "toggleOutputMute", "toggleMonitorMuted"]);
 const OUTSTANDING_LIMIT = 64;
 const WAITING_PER_KEY = 8;
 const TIMEOUT_MS = 8000;

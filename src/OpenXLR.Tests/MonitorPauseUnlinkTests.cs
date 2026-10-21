@@ -110,4 +110,61 @@ public sealed class MonitorPauseUnlinkTests
             Directory.Delete(directory, true);
         }
     }
+
+    [Fact]
+    public void AConsumedNativeResumeRetriesUntilThePreviousRoutesCanBeRemoved()
+    {
+        string directory = Directory.CreateTempSubdirectory("openxlr-pause-resume-").FullName;
+        string? previousPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            File.WriteAllText(Path.Combine(directory, "graph"), LinkedGraph);
+            File.WriteAllText(Path.Combine(directory, "refuse"), "");
+            ExecutableScript.Write(Path.Combine(directory, "pw-dump"), """
+                dir=${0%/*}
+                /bin/cat "$dir/graph"
+                """);
+            ExecutableScript.Write(Path.Combine(directory, "pw-link"), """
+                dir=${0%/*}
+                printf '%s\n' "$*" >> "$dir/calls"
+                if [ -f "$dir/refuse" ]; then echo 'temporary disconnect refusal' >&2; exit 1; fi
+                printf '[]' > "$dir/graph"
+                """);
+            Environment.SetEnvironmentVariable("PATH", directory);
+            using var mixer = new Mixer(new PipeWireAdapter());
+            typeof(Mixer).GetField("_built", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mixer, true);
+            var routes = Field<Dictionary<string, PortLink>>("_monitorRoutes");
+            routes["speakers"] = new PortLink([("monitor:monitor_FL", "speakers:playback_FL")]);
+            mixer.SetMonitorMuted(true);
+            Assert.Single(routes);
+
+            // Native acknowledgement has completed. Applying its resume
+            // intent must remain retryable while the old route refuses it.
+            Assert.False((bool)typeof(Mixer).GetMethod("ToggleDesktopMonitorIntentLocked", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(mixer, null)!);
+            Assert.True(mixer.MonitorMuted);
+            Assert.Equal(false, Field<bool?>("_desktopMonitorIntent"));
+            Assert.False(mixer.SyncDeviceVolumes());
+            Assert.True(mixer.MonitorMuted);
+            Assert.Equal(false, Field<bool?>("_desktopMonitorIntent"));
+            Assert.Single(routes);
+
+            File.Delete(Path.Combine(directory, "refuse"));
+            Assert.True(mixer.SyncDeviceVolumes());
+            Assert.False(mixer.MonitorMuted);
+            Assert.Null(Field<bool?>("_desktopMonitorIntent"));
+            Assert.Empty(routes);
+            string[] calls = File.ReadAllLines(Path.Combine(directory, "calls"));
+            Assert.All(calls, call => Assert.Equal("-d monitor:monitor_FL speakers:playback_FL", call));
+            Assert.False(mixer.SyncDeviceVolumes());
+            Assert.Equal(calls, File.ReadAllLines(Path.Combine(directory, "calls")));
+
+            T Field<T>(string name) => (T)typeof(Mixer).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(mixer)!;
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", previousPath);
+            Directory.Delete(directory, true);
+        }
+    }
 }

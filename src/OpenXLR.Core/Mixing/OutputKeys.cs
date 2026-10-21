@@ -2,6 +2,12 @@ namespace OpenXLR.Core.Mixing;
 
 public sealed partial class Mixer
 {
+    /// <summary>Toggle monitoring under one lock without reading a client's previous state.</summary>
+    public void ToggleMonitorMuted()
+    {
+        lock (_gate) SetMonitorMuted(!(_desktopMonitorIntent ?? _monitorMuted));
+    }
+
     /// <summary>Adjust a named output, or the current desktop default, in desktop percentage points.</summary>
     public void AdjustOutputVolume(string? device, double delta)
     {
@@ -55,7 +61,7 @@ public sealed partial class Mixer
             MixDefinition? mix = _config.Mixes.FirstOrDefault(m => m.Kind == MixKind.Monitor && m.SinkName == sink);
             if (mix is null)
             {
-                if (_monitorOutputs.Any(output => StripMarker(output) == sink)) SetMonitorMuted(!_monitorMuted);
+                if (_monitorOutputs.Any(output => StripMarker(output) == sink)) ToggleMonitorMuted();
                 else _pw.ToggleSinkMuted(sink);
                 return;
             }

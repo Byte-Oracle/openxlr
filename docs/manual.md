@@ -517,6 +517,9 @@ that was the default.
    output feeds keep their settings, so a mix or send that was already muted
    stays muted. The pause survives a daemon restart and profile recall leaves
    it unchanged. The terminal mixer's Outputs tab has **Mute monitoring** too.
+   This pauses OpenXLR's feeds. An application left to desktop routing bypasses
+   those feeds and remains audible; route it to an OpenXLR channel if it should
+   follow this pause.
 6. The HEADPHONES card holds the interface's own headphone volume,
    low-impedance mode, and on the Pro the Mic ↔ PC crossfade, which is
    the zero-latency direct monitor inside the device: left is only your
@@ -2954,6 +2957,15 @@ icon in the Linux applet can return to its previous state while monitoring
 remains paused. The **Mute** button in OpenXLR's MONITOR header shows the
 monitoring state; another mute press resumes monitoring. **OpenXLR Monitor A**
 and **OpenXLR Monitor B** keep their individual mix mute controls.
+
+Native mute flags are observed on the next mixer sweep. A desktop command
+that changes several flags in the same sweep is treated as one press;
+changes arriving in separate sweeps are separate actions. For direct monitor
+control that does not mute an application routing sink even briefly, bind
+OpenXLR's desktop mute key to a selected physical monitor output, use the
+MONITOR button or press the Deck monitor dial. Those actions use the daemon's
+current pause state, so rapid presses do not depend on a delayed slider or
+button update.
 
 Select **Switch system output** entries to register keys which select and
 enforce that default sink. **Follow selected monitor output** follows the

@@ -487,6 +487,9 @@ const outputDeviceName = (name) => {
   const enforced = mixer()?.enforcedDefaultSink;
   return enforced && deviceOf(enforced) ? enforced : null;
 };
+// Pro jack selections retain their feed key; output controls name the raw sink.
+const selectedMonitorOutputs = (name) => (mixer()?.monitorOutputs ?? [])
+  .filter(output => typeof output === "string" && output.split("#", 1)[0] === name);
 // Muted as toggleOutputMute sees it: a mix sink is its mix, a monitor output
 // follows the global monitor pause, its feeds and the sink itself. Any other
 // sink uses the server's own flag. null when unknown.
@@ -494,8 +497,9 @@ function outputMuted(name) {
   const mix = name?.startsWith("OpenXLR_mix_") ? mixOf(name.slice(12)) : null;
   if (mix) return mix.muted ?? null;
   const own = deviceOf(name)?.muted ?? null;
-  if (mixer()?.monitorOutputs?.includes(name))
-    return monitorMuted() || feedOf(name).split("+").every((id) => mixOf(id)?.muted === true) || own === true;
+  const selected = selectedMonitorOutputs(name);
+  if (selected.length)
+    return monitorMuted() || selected.every(output => feedOf(output).split("+").every(id => mixOf(id)?.muted === true)) || own === true;
   return own;
 }
 function outputVolume(name) {
@@ -847,9 +851,9 @@ function onDialPress(context, inst) {
     const muted = dev()?.[control];
     if (muted != null) cmd({ cmd: "set", control, value: !muted });
   } else if (t === "outputVolume") {
-    if (mixer()) cmd({ cmd: "setMonitorMuted", value: !monitorMuted() });
+    if (mixer()) keyCommands.enqueue(context, { cmd: "toggleMonitorMuted" });
   } else if (t.startsWith("output:")) {
-    cmd({ cmd: "toggleOutputMute", device: t.slice(7) || null });
+    keyCommands.enqueue(context, { cmd: "toggleOutputMute", device: t.slice(7) || null });
   } else if (t === "hp" || t === "hp2") {
     // Only units with an output selector can use it as headphone mute.
     const control = t === "hp" ? "outHp1" : "outHp2";
@@ -1078,7 +1082,8 @@ function meterKeyFor(t) {
   if (t.startsWith("output:")) {
     const name = outputDeviceName(t.slice(7));
     if (name?.startsWith("OpenXLR_mix_")) return `mix:${name.slice(12)}`;
-    return mixer()?.monitorOutputs?.includes(name) ? `mix:${feedOf(name).split("+")[0]}` : null;
+    const selected = selectedMonitorOutputs(name)[0];
+    return selected ? `mix:${feedOf(selected).split("+")[0]}` : null;
   }
   return "mix:monitor";   // outputVolume, hp, hp2, crossfade
 }

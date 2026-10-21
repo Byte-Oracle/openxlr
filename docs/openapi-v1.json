@@ -487,6 +487,12 @@
                     "cmd": "setMonitorMuted",
                     "value": true
                   }
+                },
+                "toggleMonitoring": {
+                  "summary": "Atomically toggle monitoring without reading the previous state",
+                  "value": {
+                    "cmd": "toggleMonitorMuted"
+                  }
                 }
               }
             }

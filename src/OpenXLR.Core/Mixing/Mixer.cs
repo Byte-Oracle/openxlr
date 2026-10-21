@@ -1909,22 +1909,26 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         lock (_gate)
         {
-            string? first = _monitorOutputs.FirstOrDefault();
-            double? outV = first is null ? null : _pw.GetSinkVolume(first);
-            bool changed = Differs(outV, _outputVolume);
-            // In follow mode the desktop changes the first output directly.
-            // Carry that change to the other selected outputs just as the
-            // MONITOR slider does. A new output selection establishes a fresh
-            // baseline rather than overwriting its remembered device volume.
-            if (_enforcedSink == FollowMonitorOutput && changed && _outputVolume is not null && outV is double volume)
-                foreach (string sink in FollowerOutputsLocked()) WriteFollowerVolumeLocked(sink, volume);
-            // Nothing moved, so a device that refused an earlier copy is the
-            // only thing left out of step; it gets that value again.
-            else
-                foreach ((string sink, double owed) in _outputVolumeDue.Due())
-                    WriteFollowerVolumeLocked(sink, owed);
-            _outputVolume = outV;
-            return ReadOutputMonitorMuteLocked() || changed;
+            try
+            {
+                string? first = _monitorOutputs.FirstOrDefault();
+                double? outV = first is null ? null : _pw.GetSinkVolume(first);
+                bool changed = Differs(outV, _outputVolume);
+                // In follow mode the desktop changes the first output directly.
+                // Carry that change to the other selected outputs just as the
+                // MONITOR slider does. A new output selection establishes a fresh
+                // baseline rather than overwriting its remembered device volume.
+                if (_enforcedSink == FollowMonitorOutput && changed && _outputVolume is not null && outV is double volume)
+                    foreach (string sink in FollowerOutputsLocked()) WriteFollowerVolumeLocked(sink, volume);
+                // Nothing moved, so a device that refused an earlier copy is the
+                // only thing left out of step; it gets that value again.
+                else
+                    foreach ((string sink, double owed) in _outputVolumeDue.Due())
+                        WriteFollowerVolumeLocked(sink, owed);
+                _outputVolume = outV;
+                return ReadOutputMonitorMuteLocked() || changed;
+            }
+            finally { _desktopMuteConsumed = false; }
         }
 
         static bool Differs(double? a, double? b)
@@ -1989,7 +1993,6 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 if (sink.Muted)
                 {
                     _pw.SetSinkMuted(sink.Name, false);
-                    _desktopMutePulses.Remove(sink.Name);
                 }
                 restored.Add(sink.Name);
             }
@@ -2038,6 +2041,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         lock (_gate)
         {
+            _desktopMonitorIntent = null;
             if (_monitorMuted == muted) return;
             if (!muted && _built && !RemovePausedMonitorRoutesLocked())
                 throw new InvalidOperationException("Monitor routes could not be disconnected; listening stays paused until they can be removed.");

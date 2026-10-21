@@ -682,9 +682,8 @@ public sealed class TuiViewTests
 
         app.Handle(new KeyPress(Key.Char, ' '));
         JsonElement command = Command(sent);
-        Assert.Equal("setMonitorMuted", Text(command, "cmd"));
-        Assert.Equal(!muted, command.GetProperty("value").GetBoolean());
-        Assert.Equal(2, command.EnumerateObject().Count());
+        Assert.Equal("toggleMonitorMuted", Text(command, "cmd"));
+        Assert.Single(command.EnumerateObject());
 
         sent.Clear();
         state["mixer"]!["monitorMuted"] = !muted;
@@ -692,7 +691,32 @@ public sealed class TuiViewTests
         app.Draw(screen);
         Assert.Empty(sent);
         app.Handle(new KeyPress(Key.Enter));
-        Assert.Equal(muted, Command(sent).GetProperty("value").GetBoolean());
+        Assert.Equal("toggleMonitorMuted", Text(Command(sent), "cmd"));
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void RapidMonitoringPressesToggleAtTheDaemonWithoutWaitingForReadback(int presses)
+    {
+        (App app, List<string> sent) = Ready(tab: 3);
+        SelectOutputRow(app, "Mute monitoring");
+        for (int press = 0; press < presses; press++) app.Handle(new KeyPress(Key.Char, ' '));
+        Assert.Equal(presses, sent.Count);
+        Assert.All(sent, json =>
+        {
+            using var command = JsonDocument.Parse(json);
+            Assert.Equal("toggleMonitorMuted", Text(command.RootElement, "cmd"));
+            Assert.Single(command.RootElement.EnumerateObject());
+        });
+
+        sent.Clear();
+        app.Link.Receive("""{"type":"error","message":"Monitor routes are unavailable"}""");
+        app.Draw(new Screen(140, 36));
+        Assert.Equal("Monitor routes are unavailable", app.Link.LastError);
+        Assert.Empty(sent);
+        app.Handle(new KeyPress(Key.Enter));
+        Assert.Equal("toggleMonitorMuted", Text(Command(sent), "cmd"));
     }
 
     private static void SelectOutputRow(App app, string label)

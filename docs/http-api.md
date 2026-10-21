@@ -235,6 +235,9 @@ monitor mix sink that mix.
 without changing mix or channel mutes or stopping recording and streaming.
 Use `false` to resume. The `/mixer` resource reports the current `monitorMuted`;
 it is saved with mixer settings and left unchanged by profile recall.
+`{"cmd":"toggleMonitorMuted"}` toggles that pause atomically, without a
+`value`. Use it for keys and repeated presses so each command toggles the
+current state without depending on an earlier state response.
 `{"cmd":"setMainOutput","device":"alsa_output.usb-headset"}` selects and enforces
 that output. `@monitor` follows the selected monitor output. Limits, rejected
 targets and linked-monitor behavior match the [WebSocket contract](api.md).

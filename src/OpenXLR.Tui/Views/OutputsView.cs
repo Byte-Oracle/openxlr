@@ -45,7 +45,7 @@ internal sealed class OutputsView : View
             Note = selected.Count == 0 ? "no output selected" : null,
         });
         rows.Add(new ToggleRow("Mute monitoring", state.Mixer.MonitorMuted,
-            value => link.Send("setMonitorMuted", body => body["value"] = value))
+            _ => link.Send("toggleMonitorMuted"))
         { Note = "recording and streaming continue" });
 
         rows.Add(new HeadingRow("Outputs"));
