@@ -114,6 +114,14 @@ export function duckingEnabled(state) {
   return ducking && typeof ducking === "object" ? ducking.enabled === true : null;
 }
 
+// What a press of the ducking key sends: the switch flipped from what the
+// daemon reports, the setup otherwise left alone. Null without ducking, and
+// the key then only flashes an alert.
+export function duckingToggle(state) {
+  const enabled = duckingEnabled(state);
+  return enabled === null ? null : { cmd: "setDucking", value: { enabled: !enabled } };
+}
+
 // Whether the driven unit has a hardware target, by its capabilities alone.
 // A binding never changes this: the unit stays driven whatever XLR 1 takes.
 // With no unit connected the daemon sends no capabilities and every hardware

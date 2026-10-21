@@ -202,6 +202,24 @@ test("hardware keys stay unit controls and are named after the carrying channel"
     assert.equal(alerted("hw-mute"), 1);
     assert.equal(alerted("gain-dial"), 2);
     assert.equal(feedback("gain-dial").value, "set up");
+
+    // Ducking runs with no interface at all: its key is not a hardware target
+    // and stays live, lit while the switch is on, and a press flips only the switch.
+    key("ducking", "ducking");
+    host.receive({event:"keyDown",context:"ducking"});
+    assert.equal(alerted("ducking"), 1);
+    state.ducking = {enabled:false, key:"xlr1", channels:["music"], mixes:["monitor"], sensitivity:"medium",
+      amount:"medium", speed:"medium", processing:"device", backend:null, available:true, error:null, device:null};
+    daemon.receive(state);
+    const dark = keyImage("ducking");
+    host.receive({event:"keyDown",context:"ducking"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setDucking",value:{enabled:true}});
+    state.ducking = {...state.ducking, enabled:true, backend:"software"};
+    daemon.receive(state);
+    assert.notEqual(keyImage("ducking"), dark);
+    host.receive({event:"keyDown",context:"ducking"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setDucking",value:{enabled:false}});
+    assert.equal(alerted("ducking"), 1);
   }
   finally {
     if (oldSkin === undefined) delete process.env.OPENXLR_SKIN;

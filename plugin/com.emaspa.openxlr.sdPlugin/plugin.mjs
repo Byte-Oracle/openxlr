@@ -9,7 +9,7 @@ import { channelName, mixName, mixShortName, layoutChoices, controllableOutputs,
 import fs from "node:fs";
 import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
-import { channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
+import { channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, duckingToggle, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
 
 // ---------- launch arguments ----------
 const arg = (name) => {
@@ -751,7 +751,7 @@ function onKeyDown(context, inst) {
   }
   else if (t === "softClipGuard") cmd({ cmd: "setSoftClipGuard", value: !cur });
   else if (t === "gainLocked") cmd({ cmd: "set", control: "gainLock", value: !cur });
-  else if (t === "ducking") cmd({ cmd: "setDucking", value: { enabled: !cur } });
+  else if (t === "ducking") cmd(duckingToggle(daemonState));
   else if (t.startsWith("monitor:")) cmd({ cmd: "setMonitorOutputs", devices: [t.slice(8)] });
   else if (t.startsWith("feed:")) cmd({ cmd: "setMonitorFeed", device: t.slice(5), mix: nextFeed(feedOf(t.slice(5))) });
   else if (t.startsWith("mixmute:"))
