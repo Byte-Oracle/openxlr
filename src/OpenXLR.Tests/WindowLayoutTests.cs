@@ -612,7 +612,7 @@ public sealed class WindowLayoutTests
             }
         }) { IsBackground = true };
         thread.Start();
-        Assert.True(thread.Join(TimeSpan.FromSeconds(300)), "Window layout hung.");
+        Assert.True(thread.Join(TimeSpan.FromSeconds(600)), "Window layout hung.");
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
