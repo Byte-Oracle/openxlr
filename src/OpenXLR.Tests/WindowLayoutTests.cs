@@ -688,7 +688,9 @@ public sealed class WindowLayoutTests
             Assert.True(label.IsVisible);
             Assert.Equal(Avalonia.Media.Color.Parse("#ABC123"), ((Avalonia.Media.ISolidColorBrush)label.Foreground!).Color);
         }
-        // A default icon is a drawing in the item's colour, above the name; "none" draws nothing.
+        // A text glyph, a drawing and no icon at all each share the name's line.
+        ChannelTileAlignmentWindowTests.AssertIconsShareTheNameLine(main, "with layout appearances at 1040");
+        // A default icon is a drawing in the item's colour, before the name; "none" draws nothing.
         LayoutIconBlock browser = strips.Single(b => ((ChannelViewModel)b.DataContext!).Id == "browser")
             .GetVisualDescendants().OfType<LayoutIconBlock>().Single();
         Assert.True(browser.IsVisible && browser.DrawsPath);

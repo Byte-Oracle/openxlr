@@ -952,10 +952,15 @@
                     <Button Classes="ghost reorderHandle" Classes.fixedPlace="{Binding !IsEditable}" Content="↔" Tag="{Binding}"
                             HorizontalAlignment="Left" AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=MoveItem}}"
                             ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
-                    <vm:LayoutIconBlock Icon="{Binding Appearance.Icon}" Fallback="{Binding Appearance.DefaultIcon}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
-                               HorizontalAlignment="Center" IsVisible="{Binding Appearance.HasIcon}"/>
-                    <TextBlock Text="{Binding Name}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
+                    <!-- the icon before the name on one line; the gap sits on the icon, so a
+                         name without one starts at the tile's edge -->
+                    <Grid Name="ChannelNameLine" ColumnDefinitions="Auto,*">
+                      <vm:LayoutIconBlock Name="ChannelIcon" Icon="{Binding Appearance.Icon}" Fallback="{Binding Appearance.DefaultIcon}" Margin="0,0,6,0"
+                                          Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
+                                          VerticalAlignment="Center" IsVisible="{Binding Appearance.HasIcon}"/>
+                      <TextBlock Name="ChannelName" Grid.Column="1" Text="{Binding Name}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
+                                 VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
+                    </Grid>
                     <!-- stereo level meter (L over R), dB scale -->
                     <StackPanel Spacing="1">
                       <skin:LevelMeter Level="{Binding MeterL}" AutomationProperties.Name="{loc:Text Key=LeftLevel}"/>
