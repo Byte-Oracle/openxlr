@@ -244,6 +244,38 @@ internal sealed record WaveInterfaceEntry
 }
 
 /// <summary>
+/// Ducking as the daemon reports it: the setup (on or off, the outputs it
+/// lowers, the three presets), what runs it (<see cref="Backend"/>, only
+/// <c>device</c> today) and the unit's side in <see cref="Device"/>.
+/// </summary>
+internal sealed record DuckingEntry
+{
+    public bool Enabled { get; init; }
+    public List<string> Targets { get; init; } = [];
+    public string Sensitivity { get; init; } = "medium";
+    public string Amount { get; init; } = "medium";
+    public string Speed { get; init; } = "medium";
+    public string? Backend { get; init; }
+    public DuckingDeviceEntry? Device { get; init; }
+
+    /// <summary>A short word for the switch row while something is wrong, or null.</summary>
+    [JsonIgnore]
+    public string? Note => Device is null ? null
+        : !Device.Ready ? "not on the unit"
+        : Enabled && !Device.Held ? "not held yet"
+        : null;
+}
+
+/// <summary>The unit's side of ducking: whether it runs the setup, why not, and whether it held the last write.</summary>
+internal sealed record DuckingDeviceEntry
+{
+    public bool Ready { get; init; } = true;
+    public string? Reason { get; init; }
+    public string? Note { get; init; }
+    public bool Held { get; init; } = true;
+}
+
+/// <summary>
 /// One of a unit's input-stage controls: <see cref="Device"/> null for the
 /// primary, which <c>set</c> writes, or an additional unit's id, which
 /// <c>setWaveControl</c> writes.
@@ -405,6 +437,9 @@ internal sealed record Snapshot
     public string? RecallOnConnect { get; init; }
     public List<DetectedDevice> Detected { get; init; } = [];
     public List<WaveInterfaceEntry> WaveInterfaces { get; init; } = [];
+
+    /// <summary>The unit's hardware ducking, on a unit whose capabilities say <c>ducking</c>; null elsewhere.</summary>
+    public DuckingEntry? Ducking { get; init; }
 
     public static JsonSerializerOptions Options { get; } = new()
     {
