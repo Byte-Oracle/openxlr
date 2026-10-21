@@ -27,12 +27,11 @@ output routing and a dedicated mix for a second computer on the USB Aux
 port. That covers the Elgato XLR interfaces and the Wave:3 and Wave:1 USB
 microphones.
 
-![OpenXLR mixer](docs/screenshot-mixer-0142.png)
+![OpenXLR mixer](docs/screenshot-mixer-0200.png)
 
-![OpenXLR terminal mixer](docs/screenshot-tui-0142.png)
+![OpenXLR terminal mixer](docs/screenshot-tui-0200.png)
 
-The UI and the terminal mixer, both from 0.1.42, the terminal mixer
-in the Tokyo Night skin. This README and the linked guides describe
+The UI and the terminal mixer from 0.2.0, both in the Broadcast skin. This README and the linked guides describe
 current `main`; for a released build, read the docs at its release tag.
 Changes merged after a release are available from source until the next release.
 
