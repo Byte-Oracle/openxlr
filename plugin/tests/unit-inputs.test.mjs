@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, unitCarrier, unitDialLabel, unitInputName, unitInputOf, unitKeyLabel, unitMeterKey }
+import { channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, duckingToggle, unitCarrier, unitDialLabel, unitInputName, unitInputOf, unitKeyLabel, unitMeterKey }
   from "../com.emaspa.openxlr.sdPlugin/unit-inputs.mjs";
 
 const unit = "0fd9:00b4@0123456789abcdef";
@@ -163,4 +163,27 @@ test("the ducking key follows the state's ducking on any device", () => {
   // A daemon that sends no ducking leaves the key unavailable.
   for (const state of [undefined, null, {connected:true, capabilities:{...pro, ducking:true}}, {ducking:null}])
     assert.equal(duckingEnabled(state), null);
+});
+
+test("a ducking key is offered without a Pro and a press flips the switch alone", () => {
+  const ducking = {enabled:false, key:"xlr1", channels:["music", "game"], mixes:["monitor", "stream"],
+    sensitivity:"medium", amount:"high", speed:"fast", processing:"device", backend:null, available:true,
+    error:null, device:null};
+  // A dock without hardware ducking, and no interface at all, still offer the key.
+  const dock = {connected:true, capabilities:{gain:true, mute:true, xlrInputs:1}, ducking};
+  const none = {connected:false, ducking:{...ducking, enabled:true, backend:"software"}};
+  assert.equal(duckingEnabled(dock), false);
+  assert.equal(duckingEnabled(none), true);
+  // The press sends the switch only, so the key, channels, mixes and presets stay as they are.
+  assert.deepEqual(duckingToggle(dock), {cmd:"setDucking", value:{enabled:true}});
+  assert.deepEqual(duckingToggle(none), {cmd:"setDucking", value:{enabled:false}});
+  // On a Pro it is the same command, whichever side runs it.
+  const onPro = {connected:true, capabilities:{...pro, ducking:true},
+    ducking:{...ducking, enabled:true, backend:"device", device:{unit, name:"Wave XLR Pro", ready:true, held:true, outputs:["monitor"]}}};
+  assert.deepEqual(duckingToggle(onPro), {cmd:"setDucking", value:{enabled:false}});
+  // Hardware-control mode: the daemon still sends ducking and refuses the command itself.
+  assert.deepEqual(duckingToggle({connected:true, ducking}), {cmd:"setDucking", value:{enabled:true}});
+  // No ducking from the daemon: nothing to send.
+  for (const state of [undefined, null, {connected:true}, {ducking:null}, {ducking:"on"}])
+    assert.equal(duckingToggle(state), null);
 });

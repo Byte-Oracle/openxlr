@@ -560,13 +560,13 @@ The setup has four parts:
   drop and come back: Slow 100 ms and 2 s, Medium 80 ms and 1.2 s, Fast
   30 ms and 0.2 s.
 
-Ducking is off until you switch it on. For now the window and the
-terminal mixer show the switch and the three presets only on a Wave XLR
-Pro: under **Options**, card INTERFACE, **Ducking**, and on the terminal
-mixer's Inputs tab. On any device a Stream Deck key switches it on and
-off, and `setDucking` over the [API](api.md#ducking) sets the key,
-channels and mixes. OpenXLR saves the setup with the rest of the mixer,
-and profiles carry it.
+Ducking is off until you switch it on. For now the window shows the
+switch and the three presets only on a Wave XLR Pro, under **Options**,
+card INTERFACE, **Ducking**. On any device the
+[terminal mixer](#terminal-ducking) sets the whole setup on its Inputs
+tab, a [Stream Deck key](#stream-deck) switches it on and off, and
+`setDucking` over the [API](api.md#ducking) sets every part. OpenXLR saves
+the setup with the rest of the mixer, and profiles carry it.
 
 **Where it runs.** On most devices this computer runs it: OpenXLR adds a
 small stage for each ducked mix that lowers only the chosen channels.
@@ -2428,7 +2428,7 @@ its live state, so what a key displays is what the mixer window shows.
 **Toggle** (a key) switches one thing: a hardware control (mute,
 phantom, low cut, expander, voice tune, ClipGuard, compressor, low
 impedance, the Pro's output selectors, the aux level lock, the gain
-lock, [ducking](#ducking) on or off on any device), the software low cut (cycling Off, 80, 120), a mix or send mute,
+lock), [ducking](#ducking) on or off, the software low cut (cycling Off, 80, 120), a mix or send mute,
 the monitor output (switching the monitor mixes to one specific device),
 an output's feed (cycling Monitor A, Monitor B, Monitor A+B and the remaining mixes, lit
 when not on A),
@@ -2459,7 +2459,11 @@ only. A strip bound to a source without unit controls has no hardware mute.
 Use a send mute key for it in each mix you want it
 out of, or press a dial set to it in all mixes, which mutes every send at
 once. With no interface connected the hardware keys and dials go grey, and
-a press only flashes an alert. A key's icon can be chosen in its settings, and a
+a press only flashes an alert. The ducking key, under **Mixer** in the
+key's settings, is no hardware key: it works with any device or none,
+lights while ducking is on, and a press switches only that, leaving the
+key microphone, channels, mixes and presets as they are. A daemon that
+reports no ducking leaves it grey. A key's icon can be chosen in its settings, and a
 title typed there replaces the built-in label. An icon name the plugin does
 not know shows the target's default icon. A key or dial whose target is a
 channel or a mix with an icon or colour from the layout editor
@@ -3208,7 +3212,7 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 |---|---|
 | 1 Mixer | channel sends, mix masters, stereo meters and level history; channel and user mix creation, renaming, removal and ordering |
 | 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. A microphone input, including a mono capture input, carries one bar rather than a pair of the same reading. A strip bound to another microphone shows its source, or why it is silent, on the row under its name, and a silent one's name is in the warning colour |
-| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing, the Wave XLR Pro's [ducking](#ducking) and USB Aux return |
+| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing, [ducking](#terminal-ducking) on any device and USB Aux return |
 | 4 Outputs | selected monitor sinks and their feeds, shared output volume, each sink's volume and mute, and the system default sink and source |
 | 5 Apps | every known application and its channel assignment, including the desktop's own routing |
 | 6 Inserts | the chain on each input and mix, its order, bypass and status; add a plugin from the catalogue, narrowed by typing, of those that fit the chain's width; open a plugin's native editor or edit its generated controls when the editor is blocked or refused |
@@ -3253,6 +3257,7 @@ Controls below the visible hardware cards appear as the selection moves.
 | Profiles, on a profile | Enter, `s`, `r`, `d` | load, overwrite, recall on connect, or delete |
 | Options | Enter, `R` | use a skin or reload the skin list |
 | Inputs, Bindings | Left/Right, Enter | choose a strip's source or port, then apply it |
+| Inputs, Ducking channels and mixes | Left/Right, Home, End, Space, Enter | move between the channels or mixes, then duck the one under the cursor or stop ducking it |
 | Text prompts | Enter, Escape | accept or cancel |
 
 Anything that cannot be undone, such as deleting a channel or resetting
@@ -3301,6 +3306,31 @@ Choosing a Bluetooth
 headset adds a row saying it stays in headset mode while bound. The terminal
 mixer does not offer the window's capture channel for the interface's own
 microphone; bind from the window when you want to keep it in the mixer.
+
+<a name="terminal-ducking"></a>
+The Ducking card on Inputs holds the whole [ducking](#ducking) setup, on
+any device and with no interface at all. **Ducking** is the switch, with
+a word beside it while it is on: in software, on the unit, not held yet,
+not running, or cannot run. **Key** cycles through the microphones: XLR 1,
+XLR 2 on a Wave XLR Pro, and each capture input on one mono port. When a
+channel on the list becomes the key, it leaves the list in the same step.
+**Channels** and **Mixes** are rows of keys, one per channel or mix, with
+a check on each one ducked. Left and right move along the row, which
+scrolls when the keys do not fit, and space ducks the key under the
+cursor or stops ducking it. The key microphone is never on the Channels
+row. **Sensitivity**, **Amount** and **Speed** are the three presets.
+
+On a Wave XLR Pro the card adds **Runs on**, this unit or this computer,
+which `setDuckingProcessing` sends, and **Key heard**. On the unit that
+reads XLR 1 before inserts: the Pro listens to its own input, so a gate
+or noise suppressor on XLR 1 does not stop the unit ducking on noise. On
+this computer it reads after the EQ and inserts. While the unit is chosen
+and the setup does not fit it, **Not on unit** gives the reason in a few
+words; the window shows the whole sentence. While this computer runs it,
+**Lowered by** is a short bar of how far the channels are down right now,
+the deepest of the ducked mixes. If the software side cannot run,
+**Software** shows the daemon's reason. In hardware-control mode the card
+says ducking needs the software mixer.
 
 A strip on a driven additional interface gets a card of that unit's own
 controls, such as Wave:3 input 1 on Mic 2, with the gain, mute, low cut,

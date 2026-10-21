@@ -649,8 +649,8 @@ hardware switch and mute is a key target, plus the software low cut
 lock, switching the monitor output to a specific device, and cycling
 an output's feed through Monitor A, Monitor B and Monitor A+B, an
 output's volume in 5% steps and its mute (red while muted), the enforced
-system output, routing the focused application to a channel, and the
-next member of an exclusive group. Each key
+system output, routing the focused application to a channel, the
+next member of an exclusive group, and ducking on or off on any device. Each key
 can pick its icon, and a typed title replaces the built-in label. A key or
 dial on a channel or mix shows the icon and colour that channel or mix was
 given in the layout editor, unless the key has its own icon; a group key
@@ -704,6 +704,12 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   the selection visible. F1 or `?` lists all keys. A plugin is added from
   a picker over the catalogue, narrowed by typing, of the plugins that fit
   the chain's width
+- Ducking in Inputs on any device: the switch, a key that cycles through
+  the microphones, a row of keys for the channels to lower and one for the
+  mixes, the three presets, and on a Wave XLR Pro the choice between the
+  unit and this computer with the reason the unit does not run it. A short
+  bar shows the reduction while software runs it
+  ([manual](manual.md#terminal-ducking))
 - Capture microphones in Inputs show their source, connection and carried
   unit controls. Inserts includes mono and stereo capture chains, using the
   width the daemon reports; an older daemon keeps XLR and mix chains only

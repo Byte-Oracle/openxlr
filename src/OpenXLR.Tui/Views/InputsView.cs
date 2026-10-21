@@ -5,7 +5,7 @@ namespace OpenXLR.Tui;
 /// <summary>
 /// The hardware: the interface's microphone inputs with their processing,
 /// what feeds XLR 1 and XLR 2, where each microphone's EQ runs, the
-/// headphone outputs, the direct monitor blend and the USB Aux return. A control the active device does not
+/// headphone outputs, the direct monitor blend, ducking and the USB Aux return. A control the active device does not
 /// advertise is drawn faded rather than hidden, so the same page describes
 /// every interface.
 ///
@@ -25,6 +25,9 @@ internal sealed class InputsView : View
     private Task<string?>? _applying;
     private string _applyingStrip = string.Empty;
     private string _applyingLabel = string.Empty;
+    // The ducking strips' cursors, by id, so a key survives a list that changed under it.
+    private string? _duckChannel;
+    private string? _duckMix;
     private string? _driveAfter;
     private bool _driving;
 
@@ -125,21 +128,7 @@ internal sealed class InputsView : View
             rows.Add(new ToggleRow("Line out", state.Flag("outLineOut"), value => Set(link, "outLineOut", value)));
         }
 
-        if (state.Can("ducking") && state.Ducking is { } ducking)
-        {
-            // The key microphone lowers the chosen channels in the chosen mixes,
-            // on the unit when the setup fits it and in software otherwise.
-            rows.Add(new HeadingRow("Ducking"));
-            rows.Add(new ToggleRow("Duck while talking", ducking.Enabled, value => Duck(link, "enabled", value))
-            { Note = ducking.Note });
-            string[] levels = ["low", "medium", "high"], speeds = ["slow", "medium", "fast"];
-            rows.Add(new ChoiceRow("Sensitivity", levels, Math.Max(0, Array.IndexOf(levels, ducking.Sensitivity)),
-                index => Duck(link, "sensitivity", levels[index])));
-            rows.Add(new ChoiceRow("Amount", ["low, 6 dB", "medium, 12 dB", "high, 24 dB"], Math.Max(0, Array.IndexOf(levels, ducking.Amount)),
-                index => Duck(link, "amount", levels[index])));
-            rows.Add(new ChoiceRow("Speed", speeds, Math.Max(0, Array.IndexOf(speeds, ducking.Speed)),
-                index => Duck(link, "speed", speeds[index])));
-        }
+        if (state.Ducking is { } ducking) Ducking(rows, app, state, ducking);
 
         if (state.Can("auxInput"))
         {
@@ -351,6 +340,129 @@ internal sealed class InputsView : View
     private static double Percent(double decibels) => Math.Clamp((60.0 + decibels) / 60.0 * 100.0, 0, 100);
 
     private static double Decibels(double percent) => -60.0 + Math.Clamp(percent, 0, 100) * 0.6;
+
+    /// <summary>
+    /// Ducking, on any device: the switch, the key microphone, a strip of
+    /// channels to lower and one of mixes to lower them in, the three
+    /// presets, and while the unit can run it, the choice between the unit
+    /// and this computer with the reason it does not. While software runs it,
+    /// a short bar shows how far it lowers now. The daemon owns every value;
+    /// a key sends the change and the row follows the next state.
+    /// </summary>
+    private void Ducking(List<Row> rows, App app, Snapshot state, DuckingEntry ducking)
+    {
+        DaemonLink link = app.Link;
+        rows.Add(new HeadingRow("Ducking"));
+        // Without a built mixer the daemon refuses both commands.
+        if (state.Mixer.Channels.Count == 0)
+        {
+            rows.Add(new TextRow("Ducking", "needs the software mixer"));
+            return;
+        }
+        rows.Add(new ToggleRow("Ducking", ducking.Enabled, value => Duck(link, "enabled", value))
+        { Note = ducking.Note });
+
+        // The key: a microphone strip shown on this device, and the saved key
+        // even when it is not, so cycling starts from where the daemon is.
+        List<ChannelEntry> microphones = [.. state.Mixer.Channels.Where(channel =>
+            channel.Mono && (channel.Present || channel.Id == ducking.Key))];
+        int keyAt = microphones.FindIndex(channel => channel.Id == ducking.Key);
+        List<string> keyNames = [.. microphones.Select(channel => channel.Name)];
+        if (keyAt < 0)
+        {
+            keyNames.Add($"{ducking.Key} (missing)");
+            keyAt = keyNames.Count - 1;
+        }
+        rows.Add(new ChoiceRow("Key", keyNames, keyAt, index =>
+        {
+            if (index >= microphones.Count) return;
+            string key = microphones[index].Id;
+            // The key is never ducked, so a channel that becomes the key leaves the list in the same command.
+            link.Send("setDucking", body =>
+            {
+                JsonObject value = new() { ["key"] = key };
+                if (ducking.Channels is { } channels && channels.Contains(key))
+                    value["channels"] = Ids(channels.Where(id => id != key));
+                body["value"] = value;
+            });
+        }));
+
+        // A daemon from before channels and mixes keeps them to itself.
+        if (ducking.Channels is { } ducked)
+        {
+            List<ChannelEntry> candidates = [.. state.Mixer.Shown.Where(channel => channel.Id != ducking.Key)];
+            int at = Math.Max(0, candidates.FindIndex(channel => channel.Id == _duckChannel));
+            rows.Add(new ToggleStripRow("Channels", [.. candidates.Select(channel => (channel.Name, ducked.Contains(channel.Id)))], at,
+                index => _duckChannel = candidates[index].Id,
+                index =>
+                {
+                    _duckChannel = candidates[index].Id;
+                    Duck(link, "channels", Flip(ducked, candidates[index].Id));
+                }));
+        }
+        if (ducking.Mixes is { } mixes)
+        {
+            List<MixEntry> targets = state.Mixer.Mixes;
+            int at = Math.Max(0, targets.FindIndex(mix => mix.Id == _duckMix));
+            rows.Add(new ToggleStripRow("Mixes", [.. targets.Select(mix => (mix.Name, mixes.Contains(mix.Id)))], at,
+                index => _duckMix = targets[index].Id,
+                index =>
+                {
+                    _duckMix = targets[index].Id;
+                    Duck(link, "mixes", Flip(mixes, targets[index].Id));
+                }));
+        }
+
+        string[] levels = ["low", "medium", "high"], speeds = ["slow", "medium", "fast"];
+        rows.Add(new ChoiceRow("Sensitivity", ["low, -3 dBFS", "medium, -12 dBFS", "high, -24 dBFS"],
+            Math.Max(0, Array.IndexOf(levels, ducking.Sensitivity)), index => Duck(link, "sensitivity", levels[index])));
+        rows.Add(new ChoiceRow("Amount", ["low, 6 dB", "medium, 12 dB", "high, 24 dB"],
+            Math.Max(0, Array.IndexOf(levels, ducking.Amount)), index => Duck(link, "amount", levels[index])));
+        rows.Add(new ChoiceRow("Speed", speeds, Math.Max(0, Array.IndexOf(speeds, ducking.Speed)),
+            index => Duck(link, "speed", speeds[index])));
+
+        // The choice of where it runs is offered only on a unit that can run it.
+        if (ducking.Device is not null && ducking.Processing is "device" or "software")
+        {
+            rows.Add(new ChoiceRow("Runs on", ["this unit", "this computer"], ducking.Processing == "software" ? 1 : 0,
+                index => link.Send("setDuckingProcessing", body => body["value"] = index == 1 ? "software" : "device")));
+            rows.Add(new TextRow("Key heard", ducking.KeyHeard));
+            if (ducking.Why is { Length: > 0 } why) rows.Add(new TextRow("Not on unit", why));
+        }
+        // The daemon's sentence names the fix, so it is wrapped rather than cut at the card's edge.
+        if (ducking.Error is { Length: > 0 } error)
+            foreach ((string line, int at) in Wrap(error, 40).Select((line, at) => (line, at)))
+                rows.Add(new TextRow(at == 0 ? "Software" : string.Empty, line));
+        if (ducking.Backend == "software")
+        {
+            double reduction = link.DuckReduction();
+            rows.Add(new BarRow("Lowered by", reduction / ducking.Depth, $"{reduction:0} dB"));
+        }
+    }
+
+    /// <summary>Text broken at spaces into lines of at most this many characters, a longer word on its own.</summary>
+    private static List<string> Wrap(string text, int width)
+    {
+        List<string> lines = [];
+        string line = string.Empty;
+        foreach (string word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (line.Length > 0 && line.Length + 1 + word.Length > width)
+            {
+                lines.Add(line);
+                line = string.Empty;
+            }
+            line = line.Length == 0 ? word : $"{line} {word}";
+        }
+        if (line.Length > 0) lines.Add(line);
+        return lines;
+    }
+
+    /// <summary>The list with the id added at its end, or taken out.</summary>
+    private static JsonArray Flip(List<string> ids, string id) =>
+        Ids(ids.Contains(id) ? ids.Where(other => other != id) : ids.Append(id));
+
+    private static JsonArray Ids(IEnumerable<string> ids) => new(ids.Select(id => (JsonNode?)JsonValue.Create(id)).ToArray());
 
     /// <summary>One field of the ducking setup; the daemon keeps the others.</summary>
     private static void Duck(DaemonLink link, string field, JsonNode? value) =>
