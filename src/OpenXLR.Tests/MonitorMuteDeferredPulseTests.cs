@@ -632,6 +632,40 @@ public sealed class MonitorMuteDeferredPulseTests
     }
 
     [Fact]
+    public void APhysicalMuteKeyRearmsAReleasedIndividuallyMutedOutput()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.Mixer.SetMixMuted("monitor", true);
+        fixture.SetNative("external", false);
+        fixture.Sweep();
+
+        fixture.SetNative("external", true);
+        fixture.Sweep();
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.True(fixture.Native("external"));
+        fixture.SetNative("external", false);
+        fixture.Sweep();
+        Assert.False(fixture.Mixer.MonitorMuted);
+        Assert.False(fixture.Native("external"));
+        Assert.Contains("monitor", fixture.Mixer.ExportSettings().MixMuted);
+        fixture.Sweep(); // Confirm the native write once, then remain idle.
+        int before = fixture.Calls.Length;
+        fixture.Sweep();
+        Assert.DoesNotContain("--format=json list sinks", fixture.Calls[before..]);
+        Assert.False(fixture.Native("external"));
+        fixture.SetNative("external", true);
+        fixture.Sweep();
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.True(fixture.Native("external"));
+        fixture.SetNative("external", false);
+        fixture.Sweep();
+        Assert.False(fixture.Mixer.MonitorMuted);
+        Assert.False(fixture.Native("external"));
+        Assert.Contains("monitor", fixture.Mixer.ExportSettings().MixMuted);
+    }
+
+    [Fact]
     public void TenMonitorsKeepOnlyTheExplicitlyOpenedMixAfterTheOldMuteSelectionIsReplaced()
     {
         using var fixture = new IndependentSinks();
@@ -728,6 +762,8 @@ public sealed class MonitorMuteDeferredPulseTests
         restored.Mixer.SetMonitorMuted(false);
 
         Assert.False(restored.Native("external"));
+        Assert.False(restored.Mixer.ExportSettings().MonitorOutputMutes["external"]);
+        restored.Sweep();
         Assert.Empty(restored.Mixer.ExportSettings().MonitorOutputMutes);
     }
 
@@ -780,6 +816,238 @@ public sealed class MonitorMuteDeferredPulseTests
         Assert.DoesNotContain("auxout", fixture.Mixer.ExportSettings().MixMuted);
     }
 
+    [Fact]
+    public void ApplyingAnotherOutputSelectionRestoresTheNativeFlagOfTheOutputItReplaces()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.Mixer.SetMonitorMuted(true);
+
+        fixture.Mixer.ApplySettings(new() { MonitorOutputs = ["external2"], MonitorMuted = true });
+
+        Assert.False(fixture.Native("external"));
+        Assert.True(fixture.Native("external2"));
+        Assert.True(fixture.Mixer.MonitorMuted);
+    }
+
+    [Fact]
+    public void ApplyingLegacySettingsForTheSameOutputKeepsItsOwnedNativeRestoreFlag()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.Mixer.SetMonitorMuted(true);
+
+        fixture.Mixer.ApplySettings(new() { MonitorOutputs = ["external"], MonitorMuted = true });
+        fixture.Mixer.SetMonitorMuted(false);
+
+        Assert.False(fixture.Native("external"));
+    }
+
+    [Fact]
+    public void DisablingAnIndependentAuxReturnRearmsTheNativeMuteWhileMonitoringIsPaused()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.AddMixes([new("auxout", "Aux", MixKind.AuxPort)]);
+        fixture.Mixer.SetMonitorOutputs(["external#hp1"]);
+        typeof(Mixer).GetField("_auxTargetSink", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(fixture.Mixer, "external");
+        fixture.Mixer.SetMonitorMuted(true);
+        Assert.False(fixture.Native("external"));
+
+        fixture.Mixer.SetAuxPortEnabled(false);
+
+        Assert.True(fixture.Native("external"));
+        Assert.True(fixture.Mixer.MonitorMuted);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ARefusedReleaseRetriesOnlyForTheSameDeselectedNativeInstance(bool replaced)
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.Mixer.SetMonitorMuted(true);
+        fixture.DeferNextReset("external");
+
+        fixture.Mixer.SetMonitorOutputs([]);
+        Assert.True(fixture.Native("external"));
+        Assert.Empty(fixture.Mixer.ExportSettings().MonitorOutputMutes);
+        if (replaced) fixture.ReplaceExternal();
+        int before = fixture.Calls.Length;
+        fixture.Sweep(externalRegistrySerial: replaced ? 2 : 1);
+
+        Assert.Equal(replaced, fixture.Native("external"));
+        if (replaced) Assert.DoesNotContain("set-sink-mute external 0", fixture.Calls[before..]);
+        fixture.Sweep(externalRegistrySerial: replaced ? 2 : 1);
+        before = fixture.Calls.Length;
+        fixture.Sweep(externalRegistrySerial: replaced ? 2 : 1);
+        Assert.DoesNotContain("--format=json list sinks", fixture.Calls[before..]);
+    }
+
+    [Fact]
+    public void ReselectingAnOutputWithARefusedReleaseCancelsOnlyItsOldReleaseAndKeepsTheOriginalBaseline()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.Mixer.SetMonitorMuted(true);
+        fixture.DeferNextReset("external");
+        fixture.Mixer.SetMonitorOutputs([]);
+        Assert.True(fixture.Native("external"));
+
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.Sweep();
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.True(fixture.Native("external"));
+        fixture.Mixer.SetMonitorMuted(false);
+        Assert.False(fixture.Native("external"));
+    }
+
+    [Fact]
+    public void ARefusedResumeKeepsItsNativeRestoreBaselineAcrossTheNextRestart()
+    {
+        MixerSettings saved;
+        using (var original = new IndependentSinks())
+        {
+            original.Mixer.SetMonitorOutputs(["external"]);
+            original.Mixer.SetMonitorMuted(true);
+            original.DeferNextPulse("external");
+            original.Mixer.SetMonitorMuted(false);
+            Assert.True(original.Native("external"));
+            saved = original.Mixer.ExportSettings();
+            Assert.False(saved.MonitorMuted);
+            Assert.False(saved.MonitorOutputMutes["external"]);
+        }
+        using var restored = new IndependentSinks();
+        restored.SetNative("external", true);
+        restored.Publish();
+
+        restored.Mixer.ApplySettings(saved);
+
+        Assert.False(restored.Mixer.MonitorMuted);
+        Assert.False(restored.Native("external"));
+    }
+
+    [Fact]
+    public void ARefusedFirstMonitorWriteDoesNotProbeOrRestoreUntouchedPeers()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.AddMixes(Enumerable.Range(3, 16).Select(i => new MixDefinition("monitor" + i, "Monitor " + i, MixKind.Monitor)));
+        fixture.Mixer.SetMonitorMuted(true);
+        fixture.DeferNextReset("OpenXLR_mix_monitor");
+        int before = fixture.Calls.Length;
+
+        Assert.Throws<InvalidOperationException>(() => fixture.Mixer.SetMixMuted("monitor18", false));
+
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.Empty(fixture.Mixer.ExportSettings().MixMuted);
+        foreach (MixDefinition mix in fixture.Mixer.Config.Mixes.Where(m => m.Id != "monitor"))
+        {
+            Assert.DoesNotContain("get-sink-mute " + mix.SinkName, fixture.Calls[before..]);
+            Assert.DoesNotContain(fixture.Calls[before..], call => call.StartsWith("set-sink-mute " + mix.SinkName + " ", StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
+    public void UnknownNativeGenerationsKeepSoftwarePausedWithoutAuthoringBlindHardwareMutes()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.DeferNextPhysicalPulse(identityVerification: true);
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        int before = fixture.Calls.Length;
+
+        fixture.Mixer.SetMonitorMuted(true);
+
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.False(fixture.Native("external"));
+        Assert.Empty(fixture.Mixer.ExportSettings().MonitorOutputMutes);
+        Assert.DoesNotContain(fixture.Calls[before..], call => call.StartsWith("set-sink-mute external ", StringComparison.Ordinal));
+        fixture.Sweep();
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.True(fixture.Native("external"));
+        fixture.Mixer.SetMonitorMuted(false);
+        fixture.Sweep();
+        Assert.False(fixture.Native("external"));
+    }
+
+    [Fact]
+    public void AResumeAcknowledgedBeforeNativeReadbackKeepsItsRestoreBaselineAcrossRestart()
+    {
+        MixerSettings saved;
+        using (var original = new IndependentSinks())
+        {
+            original.Mixer.SetMonitorOutputs(["external"]);
+            original.Mixer.SetMonitorMuted(true);
+            original.DeferSuccess("external");
+            original.Mixer.SetMonitorMuted(false);
+            Assert.True(original.Native("external"));
+            saved = original.Mixer.ExportSettings();
+            Assert.False(saved.MonitorMuted);
+            Assert.False(saved.MonitorOutputMutes["external"]);
+        }
+        using var restored = new IndependentSinks();
+        restored.SetNative("external", true);
+        restored.Publish();
+
+        restored.Mixer.ApplySettings(saved);
+        Assert.False(restored.Native("external"));
+        Assert.False(restored.Mixer.ExportSettings().MonitorOutputMutes["external"]);
+        restored.Sweep();
+        Assert.Empty(restored.Mixer.ExportSettings().MonitorOutputMutes);
+    }
+
+    [Fact]
+    public void AFirstHardwareWriteRefusalQueuesTheOtherOutputsWithoutTryingEachHelper()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external", "external2"]);
+        fixture.DeferNextPulse("external");
+        fixture.DeferNextPulse("external2");
+        int before = fixture.Calls.Length;
+
+        fixture.Mixer.SetMonitorMuted(true);
+
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.Single(fixture.Calls[before..], call => call.StartsWith("set-sink-mute external", StringComparison.Ordinal));
+        Assert.False(fixture.Native("external"));
+        Assert.False(fixture.Native("external2"));
+        fixture.DeferNextReset("external");
+        fixture.DeferNextReset("external2");
+        before = fixture.Calls.Length;
+        fixture.Sweep();
+        Assert.Single(fixture.Calls[before..], call => call.StartsWith("set-sink-mute external", StringComparison.Ordinal));
+        Assert.DoesNotContain(fixture.Calls[before..], call => call.StartsWith("get-sink-mute external", StringComparison.Ordinal));
+        Assert.False(fixture.Native("external"));
+        Assert.False(fixture.Native("external2"));
+        fixture.Sweep();
+        fixture.Sweep();
+        Assert.True(fixture.Native("external"));
+        Assert.True(fixture.Native("external2"));
+    }
+
+    [Fact]
+    public void ReleasingSeveralOutputsUsesOneSnapshotAndStopsAfterTheFirstWriteRefusal()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external", "external2"]);
+        fixture.Mixer.SetMonitorMuted(true);
+        fixture.DeferNextReset("external");
+        fixture.DeferNextReset("external2");
+        int before = fixture.Calls.Length;
+
+        fixture.Mixer.SetMonitorOutputs([]);
+
+        Assert.Single(fixture.Calls[before..], call => call == "--format=json list sinks");
+        Assert.Single(fixture.Calls[before..], call => call.StartsWith("set-sink-mute external", StringComparison.Ordinal));
+        Assert.True(fixture.Native("external"));
+        Assert.True(fixture.Native("external2"));
+        for (int sweep = 0; sweep < 4; sweep++) fixture.Sweep();
+        Assert.False(fixture.Native("external"));
+        Assert.False(fixture.Native("external2"));
+        before = fixture.Calls.Length;
+        fixture.Sweep();
+        Assert.DoesNotContain("--format=json list sinks", fixture.Calls[before..]);
+    }
+
     private sealed class IndependentSinks : IDisposable
     {
         private readonly string _directory = Directory.CreateTempSubdirectory("openxlr-deferred-pulse-").FullName;
@@ -791,6 +1059,7 @@ public sealed class MonitorMuteDeferredPulseTests
 
         public IndependentSinks()
         {
+            File.WriteAllText(Path.Combine(_directory, "calls"), "");
             foreach (string name in Names) SetNative(name, false);
             File.WriteAllText(Path.Combine(_directory, "native-serial"), "1");
             SetDefault("OpenXLR_ch_system");
@@ -821,6 +1090,10 @@ public sealed class MonitorMuteDeferredPulseTests
                     mute=$(/bin/cat "$dir/$2")
                     if [ "$mute" = true ]; then echo 'Mute: yes'; else echo 'Mute: no'; fi ;;
                   set-sink-mute)
+                    if [ "$3" = toggle ] && [ -f "$dir/defer-success-$2" ]; then
+                        /bin/rm "$dir/defer-success-$2"
+                        exit 0
+                    fi
                     if [ "$3" != toggle ] && [ -f "$dir/fail-reset-$2" ]; then
                         /bin/rm "$dir/fail-reset-$2"
                         echo 'temporary native restoration failure' >&2
@@ -867,6 +1140,7 @@ public sealed class MonitorMuteDeferredPulseTests
         private static readonly string[] Names = ["external", "external2", "OpenXLR_ch_system", "OpenXLR_ch_browser", "OpenXLR_mix_monitor", "OpenXLR_mix_monitor_b"];
         public void DeferNextPhysicalPulse(bool identityVerification) => File.WriteAllText(Path.Combine(_directory, identityVerification ? "fail-native" : "fail-external"), "");
         public void DeferNextPulse(string name, bool readFailure = false) => File.WriteAllText(Path.Combine(_directory, $"fail-{(readFailure ? "read-" : "")}{name}"), "");
+        public void DeferSuccess(string name) => File.WriteAllText(Path.Combine(_directory, "defer-success-" + name), "");
         public void DeferNextReset(string name) => File.WriteAllText(Path.Combine(_directory, "fail-reset-" + name), "");
         public void ReplaceExternal() => File.WriteAllText(Path.Combine(_directory, "native-serial"), "2");
         public void SelectExternalOutput(bool beforeRegistry)

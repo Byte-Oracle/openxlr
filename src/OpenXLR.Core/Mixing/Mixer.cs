@@ -731,16 +731,20 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// </summary>
     private void WireAuxRouteLocked()
     {
-        if (_auxRoute is not null) { _pw.Unlink(_auxRoute); _auxRoute = null; }
-        _auxTargetSink = null;
-        if (!_auxPortEnabled || !_hardwareOutputRouting) return;
-        MixDefinition? aux = _config.Mixes.FirstOrDefault(m => m.Kind == MixKind.AuxPort);
-        if (aux is null) return;
-        string? proSink = HardwareOutputSinkLocked();
-        if (proSink is null || HoldPlaybackLocked(proSink)) return;   // EnsureAuxRoute wires it later
-        (string tapNode, string tapPrefix) = MixTapLocked(aux);
-        PortLink route = _pw.RouteTapToOutput(tapNode, tapPrefix, proSink + "#usbaux");
-        if (route.Pairs.Count > 0) { _auxRoute = route; _auxTargetSink = proSink; }
+        try
+        {
+            if (_auxRoute is not null) { _pw.Unlink(_auxRoute); _auxRoute = null; }
+            _auxTargetSink = null;
+            if (!_auxPortEnabled || !_hardwareOutputRouting) return;
+            MixDefinition? aux = _config.Mixes.FirstOrDefault(m => m.Kind == MixKind.AuxPort);
+            if (aux is null) return;
+            string? proSink = HardwareOutputSinkLocked();
+            if (proSink is null || HoldPlaybackLocked(proSink)) return;   // EnsureAuxRoute wires it later
+            (string tapNode, string tapPrefix) = MixTapLocked(aux);
+            PortLink route = _pw.RouteTapToOutput(tapNode, tapPrefix, proSink + "#usbaux");
+            if (route.Pairs.Count > 0) { _auxRoute = route; _auxTargetSink = proSink; }
+        }
+        finally { SyncMonitorHardwareMutesLocked(); }
     }
 
     /// <summary>
@@ -1538,7 +1542,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 ChannelMuted = [.. _muted],
                 MonitorOutputs = [.. _monitorOutputs],
                 MonitorMuted = _monitorMuted,
-                MonitorOutputMutes = new Dictionary<string, bool>(_monitorOutputMutes),
+                MonitorOutputMutes = _monitorOutputMutes.Where(pair => _monitorOutputs.Any(o => StripMarker(o) == pair.Key)).ToDictionary(),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
                 KnownApps = [.. _apps.Values.Select(a => new SavedApp(a.Identity, a.Label, a.ChannelId))],
@@ -1645,8 +1649,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 : s.MonitorOutput is not null ? [s.MonitorOutput] : [];
             _monitorFeeds.Clear();
             foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
-            _monitorOutputMutes.Clear();
             HashSet<string> selectedHardware = savedOutputs.Select(StripMarker).ToHashSet(StringComparer.Ordinal);
+            // Release the old selection while its ownership is still known.
+            // Legacy settings for the same output keep the current baseline.
+            ForgetUnselectedDesktopOutputsLocked(selectedHardware);
+            foreach (string removed in _monitorOutputMutes.Keys.Where(n => !selectedHardware.Contains(n) && !_outputMutes.ContainsKey(n)).ToArray())
+                _monitorOutputMutes.Remove(removed);
             foreach ((string output, bool muted) in s.MonitorOutputMutes ?? [])
                 if (selectedHardware.Contains(output) && IsExactOutputName(output) && !output.StartsWith("OpenXLR_", StringComparison.Ordinal))
                     _monitorOutputMutes[output] = muted;
@@ -2264,6 +2272,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
     private void SetMonitorOutputsLocked(IReadOnlyList<string> sinkNames)
     {
+        PrepareMonitorHardwareSelectionLocked(sinkNames);
         string? previousSink = ResolveDefaultSink(FollowMonitorOutput, _monitorOutputs);
         DisconnectMonitorRoutesLocked();
         _monitorOutputs.Clear();
@@ -2619,12 +2628,16 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             bool replaceSelection = !muted && _monitorMuted;
             var affected = replaceSelection ? _config.Mixes.Where(m => m.Kind == MixKind.Monitor).ToArray() : [monitor];
             var before = affected.ToDictionary(m => m.Id, m => _mixMuted.Contains(m.Id));
+            var attempted = new List<MixDefinition>();
             try
             {
                 // Commit intent only after every virtual monitor accepted it.
                 // A refused resume keeps its software routes closed.
                 foreach (MixDefinition mix in affected)
+                {
+                    attempted.Add(mix); // A timeout can leave even the refused write applied.
                     _pw.SetSinkMuted(mix.SinkName, mix.Id == mixId ? muted : true);
+                }
                 foreach (MixDefinition mix in affected)
                     if (mix.Id == mixId && !muted) _mixMuted.Remove(mix.Id); else _mixMuted.Add(mix.Id);
                 if (replaceSelection) SetMonitorMuted(false);
@@ -2634,6 +2647,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 foreach (MixDefinition mix in affected)
                 {
                     if (before[mix.Id]) _mixMuted.Add(mix.Id); else _mixMuted.Remove(mix.Id);
+                }
+                foreach (MixDefinition mix in attempted)
+                {
                     _desktopMixMuteResets[mix.SinkName] = (0, 0);
                     RestoreDesktopMixMuteLocked(mix.SinkName, mix.Id);
                 }

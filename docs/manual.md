@@ -3222,7 +3222,10 @@ information does not count as another mute press. OpenXLR waits for the
 native and registry identities to agree before accepting a reconnected
 output's mute flag. If restoring a mix's mute after a blanket desktop mute
 fails, OpenXLR retries on later sweeps and keeps the previous mute choice
-until the restoration is confirmed.
+until the restoration is confirmed. Native output writes also remain pending
+until readback confirms them. OpenXLR does not author a hardware mute before
+it has verified that output's native identity. A failed release after
+removing an output is retried only for that same device instance.
 Unmuting an output muted before selection leaves it unmuted without starting
 a monitoring pause. Unmuting a native mute authored by the global pause resumes
 monitoring. If every assigned mix was individually muted, desktop unmute only
