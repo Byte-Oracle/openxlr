@@ -497,9 +497,13 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands
     public Task SetMonitorFeedAsync(string device, string mix)
         => SendAsync(new Dictionary<string, object?> { ["cmd"] = "setMonitorFeed", ["device"] = device, ["mix"] = mix });
 
-    /// <summary>Volume of the selected output device (0..1).</summary>
+    /// <summary>Volume of the selected output device (0..1.5).</summary>
     public Task SetOutputVolumeAsync(double value)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "setOutputVolume", ["value"] = value });
+
+    /// <summary>Set the monitoring pause from the checkbox's value.</summary>
+    public Task SetMonitorMutedAsync(bool value)
+        => SendAsync(new Dictionary<string, object> { ["cmd"] = "setMonitorMuted", ["value"] = value });
 
     /// <summary>Devices the daemon should hold as system defaults (null = don't enforce).</summary>
     public Task SetEnforcedDefaultsAsync(string? sink, string? source)

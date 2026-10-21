@@ -166,3 +166,42 @@ test("toggle output mute retains every accepted toggle", () => {
   assert.equal(h.sent.length, 3);
   assert.equal(h.timers.size, 0);
 });
+
+for (const count of [2, 3]) {
+  test(`${count} monitor presses retain parity before any fresh state arrives`, () => {
+    const h = harness();
+    for (let i = 0; i < count; i++) h.keys.enqueue("monitor", {cmd:"toggleMonitorMuted"});
+    assert.equal(h.sent.length, 1);
+    let muted = false;
+    for (let i = 0; i < count; i++) {
+      assert.equal(h.sent.length, i + 1);
+      assert.equal(h.sent.at(-1).cmd, "toggleMonitorMuted");
+      assert.equal(h.sent.at(-1).value, undefined);
+      muted = !muted;
+      h.ack();
+    }
+    assert.equal(muted, count % 2 === 1);
+    assert.equal(new Set(h.sent.map(p => p.requestId)).size, count);
+    assert.equal(h.timers.size, 0);
+  });
+}
+
+for (const reason of ["failure", "disconnect"]) {
+  test(`monitor ${reason} clears pending toggles and rejects stale acknowledgements`, () => {
+    const h = harness();
+    for (let i = 0; i < 3; i++) h.keys.enqueue("monitor", {cmd:"toggleMonitorMuted"});
+    const stale = h.sent[0].requestId;
+    if (reason === "failure") h.ack(true);
+    else h.keys.disconnect();
+    assert.equal(h.sent.length, 1);
+    assert.equal(h.timers.size, 0);
+    h.keys.finish(stale, false);
+    assert.equal(h.sent.length, 1);
+    h.keys.enqueue("monitor", {cmd:"toggleMonitorMuted"});
+    assert.equal(h.sent.length, 2);
+    h.keys.finish(stale, true);
+    assert.equal(h.timers.size, 1);
+    h.ack();
+    assert.equal(h.timers.size, 0);
+  });
+}

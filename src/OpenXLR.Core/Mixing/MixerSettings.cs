@@ -65,6 +65,9 @@ public sealed record MixerSettings
     /// <summary>All selected monitor outputs (the monitor mixes can feed several).</summary>
     public List<string> MonitorOutputs { get; init; } = [];
 
+    /// <summary>Listening is paused without changing mix mutes. Never profile state.</summary>
+    public bool MonitorMuted { get; init; }
+
     /// <summary>Output name to the monitor mix feeding it; absent = the first monitor mix.</summary>
     public Dictionary<string, string> MonitorFeeds { get; init; } = [];
 

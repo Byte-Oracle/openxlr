@@ -164,6 +164,9 @@ public sealed record MixerState
     /// <summary>node.names of every sink the monitor mixes feed.</summary>
     public IReadOnlyList<string> MonitorOutputs { get; init; } = [];
 
+    /// <summary>Selected monitor routes are paused; mix and channel mutes stay independent.</summary>
+    public bool MonitorMuted { get; init; }
+
     /// <summary>
     /// Which monitor mix feeds an output, by output name; an output absent
     /// here is fed by the first monitor mix.

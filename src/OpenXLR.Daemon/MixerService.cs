@@ -169,9 +169,10 @@ public sealed class MixerService : IHostedService, IDisposable
         }
         // The USB Aux port follows the Aux mix, not the monitor selection.
         bool auxDesired = _mixer.AuxPortEnabled;
+        bool monitorMuted = _mixer.MonitorMuted;
         _devices.EnsureOutputSelectors(
-            hp1: suffixes.Contains("hp1"), hp2: suffixes.Contains("hp2"),
-            usbAux: auxDesired, lineOut: suffixes.Contains("lineout"));
+            hp1: !monitorMuted && suffixes.Contains("hp1"), hp2: !monitorMuted && suffixes.Contains("hp2"),
+            usbAux: auxDesired, lineOut: !monitorMuted && suffixes.Contains("lineout"));
 
         // The device latches aux-return routing at playback-stream start, so a
         // freshly enabled aux output needs the stream bounced once. The bounce
@@ -193,7 +194,7 @@ public sealed class MixerService : IHostedService, IDisposable
         // jack: with another device in the set the software send has to
         // carry the mic there, and the hardware path would double it.
         bool anyJack = suffixes.Contains("hp1") || suffixes.Contains("hp2") || suffixes.Contains("lineout");
-        bool jacksOnly = anyJack && _mixer.MonitorOutputs.All(o => o.Contains('#'));
+        bool jacksOnly = !monitorMuted && anyJack && _mixer.MonitorOutputs.All(o => o.Contains('#'));
         // With a summed feed (A+B) the mic rides the hardware path as soon as
         // any of the summed mixes carries it.
         string jackFeed = _mixer.JackMonitorMix ?? "monitor";
@@ -342,6 +343,7 @@ public sealed class MixerService : IHostedService, IDisposable
         if (settingsWarning is not null)
             _log.LogWarning("mixer settings: {warning}{fallback}", settingsWarning, saved is null ? "; starting with defaults" : "");
         _mixer.SetInputBindings(saved?.InputBindings);
+        _mixer.SetMonitorMuted(saved?.MonitorMuted ?? false);
         UpdateInputDeviceHint();
         _mixer.Build(MixerConfig.FromSettings(saved), output);
         // Units run their microphone's EQ only while the submixer runs: in
@@ -729,10 +731,14 @@ public sealed class MixerService : IHostedService, IDisposable
                 case "setMixMuted":
                     if (cmd.Mix is null) return "setMixMuted: need 'mix'";
                     _mixer.SetMixMuted(cmd.Mix, cmd.Value.GetBoolean());
+                    SyncOutputSelectors();
                     break;
                 case "adjustOutputVolume": _mixer.AdjustOutputVolume(cmd.Device, cmd.Value.GetDouble()); break;
                 case "setOutputDeviceVolume": _mixer.SetOutputDeviceVolume(cmd.Device, cmd.Value.GetDouble()); break;
-                case "toggleOutputMute": _mixer.ToggleOutputMute(cmd.Device); break;
+                case "toggleOutputMute":
+                    _mixer.ToggleOutputMute(cmd.Device);
+                    SyncOutputSelectors();
+                    break;
                 case "setMainOutput": _mixer.SetMainOutput(cmd.Device!); break;
                 case "routeFocusedApp":
                     _mixer.RouteFocusedApplication(DesktopFocusQuery.Read(), cmd.Channel!);
@@ -757,6 +763,14 @@ public sealed class MixerService : IHostedService, IDisposable
                     break;
                 case "setMonitorOutputs":
                     _mixer.SetMonitorOutputs(cmd.Devices ?? []);
+                    SyncOutputSelectors();
+                    break;
+                case "setMonitorMuted":
+                    _mixer.SetMonitorMuted(cmd.Value.GetBoolean());
+                    SyncOutputSelectors();
+                    break;
+                case "toggleMonitorMuted":
+                    _mixer.ToggleMonitorMuted();
                     SyncOutputSelectors();
                     break;
                 case "setMonitorFeed":

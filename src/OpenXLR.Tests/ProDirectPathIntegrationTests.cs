@@ -70,6 +70,19 @@ public sealed partial class MonitorVolumeIntegrationTests
             Assert.Equal(new UnitInputStatus(pro.Info.InstanceId, 1, true), Channel("xlr1").UnitInput);
             PrimaryWait(() => { service.SweepOnce(); return LegMuted(pw, "xlr1", "monitor") == true; });
 
+            Run(new() { Cmd = "setMonitorMuted", Value = JsonSerializer.SerializeToElement(true) });
+            Assert.False(pro.MicDirect);
+            Assert.False(pro.ReadState().OutHp1);
+            Assert.True(pro.ReadState().OutUsbAux);
+            Sweep();
+            Assert.False(pro.MicDirect);
+            Assert.False(pro.ReadState().OutHp1);
+            Assert.Equal(2, GraphLinksInto(DirectSink).Count(l => l.From.StartsWith("OpenXLR_mix_aux", StringComparison.Ordinal)));
+            Assert.DoesNotContain("monitor", Channel("xlr1").MutedIn);
+            Run(new() { Cmd = "setMonitorMuted", Value = JsonSerializer.SerializeToElement(false) });
+            Assert.True(pro.MicDirect);
+            Assert.True(pro.ReadState().OutHp1);
+
             // XLR 1 on the webcam: the Pro stays driven, no channel carries its
             // input 1, so the path is off and XLR 1's send is its own again.
             Run(new() { Cmd = "setInputBinding", Channel = "xlr1", Source = "direct_cam", CaptureMonoChannel = 0 });

@@ -280,6 +280,7 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     assert.equal(daemon.messages.length, beforeLegacy);
     host.receive({event:"keyDown",context:"default-key"});
     assert.deepEqual({...daemon.messages.at(-1), requestId:undefined}, {cmd:"toggleOutputMute",device:null,requestId:undefined});
+    daemon.receive({type:"commandResult",requestId:daemon.messages.at(-1).requestId});
     state.mixer.enforcedDefaultSink = "desk";
     daemon.receive(state);
 
@@ -299,7 +300,10 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
       host.receive({event:"dialRotate",context:"output-dial",payload:{ticks:rotate}});
       assert.deepEqual(daemon.messages.at(-1), expected);
       host.receive({event:"dialDown",context:"output-dial"});
-      assert.deepEqual(daemon.messages.at(-1), {cmd:"toggleOutputMute",device:expected.device});
+      const {requestId, ...press} = daemon.messages.at(-1);
+      assert.deepEqual(press, {cmd:"toggleOutputMute",device:expected.device});
+      assert.equal(typeof requestId, "string");
+      daemon.receive({type:"commandResult",requestId});
     }
     dialTarget("output-dial", "output:legacy");
     assert.equal(feedbackOf("output-dial").value, "set up");
@@ -343,22 +347,140 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     delete state.state;
     daemon.receive(state);
 
-    // The monitor dial's press mutes what the first monitor output hears.
-    dialTarget("monitor-dial", "outputVolume");
-    assert.equal(feedbackOf("monitor-dial").muteOverlay.enabled, false);
-    host.receive({event:"dialDown",context:"monitor-dial"});
-    assert.deepEqual(daemon.messages.slice(-2), [
-      {cmd:"setMixMuted",mix:"monitor",value:true}, {cmd:"setMixMuted",mix:"monitor2",value:true}]);
-    state.mixer.mixes[0].muted = state.mixer.mixes[1].muted = true;
+    // A global monitor pause must preserve a mix that was already muted.
+    state.mixer.mixes[0].muted = false;
+    state.mixer.mixes[1].muted = true;
+    state.mixer.monitorFeeds = {"qa-output":"monitor+monitor2"};
+    delete state.mixer.monitorMuted; // An older state means not globally paused.
     daemon.receive(state);
-    assert.equal(feedbackOf("monitor-dial").muteOverlay.enabled, true);
+    dialTarget("monitor-dial", "outputVolume");
+    dialTarget("physical-monitor-dial", "output:qa-output");
+    dialTarget("mix-monitor-dial", "output:OpenXLR_mix_monitor");
+    assert.equal(feedbackOf("monitor-dial").muteOverlay.enabled, false);
+    assert.equal(feedbackOf("physical-monitor-dial").muteOverlay.enabled, false);
+    const beforeMonitorPause = daemon.messages.length;
     host.receive({event:"dialDown",context:"monitor-dial"});
-    assert.deepEqual(daemon.messages.slice(-2), [
-      {cmd:"setMixMuted",mix:"monitor",value:false}, {cmd:"setMixMuted",mix:"monitor2",value:false}]);
+    assert.equal(daemon.messages.length, beforeMonitorPause + 1);
+    const {requestId: pauseId, ...pause} = daemon.messages.at(-1);
+    assert.deepEqual(pause, {cmd:"toggleMonitorMuted"});
+    assert.equal(typeof pauseId, "string");
+    state.mixer.monitorMuted = true;
+    daemon.receive(state);
+    daemon.receive({type:"commandResult",requestId:pauseId});
+    assert.equal(feedbackOf("monitor-dial").muteOverlay.enabled, true);
+    assert.equal(feedbackOf("physical-monitor-dial").muteOverlay.enabled, true);
+    assert.equal(feedbackOf("mix-monitor-dial").muteOverlay.enabled, false, "the explicit mix sink keeps its own mute state");
+    assert.equal(keyFace("monitor-key"), "muted");
+    assert.equal(keyFace("mix-key"), "off");
+    assert.equal(keyFace("desk-key"), "muted");
+    assert.equal(keyFace("default-key"), "muted");
+    const beforeMonitorResume = daemon.messages.length;
+    host.receive({event:"dialDown",context:"monitor-dial"});
+    assert.equal(daemon.messages.length, beforeMonitorResume + 1);
+    const {requestId: resumeId, ...resume} = daemon.messages.at(-1);
+    assert.deepEqual(resume, {cmd:"toggleMonitorMuted"});
+    state.mixer.monitorMuted = false;
+    daemon.receive(state);
+    daemon.receive({type:"commandResult",requestId:resumeId});
+    assert.equal(feedbackOf("monitor-dial").muteOverlay.enabled, false);
+    assert.equal(feedbackOf("physical-monitor-dial").muteOverlay.enabled, false);
+    assert.equal(state.mixer.mixes[0].muted, false);
+    assert.equal(state.mixer.mixes[1].muted, true);
+    assert.equal(keyFace("monitor-key"), "off");
+    assert.equal(keyFace("desk-key"), "muted", "an unrelated sink keeps its server mute flag");
+
+    // Feed-local mutes still show silence; a press only changes master pause.
     state.mixer.monitorFeeds = {"qa-output":"monitor2"};
     daemon.receive(state);
+    assert.equal(feedbackOf("monitor-dial").muteOverlay.enabled, true);
+    assert.equal(feedbackOf("physical-monitor-dial").muteOverlay.enabled, true);
+    const beforeMutedFeed = daemon.messages.length;
     host.receive({event:"dialDown",context:"monitor-dial"});
-    assert.deepEqual(daemon.messages.at(-1), {cmd:"setMixMuted",mix:"monitor2",value:false});
+    assert.equal(daemon.messages.length, beforeMutedFeed + 1);
+    const {requestId: mutedFeedId, ...mutedFeed} = daemon.messages.at(-1);
+    assert.deepEqual(mutedFeed, {cmd:"toggleMonitorMuted"});
+    daemon.receive({type:"commandResult",requestId:mutedFeedId});
+    assert.equal(state.mixer.mixes[1].muted, true);
+
+    // A system-default key resolves the selected physical output the same way.
+    state.mixer.enforcedDefaultSink = "qa-output";
+    state.mixer.monitorMuted = true;
+    state.mixer.mixes[1].muted = false;
+    daemon.receive(state);
+    assert.equal(keyFace("default-key"), "muted");
+    state.mixer.monitorMuted = false;
+    daemon.receive(state);
+    assert.equal(keyFace("default-key"), "off");
+    state.mixer.enforcedDefaultSink = "desk";
+
+    // The daemon toggles atomically, so queued presses retain parity even
+    // if only acknowledgements arrive and the displayed state stays stale.
+    for (const count of [2, 3]) {
+      state.mixer.monitorMuted = false;
+      state.mixer.mixes[1].muted = true;
+      daemon.receive(state);
+      const beforeBurst = daemon.messages.length;
+      for (let i = 0; i < count; i++) host.receive({event:"dialDown",context:"monitor-dial"});
+      assert.equal(daemon.messages.length, beforeBurst + 1);
+      let paused = false;
+      const requestIds = new Set();
+      for (let i = 0; i < count; i++) {
+        assert.equal(daemon.messages.length, beforeBurst + i + 1);
+        const {requestId, ...command} = daemon.messages.at(-1);
+        assert.deepEqual(command, {cmd:"toggleMonitorMuted"});
+        requestIds.add(requestId);
+        paused = !paused;
+        daemon.receive({type:"commandResult",requestId});
+      }
+      assert.equal(requestIds.size, count);
+      assert.equal(paused, count % 2 === 1);
+      assert.equal(state.mixer.mixes[1].muted, true);
+      state.mixer.monitorMuted = paused;
+      daemon.receive(state);
+    }
+
+    // Raw Pro controls follow selected jack feeds, not an unsuffixed default.
+    state.devices.push({kind:0,name:"pro",description:"Pro",volume:1,muted:false});
+    state.mixer.monitorOutputs = ["pro#hp1"];
+    state.mixer.monitorFeeds = {"pro#hp1":"monitor2"};
+    state.mixer.monitorMuted = false;
+    state.mixer.mixes[0].muted = false;
+    state.mixer.mixes[1].muted = true;
+    daemon.receive(state);
+    dialTarget("pro-dial", "output:pro");
+    keyTarget("pro-key", "outputmute:pro");
+    assert.equal(feedbackOf("pro-dial").value, "MUTED");
+    assert.equal(keyFace("pro-key"), "muted");
+    state.mixer.mixes[1].muted = false;
+    state.mixer.monitorMuted = true;
+    daemon.receive(state);
+    assert.equal(feedbackOf("pro-dial").muteOverlay.enabled, true);
+    assert.equal(keyFace("pro-key"), "muted");
+    assert.equal(feedbackOf("physical-monitor-dial").muteOverlay.enabled, false);
+    assert.equal(keyFace("monitor-key"), "off", "an unselected physical output keeps its native mute");
+    assert.equal(feedbackOf("mix-monitor-dial").muteOverlay.enabled, false);
+    assert.equal(keyFace("desk-key"), "muted");
+    state.mixer.monitorMuted = false;
+    state.mixer.monitorOutputs.push("pro#hp2");
+    state.mixer.monitorFeeds["pro#hp2"] = "monitor";
+    state.mixer.mixes[1].muted = true;
+    daemon.receive(state);
+    assert.equal(feedbackOf("pro-dial").muteOverlay.enabled, false, "one audible selected jack keeps the raw output active");
+    state.mixer.mixes[0].muted = true;
+    daemon.receive(state);
+    assert.equal(feedbackOf("pro-dial").muteOverlay.enabled, true);
+    assert.equal(keyFace("pro-key"), "muted");
+    state.mixer.monitorOutputs = ["qa-output"];
+    state.mixer.monitorFeeds = {"qa-output":"monitor2"};
+    state.mixer.mixes[0].muted = state.mixer.mixes[1].muted = false;
+    daemon.receive(state);
+
+    // With no mixer state, a dial press cannot guess a master mute value.
+    daemon.receive({...state,mixer:null});
+    const beforeMissingMonitor = daemon.messages.length;
+    host.receive({event:"dialDown",context:"monitor-dial"});
+    assert.equal(daemon.messages.length, beforeMissingMonitor);
+    daemon.receive(state);
 
     // A channel volume dial is offered for a channel the daemon reports a
     // volume for, turns that volume, and its press mutes the channel in every

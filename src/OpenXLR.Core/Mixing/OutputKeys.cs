@@ -2,6 +2,12 @@ namespace OpenXLR.Core.Mixing;
 
 public sealed partial class Mixer
 {
+    /// <summary>Toggle monitoring under one lock without reading a client's previous state.</summary>
+    public void ToggleMonitorMuted()
+    {
+        lock (_gate) SetMonitorMuted(!(_desktopMonitorIntent ?? _monitorMuted));
+    }
+
     /// <summary>Adjust a named output, or the current desktop default, in desktop percentage points.</summary>
     public void AdjustOutputVolume(string? device, double delta)
     {
@@ -42,9 +48,9 @@ public sealed partial class Mixer
     }
 
     /// <summary>
-    /// Toggle an output's mute. A selected monitor output mutes the mixes
-    /// feeding it, the same thing a dial press on the monitor does, so the
-    /// mixer window, dial rings and keys agree. Anything else is muted at
+    /// Toggle an output's mute. A selected monitor output pauses listening
+    /// without changing its mixes. A monitor-mix sink keeps its own mute.
+    /// Anything else is muted at
     /// the audio server, read from it rather than from a stale UI value.
     /// </summary>
     public void ToggleOutputMute(string? device)
@@ -53,14 +59,16 @@ public sealed partial class Mixer
         {
             string sink = ResolveOutputKeyLocked(device);
             MixDefinition? mix = _config.Mixes.FirstOrDefault(m => m.Kind == MixKind.Monitor && m.SinkName == sink);
-            List<MixDefinition> feeding = mix is not null ? [mix]
-                : _monitorOutputs.Contains(sink) ? MixesForOutputLocked(sink) : [];
-            if (feeding.Count == 0) { _pw.ToggleSinkMuted(sink); return; }
+            if (mix is null)
+            {
+                if (_monitorOutputs.Any(output => StripMarker(output) == sink)) ToggleMonitorMuted();
+                else _pw.ToggleSinkMuted(sink);
+                return;
+            }
             // Use the regular monitor setter so state and graph acknowledgement
             // follow the same path as a click in the mixer, even when registry
             // events have not caught up with pipewire-pulse yet.
-            bool muted = mix is not null ? _pw.GetSinkMuted(sink) : feeding.All(m => _mixMuted.Contains(m.Id));
-            foreach (MixDefinition fed in feeding) SetMixMuted(fed.Id, !muted);
+            SetMixMuted(mix.Id, !_pw.GetSinkMuted(sink));
         }
     }
 

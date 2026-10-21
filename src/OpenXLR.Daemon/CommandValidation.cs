@@ -82,8 +82,9 @@ public static class CommandValidation
             case "setPluginWineTrace":
                 return CheckPluginWineTrace(cmd);
             case "setMixLatencyCompensation":
+            case "setMonitorMuted":
                 return cmd.Value.ValueKind is JsonValueKind.True or JsonValueKind.False
-                    ? null : "setMixLatencyCompensation: value must be a boolean";
+                    ? null : $"{cmd.Cmd}: value must be a boolean";
             case "addWindowsPluginFolder":
             case "removeWindowsPluginFolder":
             case "getWindowsPluginFiles":
@@ -199,6 +200,8 @@ public static class CommandValidation
                 return null;
             case "setRecallOnConnect":
                 return TooLong(cmd.Name, MaxText) ? "setRecallOnConnect: name too long" : null;
+            case "toggleMonitorMuted":
+                return null;   // no arguments; toggle the current state under the mixer lock
             case "resetDevice":
                 return null;   // no arguments; the device manager checks the device
             case "setMonitorFeed":

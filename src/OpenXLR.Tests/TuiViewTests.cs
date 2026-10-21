@@ -128,6 +128,7 @@ public sealed class TuiViewTests
         Assert.True(state.Can("phantom"));
         Assert.Equal(52, state.Number("gainDb"));
         Assert.True(state.Flag("lowCut"));
+        Assert.False(state.Mixer.MonitorMuted); // Older daemons omit the monitoring pause.
 
         MixEntry monitor = state.Mixer.Mixes[0];
         Assert.Equal("Monitor A", monitor.Name);
@@ -623,8 +624,7 @@ public sealed class TuiViewTests
     public void SpaceSelectsASinkForTheMonitorMixes()
     {
         (App app, List<string> sent) = Ready(tab: 3);
-        app.Handle(new KeyPress(Key.Down));      // the Arctis, already selected
-        app.Handle(new KeyPress(Key.Down));      // the Katana
+        SelectOutputRow(app, "Katana");
         app.Handle(new KeyPress(Key.Char, ' '));
 
         JsonElement command = Command(sent);
@@ -637,7 +637,7 @@ public sealed class TuiViewTests
     public void TheArrowsWalkWhatFeedsASelectedOutput()
     {
         (App app, List<string> sent) = Ready(tab: 3);
-        app.Handle(new KeyPress(Key.Down));      // the Arctis, fed by Monitor A
+        SelectOutputRow(app, "Arctis Nova Elite");
         app.Handle(new KeyPress(Key.Right));
 
         JsonElement command = Command(sent);
@@ -655,6 +655,82 @@ public sealed class TuiViewTests
         JsonElement command = Command(sent);
         Assert.Equal("setOutputVolume", Text(command, "cmd"));
         Assert.Equal(0.55, command.GetProperty("value").GetDouble(), 3);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void MonitoringPauseReadsBackAndTogglesWithoutChangingMixMutes(bool muted, bool selected)
+    {
+        (App app, List<string> sent) = Ready(tab: 3);
+        var state = System.Text.Json.Nodes.JsonNode.Parse(StateJson)!;
+        state["mixer"]!["monitorMuted"] = muted;
+        if (!selected) state["mixer"]!["monitorOutputs"] = new System.Text.Json.Nodes.JsonArray();
+        app.Link.Receive(state.ToJsonString());
+        SelectOutputRow(app, "Mute monitoring");
+        Assert.Empty(sent); // Neither a state push nor drawing it is an edit.
+        Assert.Equal(muted, app.Link.State!.Mixer.MonitorMuted);
+        Assert.True(app.Link.State.Mixer.Channels[0].IsMuted("monitor"));
+        Assert.False(app.Link.State.Mixer.Mixes[0].Muted);
+        var screen = new Screen(140, 36);
+        app.Draw(screen);
+        string row = Assert.Single(Frame(screen).Split('\n'), line => line.Contains("Mute monitoring", StringComparison.Ordinal));
+        Assert.Contains(muted ? " on" : "off", row, StringComparison.Ordinal);
+        Assert.Contains("recording and streaming continue", row, StringComparison.Ordinal);
+
+        app.Handle(new KeyPress(Key.Char, ' '));
+        JsonElement command = Command(sent);
+        Assert.Equal("toggleMonitorMuted", Text(command, "cmd"));
+        Assert.Single(command.EnumerateObject());
+
+        sent.Clear();
+        state["mixer"]!["monitorMuted"] = !muted;
+        app.Link.Receive(state.ToJsonString());
+        app.Draw(screen);
+        Assert.Empty(sent);
+        app.Handle(new KeyPress(Key.Enter));
+        Assert.Equal("toggleMonitorMuted", Text(Command(sent), "cmd"));
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void RapidMonitoringPressesToggleAtTheDaemonWithoutWaitingForReadback(int presses)
+    {
+        (App app, List<string> sent) = Ready(tab: 3);
+        SelectOutputRow(app, "Mute monitoring");
+        for (int press = 0; press < presses; press++) app.Handle(new KeyPress(Key.Char, ' '));
+        Assert.Equal(presses, sent.Count);
+        Assert.All(sent, json =>
+        {
+            using var command = JsonDocument.Parse(json);
+            Assert.Equal("toggleMonitorMuted", Text(command.RootElement, "cmd"));
+            Assert.Single(command.RootElement.EnumerateObject());
+        });
+
+        sent.Clear();
+        app.Link.Receive("""{"type":"error","message":"Monitor routes are unavailable"}""");
+        app.Draw(new Screen(140, 36));
+        Assert.Equal("Monitor routes are unavailable", app.Link.LastError);
+        Assert.Empty(sent);
+        app.Handle(new KeyPress(Key.Enter));
+        Assert.Equal("toggleMonitorMuted", Text(Command(sent), "cmd"));
+    }
+
+    private static void SelectOutputRow(App app, string label)
+    {
+        Assert.Equal("Outputs", app.Current.Title);
+        var screen = new Screen(140, 36);
+        for (int step = 0; step < 16; step++)
+        {
+            app.Draw(screen);
+            if (Frame(screen).Split('\n').Any(line => line.Contains(label, StringComparison.Ordinal) && line.Contains('┃')))
+                return;
+            app.Handle(new KeyPress(Key.Down));
+        }
+        Assert.Fail($"The output row '{label}' could not be selected.");
     }
 
     // --- the applications ---
