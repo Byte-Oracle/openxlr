@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json.Nodes;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
@@ -123,6 +124,14 @@ internal static class DuckingWindowTests
         {
             options.Show();
             await Until(() => main.Ducking.IsReported && main.Ducking.Channels.Count == 8);
+
+            // The submixer header opens it beside Edit layout.
+            window.Show();
+            Button fromMixer = Find<Button>(window, "DuckingButton");
+            await Until(() => fromMixer.IsEffectivelyVisible);
+            fromMixer.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Same(main.Ducking, window.OwnedWindows.OfType<DuckingWindow>().Single().DataContext);
 
             // Options: the interface card's group is gone, and AUDIO opens the window.
             Layout(options, 980, 900);
@@ -306,6 +315,10 @@ internal static class DuckingWindowTests
         }
         Assert.True(Find<ScrollViewer>(window, "DuckingScroll").Extent.Width <= Find<ScrollViewer>(window, "DuckingScroll").Viewport.Width + 0.5,
             $"{where}: the setup scrolls sideways.");
+        // The overlay scroll bar paints over the scroller's right edge; the setup stays clear of it.
+        ScrollViewer scroll = Find<ScrollViewer>(window, "DuckingScroll");
+        Rect setup = Find<StackPanel>(window, "DuckingSetup").Bounds;
+        Assert.True(setup.Right <= scroll.Viewport.Width - 12, $"{where}: the setup runs under the scroll bar.");
     }
 
     /// <summary>The fake daemon's socket: one send at a time, from its loop or from the test.</summary>

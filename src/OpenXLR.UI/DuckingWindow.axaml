@@ -51,7 +51,8 @@
     </StackPanel>
 
     <ScrollViewer Name="DuckingScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Name="DuckingSetup" Spacing="12" IsEnabled="{Binding CanEdit}">
+      <!-- the right margin keeps the overlay scroll bar off the text and the pickers -->
+      <StackPanel Name="DuckingSetup" Spacing="12" Margin="0,0,16,0" IsEnabled="{Binding CanEdit}">
         <TextBlock Text="{loc:Text Key=DuckingHint}" Classes="hint" TextWrapping="Wrap"/>
         <CheckBox Name="DuckingEnabled" IsChecked="{Binding Enabled, Mode=TwoWay}">
           <TextBlock Text="{loc:Text Key=DuckingEnabled}" TextWrapping="Wrap"/>
