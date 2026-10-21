@@ -51,6 +51,7 @@ public sealed class WindowLayoutTests
                 MonitorOutputPickerWindowTests.Check();
                 InputBindingWindowTests.Check();
                 InputBindingWindowTests.CheckDrivenUnit();
+                CaptureInputWindowTests.ThreeCaptureInputsFitClassicWidths();
                 VolumeRangeWindowTests.Check();
                 LocalizationRenderingTests.Check();
                 var vm = new MainViewModel(new DaemonClient());
