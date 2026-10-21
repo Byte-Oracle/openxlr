@@ -171,8 +171,8 @@
         <Button Content="{loc:Text Key=ResetDeviceToDefaults}" Padding="14,5" HorizontalAlignment="Left" Click="OnResetDevice" IsVisible="{Binding Main.ShowResetDefaults}"/>
         <Button Name="AdditionalInterfaces" Content="{loc:Text Key=AdditionalInterfaces}" Padding="14,5" HorizontalAlignment="Left" Click="OnWaveInterfaces"
                 IsVisible="{Binding Main.ShowWaveInterfaces}"/>
-        <!-- The Wave XLR Pro's own ducking: the unit lowers the outputs OpenXLR
-             feeds it while XLR 1 is loud. Only a unit that says it can. -->
+        <!-- Ducking: on or off and the three presets, shown on a unit with
+             hardware ducking until the Ducking window replaces this group. -->
         <StackPanel Name="Ducking" Spacing="6" Margin="0,4,0,0" IsVisible="{Binding Main.ShowDucking}">
           <Grid ColumnDefinitions="Auto,8,Auto">
             <TextBlock Text="{loc:Text Key=Ducking}" Classes="h" VerticalAlignment="Center"/>
@@ -186,32 +186,25 @@
           </Grid>
           <CheckBox Name="DuckingEnabled" Content="{loc:Text Key=DuckingEnabled}"
                     IsChecked="{Binding Main.DuckingEnabled, Mode=TwoWay}"/>
-          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto">
-            <TextBlock Text="{loc:Text Key=DuckingOutputs}" Classes="h" VerticalAlignment="Center"/>
-            <WrapPanel Grid.Column="1" Orientation="Horizontal">
-              <CheckBox Name="DuckMonitor" Content="{loc:Text Key=DuckingMonitorOutputs}" Margin="0,0,14,0"
-                        IsChecked="{Binding Main.DuckMonitor, Mode=TwoWay}"/>
-              <CheckBox Name="DuckAux" Content="{loc:Text Key=DuckingAuxOutput}"
-                        IsChecked="{Binding Main.DuckAux, Mode=TwoWay}"/>
-            </WrapPanel>
-            <TextBlock Grid.Row="2" Text="{loc:Text Key=DuckingSensitivity}" Classes="h" VerticalAlignment="Center"/>
-            <ComboBox Name="DuckingSensitivity" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"
+          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,8,Auto,8,Auto">
+            <TextBlock Text="{loc:Text Key=DuckingSensitivity}" Classes="h" VerticalAlignment="Center"/>
+            <ComboBox Name="DuckingSensitivity" Grid.Column="1" HorizontalAlignment="Stretch"
                       SelectedIndex="{Binding Main.DuckingSensitivity, Mode=TwoWay}"
                       AutomationProperties.Name="{loc:Text Key=DuckingSensitivity}">
               <ComboBoxItem Content="{loc:Text Key=DuckingLow}"/>
               <ComboBoxItem Content="{loc:Text Key=DuckingMedium}"/>
               <ComboBoxItem Content="{loc:Text Key=DuckingHigh}"/>
             </ComboBox>
-            <TextBlock Grid.Row="4" Text="{loc:Text Key=DuckingAmount}" Classes="h" VerticalAlignment="Center"/>
-            <ComboBox Name="DuckingAmount" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Stretch"
+            <TextBlock Grid.Row="2" Text="{loc:Text Key=DuckingAmount}" Classes="h" VerticalAlignment="Center"/>
+            <ComboBox Name="DuckingAmount" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"
                       SelectedIndex="{Binding Main.DuckingAmount, Mode=TwoWay}"
                       AutomationProperties.Name="{loc:Text Key=DuckingAmount}">
               <ComboBoxItem Content="{loc:Text Key=DuckingAmountLow}"/>
               <ComboBoxItem Content="{loc:Text Key=DuckingAmountMedium}"/>
               <ComboBoxItem Content="{loc:Text Key=DuckingAmountHigh}"/>
             </ComboBox>
-            <TextBlock Grid.Row="6" Text="{loc:Text Key=DuckingSpeed}" Classes="h" VerticalAlignment="Center"/>
-            <ComboBox Name="DuckingSpeed" Grid.Row="6" Grid.Column="1" HorizontalAlignment="Stretch"
+            <TextBlock Grid.Row="4" Text="{loc:Text Key=DuckingSpeed}" Classes="h" VerticalAlignment="Center"/>
+            <ComboBox Name="DuckingSpeed" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Stretch"
                       SelectedIndex="{Binding Main.DuckingSpeed, Mode=TwoWay}"
                       AutomationProperties.Name="{loc:Text Key=DuckingSpeed}">
               <ComboBoxItem Content="{loc:Text Key=DuckingSlow}"/>

@@ -2698,16 +2698,7 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>Atenuación automática</value>
   </data>
   <data name="DuckingEnabled" xml:space="preserve">
-    <value>Bajar las salidas mientras XLR 1 suena fuerte</value>
-  </data>
-  <data name="DuckingOutputs" xml:space="preserve">
-    <value>Salidas</value>
-  </data>
-  <data name="DuckingMonitorOutputs" xml:space="preserve">
-    <value>Auriculares y Line Out</value>
-  </data>
-  <data name="DuckingAuxOutput" xml:space="preserve">
-    <value>Salida USB Aux</value>
+    <value>Bajar el resto del audio mientras el micrófono de disparo suena fuerte</value>
   </data>
   <data name="DuckingSensitivity" xml:space="preserve">
     <value>Sensibilidad</value>
@@ -2743,7 +2734,7 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>Rápida</value>
   </data>
   <data name="DuckingHint" xml:space="preserve">
-    <value>El Wave XLR Pro lo hace por sí mismo. Baja toda la mezcla que OpenXLR envía a cada salida elegida, el chat incluido. La mezcla del stream mantiene su nivel. XLR 1 es la única entrada de disparo que se sabe que el equipo acepta.</value>
+    <value>La atenuación baja los canales elegidos en las mezclas elegidas mientras el micrófono de disparo suena fuerte. El Wave XLR Pro la hace por sí mismo cuando el ajuste encaja con lo que el equipo puede hacer; si no, la hace este ordenador.</value>
   </data>
   <data name="DuckingNotHeld" xml:space="preserve">
     <value>El equipo aún no mantiene este ajuste; OpenXLR lo vuelve a escribir en unos segundos.</value>
@@ -2754,11 +2745,11 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="DuckingStatusDevice" xml:space="preserve">
     <value>Activada, en el procesador propio del {0}.</value>
   </data>
+  <data name="DuckingStatusSoftware" xml:space="preserve">
+    <value>Activada, en este ordenador.</value>
+  </data>
   <data name="DuckingHardwareBadgeTip" xml:space="preserve">
     <value>La atenuación funciona en el procesador propio del {0}.</value>
-  </data>
-  <data name="DuckingKeyNotSupported" xml:space="preserve">
-    <value>No funciona: el {0} solo atenúa con XLR 1 como entrada de disparo.</value>
   </data>
   <data name="DuckingNotRunning" xml:space="preserve">
     <value>Nada ejecuta este ajuste.</value>

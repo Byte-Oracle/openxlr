@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { channelUnitControl, channelUnitTarget, deviceTargetSupported, unitCarrier, unitDialLabel, unitInputName, unitInputOf, unitKeyLabel, unitMeterKey }
+import { channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, unitCarrier, unitDialLabel, unitInputName, unitInputOf, unitKeyLabel, unitMeterKey }
   from "../com.emaspa.openxlr.sdPlugin/unit-inputs.mjs";
 
 const unit = "0fd9:00b4@0123456789abcdef";
@@ -150,8 +150,17 @@ test("hardware targets follow the unit's capabilities whatever XLR 1 takes", () 
     for (const target of ["gain", "mute", "gainLocked", "hp"])
       assert.equal(deviceTargetSupported(capabilities, target), false);
   assert.equal(deviceTargetSupported(pro, "sendmute:xlr1:monitor"), false);
-  // Ducking is the Pro's alone, by its own capability.
-  assert.equal(deviceTargetSupported({...pro, ducking:true}, "ducking"), true);
-  assert.equal(deviceTargetSupported(wave, "ducking"), false);
-  assert.equal(deviceTargetSupported({...pro, ducking:false}, "ducking"), false);
+  // Ducking is no hardware target: no capability makes it one.
+  assert.equal(deviceTargetSupported({...pro, ducking:true}, "ducking"), false);
+});
+
+test("the ducking key follows the state's ducking on any device", () => {
+  const ducking = {enabled:true, key:"xlr1", channels:["music"], mixes:["monitor"], backend:"software", device:null};
+  // No unit at all, a unit without hardware ducking and a Pro all read it.
+  assert.equal(duckingEnabled({connected:false, ducking}), true);
+  assert.equal(duckingEnabled({connected:true, capabilities:{gain:true}, ducking:{...ducking, enabled:false}}), false);
+  assert.equal(duckingEnabled({connected:true, capabilities:{...pro, ducking:true}, ducking}), true);
+  // A daemon that sends no ducking leaves the key unavailable.
+  for (const state of [undefined, null, {connected:true, capabilities:{...pro, ducking:true}}, {ducking:null}])
+    assert.equal(duckingEnabled(state), null);
 });

@@ -11,13 +11,13 @@ using static OpenXLR.Tests.WindowLayoutTests;
 namespace OpenXLR.Tests;
 
 /// <summary>
-/// The Wave XLR Pro's ducking in the Options window's interface card,
-/// against a fake daemon: shown only while the driven unit says it can
-/// duck, every control showing the daemon's choice, each change sending one
+/// Ducking in the Options window's interface card, against a fake daemon:
+/// shown only while the driven unit says it can duck, the switch and the
+/// three presets showing the daemon's choice, each change sending one
 /// setDucking field and nothing echoed back when the daemon's state comes
-/// in, the line that says the unit does not hold the setting yet, and the
-/// whole group fitting the card. Run from the window layout test, on its UI
-/// thread.
+/// in, the line that says what runs it, that the unit does not hold the
+/// setting yet, or why nothing runs it, and the whole group fitting the
+/// card. Run from the window layout test, on its UI thread.
 /// </summary>
 internal static class DuckingWindowTests
 {
@@ -25,9 +25,11 @@ internal static class DuckingWindowTests
     {
         public bool Ducks = true;
         public bool Held = true;
+        public string? Error;
         public JsonObject Ducking = new()
         {
-            ["enabled"] = false, ["key"] = "xlr1", ["targets"] = new JsonArray("monitor"),
+            ["enabled"] = false, ["key"] = "xlr1",
+            ["channels"] = new JsonArray("game", "music", "browser", "system", "voicechat", "sfx"), ["mixes"] = new JsonArray("monitor"),
             ["sensitivity"] = "medium", ["amount"] = "medium", ["speed"] = "medium",
         };
 
@@ -41,11 +43,14 @@ internal static class DuckingWindowTests
                 var ducking = (JsonObject)Ducking.DeepClone();
                 bool ready = ducking["key"]!.GetValue<string>() == "xlr1";
                 ducking["processing"] = "device";
-                ducking["backend"] = ready ? "device" : null;
+                ducking["backend"] = Error is not null ? null : ready ? "device" : "software";
+                ducking["available"] = Error is null;
+                ducking["error"] = Error;
                 ducking["device"] = new JsonObject
                 {
                     ["unit"] = "0fd9:00b4", ["name"] = "Wave XLR Pro", ["firmware"] = null, ["ready"] = ready,
-                    ["reason"] = ready ? null : "keyNotSupported", ["note"] = ready ? null : "keyed by XLR 2", ["held"] = Held,
+                    ["reason"] = ready ? null : "keyNotSupported", ["note"] = ready ? null : "keyed by XLR 2",
+                    ["outputs"] = new JsonArray("monitor"), ["held"] = Held,
                 };
                 state["ducking"] = ducking;
             }
@@ -102,20 +107,19 @@ internal static class DuckingWindowTests
             Layout(options, 980, 900);
             StackPanel group = Find<StackPanel>(options, "Ducking");
             Assert.True(group.IsEffectivelyVisible);
-            CheckBox enabled = Find<CheckBox>(options, "DuckingEnabled"), monitor = Find<CheckBox>(options, "DuckMonitor"),
-                aux = Find<CheckBox>(options, "DuckAux");
+            CheckBox enabled = Find<CheckBox>(options, "DuckingEnabled");
             ComboBox sensitivity = Find<ComboBox>(options, "DuckingSensitivity"), amount = Find<ComboBox>(options, "DuckingAmount"),
                 speed = Find<ComboBox>(options, "DuckingSpeed");
             TextBlock status = Find<TextBlock>(options, "DuckingStatus");
             Border badge = Find<Border>(options, "DuckingHardwareBadge");
 
             // The daemon's choice, and a state push sends nothing back.
-            Assert.Equal((false, true, false), (enabled.IsChecked, monitor.IsChecked, aux.IsChecked));
+            Assert.False(enabled.IsChecked);
             Assert.Equal((1, 1, 1), (sensitivity.SelectedIndex, amount.SelectedIndex, speed.SelectedIndex));
             Assert.True(badge.IsEffectivelyVisible);
             Assert.Equal(Localizer.Text("DuckingStatusOff"), status.Text);
             Assert.DoesNotContain("warn", status.Classes);
-            foreach (Control control in new Control[] { enabled, monitor, aux, sensitivity, amount, speed }) AssertInside(control, options);
+            foreach (Control control in new Control[] { enabled, sensitivity, amount, speed }) AssertInside(control, options);
             group.BringIntoView();
             Layout(options, 980, 900);
             Capture(options, "ducking-options");
@@ -130,18 +134,17 @@ internal static class DuckingWindowTests
                 return commands.ToArray()[^1]["value"]!;
             }
             Assert.True((await Sent(() => enabled.IsChecked = true))["enabled"]!.GetValue<bool>());
-            Assert.Equal(["monitor", "aux"], (await Sent(() => aux.IsChecked = true))["targets"]!.AsArray().Select(t => t!.GetValue<string>()));
-            Assert.Equal(["aux"], (await Sent(() => monitor.IsChecked = false))["targets"]!.AsArray().Select(t => t!.GetValue<string>()));
             Assert.Equal("high", (await Sent(() => sensitivity.SelectedIndex = 2))["sensitivity"]!.GetValue<string>());
             Assert.Equal("low", (await Sent(() => amount.SelectedIndex = 0))["amount"]!.GetValue<string>());
             Assert.Equal("fast", (await Sent(() => speed.SelectedIndex = 2))["speed"]!.GetValue<string>());
             Assert.All(commands, c => Assert.Single(c["value"]!.AsObject()));
 
             // The daemon's answers came back as state and changed nothing on their own.
-            await Until(() => main.DuckingSpeed == 2 && main.DuckAux && !main.DuckMonitor);
-            Assert.Equal(6, commands.Count);
+            await Until(() => main.DuckingSpeed == 2 && main.DuckingAmount == 0 && main.DuckingEnabled);
+            Assert.Equal(4, commands.Count);
 
-            Assert.Equal(Localizer.Format("DuckingStatusDevice", "Wave XLR Pro"), status.Text);
+            // The controls change at once; the line follows the daemon's state.
+            await Until(() => status.Text == Localizer.Format("DuckingStatusDevice", "Wave XLR Pro"));
 
             // A unit that has not taken the setting: the line says so.
             daemon.Held = false;
@@ -152,15 +155,23 @@ internal static class DuckingWindowTests
             Assert.Contains("warn", status.Classes);
             AssertInside(status, options);
 
-            // A setup the unit cannot run: no badge, and the line says why.
+            // A setup the unit cannot run runs on this computer: no badge, and no warning.
             daemon.Held = true;
             daemon.Ducking["key"] = "xlr2";
             await live.Push(daemon.State());
             await Until(() => !main.DuckingOnDevice);
             Layout(options, 980, 900);
             Assert.False(badge.IsEffectivelyVisible);
-            Assert.Equal(Localizer.Format("DuckingKeyNotSupported", "Wave XLR Pro"), status.Text);
-            Assert.Contains("warn", status.Classes);
+            Assert.Equal(Localizer.Text("DuckingStatusSoftware"), status.Text);
+            Assert.DoesNotContain("warn", status.Classes);
+
+            // Nothing runs it: the line gives the daemon's reason.
+            daemon.Error = "Ducking needs the OpenXLR native plugin host.";
+            await live.Push(daemon.State());
+            await Until(() => main.DuckingWarns);
+            Layout(options, 980, 900);
+            Assert.Equal(daemon.Error, status.Text);
+            AssertInside(status, options);
 
             // A unit without ducking: the group goes, and nothing is sent.
             daemon.Ducks = false;
@@ -168,7 +179,7 @@ internal static class DuckingWindowTests
             await Until(() => !main.ShowDucking);
             Layout(options, 980, 900);
             Assert.False(group.IsEffectivelyVisible);
-            Assert.Equal(6, commands.Count);
+            Assert.Equal(4, commands.Count);
         }
         finally
         {

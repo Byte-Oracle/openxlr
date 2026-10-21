@@ -6,8 +6,9 @@ namespace OpenXLR.Tests;
 
 /// <summary>
 /// The terminal mixer's Inputs tab on a Wave XLR Pro: a Ducking group with
-/// the switch, the two outputs and the three presets, each key sending one
-/// setDucking field, and nothing of it on a unit without the capability.
+/// the switch and the three presets, each key sending one setDucking field,
+/// a note saying where it runs or what is wrong, and nothing of it on a unit
+/// without the capability.
 /// </summary>
 public sealed class TuiDuckingTests
 {
@@ -20,10 +21,11 @@ public sealed class TuiDuckingTests
           "capabilities": { "gain": true, "mute": true, "xlrInputs": 2, "xlrJacks": true, "hpOutputs": 2,
                             "hpVolume": true, "outputRouting": true, "auxInput": true, "ducking": true },
           "state": { "gainDb": 40, "mute": false },
-          "ducking": { "enabled": false, "key": "xlr1", "targets": ["monitor"], "sensitivity": "medium",
+          "ducking": { "enabled": false, "key": "xlr1", "channels": ["game", "music"], "mixes": ["monitor"], "sensitivity": "medium",
                        "amount": "medium", "speed": "medium", "processing": "device", "backend": "device",
+                       "available": true, "error": null,
                        "device": { "unit": "0fd9:00b4", "name": "Wave XLR Pro", "firmware": null, "ready": true,
-                                   "reason": null, "note": null, "held": true,
+                                   "reason": null, "note": null, "outputs": ["monitor"], "held": true,
                                    "readback": { "sensitivity": "medium", "amount": "medium", "speed": "medium", "pairs": [], "entries": [4, 7, 8] } } },
           "mixer": {
             "mixes": [ { "id": "monitor", "name": "Monitor A", "volume": 1, "muted": false, "kind": "monitor" } ],
@@ -91,18 +93,14 @@ public sealed class TuiDuckingTests
         (App app, List<string> sent) = Ready(ProJson);
         Assert.Contains(Draw(app), line => line.Contains("Ducking", StringComparison.Ordinal));
 
-        Select(app, "Duck on XLR 1");
+        Select(app, "Duck while talking");
         app.Handle(new KeyPress(Key.Char, ' '));
         Assert.True(Value(sent).GetProperty("enabled").GetBoolean());
+        Assert.DoesNotContain(Draw(app), line => line.Contains("Phones and Line Out", StringComparison.Ordinal));
 
-        // Rows read the daemon's state, which still says the phones and Line Out alone.
-        Select(app, "Phones and Line Out");
-        app.Handle(new KeyPress(Key.Char, ' '));
-        Assert.Empty(Value(sent).GetProperty("targets").EnumerateArray());
-
-        Select(app, "USB Aux out");
-        app.Handle(new KeyPress(Key.Char, ' '));
-        Assert.Equal(["monitor", "aux"], Value(sent).GetProperty("targets").EnumerateArray().Select(t => t.GetString()));
+        Select(app, "Sensitivity");
+        app.Handle(new KeyPress(Key.Right));
+        Assert.Equal("high", Value(sent).GetProperty("sensitivity").GetString());
 
         Select(app, "Amount");
         app.Handle(new KeyPress(Key.Left));
@@ -114,28 +112,39 @@ public sealed class TuiDuckingTests
     }
 
     [Fact]
-    public void AUnitThatHasNotTakenOrCannotRunTheSetupSaysSoAndAnotherModelShowsNoDucking()
+    public void TheSwitchSaysWhereDuckingRunsOrWhatIsWrongAndAnotherModelShowsNoDucking()
     {
+        (App off, _) = Ready(ProJson);
+        Assert.DoesNotContain("on the unit", Select(off, "Duck while talking"), StringComparison.Ordinal);
+        (App device, _) = Ready(Edit(root => root["ducking"]!["enabled"] = true));
+        Assert.Contains("on the unit", Select(device, "Duck while talking"), StringComparison.Ordinal);
         (App app, _) = Ready(Edit(root =>
         {
             root["ducking"]!["enabled"] = true;
             root["ducking"]!["device"]!["held"] = false;
         }));
-        Assert.Contains("not held yet", Select(app, "Duck on XLR 1"), StringComparison.Ordinal);
-        (App unfit, _) = Ready(Edit(root =>
+        Assert.Contains("not held yet", Select(app, "Duck while talking"), StringComparison.Ordinal);
+        (App software, _) = Ready(Edit(root =>
         {
+            root["ducking"]!["enabled"] = true;
             root["ducking"]!["key"] = "xlr2";
-            root["ducking"]!["backend"] = null;
+            root["ducking"]!["backend"] = "software";
             root["ducking"]!["device"]!["ready"] = false;
             root["ducking"]!["device"]!["reason"] = "keyNotSupported";
         }));
-        Assert.Contains("not on the unit", Select(unfit, "Duck on XLR 1"), StringComparison.Ordinal);
+        Assert.Contains("in software", Select(software, "Duck while talking"), StringComparison.Ordinal);
+        (App stopped, _) = Ready(Edit(root =>
+        {
+            root["ducking"]!["enabled"] = true;
+            root["ducking"]!["backend"] = null;
+        }));
+        Assert.Contains("not running", Select(stopped, "Duck while talking"), StringComparison.Ordinal);
 
         (App other, _) = Ready(Edit(root =>
         {
             root["capabilities"]!["ducking"] = false;
             root.AsObject().Remove("ducking");
         }));
-        Assert.DoesNotContain(Draw(other), line => line.Contains("Duck on XLR 1", StringComparison.Ordinal));
+        Assert.DoesNotContain(Draw(other), line => line.Contains("Duck while talking", StringComparison.Ordinal));
     }
 }

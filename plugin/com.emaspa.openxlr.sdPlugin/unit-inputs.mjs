@@ -107,6 +107,13 @@ export function unitMeterKey(mixer, target) {
   return carrier ? `ch:${carrier.id}` : null;
 }
 
+// Ducking's switch, or null from a daemon that sends no ducking. It runs on
+// any device, on the unit or in software, so no capability gates it.
+export function duckingEnabled(state) {
+  const ducking = state?.ducking;
+  return ducking && typeof ducking === "object" ? ducking.enabled === true : null;
+}
+
 // Whether the driven unit has a hardware target, by its capabilities alone.
 // A binding never changes this: the unit stays driven whatever XLR 1 takes.
 // With no unit connected the daemon sends no capabilities and every hardware
@@ -127,7 +134,6 @@ export function deviceTargetSupported(capabilities, target) {
     crossfade: "crossfade",
     outHp1: "outputRouting", outHp2: "outputRouting",
     outLineOut: "outputRouting", auxLevel: "auxInput", auxLevelLock: "auxInput",
-    ducking: "ducking",
   }[target];
   return capability ? c[capability] === true : target === "gainLocked";
 }

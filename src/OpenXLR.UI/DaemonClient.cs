@@ -333,7 +333,7 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands
     public Task ResetDeviceAsync()
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "resetDevice" });
 
-    /// <summary>Change the unit's hardware ducking: <paramref name="fields"/> holds the fields that change, the others keep their values.</summary>
+    /// <summary>Change the ducking setup: <paramref name="fields"/> holds the fields that change, the others keep their values.</summary>
     public Task SetDuckingAsync(IDictionary<string, object> fields)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "setDucking", ["value"] = fields });
 

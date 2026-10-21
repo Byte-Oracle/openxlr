@@ -2698,16 +2698,7 @@ Von OpenXLR gesteuertes Interface wählen</value>
     <value>Ducking</value>
   </data>
   <data name="DuckingEnabled" xml:space="preserve">
-    <value>Ausgänge absenken, solange XLR 1 laut ist</value>
-  </data>
-  <data name="DuckingOutputs" xml:space="preserve">
-    <value>Ausgänge</value>
-  </data>
-  <data name="DuckingMonitorOutputs" xml:space="preserve">
-    <value>Kopfhörer und Line Out</value>
-  </data>
-  <data name="DuckingAuxOutput" xml:space="preserve">
-    <value>USB-Aux-Ausgang</value>
+    <value>Anderen Ton absenken, solange das Auslösemikrofon laut ist</value>
   </data>
   <data name="DuckingSensitivity" xml:space="preserve">
     <value>Empfindlichkeit</value>
@@ -2743,7 +2734,7 @@ Von OpenXLR gesteuertes Interface wählen</value>
     <value>Schnell</value>
   </data>
   <data name="DuckingHint" xml:space="preserve">
-    <value>Das Wave XLR Pro erledigt das selbst. Es senkt den ganzen Mix, den OpenXLR an jeden gewählten Ausgang schickt, Chat eingeschlossen. Der Stream-Mix behält seinen Pegel. XLR 1 ist der einzige Auslöser, den das Gerät bekanntermaßen annimmt.</value>
+    <value>Ducking senkt die gewählten Kanäle in den gewählten Mixen ab, solange das Auslösemikrofon laut ist. Das Wave XLR Pro erledigt das selbst, wenn die Einstellung zu dem passt, was das Gerät kann; sonst übernimmt es dieser Computer.</value>
   </data>
   <data name="DuckingNotHeld" xml:space="preserve">
     <value>Das Gerät hält diese Einstellung noch nicht; OpenXLR schreibt sie in wenigen Sekunden erneut.</value>
@@ -2754,11 +2745,11 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="DuckingStatusDevice" xml:space="preserve">
     <value>An, läuft auf dem eigenen Prozessor des {0}.</value>
   </data>
+  <data name="DuckingStatusSoftware" xml:space="preserve">
+    <value>An, läuft auf diesem Computer.</value>
+  </data>
   <data name="DuckingHardwareBadgeTip" xml:space="preserve">
     <value>Das Ducking läuft auf dem eigenen Prozessor des {0}.</value>
-  </data>
-  <data name="DuckingKeyNotSupported" xml:space="preserve">
-    <value>Läuft nicht: Das {0} senkt nur mit XLR 1 als Auslöser ab.</value>
   </data>
   <data name="DuckingNotRunning" xml:space="preserve">
     <value>Nichts führt diese Einstellung aus.</value>
