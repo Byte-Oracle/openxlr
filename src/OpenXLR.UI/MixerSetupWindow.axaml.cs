@@ -58,8 +58,15 @@ public partial class MixerSetupWindow : Window
     {
         if (Vm is not { } vm) return;
         var name = new TextBox { Name = "CaptureName", MaxLength = 60, PlaceholderText = Localizer.Text("ChannelNamePlaceholder") };
+        // Each source by its label, its node name in the tooltip, as the source dialog shows them.
         var source = new ComboBox { Name = "CaptureSource", PlaceholderText = Localizer.Text("CaptureSourcePlaceholder"), ItemsSource = vm.Inputs.Where(d => !d.IsOwn).ToArray(),
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<AudioDeviceItem>((device, _) =>
+            {
+                var text = new TextBlock { Text = device?.Label, TextTrimming = TextTrimming.CharacterEllipsis };
+                ToolTip.SetTip(text, device?.Name);
+                return text;
+            }) };
         ComboBox port = InputBindingDialog.PortPicker("CapturePort");
         AutomationProperties.SetName(port, Localizer.Text("InputBindingPort"));
         source.SelectionChanged += (_, _) =>
