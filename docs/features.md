@@ -224,8 +224,10 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   computer with no added latency; the Wave XLR Pro runs it on its own
   processor instead when the setup fits, and the state says why when it
   does not. Saved with the mixer, carried by profiles, and reported as a
-  `duck:<mix>` reduction meter while software runs
-  ([manual](manual.md#ducking))
+  `duck:<mix>` reduction meter while software runs. Set up in the
+  Ducking window, opened from the layout editor and from Options, with
+  the key, a channel and a mix checklist, the presets, where it runs and
+  a reduction bar ([manual](manual.md#ducking))
 - Bidirectional Linux volume and mute controls for every monitor mix,
   with an explicit 150% boost button for monitor masters and output volume
 - A MONITOR mute that pauses every selected output while recording and
