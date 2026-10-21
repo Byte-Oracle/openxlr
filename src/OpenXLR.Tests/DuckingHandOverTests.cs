@@ -291,8 +291,10 @@ public sealed class DuckingHandOverTests
         mixer.SyncDucking();
         Assert.True(mixer.DuckingSnapshot().Device!.Ready);
         Field<List<string>>(mixer, "_monitorOutputs").Add("speakers");
+        Field<Dictionary<string, string>>(mixer, "_outputNames")["speakers"] = "Desk Speakers";
         mixer.SyncDucking();
         Assert.Equal("mixElsewhere", mixer.DuckingSnapshot().Device!.Reason);
+        Assert.Equal("Monitor A also plays on Desk Speakers, which the Wave XLR Pro cannot duck.", mixer.DuckingSnapshot().Device!.Note);
         Assert.Equal(["monitor"], mixer.DuckingSnapshot().Device!.Outputs);
     }
 

@@ -1980,14 +1980,19 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             if (!_built) return false;
-            string levels = string.Join('\n', _pw.ListDevices()
+            List<AudioNode> devices = [.. _pw.ListDevices()];
+            string levels = string.Join('\n', devices
                 .Select(d => $"{d.Kind}\t{d.Name}\t{d.Description}\t{d.IsPhysical}\t{d.Volume}\t{d.Muted}"));
             if (levels == _deviceList) return false;
             _deviceList = levels;
+            _outputNames = devices.Where(d => d.Kind == AudioNodeKind.Sink && !string.IsNullOrWhiteSpace(d.Description))
+                .GroupBy(d => d.Name, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Description, StringComparer.Ordinal);
             return true;
         }
     }
     private string? _deviceList;
+    // Output descriptions from the last device sync, so notes name an output the way the pickers do.
+    private Dictionary<string, string> _outputNames = new(StringComparer.Ordinal);
 
     /// <summary>Repair internal sinks and read monitor masters from one dump under the mixer lock.</summary>
     public bool SyncOwnSinkLevels(out IReadOnlyList<string> restored)
