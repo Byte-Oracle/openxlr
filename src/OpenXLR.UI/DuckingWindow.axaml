@@ -1,0 +1,133 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:loc="using:OpenXLR.UI.Localization"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:OpenXLR.UI"
+        xmlns:skin="using:OpenXLR.UI.Skinning"
+        x:Class="OpenXLR.UI.DuckingWindow" x:DataType="vm:DuckingViewModel"
+        Title="{loc:Text Key=Ducking}" Width="680" Height="760" MinWidth="480" MinHeight="420"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource Ox.Window.Background}">
+  <!-- The ducking setup: the switch and the key, the channels and the mixes,
+       the presets, where it runs and what runs it now. Every colour, size and
+       radius is an Ox.* token or a control theme; the badge is the EQ
+       editor's. -->
+  <!-- A wide window keeps the setup at a readable width, centred. -->
+  <DockPanel Margin="16" MaxWidth="900">
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,0,8">
+      <TextBlock Text="{loc:Text Key=Ducking}" Classes="title" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+      <!-- the unit's own processor runs it -->
+      <Border Grid.Column="1" Name="DuckingHardwareBadge" IsVisible="{Binding OnDevice}" VerticalAlignment="Center"
+              Background="{DynamicResource Ox.Badge.Background}" CornerRadius="{DynamicResource Ox.Eq.CornerRadius}" Padding="8,2"
+              ToolTip.Tip="{Binding BadgeTip}" AutomationProperties.Name="{Binding BadgeTip}">
+        <TextBlock Text="{loc:Text Key=EqHardwareBadge}" Foreground="{DynamicResource Ox.Text.Info}"
+                   FontSize="{DynamicResource Ox.Eq.LabelFontSize}" FontWeight="{DynamicResource Ox.Label.FontWeight}"/>
+      </Border>
+    </Grid>
+
+    <!-- The footer: where it runs, why the unit does not, the reduction now and what runs it. -->
+    <StackPanel DockPanel.Dock="Bottom" Name="DuckingFooter" Spacing="8" Margin="0,10,0,0">
+      <WrapPanel Name="DuckingProcessing" IsVisible="{Binding HasProcessingChoice}" IsEnabled="{Binding CanEdit}"
+                 ItemSpacing="6" LineSpacing="4">
+        <TextBlock Text="{loc:Text Key=DuckingProcessingLabel}" Classes="h" VerticalAlignment="Center"/>
+        <!-- two sides of one switch: the lit side is the daemon's choice, and a press asks for its side -->
+        <ToggleButton Name="DuckingOnUnit" Content="{loc:Text Key=DuckingProcessingDevice}" IsChecked="{Binding ProcessOnDevice, Mode=OneWay}"
+                      Click="OnProcessOnUnit" ToolTip.Tip="{Binding ProcessOnDeviceTip}"/>
+        <ToggleButton Name="DuckingOnComputer" Content="{loc:Text Key=DuckingProcessingSoftware}" IsChecked="{Binding ProcessInSoftware, Mode=OneWay}"
+                      Click="OnProcessInSoftware" ToolTip.Tip="{loc:Text Key=DuckingProcessingSoftwareTip}"/>
+      </WrapPanel>
+      <!-- why the unit, chosen to run it, does not -->
+      <TextBlock Name="DuckingDeviceNote" Text="{Binding Note}" IsVisible="{Binding HasNote}" Classes="hint" TextWrapping="Wrap"/>
+      <!-- how far the chosen channels are lowered now, while this computer runs it -->
+      <Grid Name="DuckingReduction" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" IsVisible="{Binding ShowReduction}">
+        <TextBlock Text="{loc:Text Key=DuckingReduction}" Classes="h" VerticalAlignment="Center"/>
+        <skin:LevelMeter Grid.Column="1" Name="DuckingReductionMeter" Level="{Binding ReductionLevel}" VerticalAlignment="Center"
+                         WarningLevel="1" HotLevel="1" AutomationProperties.Name="{loc:Text Key=DuckingReduction}"/>
+        <TextBlock Grid.Column="2" Name="DuckingReductionValue" Text="{Binding ReductionText}" Classes="val" VerticalAlignment="Center"/>
+      </Grid>
+      <!-- what runs ducking, or why nothing does -->
+      <TextBlock Name="DuckingStatus" Text="{Binding Status}" Classes="hint" Classes.warn="{Binding Warns}" TextWrapping="Wrap"/>
+      <!-- the daemon refused the last change -->
+      <TextBlock Name="DuckingRefusal" Text="{Binding Refusal}" IsVisible="{Binding HasRefusal}" Classes="warn" TextWrapping="Wrap"/>
+      <Button Name="DuckingClose" Content="{loc:Text Key=Close}" HorizontalAlignment="Right" Padding="18,6" Click="OnClose"/>
+    </StackPanel>
+
+    <ScrollViewer Name="DuckingScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Name="DuckingSetup" Spacing="12" IsEnabled="{Binding CanEdit}">
+        <TextBlock Text="{loc:Text Key=DuckingHint}" Classes="hint" TextWrapping="Wrap"/>
+        <CheckBox Name="DuckingEnabled" IsChecked="{Binding Enabled, Mode=TwoWay}">
+          <TextBlock Text="{loc:Text Key=DuckingEnabled}" TextWrapping="Wrap"/>
+        </CheckBox>
+
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+          <TextBlock Text="{loc:Text Key=DuckingKey}" Classes="h" VerticalAlignment="Center"/>
+          <ComboBox Grid.Column="1" Name="DuckingKey" ItemsSource="{Binding Keys}" SelectedItem="{Binding SelectedKey, Mode=TwoWay}"
+                    HorizontalAlignment="Stretch" AutomationProperties.Name="{loc:Text Key=DuckingKey}"
+                    ToolTip.Tip="{loc:Text Key=DuckingKeyTip}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:DuckingKeyChoice">
+                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </Grid>
+
+        <!-- what is lowered, and where: channels times mixes -->
+        <Grid Name="DuckingTargets" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding HasTargets}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{loc:Text Key=DuckingChannels}" Classes="h" TextWrapping="Wrap"/>
+            <ItemsControl Name="DuckingChannels" ItemsSource="{Binding Channels}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DuckingChoice">
+                  <CheckBox Name="DuckingChannel" IsChecked="{Binding IsChecked, Mode=TwoWay}" AutomationProperties.Name="{Binding Name}">
+                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                  </CheckBox>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <WrapPanel ItemSpacing="6" LineSpacing="4">
+              <Button Name="DuckingAllApplications" Content="{loc:Text Key=DuckingAllApplications}" Click="OnAllApplications"/>
+              <Button Name="DuckingNoChannels" Content="{loc:Text Key=DuckingNone}" Click="OnNoChannels"
+                      ToolTip.Tip="{loc:Text Key=DuckingNoneTip}"/>
+            </WrapPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="6">
+            <TextBlock Text="{loc:Text Key=DuckingMixes}" Classes="h" TextWrapping="Wrap"/>
+            <ItemsControl Name="DuckingMixes" ItemsSource="{Binding Mixes}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DuckingChoice">
+                  <CheckBox Name="DuckingMix" IsChecked="{Binding IsChecked, Mode=TwoWay}" AutomationProperties.Name="{Binding Name}">
+                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                  </CheckBox>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Grid>
+
+        <!-- the Wave XLR Pro's three presets, which software uses too -->
+        <Grid Name="DuckingPresets" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+          <TextBlock Text="{loc:Text Key=DuckingSensitivity}" Classes="h" VerticalAlignment="Center"/>
+          <ComboBox Name="DuckingSensitivity" Grid.Column="1" HorizontalAlignment="Stretch"
+                    SelectedIndex="{Binding Sensitivity, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=DuckingSensitivity}">
+            <ComboBoxItem Content="{loc:Text Key=DuckingLow}"/>
+            <ComboBoxItem Content="{loc:Text Key=DuckingMedium}"/>
+            <ComboBoxItem Content="{loc:Text Key=DuckingHigh}"/>
+          </ComboBox>
+          <TextBlock Grid.Row="1" Text="{loc:Text Key=DuckingAmount}" Classes="h" VerticalAlignment="Center"/>
+          <ComboBox Name="DuckingAmount" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
+                    SelectedIndex="{Binding Amount, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=DuckingAmount}">
+            <ComboBoxItem Content="{loc:Text Key=DuckingAmountLow}"/>
+            <ComboBoxItem Content="{loc:Text Key=DuckingAmountMedium}"/>
+            <ComboBoxItem Content="{loc:Text Key=DuckingAmountHigh}"/>
+          </ComboBox>
+          <TextBlock Grid.Row="2" Text="{loc:Text Key=DuckingSpeed}" Classes="h" VerticalAlignment="Center"/>
+          <ComboBox Name="DuckingSpeed" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"
+                    SelectedIndex="{Binding Speed, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=DuckingSpeed}">
+            <ComboBoxItem Content="{loc:Text Key=DuckingSlow}"/>
+            <ComboBoxItem Content="{loc:Text Key=DuckingMedium}"/>
+            <ComboBoxItem Content="{loc:Text Key=DuckingFast}"/>
+          </ComboBox>
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

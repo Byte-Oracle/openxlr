@@ -2742,17 +2742,80 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="DuckingStatusOff" xml:space="preserve">
     <value>Aus.</value>
   </data>
-  <data name="DuckingStatusDevice" xml:space="preserve">
-    <value>An, läuft auf dem eigenen Prozessor des {0}.</value>
-  </data>
-  <data name="DuckingStatusSoftware" xml:space="preserve">
-    <value>An, läuft auf diesem Computer.</value>
-  </data>
   <data name="DuckingHardwareBadgeTip" xml:space="preserve">
     <value>Das Ducking läuft auf dem eigenen Prozessor des {0}.</value>
   </data>
   <data name="DuckingNotRunning" xml:space="preserve">
     <value>Nichts führt diese Einstellung aus.</value>
+  </data>
+  <data name="DuckingButtonTip" xml:space="preserve">
+    <value>Anderen Ton absenken, solange ein Mikrofon laut ist: Auslöser, Kanäle, Mixe, Voreinstellungen und wo es läuft.</value>
+  </data>
+  <data name="DuckingKey" xml:space="preserve">
+    <value>Auslösemikrofon</value>
+  </data>
+  <data name="DuckingKeyTip" xml:space="preserve">
+    <value>Das Mikrofon, dessen Stimme den anderen Ton absenkt. Es selbst wird nie abgesenkt.</value>
+  </data>
+  <data name="DuckingChannels" xml:space="preserve">
+    <value>Diese Kanäle absenken</value>
+  </data>
+  <data name="DuckingMixes" xml:space="preserve">
+    <value>In diesen Mixen</value>
+  </data>
+  <data name="DuckingAllApplications" xml:space="preserve">
+    <value>Alle Anwendungskanäle</value>
+  </data>
+  <data name="DuckingNone" xml:space="preserve">
+    <value>Keine</value>
+  </data>
+  <data name="DuckingNoneTip" xml:space="preserve">
+    <value>Keinen Kanal absenken. Das Ducking senkt dann nichts ab, bis du einen ankreuzt.</value>
+  </data>
+  <data name="DuckingProcessingLabel" xml:space="preserve">
+    <value>Läuft auf</value>
+  </data>
+  <data name="DuckingProcessingDevice" xml:space="preserve">
+    <value>Diesem Gerät</value>
+  </data>
+  <data name="DuckingProcessingSoftware" xml:space="preserve">
+    <value>Diesem Computer</value>
+  </data>
+  <data name="DuckingProcessingDeviceTip" xml:space="preserve">
+    <value>Das Ducking auf dem eigenen Prozessor von {0} rechnen. Es hört XLR 1 so, wie das Gerät es hört, vor USB, also vor dem EQ in Software, den Effekten und jedem Gate auf diesem Computer. Ein Noise Gate oder eine Rauschunterdrückung auf XLR 1 hält es nicht davon ab, bei Geräuschen abzusenken. Es senkt den fertigen Mix ab, während das Gerät ihn auf seinen Ausgängen spielt, nach allem auf diesem Computer. Wenn ein Gate auf XLR 1 Fehlauslösungen verhindern soll, wähle diesen Computer.</value>
+  </data>
+  <data name="DuckingProcessingSoftwareTip" xml:space="preserve">
+    <value>Das Ducking auf diesem Computer rechnen. Der Auslöser ist das Mikrofon nach seinem EQ, seinen Effekten und der Sound-Check-Schleife, vor Lautstärke und Sends, sodass ein Gate darauf Fehlauslösungen verhindert. Die gewählten Kanäle werden in jedem Mix abgesenkt, vor den eigenen Plugins und der Latenzverzögerung dieses Mixes. Das eigene Ducking des Geräts wird ausgeschaltet.</value>
+  </data>
+  <data name="DuckingStatusOnUnit" xml:space="preserve">
+    <value>An, läuft auf dem eigenen Prozessor von {0}. Es hört XLR 1 vor USB, also vor jedem Gate und Plugin auf diesem Computer, und senkt den fertigen Mix auf den Ausgängen des Geräts ab.</value>
+  </data>
+  <data name="DuckingStatusOnComputer" xml:space="preserve">
+    <value>An, läuft auf diesem Computer. Es hört {0} nach EQ, Effekten und Sound-Check-Schleife und senkt die gewählten Kanäle in jedem Mix ab, vor den eigenen Plugins des Mixes.</value>
+  </data>
+  <data name="DuckingMixerOff" xml:space="preserve">
+    <value>Der Software-Mixer ist aus, daher läuft kein Ducking. Schalte ihn unter Optionen, AUDIO ein.</value>
+  </data>
+  <data name="DuckingNothingChosen" xml:space="preserve">
+    <value>An, aber nichts wird abgesenkt. Wähle mindestens einen Kanal und einen Mix.</value>
+  </data>
+  <data name="DuckingDeviceKeyNotSupported" xml:space="preserve">
+    <value>{0} kann nur mit XLR 1 als Auslöser absenken.</value>
+  </data>
+  <data name="DuckingDeviceFailed" xml:space="preserve">
+    <value>{0} hat das geschriebene Ducking nicht behalten. Schalte das Ducking aus und wieder an, um es erneut mit dem Gerät zu versuchen.</value>
+  </data>
+  <data name="DuckingDeviceUnsupported" xml:space="preserve">
+    <value>{0} hat auf das Lesen seines Ducking-Blocks nicht geantwortet.</value>
+  </data>
+  <data name="DuckingDeviceNotReady" xml:space="preserve">
+    <value>{0} kann diese Einstellung nicht ausführen.</value>
+  </data>
+  <data name="DuckingReduction" xml:space="preserve">
+    <value>Absenkung</value>
+  </data>
+  <data name="DuckingReductionValue" xml:space="preserve">
+    <value>{0:0} dB</value>
   </data>
   <data name="CaptureBindingHint" xml:space="preserve">
     <value>Wähle eine Quelle und einen Port für {0}. Sends, Lautstärke, Inserts und Gruppe bleiben erhalten. Nach einer Änderung sind die Monitor-Sends stumm und Sound Check endet. Entferne die Inserts, bevor du zwischen Mono und Stereo wechselst.</value>

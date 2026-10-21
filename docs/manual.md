@@ -560,13 +560,31 @@ The setup has four parts:
   drop and come back: Slow 100 ms and 2 s, Medium 80 ms and 1.2 s, Fast
   30 ms and 0.2 s.
 
-Ducking is off until you switch it on. For now the window shows the
-switch and the three presets only on a Wave XLR Pro, under **Options**,
-card INTERFACE, **Ducking**. On any device the
-[terminal mixer](#terminal-ducking) sets the whole setup on its Inputs
-tab, a [Stream Deck key](#stream-deck) switches it on and off, and
-`setDucking` over the [API](api.md#ducking) sets every part. OpenXLR saves
-the setup with the rest of the mixer, and profiles carry it.
+Ducking is off until you switch it on. In the window, open **Ducking**
+from either of two places: the bottom row of the **Mixer layout** window,
+beside **Exclusive groups**, or **Options**, card AUDIO, under the software
+mixer switch. Both open the same window, on any device:
+
+1. Tick **Lower other audio while the key microphone is loud**.
+2. Pick the **Key microphone**. It leaves the channel list, since the key
+   is never lowered.
+3. Tick the channels under **Lower these channels**. **All application
+   channels** ticks the application channels and nothing else; **None**
+   clears the list.
+4. Tick the mixes under **In these mixes**.
+5. Choose **Sensitivity**, **Amount** and **Speed**.
+
+Each change applies at once. With the Wave XLR Pro attached, **Runs on**
+offers **This unit** and **This computer** (see below). The line at the
+bottom says what runs ducking and where it sits in the signal, or why
+nothing runs it. While this computer runs it, **Reduction** shows how far
+the chosen channels are lowered now, the deepest of the ducked mixes. If
+the daemon refuses a change, the window shows why and puts its setup back.
+
+On any device the [terminal mixer](#terminal-ducking) also sets the whole
+setup on its Inputs tab, a [Stream Deck key](#stream-deck) switches it on
+and off, and `setDucking` over the [API](api.md#ducking) sets every part.
+OpenXLR saves the setup with the rest of the mixer, and profiles carry it.
 
 **Where it runs.** On most devices this computer runs it: OpenXLR adds a
 small stage for each ducked mix that lowers only the chosen channels.
@@ -590,14 +608,32 @@ When the setup does not fit, the computer runs it and the state says why
 
 Moving from one to the other never ducks twice. There can be a moment
 without ducking while it moves. To keep it on this computer whatever the
-device, choose software processing (`setDuckingProcessing`).
+setup, choose **Runs on**, **This computer** in the Ducking window
+(`setDuckingProcessing` over the API). The window shows the unit's reason
+under **Runs on** while the unit is chosen and cannot run it, and the
+**Hardware processing** badge beside its title while the unit does.
+
+**Where each side sits in the signal.** The unit and this computer listen
+and lower at different points:
+
+- On the unit, the Pro listens to XLR 1 as the unit hears it, before USB.
+  That is before anything on this computer: the EQ in software, inserts
+  and gates. A noise gate or suppressor insert on XLR 1 does not stop the
+  unit from ducking on noise. The unit lowers the finished mix as it plays
+  it on its outputs, after everything on this computer.
+- On this computer, the key is the key channel after its EQ, its insert
+  chain and Sound Check's loop, before the channel's volume and sends. The
+  chosen channels dip inside each ducked mix, before that mix's own insert
+  chain and latency delay.
+
+If a gate on XLR 1 should stop false triggers, choose **This computer**.
 
 On the Pro, OpenXLR writes the setting every time the unit connects, which
 clears any ducking Wave Link left on it. If another program changes the
 setting while OpenXLR runs, OpenXLR writes its own back within a few
 seconds. In hardware-control mode OpenXLR writes nothing and the unit
-keeps what it holds. The **Hardware processing** badge beside the heading
-shows while the Pro runs ducking, as on the EQ editor. The unit's bytes
+keeps what it holds, and the Ducking window shows the setup without
+letting you change it. The unit's bytes
 come from Wave Link captures on Windows, and nobody has listened to the
 result on Linux yet
 ([hardware support](hardware-support.md#wave-xlr-pro-0fd900b4)).

@@ -37,12 +37,16 @@ public sealed partial class MainViewModel : ViewModelBase
     public DaemonRestartViewModel DaemonRestart { get; } = new();
     public UpdatesViewModel Updates { get; } = new();
 
+    /// <summary>The ducking setup the Ducking window edits; reported by every daemon that has it, on any device.</summary>
+    public DuckingViewModel Ducking { get; }
+
     private readonly DaemonClient _client;
     private bool _applying;
 
     public MainViewModel(DaemonClient client)
     {
         _client = client;
+        Ducking = new DuckingViewModel(client);
         LoadMixerView();
         OutputVolumeRange = new VolumeRangeViewModel(() => OutputVolume = Math.Min(OutputVolume, 1));
         OutputVolumeRange.Changed += RequestDesktopVolumeBoost;
@@ -201,7 +205,7 @@ public sealed partial class MainViewModel : ViewModelBase
         private set { if (Set(ref _deviceFirmware, value)) { Raise(nameof(FirmwareText)); Raise(nameof(ShowInterfaceCard)); } }
     }
     public string FirmwareText => DeviceFirmware.Length > 0 ? Localizer.Format("DeviceFirmware", DeviceFirmware) : "";
-    public bool ShowInterfaceCard => ShowResetDefaults || DeviceNote.Length > 0 || DeviceFirmware.Length > 0 || ShowWaveInterfaces || ShowDucking;
+    public bool ShowInterfaceCard => ShowResetDefaults || DeviceNote.Length > 0 || DeviceFirmware.Length > 0 || ShowWaveInterfaces;
 
     // The daemon-side gain lock cannot stop a physical dial, so it only
     // shows for devices without one.
@@ -791,7 +795,6 @@ public sealed partial class MainViewModel : ViewModelBase
                 CapRetainsSettings = caps["retainsSettings"]?.GetValue<bool>() ?? true;
                 CapBuiltInDefaults = caps["builtInDefaults"]?.GetValue<bool>() ?? false;
             }
-            ApplyDucking(node["capabilities"], node["ducking"]);
 
             if (node["state"] is JsonNode s)
             {
@@ -840,6 +843,7 @@ public sealed partial class MainViewModel : ViewModelBase
             ApplyWaveInterfaces(node["waveInterfaces"]);
             ApplyMixer(node["mixer"]);
             ApplyStreams(node["mixer"]);
+            Ducking.Apply(node["ducking"], node["mixer"]);
             // The daemon says whether XLR 1's signal has a hardware low cut and
             // ClipGuard in front of it; an older daemon leaves the window to
             // work it out from the interface's capabilities.
@@ -1079,6 +1083,7 @@ public sealed partial class MainViewModel : ViewModelBase
     private void ApplyMeters(JsonNode levels)
     {
         if (levels is not JsonObject obj) return;
+        Ducking.ApplyMeters(obj);
         foreach (KeyValuePair<string, JsonNode?> kv in obj)
         {
             double l = 0, r = 0;

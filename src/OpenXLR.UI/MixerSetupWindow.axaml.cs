@@ -38,6 +38,11 @@ public partial class MixerSetupWindow : Window
         if (Vm is { } vm) await new ExclusiveGroupsWindow(vm).ShowDialog(this);
     }
 
+    private void OnDucking(object? sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm) DuckingWindow.Open(this, vm.Ducking);
+    }
+
     private async void OnAddChannel(object? sender, RoutedEventArgs e)
     {
         string name = ChannelName.Text?.Trim() ?? "";
