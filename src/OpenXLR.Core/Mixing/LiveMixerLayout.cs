@@ -68,7 +68,7 @@ public sealed partial class Mixer
             if (source is not null && (!CaptureBinding.IsValid(source, pair, monoChannel)
                 || !_pw.ListDevices().Any(d => d.Name == source && d.Kind == AudioNodeKind.Source && !d.IsOwn)))
                 throw new InvalidOperationException("select an available external capture source and a pair from 0 to 31");
-            EnsurePulseHeadroomLocked(newStreams: _config.Mixes.Count, newNodes: 2);
+            EnsurePulseHeadroomLocked(newStreams: _config.Mixes.Count + _duckBuses.Count, newNodes: 2);
             string id = NewChannelId(name, _config.Channels.Select(c => c.Id));
             var channel = new ChannelDefinition(id, name)
             {
@@ -83,7 +83,10 @@ public sealed partial class Mixer
             if (source is not null) channel = CaptureBinding.MigrateMono(channel, _pw.ListDevices(), InsertsFor(id));
             MixerConfig previous = _config;
             var previousAppearance = _appearance;
-            uint module = _pw.CreateCombineSink(channel.SinkName, MixSinkPattern, $"OpenXLR {name}", visible: channel.IsApplication);
+            SuspendDuckBusesLocked();
+            uint module;
+            try { module = _pw.CreateCombineSink(channel.SinkName, MixSinkPattern, $"OpenXLR {name}", visible: channel.IsApplication); }
+            catch { SyncDuckBusesLocked(); throw; }
             try
             {
                 _config = _config with { Channels = [.. _config.Channels, channel] };
@@ -96,7 +99,7 @@ public sealed partial class Mixer
                     _levels[cell] = 1.0;
                     _muted.Add(cell);
                 }
-                if (!WaitForLegsLocked([module], _config.Mixes.Select(m => m.SinkName)))
+                if (!WaitForLegsLocked([module], CombineSinkNamesLocked()))
                     throw new InvalidOperationException("the channel's sends did not come up within 3 s; nothing was changed");
                 foreach (MixDefinition mix in _config.Mixes) ApplyCellLocked(id, mix.Id);
                 EnsureCaptureFeedsLocked();
@@ -117,6 +120,7 @@ public sealed partial class Mixer
                 { throw new AggregateException("channel creation failed and its module could not be removed", editError, cleanupError); }
                 throw;
             }
+            finally { SyncDuckBusesLocked(); }
             if (!ReferenceEquals(original, channel))
                 _pw.Note($"Capture input {id} now takes mono port 1 of {source}.");
             _meters.Add($"ch:{id}", channel.SinkName);
@@ -149,7 +153,12 @@ public sealed partial class Mixer
 
             // Capture sinks are hidden, so their label can change without
             // interrupting the source or recreating the combine.
-            if (channel.IsApplication) ReloadChannelSinkLocked(channel with { Name = name }, channel.Name);
+            if (channel.IsApplication)
+            {
+                SuspendDuckBusesLocked();
+                try { ReloadChannelSinkLocked(channel with { Name = name }, channel.Name); }
+                finally { SyncDuckBusesLocked(); }
+            }
         }
     }
 
@@ -219,7 +228,11 @@ public sealed partial class Mixer
             _insertErrors.Remove(id);
             _eq.Remove(id);
             _channelVolume.Remove(id);
-            if (_combineModules.Remove(id, out uint module))
+            bool loaded = _combineModules.Remove(id, out uint module);
+            // Before the unload, which can fail: a removed key must not stay
+            // in the plan, and its stages go before their key input does.
+            PruneDuckPlanLocked();
+            if (loaded)
             {
                 try { _pw.UnloadModule(module); }
                 catch (Exception ex)
@@ -368,6 +381,7 @@ public sealed partial class Mixer
                 throw;
             }
 
+            PruneDuckPlanLocked();   // the bus goes before the mix it feeds
             if (previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id)))
                 SetMonitorOutputsLocked([.. _monitorOutputs]);
             RemoveMixChainLocked(key);
@@ -451,7 +465,7 @@ public sealed partial class Mixer
     private void FinishReloadLocked(ChannelDefinition channel, uint module, IEnumerable<int> streamSerials)
     {
         _combineModules[channel.Id] = module;
-        bool complete = WaitForLegsLocked([module], _config.Mixes.Select(m => m.SinkName));
+        bool complete = WaitForLegsLocked([module], CombineSinkNamesLocked());
         foreach (MixDefinition mix in _config.Mixes) ApplyCellLocked(channel.Id, mix.Id);
         foreach (int serial in streamSerials)
         {
@@ -489,7 +503,8 @@ public sealed partial class Mixer
     }
 
     /// <summary>The fader state of removed cells, so a failed save can put them back.</summary>
-    private sealed record CellSnapshot(Dictionary<string, double> Levels, HashSet<string> Muted, Dictionary<string, int> Legs, HashSet<string> Pending,
+    private sealed record CellSnapshot(Dictionary<string, double> Levels, HashSet<string> Muted, Dictionary<string, int> Legs,
+        Dictionary<string, int> DuckLegs, HashSet<string> Pending,
         double? MixVolume, bool MixMuted, string? MixId)
     {
         public void Restore(Mixer m)
@@ -497,6 +512,7 @@ public sealed partial class Mixer
             foreach ((string cell, double level) in Levels) { m._cells.Add(cell); m._levels[cell] = level; }
             foreach (string cell in Muted) m._muted.Add(cell);
             foreach ((string cell, int index) in Legs) m._legIndex[cell] = index;
+            foreach ((string cell, int index) in DuckLegs) m._duckLegIndex[cell] = index;
             m._pendingCells.UnionWith(Pending);
             if (MixId is not null && MixVolume is double volume) m._mixVolume[MixId] = volume;
             if (MixId is not null && MixMuted) m._mixMuted.Add(MixId);
@@ -511,7 +527,7 @@ public sealed partial class Mixer
 
     private CellSnapshot TakeCellsLocked(List<string> cells, string? mixId)
     {
-        var snapshot = new CellSnapshot([], [], [], [],
+        var snapshot = new CellSnapshot([], [], [], [], [],
             mixId is not null && _mixVolume.TryGetValue(mixId, out double volume) ? volume : null,
             mixId is not null && _mixMuted.Contains(mixId), mixId);
         foreach (string cell in cells)
@@ -520,6 +536,7 @@ public sealed partial class Mixer
             _levels.Remove(cell);
             if (_muted.Remove(cell)) snapshot.Muted.Add(cell);
             if (_legIndex.Remove(cell, out int index)) snapshot.Legs[cell] = index;
+            if (_duckLegIndex.Remove(cell, out int duckIndex)) snapshot.DuckLegs[cell] = duckIndex;
             if (_pendingCells.Remove(cell)) snapshot.Pending.Add(cell);
         }
         if (mixId is not null) { _mixVolume.Remove(mixId); _mixMuted.Remove(mixId); }
@@ -535,6 +552,7 @@ public sealed partial class Mixer
             _levels.Remove(cell);
             _muted.Remove(cell);
             _legIndex.Remove(cell);
+            _duckLegIndex.Remove(cell);
             _pendingCells.Remove(cell);
         }
     }
@@ -547,6 +565,7 @@ public sealed partial class Mixer
             _levels.Remove(cell);
             _muted.Remove(cell);
             _legIndex.Remove(cell);
+            _duckLegIndex.Remove(cell);
             _pendingCells.Remove(cell);
         }
         _mixVolume.Remove(mixId);

@@ -89,6 +89,10 @@ public sealed record MixDefinition(string Id, string Name, MixKind Kind)
     public const string SinkPrefix = "OpenXLR_mix_";
     /// <summary>PipeWire node name of this mix's sink.</summary>
     public string SinkName => $"{SinkPrefix}{Id}";
+    /// <summary>Hidden sink collecting this mix's ducked sends, also followed by the combines.</summary>
+    public string DuckBusName => $"{SinkName}.duck";
+    /// <summary>The native stereo duck stage between the bus and this mix.</summary>
+    public string DuckStageName => $"OpenXLR_duck_{Id}";
     /// <summary>PipeWire node name of the published virtual capture device.</summary>
     public string VirtualMicName => $"OpenXLR_{Id}";
     /// <summary>

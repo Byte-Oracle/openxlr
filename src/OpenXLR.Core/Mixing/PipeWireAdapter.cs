@@ -871,6 +871,45 @@ public sealed class PipeWireAdapter
     /// <summary>Whether the microphone EQ's helper is there to start.</summary>
     internal bool EqHostInstalled => File.Exists(EqHost ?? NativePluginHost.Executable);
 
+    /// <summary>The duck stage's helper; null uses the installed helper beside the daemon.</summary>
+    internal string? DuckHost { get; set; }
+
+    internal bool DuckHostInstalled => File.Exists(DuckHost ?? NativePluginHost.Executable);
+
+    /// <summary>One stereo duck stage with a separate mono key and a reduction meter in dB.</summary>
+    internal FilterHandle CreateDucker(string mixId, IReadOnlyDictionary<string, double> controls)
+    {
+        string executable = DuckHost ?? NativePluginHost.Executable;
+        if (!File.Exists(executable)) throw new InvalidOperationException(Mixer.DuckingNeedsHost);
+        int rate = ParseGraphSampleRate(Run("pw-metadata", "-n", "settings"));
+        string node = new MixDefinition(mixId, mixId, MixKind.Monitor).DuckStageName;
+        NativePluginHost host;
+        try
+        {
+            host = new NativePluginHost(new() { Id = mixId, Kind = "duck", Plugin = "duck", Params = new(controls) },
+                node, 2, rate, executable, [], meterSymbols: new HashSet<string>(StringComparer.Ordinal) { "reduction" });
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or System.ComponentModel.Win32Exception)
+        {
+            throw new InvalidOperationException($"Ducking could not start the native plugin host. {ex.Message}", ex);
+        }
+        _nativeHosts.Add(host);
+        var filter = new FilterHandle(node, node, node, host.Process) { NativeHost = host };
+        try
+        {
+            if (!WaitForPorts(node, "playback", false, TimeSpan.FromSeconds(3), host.Process, count: 2)
+                || !WaitForPorts(node, "capture", true, TimeSpan.FromSeconds(3), host.Process, count: 2)
+                || !WaitForPorts(node, "key", false, TimeSpan.FromSeconds(3), host.Process))
+                throw new InvalidOperationException("Ducking's audio ports did not appear.");
+            return filter;
+        }
+        catch
+        {
+            StopFilter(filter);
+            throw;
+        }
+    }
+
     /// <summary>
     /// One microphone's EQ stage: the native helper's mono "eq" backend under
     /// <c>OpenXLR_eq_&lt;id&gt;</c>, started with every control at
@@ -1236,13 +1275,13 @@ public sealed class PipeWireAdapter
         f.Process.Dispose();
     }
 
-    private bool WaitForPorts(string node, string prefix, bool output, TimeSpan timeout, Process owner)
+    private bool WaitForPorts(string node, string prefix, bool output, TimeSpan timeout, Process owner, int count = 1)
     {
         long end = Environment.TickCount64 + (long)timeout.TotalMilliseconds;
         while (Environment.TickCount64 < end)
         {
             if (owner.HasExited) return false;
-            if (ListPorts(node, prefix, output).Count > 0) return true;
+            if (ListPorts(node, prefix, output).Count >= count) return true;
             Thread.Sleep(100);
         }
         return false;
