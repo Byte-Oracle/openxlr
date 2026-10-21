@@ -183,14 +183,12 @@ few releases, and they get to settle in users' hands first.
   sections folded under it, on a dark neutral palette, with a copy to
   start from in `docs/examples/skins`.
   [skins.md](skins.md#layout)
-- [ ] Ducking on every device: a key microphone lowers chosen channels in
+- [x] Ducking on every device: a key microphone lowers chosen channels in
   chosen mixes while it is loud, with the Wave XLR Pro's presets. A native
-  stage per ducked mix runs it on this computer; the Pro runs it on its
-  own processor when the setup fits, and the state says why when it does
-  not. One setup in `mixer.json`, carried by profiles
-  ([manual](manual.md#ducking)). Built in the daemon; open: acceptance on
-  the desk by ear, and the Ducking window that replaces the switch and
-  presets in Options.
+  stage per ducked mix runs it on this computer, set from the Ducking
+  window, the terminal mixer and a Deck key. One setup in `mixer.json`,
+  carried by profiles ([manual](manual.md#ducking)). Checked by ear on the
+  desk on 2026-10-21.
 - [x] Inputs from more than one attached Wave interface at once: up to
   four additional interfaces driven beside the primary, each with its own
   controls and capture channel, and a strip bound to another unit's input
@@ -408,13 +406,16 @@ while fixes to existing hosts remain part of normal maintenance.
   against the software EQ's curves, and whether its EQ reaches the
   zero-latency headphone path.
 - [ ] Ducking on the Pro's own processor. Mapped from Wave Link 3.5 on
-  Windows; the daemon gives the unit the one ducking setup whenever it
-  fits, keyed by XLR 1, on the two USB pairs OpenXLR streams to (the
-  jacks' monitor feed and the USB Aux mix), and runs anything else in
-  software ([manual](manual.md#ducking)). Still open: by-ear acceptance on
-  Linux, the encoding of keys other than XLR 1, and per-channel hardware
-  ducking, which needs each channel on its own pair: the hardware mixing
-  track, starting with the remaining mix matrix above.
+  Windows, and the daemon can write it, but the unit ducks inside its own
+  mix and OpenXLR feeds the jacks through the monitor return, which goes
+  around that mix, so the Pro runs ducking in software for now
+  ([manual](manual.md#ducking)). A desk test with USB pair 2/3 in the
+  Personal mix and the monitor return off gave clean music that the unit
+  ducked. Open: feeding the jacks through the unit's mix (levels, latency,
+  the direct microphone path, Headphones 2 and Line Out), a by-ear check of
+  the USB Aux port, the encoding of keys other than XLR 1, and per-channel
+  hardware ducking, which needs each channel on its own pair: the hardware
+  mixing track, starting with the remaining mix matrix above.
 - [ ] The Pro's mix maximizer and channel booster, the other two onboard
   effects with no mapped control. The booster adds up to 12 dB above the
   normal ceiling on any input; the maximizer is per mix.

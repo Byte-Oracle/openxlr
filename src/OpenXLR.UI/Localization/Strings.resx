@@ -2745,7 +2745,7 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>Fast</value>
   </data>
   <data name="DuckingHint" xml:space="preserve">
-    <value>Ducking lowers the chosen channels in the chosen mixes while the key microphone is loud. The Wave XLR Pro runs it itself when the setup fits what the unit can do; otherwise this computer runs it.</value>
+    <value>Ducking lowers the chosen channels in the chosen mixes while the key microphone is loud. This computer runs it on every device, the Wave XLR Pro included: the Pro ducks inside its own mix, which the jacks do not go through yet.</value>
   </data>
   <data name="DuckingNotHeld" xml:space="preserve">
     <value>The unit does not hold this setting yet; OpenXLR writes it again within a few seconds.</value>

@@ -245,7 +245,7 @@ that final acknowledgement (or an `error` without a request id):
 | `saveProfile` / `loadProfile` / `deleteProfile` | `name` | named scenes, scoped to the connected interface, or to `generic` while none is connected (see below); loading restores saved gain even while locked and leaves the lock enabled |
 | `setRecallOnConnect` | `name` | the profile recalled whenever the active device connects fresh (daemon start, replug, switch to it); empty clears it. With none chosen, a device whose capabilities say `retainsSettings: false` gets the last settings the daemon saw on it instead. Refused while no interface is connected |
 | `setDucking` | `value` | change the [ducking](#ducking) setup: an object with any of `enabled`, `key`, `channels`, `mixes`, `sensitivity`, `amount`, `speed`; the fields it leaves out keep their values and an unknown one is refused. Saved in `mixer.json` before it applies. Needs the software mixer, on any device or none |
-| `setDuckingProcessing` | `value` | where [ducking](#ducking) should run: `device` (the default) on the unit when the setup fits it, or `software` on this computer. Saved in `mixer.json`, never in a profile |
+| `setDuckingProcessing` | `value` | where [ducking](#ducking) should run: `device` (the default) on the unit when the setup fits it, or `software` on this computer. The Wave XLR Pro does not run it yet, so `device` runs in software there with the reason in the state. Saved in `mixer.json`, never in a profile |
 | `resetDevice` | none | write the recorded defaults back to a device using connect-time restoration and forget its last settings (an error until the daemon has seen the device connect after a power cycle once); on the Wave XLR Pro, which keeps its own settings, write OpenXLR's baseline instead: gain 30 dB on both inputs, every processing stage and phantom off, headphones and aux level at half, the crossfade fully on PC, routing untouched, refused while the gain lock is on. The capabilities say `builtInDefaults` when a model has a baseline |
 | `getDiagnostics` | none | vendor block dump for bug reports |
 
@@ -1374,6 +1374,8 @@ rule that fails gives `reason`:
 |---|---|---|
 | the software mixer runs | `mixerOff` | The software mixer is off, so ducking does not run. |
 | the key carries the unit's input 1 | `keyNotSupported` | The Wave XLR Pro ducks only with XLR 1 as the key. |
+| the unit's ducking is heard on the jacks: no target mix is heard on them while the unit cannot reach them | `monitorReturn` | The Wave XLR Pro ducks inside its own mix, and OpenXLR feeds the jacks around that mix, so this computer ducks. |
+| the unit's ducking is known to reach the USB Aux port: no target mix is heard there until it is | `auxNotChecked` | Ducking on the Wave XLR Pro's USB Aux port has not been checked by ear yet, so this computer ducks. |
 | every target mix that is heard is heard only on the unit: a monitor mix in the jacks' feed, or the Aux mix on the USB Aux port, and on no other output, virtual microphone or feed | `mixElsewhere` | Monitor A also plays on Speakers, which the Wave XLR Pro cannot duck. |
 | when one mix of the jacks' feed is ducked, all of them are | `sharedOutput` | The jacks play Monitor A and Chat together, and only Monitor A is ducked. |
 | every channel heard in a target mix (send above 0, not muted) is in `channels`, the key excepted | `partialMix` | Voice Chat plays in Monitor A and is not ducked; the Wave XLR Pro lowers a whole output. |
@@ -1381,6 +1383,9 @@ rule that fails gives `reason`:
 | the unit kept the ducking written to it (two misses fail it) | `failed` | The Wave XLR Pro did not keep the ducking written to it. Switch ducking off and on to try again. |
 | the unit answers a read of its ducking block | `unsupportedBlock` | The Wave XLR Pro did not answer a read of its ducking block. |
 
+On the Wave XLR Pro both of these fail today, so it reports the unit's
+side and runs ducking in software: the unit ducks inside its own mix, and
+OpenXLR feeds the jacks through the monitor return, which goes around it.
 A target mix no output, virtual microphone or feed hears is left out of
 these rules; a setup whose target mixes nobody hears runs on the unit with
 no pairs ducked. The unit ducks the pairs `outputs` names.

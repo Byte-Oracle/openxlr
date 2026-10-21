@@ -20,6 +20,7 @@ public sealed class DuckingPlacementTests
     [Theory]
     [InlineData("mixerOff", "The software mixer is off, so ducking does not run.")]
     [InlineData("keyNotSupported", "The Wave XLR Pro ducks only with XLR 1 as the key.")]
+    [InlineData("monitorReturn", "The Wave XLR Pro ducks inside its own mix, and OpenXLR feeds the jacks around that mix, so this computer ducks.")]
     [InlineData("mixElsewhere", "Monitor A also plays on Speakers, which the Wave XLR Pro cannot duck.")]
     [InlineData("sharedOutput", "The jacks play Monitor A and Monitor B together, and only Monitor A is ducked.")]
     [InlineData("partialMix", "Voice Chat plays in Monitor A and is not ducked; the Wave XLR Pro lowers a whole output.")]
@@ -35,6 +36,7 @@ public sealed class DuckingPlacementTests
         {
             case "mixerOff": view = view with { MixerRunning = false }; break;
             case "keyNotSupported": view = view with { KeyIsUnitInput1 = false }; break;
+            case "monitorReturn": support = Pro with { ReachesJacks = false }; break;
             case "mixElsewhere": view = EditMonitor(view, m => m with { OtherConsumers = ["Speakers"] }); break;
             case "sharedOutput": view = view with { JackFeed = ["monitor", "monitor2"] }; break;
             case "partialMix": setup = setup with { Channels = [.. setup.Channels.Where(c => c != "voicechat")] }; break;
@@ -49,6 +51,18 @@ public sealed class DuckingPlacementTests
         Assert.Equal(note, verdict.Note);
         Assert.Equal(reason == "mixerOff" ? null : "software", verdict.Backend);
         Assert.Equal(["monitor"], verdict.Outputs);
+    }
+
+    [Fact]
+    public void TheAuxPortRunsInSoftwareUntilTheUnitIsKnownToReachIt()
+    {
+        DuckingVerdict verdict = DuckingPlacement.Evaluate(Setup with { Mixes = ["auxout"] },
+            View with { SoftwareRunning = true }, Pro with { ReachesAux = false });
+        Assert.Equal(("auxNotChecked", "software", false), (verdict.Reason, verdict.Backend, verdict.Ready));
+        Assert.Equal("Ducking on the Wave XLR Pro's USB Aux port has not been checked by ear yet, so this computer ducks.", verdict.Note);
+        Assert.Equal(["aux"], verdict.Outputs);
+        // A unit that reaches the jacks but not the Aux port still runs a jacks-only setup.
+        Assert.Equal("device", DuckingPlacement.Evaluate(Setup, View, Pro with { ReachesAux = false }).Backend);
     }
 
     [Theory]
