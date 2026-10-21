@@ -200,6 +200,7 @@ every save. Every field is optional on read; an absent one is empty or off.
 | `softClipGuard` | the software ClipGuard |
 | `inserts` | insert chains by `xlr1`, `xlr2`, capture channel id or `mix:<id>` |
 | `exclusiveGroups` | exclusive channel groups, see [Exclusive groups](#exclusive-groups) |
+| `ducking` | the [ducking](api.md#ducking) setup, `{enabled, key, channels, mixes, sensitivity, amount, speed, processing}`; absent takes the defaults, off, and the next save writes them. Unknown ids and words are dropped with a note |
 
 A null field or a null entry inside one is dropped and logged; so is a
 non-finite number in `mixVolumes`, `levels`, `channelVolumes` or an insert's `params`. A
@@ -278,6 +279,13 @@ debounced, retried behaviour.
   item's `icon`, `colour` and `hidden` as described under
   [Appearance](#appearance), hardware inputs and Monitor A/B and Aux
   included; `output` is `phones1` or `phones2`. No node changes.
+
+Every edit keeps the [ducking](api.md#ducking) setup in step in the same
+save: a deleted channel leaves `ducking.channels`, a deleted mix leaves
+`ducking.mixes`, and deleting the key channel turns ducking off and resets
+the key to `xlr1`. A new channel or mix is not added to the setup; a new
+channel starts muted in every mix anyway. A rename keeps the id, so the
+setup is unchanged.
 
 Every added channel or mix costs pipewire-pulse a few dozen open files;
 the daemon refuses an addition the server has no room for, and the packages
