@@ -716,18 +716,23 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         if (!_auxPortEnabled || !_hardwareOutputRouting) return;
         MixDefinition? aux = _config.Mixes.FirstOrDefault(m => m.Kind == MixKind.AuxPort);
         if (aux is null) return;
-        // The raw sink is hidden from pickers, so derive it from any Pro
-        // pseudo-output's bare name.
-        string? proSink = _pw.ListDevices(true, _inputHints)
-            .Where(d => d.Kind == AudioNodeKind.Sink &&
-                        d.Name.Contains("Wave_XLR", StringComparison.OrdinalIgnoreCase))
-            .Select(d => { int m = d.Name.IndexOf('#'); return m < 0 ? d.Name : d.Name[..m]; })
-            .FirstOrDefault();
+        string? proSink = HardwareOutputSinkLocked();
         if (proSink is null || HoldPlaybackLocked(proSink)) return;   // EnsureAuxRoute wires it later
         (string tapNode, string tapPrefix) = MixTapLocked(aux);
         PortLink route = _pw.RouteTapToOutput(tapNode, tapPrefix, proSink + "#usbaux");
         if (route.Pairs.Count > 0) { _auxRoute = route; _auxTargetSink = proSink; }
     }
+
+    /// <summary>
+    /// The Pro's raw sink. It is hidden from pickers, so it is derived from
+    /// any Pro pseudo-output's bare name.
+    /// </summary>
+    private string? HardwareOutputSinkLocked()
+        => _pw.ListDevices(true, _inputHints)
+            .Where(d => d.Kind == AudioNodeKind.Sink &&
+                        d.Name.Contains("Wave_XLR", StringComparison.OrdinalIgnoreCase))
+            .Select(d => { int m = d.Name.IndexOf('#'); return m < 0 ? d.Name : d.Name[..m]; })
+            .FirstOrDefault();
 
     /// <summary>
     /// Bounce the aux port's physical sink so the device re-latches its return
@@ -2131,19 +2136,31 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// Restart the Pro sink's playback stream after a headphone-mix change,
     /// which is when the device latches its matrix (same as the aux return).
     /// The monitor routes are dropped for the bounce and rebuilt after it.
+    /// With no jack a monitor output (a direct path another program left on
+    /// being switched off), the stream restarted is the Aux route's when it
+    /// plays there, and otherwise the sink's own, which no route of ours holds.
     /// </summary>
     public void BounceMonitorHardwareOutput()
     {
         string? sink;
+        bool rewire = false, aux = false;
         lock (_gate)
         {
             if (!_built) return;
             string? pseudo = _monitorOutputs.FirstOrDefault(o => o.Contains('#'));
-            if (pseudo is null) return;
-            sink = pseudo[..pseudo.IndexOf('#')];
-            DisconnectMonitorRoutesLocked();
+            if (pseudo is not null)
+            {
+                sink = pseudo[..pseudo.IndexOf('#')];
+                DisconnectMonitorRoutesLocked();
+                rewire = true;
+            }
+            else if (_auxTargetSink is not null) { sink = null; aux = true; }
+            else sink = HardwareOutputSinkLocked();
         }
+        if (aux) { BounceAuxTarget(); return; }
+        if (sink is null) return;
         _pw.BounceSink(sink);
+        if (!rewire) return;
         lock (_gate)
         {
             if (_built) SetMonitorOutputsLocked([.. _monitorOutputs]);

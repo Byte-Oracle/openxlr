@@ -2700,4 +2700,73 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
     <value>{0} nicht mehr steuern? Die Aufnahmeeingänge und ihre Effektketten werden gelöscht. Dieser Daemon meldet keine Unterstützung für das Behalten der Eingänge.</value>
   </data>
+  <data name="Ducking" xml:space="preserve">
+    <value>Ducking</value>
+  </data>
+  <data name="DuckingEnabled" xml:space="preserve">
+    <value>Ausgänge absenken, solange XLR 1 laut ist</value>
+  </data>
+  <data name="DuckingOutputs" xml:space="preserve">
+    <value>Ausgänge</value>
+  </data>
+  <data name="DuckingMonitorOutputs" xml:space="preserve">
+    <value>Kopfhörer und Line Out</value>
+  </data>
+  <data name="DuckingAuxOutput" xml:space="preserve">
+    <value>USB-Aux-Ausgang</value>
+  </data>
+  <data name="DuckingSensitivity" xml:space="preserve">
+    <value>Empfindlichkeit</value>
+  </data>
+  <data name="DuckingAmount" xml:space="preserve">
+    <value>Stärke</value>
+  </data>
+  <data name="DuckingSpeed" xml:space="preserve">
+    <value>Geschwindigkeit</value>
+  </data>
+  <data name="DuckingLow" xml:space="preserve">
+    <value>Niedrig</value>
+  </data>
+  <data name="DuckingMedium" xml:space="preserve">
+    <value>Mittel</value>
+  </data>
+  <data name="DuckingHigh" xml:space="preserve">
+    <value>Hoch</value>
+  </data>
+  <data name="DuckingAmountLow" xml:space="preserve">
+    <value>Niedrig, 6 dB</value>
+  </data>
+  <data name="DuckingAmountMedium" xml:space="preserve">
+    <value>Mittel, 12 dB</value>
+  </data>
+  <data name="DuckingAmountHigh" xml:space="preserve">
+    <value>Hoch, 24 dB</value>
+  </data>
+  <data name="DuckingSlow" xml:space="preserve">
+    <value>Langsam</value>
+  </data>
+  <data name="DuckingFast" xml:space="preserve">
+    <value>Schnell</value>
+  </data>
+  <data name="DuckingHint" xml:space="preserve">
+    <value>Das Wave XLR Pro erledigt das selbst. Es senkt den ganzen Mix, den OpenXLR an jeden gewählten Ausgang schickt, Chat eingeschlossen. Der Stream-Mix behält seinen Pegel. XLR 1 ist der einzige Auslöser, den das Gerät bekanntermaßen annimmt.</value>
+  </data>
+  <data name="DuckingNotHeld" xml:space="preserve">
+    <value>Das Gerät hält diese Einstellung noch nicht; OpenXLR schreibt sie in wenigen Sekunden erneut.</value>
+  </data>
+  <data name="DuckingStatusOff" xml:space="preserve">
+    <value>Aus.</value>
+  </data>
+  <data name="DuckingStatusDevice" xml:space="preserve">
+    <value>An, läuft auf dem eigenen Prozessor des {0}.</value>
+  </data>
+  <data name="DuckingHardwareBadgeTip" xml:space="preserve">
+    <value>Das Ducking läuft auf dem eigenen Prozessor des {0}.</value>
+  </data>
+  <data name="DuckingKeyNotSupported" xml:space="preserve">
+    <value>Läuft nicht: Das {0} senkt nur mit XLR 1 als Auslöser ab.</value>
+  </data>
+  <data name="DuckingNotRunning" xml:space="preserve">
+    <value>Nichts führt diese Einstellung aus.</value>
+  </data>
 </root>

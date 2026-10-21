@@ -1323,6 +1323,7 @@ extern "C" const Backend vst3_backend = {
     vst3_unload,
     vst3_latency,
     true,
+    0,
 };
 
 // --- the scanner ------------------------------------------------------------

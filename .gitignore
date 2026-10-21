@@ -18,6 +18,7 @@ native/tests/lifecycle
 native/tests/scan-plugin.so
 native/tests/sound-check
 native/tests/eq
+native/tests/duck
 # nix build output symlink
 result
 

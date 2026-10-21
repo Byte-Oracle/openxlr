@@ -86,6 +86,19 @@ public interface IAudioDevice : IDisposable
     /// </summary>
     DeviceEq? ReadEq(int input) => null;
 
+    // Ducking on the unit's own DSP (the Wave XLR Pro). A unit whose
+    // capabilities report Ducking overrides both.
+    /// <summary>The unit's ducking as the last poll read it, without a transfer; null where it has none or nothing was read.</summary>
+    DuckingReadback? ReadDucking() => null;
+
+    /// <summary>
+    /// Bring the unit's ducking to a setting through a read of each block it
+    /// lives in, an edit of the fields ducking owns and a write of each block
+    /// that changed.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The unit has no hardware ducking.</exception>
+    DuckingWrite SetDucking(DuckingSettings settings) => throw new InvalidOperationException("this unit has no hardware ducking");
+
     // Physical output routing and aux input. Default no-ops; devices with
     // OutputRouting / AuxInput capabilities override them.
     /// <summary>
@@ -186,6 +199,13 @@ public sealed record DeviceCapabilities
     /// microphone's EQ runs in software.
     /// </summary>
     public bool HardwareEq { get; init; }
+
+    /// <summary>
+    /// The unit ducks its own outputs while the key input is loud and the
+    /// driver can set it: the Wave XLR Pro, keyed by XLR 1, on the USB
+    /// playback pairs OpenXLR streams to. False on every other model.
+    /// </summary>
+    public bool Ducking { get; init; }
 
     /// <summary>Per-jack routing of the hardware monitor bus (HP1/HP2/USB Aux out/Line out).</summary>
     public bool OutputRouting { get; init; }

@@ -62,6 +62,7 @@ python3 tools/test-monitor-volume.py  # private PipeWire server and session bus;
 xvfb-run -a make -C native test-editor  # also needs Xvfb and xauth
 make -C native test-sound-check  # Sound Check loop backend, no audio server
 make -C native test-eq  # microphone EQ backend against the cookbook table, no audio server
+make -C native test-duck  # duck detector, gain depth and timing, no audio server
 python3 tools/eq-reference.py --check  # regenerate with no flag after changing the EQ reference settings
 OPENXLR_TEST_DESKTOP=1 xvfb-run -a dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~TrayWindowTests
 OPENXLR_TEST_LAYOUT=1 xvfb-run -a -s '-screen 0 2560x1440x24' dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~WindowLayoutTests

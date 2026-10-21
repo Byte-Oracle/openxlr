@@ -51,6 +51,7 @@ public sealed class WindowLayoutTests
                 MonitorOutputPickerWindowTests.Check();
                 InputBindingWindowTests.Check();
                 InputBindingWindowTests.CheckDrivenUnit();
+                DuckingWindowTests.Check();
                 CaptureInputWindowTests.ThreeCaptureInputsFitClassicWidths();
                 VolumeRangeWindowTests.Check();
                 LocalizationRenderingTests.Check();

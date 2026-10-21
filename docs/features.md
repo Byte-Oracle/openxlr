@@ -25,6 +25,12 @@ Wave XLR Pro:
 - Mic/PC direct-monitor crossfade (inside the device, no host latency)
 - Physical output routing: Headphones 1, Headphones 2, Line Out and USB
   Aux are each switched in the device's hardware mixer
+- Ducking on the device: while XLR 1 is loud the unit lowers what OpenXLR
+  sends to its headphone jacks and Line Out, its USB Aux port, or both, by
+  6, 12 or 24 dB at a chosen sensitivity and speed. Each output's whole mix
+  is lowered; the stream mix is not. Saved per unit and written on every
+  connect, which clears ducking Wave Link left while OpenXLR's is off.
+  Mapped from Wave Link on Windows, listening checks on Linux pending
 
 Wave XLR MK.2 and XLR Dock MK.2: gain, mute, phantom power, low cut,
 expander, voice tune with strength, ClipGuard, compressor, headphone
@@ -59,9 +65,9 @@ and the Wave XLR Pro on each of its two inputs from firmware 1.0.14, the
 way Wave Link 3.5 does ([findings](mk2-eq-findings.md),
 [Pro](hardware-support.md#wave-xlr-pro-0fd900b4)); every other model and
 older firmware run it in software. The Pro's EQ follows Wave Link
-captures; nobody has confirmed it by ear on Linux yet. The Pro's ducking, mix
+captures; nobody has confirmed it by ear on Linux yet. The Pro's mix
 maximizer, channel booster and remaining hardware mix matrix are
-unmapped. Wave Link configures those onboard effects on supported systems;
+unmapped, as is any ducking key but XLR 1. Wave Link configures those onboard effects on supported systems;
 OpenXLR's LV2, CLAP and VST3 inserts process audio on the Linux host.
 
 XLR Dock: gain, mute and headphone volume through the kernel's standard

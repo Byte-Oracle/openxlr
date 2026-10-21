@@ -201,7 +201,12 @@ public sealed class MixerService : IHostedService, IDisposable
         // The mixer refuses the path while that channel is in an exclusive
         // group or under Sound Check, and reads its mutes under its own lock.
         bool micDirect = _mixer.SetHardwareMicMonitor(jacksOnly && _mixer.IsMonitorOnlyFeed(jackFeed), whenHeardIn: jackFeed);
-        if (anyJack && _devices.EnsureHeadphoneMix(monitorReturn: true, micDirect: micDirect) && _mixer.Built)
+        // The direct path is driven whether or not a jack is in use: another
+        // program (Wave Link in a virtual machine) can leave it on, and the
+        // jacks would then carry the microphone with nothing here showing it.
+        // The return pair is only asserted for a jack; with none in use it
+        // stays as the unit holds it, which nothing here depends on.
+        if (_devices.EnsureHeadphoneMix(monitorReturn: anyJack ? true : null, micDirect: micDirect) && _mixer.Built)
             _mixer.BounceMonitorHardwareOutput();
     }
 

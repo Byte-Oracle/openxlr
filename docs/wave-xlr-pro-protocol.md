@@ -77,7 +77,7 @@ read or written as one unit; individual controls are byte fields at fixed offset
 | 0x0004 | 80 B  | R/W   | 9828 | 168 | config: a 0–100 fader + a packed-flags byte + an enum |
 | 0x0005 | 8 B   | R/W   | 9790 | 131 | **two independent one-byte level faders** |
 | 0x0006 | 29 B  | R only| 9837 | 0   | status/telemetry |
-| 0x0008 | 96 B  | R only| 9805 | 0   | status/telemetry |
+| 0x0008 | 96 B  | R only| 9805 | 0   | ducking settings, written by Wave Link 3.5 (section 11) |
 
 Wave Link **polls every read block at ~17 Hz continuously** (≈9800 reads each over 577 s). A
 Linux backend does not need that rate to *set* controls, but the firmware may expect periodic
@@ -193,7 +193,7 @@ three ear-dependent bits can be named the moment you toggle them and listen.
 - Mic gain is also visible through standard ALSA controls, but OpenXLR uses
   the same vendor block as the other per-XLR fields to keep both input
   structures and client state consistent.
-- Telemetry blocks (0x0002/0x0006/0x0008) are readable for meters or clip
+- Telemetry blocks (0x0002/0x0006) are readable for meters or clip
   indicators; they are not required for control.
 
 ## Hardware correction (2026-08-25, user-supplied): TWO XLR inputs, TWO headphone outputs
@@ -425,3 +425,48 @@ family, at the struct's base offset, through the block's one
 read-modify-write path ([api.md](api.md#where-the-eq-runs)). Acceptance by
 ear on Linux, the filters' curves and the zero-latency headphone path are
 still open.
+
+## 11. Ducking (captures of 2026-10-21)
+
+Wave Link 3.5 on Windows, firmware 1.0.14, captures 24 to 31 of the
+session on the maintainer's unit. This corrects section 2: block 0x0008 is
+not telemetry, Wave Link writes it.
+
+Block 0x0008, 96 bytes, twelve entries of eight bytes. Entries 0 to 3 are
+the hardware inputs (XLR Mic 1, XLR Mic 2, USB Aux in, Line In), entries 4
+to 11 the USB playback pairs 0/1 to 14/15, which Wave Link uses as its
+channel returns (Browser 2/3, Music 10/11, Game 12/13, System 14/15).
+
+| Byte | Field | Values Wave Link writes |
+|---|---|---|
+| 0 | key threshold, int8 dB | sensitivity Low `fd` (-3), Medium `f4` (-12), High `e8` (-24) |
+| 1 | depth, dB | amount Low `06`, Medium `0c`, High `18` |
+| 2, 3 | attack, LE16 ms | speed Slow 100, Medium 80, Fast 30 |
+| 4, 5 | release, LE16 ms | speed Slow 2000, Medium 1200, Fast 200 |
+| 6 | flags | bit 0 set on a ducked channel; bit 1 unknown |
+| 7 | `00` | |
+
+Each preset change wrote one field in all twelve entries and nothing else
+(three values each). With no key at all Wave Link left byte 6 at `00 02 00
+00 03 00 00 03 03 00 00 00`; the `02` and `03` are unexplained.
+
+Making XLR Mic 1 the key for Browser, Music, Game and System wrote 0x0008
+(byte 6 bit 0 on entries 5, 9, 10, 11) and block 0x0001 bytes 16 to 17, 34
+to 35 and 52 to 53 `55 55 -> 5d fd`, 8 ms apart, with no 0x0003 commit and
+nothing rolled back. Those two bytes after the `aa` at 15, 33 and 51 are
+eight 2-bit fields, little endian, field k for pair k: `01` normally, `11`
+while the pair is ducked in that mix. The sections at 69 and 87 did not
+change. With XLR 1 loud and no host write the unit lowered the ducked
+pairs by the configured depth (block 0x0002 meters, capture 28). Nothing
+in either block was seen to name the key.
+
+The daemon writes the same fields
+(`src/OpenXLR.Core/Devices/ProDucking.cs`): the presets in all twelve
+entries while ducking is on, bit 0 of byte 6 set on the target pairs and
+cleared on every other entry whose bit 1 is clear (an entry with bit 1 set
+keeps byte 6 as read), and the high bit of each pair field in the three
+mix sections. Every other byte of both blocks is copied from a fresh read.
+It writes 0x0008, then 0x0001, only the blocks that change, without the
+commit. Its targets are the pairs OpenXLR streams to: 2/3 (the jacks'
+monitor feed, through the Personal mix) and 10/11 (the Aux mix, through the
+aux mix's Music cell).

@@ -108,6 +108,7 @@ jobs:
           make -C native
           make -C native test-sound-check
           make -C native test-eq
+          make -C native test-duck
           dotnet build src/OpenXLR.slnx -c Release --no-restore -warnaserror -p:EnableNativeLv2Host=true
           test -x native/openxlr-lv2-host
           make -C native test-audio test-clap test-lv2 test-vst3 test-scan

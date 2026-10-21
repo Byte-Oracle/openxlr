@@ -47,6 +47,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
         OutputRouting = true, AuxInput = true,
         XlrInputs = 2, HpOutputs = 2,
         BuiltInDefaults = true,
+        Ducking = true,
     };
 
     private const ushort VIndex = 0x0103;
@@ -272,6 +273,9 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
         byte[] b4 = Read(BlockSettings, SettingsLen);
         lock (_lock) _settings = b4;
         byte[] b5 = Read(BlockHp, HpLen);
+        // A unit that refuses the ducking block still answers every other control.
+        try { _ducking = ProDucking.Decode(Read(ProDucking.Block, ProDucking.Length), b1); }
+        catch (IOException) { _ducking = null; }
         byte f = b4[FlagsOffset];
         byte f2 = b4[Xlr2Base + FlagsOffset];
         return new DeviceState
@@ -512,6 +516,35 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     {
         lock (_lock)
             return input is 1 or 2 && EqSupport?.Ready == true && _settings is { Length: SettingsLen } s ? EqOf(s, input) : null;
+    }
+
+    // --- ducking (blocks 0x0008 and 0x0001, see ProDucking) ---
+
+    private volatile DuckingReadback? _ducking;
+
+    public DuckingReadback? ReadDucking() => _ducking;
+
+    /// <summary>
+    /// Bring the unit's ducking to a setting: both blocks read fresh, the
+    /// fields ProDucking owns edited, and each block written back only when
+    /// it changed, 0x0008 first as Wave Link does. No commit: Wave Link sends
+    /// none for ducking and the unit keeps the bits without one.
+    /// </summary>
+    public DuckingWrite SetDucking(DuckingSettings settings)
+    {
+        // Under the lock, as SetEq's read-modify-write is, so no other write lands between the reads and the writes.
+        lock (_lock)
+        {
+            byte[] b8 = Read(ProDucking.Block, ProDucking.Length);
+            byte[] b1 = Read(BlockCrossfade, CrossfadeLen);
+            byte[] new8 = (byte[])b8.Clone(), new1 = (byte[])b1.Clone();
+            ProDucking.Apply(new8, new1, settings);
+            bool wrote8 = !new8.AsSpan().SequenceEqual(b8), wrote1 = !new1.AsSpan().SequenceEqual(b1);
+            if (wrote8) Write(ProDucking.Block, new8);
+            if (wrote1) Write(BlockCrossfade, new1);
+            _ducking = ProDucking.Decode(new8, new1);
+            return new DuckingWrite(wrote8, ProDucking.Diff(b8, new8), wrote1, ProDucking.Diff(b1, new1));
+        }
     }
 
     /// <summary>Every readable vendor block as hex, for tester diagnostics, with the firmware and each input's EQ decoded.</summary>

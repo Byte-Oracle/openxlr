@@ -1636,7 +1636,7 @@ public sealed class PipeWireAdapter
         if (marker >= 0)
         {
             string suffix = outputSink[(marker + 1)..];
-            pair = suffix == "usbaux" ? 5 : 1;   // aux mix return vs monitor-bus return
+            pair = suffix == "usbaux" ? OpenXLR.Core.Devices.ProReturnPairs.Aux : OpenXLR.Core.Devices.ProReturnPairs.Monitor;
             outputSink = outputSink[..marker];
         }
         return LinkNodes(fromNode, fromPrefix, outputSink, "playback", pair);

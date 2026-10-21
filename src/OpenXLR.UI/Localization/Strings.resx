@@ -2711,4 +2711,73 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
     <value>Stop driving {0}? Its capture inputs and their insert chains will be deleted. This daemon does not report support for keeping them.</value>
   </data>
+  <data name="Ducking" xml:space="preserve">
+    <value>Ducking</value>
+  </data>
+  <data name="DuckingEnabled" xml:space="preserve">
+    <value>Lower the outputs while XLR 1 is loud</value>
+  </data>
+  <data name="DuckingOutputs" xml:space="preserve">
+    <value>Outputs</value>
+  </data>
+  <data name="DuckingMonitorOutputs" xml:space="preserve">
+    <value>Headphones and Line Out</value>
+  </data>
+  <data name="DuckingAuxOutput" xml:space="preserve">
+    <value>USB Aux out</value>
+  </data>
+  <data name="DuckingSensitivity" xml:space="preserve">
+    <value>Sensitivity</value>
+  </data>
+  <data name="DuckingAmount" xml:space="preserve">
+    <value>Amount</value>
+  </data>
+  <data name="DuckingSpeed" xml:space="preserve">
+    <value>Speed</value>
+  </data>
+  <data name="DuckingLow" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="DuckingMedium" xml:space="preserve">
+    <value>Medium</value>
+  </data>
+  <data name="DuckingHigh" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="DuckingAmountLow" xml:space="preserve">
+    <value>Low, 6 dB</value>
+  </data>
+  <data name="DuckingAmountMedium" xml:space="preserve">
+    <value>Medium, 12 dB</value>
+  </data>
+  <data name="DuckingAmountHigh" xml:space="preserve">
+    <value>High, 24 dB</value>
+  </data>
+  <data name="DuckingSlow" xml:space="preserve">
+    <value>Slow</value>
+  </data>
+  <data name="DuckingFast" xml:space="preserve">
+    <value>Fast</value>
+  </data>
+  <data name="DuckingHint" xml:space="preserve">
+    <value>The Wave XLR Pro does this itself. It lowers the whole mix OpenXLR sends to each chosen output, chat included. The stream mix keeps its level. XLR 1 is the only key the unit is known to take.</value>
+  </data>
+  <data name="DuckingNotHeld" xml:space="preserve">
+    <value>The unit does not hold this setting yet; OpenXLR writes it again within a few seconds.</value>
+  </data>
+  <data name="DuckingStatusOff" xml:space="preserve">
+    <value>Off.</value>
+  </data>
+  <data name="DuckingStatusDevice" xml:space="preserve">
+    <value>On, running on the {0}'s own processor.</value>
+  </data>
+  <data name="DuckingHardwareBadgeTip" xml:space="preserve">
+    <value>Ducking runs on the {0}'s own processor.</value>
+  </data>
+  <data name="DuckingKeyNotSupported" xml:space="preserve">
+    <value>Does not run: the {0} ducks only with XLR 1 as the key.</value>
+  </data>
+  <data name="DuckingNotRunning" xml:space="preserve">
+    <value>Nothing runs this setup.</value>
+  </data>
 </root>

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The audio thread's two safety rules, without a graph to run them in: a
+// Audio ports and the audio thread's safety rules, without a graph: a
 // cycle the fixed buffers cannot carry is refused before anything is
 // written, and a plugin stuck inside one process call is told apart from a
 // node that simply has no work.
@@ -24,7 +24,56 @@ static void assert_canary(const float *buffer) {
     assert(buffer[i] == -1.0f);
 }
 
+static void check_key_silence(Host *h, uint32_t frames, float *const *in,
+                              float *const *out) {
+  assert(host_key(h) == h->silence);
+  for (uint32_t n = 0; n < frames; n++) assert(host_key(h)[n] == 0);
+}
+
+static void check_ports(void) {
+  pw_init(NULL, NULL);
+  struct pw_main_loop *loop = pw_main_loop_new(NULL);
+  assert(loop);
+  const Backend keyed = {.process = check_key_silence, .key_inputs = 1};
+  const Backend *backends[] = {&lv2_backend, &clap_backend, &vst3_backend, &keyed};
+  for (unsigned i = 0; i < sizeof(backends) / sizeof(backends[0]); i++) {
+    Host h = {.backend = backends[i], .rate = 48000, .channels = 2};
+    h.filter = pw_filter_new_simple(pw_main_loop_get_loop(loop), "port-test",
+                                    NULL, &filter_events, &h);
+    assert(h.filter && add_audio_ports(&h));
+    for (unsigned c = 0; c < h.channels; c++) {
+      assert(h.in_ports[c] && h.out_ports[c]);
+      const struct pw_properties *in = pw_filter_get_properties(h.filter, h.in_ports[c]);
+      const struct pw_properties *out = pw_filter_get_properties(h.filter, h.out_ports[c]);
+      assert(!strcmp(pw_properties_get(in, PW_KEY_PORT_NAME), c ? "playback_1" : "playback_0"));
+      assert(!strcmp(pw_properties_get(out, PW_KEY_PORT_NAME), c ? "capture_1" : "capture_0"));
+    }
+    if (h.backend != &keyed) {
+      assert(h.backend->key_inputs == 0 && h.key_port == NULL);
+    } else {
+      assert(h.key_port);
+      const struct pw_properties *key = pw_filter_get_properties(h.filter, h.key_port);
+      assert(!strcmp(pw_properties_get(key, PW_KEY_PORT_NAME), "key_0"));
+      assert(!strcmp(pw_properties_get(key, PW_KEY_AUDIO_CHANNEL), "MONO"));
+      assert(!strcmp(pw_properties_get(key, PW_KEY_FORMAT_DSP), "32 bit float mono audio"));
+      h.silence = guarded(), h.scratch = guarded();
+      struct spa_io_position position = {0};
+      position.clock.duration = 256;
+      position.clock.rate.denom = h.rate;
+      process_audio(&h, &position);
+      assert(atomic_load(&h.audio_entered) == 1 && atomic_load(&h.audio_left) == 1);
+      assert_canary(h.silence), assert_canary(h.scratch);
+      free(h.silence), free(h.scratch);
+    }
+    pw_filter_destroy(h.filter);
+  }
+  pw_main_loop_destroy(loop);
+  pw_deinit();
+  puts("PASS: existing backends get no key port; a keyed backend gets mono key_0 and silence without a buffer");
+}
+
 int main(void) {
+  check_ports();
   Host h = {.rate = 48000, .channels = 2};
 
   // The quantum the graph runs at decides whether the cycle can happen at
