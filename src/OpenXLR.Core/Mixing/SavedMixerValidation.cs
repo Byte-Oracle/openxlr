@@ -47,6 +47,7 @@ internal static class SavedMixerValidation
             Inserts = Inserts(settings, notes),
             Eq = Eq(settings.Eq, notes),
             EqProcessing = EqProcessing(settings.EqProcessing, notes),
+            Ducking = Ducking(settings, notes),
             Appearance = Appearance(settings.Appearance, notes),
         };
     }
@@ -62,6 +63,19 @@ internal static class SavedMixerValidation
         if (scene.MonitorFeeds is not null) Mapping(scene.MonitorFeeds, "monitorFeeds");
         if (scene.Inserts is not null) Inserts(scene.Inserts);
         if (scene.Eq is not null) Eq(scene.Eq);
+        if (scene.Ducking is { } ducking)
+        {
+            Require(!string.IsNullOrWhiteSpace(ducking.Key), "key must name a microphone channel", "ducking.key");
+            Names(ducking.Channels, "ducking.channels");
+            Names(ducking.Mixes, "ducking.mixes");
+            Require(ducking.Channels.All(c => !string.IsNullOrWhiteSpace(c) && c != ducking.Key)
+                && ducking.Channels.Distinct(StringComparer.Ordinal).Count() == ducking.Channels.Count,
+                "channels must be distinct channel ids other than the key", "ducking.channels");
+            Require(ducking.Mixes.All(m => !string.IsNullOrWhiteSpace(m))
+                && ducking.Mixes.Distinct(StringComparer.Ordinal).Count() == ducking.Mixes.Count,
+                "mixes must be distinct mix ids", "ducking.mixes");
+            if (DuckingSetup.CheckPresets(ducking) is { } problem) throw new JsonException($"Invalid saved mixer field 'ducking': {problem}.");
+        }
         Require(scene.OutputVolume is null || double.IsFinite(scene.OutputVolume.Value), NonFinite, "outputVolume");
     }
 
@@ -70,6 +84,33 @@ internal static class SavedMixerValidation
     private const string TooMany = "too many entries";
 
     // Lenient pass for the settings file.
+
+    private static DuckingSetup? Ducking(MixerSettings settings, List<string> notes)
+    {
+        if (settings.Ducking is not { } setup) return null;
+        setup = DuckingSetup.Prune(setup, MixerConfig.FromSettings(settings), notes);
+        return setup with
+        {
+            Sensitivity = Preset(setup.Sensitivity, Devices.ProDucking.Sensitivities, "sensitivity"),
+            Amount = Preset(setup.Amount, Devices.ProDucking.Amounts, "amount"),
+            Speed = Preset(setup.Speed, Devices.ProDucking.Speeds, "speed"),
+            Processing = Processing(),
+        };
+
+        string Preset(string value, IReadOnlyList<string> choices, string field)
+        {
+            if (choices.Contains(value)) return value;
+            notes.Add($"ducking.{field}: invalid preset; reset to medium");
+            return Devices.ProDucking.Medium;
+        }
+
+        string Processing()
+        {
+            if (MicEqProcessing.IsValid(setup.Processing)) return setup.Processing;
+            notes.Add("ducking.processing: must be device or software; reset to device");
+            return Devices.ProDucking.Device;
+        }
+    }
 
     /// <summary>
     /// The strips bound to a source. A file written before the per-strip

@@ -147,6 +147,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             if (_built) TearDownLocked();
             _config = config;
+            _duckingSetup = _duckingSetup is null ? DuckingSetup.Default(config) : DuckingSetup.Prune(_duckingSetup, config);
 
             // A crashed or killed daemon never runs its teardown, and loading
             // over its leftover nodes fails the whole build with a name
@@ -1546,6 +1547,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 Inserts = CopyInsertsLocked(),
                 Eq = new Dictionary<string, MicEq>(_eq, StringComparer.Ordinal),
                 EqProcessing = new Dictionary<string, string>(_eqProcessing, StringComparer.Ordinal),
+                Ducking = DuckingSetupLocked().Copy(),
                 Appearance = ExportAppearanceLocked(),
             };
         }
@@ -1594,7 +1596,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         lock (_gate)
         {
-            if (!_built) return;
+            _duckingSetup = DuckingSetup.Prune(s.Ducking ?? DuckingSetup.Default(_config), _config);
+            if (!_built) { SyncDuckingLocked(); return; }
             if (s.MonitorMuted) SetMonitorMuted(true);
             SetInputBindings(s.InputBindings);
             RestoreAppearanceLocked(s.Appearance);
@@ -1691,6 +1694,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 ApplyChainsLocked(s.Inserts.Count > 0 ? s.Inserts : null, absentMixesEmpty: false, rebuildAll);
             SyncEqStagesLocked();
             UpdateMixLatencyLocked();
+            SyncDuckingLocked();
         }
     }
 
@@ -1714,6 +1718,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 SoftClipGuard = _softClipGuard,
                 Inserts = SceneInsertsLocked(),
                 Eq = SceneEqLocked(),
+                Ducking = DuckingSetupLocked().ToScene(),
             };
         }
     }
@@ -1740,7 +1745,14 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         lock (_gate)
         {
-            if (!_built) return;
+            SavedMixerValidation.Validate(s);
+            if (s.Ducking is { } ducking)
+            {
+                DuckingSetup previous = DuckingSetupLocked();
+                _duckingSetup = DuckingSetup.Prune(DuckingSetup.FromScene(ducking, previous.Processing), _config);
+                if (_duckingSetup.Enabled && !previous.Enabled) _duckingFailed.Clear();
+            }
+            if (!_built) { SyncDuckingLocked(); return; }
 
             foreach ((string mixId, double vol) in s.MixVolumes)
                 if (_mixVolume.ContainsKey(mixId)) _mixVolume[mixId] = Math.Clamp(vol, 0, MixVolumeMaximumLocked(mixId));
@@ -1800,6 +1812,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (chainsChanged || s.Inserts is not null)
                 ApplyChainsLocked(s.Inserts, absentMixesEmpty: true, rebuildAll: false);
             if (s.Eq is not null) SyncEqStagesLocked();
+            SyncDuckingLocked();
         }
         if (s.OutputVolume is double v) SetOutputVolume(v);
     }

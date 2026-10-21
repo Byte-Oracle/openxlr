@@ -124,6 +124,7 @@ public sealed partial class Mixer
             if (!ReferenceEquals(original, channel))
                 _pw.Note($"Capture input {id} now takes mono port 1 of {source}.");
             _meters.Add($"ch:{id}", channel.SinkName);
+            SyncDuckingLocked();
         }
     }
 
@@ -159,6 +160,7 @@ public sealed partial class Mixer
                 try { ReloadChannelSinkLocked(channel with { Name = name }, channel.Name); }
                 finally { SyncDuckBusesLocked(); }
             }
+            SyncDuckingLocked();
         }
     }
 
@@ -232,6 +234,7 @@ public sealed partial class Mixer
             // Before the unload, which can fail: a removed key must not stay
             // in the plan, and its stages go before their key input does.
             PruneDuckPlanLocked();
+            SyncDuckingLocked();
             if (loaded)
             {
                 try { _pw.UnloadModule(module); }
@@ -310,6 +313,7 @@ public sealed partial class Mixer
                 throw;
             }
             _meters.Add($"mix:{id}", mix.SinkName);
+            SyncDuckingLocked();
         }
     }
 
@@ -335,6 +339,7 @@ public sealed partial class Mixer
             try { PersistLocked(persist); }
             catch { _config = previous; throw; }
             _renamedSinceBuild = true;
+            SyncDuckingLocked();
         }
     }
 
@@ -384,6 +389,7 @@ public sealed partial class Mixer
             PruneDuckPlanLocked();   // the bus goes before the mix it feeds
             if (previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id)))
                 SetMonitorOutputsLocked([.. _monitorOutputs]);
+            SyncDuckingLocked();
             RemoveMixChainLocked(key);
             _appearance.Remove("mix:" + id);
             _meters.Remove($"mix:{id}");
@@ -412,6 +418,7 @@ public sealed partial class Mixer
             _config = _config.WithOrder(channels, mixes);
             try { PersistLocked(persist); }
             catch { _config = previous; throw; }
+            SyncDuckingLocked();
         }
     }
 
@@ -428,7 +435,9 @@ public sealed partial class Mixer
 
     private void PersistLocked(Func<MixerSettings, string?> persist)
     {
-        if (persist(ExportSettings()) is string error) throw new IOException(error);
+        DuckingSetup next = DuckingSetup.Prune(DuckingSetupLocked(), _config);
+        if (persist(ExportSettings() with { Ducking = next.Copy() }) is string error) throw new IOException(error);
+        _duckingSetup = next;
     }
 
     /// <summary>

@@ -103,6 +103,9 @@ public sealed record MixerSettings
     /// </summary>
     public Dictionary<string, string> EqProcessing { get; init; } = [];
 
+    /// <summary>The ducking setup and processing choice. Absent takes the layout's default targets, switched off.</summary>
+    public DuckingSetup? Ducking { get; init; }
+
     /// <summary>
     /// Every plugin the saved chains name. A client that reconnects while the
     /// daemon is still starting asks for the catalogue before the chains are
