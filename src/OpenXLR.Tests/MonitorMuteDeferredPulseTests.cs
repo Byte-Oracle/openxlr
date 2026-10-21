@@ -1025,6 +1025,29 @@ public sealed class MonitorMuteDeferredPulseTests
     }
 
     [Fact]
+    public void AQueuedHardwareWriteUsesItsNativeReadbackWithoutProbingEveryOutputAgain()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external", "external2"]);
+        fixture.DeferNextPulse("external");
+        fixture.Mixer.SetMonitorMuted(true);
+        // A native write may apply even when its helper reported failure.
+        fixture.SetNative("external", true);
+        fixture.SetNative("external2", true);
+        fixture.DeferNextPulse("external", readFailure: true);
+        fixture.DeferNextPulse("external2", readFailure: true);
+        int before = fixture.Calls.Length;
+
+        fixture.Sweep();
+
+        Assert.Single(fixture.Calls[before..], call => call == "--format=json list sinks");
+        Assert.DoesNotContain(fixture.Calls[before..], call => call.StartsWith("get-sink-mute external", StringComparison.Ordinal));
+        Assert.True(fixture.Mixer.MonitorMuted);
+        Assert.True(fixture.Native("external"));
+        Assert.True(fixture.Native("external2"));
+    }
+
+    [Fact]
     public void ReleasingSeveralOutputsUsesOneSnapshotAndStopsAfterTheFirstWriteRefusal()
     {
         using var fixture = new IndependentSinks();

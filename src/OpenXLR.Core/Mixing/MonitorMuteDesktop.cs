@@ -391,15 +391,21 @@ public sealed partial class Mixer
         foreach ((string name, (bool muted, int failures, long retryAt)) in _desktopMuteResets.ToArray())
         {
             if (!canReset || !selected.Contains(name) && _monitorOutputMutes.ContainsKey(name)) continue;
-            if (!observed.TryGetValue(name, out bool current))
-            {
-                _desktopMuteResets[name] = (muted, 0, 0);
-                continue;
-            }
+            if (!observed.TryGetValue(name, out bool current)) continue;
             if (current == muted)
             {
-                try { current = _pw.GetSinkMuted(name); }
-                catch (InvalidOperationException) { continue; }
+                if (!observedNative.Contains(name))
+                {
+                    if (Clock() < retryAt) continue;
+                    try { current = _pw.GetSinkMuted(name); }
+                    catch (InvalidOperationException)
+                    {
+                        int count = Math.Min(failures + 1, 8);
+                        _desktopMuteResets[name] = (muted, count, Clock() + DesktopMuteRetryDelay(count));
+                        canReset = false;
+                        continue;
+                    }
+                }
                 if (current == muted)
                 {
                     _desktopMuteResets.Remove(name);
