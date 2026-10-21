@@ -104,6 +104,7 @@ public sealed class WebSocketHub
             Warning = string.Join(" ", new[] { _devices.Warning, _waveInterfaces?.Warning, _mixer.GraphWarning, _mixer.InputWarning, _mixer.PersistenceWarning, profileWarning }.Where(w => w is not null)) is { Length: > 0 } w ? w : null,
             ActiveProfile = _activeProfile.TryGetValue(deviceId, out string? ap) ? ap : null,
             Mixer = _mixer.Snapshot(),
+            Ducking = _mixer.Ducking(),
             MixerWaiting = _mixer.WaitingForAudio,
             Devices = _mixer.Devices(),
             Profiles = profiles,
@@ -364,14 +365,6 @@ public sealed class WebSocketHub
             case "set":
                 error = cmd.Control is null ? "set: missing 'control'" : _devices.Apply(cmd.Control, cmd.Value);  // broadcasts on success
                 break;
-            case "setDucking":
-                error = CommandValidation.CheckDucking(cmd, out OpenXLR.Core.Devices.DuckingChange? ducking)
-                        ?? _devices.SetDucking(ducking!);   // broadcasts on success
-                break;
-            case "setDuckingProcessing":
-                error = CommandValidation.CheckDuckingProcessing(cmd)
-                        ?? _devices.SetDucking(new OpenXLR.Core.Devices.DuckingChange(Processing: cmd.Value.GetString()));
-                break;
             case "createCaptureChannel":
             case "createChannel":
             case "renameChannel":
@@ -417,6 +410,8 @@ public sealed class WebSocketHub
             case "setEqEnabled":
             case "setEqBand":
             case "setEqProcessing":
+            case "setDucking":
+            case "setDuckingProcessing":
                 error = _mixer.Apply(cmd);                     // broadcasts on success
                 stateOnError = true;
                 break;

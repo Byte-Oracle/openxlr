@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using OpenXLR.Core;
 using OpenXLR.Core.Devices;
+using OpenXLR.Core.Mixing;
 using OpenXLR.Daemon;
 using static OpenXLR.Tests.ProDuckingTests;
 
@@ -12,9 +13,12 @@ namespace OpenXLR.Tests;
 /// modelled as its blocks: both blocks read fresh and written only when
 /// they change, 0x0008 first, on the Pro's bank and with no commit; the
 /// Pro's existing block 0x0001 writes carrying the ducking fields through;
-/// the saved choice written on every connect, which clears what Wave Link
-/// left while OpenXLR's is off; a change by another program written back no
-/// sooner than the spacing and said once; and nothing on a model without it.
+/// nothing written before the mixer's first post; a post pending at once,
+/// written by the loop and verified by the poll; the last target posted, or
+/// off, written on every connect, which clears what Wave Link left; a
+/// change by another program written back no sooner than the spacing and
+/// said once; a target the unit does not keep failed after two misses; and
+/// nothing on a model without it.
 /// </summary>
 [Collection("xdg-config")]
 public sealed class ProDuckingDeviceTests
@@ -52,7 +56,7 @@ public sealed class ProDuckingDeviceTests
         Assert.True(pro.Capabilities.Ducking);
         unit.Calls.Clear();
 
-        DuckingWrite write = pro.SetDucking(new DuckingSettings { Enabled = true, Targets = ["monitor"] });
+        DuckingWrite write = pro.SetDucking(On(ProReturnPairs.Monitor));
         Assert.True(write.Wrote8 && write.Wrote1);
         // Medium presets in every entry; pairs 5, 6 and 7 (entries 9 to 11, flags at 78, 86, 94) let go.
         Assert.StartsWith("0 fd->f4, 1 06->0c, 2 64->50, 4 d0->b0, 5 07->04, 8 fd->f4", write.Change8);
@@ -67,7 +71,7 @@ public sealed class ProDuckingDeviceTests
         Assert.Equal([1], pro.ReadDucking()!.Pairs);
 
         unit.Calls.Clear();
-        Assert.False(pro.SetDucking(new DuckingSettings { Enabled = true, Targets = ["monitor"] }).Wrote);
+        Assert.False(pro.SetDucking(On(ProReturnPairs.Monitor)).Wrote);
         Assert.Empty(Writes(unit));
         Assert.Equal(2, unit.Calls.Count);   // the two reads
     }
@@ -78,7 +82,7 @@ public sealed class ProDuckingDeviceTests
         var unit = LeftByWaveLink();
         using var pro = new WaveXlrProDevice(unit);
         pro.Connect();
-        pro.SetDucking(new DuckingSettings { Enabled = true, Targets = ["monitor", "aux"] });
+        pro.SetDucking(On(ProReturnPairs.Monitor, ProReturnPairs.Aux));
         byte[] ducked = Fields(unit.Blocks[0x0001]);
         Assert.Equal(new byte[] { 0x5d, 0x5d, 0x5d, 0x5d, 0x5d, 0x5d }, ducked);
 
@@ -99,7 +103,7 @@ public sealed class ProDuckingDeviceTests
         Assert.Equal((150, 0x1e, 0x1e, 0x1e), (routed[0], routed[90], routed[91], routed[93]));
 
         // And ducking off keeps what those writers set.
-        pro.SetDucking(DuckingSettings.Default);
+        pro.SetDucking(ProDuckingTarget.Off);
         byte[] after = unit.Blocks[0x0001];
         for (int i = 0; i < after.Length; i++)
             if (!ProDucking.MixFieldOffsets.Any(at => i == at || i == at + 1)) Assert.Equal(routed[i], after[i]);
@@ -126,12 +130,15 @@ public sealed class ProDuckingDeviceTests
 
     // --- the device manager ---
 
-    private static T WithConfigDir<T>(Func<T> body)
+    private const string Unit = "0fd9:00b4";
+
+    /// <summary>The device manager keeps last settings under the configuration directory: a private one per test.</summary>
+    private static void WithConfigDir(Action body)
     {
         string dir = Directory.CreateTempSubdirectory("openxlr-ducking-").FullName;
         string? previous = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
         Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", dir);
-        try { return body(); }
+        try { body(); }
         finally
         {
             Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previous);
@@ -139,81 +146,143 @@ public sealed class ProDuckingDeviceTests
         }
     }
 
+    private static DeviceManager Manager(Func<IReadOnlyList<IAudioDevice>> detect, ManualTime time, DeviceEqWriterTests.Lines log)
+    {
+        var manager = new DeviceManager(log, new ConfigurationBuilder().Build(), detect, time: time);
+        manager.SweepOnce();
+        return manager;
+    }
+
     private static DeviceManager Manager(IAudioDevice unit, ManualTime time, DeviceEqWriterTests.Lines log)
     {
-        var manager = new DeviceManager(log, new ConfigurationBuilder().Build(), () => [unit], time: time);
-        manager.SweepOnce();
+        DeviceManager manager = Manager(() => [unit], time, log);
         Assert.True(unit.Connected);
         return manager;
     }
 
-    private static DuckingChange Change(string json)
+    private static int Raised(DeviceManager manager, Action act)
     {
-        using JsonDocument doc = JsonDocument.Parse(json);
-        Assert.Null(CommandValidation.CheckDucking(new Command { Cmd = "setDucking", Value = doc.RootElement.Clone() }, out DuckingChange? change));
-        return change!;
+        int raised = 0;
+        void Count() => Interlocked.Increment(ref raised);
+        manager.DuckingStatusChanged += Count;
+        try { act(); }
+        finally { manager.DuckingStatusChanged -= Count; }
+        return raised;
     }
 
     [Fact]
-    public void AConnectWithDuckingOffClearsWhatWaveLinkLeft() => WithConfigDir(() =>
+    public void NothingIsWrittenBeforeTheMixersFirstPost() => WithConfigDir(() =>
     {
         var unit = LeftByWaveLink();
         var log = new DeviceEqWriterTests.Lines();
         using DeviceManager manager = Manager(new WaveXlrProDevice(unit), new ManualTime(), log);
+        manager.SweepOnce();
 
-        Assert.Equal(Block8(LowLowSlowBytes, IdleFlags), unit.Blocks[0x0008]);
-        Assert.Equal(new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 }, Fields(unit.Blocks[0x0001]));
-        Assert.Contains(log.Written, line => line.StartsWith("ducking (connect) on Elgato Wave XLR Pro: off. Block 0x0008 written: ", StringComparison.Ordinal)
-            && line.Contains("Block 0x0001 written: 16 5d->55, 17 fd->55, 34 5d->55", StringComparison.Ordinal));
-
-        StateMessage state = manager.Snapshot();
-        Assert.True(state.Capabilities!.Ducking);
-        DuckingState ducking = state.Ducking!;
-        Assert.False(ducking.Enabled);
-        Assert.Equal(("xlr1", "medium", "device", "device"), (ducking.Key, ducking.Sensitivity, ducking.Processing, ducking.Backend));
-        Assert.Equal(["monitor"], ducking.Targets);
-        DuckingDevice device = ducking.Device!;
-        Assert.Equal(("0fd9:00b4", "Wave XLR Pro", true, null, null), (device.Unit, device.Name, device.Ready, device.Reason, device.Note));
-        Assert.True(device.Held);
-        Assert.Empty(device.Readback!.Pairs);
-        Assert.Equal([4, 7, 8], device.Readback.Entries);
-        // Off does not write presets, so the unit still holds Wave Link's.
-        Assert.Equal("low", device.Readback.Sensitivity);
-        return 0;
+        // Hardware-control mode never posts, so Wave Link's ducking stays.
+        Assert.DoesNotContain((ushort)0x0008, Writes(unit));
+        Assert.Equal(new byte[] { 0x5d, 0xfd, 0x5d, 0xfd, 0x5d, 0xfd }, Fields(unit.Blocks[0x0001]));
+        Assert.Equal(Block8(LowLowSlowBytes, WaveLinkFlags), unit.Blocks[0x0008]);
+        Assert.DoesNotContain(log.Written, line => line.StartsWith("ducking (", StringComparison.Ordinal));
+        DeviceDuckingStatus status = manager.DuckingStatus(Unit);
+        Assert.Equal(DeviceDuckingPhase.None, status.Phase);
+        Assert.Equal([1, 5, 6, 7], status.Readback!.Pairs);
+        Assert.Equal(("low", "low", "slow"), (status.Readback.Sensitivity, status.Readback.Amount, status.Readback.Speed));
+        (string id, UnitDuckingSupport support) = manager.PublishedDuckingSupport!.Value;
+        Assert.Equal((Unit, "Wave XLR Pro", true, null), (id, support.Name, support.Ready, support.Reason));
+        // The state's ducking is the mixer's now; the device half carries none.
+        Assert.Null(manager.Snapshot().Ducking);
+        Assert.True(manager.Snapshot().Capabilities!.Ducking);
     });
 
     [Fact]
-    public void TheChoiceIsSavedAndEveryConnectRestoresIt() => WithConfigDir(() =>
+    public void APostIsPendingAtOnceWrittenByTheLoopAndVerifiedByThePoll() => WithConfigDir(() =>
+    {
+        var unit = LeftByWaveLink();
+        var log = new DeviceEqWriterTests.Lines();
+        using DeviceManager manager = Manager(new WaveXlrProDevice(unit), new ManualTime(), log);
+        unit.Calls.Clear();
+
+        manager.PostDucking(Unit, On(ProReturnPairs.Monitor), "XLR 1");
+        // A post does no USB work: it waits for the loop.
+        Assert.Empty(unit.Calls);
+        Assert.Equal(new DeviceDuckingStatus(DeviceDuckingPhase.Pending, On(ProReturnPairs.Monitor)), manager.DuckingStatus(Unit) with { Readback = null });
+
+        Assert.True(Raised(manager, manager.SweepOnce) > 0);
+        Assert.Equal(new ushort[] { 0x0008, 0x0001 }, Writes(unit));
+        DeviceDuckingStatus status = manager.DuckingStatus(Unit);
+        Assert.Equal(DeviceDuckingPhase.Verified, status.Phase);
+        Assert.Equal(On(ProReturnPairs.Monitor), status.Value);
+        Assert.Equal([1], status.Readback!.Pairs);
+        Assert.Equal(("medium", "medium", "medium"), (status.Readback.Sensitivity, status.Readback.Amount, status.Readback.Speed));
+        Assert.Contains(log.Written, line => line.StartsWith(
+            "ducking (update) on Elgato Wave XLR Pro: on, pairs 1, sensitivity medium, amount medium, speed medium, keyed by XLR 1. Block 0x0008 written: ",
+            StringComparison.Ordinal) && line.Contains("Block 0x0001 written: 17 fd->55, 35 fd->55, 53 fd->55.", StringComparison.Ordinal));
+
+        // The same target again is not written; another unit's post is dropped.
+        unit.Calls.Clear();
+        manager.PostDucking(Unit, On(ProReturnPairs.Monitor), "XLR 1");
+        manager.PostDucking("0fd9:00b4@elsewhere", ProDuckingTarget.Off, "XLR 1");
+        manager.SweepOnce();
+        Assert.Empty(Writes(unit));
+        Assert.Equal(DeviceDuckingPhase.Verified, manager.DuckingStatus(Unit).Phase);
+        Assert.Equal(DeviceDuckingStatus.None, manager.DuckingStatus("0fd9:00b4@elsewhere"));
+
+        // Off lets every pair go and leaves the presets as they were.
+        manager.PostDucking(Unit, ProDuckingTarget.Off with { Pairs = new HashSet<int> { 1 } }, "XLR 1");
+        manager.SweepOnce();
+        Assert.Empty(manager.DuckingStatus(Unit).Readback!.Pairs);
+        Assert.Contains(log.Written, line => line.StartsWith("ducking (update) on Elgato Wave XLR Pro: off. ", StringComparison.Ordinal));
+    });
+
+    [Fact]
+    public void EveryConnectWritesTheLastTargetPostedOrOff() => WithConfigDir(() =>
     {
         var unit = LeftByWaveLink();
         var log = new DeviceEqWriterTests.Lines();
         var time = new ManualTime();
-        using (DeviceManager manager = Manager(new WaveXlrProDevice(unit), time, log))
+        List<IAudioDevice> attached = [new WaveXlrProDevice(unit)];
+        using DeviceManager manager = Manager(() => attached, time, log);
+        var target = new ProDuckingTarget(true, "high", "low", "fast", new HashSet<int> { 1, 5 });
+        manager.PostDucking(Unit, target, "XLR 1");
+        manager.SweepOnce();
+        Assert.Equal(DeviceDuckingPhase.Verified, manager.DuckingStatus(Unit).Phase);
+
+        void Replug()
         {
-            Assert.Null(manager.SetDucking(Change("""{"enabled":true,"targets":["monitor","aux"],"sensitivity":"high","amount":"high","speed":"fast"}""")));
-            Assert.Null(manager.SetDucking(Change("""{"amount":"low"}""")));
-            Assert.True(File.Exists(Path.Combine(OpenXlrPaths.ConfigDir, "devices", "0fd9-00b4", "ducking.json")));
-            DuckingState state = manager.Snapshot().Ducking!;
-            Assert.True(state.Enabled && state.Device!.Held);
-            DuckingReadback read = state.Device.Readback!;
-            Assert.Equal(("high", "low", "fast"), (read.Sensitivity, read.Amount, read.Speed));
-            Assert.Equal([1, 5], read.Pairs);
-            Assert.Contains(log.Written, line => line.StartsWith("ducking (setDucking) on Elgato Wave XLR Pro: on, key xlr1, targets monitor aux, sensitivity high, amount low, speed fast.", StringComparison.Ordinal));
+            attached.Clear();
+            unit.Close();
+            manager.SweepOnce();
+            Assert.False(manager.Snapshot().Connected);
+            Assert.Equal(DeviceDuckingStatus.None, manager.DuckingStatus(Unit));
+            // Wave Link had the unit meanwhile and put its own back.
+            unit.Blocks[0x0001] = Block1(0x5d, 0xfd);
+            unit.Blocks[0x0008] = Block8(LowLowSlowBytes, WaveLinkFlags);
+            attached.Add(new WaveXlrProDevice(unit));
+            unit.Calls.Clear();
+            manager.SweepOnce();
+            Assert.True(manager.Snapshot().Connected);
         }
 
-        // Wave Link had the unit meanwhile and put its own back.
-        unit.Blocks[0x0001] = Block1(0x5d, 0xfd);
-        unit.Blocks[0x0008] = Block8(LowLowSlowBytes, WaveLinkFlags);
-        using (DeviceManager manager = Manager(new WaveXlrProDevice(unit), time, log))
-        {
-            DuckingReadback held = manager.Snapshot().Ducking!.Device!.Readback!;
-            Assert.Equal([1, 5], held.Pairs);
-            Assert.Equal(("high", "low", "fast"), (held.Sensitivity, held.Amount, held.Speed));
-            byte[] flags = (byte[])IdleFlags.Clone();
-            flags[5] = flags[9] = 0x01;
-            Assert.Equal(Block8([0xe8, 0x06, 0x1e, 0x00, 0xc8, 0x00], flags), unit.Blocks[0x0008]);
-        }
-        return 0;
+        Replug();
+        Assert.Equal(new ushort[] { 0x0008, 0x0001 }, Writes(unit));
+        DeviceDuckingStatus held = manager.DuckingStatus(Unit);
+        Assert.Equal((DeviceDuckingPhase.Verified, target), (held.Phase, held.Value));
+        Assert.Equal([1, 5], held.Readback!.Pairs);
+        byte[] flags = (byte[])IdleFlags.Clone();
+        flags[5] = flags[9] = 0x01;
+        Assert.Equal(Block8([0xe8, 0x06, 0x1e, 0x00, 0xc8, 0x00], flags), unit.Blocks[0x0008]);
+        Assert.Contains(log.Written, line => line.StartsWith(
+            "ducking (connect) on Elgato Wave XLR Pro: on, pairs 1 5, sensitivity high, amount low, speed fast, keyed by XLR 1.", StringComparison.Ordinal));
+
+        // With off posted, the connect clears what Wave Link left.
+        manager.PostDucking(Unit, ProDuckingTarget.Off, "XLR 1");
+        manager.SweepOnce();
+        Replug();
+        Assert.Equal(Block8(LowLowSlowBytes, IdleFlags), unit.Blocks[0x0008]);
+        Assert.Equal(new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 }, Fields(unit.Blocks[0x0001]));
+        Assert.Equal((DeviceDuckingPhase.Verified, ProDuckingTarget.Off), (manager.DuckingStatus(Unit).Phase, manager.DuckingStatus(Unit).Value));
+        Assert.Contains(log.Written, line => line.StartsWith("ducking (connect) on Elgato Wave XLR Pro: off. Block 0x0008 written: ", StringComparison.Ordinal)
+            && line.Contains("Block 0x0001 written: 16 5d->55, 17 fd->55, 34 5d->55", StringComparison.Ordinal));
     });
 
     [Fact]
@@ -223,6 +292,8 @@ public sealed class ProDuckingDeviceTests
         var log = new DeviceEqWriterTests.Lines();
         var time = new ManualTime();
         using DeviceManager manager = Manager(new WaveXlrProDevice(unit), time, log);
+        manager.PostDucking(Unit, ProDuckingTarget.Off, "XLR 1");
+        manager.SweepOnce();
         byte[] off8 = unit.Blocks[0x0008], off1 = unit.Blocks[0x0001];
 
         void Meddle()
@@ -236,134 +307,85 @@ public sealed class ProDuckingDeviceTests
         Assert.Equal(off8, unit.Blocks[0x0008]);
         Assert.Equal(off1, unit.Blocks[0x0001]);
         Assert.Equal(new ushort[] { 0x0008, 0x0001 }, Writes(unit));
+        manager.SweepOnce();
+        Assert.Equal(DeviceDuckingPhase.Verified, manager.DuckingStatus(Unit).Phase);
 
         Meddle();
         unit.Calls.Clear();
         for (int i = 0; i < 49; i++) { time.Advance(TimeSpan.FromMilliseconds(100)); manager.SweepOnce(); }
         Assert.Empty(Writes(unit));
-        Assert.False(manager.Snapshot().Ducking!.Device!.Held);
+        // Not held while it waits out the spacing.
+        Assert.Equal(DeviceDuckingPhase.Pending, manager.DuckingStatus(Unit).Phase);
         time.Advance(TimeSpan.FromMilliseconds(100));
         manager.SweepOnce();
         Assert.Equal(new ushort[] { 0x0008, 0x0001 }, Writes(unit));
-        Assert.Single(log.Written, line => line.Contains("no longer matches OpenXLR's", StringComparison.Ordinal));
-        Assert.Equal(3, log.Written.Count(line => line.StartsWith("ducking (", StringComparison.Ordinal)));
-        Assert.True(manager.Snapshot().Ducking!.Device!.Held);
-        return 0;
+        Assert.Single(log.Written, line => line.Contains("no longer matches OpenXLR's (off)", StringComparison.Ordinal));
+        Assert.Equal(2, log.Written.Count(line => line.StartsWith("ducking (restore)", StringComparison.Ordinal)));
+        manager.SweepOnce();
+        Assert.Equal(DeviceDuckingPhase.Verified, manager.DuckingStatus(Unit).Phase);
     });
 
     [Fact]
-    public void ASetupTheUnitCannotRunIsWrittenAsOffAndSaysWhy() => WithConfigDir(() =>
+    public void ATargetTheUnitDoesNotKeepFailsAfterTwoMissesAndANewPostTriesAgain() => WithConfigDir(() =>
     {
         var unit = LeftByWaveLink();
         var log = new DeviceEqWriterTests.Lines();
         using DeviceManager manager = Manager(new WaveXlrProDevice(unit), new ManualTime(), log);
-        Assert.Null(manager.SetDucking(Change("""{"enabled":true,"targets":["monitor"]}""")));
-        Assert.Equal([1], manager.Snapshot().Ducking!.Device!.Readback!.Pairs);
+        // The unit stops answering its ducking block; everything else still answers.
+        byte[] block8 = unit.Blocks[0x0008];
+        unit.Blocks.Remove(0x0008);
+        manager.SweepOnce();
+        Assert.Equal(("unsupportedBlock", false), (manager.PublishedDuckingSupport!.Value.Support.Reason, manager.PublishedDuckingSupport!.Value.Support.Ready));
 
-        // Keyed by XLR 2: saved as asked, but the unit is given ducking off.
-        Assert.Null(manager.SetDucking(Change("""{"key":"xlr2"}""")));
-        DuckingState state = manager.Snapshot().Ducking!;
-        Assert.True(state.Enabled);
-        Assert.Equal("xlr2", state.Key);
-        Assert.Null(state.Backend);
-        Assert.False(state.Device!.Ready);
-        Assert.Equal("keyNotSupported", state.Device.Reason);
-        Assert.Equal("The Wave XLR Pro ducks only with XLR 1 as the key, so it does not run a setup keyed by XLR 2.", state.Device.Note);
-        Assert.True(state.Device.Held);
-        Assert.Empty(state.Device.Readback!.Pairs);
-        Assert.Equal(new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 }, Fields(unit.Blocks[0x0001]));
-        Assert.Contains(log.Written, line => line.Contains("speed medium, written as off (keyNotSupported).", StringComparison.Ordinal));
-        Assert.Equal("xlr2", DeviceStateStore.LoadDucking("0fd9:00b4")!.Key);
+        manager.PostDucking(Unit, On(ProReturnPairs.Monitor), "XLR 1");
+        manager.SweepOnce();
+        Assert.Equal(DeviceDuckingPhase.Pending, manager.DuckingStatus(Unit).Phase);
+        Assert.True(Raised(manager, manager.SweepOnce) > 0);
+        DeviceDuckingStatus failed = manager.DuckingStatus(Unit);
+        Assert.Equal(DeviceDuckingPhase.Failed, failed.Phase);
+        Assert.StartsWith(DeviceManager.DuckingNotKept, failed.Reason);
+        Assert.Contains(log.Written, line => line.Contains(DeviceManager.DuckingNotKept, StringComparison.Ordinal));
+        manager.SweepOnce();
+        Assert.Equal(DeviceDuckingPhase.Failed, manager.DuckingStatus(Unit).Phase);
 
-        // Back to XLR 1: the unit ducks again.
-        Assert.Null(manager.SetDucking(Change("""{"key":"xlr1"}""")));
-        Assert.Equal(("device", true), (manager.Snapshot().Ducking!.Backend, manager.Snapshot().Ducking!.Device!.Ready));
-        Assert.Equal([1], manager.Snapshot().Ducking!.Device!.Readback!.Pairs);
-        return 0;
+        // The block answers again and a new post is written and verified.
+        unit.Blocks[0x0008] = block8;
+        manager.SweepOnce();
+        Assert.True(manager.PublishedDuckingSupport!.Value.Support.Ready);
+        manager.PostDucking(Unit, On(ProReturnPairs.Monitor), "XLR 1");
+        Assert.Equal(DeviceDuckingPhase.Pending, manager.DuckingStatus(Unit).Phase);
+        manager.SweepOnce();
+        Assert.Equal(DeviceDuckingPhase.Verified, manager.DuckingStatus(Unit).Phase);
     });
 
     [Fact]
-    public void AModelWithoutDuckingHasNoneAndRefusesTheCommand() => WithConfigDir(() =>
+    public void AModelWithoutDuckingTakesNoPost() => WithConfigDir(() =>
     {
         var usb = new Mk2HardwareEqTests.Unit();
         using DeviceManager manager = Manager(new XlrDockMk2Device(usb), new ManualTime(), new DeviceEqWriterTests.Lines());
         StateMessage state = manager.Snapshot();
         Assert.False(state.Capabilities!.Ducking);
         Assert.Null(state.Ducking);
-        Assert.Equal("setDucking: the active device has no hardware ducking", manager.SetDucking(Change("""{"enabled":true}""")));
+        Assert.Null(manager.PublishedDuckingSupport);
+        manager.PostDucking("0fd9:00c7", On(ProReturnPairs.Monitor), "XLR 1");
+        manager.SweepOnce();
         Assert.DoesNotContain(usb.Calls, c => c.Block == 0x0008);
-        Assert.False(Directory.Exists(Path.Combine(OpenXlrPaths.ConfigDir, "devices", "0fd9-00c7")));
-        return 0;
+        Assert.Equal(DeviceDuckingStatus.None, manager.DuckingStatus("0fd9:00c7"));
     });
 
     [Fact]
-    public void ASavedFileTheUnitCannotTakeIsDuckingOff() => WithConfigDir(() =>
+    public void ADuckingFileFromTheHardwareBuildIsIgnored() => WithConfigDir(() =>
     {
-        string dir = Path.Combine(OpenXlrPaths.ConfigDir, "devices", "0fd9-00b4");
-        Directory.CreateDirectory(dir);
-        File.WriteAllText(Path.Combine(dir, "ducking.json"), """{"enabled":true,"key":"xlr3","targets":["monitor"]}""");
-        Assert.Null(DeviceStateStore.LoadDucking("0fd9:00b4"));
-        File.WriteAllText(Path.Combine(dir, "ducking.json"), """{"enabled":true,"processing":"software"}""");
-        Assert.Null(DeviceStateStore.LoadDucking("0fd9:00b4"));
-        File.WriteAllText(Path.Combine(dir, "ducking.json"), "not json");
-        Assert.Null(DeviceStateStore.LoadDucking("0fd9:00b4"));
-        var saved = new DuckingSettings { Enabled = true, Targets = ["aux"], Speed = "slow" };
-        DeviceStateStore.SaveDucking("0fd9:00b4", saved);
-        Assert.Equal(saved, DeviceStateStore.LoadDucking("0fd9:00b4"));
-        return 0;
+        string devices = Path.Combine(OpenXlrPaths.ConfigDir, "devices", "0fd9-00b4");
+        Directory.CreateDirectory(devices);
+        File.WriteAllText(Path.Combine(devices, "ducking.json"), """{"enabled":true,"key":"xlr1","targets":["monitor","aux"]}""");
+        var unit = LeftByWaveLink();
+        using DeviceManager manager = Manager(new WaveXlrProDevice(unit), new ManualTime(), new DeviceEqWriterTests.Lines());
+        manager.SweepOnce();
+        Assert.DoesNotContain((ushort)0x0008, Writes(unit));
+        Assert.Equal(DeviceDuckingPhase.None, manager.DuckingStatus(Unit).Phase);
+        manager.PostDucking(Unit, ProDuckingTarget.Off, "XLR 1");
+        manager.SweepOnce();
+        Assert.Equal("""{"enabled":true,"key":"xlr1","targets":["monitor","aux"]}""", File.ReadAllText(Path.Combine(devices, "ducking.json")));
     });
-
-    // --- the command ---
-
-    [Theory]
-    [InlineData("""{"enabled":true}""", true, null, null, null)]
-    [InlineData("""{"targets":[]}""", null, "", null, null)]
-    [InlineData("""{"targets":["aux","monitor"],"speed":"fast"}""", null, "monitor aux", null, "fast")]
-    [InlineData("""{"key":"xlr1","sensitivity":"low","amount":"high"}""", null, null, "low", null)]
-    [InlineData("""{"key":"xlr2"}""", null, null, null, null)]
-    public void AWellFormedSetDuckingNamesOnlyWhatItCarries(string value, bool? enabled, string? targets, string? sensitivity, string? speed)
-    {
-        DuckingChange change = Change(value);
-        Assert.Equal(enabled, change.Enabled);
-        Assert.Equal(targets, change.Targets is null ? null : string.Join(" ", ProDucking.Ordered(change.Targets)));
-        Assert.Equal(sensitivity, change.Sensitivity);
-        Assert.Equal(speed, change.Speed);
-    }
-
-    [Theory]
-    [InlineData("true", "value must be an object")]
-    [InlineData("{}", "value needs at least one of")]
-    [InlineData("""{"enabled":"yes"}""", "enabled must be a boolean")]
-    [InlineData("""{"key":"xlr3"}""", "key must be xlr1 or xlr2")]
-    [InlineData("""{"processing":"device"}""", "unknown field 'processing'")]
-    [InlineData("""{"targets":"monitor"}""", "targets must be a list")]
-    [InlineData("""{"targets":["monitor","monitor"]}""", "targets must be distinct")]
-    [InlineData("""{"targets":["game"]}""", "targets must be distinct entries of monitor and aux")]
-    [InlineData("""{"targets":["monitor","aux","monitor"]}""", "targets must be a list")]
-    [InlineData("""{"sensitivity":"medium","amount":"slow"}""", "amount must be low, medium or high")]
-    [InlineData("""{"speed":"high"}""", "speed must be slow, medium or fast")]
-    [InlineData("""{"sensitivity":12}""", "sensitivity must be low, medium or high")]
-    [InlineData("""{"enable":true}""", "unknown field 'enable'")]
-    public void AMalformedSetDuckingIsRefusedBeforeTheDevice(string value, string error)
-    {
-        using JsonDocument doc = JsonDocument.Parse(value);
-        var cmd = new Command { Cmd = "setDucking", Value = doc.RootElement.Clone() };
-        Assert.StartsWith("setDucking: " + error, CommandValidation.CheckDucking(cmd, out DuckingChange? change));
-        Assert.Null(change);
-        // The general check knows the command too.
-        Assert.StartsWith("setDucking: ", CommandValidation.Check(cmd, null!, _ => null));
-    }
-
-    [Theory]
-    [InlineData("\"device\"", null)]
-    [InlineData("\"software\"", "setDuckingProcessing: ducking does not run in software yet; the unit runs it")]
-    [InlineData("\"unit\"", "setDuckingProcessing: value must be 'device' or 'software'")]
-    [InlineData("true", "setDuckingProcessing: value must be 'device' or 'software'")]
-    public void WhereDuckingRunsTakesTheDeviceAloneForNow(string value, string? error)
-    {
-        using JsonDocument doc = JsonDocument.Parse(value);
-        var cmd = new Command { Cmd = "setDuckingProcessing", Value = doc.RootElement.Clone() };
-        Assert.Equal(error, CommandValidation.CheckDuckingProcessing(cmd));
-        Assert.Equal(error, CommandValidation.Check(cmd, null!, _ => null));
-    }
 }

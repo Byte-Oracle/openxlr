@@ -1,3 +1,5 @@
+using OpenXLR.Core.Mixing;
+
 namespace OpenXLR.Core.Devices;
 
 /// <summary>
@@ -11,62 +13,6 @@ public static class ProReturnPairs
 
     /// <summary>The Aux mix for the USB Aux port: the aux mix's Music cell takes it (channels 10/11).</summary>
     public const int Aux = 5;
-}
-
-/// <summary>
-/// The user's ducking setup: whether it is on, the key input, the outputs
-/// it lowers, the three presets, and where it runs. Only the unit runs it
-/// today (<c>device</c>); whether the unit can run a given setup is
-/// <see cref="ProDucking.Unfit"/>. Values are the API's words;
-/// <see cref="ProDucking.Valid"/> checks them.
-/// </summary>
-public sealed record DuckingSettings
-{
-    public bool Enabled { get; init; }
-
-    /// <summary>The input whose level ducks the targets: <c>xlr1</c> or <c>xlr2</c>. The unit runs only <c>xlr1</c>.</summary>
-    public string Key { get; init; } = ProDucking.KeyXlr1;
-
-    /// <summary><c>monitor</c> and <c>aux</c>, the Pro outputs OpenXLR feeds.</summary>
-    public IReadOnlyList<string> Targets { get; init; } = [ProDucking.TargetMonitor];
-
-    public string Sensitivity { get; init; } = ProDucking.Medium;
-    public string Amount { get; init; } = ProDucking.Medium;
-    public string Speed { get; init; } = ProDucking.Medium;
-
-    /// <summary>Where the setup runs: <c>device</c>, the only place today.</summary>
-    public string Processing { get; init; } = ProDucking.Device;
-
-    public static DuckingSettings Default { get; } = new();
-
-    public bool Equals(DuckingSettings? other)
-        => other is not null && Enabled == other.Enabled && Key == other.Key && Sensitivity == other.Sensitivity
-            && Amount == other.Amount && Speed == other.Speed && Processing == other.Processing && Targets.SequenceEqual(other.Targets);
-
-    public override int GetHashCode() => HashCode.Combine(Enabled, Key, Sensitivity, Amount, Speed, Targets.Count);
-
-    public override string ToString() => Enabled
-        ? $"on, key {Key}, targets {string.Join(" ", Targets)}, sensitivity {Sensitivity}, amount {Amount}, speed {Speed}"
-        : "off";
-}
-
-/// <summary>
-/// A change to <see cref="DuckingSettings"/>: each field present replaces
-/// the setting's, an absent one keeps it.
-/// </summary>
-public sealed record DuckingChange(bool? Enabled = null, string? Key = null, IReadOnlyList<string>? Targets = null,
-    string? Sensitivity = null, string? Amount = null, string? Speed = null, string? Processing = null)
-{
-    public DuckingSettings ApplyTo(DuckingSettings s) => s with
-    {
-        Enabled = Enabled ?? s.Enabled,
-        Key = Key ?? s.Key,
-        Targets = Targets is null ? s.Targets : ProDucking.Ordered(Targets),
-        Sensitivity = Sensitivity ?? s.Sensitivity,
-        Amount = Amount ?? s.Amount,
-        Speed = Speed ?? s.Speed,
-        Processing = Processing ?? s.Processing,
-    };
 }
 
 /// <summary>
@@ -134,16 +80,12 @@ public static class ProDucking
     public const int MixBlockLength = 108;
 
     public const string KeyXlr1 = "xlr1";
-    public const string KeyXlr2 = "xlr2";
     public const string Device = "device";
-    /// <summary>A <see cref="Unfit"/> reason: the setup's key is one the unit is not known to take.</summary>
-    public const string KeyNotSupported = "keyNotSupported";
+    /// <summary>The outputs a unit can duck: the jacks' feed on pair 1 and the USB Aux port on pair 5.</summary>
     public const string TargetMonitor = "monitor";
     public const string TargetAux = "aux";
     public const string Low = "low", Medium = "medium", High = "high", Slow = "slow", Fast = "fast", Custom = "custom";
 
-    public static IReadOnlyList<string> Keys { get; } = [KeyXlr1, KeyXlr2];
-    public static IReadOnlyList<string> Targets { get; } = [TargetMonitor, TargetAux];
     public static IReadOnlyList<string> Sensitivities { get; } = [Low, Medium, High];
     public static IReadOnlyList<string> Amounts { get; } = [Low, Medium, High];
     public static IReadOnlyList<string> Speeds { get; } = [Slow, Medium, Fast];
@@ -152,43 +94,25 @@ public static class ProDucking
     private static readonly byte[] Depths = [6, 12, 24];
     private static readonly (ushort Attack, ushort Release)[] Times = [(100, 2000), (80, 1200), (30, 200)];
 
-    /// <summary>The USB playback pair a target streams on.</summary>
-    public static int PairOf(string target) => target == TargetAux ? ProReturnPairs.Aux : ProReturnPairs.Monitor;
+    /// <summary>The USB playback pair an output streams on.</summary>
+    public static int PairOf(string output) => output == TargetAux ? ProReturnPairs.Aux : ProReturnPairs.Monitor;
 
-    /// <summary>The targets without repeats, in the API's order.</summary>
-    public static IReadOnlyList<string> Ordered(IEnumerable<string> targets)
-        => [.. Targets.Where(targets.Contains)];
-
-    /// <summary>Why a setting cannot be written, or null when every value is one the unit takes.</summary>
-    public static string? Valid(DuckingSettings s)
+    /// <summary>Why a target cannot be written, or null when every value is one the unit takes.</summary>
+    public static string? Valid(ProDuckingTarget target)
     {
-        if (!Keys.Contains(s.Key)) return "key must be xlr1 or xlr2";
-        if (s.Processing != Device) return "processing must be device, the one place ducking runs today";
-        if (s.Targets.Any(t => !Targets.Contains(t)) || s.Targets.Distinct().Count() != s.Targets.Count)
-            return "targets must be distinct entries of monitor and aux";
-        if (!Sensitivities.Contains(s.Sensitivity)) return "sensitivity must be low, medium or high";
-        if (!Amounts.Contains(s.Amount)) return "amount must be low, medium or high";
-        if (!Speeds.Contains(s.Speed)) return "speed must be slow, medium or fast";
+        if (!Sensitivities.Contains(target.Sensitivity)) return "sensitivity must be low, medium or high";
+        if (!Amounts.Contains(target.Amount)) return "amount must be low, medium or high";
+        if (!Speeds.Contains(target.Speed)) return "speed must be slow, medium or fast";
+        if (target.Pairs is null || target.Pairs.Any(p => p is < 0 or >= PairCount)) return $"pairs must be USB playback pairs 0 to {PairCount - 1}";
         return null;
     }
 
-    /// <summary>
-    /// Why the unit cannot run a setup, as a word a client can explain, or
-    /// null when it can: the key must be XLR 1, the only key Wave Link was
-    /// seen to write, and every target is one of the Pro's whole outputs.
-    /// A setup the unit cannot run is written as ducking off.
-    /// </summary>
-    public static string? Unfit(DuckingSettings s) => s.Key != KeyXlr1 ? KeyNotSupported : null;
-
-    /// <summary>What the unit is given for a setup: the setup itself, or ducking off when it cannot run it.</summary>
-    public static DuckingSettings OnUnit(DuckingSettings s) => Unfit(s) is null ? s : s with { Enabled = false };
-
-    /// <summary>The six preset bytes every entry takes for a setting.</summary>
-    public static byte[] PresetBytes(DuckingSettings s)
+    /// <summary>The six preset bytes every entry takes for the three preset words.</summary>
+    public static byte[] PresetBytes(string sensitivity, string amount, string speed)
     {
-        sbyte threshold = Thresholds[IndexOf(Sensitivities, s.Sensitivity)];
-        byte depth = Depths[IndexOf(Amounts, s.Amount)];
-        (ushort attack, ushort release) = Times[IndexOf(Speeds, s.Speed)];
+        sbyte threshold = Thresholds[IndexOf(Sensitivities, sensitivity)];
+        byte depth = Depths[IndexOf(Amounts, amount)];
+        (ushort attack, ushort release) = Times[IndexOf(Speeds, speed)];
         return [(byte)threshold, depth, (byte)attack, (byte)(attack >> 8), (byte)release, (byte)(release >> 8)];
     }
 
@@ -199,18 +123,19 @@ public static class ProDucking
     }
 
     /// <summary>
-    /// Write a setting into the two blocks: the presets while it is on, the
+    /// Write a target into the two blocks: the presets while it is on, the
     /// ducked flag of every entry, and the high bit of every pair field in
-    /// the three mix sections. Everything else is left as it was.
+    /// the three mix sections, set for the target's pairs while it is on
+    /// and cleared otherwise. Everything else is left as it was.
     /// </summary>
-    /// <exception cref="ArgumentException">A block has the wrong length or the setting a value the unit does not take.</exception>
-    public static void Apply(Span<byte> block8, Span<byte> block1, DuckingSettings s)
+    /// <exception cref="ArgumentException">A block has the wrong length or the target a value the unit does not take.</exception>
+    public static void Apply(Span<byte> block8, Span<byte> block1, ProDuckingTarget target)
     {
         if (block8.Length != Length) throw new ArgumentException($"block 0x0008 is {Length} bytes", nameof(block8));
         if (block1.Length != MixBlockLength) throw new ArgumentException($"block 0x0001 is {MixBlockLength} bytes", nameof(block1));
-        if (Valid(s) is { } problem) throw new ArgumentException(problem, nameof(s));
-        int pairs = WantedPairs(s);
-        byte[]? preset = s.Enabled ? PresetBytes(s) : null;
+        if (Valid(target) is { } problem) throw new ArgumentException(problem, nameof(target));
+        int pairs = WantedPairs(target);
+        byte[]? preset = target.Enabled ? PresetBytes(target.Sensitivity, target.Amount, target.Speed) : null;
         for (int e = 0; e < EntryCount; e++)
         {
             Span<byte> entry = block8.Slice(e * EntryLength, EntryLength);
@@ -232,9 +157,9 @@ public static class ProDucking
         }
     }
 
-    /// <summary>The pairs a setting ducks, as a mask with bit k for pair k: none while it is off.</summary>
-    public static int WantedPairs(DuckingSettings s)
-        => s.Enabled ? s.Targets.Aggregate(0, (mask, t) => mask | 1 << PairOf(t)) : 0;
+    /// <summary>The pairs a target ducks, as a mask with bit k for pair k: none while it is off.</summary>
+    public static int WantedPairs(ProDuckingTarget target)
+        => target.Enabled ? target.Pairs.Aggregate(0, (mask, pair) => mask | 1 << pair) : 0;
 
     /// <summary>What the two blocks hold, decoded; the 96 bytes of 0x0008 and the 108 of 0x0001.</summary>
     public static DuckingReadback Decode(ReadOnlySpan<byte> block8, ReadOnlySpan<byte> block1)
@@ -289,12 +214,12 @@ public static class ProDucking
     }
 
     /// <summary>
-    /// Whether the unit, as last read, holds a setting: writing it would
+    /// Whether the unit, as last read, holds a target: writing it would
     /// change no byte. False when the readback carries no raw bytes.
     /// </summary>
-    public static bool Holds(DuckingReadback unit, DuckingSettings s)
+    public static bool Holds(DuckingReadback unit, ProDuckingTarget target)
     {
-        if (unit.Raw.Length != 2 * (Length + 2 * MixFieldOffsets.Count) || Valid(s) is not null) return false;
+        if (unit.Raw.Length != 2 * (Length + 2 * MixFieldOffsets.Count) || Valid(target) is not null) return false;
         byte[] raw = Convert.FromHexString(unit.Raw);
         byte[] block8 = raw[..Length];
         var block1 = new byte[MixBlockLength];
@@ -304,7 +229,7 @@ public static class ProDucking
             block1[MixFieldOffsets[i] + 1] = raw[Length + 2 * i + 1];
         }
         byte[] want8 = (byte[])block8.Clone(), want1 = (byte[])block1.Clone();
-        Apply(want8, want1, s);
+        Apply(want8, want1, target);
         return want8.AsSpan().SequenceEqual(block8) && want1.AsSpan().SequenceEqual(block1);
     }
 

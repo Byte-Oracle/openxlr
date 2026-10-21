@@ -86,10 +86,28 @@ public sealed record DuckingSetup : DuckingScene
     // also the software stage's values.
     internal DuckingPlan ToPlan()
     {
-        byte[] bytes = ProDucking.PresetBytes(new DuckingSettings
-            { Sensitivity = Sensitivity, Amount = Amount, Speed = Speed });
+        byte[] bytes = ProDucking.PresetBytes(Sensitivity, Amount, Speed);
         return new(Key, Channels.Where(c => c != Key).SelectMany(c => Mixes.Select(m => $"{c}|{m}"))
             .ToFrozenSet(StringComparer.Ordinal), unchecked((sbyte)bytes[0]), bytes[1],
             bytes[2] | bytes[3] << 8, bytes[4] | bytes[5] << 8, Enabled);
     }
+}
+
+/// <summary>
+/// A <c>setDucking</c> value: each field present replaces the setup's, an
+/// absent one keeps it. Where ducking runs is a separate command.
+/// </summary>
+public sealed record DuckingChange(bool? Enabled = null, string? Key = null, IReadOnlyList<string>? Channels = null,
+    IReadOnlyList<string>? Mixes = null, string? Sensitivity = null, string? Amount = null, string? Speed = null)
+{
+    public DuckingSetup ApplyTo(DuckingSetup setup) => setup with
+    {
+        Enabled = Enabled ?? setup.Enabled,
+        Key = Key ?? setup.Key,
+        Channels = Channels is null ? setup.Channels : [.. Channels],
+        Mixes = Mixes is null ? setup.Mixes : [.. Mixes],
+        Sensitivity = Sensitivity ?? setup.Sensitivity,
+        Amount = Amount ?? setup.Amount,
+        Speed = Speed ?? setup.Speed,
+    };
 }

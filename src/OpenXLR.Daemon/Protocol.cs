@@ -231,7 +231,7 @@ public sealed record StateMessage
     [JsonPropertyName("waveInterfaces")] public IReadOnlyList<WaveInterfaceState>? WaveInterfaces { get; init; }
     [JsonPropertyName("capabilities")] public DeviceCapabilities? Capabilities { get; init; }
     [JsonPropertyName("state")] public DeviceState? State { get; init; }
-    /// <summary>The driven unit's hardware ducking (see <see cref="DuckingState"/>); null on a model without it.</summary>
+    /// <summary>The ducking setup and where it runs (see <see cref="DuckingState"/>); set whenever the daemon runs.</summary>
     [JsonPropertyName("ducking")] public DuckingState? Ducking { get; init; }
     /// <summary>Submixer state; null until the mixer graph is built.</summary>
     [JsonPropertyName("mixer")] public MixerState? Mixer { get; init; }
@@ -266,62 +266,62 @@ public sealed record StateMessage
 }
 
 /// <summary>
-/// Ducking: the user's setup (<see cref="Enabled"/> to <see cref="Speed"/>),
-/// where it runs (<see cref="Processing"/>, the choice, and
-/// <see cref="Backend"/>, what runs it now), and <see cref="Device"/>, the
-/// driven unit's side, shaped like a microphone EQ's. Only the unit runs
-/// ducking today, so <see cref="Backend"/> is <c>device</c> while the unit
-/// can run the setup and null otherwise.
+/// Ducking, present whenever the daemon runs, on any device or none: the
+/// user's setup (<see cref="Enabled"/> to <see cref="Speed"/>), where it
+/// should run (<see cref="Processing"/>) and what runs it now
+/// (<see cref="Backend"/>: <c>device</c> while the unit runs it, on or off,
+/// <c>software</c> while the native stages exist, null otherwise), the
+/// software side (<see cref="Available"/>, <see cref="Error"/>), and the
+/// primary unit's side in <see cref="Device"/>, null unless that unit has
+/// hardware ducking.
 /// </summary>
 public sealed record DuckingState
 {
     [JsonPropertyName("enabled")] public bool Enabled { get; init; }
     [JsonPropertyName("key")] public string Key { get; init; } = "";
-    [JsonPropertyName("targets")] public IReadOnlyList<string> Targets { get; init; } = [];
+    [JsonPropertyName("channels")] public IReadOnlyList<string> Channels { get; init; } = [];
+    [JsonPropertyName("mixes")] public IReadOnlyList<string> Mixes { get; init; } = [];
     [JsonPropertyName("sensitivity")] public string Sensitivity { get; init; } = "";
     [JsonPropertyName("amount")] public string Amount { get; init; } = "";
     [JsonPropertyName("speed")] public string Speed { get; init; } = "";
     [JsonPropertyName("processing")] public string Processing { get; init; } = ProDucking.Device;
-    [JsonPropertyName("backend")] public string? Backend { get; init; }
-    [JsonPropertyName("device")] public DuckingDevice? Device { get; init; }
+    [JsonPropertyName("backend"), JsonIgnore(Condition = JsonIgnoreCondition.Never)] public string? Backend { get; init; }
+    [JsonPropertyName("available")] public bool Available { get; init; }
+    [JsonPropertyName("error"), JsonIgnore(Condition = JsonIgnoreCondition.Never)] public string? Error { get; init; }
+    [JsonPropertyName("device"), JsonIgnore(Condition = JsonIgnoreCondition.Never)] public DuckingDevice? Device { get; init; }
 
-    public static DuckingState From(DuckingSettings s, DeviceInfo unit, string? firmware, DuckingReadback? read)
+    public static DuckingState From(DuckingStateSnapshot s) => new()
     {
-        string? reason = ProDucking.Unfit(s);
-        return new()
+        Enabled = s.Setup.Enabled, Key = s.Setup.Key, Channels = s.Setup.Channels, Mixes = s.Setup.Mixes,
+        Sensitivity = s.Setup.Sensitivity, Amount = s.Setup.Amount, Speed = s.Setup.Speed, Processing = s.Setup.Processing,
+        Backend = s.Backend, Available = s.Available, Error = s.Error,
+        Device = s.Device is not { } d ? null : new DuckingDevice
         {
-            Enabled = s.Enabled, Key = s.Key, Targets = s.Targets,
-            Sensitivity = s.Sensitivity, Amount = s.Amount, Speed = s.Speed, Processing = s.Processing,
-            Backend = reason is null ? ProDucking.Device : null,
-            Device = new DuckingDevice
-            {
-                Unit = unit.InstanceId, Name = unit.Model, Firmware = firmware,
-                Ready = reason is null, Reason = reason,
-                Note = reason is null ? null : $"The {unit.Model} ducks only with XLR 1 as the key, so it does not run a setup keyed by {(s.Key == ProDucking.KeyXlr2 ? "XLR 2" : s.Key)}.",
-                Held = read is not null && ProDucking.Holds(read, ProDucking.OnUnit(s)),
-                Readback = read,
-            },
-        };
-    }
+            Unit = d.Unit, Name = d.Name, Firmware = d.Firmware, Ready = d.Ready, Reason = d.Reason, Note = d.Note,
+            Outputs = d.Outputs, Held = d.Held, Readback = d.Readback,
+        },
+    };
 }
 
 /// <summary>
-/// The driven unit's side of ducking, in the microphone EQ's shape: which
-/// unit, whether it runs the setup (<see cref="Ready"/>, and when not, a
-/// <see cref="Reason"/> word and a <see cref="Note"/> sentence), whether the
-/// last read matched what OpenXLR wrote (<see cref="Held"/>), and that read
-/// decoded.
+/// The primary unit's side of ducking, in the microphone EQ's shape: which
+/// unit, whether it can run the setup (<see cref="Ready"/>, and when not, a
+/// <see cref="Reason"/> word and a <see cref="Note"/> sentence), the outputs
+/// it would duck for this setup (<see cref="Outputs"/>, given even when not
+/// ready), whether it holds the last target posted to it
+/// (<see cref="Held"/>), and its last read decoded.
 /// </summary>
 public sealed record DuckingDevice
 {
     [JsonPropertyName("unit")] public string Unit { get; init; } = "";
     [JsonPropertyName("name")] public string Name { get; init; } = "";
-    [JsonPropertyName("firmware")] public string? Firmware { get; init; }
+    [JsonPropertyName("firmware"), JsonIgnore(Condition = JsonIgnoreCondition.Never)] public string? Firmware { get; init; }
     [JsonPropertyName("ready")] public bool Ready { get; init; }
-    [JsonPropertyName("reason")] public string? Reason { get; init; }
-    [JsonPropertyName("note")] public string? Note { get; init; }
+    [JsonPropertyName("reason"), JsonIgnore(Condition = JsonIgnoreCondition.Never)] public string? Reason { get; init; }
+    [JsonPropertyName("note"), JsonIgnore(Condition = JsonIgnoreCondition.Never)] public string? Note { get; init; }
+    [JsonPropertyName("outputs")] public IReadOnlyList<string> Outputs { get; init; } = [];
     [JsonPropertyName("held")] public bool Held { get; init; }
-    [JsonPropertyName("readback")] public DuckingReadback? Readback { get; init; }
+    [JsonPropertyName("readback"), JsonIgnore(Condition = JsonIgnoreCondition.Never)] public DuckingReadback? Readback { get; init; }
 }
 
 public sealed record DetectedDevice(

@@ -1,4 +1,5 @@
 using OpenXLR.Core.Devices;
+using OpenXLR.Core.Mixing;
 
 namespace OpenXLR.Tests;
 
@@ -65,7 +66,9 @@ public sealed class ProDuckingTests
         return block;
     }
 
-    private static DuckingSettings On(params string[] targets) => new() { Enabled = true, Targets = targets };
+    internal static ProDuckingTarget On(params int[] pairs) => new(true, "medium", "medium", "medium", pairs.ToHashSet());
+
+    private static ProDuckingTarget Off => ProDuckingTarget.Off;
 
     private static void AssertOnlyMixFieldsChanged(byte[] before, byte[] after)
     {
@@ -109,7 +112,7 @@ public sealed class ProDuckingTests
         byte[] b8 = Block8(LowLowSlowBytes, WaveLinkFlags);
         byte[] b1 = Block1(0x5d, 0xfd);
         byte[] before1 = (byte[])b1.Clone();
-        ProDucking.Apply(b8, b1, DuckingSettings.Default);
+        ProDucking.Apply(b8, b1, Off);
 
         // Wave Link's own state with no key: the 02 and 03 entries stay, the
         // presets are not written while ducking is off.
@@ -119,18 +122,18 @@ public sealed class ProDuckingTests
         DuckingReadback unit = ProDucking.Decode(b8, b1);
         Assert.Empty(unit.Pairs);
         Assert.Equal([4, 7, 8], unit.Entries);
-        Assert.True(ProDucking.Holds(unit, DuckingSettings.Default));
+        Assert.True(ProDucking.Holds(unit, Off));
     }
 
     [Theory]
-    [InlineData("monitor", 0x5d, 0x55, 5)]
-    [InlineData("aux", 0x55, 0x5d, 9)]
-    public void OneTargetDucksItsPairInEveryMixSection(string target, byte b16, byte b17, int entry)
+    [InlineData(ProReturnPairs.Monitor, 0x5d, 0x55, 5)]
+    [InlineData(ProReturnPairs.Aux, 0x55, 0x5d, 9)]
+    public void OnePairIsDuckedInEveryMixSection(int pair, byte b16, byte b17, int entry)
     {
         byte[] b8 = Block8(MediumBytes, IdleFlags);
         byte[] b1 = Block1();
         byte[] before1 = (byte[])b1.Clone();
-        ProDucking.Apply(b8, b1, On(target));
+        ProDucking.Apply(b8, b1, On(pair));
 
         byte[] flags = (byte[])IdleFlags.Clone();
         flags[entry] |= 0x01;
@@ -138,22 +141,45 @@ public sealed class ProDuckingTests
         foreach (int at in ProDucking.MixFieldOffsets) Assert.Equal(new[] { b16, b17 }, b1[at..(at + 2)]);
         // The fourth and fifth sections, and every other byte, stay.
         AssertOnlyMixFieldsChanged(before1, b1);
-        Assert.Equal([ProDucking.PairOf(target)], ProDucking.Decode(b8, b1).Pairs);
+        Assert.Equal([pair], ProDucking.Decode(b8, b1).Pairs);
     }
 
     [Fact]
-    public void BothTargetsDuckPairsOneAndFive()
+    public void BothOutputsDuckPairsOneAndFive()
     {
         byte[] b8 = Block8(MediumBytes, IdleFlags);
         byte[] b1 = Block1();
-        ProDucking.Apply(b8, b1, On("monitor", "aux"));
+        ProDucking.Apply(b8, b1, On(ProReturnPairs.Monitor, ProReturnPairs.Aux));
         foreach (int at in ProDucking.MixFieldOffsets) Assert.Equal(new byte[] { 0x5d, 0x5d }, b1[at..(at + 2)]);
         Assert.Equal([4, 5, 7, 8, 9], ProDucking.Decode(b8, b1).Entries);
 
-        // And off again: back to the idle state byte for byte.
+        // On with no pairs, as for a setup whose mixes nobody hears: the
+        // presets are written and nothing is ducked, the idle state byte for byte.
         ProDucking.Apply(b8, b1, On());
         Assert.Equal(Block8(MediumBytes, IdleFlags), b8);
         Assert.Equal(Block1(), b1);
+        Assert.True(ProDucking.Holds(ProDucking.Decode(b8, b1), On()));
+    }
+
+    [Fact]
+    public void OffDucksNoPairWhateverPairsItCarries()
+    {
+        byte[] b8 = Block8(LowLowSlowBytes, WaveLinkFlags);
+        byte[] b1 = Block1(0x5d, 0xfd);
+        ProDucking.Apply(b8, b1, Off with { Pairs = new HashSet<int> { 1, 5 } });
+        Assert.Equal(Block8(LowLowSlowBytes, IdleFlags), b8);
+        Assert.Empty(ProDucking.Decode(b8, b1).Pairs);
+    }
+
+    [Fact]
+    public void TheJournalNamesThePairsAndPresetsOfATarget()
+    {
+        Assert.Equal("off", Off.ToString());
+        Assert.Equal("on, pairs 1 5, sensitivity medium, amount medium, speed medium", On(5, 1).ToString());
+        Assert.Equal("on, pairs none, sensitivity high, amount low, speed fast",
+            (On() with { Sensitivity = "high", Amount = "low", Speed = "fast" }).ToString());
+        Assert.Equal(On(1, 5), On(5, 1));
+        Assert.NotEqual(On(1), On(1, 5));
     }
 
     public static TheoryData<string, string, string> Presets()
@@ -179,7 +205,7 @@ public sealed class ProDuckingTests
             "medium" => [0x50, 0x00, 0xb0, 0x04],
             _ => [0x1e, 0x00, 0xc8, 0x00],
         };
-        var s = new DuckingSettings { Enabled = true, Sensitivity = sensitivity, Amount = amount, Speed = speed };
+        var s = new ProDuckingTarget(true, sensitivity, amount, speed, new HashSet<int>());
         byte[] b8 = Block8(LowLowSlowBytes, IdleFlags);
         for (int e = 0; e < 12; e++) b8[e * 8 + 7] = (byte)(0x40 + e);   // byte 7 is not ours either
         byte[] b1 = Block1();
@@ -189,7 +215,7 @@ public sealed class ProDuckingTests
             Assert.Equal(new[] { threshold, depth, times[0], times[1], times[2], times[3] }, b8[(e * 8)..(e * 8 + 6)]);
             Assert.Equal((byte)(0x40 + e), b8[e * 8 + 7]);
         }
-        Assert.Equal(ProDucking.PresetBytes(s), b8[..6]);
+        Assert.Equal(ProDucking.PresetBytes(sensitivity, amount, speed), b8[..6]);
         DuckingReadback unit = ProDucking.Decode(b8, b1);
         Assert.Equal((sensitivity, amount, speed), (unit.Sensitivity, unit.Amount, unit.Speed));
         Assert.True(ProDucking.Holds(unit, s));
@@ -203,7 +229,7 @@ public sealed class ProDuckingTests
         byte[] b8 = Block8(MediumBytes, flags);
         byte[] b1 = Block1(0x00, 0xa0);
         byte[] before1 = (byte[])b1.Clone();
-        ProDucking.Apply(b8, b1, On("monitor", "aux"));
+        ProDucking.Apply(b8, b1, On(1, 5));
         byte[] wanted = (byte[])flags.Clone();
         wanted[5] |= 0x01;   // pair 1
         wanted[9] |= 0x01;   // pair 5
@@ -225,48 +251,26 @@ public sealed class ProDuckingTests
         b8[8 * 7 + 4] = 0xb1;           // a release that is not 1200
         DuckingReadback unit = ProDucking.Decode(b8, Block1());
         Assert.Equal(("custom", "custom", "custom"), (unit.Sensitivity, unit.Amount, unit.Speed));
-        Assert.False(ProDucking.Holds(unit, On("monitor")));
+        Assert.False(ProDucking.Holds(unit, On(1)));
         // Off leaves the presets alone, so that unit holds "off" all the same.
-        Assert.True(ProDucking.Holds(unit, DuckingSettings.Default));
-        Assert.False(ProDucking.Holds(new DuckingReadback("medium", "medium", "medium", [], []), DuckingSettings.Default));
+        Assert.True(ProDucking.Holds(unit, Off));
+        Assert.False(ProDucking.Holds(new DuckingReadback("medium", "medium", "medium", [], []), Off));
     }
 
     [Theory]
-    [InlineData("xlr3", "monitor", "medium", "medium", "medium")]
-    [InlineData("xlr1", "game", "medium", "medium", "medium")]
-    [InlineData("xlr1", "monitor", "loud", "medium", "medium")]
-    [InlineData("xlr1", "monitor", "medium", "slow", "medium")]
-    [InlineData("xlr1", "monitor", "medium", "medium", "high")]
-    public void ValuesTheUnitDoesNotTakeAreRefused(string key, string target, string sensitivity, string amount, string speed)
+    [InlineData(8, "medium", "medium", "medium")]
+    [InlineData(-1, "medium", "medium", "medium")]
+    [InlineData(1, "loud", "medium", "medium")]
+    [InlineData(1, "medium", "slow", "medium")]
+    [InlineData(1, "medium", "medium", "high")]
+    [InlineData(1, "custom", "medium", "medium")]
+    public void ValuesTheUnitDoesNotTakeAreRefused(int pair, string sensitivity, string amount, string speed)
     {
-        var s = new DuckingSettings { Enabled = true, Key = key, Targets = [target], Sensitivity = sensitivity, Amount = amount, Speed = speed };
-        Assert.NotNull(ProDucking.Valid(s));
-        Assert.Throws<ArgumentException>(() => ProDucking.Apply(new byte[96], new byte[108], s));
-        Assert.NotNull(ProDucking.Valid(On("monitor", "monitor")));
+        var target = new ProDuckingTarget(true, sensitivity, amount, speed, new HashSet<int> { pair });
+        Assert.NotNull(ProDucking.Valid(target));
+        Assert.Throws<ArgumentException>(() => ProDucking.Apply(new byte[96], new byte[108], target));
+        Assert.False(ProDucking.Holds(ProDucking.Decode(new byte[96], new byte[108]), target));
         Assert.Throws<ArgumentException>(() => ProDucking.Apply(new byte[95], new byte[108], On()));
         Assert.Throws<ArgumentException>(() => ProDucking.Apply(new byte[96], new byte[107], On()));
-    }
-
-    [Fact]
-    public void OnlyASetupKeyedByXlr1FitsTheUnitAndAnotherIsWrittenAsOff()
-    {
-        var xlr2 = new DuckingSettings { Enabled = true, Key = "xlr2" };
-        Assert.Null(ProDucking.Valid(xlr2));
-        Assert.Equal("keyNotSupported", ProDucking.Unfit(xlr2));
-        Assert.Null(ProDucking.Unfit(On("monitor", "aux")));
-        Assert.False(ProDucking.OnUnit(xlr2).Enabled);
-        Assert.Equal(On("aux"), ProDucking.OnUnit(On("aux")));
-        Assert.NotNull(ProDucking.Valid(On() with { Processing = "software" }));
-    }
-
-    [Fact]
-    public void AChangeKeepsWhatItDoesNotName()
-    {
-        var saved = new DuckingSettings { Enabled = true, Targets = ["aux"], Sensitivity = "high", Amount = "low", Speed = "fast" };
-        Assert.Equal(saved with { Enabled = false }, new DuckingChange(Enabled: false).ApplyTo(saved));
-        Assert.Equal(saved with { Targets = ["monitor", "aux"] }, new DuckingChange(Targets: ["aux", "monitor"]).ApplyTo(saved));
-        Assert.Equal(saved with { Targets = [] }, new DuckingChange(Targets: []).ApplyTo(saved));
-        Assert.Equal(saved, new DuckingChange().ApplyTo(saved));
-        Assert.Equal(saved with { Key = "xlr2" }, new DuckingChange(Key: "xlr2").ApplyTo(saved));
     }
 }
