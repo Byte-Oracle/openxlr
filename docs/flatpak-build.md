@@ -1,9 +1,11 @@
 # Building the experimental Flatpak
 
-The runtime changes described in [flatpak.md](flatpak.md) must land before
-this package is usable. The manifest targets x86_64, matching the committed
-.NET runtime graph. It uses the Freedesktop 25.08 runtime and .NET 10 SDK
-extension. Flatpak 1.16 or newer is required for the USB-only device grant.
+The manifest targets x86_64, matching the committed .NET runtime graph. It
+uses the Freedesktop 25.08 runtime and .NET 10 SDK extension, and requires
+Flatpak 1.15.11 or newer for the USB-only device grant. CI checks the
+manifest and its files with `python3 packaging/flatpak/test-package.py`,
+the NuGet source list with `python3 packaging/flatpak/nuget-sources.py
+--check` and the metainfo with `appstreamcli validate --no-net`.
 
 ```sh
 flatpak install --user flathub org.freedesktop.Sdk//25.08 org.freedesktop.Platform//25.08 org.freedesktop.Sdk.Extension.dotnet10//25.08 org.flatpak.Builder

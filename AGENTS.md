@@ -45,6 +45,9 @@ python3 tools/deck-icons.py --check  # regenerate with no flag after changing La
 node --check plugin/com.emaspa.openxlr.sdPlugin/plugin.mjs
 node --test plugin/tests/*.test.mjs
 python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
+python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
+python3 packaging/flatpak/test-package.py  # the Flatpak manifest and its files
+python3 packaging/flatpak/nuget-sources.py --check  # regenerate with no flag after a package change
 shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh packaging/ppa/make-source.sh
 tools/check-version.sh
 tools/check-locked-restore.sh
@@ -57,7 +60,7 @@ node --test packaging/omarchy/tests/*.test.mjs
 shellcheck --severity=error packaging/omarchy/openxlr-omarchy-enable
 make -C native  # C/C++, PipeWire, lilv, LV2 and X11 development headers
 make -C native test-audio test-clap test-lv2 test-vst3 test-scan  # audio bounds, stall detection, CLAP bus layouts, latency reports, VST3 parameter and stream checks, scan phase markers
-dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~Lv2BundleTests  # run with lilv installed, even if the earlier suite ran without it
+dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~Lv2BundleTests|FullyQualifiedName~PluginSearchPathTests"  # run with lilv installed, even if the earlier suite ran without it
 python3 tools/test-monitor-volume.py  # private PipeWire server and session bus; pipewire-pulse, wireplumber, pactl, dbus-daemon
 xvfb-run -a make -C native test-editor  # also needs Xvfb and xauth
 make -C native test-sound-check  # Sound Check loop backend, no audio server
@@ -124,9 +127,10 @@ and [package checks](packaging/yabridge/README.md).
   `OpenXlrPaths.WriteAtomic`; helper processes run through
   `ProcessRunner`, a program handed to the user (an installer, the
   desktop's link opener) through its `RunInteractiveAsync`. Do not add a
-  `Process.Start` or a `File.WriteAllText` for either. The one raw
-  process is the meter reader's `parec`, which streams for the sink's
-  whole life and is stopped with the meter.
+  `Process.Start` or a `File.WriteAllText` for either. The raw processes
+  are the ones that live as long as what they serve: the meter reader's
+  `parec`, the `pw-loopback` and filter-chain `pw-cli` nodes of the graph,
+  the native plugin host and the USB helper, each stopped with its owner.
 - A new command is registered in `CommandValidation`, dispatched in
   `WebSocketHub`, documented in `docs/api.md`, and handled in the client
   that uses it.

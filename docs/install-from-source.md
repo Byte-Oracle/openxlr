@@ -3,9 +3,12 @@
 ## Requirements
 
 - Linux with PipeWire, `pipewire-pulse` and WirePlumber; `pactl`,
-  `pw-cli`, `pw-link`, `pw-dump`, `parec`, `wpctl` and `amixer` on PATH
+  `pw-cli`, `pw-link`, `pw-dump`, `pw-loopback`, `parec`, `wpctl` and
+  `amixer` on PATH
 - `gdbus` (the GLib command-line tools) for focused application routing
   from desktop and Deck keys; `xdg-open` for the links the window opens
+- gdk-pixbuf with the librsvg loader for the applications' own desktop
+  icons; without them the window falls back to PNG icons
 - `swh-plugins` (LADSPA) for the software ClipGuard; everything else
   works without it
 - `lilv` for LV2 discovery and compatible LV2, CLAP or VST3 plugins
@@ -32,19 +35,19 @@ The native editor tests additionally use Xvfb and xauth.
 
 ```sh
 # Arch Linux, CachyOS and Omarchy
-sudo pacman -S --needed dotnet-sdk aspnet-runtime pipewire pipewire-pulse wireplumber libusb libpulse alsa-utils glib2 xdg-utils
+sudo pacman -S --needed dotnet-sdk aspnet-runtime pipewire pipewire-pulse wireplumber libusb libpulse alsa-utils glib2 xdg-utils gdk-pixbuf2 librsvg
 # optional: software ClipGuard for the XLR Dock, and LV2 plugins for inserts
 sudo pacman -S --needed swh-plugins lilv lsp-plugins-lv2
 # native host and editor test dependencies
-sudo pacman -S --needed base-devel lv2 libx11 xorg-server-xvfb xorg-xauth
+sudo pacman -S --needed base-devel lv2 libx11 libxtst xorg-server-xvfb xorg-xauth
 
 # Fedora
-sudo dnf install dotnet-sdk-10.0 aspnetcore-runtime-10.0 pipewire pipewire-pulseaudio wireplumber libusb1 pulseaudio-utils alsa-utils glib2 xdg-utils ladspa-swh-plugins lilv-libs lsp-plugins-lv2
-sudo dnf install gcc-c++ make pkgconf-pkg-config pipewire-devel lilv-devel lv2-devel libX11-devel xorg-x11-server-Xvfb xorg-x11-xauth
+sudo dnf install dotnet-sdk-10.0 aspnetcore-runtime-10.0 pipewire pipewire-pulseaudio wireplumber libusb1 pulseaudio-utils alsa-utils glib2 xdg-utils gdk-pixbuf2 librsvg2 ladspa-swh-plugins lilv-libs lsp-plugins-lv2
+sudo dnf install gcc-c++ make pkgconf-pkg-config pipewire-devel lilv-devel lv2-devel libX11-devel libXtst xorg-x11-server-Xvfb xorg-x11-xauth
 
 # Debian / Ubuntu (dotnet from Microsoft's feed if the distro lacks 10.0)
-sudo apt install dotnet-sdk-10.0 aspnetcore-runtime-10.0 pipewire pipewire-pulse wireplumber libusb-1.0-0 pulseaudio-utils alsa-utils libglib2.0-bin xdg-utils swh-plugins liblilv-0-0 lsp-plugins-lv2
-sudo apt install build-essential pkg-config libpipewire-0.3-dev liblilv-dev lv2-dev libx11-dev xvfb xauth
+sudo apt install dotnet-sdk-10.0 aspnetcore-runtime-10.0 pipewire pipewire-pulse wireplumber libusb-1.0-0 pulseaudio-utils alsa-utils libglib2.0-bin xdg-utils libgdk-pixbuf-2.0-0 librsvg2-common swh-plugins liblilv-0-0 lsp-plugins-lv2
+sudo apt install build-essential pkg-config libpipewire-0.3-dev liblilv-dev lv2-dev libx11-dev libxtst6 xvfb xauth
 ```
 
 Verify the audio stack is PipeWire before going further:
