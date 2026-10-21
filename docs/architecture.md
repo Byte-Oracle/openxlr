@@ -23,7 +23,8 @@ flowchart TD
   `Main`, before any hosted service, since connecting the device switches
   the card's profile and WirePlumber then moves the defaults to the new
   nodes; the hosted services start in the order watchdog, device manager,
-  mixer service. The content root is the install directory, whatever the
+  mixer service, additional interfaces; under Flatpak a parent-process
+  wait takes the watchdog's place. The content root is the install directory, whatever the
   working directory. The WebSocket endpoints and HTTP API share one
   dispatcher on `127.0.0.1:37890`. Clients authenticate with a private
   per-run token; browser Origins, command sizes and rates are checked as
@@ -102,11 +103,11 @@ modules or custom drivers:
   value in dB for each mix fed by a running stage. The daemon drives the
   plan from the saved ducking setup: buses and stages exist only while
   ducking runs in software with at least one ducked cell, so a start with
-  ducking off, or run by the Wave XLR Pro, creates none. Placement and the
-  hand-over to the unit are in [api.md](api.md#where-ducking-runs); the
-  daemon reaches the unit through `DeviceDuckingPort`, which posts targets
-  to the device manager and reads back a cached status without USB
-  transfers, as the EQ's port does.
+  ducking off, or taken over by the Wave XLR Pro, creates none. Placement
+  and the hand-over to the unit are in [api.md](api.md#where-ducking-runs);
+  the daemon reaches the unit through `DeviceDuckingPort`, which posts the
+  presets and USB pairs the unit should hold to the device manager and
+  reads back a cached status without USB transfers, as the EQ's port does.
 - For every virtual-microphone mix, a post sink fed from the mix
   (directly or through the mix's insert chain) and a remap source
   (`module-remap-source`) reading its monitor: the virtual microphone an
@@ -208,13 +209,14 @@ refused.
 
 ## The device protocols
 
-The five devices use vendor-block and class-request protocols plus ALSA
+The seven devices use vendor-block and class-request protocols plus ALSA
 controls, all reached without detaching the kernel's audio driver:
 
 - Wave XLR Pro, Wave XLR MK.2 and XLR Dock MK.2: a vendor block bank
   on the unclaimed interface (`bmRequestType 0x41/0xC1`, `bRequest 1`,
-  `wIndex 0x0103` on the Pro and the XLR Dock MK.2, `0x0203` on the
-  Wave XLR MK.2). Fixed-size
+  `wIndex 0x0103` on the Pro, `0x0203` on the Wave XLR MK.2, and on the
+  XLR Dock MK.2 whichever of the two its firmware answers, probed at
+  connect). Fixed-size
   blocks hold gain, packed flag bits, and on the Pro the hardware mix
   matrix; a write reads the block, modifies it, writes it back, and on
   the Pro follows with a commit block. Offsets and how they were found:

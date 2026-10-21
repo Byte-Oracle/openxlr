@@ -494,8 +494,9 @@ stored +3.25 dB shelf at 227 Hz and -3 dB bell at 860 Hz did nothing.
 ## What this means for OpenXLR
 
 - On firmware 1.0.15 the MK.2 family has a hardware equalizer, and
-  OpenXLR drives it: the layout is known, a write applies at once, and its
-  filters match OpenXLR's software EQ for the same values. A microphone
+  OpenXLR drives it: the layout is known, a write applies at once, and the
+  dock's filters match OpenXLR's software EQ for the same values. The
+  daemon's own writes have not been run on either MK.2 unit yet. A microphone
   that carries such a unit's input runs its EQ there, and the unit's
   `hardwareEq` capability is true; see
   [where the EQ runs](api.md#where-the-eq-runs).
@@ -518,8 +519,9 @@ stored +3.25 dB shelf at 227 Hz and -3 dB bell at 860 Hz did nothing.
   on 2026-10-21, XLR 1's struct at block offset 0 and XLR 2's at 38, with
   no commit (see the
   [protocol notes, section 10](wave-xlr-pro-protocol.md#10-captures-16-to-20-2026-10-21-the-microphone-eq-in-block-0x0004)).
-  OpenXLR drives it there; it has not been measured or heard on Linux
-  yet.
+  OpenXLR drives it there. One bell was measured on the desk: +12 dB at
+  5 kHz read +12.3 to +12.7 dB on the raw USB capture, and software mode
+  left it flat; the other filter types are not measured yet.
 - Still open, beyond the list at the top: bytes 3 to 17 of block
   `0x0004`, byte 1 bit 3, and the dock's 1.0.0 report of band 3 sounding
   brighter with both switches off.

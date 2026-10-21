@@ -241,7 +241,8 @@ Katana). Live-verified: toggling off91 mid-tone gates jack 2, off90 gates jack 1
 
 With a jack enabled, a 17-channel pair sweep found the monitor bus is fed by USB playback
 channel pairs 2/3, 10/11, 12/13, and 14/15 (0/1, 4/5, 6/7, 8/9, 16 are silent). OpenXLR routes
-the monitor mix into channels 2/3 (`#phones` pseudo-device in the Monitor picker; direct port
+the monitor mix into channels 2/3 (at the time a `#phones` pseudo-device in the Monitor picker,
+today the Headphones 1, Headphones 2 and Line Out entries on one return; direct port
 links to playback_AUX2/AUX3). End-to-end chain (app -> System channel -> monitor mix -> monitor
 bus -> Headphones 1) confirmed by ear.
 
@@ -270,7 +271,8 @@ write + block 3 commit), corrected ClipGuard/compressor, aux level + lock. Daemo
 outHp1/outHp2/outUsbAux/outLineOut/auxLevelDb/auxLevelLock/compressor (polarity removed). UI:
 MONITOR ROUTING toggles in the HEADPHONES card, USB Aux level+lock row, Compressor button,
 asterisks gone. Mixer: `<proSink>#phones` pseudo-sink "Wave XLR Pro Headphones" in the Monitor
-picker, routed to channels 2/3.
+picker, routed to channels 2/3 (historical; the picker now lists Headphones 1, Headphones 2
+and Line Out).
 
 ## 7. Captures 3-4 (2026-08-26): the hardware mix matrix and the aux-out solution
 
@@ -422,9 +424,10 @@ Bytes 76 to 79 are the USB Aux input tail (section 6).
 
 OpenXLR drives this from firmware 1.0.14 through the same codec as the MK.2
 family, at the struct's base offset, through the block's one
-read-modify-write path ([api.md](api.md#where-the-eq-runs)). Acceptance by
-ear on Linux, the filters' curves and the zero-latency headphone path are
-still open.
+read-modify-write path ([api.md](api.md#where-the-eq-runs)). One bell was
+measured on the desk: +12 dB at 5 kHz written from OpenXLR read +12.3 to
++12.7 dB on the raw USB capture, and software mode left it flat. The other
+filter types' curves and the zero-latency headphone path are still open.
 
 ## 11. Ducking (captures of 2026-10-21)
 
@@ -469,4 +472,7 @@ mix sections. Every other byte of both blocks is copied from a fresh read.
 It writes 0x0008, then 0x0001, only the blocks that change, without the
 commit. Its targets are the pairs OpenXLR streams to: 2/3 (the jacks'
 monitor feed, through the Personal mix) and 10/11 (the Aux mix, through the
-aux mix's Music cell).
+aux mix's Music cell). On the desk the unit's ducking did not reach the
+jacks: it acts inside the unit's mix, and OpenXLR feeds the jacks through
+the monitor return, which goes around that mix, so OpenXLR ducks in
+software on the Pro ([hardware support](hardware-support.md)).

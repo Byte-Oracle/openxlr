@@ -21,6 +21,12 @@ open `main`, so they can describe changes newer than the installed release.
   of another brand gets.
 - [Omarchy shell plugin](omarchy.md): the bar plugin, its enable command,
   the Arch package recipe and its limits.
+- [Multiple Wave interfaces](wave-interfaces.md): driving up to four more
+  units beside the primary, their controls and capture channels.
+- [Installation receipts and doctor](installation.md): owned files, build
+  identity and repair commands.
+- [Flatpak](flatpak.md): the experimental Flatpak mode, its startup, logs
+  and host setup.
 - [Source installation](install-from-source.md): prerequisites, native build,
   service setup, updates, uninstall and environment variables.
 - [Windows bridge](../packaging/yabridge/README.md): companion availability,
@@ -39,6 +45,10 @@ open `main`, so they can describe changes newer than the installed release.
   [OpenAPI document](openapi-v1.json) and [saved mixer layout](mixer-layout.md).
 - [Native plugin host](../native/README.md): backend contracts, editor
   behaviour, tracing and regression checks.
+- [Localization](localization.md): the string catalogue, the languages and
+  how a translation is added and checked.
+- [Flatpak build](flatpak-build.md) and [Flatpak testing](flatpak-testing.md):
+  building the bundle and the installed acceptance checks.
 
 ## Protocol evidence and historical research
 
@@ -46,6 +56,8 @@ These records retain dated observations and provisional labels. Use the
 hardware support table for current support claims.
 
 - [USB capture guide](usb-capture.md): new captures for unmapped MK.1 controls.
+- [Hardware effects capture](hardware-effects-capture.md): collecting the
+  evidence for the onboard effects that are still unmapped.
 - [Pro protocol notebook](wave-xlr-pro-protocol.md): chronological captures
   and corrections; later verified mappings supersede early guesses.
 - [Pro capture plan](wave-xlr-pro-capture-plan.md): completed capture procedure.
