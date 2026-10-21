@@ -24,8 +24,10 @@ public interface ILayoutInfo
     bool HasBindableStrip(string id) => Mixer.IsBindableStrip(id) && HasChannel(id);
     /// <summary>A microphone input that can record a mono Sound Check take.</summary>
     bool IsSoundCheckChannel(string id) => id is "xlr1" or "xlr2" && HasChannel(id);
-    /// <summary>A microphone input, which carries the microphone EQ: XLR 1 or XLR 2.</summary>
+    /// <summary>A microphone input, which carries the microphone EQ: XLR 1, XLR 2 or a capture input on one mono port.</summary>
     bool IsMicrophoneChannel(string id) => Mixer.IsMicrophoneId(id) && HasChannel(id);
+    /// <summary>A microphone whose EQ runs on this computer only, with no choice of where: a capture input.</summary>
+    bool EqRunsInSoftwareOnly(string id) => false;
     /// <summary>Whether a microphone's EQ runs on its unit now, so switching it on needs no native helper.</summary>
     bool EqRunsOnDevice(string id) => false;
     /// <summary>An insert chain key: an XLR or capture input id, or "mix:&lt;id&gt;".</summary>

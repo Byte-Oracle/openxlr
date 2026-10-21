@@ -537,15 +537,23 @@
                                 AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
                                 ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
                 </Panel>
-                <!-- a capture input's plugin chain, the button an XLR row has, without the EQ over it.
+                <!-- a capture input's plugin chain, the button an XLR row has, with the microphone's
+                     EQ over it on a capture input the daemon reports one for, as on XLR 1.
                      The part is in the row's spec only while the daemon reports the input's chain
                      width, and the strip panel alone decides whether a part is shown. -->
-                <Button layout:StripPanel.Part="effects" Name="MatrixCaptureInserts" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
-                        Classes.fxOn="{Binding Inserts.IsProcessing, FallbackValue=False}" Classes.fxOff="{Binding Inserts.IsOff, FallbackValue=False}"
-                        Padding="5,2" FontSize="11" VerticalAlignment="Center" HorizontalContentAlignment="Center"
-                        MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
-                        Click="OnXlrInserts" AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=InsertsTitle}}"
-                        ToolTip.Tip="{loc:Text Key=InputChainHint}"/>
+                <StackPanel layout:StripPanel.Part="effects" Name="MatrixCaptureEffectsPart" Spacing="2" VerticalAlignment="Center">
+                  <Button Name="MatrixEq" Classes="matrixEq fx" Content="{loc:Text Key=Eq}"
+                          Classes.fxOn="{Binding Channel.Eq.IsLit, FallbackValue=False}" Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}"
+                          Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                          MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}" IsVisible="{Binding ShowsEq}" Click="OnEq"
+                          AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{Binding Channel.Eq.ButtonTip, FallbackValue=''}"/>
+                  <Button Name="MatrixCaptureInserts" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
+                          Classes.fxOn="{Binding Inserts.IsProcessing, FallbackValue=False}" Classes.fxOff="{Binding Inserts.IsOff, FallbackValue=False}"
+                          Padding="5,2" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                          MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                          Click="OnXlrInserts" AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=InsertsTitle}}"
+                          ToolTip.Tip="{loc:Text Key=InputChainHint}"/>
+                </StackPanel>
               </layout:StripPanel>
             </Border>
           </DockPanel>

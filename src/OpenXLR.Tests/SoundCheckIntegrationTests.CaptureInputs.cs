@@ -68,7 +68,9 @@ public sealed partial class SoundCheckIntegrationTests
             }
             Assert.Empty(CaptureChainFixture.Nodes(pw, "capture"));
             Assert.Contains($"{CaptureSource} -> OpenXLR_ch_capture", CaptureLinks());
-            Assert.Null(mixer.Snapshot().Channels.Single(c => c.Id == "capture").Eq);
+            // The EQ is offered and off, so no stage ever joined the route.
+            Assert.False(mixer.Snapshot().Channels.Single(c => c.Id == "capture").Eq!.Enabled);
+            Assert.DoesNotContain(pw.DumpNodes(), n => n.Name.StartsWith("OpenXLR_eq_capture_", StringComparison.Ordinal));
         }
         finally
         {

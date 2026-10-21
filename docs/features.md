@@ -106,7 +106,7 @@ an XLR Dock beside it has run this way; two units of one model have not. See [Mu
 ## Software controls
 
 These run on the computer. The microphone EQ is on XLR 1 and XLR 2
-whatever feeds them. The low cut and ClipGuard are on XLR 1 when it is
+whatever feeds them, and on every capture input on one mono port. The low cut and ClipGuard are on XLR 1 when it is
 bound to another source, or when the interface's backend has no mapped
 hardware control for them. Gain lock is for Elgato devices without a
 physical gain dial.
@@ -123,7 +123,7 @@ physical gain dial.
   LADSPA package. If that plugin is unavailable, enabling ClipGuard is
   rejected, the control stays disabled, and the existing microphone
   route remains live.
-- Microphone EQ: four bands on XLR 1 and XLR 2 with Wave Link's band
+- Microphone EQ: four bands on XLR 1, XLR 2 and mono capture inputs with Wave Link's band
   types (high pass, low shelf, bell, notch, high shelf, low pass), ranges
   and steps (20 Hz to 20 kHz in hertz, -12 to +12 dB in quarter decibels,
   Q 0.1 to 10 on Wave Link's log grid) and defaults, off until switched
@@ -158,7 +158,10 @@ physical gain dial.
   each microphone's EQ runs. The terminal mixer's Inputs tab offers the
   same choice and says what runs each EQ, and `setEqProcessing` sets it
   from a script ([api.md](api.md#where-the-eq-runs)). The Flow window says
-  where the EQ runs.
+  where the EQ runs. A capture input's EQ always runs in software, at the
+  head of the input before its inserts, with the same editor without the
+  switch and the badge; its Sound Check take is the raw microphone, looped
+  through the EQ ([api.md](api.md#eq-on-capture-inputs)).
 - Gain lock: the daemon rejects every gain change while the lock is set,
   from any client, and stores the lock per device in `gainlock.json`.
   Shown only for devices without a physical gain dial, which would
@@ -439,8 +442,8 @@ filters by the input's width. Flow cards include the chain, and microphone
 capture inputs draw a one-bar meter. Older daemons without a chain width show
 no capture Inserts button. The terminal mixer edits capture chains too, at
 their published mono or stereo width, and shows mono capture microphones
-with one meter bar. Sound Check also runs on mono capture inputs; the
-microphone EQ stays on XLR 1 and XLR 2.
+with one meter bar. Sound Check and the microphone EQ, in software, also
+run on mono capture inputs.
 
 ### Separate mixer window
 

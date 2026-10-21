@@ -2429,6 +2429,9 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="EqButtonTip" xml:space="preserve">
     <value>The microphone's four-band EQ, at the head of the input before the low cut, ClipGuard and the plugins. Lit while it is on, red when it cannot run. Opens the editor.</value>
   </data>
+  <data name="EqButtonTipCapture" xml:space="preserve">
+    <value>The microphone's four-band EQ, on this computer at the head of the input before the plugins. Lit while it is on, red when it cannot run. Opens the editor.</value>
+  </data>
   <data name="EqButtonNameOn" xml:space="preserve">
     <value>{0} EQ, on</value>
   </data>
@@ -2503,6 +2506,9 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   </data>
   <data name="EqStatusSoftware" xml:space="preserve">
     <value>On, running on this computer at the head of the input, before the low cut, ClipGuard and the plugins.</value>
+  </data>
+  <data name="EqStatusSoftwareCapture" xml:space="preserve">
+    <value>On, running on this computer at the head of the input, before the plugins.</value>
   </data>
   <data name="EqStatusDevice" xml:space="preserve">
     <value>On, running on the interface before USB, ahead of the plugins and everything else on this computer.</value>

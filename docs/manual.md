@@ -888,8 +888,10 @@ processing as they are set, so you can change controls, bypass plugins or
 reorder the chain and hear the result on the same words. The loop needs at least a
 tenth of a second recorded. The interface's own gain and processing are
 already in the take; changing those while it loops changes nothing. The
-loop works without any insert. Capture inputs have no EQ, low cut or
-ClipGuard of their own; Sound Check does not add them.
+loop works without any insert. Capture inputs have no low cut or
+ClipGuard of their own; Sound Check does not add them. A capture input's
+EQ already runs on this computer, so its take is the raw microphone and the
+loop goes through the EQ as it is set.
 
 - **Hear live mic** goes back to the microphone and keeps the take, so
   **Loop sample** can play it again. **Record** replaces it.
@@ -919,10 +921,12 @@ ClipGuard of their own; Sound Check does not add them.
   silence at each end.
 
 <a name="microphone-eq"></a>
-**Microphone EQ.** XLR 1 and XLR 2 each have a four-band EQ with the same
-band types, ranges and steps as Wave Link's, and the same curves. It comes
-first on the input, before the low cut, ClipGuard and your plugins, so
-ClipGuard also catches a boost, and Sound Check's loop goes through it.
+**Microphone EQ.** XLR 1, XLR 2 and every capture input on one mono port
+each have a four-band EQ with the same band types, ranges and steps as Wave
+Link's, and the same curves. It comes first on the input, before the low
+cut, ClipGuard and your plugins, so ClipGuard also catches a boost, and
+Sound Check's loop goes through it. A capture input has no low cut or
+ClipGuard, so its EQ comes straight before its plugins.
 
 Open it with **EQ**. In INPUTS it sits on the microphone's input line,
 right after the chip that says what feeds it, and stands as tall as the
@@ -957,7 +961,7 @@ clicking **EQ** again brings it to the front.
 - **EQ on** switches the whole EQ. **Compare** bypasses it while it is
   on, so you hear the microphone without it; the EQ comes back when you
   turn **Compare** off or close the editor. **Copy** and **Paste** carry one
-  microphone's EQ, switch and bands, to the other. **Reset** asks first,
+  microphone's EQ, switch and bands, to another. **Reset** asks first,
   then puts the four bands back where they start and leaves the EQ on or
   off.
 - The line at the bottom says what runs the EQ, or why it cannot run. On
@@ -990,6 +994,19 @@ and Q steps of 3.75 percent. The editor shows the values the daemon keeps.
   and the microphone keeps its path. On the unit it needs nothing.
 - Scripts drive the same EQ through the [control API](api.md#microphone-eq)
   with `setEq`, `setEqEnabled` and `setEqBand`.
+
+**EQ on a capture input.** A capture input on one mono port gets the same
+EQ button and editor as XLR 1, in INPUTS after its source chip, in an
+input rack and in the matrix. Its EQ always runs on this computer, at the
+head of the input before its plugins, even when the input carries another
+Wave interface's microphone, so the editor shows no **Where the EQ runs**
+switch and no **Hardware processing** badge, and its bottom line says it
+runs on this computer. Switching it on moves the input onto its own route,
+the way adding a plugin does, without a gap in the sound. It is saved with
+the mixer and in profiles like XLR 1's. Changing the input's source keeps
+it; deleting the input deletes it. A capture input on a stereo pair has no
+EQ, and one moved from a mono port to a stereo pair keeps its EQ settings
+for when it goes back to a mono port.
 
 **Where the EQ runs.** A Wave XLR MK.2 or XLR Dock MK.2 on firmware 1.0.15
 or later, and a Wave XLR Pro on firmware 1.0.14 or later, runs the EQ on
@@ -3059,7 +3076,9 @@ phantom power, and adds each one's microphone as a capture channel; see
 additional unit shows its gain and switches under its own name in classic
 INPUTS too, labelled with the unit's name. The primary unit keeps its
 "plays on" heading because those controls belong to the header's unit.
-The software low cut, ClipGuard and microphone EQ stay on the XLR strips.
+The software low cut and ClipGuard stay on the XLR strips. A capture input
+on one mono port has the [microphone EQ](#microphone-eq) too, and it runs
+on this computer, never on the unit.
 
 Capture inputs on supported Elgato units follow the unit when driving it,
 switching its card profile or replugging it renames the source. The channel
@@ -3078,7 +3097,8 @@ confirmation offers deletion only.
 Capture channels host LV2, CLAP and VST3 inserts in the window and through
 the [HTTP API](http-api.md). In the classic window, INPUTS shows one block
 per capture input after Aux In, in layout order. Each block has its name, a
-source chip with a connection light and any warning, its volume,
+source chip with a connection light and any warning, on a mono port the
+**EQ** button right after the chip, its volume,
 and an **Inserts** button with the chain below it. The chip opens the source
 dialog. An input rack shows the source in its `binding` part and the
 chain in `effects`. Broadcast and Wave put the source under the channel's
@@ -3092,8 +3112,9 @@ plugins that fit the input's width. A capture input on one microphone port
 draws one meter bar and a stereo pair draws two; XLR 1 and XLR 2 keep their
 two. An older daemon that does not report a chain width shows no capture
 Inserts button. A capture microphone's chain window also offers
-[Sound Check](#sound-check). EQ remains on XLR 1 and XLR 2, and the terminal
-mixer edits capture chains too, using the width the daemon reports.
+[Sound Check](#sound-check) and the [microphone EQ](#microphone-eq), which
+runs in software only. The terminal mixer edits capture chains too, using
+the width the daemon reports.
 
 A capture input on one mono port takes a mono chain; a stereo pair takes a
 stereo chain. A capture input on the first pair of a source that has just

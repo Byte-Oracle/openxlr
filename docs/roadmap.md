@@ -304,8 +304,10 @@ while fixes to existing hosts remain part of normal maintenance.
   software, which the terminal mixer offers too
   ([api.md](api.md#where-the-eq-runs)), and on the Wave XLR Pro's two
   inputs from firmware 1.0.14, coded from Wave Link captures, with one
-  bell measured on the desk. Then the terminal mixer's editor and the
-  OpenDeck plugin together with capture microphones.
+  bell measured on the desk. Capture microphones, any capture input on
+  one mono port, have it too, in software only
+  ([api.md](api.md#eq-on-capture-inputs)). Then the terminal mixer's editor
+  and the OpenDeck plugin.
 
 ## Next: daemon and integrations
 

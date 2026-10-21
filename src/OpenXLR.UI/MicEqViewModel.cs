@@ -63,8 +63,15 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
         EqClipboard.Changed += OnClipboardChanged;
     }
 
-    /// <summary>The channel id the commands name: <c>xlr1</c> or <c>xlr2</c>.</summary>
+    /// <summary>The channel id the commands name: <c>xlr1</c>, <c>xlr2</c> or a capture input's id.</summary>
     public string Channel { get; }
+
+    /// <summary>
+    /// A capture input's EQ, which always runs on this computer: the editor
+    /// offers no unit, no choice of where and no hardware badge, and names no
+    /// low cut or ClipGuard, which a capture input does not have.
+    /// </summary>
+    public bool IsCaptureInput => Channel is not ("xlr1" or "xlr2");
 
     public string ChannelName
     {
@@ -153,8 +160,8 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
     /// <summary>Which backend runs the EQ: <c>device</c> on the unit's own DSP, <c>software</c>, null while nothing runs it.</summary>
     public string? Backend => _backend;
 
-    /// <summary>The unit's own DSP runs the EQ, on or off.</summary>
-    public bool OnDevice => _backend == "device";
+    /// <summary>The unit's own DSP runs the EQ, on or off. Never on a capture input.</summary>
+    public bool OnDevice => _backend == "device" && !IsCaptureInput;
 
     /// <summary>The unit that runs it, or the one the channel carries; null when the daemon names none.</summary>
     public string? DeviceName => _deviceName;
@@ -238,6 +245,7 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
     /// <summary>The EQ button's tooltip, which says where the EQ runs.</summary>
     public string ButtonTip => OnDevice
         ? Localizer.Format("EqButtonTipDevice", _deviceName ?? Localizer.Text("EqTheInterface"))
+        : IsCaptureInput ? Localizer.Text("EqButtonTipCapture")
         : HasDeviceNote ? Localizer.Text("EqButtonTip") + " " + DeviceNote : Localizer.Text("EqButtonTip");
 
     /// <summary>False when the EQ cannot run, and <see cref="Error"/> says why.</summary>
@@ -264,7 +272,7 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
         : !_enabled ? Localizer.Text("EqStatusOff")
         : _backend switch
         {
-            "software" => Localizer.Text("EqStatusSoftware"),
+            "software" => IsCaptureInput ? Localizer.Text("EqStatusSoftwareCapture") : Localizer.Text("EqStatusSoftware"),
             "device" => _deviceName is { } name ? Localizer.Format("EqStatusDeviceNamed", name) : Localizer.Text("EqStatusDevice"),
             _ => Localizer.Text("EqStatusStarting"),
         };
@@ -332,7 +340,7 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
             _processing = processing;
         }
         JsonNode? device = eq["device"];
-        _hasDevice = device is not null;
+        _hasDevice = device is not null && !IsCaptureInput;
         _deviceReady = device?["ready"]?.GetValue<bool>() ?? false;
         _deviceName = device?["name"]?.GetValue<string>();
         _deviceFirmware = device?["firmware"]?.GetValue<string>();

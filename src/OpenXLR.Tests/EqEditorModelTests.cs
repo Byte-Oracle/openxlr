@@ -708,4 +708,62 @@ public sealed class EqEditorModelTests
         ApplyMixer.Invoke(model, [JsonNode.Parse(Mixer("software", "software"))]);
         Assert.Equal(Localizer.Format("FlowEq", 3), Step());
     }
+
+    /// <summary>
+    /// A capture input's EQ, which the daemon reports like XLR 1's with
+    /// processing software: the window makes the same model, the matrix and
+    /// the Flow card show it ahead of the input's plugins, and the editor
+    /// offers no unit, no choice and no badge even from a state that named
+    /// one, and says the EQ runs at the head of the input before the plugins.
+    /// A capture input on a stereo pair, which the daemon reports no EQ for,
+    /// gets none.
+    /// </summary>
+    [Fact]
+    public void ACaptureInputHasTheSameEqRunningOnThisComputer()
+    {
+        var model = new MainViewModel(new DaemonClient());
+        JsonNode software = State(true, Defaults);
+        software["processing"] = "software";
+        software["device"] = null;
+        string mixer = """
+            {"channels":[{"id":"guest","name":"Guest","captureSource":"usb.guest","captureMonoChannel":0,"captureConnected":true,
+                          "microphone":true,"chainWidth":1,"volume":1,"eq":EQ},
+                         {"id":"camera","name":"Camera","captureSource":"usb.camera","captureConnected":true,"chainWidth":2,"volume":1}],
+             "mixes":[{"id":"monitor","name":"Monitor A"}],
+             "inserts":{"guest":[{"insert":{"id":"comp","plugin":"urn:comp","kind":"lv2","label":"Compressor","params":{}}}]}}
+            """.Replace("EQ", software.ToJsonString());
+        ApplyMixer.Invoke(model, [JsonNode.Parse(mixer)]);
+        using var matrix = new MixMatrixViewModel(model);
+        ChannelViewModel guest = model.Channels.Single(c => c.Id == "guest");
+        MicEqViewModel eq = Assert.IsType<MicEqViewModel>(guest.Eq);
+        Assert.Null(model.Channels.Single(c => c.Id == "camera").Eq);
+        Assert.True(matrix.Rows.Single(r => r.Channel.Id == "guest").ShowsEq);
+        Assert.False(matrix.Rows.Single(r => r.Channel.Id == "camera").ShowsEq);
+        Assert.Equal("guest", eq.Channel);
+        Assert.True(eq.IsCaptureInput);
+        Assert.False(eq.HasProcessingChoice);
+        Assert.False(eq.OnDevice);
+        Assert.Null(eq.EditorNote);
+        Assert.Equal(Localizer.Text("EqStatusSoftwareCapture"), eq.Status);
+        Assert.Equal(Localizer.Text("EqButtonTipCapture"), eq.ButtonTip);
+        Assert.DoesNotContain("ClipGuard", eq.Status);
+        Assert.Equal(Localizer.Format("EqWindowTitle", "Guest"), eq.Title);
+        string[] steps = FlowGraph.From(model).Nodes.Single(n => n.Key == "ch:guest").Processing.Split('\n');
+        Assert.Equal(Localizer.Format("FlowEq", 3), steps[0]);
+        Assert.Contains("Compressor", steps[1]);
+
+        // A state that names a unit and a device backend still offers neither.
+        var (direct, sent) = Model("guest");
+        direct.Apply(OnUnit(true, "device", "device", "1.0.15", ready: true), null);
+        Assert.False(direct.HasProcessingChoice);
+        Assert.False(direct.OnDevice);
+        Assert.Null(direct.DeviceNote);
+        direct.ChooseProcessing("software");
+        direct.ChooseProcessing("device");
+        Assert.Empty(sent.Sent);
+        // Its edits name the capture input.
+        direct.Enabled = false;
+        Assert.True(sent.Sent.TryDequeue(out var off));
+        Assert.Equal(("setEqEnabled", "guest", (object)false), off);
+    }
 }

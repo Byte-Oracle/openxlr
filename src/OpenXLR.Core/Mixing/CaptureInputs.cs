@@ -138,9 +138,19 @@ public sealed partial class Mixer
         }
     }
 
+    /// <summary>
+    /// Whether a capture input plays through its own route rather than its
+    /// direct feed: an insert, the EQ or Sound Check needs one. An EQ stage
+    /// that is switched off keeps the route until it is next built, so on and
+    /// off compare at once, as on XLR 1 and XLR 2.
+    /// </summary>
     private bool CaptureRouteLocked(ChannelDefinition channel)
-        => channel.CaptureSource is not null && (InputRouteLocked(channel, null).ActiveInserts
-            || _soundCheck is not null && _soundCheckChannel == channel.Id);
+    {
+        if (channel.CaptureSource is null) return false;
+        InputRoute route = InputRouteLocked(channel, null);
+        return route.ActiveInserts || route.Eq || _eqStages.ContainsKey(channel.Id)
+            || _soundCheck is not null && _soundCheckChannel == channel.Id;
+    }
 
     // The exact name wins, as before, without asking for its ports on every
     // sweep. Only while it is missing does a capture input on a supported
@@ -195,6 +205,9 @@ public sealed partial class Mixer
         if (_inputFeeds.Remove(id, out PortLink? feed)) UnlinkDiscardedInputFeed(feed, retained);
         if (_chainOuts.Remove(id, out PortLink? onward)) _pw.Unlink(onward);
         if (_chains.Remove(id, out FilterHandle? chain)) _pw.StopFilter(chain);
+        if (_eqInputs.Remove(id, out PortLink? into)) _pw.Unlink(into);
+        if (_eqStages.Remove(id, out SoftwareEqBackend? stage)) stage.Release();
+        _eqUpstreams.Remove(id);
         _stripSources.Remove(id);
         _inputHeads.Remove(id);
         _chainStructures.Remove(id);

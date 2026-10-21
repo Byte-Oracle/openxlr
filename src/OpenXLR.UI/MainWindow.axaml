@@ -608,7 +608,17 @@
                   <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
                              TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
                 </Grid>
-                <views:CaptureSourceChip HorizontalAlignment="Left"/>
+                <!-- the source chip, then the microphone's EQ at its height, as on XLR 1: the
+                     button letters at the size the chip letters its source in, so the two stay level -->
+                <Grid Name="CaptureChipRow" ColumnDefinitions="*,Auto" HorizontalAlignment="Left">
+                  <views:CaptureSourceChip HorizontalAlignment="Left"/>
+                  <Button Name="CaptureEq" Grid.Column="1" Content="{loc:Text Key=Eq}" Classes="fx" Margin="6,0,0,0" Padding="6,1" BorderThickness="0" FontSize="11"
+                          MinWidth="0" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalContentAlignment="Center"
+                          Classes.fxOn="{Binding Eq.IsLit, FallbackValue=False}" Classes.fxOff="{Binding Eq.IsFaulty, FallbackValue=False}"
+                          IsVisible="{Binding HasEq}" Tag="{Binding Id}" Click="OnEq"
+                          AutomationProperties.Name="{Binding Eq.ButtonName, FallbackValue=''}"
+                          ToolTip.Tip="{Binding Eq.ButtonTip, FallbackValue=''}"/>
+                </Grid>
                 <TextBlock Text="{Binding BindingWarning}" Classes="hint" FontSize="11"
                            TextWrapping="Wrap" IsVisible="{Binding HasBindingWarning}"/>
                 <Grid ColumnDefinitions="90,*,Auto,64" IsVisible="{Binding HasVolume}">
