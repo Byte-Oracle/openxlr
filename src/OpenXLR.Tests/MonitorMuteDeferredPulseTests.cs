@@ -204,16 +204,21 @@ public sealed class MonitorMuteDeferredPulseTests
     public void AFailedApplicationReadDoesNotCreditAnAlreadyConsumedStaleRegistryFlag()
     {
         using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
         fixture.SetDefault("OpenXLR_ch_browser");
         fixture.SetNative("OpenXLR_ch_browser", true);
         fixture.Sweep();
         Assert.True(fixture.Mixer.MonitorMuted);
         Assert.False(fixture.Native("OpenXLR_ch_browser"));
 
-        fixture.SetDefault("OpenXLR_ch_system");
-        fixture.SetNative("OpenXLR_ch_system", true);
+        int before = fixture.Calls.Length;
+        fixture.SetNative("external", true);
         fixture.DeferNextPulse("OpenXLR_ch_browser", readFailure: true);
         fixture.Sweep(browserRegistryMuted: true);
+        string[] calls = fixture.Calls[before..];
+        Assert.Contains("get-sink-mute OpenXLR_ch_browser", calls);
+        Assert.Single(calls, call => call == "--format=json list sinks");
+        Assert.DoesNotContain("set-sink-mute OpenXLR_ch_browser 0", calls);
         Assert.False(fixture.Mixer.MonitorMuted);
         fixture.Sweep();
         Assert.False(fixture.Mixer.MonitorMuted);
@@ -224,17 +229,15 @@ public sealed class MonitorMuteDeferredPulseTests
     [InlineData(true, false)]
     [InlineData(false, true)]
     [InlineData(true, true)]
-    public void APhysicalBlanketPulseKeepsMixedOriginalMixMutesWhenEveryApplicationIsDeferred(bool firstMuted, bool readFailure)
+    public void APhysicalBlanketPulseKeepsMixedOriginalMixMutesWhenTheDefaultApplicationIsDeferred(bool firstMuted, bool readFailure)
     {
         using var fixture = new IndependentSinks();
         fixture.Mixer.SetMonitorOutputs(["external"]);
         fixture.Mixer.SetMixMuted("monitor", firstMuted);
         fixture.Mixer.SetMixMuted("monitor_b", !firstMuted);
         foreach (string name in new[] { "OpenXLR_ch_system", "OpenXLR_ch_browser" })
-        {
             fixture.SetNative(name, true);
-            fixture.DeferNextPulse(name, readFailure);
-        }
+        fixture.DeferNextPulse("OpenXLR_ch_system", readFailure);
         fixture.SetNative("external", true);
         fixture.SetNative("OpenXLR_mix_monitor", true);
         fixture.SetNative("OpenXLR_mix_monitor_b", true);
@@ -286,6 +289,7 @@ public sealed class MonitorMuteDeferredPulseTests
         private readonly string? _previousPath = Environment.GetEnvironmentVariable("PATH");
         private readonly PipeWireAdapter _adapter = new();
         public Mixer Mixer { get; }
+        public string[] Calls => File.ReadAllLines(Path.Combine(_directory, "calls"));
 
         public IndependentSinks()
         {
@@ -299,6 +303,7 @@ public sealed class MonitorMuteDeferredPulseTests
             ExecutableScript.Write(Path.Combine(_directory, "pw-link"), "exit 0\n");
             ExecutableScript.Write(Path.Combine(_directory, "pactl"), """
                 dir=${0%/*}
+                printf '%s\n' "$*" >> "$dir/calls"
                 if [ "$1" = --format=json ]; then
                     if [ -f "$dir/fail-native" ]; then /bin/rm "$dir/fail-native"; exit 1; fi
                     mute=$(/bin/cat "$dir/external")
