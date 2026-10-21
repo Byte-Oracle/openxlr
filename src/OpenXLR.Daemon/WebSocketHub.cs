@@ -363,6 +363,14 @@ public sealed class WebSocketHub
             case "set":
                 error = cmd.Control is null ? "set: missing 'control'" : _devices.Apply(cmd.Control, cmd.Value);  // broadcasts on success
                 break;
+            case "setDucking":
+                error = CommandValidation.CheckDucking(cmd, out OpenXLR.Core.Devices.DuckingChange? ducking)
+                        ?? _devices.SetDucking(ducking!);   // broadcasts on success
+                break;
+            case "setDuckingProcessing":
+                error = CommandValidation.CheckDuckingProcessing(cmd)
+                        ?? _devices.SetDucking(new OpenXLR.Core.Devices.DuckingChange(Processing: cmd.Value.GetString()));
+                break;
             case "createCaptureChannel":
             case "createChannel":
             case "renameChannel":

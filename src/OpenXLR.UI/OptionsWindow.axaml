@@ -171,6 +171,59 @@
         <Button Content="{loc:Text Key=ResetDeviceToDefaults}" Padding="14,5" HorizontalAlignment="Left" Click="OnResetDevice" IsVisible="{Binding Main.ShowResetDefaults}"/>
         <Button Name="AdditionalInterfaces" Content="{loc:Text Key=AdditionalInterfaces}" Padding="14,5" HorizontalAlignment="Left" Click="OnWaveInterfaces"
                 IsVisible="{Binding Main.ShowWaveInterfaces}"/>
+        <!-- The Wave XLR Pro's own ducking: the unit lowers the outputs OpenXLR
+             feeds it while XLR 1 is loud. Only a unit that says it can. -->
+        <StackPanel Name="Ducking" Spacing="6" Margin="0,4,0,0" IsVisible="{Binding Main.ShowDucking}">
+          <Grid ColumnDefinitions="Auto,8,Auto">
+            <TextBlock Text="{loc:Text Key=Ducking}" Classes="h" VerticalAlignment="Center"/>
+            <!-- the unit's own processor runs it, the badge the EQ editor wears -->
+            <Border Grid.Column="2" Name="DuckingHardwareBadge" IsVisible="{Binding Main.DuckingOnDevice}" VerticalAlignment="Center"
+                    Background="{DynamicResource Ox.Badge.Background}" CornerRadius="{DynamicResource Ox.Eq.CornerRadius}" Padding="8,2"
+                    ToolTip.Tip="{Binding Main.DuckingBadgeTip}" AutomationProperties.Name="{Binding Main.DuckingBadgeTip}">
+              <TextBlock Text="{loc:Text Key=EqHardwareBadge}" Foreground="{DynamicResource Ox.Text.Info}"
+                         FontSize="{DynamicResource Ox.Eq.LabelFontSize}" FontWeight="{DynamicResource Ox.Label.FontWeight}"/>
+            </Border>
+          </Grid>
+          <CheckBox Name="DuckingEnabled" Content="{loc:Text Key=DuckingEnabled}"
+                    IsChecked="{Binding Main.DuckingEnabled, Mode=TwoWay}"/>
+          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto">
+            <TextBlock Text="{loc:Text Key=DuckingOutputs}" Classes="h" VerticalAlignment="Center"/>
+            <WrapPanel Grid.Column="1" Orientation="Horizontal">
+              <CheckBox Name="DuckMonitor" Content="{loc:Text Key=DuckingMonitorOutputs}" Margin="0,0,14,0"
+                        IsChecked="{Binding Main.DuckMonitor, Mode=TwoWay}"/>
+              <CheckBox Name="DuckAux" Content="{loc:Text Key=DuckingAuxOutput}"
+                        IsChecked="{Binding Main.DuckAux, Mode=TwoWay}"/>
+            </WrapPanel>
+            <TextBlock Grid.Row="2" Text="{loc:Text Key=DuckingSensitivity}" Classes="h" VerticalAlignment="Center"/>
+            <ComboBox Name="DuckingSensitivity" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"
+                      SelectedIndex="{Binding Main.DuckingSensitivity, Mode=TwoWay}"
+                      AutomationProperties.Name="{loc:Text Key=DuckingSensitivity}">
+              <ComboBoxItem Content="{loc:Text Key=DuckingLow}"/>
+              <ComboBoxItem Content="{loc:Text Key=DuckingMedium}"/>
+              <ComboBoxItem Content="{loc:Text Key=DuckingHigh}"/>
+            </ComboBox>
+            <TextBlock Grid.Row="4" Text="{loc:Text Key=DuckingAmount}" Classes="h" VerticalAlignment="Center"/>
+            <ComboBox Name="DuckingAmount" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Stretch"
+                      SelectedIndex="{Binding Main.DuckingAmount, Mode=TwoWay}"
+                      AutomationProperties.Name="{loc:Text Key=DuckingAmount}">
+              <ComboBoxItem Content="{loc:Text Key=DuckingAmountLow}"/>
+              <ComboBoxItem Content="{loc:Text Key=DuckingAmountMedium}"/>
+              <ComboBoxItem Content="{loc:Text Key=DuckingAmountHigh}"/>
+            </ComboBox>
+            <TextBlock Grid.Row="6" Text="{loc:Text Key=DuckingSpeed}" Classes="h" VerticalAlignment="Center"/>
+            <ComboBox Name="DuckingSpeed" Grid.Row="6" Grid.Column="1" HorizontalAlignment="Stretch"
+                      SelectedIndex="{Binding Main.DuckingSpeed, Mode=TwoWay}"
+                      AutomationProperties.Name="{loc:Text Key=DuckingSpeed}">
+              <ComboBoxItem Content="{loc:Text Key=DuckingSlow}"/>
+              <ComboBoxItem Content="{loc:Text Key=DuckingMedium}"/>
+              <ComboBoxItem Content="{loc:Text Key=DuckingFast}"/>
+            </ComboBox>
+          </Grid>
+          <TextBlock Text="{loc:Text Key=DuckingHint}" Classes="hint" FontSize="{DynamicResource Ox.Label.FontSize}" TextWrapping="Wrap"/>
+          <!-- what runs ducking, or why nothing does -->
+          <TextBlock Name="DuckingStatus" Text="{Binding Main.DuckingStatus}" Classes="hint" Classes.warn="{Binding Main.DuckingWarns}"
+                     FontSize="{DynamicResource Ox.Label.FontSize}" TextWrapping="Wrap"/>
+        </StackPanel>
       </StackPanel>
     </Border>
 

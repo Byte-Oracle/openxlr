@@ -519,6 +519,7 @@ public sealed class DeviceManager : BackgroundService
             _device = dev;
             _last = null;
             ForgetEq();
+            LoadDuckingLocked(dev);
             if (dev.EqSupport is { Ready: false } eqSupport && eqSupport.Note is { } eqNote)
                 _log.LogInformation("{dev}: {note}", dev.Info.DisplayName, eqNote);
             if (_unansweredId is not null && _unansweredId != dev.Info.InstanceId) ClearUnansweredLocked();
@@ -808,6 +809,14 @@ public sealed class DeviceManager : BackgroundService
             {
                 _last = now;
                 NoteChangedLocked();
+            }
+            // A rewrite comes first, so what clients see is what the unit holds after it.
+            KeepDuckingLocked(_device, _device.ReadDucking());
+            DuckingReadback? ducking = _device.ReadDucking();
+            if (ducking != _lastDucking)
+            {
+                _lastDucking = ducking;
+                changed = true;
             }
             VerifyEqLocked(_device);
             if (changed || recovered) RaiseFromLocked();
@@ -1142,6 +1151,7 @@ public sealed class DeviceManager : BackgroundService
             Device = new DeviceDescriptor(dev.Info.Vendor, dev.Info.Model,
                 $"{dev.Info.VendorId:x4}:{dev.Info.ProductId:x4}", dev.ConnectionNote, dev.Firmware),
             Capabilities = dev.Capabilities,
+            Ducking = dev.Capabilities.Ducking ? DuckingState.From(_ducking, dev.Info, dev.Firmware, dev.ReadDucking()) : null,
             // Reopened but not answering yet: the values it last gave, which
             // the warning marks as such.
             State = _last ?? (_unansweredId == id && _lastGoodId == id ? _lastGood : null),
@@ -1171,6 +1181,103 @@ public sealed class DeviceManager : BackgroundService
             // to it is forgotten, and the mixer posts again when it returns.
             ForgetEq();
             if (was) StateChanged?.Invoke(NothingDriven.Message);
+        }
+    }
+
+    // Hardware ducking (the Wave XLR Pro). The choice is OpenXLR's, saved per
+    // unit; the unit is brought to it on every connect, on setDucking, and
+    // when a poll finds it changed by another program, no more often than
+    // DuckingRewriteSpacing. Every write is said in the journal with the
+    // bytes it changed, so a hardware check can follow it.
+    private DuckingSettings _ducking = DuckingSettings.Default;
+    private DuckingReadback? _lastDucking;
+    private long _duckingRewriteNotBefore;
+    private bool _duckingElsewhereLogged;
+
+    /// <summary>The least time between two rewrites of ducking another program changed.</summary>
+    internal static readonly TimeSpan DuckingRewriteSpacing = TimeSpan.FromSeconds(5);
+
+    /// <summary>A unit just opened: read its saved choice and write it, which clears ducking another program left while OpenXLR's is off.</summary>
+    private void LoadDuckingLocked(IAudioDevice dev)
+    {
+        _lastDucking = null;
+        _duckingElsewhereLogged = false;
+        _duckingRewriteNotBefore = 0;
+        if (!dev.Capabilities.Ducking) return;
+        _ducking = DeviceStateStore.LoadDucking(DevId(dev)) ?? DuckingSettings.Default;
+        try { WriteDuckingLocked(dev, "connect"); }
+        catch (Exception ex) when (ex is not UsbHungException)
+        {
+            _log.LogWarning("ducking on {dev}: {msg}", dev.Info.DisplayName, ex.Message);
+        }
+    }
+
+    private void WriteDuckingLocked(IAudioDevice dev, string reason)
+    {
+        // A setup the unit cannot run is given to it as ducking off.
+        DuckingWrite write = dev.SetDucking(ProDucking.OnUnit(_ducking));
+        if (!write.Wrote)
+        {
+            _log.LogDebug("ducking ({reason}) on {dev}: already held, {settings}", reason, dev.Info.DisplayName, _ducking);
+            return;
+        }
+        _log.LogInformation("ducking ({reason}) on {dev}: {settings}{fit}. Block 0x0008 {b8}. Block 0x0001 {b1}.",
+            reason, dev.Info.DisplayName, _ducking, ProDucking.Unfit(_ducking) is { } unfit ? $", written as off ({unfit})" : "",
+            write.Wrote8 ? "written: " + write.Change8 : "unchanged", write.Wrote1 ? "written: " + write.Change1 : "unchanged");
+    }
+
+    /// <summary>After a poll: a unit that no longer holds the choice gets it back, at most every DuckingRewriteSpacing.</summary>
+    private void KeepDuckingLocked(IAudioDevice dev, DuckingReadback? unit)
+    {
+        if (!dev.Capabilities.Ducking || unit is null || ProDucking.Holds(unit, ProDucking.OnUnit(_ducking))) return;
+        long now = NowMs;
+        if (now < _duckingRewriteNotBefore) return;
+        _duckingRewriteNotBefore = now + (long)DuckingRewriteSpacing.TotalMilliseconds;
+        if (!_duckingElsewhereLogged)
+        {
+            _duckingElsewhereLogged = true;
+            _log.LogInformation("The {model}'s ducking no longer matches OpenXLR's ({settings}); OpenXLR writes its own back, at most every {s} s.",
+                dev.Info.Model, _ducking, (int)DuckingRewriteSpacing.TotalSeconds);
+        }
+        try { WriteDuckingLocked(dev, "restore"); }
+        catch (Exception ex) when (ex is not UsbHungException)
+        {
+            _log.LogDebug("ducking restore on {dev}: {msg}", dev.Info.DisplayName, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Change the driven unit's ducking: fields the change carries replace
+    /// the saved choice, which is saved first and then written to the unit.
+    /// Null on success, else the reason.
+    /// </summary>
+    public string? SetDucking(DuckingChange change)
+    {
+        lock (_gate)
+        {
+            if (_device is null || !_device.Connected) return "no device connected";
+            if (!_device.Capabilities.Ducking) return "setDucking: the active device has no hardware ducking";
+            DuckingSettings next = change.ApplyTo(_ducking);
+            if (ProDucking.Valid(next) is { } problem) return $"setDucking: {problem}";
+            try { DeviceStateStore.SaveDucking(DevId(_device), next); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return $"setDucking: the setting could not be saved, so the unit was left as it is: {ex.Message}";
+            }
+            _ducking = next;
+            try { WriteDuckingLocked(_device, "setDucking"); }
+            catch (UsbHungException ex)
+            {
+                NoteHung(ex);
+                return ex.Message;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            _lastDucking = _device.ReadDucking();
+            RaiseFromLocked();
+            return null;
         }
     }
 

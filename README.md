@@ -86,7 +86,9 @@ SUPPORT, Collect diagnostics).
   mute, low cut, expander, voice tune and phantom power per input,
   ClipGuard, compressor, aux input level and lock, two headphone
   volumes with low-impedance mode, the mic/PC crossfade, and the
-  physical output routing (HP1, HP2, Line Out, USB Aux). The other
+  physical output routing (HP1, HP2, Line Out, USB Aux), and the unit's
+  own ducking, keyed by XLR 1, on the headphone and Line Out feed and the
+  USB Aux port (mapped on Windows, listening checks on Linux pending). The other
   devices expose the subset their protocol has; see the table above. An
   XLR Dock whose kernel driver lacks a gain, mute or headphone control
   gets that control through the dock's config block instead.
@@ -95,7 +97,7 @@ SUPPORT, Collect diagnostics).
   for devices without physical gain controls. The XLR Dock MK.2 and the
   Wave XLR MK.2 run the microphone EQ on their own processor from
   firmware 1.0.15, and the Wave XLR Pro on both inputs from firmware
-  1.0.14 (not yet confirmed by ear on Linux). The Pro's ducking, mix
+  1.0.14 (not yet confirmed by ear on Linux). The Pro's mix
   maximizer and channel booster are not exposed; plugin effects run on
   the computer, separate from the device's onboard processing.
 - **Submixer** built from PipeWire nodes (null sinks, remap sources,

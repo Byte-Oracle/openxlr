@@ -125,6 +125,29 @@ internal sealed class InputsView : View
             rows.Add(new ToggleRow("Line out", state.Flag("outLineOut"), value => Set(link, "outLineOut", value)));
         }
 
+        if (state.Can("ducking") && state.Ducking is { } ducking)
+        {
+            // The unit lowers what OpenXLR sends to these outputs while XLR 1 is loud.
+            rows.Add(new HeadingRow("Ducking"));
+            rows.Add(new ToggleRow("Duck on XLR 1", ducking.Enabled, value => Duck(link, "enabled", value))
+            { Note = ducking.Note });
+            foreach ((string target, string label) in new[] { ("monitor", "Phones and Line Out"), ("aux", "USB Aux out") })
+                rows.Add(new ToggleRow(label, ducking.Targets.Contains(target), value =>
+                {
+                    var targets = new JsonArray();
+                    foreach (string t in new[] { "monitor", "aux" })
+                        if (t == target ? value : ducking.Targets.Contains(t)) targets.Add(t);
+                    Duck(link, "targets", targets);
+                }));
+            string[] levels = ["low", "medium", "high"], speeds = ["slow", "medium", "fast"];
+            rows.Add(new ChoiceRow("Sensitivity", levels, Math.Max(0, Array.IndexOf(levels, ducking.Sensitivity)),
+                index => Duck(link, "sensitivity", levels[index])));
+            rows.Add(new ChoiceRow("Amount", ["low, 6 dB", "medium, 12 dB", "high, 24 dB"], Math.Max(0, Array.IndexOf(levels, ducking.Amount)),
+                index => Duck(link, "amount", levels[index])));
+            rows.Add(new ChoiceRow("Speed", speeds, Math.Max(0, Array.IndexOf(speeds, ducking.Speed)),
+                index => Duck(link, "speed", speeds[index])));
+        }
+
         if (state.Can("auxInput"))
         {
             rows.Add(new HeadingRow("USB Aux in"));
@@ -335,6 +358,10 @@ internal sealed class InputsView : View
     private static double Percent(double decibels) => Math.Clamp((60.0 + decibels) / 60.0 * 100.0, 0, 100);
 
     private static double Decibels(double percent) => -60.0 + Math.Clamp(percent, 0, 100) * 0.6;
+
+    /// <summary>One field of the unit's ducking; the daemon keeps the others.</summary>
+    private static void Duck(DaemonLink link, string field, JsonNode? value) =>
+        link.Send("setDucking", body => body["value"] = new JsonObject { [field] = value });
 
     private static void Set(DaemonLink link, string control, bool value) =>
         link.Send("set", body => { body["control"] = control; body["value"] = value; });

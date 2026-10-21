@@ -150,4 +150,8 @@ test("hardware targets follow the unit's capabilities whatever XLR 1 takes", () 
     for (const target of ["gain", "mute", "gainLocked", "hp"])
       assert.equal(deviceTargetSupported(capabilities, target), false);
   assert.equal(deviceTargetSupported(pro, "sendmute:xlr1:monitor"), false);
+  // Ducking is the Pro's alone, by its own capability.
+  assert.equal(deviceTargetSupported({...pro, ducking:true}, "ducking"), true);
+  assert.equal(deviceTargetSupported(wave, "ducking"), false);
+  assert.equal(deviceTargetSupported({...pro, ducking:false}, "ducking"), false);
 });
