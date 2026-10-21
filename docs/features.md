@@ -2,12 +2,12 @@
 
 What OpenXLR does, area by area, and how. The README has the summary.
 
-The mixer, the microphone processing, the window, the terminal mixer and
+The mixer, the microphone processing, the UI, the terminal mixer and
 the OpenDeck plugin work with any capture source PipeWire offers; [hardware control](#hardware-control) is
 for Elgato devices. [Hardware support](hardware-support.md#other-microphones)
 says what a microphone of another brand gets and what it does not.
 
-The experimental [Flatpak mode](flatpak.md) runs the daemon with the window
+The experimental [Flatpak mode](flatpak.md) runs the daemon with the UI
 and requests login startup through the desktop portal.
 
 ## Hardware control
@@ -77,7 +77,7 @@ original Wave XLR's protocol dialect, which the dock also answers. A dock
 whose firmware answers the kernel's range query badly comes up without
 the capture volume control; OpenXLR then drives gain, or any of the three
 the card lacks, through that same config block, and the connection note
-in the window says so. Each control takes exactly one path, since the
+in the UI says so. Each control takes exactly one path, since the
 kernel caches feature-unit values and a block write behind ALSA's back
 would leave the two disagreeing. The
 phantom byte was identified by the
@@ -135,7 +135,7 @@ physical gain dial.
   change reaches the running filters without a new node: a frequency, gain
   or Q change keeps the filter state, and a switch or a type change
   crossfades over 5 ms. It is saved with the mixer and in profiles. The
-  window's editor opens from an **EQ** button in INPUTS, an input rack and
+  UI opens the editor from an **EQ** button in INPUTS, an input rack and
   the matrix row heads. Its response graph uses the daemon's curve maths
   on a log frequency axis. Each band has a handle to drag for frequency
   and gain, or for Q on a type without a gain; the wheel steps Q, a
@@ -216,11 +216,11 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   streams the mixer already has, so it adds no node and no delay. XLR 1,
   XLR 2 and Aux In have one too, after the interface's gain, so a strip
   bound to a webcam or USB microphone without a gain control still has a
-  level, and a strip with plugins has one after them. The window draws it
+  level, and a strip with plugins has one after them. The UI draws it
   in the channel tiles, in the input rack and in the mix matrix's row
   heads, under the gain on a hardware row; the terminal mixer and the
   OpenDeck dials change it too. The Wave XLR Pro's zero-latency headphone
-  path is hardware and does not follow it, and the window says so on the
+  path is hardware and does not follow it, and the UI says so on the
   channel it carries
 - Ducking on every device: a key microphone (XLR 1, XLR 2 or a mono
   capture input) lowers chosen channels in chosen mixes while it is loud,
@@ -238,7 +238,7 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   with an explicit 150% boost button for monitor masters and output volume
 - A MONITOR mute that pauses every selected output while recording and
   streaming continue. Resuming keeps mix and channel mutes, levels and feeds
-  as they were. The window, terminal mixer and Deck share the same pause,
+  as they were. The UI, terminal mixer and Deck share the same pause,
   saved with mixer settings and left unchanged by profile recall
 - An editable layout: Edit layout in the SUBMIXER card adds, renames,
   reorders and removes application channels, virtual microphones and
@@ -251,20 +251,20 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   leaves a channel's strip or a mix's master and column out of the mixer
   while its audio, sends, outputs and apps carry on. Every mix can be
   hidden, Monitor A, Monitor B, Stream, Chat and Aux included. Show hidden
-  in the SUBMIXER header draws them faded in their places, as a window
+  in the SUBMIXER header draws them faded in their places, as a UI
   preference. Icons come from a built-in vector set of 23, every item
   starts with one chosen by its kind, and the icon can be picked when the
   channel or mix is added. A skin may redraw an icon or add its own as
-  path data. The window, the terminal mixer and the Stream Deck keys
+  path data. The UI, the terminal mixer and the Stream Deck keys
   show the same icon and colour. See
   [Edit the mixer layout](manual.md#layout)
-- Arrange mode in the window: drag handles, or the arrow keys, move the
-  five sections and the channel and mix tiles. Section order is a window
+- Arrange mode in the UI: drag handles, or the arrow keys, move the
+  five sections and the channel and mix tiles. Section order is a UI
   preference; tile order is the layout's one order. See
   [Arrange](manual.md#arrange)
-- Skins can place the window's header and five sections in a tree of
+- Skins can place the UI's header and five sections in a tree of
   stacks, grids and docks that scrolls sideways when it is wider than the
-  window, start a section folded or hidden, give a section a preferred
+  UI, start a section folded or hidden, give a section a preferred
   size, and order the header's actions with some in a ⋯ menu; Options
   always stays first. Under such a skin Arrange trades sections' places,
   across containers too, by pointer, arrow keys or a Swap with menu, and
@@ -300,7 +300,7 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   A skin orders and hides the parts of the heads and cells. See
   [The mix matrix](skins.md#the-mix-matrix)
 - The Broadcast skin, shipped with the application: the submixer as a mix
-  matrix across the window, HEADPHONES and MONITOR's toolbar side by side
+  matrix across the UI, HEADPHONES and MONITOR's toolbar side by side
   above it, INPUTS hidden until Arrange mode shows it, and APPLICATIONS
   in columns of six under the matrix, on a dark neutral palette. It is the complete example
   of a layout skin, and a copy to start from is in `docs/examples/skins`.
@@ -356,7 +356,7 @@ unchanged.
 ### Another microphone on XLR 1 or XLR 2
 
 XLR 1 and XLR 2 can each be bound to one mono port of any external PipeWire
-capture source. The window binds either strip from a chip on the strip, from
+capture source. The UI binds either strip from a chip on the strip, from
 Options and, with no interface attached, from a link in the header; the API
 binds either too. The chip names the source and lights while the strip is
 linked, and a line under it says why a strip is silent. The existing sends,
@@ -383,7 +383,7 @@ the dial, output selectors, USB Aux, additional interfaces, recall on
 connect and the gain lock keep working, and the other strips keep its
 audio. Its microphone can stay in the mixer as a capture channel, which the
 binding dialog offers to add. That channel then carries the interface's
-input: the window draws the interface's gain, mute and switches on it, and
+input: the UI draws the interface's gain, mute and switches on it, and
 on a Wave XLR Pro the zero-latency path to the jacks follows it. With no
 channel carrying it, the INPUTS panel keeps the controls folded under a
 heading that says so, and the crossfade says where the interface's own
@@ -419,7 +419,7 @@ The API exposes the same edit as `setCaptureSource`. A different source
 replaces the remembered Elgato unit too, so the old unit cannot take over
 when the new source is missing.
 
-Capture inputs host insert chains, set in the window or through the API:
+Capture inputs host insert chains, set in the UI or through the API:
 a mono chain on an input that takes one port, a stereo chain on a pair. An
 empty input on the first pair of a one-channel source becomes mono, with
 its links left as they were. Each chain sits before the channel's sends and meter and is built
@@ -449,7 +449,7 @@ run on mono capture inputs.
 
 The submixer can be moved into its own resizable window for a second or small
 display. It keeps the live controls, compact and mini views, skins and touch
-sizing. Closing it returns the panel to the main window.
+sizing. Closing it returns the panel to the UI.
 
 ### Exclusive channel groups
 
@@ -589,7 +589,7 @@ restores the split profile when it stops.
 - Every app in APPLICATIONS shows its icon. The daemon takes the icon
   name the app publishes to PipeWire, or finds the app's desktop entry by
   its Flatpak or application id, its process binary or its name, in the
-  XDG data directories, the Flatpak exports and Snap's. The window looks
+  XDG data directories, the Flatpak exports and Snap's. The UI looks
   the name up in the desktop's icon theme, then hicolor and the pixmaps
   directory, and draws a PNG or SVG at its drawn size. An app with no icon
   shows its initial on a badge the skin sizes and colours
@@ -599,9 +599,9 @@ restores the split profile when it stops.
   the system default output and never touches them again, so a headset
   with separate game and chat sinks keeps its own routing for that app
 - The application that has the focus can be sent to a channel from a
-  desktop shortcut or a Stream Deck key. The window reads the focused
+  desktop shortcut or a Stream Deck key. The UI reads the focused
   process id through a short-lived KWin script on KDE Plasma, the daemon
-  asks the window for it over D-Bus, and the id is matched against the
+  asks the UI for it over D-Bus, and the id is matched against the
   daemon's live audio clients; an application that cannot be identified
   without guessing is refused
 
@@ -625,10 +625,10 @@ recalling one does not rewire the desktop.
 
 ## OpenDeck plugin
 
-OpenDeck keys and dials follow the window's saved skin: surfaces, lettering,
+OpenDeck keys and dials follow the UI's saved skin: surfaces, lettering,
 status lights, icons, needles and meters share its colours. Changes arrive
 through file events without an audio command or a polling timer. Built-in
-palettes also work when the window is closed. See [skins.md](skins.md) for
+palettes also work when the UI is closed. See [skins.md](skins.md) for
 custom-skin limits and the realised palette file.
 
 `plugin/com.emaspa.openxlr.sdPlugin` is an
@@ -684,7 +684,7 @@ toggle), with its name and value on the panel and the insert's bypass
 on the press. A key or dial follows its insert by id, and falls back to
 the same plugin in the same chain when a profile recall rebuilds the
 chain. Capture insert keys and dials keep their channel id through a rename.
-Sound Check stays in the window.
+Sound Check stays in the UI.
 
 Install: download `com.emaspa.openxlr.sdPlugin.zip` from the
 [latest release](https://github.com/emaspa/openxlr/releases/latest) and
@@ -698,7 +698,7 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
 
 - `openxlr-tui`: the whole mixer in a terminal, for a machine with no
   desktop session, an ssh connection or a tiling setup. It speaks the same
-  WebSocket the window does, so both can be open at once and each shows
+  WebSocket the UI does, so both can be open at once and each shows
   what the other changed
 - A desk of vertical channel sends and separate mix masters, with stereo
   meters, hold markers and fifteen seconds of level history for the chosen
@@ -726,7 +726,7 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   follow the catalogue's order, defaults, switches, named scale points and
   integer ranges, with ratio steps for positive logarithmic ranges. Escape
   returns to the chain and `r` resets the controls to their defaults
-- The same skins as the window, read from the same folders and following
+- The same skins as the UI, read from the same folders and following
   the same saved choice, so an appearance chosen in one is the appearance
   in the other. Console faders, cap keys and lamps follow the skin's
   control choices, and every meter is a solid bar that blends the skin's
@@ -771,11 +771,11 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   of that capture stream, so capture is never allowed to suspend
 - Desktop monitor volume: the default output can follow the first selected
   MONITOR device. Keyboard volume controls and the desktop applet then use
-  the same output volume as the mixer window, including synchronization to
+  the same output volume as the mixer in the UI, including synchronization to
   the other selected monitor devices, without changing Stream or Chat levels.
   A `150%` button next to MONITOR and next to each monitor mix opens a boost
   range above unity; a boosted value arriving from the desktop opens it on its
-  own, so the window and the OpenDeck dials show the boosted level instead of
+  own, so the UI and the OpenDeck dials show the boosted level instead of
   stopping at 100%. On KDE Plasma 6 these buttons share one range with the
   desktop's Raise maximum volume setting and follow it in both directions.
   Other desktops keep a range per control.
@@ -807,7 +807,7 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   a desktop applet or the session manager can turn one down and quietly
   cut the mixes it feeds
 - Skins: every surface, label, indicator, meter, fader and control in the
-  window reads a named appearance value. A skin is a folder with a
+  UI reads a named appearance value. A skin is a folder with a
   versioned `skin.json` that replaces some or all of those values and picks,
   per control, one of the appearances OpenXLR itself draws: a flat or a
   console fader, a continuous or a segmented meter, a flat dot or a lamp in
@@ -818,7 +818,7 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   the application: Material, the classic look, Deck, built from the
   OpenDeck plugin's key and dial art, one for each of the eleven
   Omarchy palettes, two of them light, Nyan Pink, Broadcast and Wave. The
-  last two also arrange the window. Broadcast is the default: a new
+  last two also arrange the UI. Broadcast is the default: a new
   install, or one that never picked a skin, starts on it, and a skin the
   user picked, Material included, is kept. The picker is in Options, the
   choice lives in `ui.json` alone, and switching
@@ -830,17 +830,17 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   and a plugin's own editor window is drawn by the plugin and is not
   skinned. [skins.md](skins.md) is the contract
 - Material in System, Light or Dark mode: System follows the desktop's light
-  or dark preference, in the window and in the terminal mixer
-- Touch sizing for the mixer window: larger buttons, faders and list rows,
+  or dark preference, in the UI and in the terminal mixer
+- Touch sizing in the UI: larger buttons, faders and list rows,
   wider channel strips and mix tiles, chosen in Options and kept in
   `ui.json` beside the skin, over whichever skin is worn
-- A translatable window: every string it shows comes from one catalogue,
+- A translatable UI: every string it shows comes from one catalogue,
   and it ships in English, German and Spanish. Languages come from
   contributors ([localization.md](localization.md)); a language chosen in
-  Options applies the next time the window starts
-- One window per user: a second launch brings the running window to the
+  Options applies the next time the UI starts
+- One UI per user: a second launch brings the running UI to the
   front, out of the tray if it is hidden there, and exits
-- Tray icon, start-minimized option, daemon and window autostart from
+- Tray icon, start-minimized option, daemon and UI autostart from
   Options
 - Diagnostics archive: one action collects app and device state, a
   vendor block dump, the PipeWire graph, daemon logs and configs into a
@@ -858,13 +858,13 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
 `openxlr doctor` checks recorded package files and compares the
 running daemon with the installed build. It reports missing, changed and
 stale owned paths with repair commands, without changing audio or opening
-the window. Options records exact startup files and original backups,
+the UI. Options records exact startup files and original backups,
 migrating recognized files from older versions before removal. See
 [installation.md](installation.md).
 
 ### Desktop keys
 
-The window registers global shortcuts through the desktop's GlobalShortcuts
+The UI registers global shortcuts through the desktop's GlobalShortcuts
 portal, which works on Wayland, and keeps them active while it sits in the
 tray. The daemon owns no shortcut session. A key routes the application
 that has the focus to a chosen channel, steps an output's volume by five

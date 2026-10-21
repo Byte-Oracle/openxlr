@@ -197,7 +197,7 @@
           "type": "number",
           "minimum": 10,
           "maximum": 40,
-          "description": "the window's own title line"
+          "description": "the UI's own title line"
         },
         "Ox.Title.FontWeight": {
           "$ref": "#/$defs/fontWeight",

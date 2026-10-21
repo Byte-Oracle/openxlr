@@ -31,7 +31,7 @@ microphones.
 
 ![OpenXLR terminal mixer](docs/screenshot-tui-0142.png)
 
-The window and the terminal mixer, both from 0.1.42, the terminal mixer
+The UI and the terminal mixer, both from 0.1.42, the terminal mixer
 in the Tokyo Night skin. This README and the linked guides describe
 current `main`; for a released build, read the docs at its release tag.
 Changes merged after a release are available from source until the next release.
@@ -113,13 +113,13 @@ SUPPORT, Collect diagnostics).
   any selected output. The default layout is Game, Music,
   Browser, System, Voice Chat and SFX with Stream and Chat microphones;
   channels and microphones can be added, renamed, reordered and removed
-  while audio plays, from the window or the API, and a channel or a mix
+  while audio plays, from the UI or the API, and a channel or a mix
   can be hidden with its icon and colour chosen. Per-send levels and
   mutes, a volume per channel, level meters, the monitor mixes on several
   outputs at once with a pause for monitoring that leaves recording and
   streaming alone, an optional boost that takes the monitor volume to
   150%, and ducking: a key microphone lowers chosen channels in chosen
-  mixes while it is loud, on any device, set from the window, the
+  mixes while it is loud, on any device, set from the UI, the
   terminal mixer or a Stream Deck key.
 - **Microphone processing** on XLR 1 and XLR 2, whatever feeds them: a
   four-band EQ with Wave Link's band types, ranges and steps, and Sound
@@ -171,7 +171,7 @@ SUPPORT, Collect diagnostics).
   reflects changes made in the UI or on the hardware; a dial turn leads
   locally, so the daemon's echo never pulls the dial back mid-turn.
 - **Daemon and UI**: the daemon owns the device and the graph, keeps
-  running with the window closed, follows the PipeWire registry through
+  running with the UI closed, follows the PipeWire registry through
   one subscription, re-asserts the chosen default sink and source once a
   second, and serves a WebSocket API and a versioned HTTP API (`/api/v1`)
   on 127.0.0.1:37890. The UI has a Flow window with selectable signal
@@ -179,13 +179,13 @@ SUPPORT, Collect diagnostics).
   diagnostics archive exporter. It also owns the desktop keys: global
   shortcuts registered through the desktop portal that route the focused
   application, step an output's volume, toggle its mute or switch the
-  system output, active while the window sits in the tray. Options
+  system output, active while the UI sits in the tray. Options
   separates background audio and app startup at login, with independent
-  choices for launch visibility and whether closing the window keeps the
+  choices for launch visibility and whether closing the UI keeps the
   app in the tray or quits.
 - **Terminal mixer**: `openxlr-tui` is the whole mixer in a terminal, for a
   machine with no desktop session, an ssh connection or a tiling setup. It
-  speaks the same socket as the window, so both can be open at once, and it
+  speaks the same socket as the UI, so both can be open at once, and it
   wears the same skins. Tabs in the manner of btop: the submix with
   live meters, the send matrix, the hardware inputs, the outputs, the
   applications, the insert chains, the profiles and the options.
@@ -196,11 +196,11 @@ SUPPORT, Collect diagnostics).
   [docs/omarchy.md](docs/omarchy.md). The bar and the popout have been
   checked on Omarchy 4.0.4; the live theme switch and the hardware
   controls still need desktop acceptance.
-- **Skins**: the window's appearance is a set of named values a skin file
+- **Skins**: the UI's appearance is a set of named values a skin file
   can replace. Sixteen ship, all built into the application: Material, the
-  classic look, Deck, which dresses the window in the visual language of the
+  classic look, Deck, which dresses the UI in the visual language of the
   OpenDeck plugin's keys and dials, one for each of the eleven Omarchy
-  palettes, Nyan Pink, Broadcast and Wave. The last two arrange the window
+  palettes, Nyan Pink, Broadcast and Wave. The last two arrange the UI
   as a mix matrix, with inputs as rows and mixes as columns. Broadcast is
   the default, for new installs and for installs that never picked a skin,
   and uses neutral greys; Wave uses charcoal surfaces and blue accents. A skin is
@@ -304,7 +304,7 @@ install-from-file, or copy the folder the package puts in
 compatible LV2, CLAP and VST3 plugins (`lsp-plugins-lv2` is the set used
 during development); the software ClipGuard for the XLR Dock needs
 `swh-plugins`. The NixOS module wires both up itself. Focused-application
-routing asks the window over D-Bus with `gdbus` from the GLib command-line
+routing asks the UI over D-Bus with `gdbus` from the GLib command-line
 tools (`glib2` on Arch and Fedora, `libglib2.0-bin` on Ubuntu), which the
 packages depend on. The packages also
 raise pipewire-pulse's open-file limit with a systemd drop-in, which
@@ -322,7 +322,7 @@ after they restart. Rebooting does that, and so does this:
 systemctl --user restart openxlr-daemon
 ```
 
-Then close the mixer window and open it again, and quit `openxlr-tui` if
+Then close the UI and open it again, and quit `openxlr-tui` if
 it is running. On Omarchy, reload the bar plugin with:
 
 ```sh
@@ -408,7 +408,7 @@ historical protocol research.
 Support, hardware reports, feature requests and release news also live
 on the OpenXLR Discord server, [discord.gg/4bswtnGPW4](https://discord.gg/4bswtnGPW4),
 and on Reddit at [r/OpenXLR](https://www.reddit.com/r/OpenXLR/). The
-window links to both from About in the main header. Confirmed bugs still end up
+UI links to both from About in its header. Confirmed bugs still end up
 as GitHub issues, so any of the three works to start. To help with
 code or hardware reports, read [CONTRIBUTING.md](CONTRIBUTING.md)
 first.

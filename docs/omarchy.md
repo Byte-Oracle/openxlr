@@ -1,7 +1,7 @@
 # Omarchy shell plugin
 
 `openxlr.mixer` puts the mixer in the Omarchy 4 bar. It is a client of the
-existing daemon, so the window and terminal mixer can remain open and see
+existing daemon, so the UI and terminal mixer can remain open and see
 the same changes. The plugin source is in
 `packaging/omarchy/openxlr.mixer/`, beside the other desktop package inputs.
 
@@ -106,9 +106,9 @@ Each lit cell takes the colour for its own position on the scale: fill
 below the warning threshold, warning up to the hot threshold, hot above
 it. An unlit cell takes the track colour. Levels change the glyphs that
 are lit, not the colour zones. The bar meters never take these skin colours,
-and the plugin does not change the window's selected skin.
+and the plugin does not change the UI's selected skin.
 
-The skins are embedded in OpenXLR's window assembly, so the plugin carries
+The skins are embedded in OpenXLR's UI assembly, so the plugin carries
 only their six meter tokens in `Skins.js`. Regenerate it after editing an
 embedded skin with `python3 tools/omarchy-skins.py`.
 `python3 tools/omarchy-skins.py --check` checks for drift without writing;
@@ -119,7 +119,7 @@ the application's defaults for unset thresholds.
 
 This needs Omarchy 4's plugin host, a running OpenXLR daemon in the same
 user session, and Arch's `qt6-websockets` package. It does not need the
-OpenXLR window. The Arch package installs the plugin under
+OpenXLR UI. The Arch package installs the plugin under
 `/usr/share/openxlr/omarchy/openxlr.mixer/` and the enable command under
 `/usr/bin/`. Once the package includes them, run inside your Omarchy session:
 
@@ -147,7 +147,7 @@ omarchy plugin remove openxlr.mixer
 Removal disables the plugin and unlinks its directory. It leaves the
 system copy for the package manager. A package upgrade replaces that
 copy; run `omarchy-shell shell rescanPlugins` after upgrading to reload it.
-The daemon and the window keep the code they started with until they are
+The daemon and the UI keep the code they started with until they are
 restarted, which the README's upgrading section covers.
 The plugin is package-managed, so `omarchy plugin update` does not update it.
 No package hook writes to a user's home or restarts a service.
@@ -217,11 +217,11 @@ since the daemon may already have applied it. Unloading the widget closes
 its socket and cancels its timers. Each bar instance owns one connection.
 
 This popout does not edit routing, output selection, layouts, profiles,
-inserts, gain or phantom power. Use the window or `openxlr-tui` for those.
-It does not start the daemon, change login settings or hide the window's
+inserts, gain or phantom power. Use the UI or `openxlr-tui` for those.
+It does not start the daemon, change login settings or hide the UI's
 tray icon. It does not copy the terminal's peak holds or level history.
 Its popout meters follow the Omarchy theme, so selecting a different skin
-in the OpenXLR window does not recolour them.
+in the OpenXLR UI does not recolour them.
 
 ## Checks and desktop acceptance
 
@@ -263,8 +263,8 @@ Before merging, check on an Omarchy machine:
   with the popout open; only its meters should take the skin colours.
 - Check XLR 1 and 2 hardware mute, send mute, independent stereo levels,
   custom channel names, monitor sums and different feeds on two outputs.
-  Compare edits with the window and terminal, including 150% monitor gain.
-- Bind XLR 1 to another microphone from the window and keep the
+  Compare edits with the UI and terminal, including 150% monitor gain.
+- Bind XLR 1 to another microphone from the UI and keep the
   interface's microphone as a capture channel. The bar label reads
   `Mic 1`, the interface's mute leaves it undimmed, its popout strip names
   the source and has no mic button, and the capture channel's mic button

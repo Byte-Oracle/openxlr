@@ -30,22 +30,22 @@ flowchart TD
   per-run token; browser Origins, command sizes and rates are checked as
   well.
 - `OpenXLR.UI` is an Avalonia client with no Core assembly dependency. It
-  parses state and sends commands. It also manages local window preferences,
+  parses state and sends commands. It also manages local UI preferences,
   autostart and the daemon service, collects diagnostics, and optionally
   checks GitHub releases. Closing it leaves audio running. Its Flow window
   builds a four-column view from state; selecting a path changes only
-  the visualization. The window also owns the desktop keys: it registers
+  the visualization. The UI also owns the desktop keys: it registers
   shortcuts through the `org.freedesktop.portal.GlobalShortcuts` portal on
   a private session-bus connection and turns a press into a daemon
   command, while hidden in the tray as well. For focused-application
   routing it serves `org.openxlr.Desktop` on that bus; a short-lived KWin
   script reports the focused process id back, and the daemon asks the
-  window for it with `gdbus`, one request at a time.
+  UI for it with `gdbus`, one request at a time.
 - The OpenDeck plugin is an OpenAction plugin in OpenDeck's Node runtime,
-  using the same authenticated API and live choices as the window.
+  using the same authenticated API and live choices as the UI.
 - `OpenXLR.Tui` is the terminal mixer, `openxlr-tui`. It speaks the same
-  authenticated WebSocket, draws its own cells, and reads the window's
-  skins from the same folders and the same saved choice. Like the window
+  authenticated WebSocket, draws its own cells, and reads the UI's
+  skins from the same folders and the same saved choice. Like the UI
   it has no reference to Core, and it has no NuGet dependency.
 - The Omarchy plugin, `packaging/omarchy/openxlr.mixer/`, is QML for
   Omarchy 4's bar. It connects to `/api/v1/events` with the same token and

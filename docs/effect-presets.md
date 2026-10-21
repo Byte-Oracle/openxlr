@@ -1,6 +1,6 @@
 # Effect presets
 
-The window can copy effects between chains, compare two settings of a chain,
+The UI can copy effects between chains, compare two settings of a chain,
 and save chains or single effects as named presets. All of it works on the
 parameter values OpenXLR already shows. A preset never holds plugin-private
 state, so an effect's own preset banks, loaded sample files and editor
@@ -10,16 +10,16 @@ buttons. This page describes the files.
 ## What a preset holds
 
 A preset is a name and a chain. The chain is an ordered list of effects,
-each written the way the window sends it to the daemon with
+each written the way the UI sends it to the daemon with
 [`setInserts`](api.md). Every effect has its slot id, its format, the plugin identifier, the
 label it shows, whether it is bypassed, whether it runs in the native host,
-and the value of every control the window has set. A single-effect preset
+and the value of every control the UI has set. A single-effect preset
 is a chain with exactly one effect in it.
 
 ## Where they live
 
 Saved presets are one file, `effect-chain-presets.json`, under
-`~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`). The window writes it
+`~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`). The UI writes it
 whole through an atomic replace, with owner-only permissions, and reads
 it only when it is a regular file of at most 8 MiB; a pipe, socket or
 device in its place is refused. The daemon never reads it. The file is a JSON array of presets in the format below.
@@ -68,11 +68,11 @@ installs a plugin.
 | `bypass`, `nativeHost` | optional booleans |
 | `params` | an object of up to 256 controls, each a symbol of 1 to 256 characters without spaces or control characters, and a finite number |
 
-The window refuses a whole file that is over 8 MiB, repeats a property in
+The UI refuses a whole file that is over 8 MiB, repeats a property in
 any object, holds a value of the wrong type or has a field outside these
 bounds, and shows one error line. The store holds at most 64 presets and
 is itself limited to 8 MiB. A store that fails these checks is reported
-and left as it is. The window will not save over it until the file is
+and left as it is. The UI will not save over it until the file is
 repaired or removed.
 
 ## Loading and ids
@@ -91,6 +91,6 @@ plugin in the same chain.
 Every load goes through `setInserts` and its validation. The daemon refuses
 a plugin that is not installed, a control the plugin does not declare, or a
 plugin that cannot run at the chain's width, and the chain stays as it was.
-Before it replaces the chain, the window sends any control values still
+Before it replaces the chain, the UI sends any control values still
 waiting in its queue, so an edit made a moment earlier cannot arrive after
 the loaded values and overwrite them.

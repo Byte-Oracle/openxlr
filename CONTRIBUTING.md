@@ -10,13 +10,13 @@ or in a GitHub issue.
 - **Hardware reports.** If you own a device we could not test ourselves,
   run the controls, note what works and what does not, and open an issue
   with a diagnostics archive (Options, SUPPORT, Collect diagnostics in
-  the window). The per-control table in
+  the UI). The per-control table in
   [docs/hardware-support.md](docs/hardware-support.md) shows what is
   still unverified.
 - **Bugs with a way to reproduce them.** The archive again, plus what
   you did and what you expected. The daemon's journal is
   `journalctl --user -u openxlr-daemon`.
-- **A translation of the window.** The window ships in English and reads
+- **A translation of the UI.** The UI ships in English and reads
   every string from one catalogue; a language is a copy of it with the
   values translated. [docs/localization.md](docs/localization.md) has the
   steps. Only translate a language you read and write well.
@@ -166,7 +166,7 @@ and [package checks](packaging/yabridge/README.md).
 The CodeQL init and analyze steps must use the same pinned commit. Dependabot
 groups these actions so a version update changes both steps in one pull request.
 
-Dependabot groups Avalonia packages because the window uses them as one
+Dependabot groups Avalonia packages because the UI uses them as one
 framework. A grouped update can still leave a referencing project's lock
 file stale. Run the full solution restore and regenerate the Nix dependency
 list as described above, then commit all changed lock files before the
@@ -225,10 +225,10 @@ brief an agent should read before working on the tree.
 
 ## Code conventions
 
-- The window (`OpenXLR.UI`) has no reference to `OpenXLR.Core`, so
+- The UI (`OpenXLR.UI`) has no reference to `OpenXLR.Core`, so
   nothing from libusb or lilv ends up in it. The two files both sides
   need, `OpenXlrPaths.cs` and `ProcessRunner.cs`, are compiled into the
-  window as linked sources; anything else shared goes the same way.
+  UI as linked sources; anything else shared goes the same way.
 - Every file under `~/.config/openxlr` is written through
   `OpenXlrPaths.WriteAtomic` (private modes, atomic replace), and every
   helper process runs through `ProcessRunner` (C locale, deadline,
@@ -249,7 +249,7 @@ brief an agent should read before working on the tree.
   cannot be run while other test classes start helpers: the write handle
   reaches their forked children and Linux answers exec with "Text file
   busy".
-- The window holds no colour, font size or corner radius of its own. A
+- The UI holds no colour, font size or corner radius of its own. A
   new surface reads an `Ox.*` resource with `DynamicResource`, and a new
   value is added to `src/OpenXLR.UI/Skinning/SkinTokens.cs`, then to its
   table in [docs/skins.md](docs/skins.md) and to
@@ -257,7 +257,7 @@ brief an agent should read before working on the tree.
   holds the three together. A control appearance a skin can choose is an
   entry in `src/OpenXLR.UI/Skinning/SkinControls.cs` and a control theme
   in `Skinning/Controls.axaml`.
-- Text the window shows is an entry in
+- Text the UI shows is an entry in
   `src/OpenXLR.UI/Localization/Strings.resx`, read by its literal key with
   `{loc:Text Key=...}` in markup or `Localizer.Text` and `Localizer.Format`
   in code; `LocalizationTests` holds the catalogue and the sources together.

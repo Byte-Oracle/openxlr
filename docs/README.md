@@ -11,7 +11,7 @@ open `main`, so they can describe changes newer than the installed release.
   Flow, Stream Deck, troubleshooting, local files, the terminal mixer and
   the Omarchy bar.
 - [Features](features.md): supported behaviour by area.
-- [Skins](skins.md): the window's appearance values, where skins live and
+- [Skins](skins.md): the UI's appearance values, where skins live and
   the rules one is read under, with a [JSON schema](skin.schema.json) and an
   [example skin](examples/skins/example/skin.json) to start from.
 - [Effect presets](effect-presets.md): copied effects, A/B comparison and

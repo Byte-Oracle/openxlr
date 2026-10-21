@@ -31,7 +31,7 @@ The manifest grants the audio sockets, USB device nodes, graphics and
 specific tray/focus D-Bus names. Only the host WirePlumber `wireplumber.conf.d` folder
 and OpenXLR runtime directory are writable outside private app storage.
 Imported LV2, CLAP and VST3 bundles live in app-private persistent folders.
-The window, catalogue and native host see those folders under the usual
+The UI, catalogue and native host see those folders under the usual
 home-directory names, without access to the host's plugin folders.
 Loopback API and Stream Deck clients require the shared network namespace.
 Audio clients identify their media category as Manager so WirePlumber can

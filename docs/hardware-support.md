@@ -143,7 +143,7 @@ block reads the live register, and with a microphone attached the capture
 level moved by the same 70 dB whether gain was set through ALSA or through
 the word, and an ALSA write shows up in the block at once. On such a unit
 the daemon drives the missing control through the block and says so in
-its journal on connect and in the window's Options, under INTERFACE.
+its journal on connect and in the UI's Options, under INTERFACE.
 Each control uses one path only, because the
 kernel caches mixer values and would not see a block write behind its
 back. A control the card lacks while the USB handle is not open (the
@@ -315,7 +315,7 @@ interface. The backend, `src/OpenXLR.Core/Devices/Wave3Device.cs`,
 takes every protocol fact from three public sources and names the
 source on each line. One user ran a quick test on their own unit before
 0.1.49: OpenXLR found the microphone, and gain, mute, headphone volume
-and the monitor balance answered from the window.
+and the monitor balance answered from the UI.
 
 The maintainer has had a unit since 2026-10-19 (firmware 1.2.4, API
 5.4) and ran the checks that need nobody at the microphone, with the
@@ -377,7 +377,7 @@ grid would swallow the Stream Deck's five-unit crossfade ticks.
 | Direct monitor balance, as the crossfade | verified on hardware | Q8.8 percent at 10, half a percent per crossfade unit, shown as the Mic and PC crossfade (0 to 200). The word runs the other way from the crossfade: 0 percent is the computer alone and 100 the microphone alone. None of the sources states the direction; an owner settled it by ear on 2026-10-18, when the straight mapping put all computer audio at the slider's microphone end, and the backend mirrors the scales since |
 | Headphone mute | read | byte 9, in the state as `hpMute`. wave3-research saw the firmware assert it when the level reaches its floor; a level written above the floor releases it, so the jack cannot stay silent with nothing in OpenXLR to release it. No control sets it |
 | Low cut | software | the submixer's high-pass, by design; byte 6 is carried as read |
-| Gain lock | software | the daemon's own lock, kept off the window because of the dial, as on every device with one; byte 15 is carried as read |
+| Gain lock | software | the daemon's own lock, kept off the UI because of the dial, as on every device with one; byte 15 is carried as read |
 | Dial target | read | byte 12: 1 gain, 2 headphones, 3 monitor mix; named in the diagnostics dump, with where the reported gain came from |
 | Mute ring colour, LED brightness | unmapped | wave3-research's bytes 10, 11, 13 and 15; carried as read where no setter owns them |
 | Desktop volume controls | verified on hardware | the kernel's 'Mic Capture Volume', 'Mic Capture Switch' and 'PCM Playback Volume' kept in step with the block, as openwave does on the hardware; a change to the sink volume or the source mute in the desktop reached the block within a second. See below |
@@ -406,7 +406,7 @@ the reason on its `alsa` line.
 
 The one input strip is the capsule, not an XLR jack. The capabilities
 say so with `xlrJacks` false, so the mixer names that strip Mic 1 rather
-than XLR 1 and gives it the microphone icon, and the window calls its
+than XLR 1 and gives it the microphone icon, and the UI calls its
 input the built-in microphone, never a jack. The Wave:3 has no XLR jack,
 no phantom power, no second input, no output routing and no aux port, and
 none of those is offered. None of the sources says whether the microphone keeps
@@ -545,7 +545,7 @@ the packages include. Aux In cannot be bound.
 As a capture input (Edit layout, **Add capture input**), the source gets a
 channel of its own with sends, a volume, meters and its place in profiles,
 fed from a stereo pair, or from one mono port through the API. A capture
-input hosts an insert chain of its own, shown in the window's INPUTS card,
+input hosts an insert chain of its own, shown in the UI's INPUTS card,
 the racks and the matrix, and a mono capture input has Sound Check. It has
 no EQ of its own, and the inserts on the mixes it feeds process it too.
 
@@ -595,11 +595,11 @@ nodes. On real units, so far:
 | XLR 2 on another source while XLR 1 is bound; both strips on one port | not yet checked | |
 | Unplugging and replugging the bound source, and the primary interface while a strip is bound | not yet checked | |
 | Bindings and the capture channel after a daemon restart; no interface attached, binding from the header and `generic` profiles | not yet checked | |
-| A Wave:3 primary with XLR 1 on another microphone: its controls in the window, the crossfade line | not yet checked | |
+| A Wave:3 primary with XLR 1 on another microphone: its controls in the UI, the crossfade line | not yet checked | |
 | An XLR Dock primary with XLR 1 bound elsewhere: dock controls, live capture on return to the jack | not yet checked | |
 | A Bluetooth headset bound to XLR 1: the headset profile switch and back | not yet checked | |
 | Stream Deck keys and the Omarchy bar naming the channel that carries the interface's microphone | not yet checked | |
-| A capture input's own insert chain and Sound Check on a mono capture input, in the window and the terminal mixer | not yet checked | |
+| A capture input's own insert chain and Sound Check on a mono capture input, in the UI and the terminal mixer | not yet checked | |
 | The unit controls following a capture input bound to an additional interface's input | not yet checked | |
 | Changing a capture input's source in place: the channel keeps its id, sends and inserts, the old source is released | not yet checked | |
 
@@ -662,21 +662,21 @@ diagnostics archive:
    value in headphone and mix mode. That decides which reading of those
    bytes is right and whether the backend's gain handling can be
    simplified.
-3. Mute from the window and from the capacitive pad: the state and the
+3. Mute from the UI and from the capacitive pad: the state and the
    LED ring agree both ways.
-4. ClipGuard from the window: the setting survives a readback, and a
+4. ClipGuard from the UI: the setting survives a readback, and a
    loud signal is caught by the hardware. If the byte does nothing, say
    so; the software limiter can take over.
-5. Headphone volume from the window: the level in the headphones
+5. Headphone volume from the UI: the level in the headphones
    follows, -60 dB is near silence, 0 dB is the loudest. Then turn the
    dial in headphone mode down to its floor and take a dump: `hpMute`
    in the state turns on if the firmware asserts it there. Raise the
-   volume from the window: sound is back and `hpMute` is off.
-6. Gain from the window with the dial on gain: the microphone's own
+   volume from the UI: sound is back and `hpMute` is off.
+6. Gain from the UI with the dial on gain: the microphone's own
    gain display and the recorded level follow. Firmware 1.2.4 took the
    write on the maintainer's unit; say if yours snaps back, which is what
    wave3-research saw on an older firmware.
-7. The crossfade from the window, settled by ear on the maintainer's
+7. The crossfade from the UI, settled by ear on the maintainer's
    unit: with a playback stream running and the microphone live, the left
    end leaves only the microphone in the headphones and the right end
    only the computer. Say if yours differs.
@@ -691,7 +691,7 @@ diagnostics archive:
    and controller it is on.
 10. Change the microphone's output volume and mute its input in the
     desktop's sound settings: within a second the headphones and the
-    mute ring follow, and so does the window. Then turn the dial in
+    mute ring follow, and so does the UI. Then turn the dial in
     headphone mode: the desktop's slider follows.
 11. Options, under INTERFACE, shows a firmware version. Say whether it
     matches the one Wave Link shows for the microphone.

@@ -1,7 +1,7 @@
 # Flatpak
 
 Flatpak support is experimental. Distro packages remain the recommended
-installation. The Flatpak window owns its daemon: closing to the tray keeps
+installation. The Flatpak UI owns its daemon: closing to the tray keeps
 audio running; Quit stops both. Stop the packaged daemon before launching
 the Flatpak, since they use the same control port. Disable the native
 installation's login options before enabling Flatpak login startup.
@@ -9,7 +9,7 @@ installation's login options before enabling Flatpak login startup.
 ## Startup and logs
 
 The login settings use the desktop background portal. Start audio in the
-background launches in the tray. Start the OpenXLR app shows the window,
+background launches in the tray. Start the OpenXLR app shows the UI,
 unless Tray only is selected under On launch. A refused request is reported
 without saving it. If autostart is granted but background activity is not,
 the login choice is saved with a warning so the entry can still be disabled.
@@ -18,7 +18,7 @@ Desktop settings can revoke permission later.
 Restart daemon restarts the child without touching host services. Failed
 children are retried with a delay; a busy API port or owned daemon lock
 ends the attempt. Restart interrupts a pending retry delay. A parent-process wait also stops the daemon if the
-window crashes. The tray uses the app's D-Bus namespace, including when
+UI crashes. The tray uses the app's D-Bus namespace, including when
 the desktop tray host restarts. There is no systemd watchdog. Private `daemon.log`
 under `$XDG_STATE_HOME/openxlr` has one rotated copy. Collect
 diagnostics includes both instead of the journal.
