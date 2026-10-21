@@ -73,6 +73,35 @@ modules or custom drivers:
   its own stream in every combine and a removed one loses them without
   any channel being reloaded. The default layout's 9 channels and 5
   mixes are 14 sinks and no loopback processes.
+- Core's internal ducking plan can send selected cells through a hidden
+  null sink per mix, `OpenXLR_mix_<id>.duck`, and a native stereo stage,
+  `OpenXLR_duck_<id>`. The bus matches the combine pattern and grows a leg
+  in every channel without reloading it. A target cell's direct leg is
+  held at zero and muted; its bus leg carries the usual send level,
+  channel volume and mute. Every other bus leg is zero and muted. The
+  stage feeds the mix's playback ports, where PipeWire sums it with the
+  direct sends. Monitor masters, mix inserts, latency delays, consumers
+  and mix meters still read the same mix. The stage has no algorithmic
+  latency. Each bus reserves headroom for one stream per channel and
+  two nodes before it is created.
+- The duck key is the key channel's `monitor_FL`, after input EQ, inserts
+  and Sound Check, before channel volume and sends. The key's own cells
+  cannot be targets. `key_open` follows whether any key send is audible
+  after channel volume, send mutes, exclusive groups, mix controls and
+  hardware-path silencing. Controls go live over the helper's command
+  pipe. Turning the plan off lets the gain recover at its release rate
+  and keeps existing stages until a rebuild. An off plan starts none.
+- A duck bus's output stays disconnected until all its legs have their
+  intended levels. A move onto the bus closes the direct leg first; a
+  move back disconnects the output first. Channel creation and reload
+  disconnect bus outputs while their new legs are set. The healing sweep
+  repairs duck links and replaces failed stages under the insert restart
+  policy, keyed `duck:<mix>`. A failed stage gets a bus-monitor bypass on
+  that sweep and is retried on a later one; repeated failures leave the
+  bypass carrying audio. `ReadMeters` adds `duck:<mix>` with one reduction
+  value in dB for each mix fed by a running stage. The daemon does not
+  call the internal plan API yet, so a normal start creates no duck buses
+  or stages and publishes no duck meters.
 - For every virtual-microphone mix, a post sink fed from the mix
   (directly or through the mix's insert chain) and a remap source
   (`module-remap-source`) reading its monitor: the virtual microphone an

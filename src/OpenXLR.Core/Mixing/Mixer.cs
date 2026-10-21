@@ -74,8 +74,16 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
     public Mixer(PipeWireAdapter? adapter = null) => _pw = adapter ?? new PipeWireAdapter();
 
-    /// <summary>Live stereo levels per channel and mix, keyed by id, as [L, R].</summary>
-    public IReadOnlyDictionary<string, double[]> ReadMeters() => _meters.Read();
+    /// <summary>Live stereo channel and mix levels, plus one reduction value in dB per running duck stage.</summary>
+    public IReadOnlyDictionary<string, double[]> ReadMeters()
+    {
+        IReadOnlyDictionary<string, double[]> levels = _meters.Read();
+        if (_duckMeterHosts.IsEmpty) return levels;
+        var meters = new Dictionary<string, double[]>(levels);
+        foreach ((string mix, NativePluginHost host) in _duckMeterHosts)
+            if (host.IsHealthy) meters[DuckKey(mix)] = [host.Meters.GetValueOrDefault("reduction")];
+        return meters;
+    }
 
     public MixerConfig Config => _config;
 
@@ -112,12 +120,17 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private void DiscoverLegsLocked()
     {
         _legIndex.Clear();
+        _duckLegIndex.Clear();
         foreach ((string chId, uint module) in _combineModules)
         {
             IReadOnlyDictionary<string, int> legs = _pw.FindCombineLegs(module);
             foreach (MixDefinition mix in _config.Mixes)
+            {
                 if (legs.TryGetValue(mix.SinkName, out int idx))
                     _legIndex[Cell(chId, mix.Id)] = idx;
+                if (_duckBuses.ContainsKey(mix.Id) && legs.TryGetValue(mix.DuckBusName, out int duckIdx))
+                    _duckLegIndex[Cell(chId, mix.Id)] = duckIdx;
+            }
         }
     }
 
@@ -172,6 +185,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             // Push initial fader values.
             NormalizeExclusiveGroupsLocked();
             ReapplyMixesLocked(config.Mixes);
+            _duckPlan = _duckPlan?.Prune(config);
+            SyncDuckBusesLocked();
 
             // Publish non-monitor mixes as selectable capture devices. Each
             // reads a post sink fed from the mix (directly, or through the
@@ -628,6 +643,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (!_built) return false;
             bool soundCheckChanged = EnsureSoundCheckLocked();
             soundCheckChanged |= HealEqStagesLocked();
+            soundCheckChanged |= HealDuckBusesLocked();
             if (_chains.Count == 0 && _mixDelays.Count == 0 && _latencyReports.Count == 0)
                 return EnsureMixRoutesLocked() || soundCheckChanged;
             bool changed = false;
@@ -2018,6 +2034,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             }
             changed |= sink.Muted ? _mixMuted.Add(mix.Id) : _mixMuted.Remove(mix.Id);
         }
+        if (changed) PushDuckKeyOpenLocked();
         return changed;
     }
 
@@ -2467,6 +2484,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (monitor is not null) _pw.SetSinkVolume(monitor.SinkName, volume);
             _mixVolume[mixId] = volume;
             if (monitor is null) ReapplyMixLocked(mixId);
+            else PushDuckKeyOpenLocked();
         }
     }
 
@@ -2478,6 +2496,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (monitor is not null) _pw.SetSinkMuted(monitor.SinkName, muted);
             if (muted) _mixMuted.Add(mixId); else _mixMuted.Remove(mixId);
             if (monitor is null) ReapplyMixLocked(mixId);
+            else PushDuckKeyOpenLocked();
         }
     }
 
@@ -2846,40 +2865,48 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private void ApplyCellLocked(string channelId, string mixId)
     {
         string cell = Cell(channelId, mixId);
-        (double level, bool muted) = CellTargetLocked(channelId, mixId, out bool waiting);
-
-        if (!_legIndex.TryGetValue(cell, out int idx))
-        {
-            DiscoverLegsLocked();
-            // A leg that has not grown yet comes up at a level the session
-            // manager picks, full level and unmuted when it remembers
-            // nothing. Remember the cell so the sweep can
-            // push the stored fader the moment the leg appears; leaving it
-            // would open a send the user had closed.
-            if (!_legIndex.TryGetValue(cell, out idx)) { MarkCellPendingLocked(cell); return; }
-        }
+        var targets = CellLegTargetsLocked(channelId, mixId, out bool waiting);
+        bool bus = _duckBuses.ContainsKey(mixId);
+        if (!_legIndex.ContainsKey(cell) || bus && !_duckLegIndex.ContainsKey(cell)) DiscoverLegsLocked();
         try
         {
-            _pw.SetSinkInputVolume(idx, level);
-            _pw.SetSinkInputMuted(idx, muted);
-            Settle(cell);
+            Write();
         }
         catch (InvalidOperationException)
         {
             // The leg's index changed (combine reconnected); rediscover once.
             DiscoverLegsLocked();
-            if (_legIndex.TryGetValue(cell, out idx))
+            try { Write(); }
+            catch (InvalidOperationException) { MarkCellPendingLocked(cell); }
+        }
+        PushDuckKeyOpenLocked();
+
+        void Write()
+        {
+            if (!_legIndex.TryGetValue(cell, out int direct) || bus && !_duckLegIndex.ContainsKey(cell))
             {
-                try { _pw.SetSinkInputVolume(idx, level); _pw.SetSinkInputMuted(idx, muted); Settle(cell); }
-                catch (InvalidOperationException) { MarkCellPendingLocked(cell); }
+                MarkCellPendingLocked(cell);
+                return;
             }
-            else MarkCellPendingLocked(cell);
+            // Close the unused leg first. A failed close must never be
+            // followed by opening the other path onto the same audio.
+            if (bus && UsesDuckBusLocked(cell, mixId))
+            {
+                Leg(direct, targets.Direct);
+                Leg(_duckLegIndex[cell], targets.Bus);
+            }
+            else
+            {
+                if (bus) Leg(_duckLegIndex[cell], targets.Bus);
+                Leg(direct, targets.Direct);
+            }
+            if (waiting) MarkCellPendingLocked(cell); else _pendingCells.Remove(cell);
         }
 
-        // A member held silent behind a peer's pending mute is tried again.
-        void Settle(string cell)
+        void Leg(int index, (double Level, bool Muted) target)
         {
-            if (waiting) MarkCellPendingLocked(cell); else _pendingCells.Remove(cell);
+            _pw.SetSinkInputVolume(index, target.Level);
+            _pw.SetSinkInputMuted(index, target.Muted);
         }
     }
 
@@ -2982,16 +3009,26 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         foreach ((string cell, int index) in _legIndex.ToList())
         {
             if (_pendingCells.Contains(cell) || !_cells.Contains(cell)) continue;
-            if (!legs.TryGetValue(index, out (int Percent, bool Muted) leg)) continue;
             int bar = cell.IndexOf('|', StringComparison.Ordinal);
             if (bar <= 0) continue;
             string channel = cell[..bar], mix = cell[(bar + 1)..];
-            (double level, bool muted) = CellTargetLocked(channel, mix, out _);
-            if (leg.Percent == PipeWireAdapter.SinkInputPercent(level) && leg.Muted == muted) continue;
+            if (!legs.TryGetValue(index, out (int Percent, bool Muted) leg))
+            {
+                if (_duckBuses.ContainsKey(mix)) MarkCellPendingLocked(cell);
+                continue;
+            }
+            var targets = CellLegTargetsLocked(channel, mix, out _);
+            bool directHeld = Matches(leg, targets.Direct);
+            bool busHeld = !_duckBuses.ContainsKey(mix) || _duckLegIndex.TryGetValue(cell, out int busIndex)
+                && legs.TryGetValue(busIndex, out var busLeg) && Matches(busLeg, targets.Bus);
+            if (directHeld && busHeld) continue;
             ApplyCellLocked(channel, mix);
             held.Add(cell);
         }
         return held;
+
+        static bool Matches((int Percent, bool Muted) leg, (double Level, bool Muted) target)
+            => leg.Percent == PipeWireAdapter.SinkInputPercent(target.Level) && leg.Muted == target.Muted;
     }
 
     private MixDefinition? MonitorMixLocked(string mixId)
@@ -3021,6 +3058,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         _inputFeeds.Clear();
         foreach (string id in _captureFeeds.Keys.ToArray()) RemoveCaptureFeedLocked(id);
         RemoveEqStagesLocked();
+        RemoveDuckBusesLocked();
         RemoveInputChainsLocked();
         RemoveMixChainsLocked();
         _chainStructures.Clear();
