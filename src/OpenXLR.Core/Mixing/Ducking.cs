@@ -216,7 +216,7 @@ public sealed partial class Mixer
             {
                 if (_monitorMuted || !MixesForOutputLocked(output).Any(m => m.Id == mix.Id)) continue;
                 if (_hardwareOutputRouting && output.Contains('#') && IsDrivenUnitSinkLocked(output)) jacks = true;
-                else consumers.Add(output);
+                else consumers.Add(_outputNames.GetValueOrDefault(output.Split('#')[0], output));
             }
             var open = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (ChannelDefinition channel in _config.Channels)
