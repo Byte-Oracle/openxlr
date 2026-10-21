@@ -16,7 +16,7 @@ namespace OpenXLR.UI;
 /// <see cref="StateReceived"/> for every pushed state. State is handed over as a
 /// JsonNode so the UI can bind to it without duplicating the daemon's records.
 /// </summary>
-public sealed class DaemonClient : IAsyncDisposable, IEqCommands
+public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingCommands
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
@@ -333,9 +333,17 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands
     public Task ResetDeviceAsync()
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "resetDevice" });
 
-    /// <summary>Change the ducking setup: <paramref name="fields"/> holds the fields that change, the others keep their values.</summary>
-    public Task SetDuckingAsync(IDictionary<string, object> fields)
-        => SendAsync(new Dictionary<string, object> { ["cmd"] = "setDucking", ["value"] = fields });
+    /// <summary>
+    /// Change the ducking setup: <paramref name="fields"/> holds the fields
+    /// that change, the others keep their values. Resolves to null, or the
+    /// daemon's refusal, which arrives after the state it leaves.
+    /// </summary>
+    public Task<string?> SetDuckingAsync(IReadOnlyDictionary<string, object> fields)
+        => EditLayoutAsync(new Dictionary<string, object> { ["cmd"] = "setDucking", ["value"] = fields });
+
+    /// <summary>Where ducking runs: <c>device</c> on the unit's own processor, or <c>software</c>. Resolves like <see cref="SetDuckingAsync"/>.</summary>
+    public Task<string?> SetDuckingProcessingAsync(string value)
+        => EditLayoutAsync(new Dictionary<string, object> { ["cmd"] = "setDuckingProcessing", ["value"] = value });
 
     public Task SetControlAsync(string control, object value)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "set", ["control"] = control, ["value"] = value });

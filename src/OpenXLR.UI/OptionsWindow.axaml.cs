@@ -168,6 +168,11 @@ public partial class OptionsWindow : Window
             await new DesktopKeysWindow(_desktopKeys, vm.Main).ShowDialog(this);
     }
 
+    private void OnDucking(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is OptionsViewModel vm) DuckingWindow.Open(this, vm.Main.Ducking);
+    }
+
     private void OnWaveInterfaces(object? sender, RoutedEventArgs e)
     {
         if (DataContext is OptionsViewModel vm) new WaveInterfacesWindow(vm.Main).Show(this);

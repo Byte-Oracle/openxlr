@@ -1,98 +1,554 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading.Tasks;
 using OpenXLR.UI.Localization;
 
 namespace OpenXLR.UI;
 
+/// <summary>The two commands the Ducking window sends. The daemon client sends them; a test records them.</summary>
+public interface IDuckingCommands
+{
+    /// <summary><c>setDucking</c> with the fields that change; resolves to null, or the daemon's refusal.</summary>
+    Task<string?> SetDuckingAsync(IReadOnlyDictionary<string, object> fields);
+
+    /// <summary><c>setDuckingProcessing</c>: <c>device</c> or <c>software</c>; resolves to null, or the daemon's refusal.</summary>
+    Task<string?> SetDuckingProcessingAsync(string value);
+}
+
+/// <summary>A microphone the key picker offers.</summary>
+public sealed record DuckingKeyChoice(string Id, string Name)
+{
+    public override string ToString() => Name;
+}
+
+/// <summary>A channel or a mix in one of the Ducking window's checklists.</summary>
+public sealed class DuckingChoice : ViewModelBase
+{
+    private readonly Action<DuckingChoice> _toggled;
+    private bool _isChecked;
+
+    internal DuckingChoice(string id, string name, bool isChecked, Action<DuckingChoice> toggled)
+    {
+        Id = id;
+        Name = name;
+        _isChecked = isChecked;
+        _toggled = toggled;
+    }
+
+    public string Id { get; }
+
+    public string Name { get; }
+
+    /// <summary>Ticked by the user: the list goes to the daemon.</summary>
+    public bool IsChecked
+    {
+        get => _isChecked;
+        set { if (Set(ref _isChecked, value)) _toggled(this); }
+    }
+
+    /// <summary>Show what the daemon holds, sending nothing.</summary>
+    internal void Show(bool value)
+    {
+        if (_isChecked == value) return;
+        _isChecked = value;
+        Raise(nameof(IsChecked));
+    }
+}
+
 /// <summary>
-/// Ducking in the Options window's interface card: on or off and its three
-/// presets, each sent as a <c>setDucking</c> that carries only the field
-/// that changed, with the EQ editor's badge while the unit's own processor
-/// runs it and a line saying what runs it or why nothing does. The channels,
-/// mixes and key are left as the daemon holds them. Shown while the driven
-/// unit's capabilities say <c>ducking</c>, until the Ducking window takes
-/// its place.
+/// The ducking setup as the Ducking window edits it: the switch, the key
+/// microphone, the channels lowered and the mixes they are lowered in, the
+/// three presets, where it runs, and what runs it now. Every value is the
+/// daemon's, or one the user just set; a state that differs from an edit not
+/// yet reported back is taken as older than the edit, for a second at most,
+/// as the EQ editor does. A refused edit puts the daemon's state back and
+/// shows why.
 /// </summary>
-public sealed partial class MainViewModel
+public sealed class DuckingViewModel : ViewModelBase
 {
     // The API's words for each choice, in the order the pickers list them.
-    internal static readonly string[] DuckingSensitivities = ["low", "medium", "high"];
-    internal static readonly string[] DuckingAmounts = ["low", "medium", "high"];
-    internal static readonly string[] DuckingSpeeds = ["slow", "medium", "fast"];
+    internal static readonly string[] Sensitivities = ["low", "medium", "high"];
+    internal static readonly string[] Amounts = ["low", "medium", "high"];
+    internal static readonly string[] Speeds = ["slow", "medium", "fast"];
 
-    private bool _capDucking;
-    /// <summary>The driven unit can duck its own outputs.</summary>
-    public bool CapDucking { get => _capDucking; private set { if (Set(ref _capDucking, value)) Raise(nameof(ShowDucking)); } }
+    /// <summary>The deepest preset, in dB: the reduction bar is full at this depth.</summary>
+    public const double FullScaleDb = 24;
 
-    public bool ShowDucking => DeviceConnected && CapDucking;
+    /// <summary>How long an edit waits for the daemon to report it back before a different report wins.</summary>
+    internal static readonly TimeSpan EchoWait = TimeSpan.FromSeconds(1);
 
-    private bool _duckingEnabled;
-    public bool DuckingEnabled
+    private readonly IDuckingCommands _commands;
+    private readonly TimeProvider _time;
+    private readonly Dictionary<string, (string Json, long Since)> _awaiting = new(StringComparer.Ordinal);
+    private JsonNode? _reportedNode;
+    private bool _applying;
+
+    // The layout the lists are drawn from, as the last state named it.
+    private sealed record LayoutChannel(string Id, string Name, bool Microphone, bool Application, bool Present);
+    private List<LayoutChannel> _layoutChannels = [];
+    private List<(string Id, string Name)> _layoutMixes = [];
+
+    // The setup, as reported or as just edited.
+    private bool _reported, _mixerRunning, _targetsReported, _enabled;
+    private string _key = "xlr1";
+    private List<string> _channels = [], _mixes = [];
+    private int _sensitivity = 1, _amount = 1, _speed = 1;
+    private string _processing = "device";
+
+    // What runs it, from the daemon only.
+    private string? _backend, _error;
+    private bool _available = true;
+    private bool _hasDevice, _deviceReady, _held = true;
+    private string? _deviceName, _reason, _note;
+
+    private double _reduction;
+    private string? _refusal;
+    private DuckingKeyChoice? _selectedKey;
+
+    /// <param name="time">The clock for the echo wait; a test passes one it moves by hand.</param>
+    public DuckingViewModel(IDuckingCommands commands, TimeProvider? time = null)
     {
-        get => _duckingEnabled;
-        set { if (Set(ref _duckingEnabled, value) && !_applying) SendDucking("enabled", value); }
+        _commands = commands;
+        _time = time ?? TimeProvider.System;
     }
 
-    private int _duckingSensitivity = 1;
-    public int DuckingSensitivity
+    /// <summary>The daemon reports ducking: the buttons that open the window show.</summary>
+    public bool IsReported => _reported;
+
+    /// <summary>The setup can be changed: the software mixer runs. In hardware-control mode the daemon refuses both commands.</summary>
+    public bool CanEdit => _reported && _mixerRunning;
+
+    /// <summary>The switch.</summary>
+    public bool Enabled
     {
-        get => _duckingSensitivity;
-        set { if (Set(ref _duckingSensitivity, value) && !_applying && value >= 0) SendDucking("sensitivity", DuckingSensitivities[value]); }
+        get => _enabled;
+        set
+        {
+            if (_enabled == value) return;
+            _enabled = value;
+            if (!_applying) Send(new() { ["enabled"] = value });
+            RaiseState();
+        }
     }
 
-    private int _duckingAmount = 1;
-    public int DuckingAmount
+    /// <summary>The microphones that can be the key, by name.</summary>
+    public ObservableCollection<DuckingKeyChoice> Keys { get; } = [];
+
+    /// <summary>The key microphone: picking one leaves it out of the channels in the same command.</summary>
+    public DuckingKeyChoice? SelectedKey
     {
-        get => _duckingAmount;
-        set { if (Set(ref _duckingAmount, value) && !_applying && value >= 0) SendDucking("amount", DuckingAmounts[value]); }
+        get => _selectedKey;
+        set
+        {
+            // A list being refilled clears its selection; that is not a choice.
+            if (_applying || value is null || value.Id == _key)
+            {
+                Raise();
+                return;
+            }
+            _selectedKey = value;
+            _key = value.Id;
+            var fields = new Dictionary<string, object> { ["key"] = value.Id };
+            if (_channels.Contains(value.Id))
+            {
+                _channels = [.. _channels.Where(c => c != value.Id)];
+                fields["channels"] = _channels.ToArray();
+            }
+            Send(fields);
+            RefreshLists();
+            RaiseState();
+        }
     }
 
-    private int _duckingSpeed = 1;
-    public int DuckingSpeed
+    /// <summary>The channels that can be lowered, the key left out.</summary>
+    public ObservableCollection<DuckingChoice> Channels { get; } = [];
+
+    /// <summary>The mixes they can be lowered in.</summary>
+    public ObservableCollection<DuckingChoice> Mixes { get; } = [];
+
+    /// <summary>The daemon names the channels and mixes; one from before the per-channel setup does not, and the lists stay hidden.</summary>
+    public bool HasTargets => _targetsReported;
+
+    public int Sensitivity
     {
-        get => _duckingSpeed;
-        set { if (Set(ref _duckingSpeed, value) && !_applying && value >= 0) SendDucking("speed", DuckingSpeeds[value]); }
+        get => _sensitivity;
+        set { if (Set(ref _sensitivity, value) && !_applying && value >= 0) Send(new() { ["sensitivity"] = Sensitivities[value] }); }
     }
 
-    private bool _duckingOnDevice;
-    /// <summary>The unit's own processor runs the setup: the badge beside the heading, as on the EQ editor.</summary>
-    public bool DuckingOnDevice { get => _duckingOnDevice; private set => Set(ref _duckingOnDevice, value); }
-
-    private string _duckingDeviceName = "";
-    public string DuckingBadgeTip => Localizer.Format("DuckingHardwareBadgeTip", _duckingDeviceName);
-
-    private string _duckingStatus = "";
-    /// <summary>What runs ducking, or why nothing does: the line under the controls.</summary>
-    public string DuckingStatus { get => _duckingStatus; private set => Set(ref _duckingStatus, value); }
-
-    private bool _duckingWarns;
-    /// <summary>The status says something is wrong: the unit cannot run the setup or did not keep it.</summary>
-    public bool DuckingWarns { get => _duckingWarns; private set => Set(ref _duckingWarns, value); }
-
-    private void SendDucking(string field, object value)
-        => _ = _client.SetDuckingAsync(new Dictionary<string, object> { [field] = value });
-
-    /// <summary>Read the capability and the state's <c>ducking</c>; called with the rest of a state push.</summary>
-    private void ApplyDucking(JsonNode? capabilities, JsonNode? ducking)
+    public int Amount
     {
-        CapDucking = capabilities?["ducking"]?.GetValue<bool>() ?? false;
-        Raise(nameof(ShowDucking));
-        if (ducking is null) return;
-        DuckingEnabled = ducking["enabled"]?.GetValue<bool>() ?? false;
-        DuckingSensitivity = System.Array.IndexOf(DuckingSensitivities, ducking["sensitivity"]?.GetValue<string>());
-        DuckingAmount = System.Array.IndexOf(DuckingAmounts, ducking["amount"]?.GetValue<string>());
-        DuckingSpeed = System.Array.IndexOf(DuckingSpeeds, ducking["speed"]?.GetValue<string>());
-        JsonNode? device = ducking["device"];
-        string? backend = ducking["backend"]?.GetValue<string>();
-        DuckingOnDevice = backend == "device";
-        _duckingDeviceName = device?["name"]?.GetValue<string>() ?? "";
-        Raise(nameof(DuckingBadgeTip));
-        bool held = device?["held"]?.GetValue<bool>() ?? true;
-        // Software runs what the unit cannot; only a setup nothing runs warns.
-        (DuckingStatus, DuckingWarns) =
-            !DuckingEnabled ? (Localizer.Text("DuckingStatusOff"), false)
-            : backend == "device" ? held ? (Localizer.Format("DuckingStatusDevice", _duckingDeviceName), false) : (Localizer.Text("DuckingNotHeld"), true)
-            : backend == "software" ? (Localizer.Text("DuckingStatusSoftware"), false)
-            : (ducking["error"]?.GetValue<string>() ?? device?["note"]?.GetValue<string>() ?? Localizer.Text("DuckingNotRunning"), true);
+        get => _amount;
+        set { if (Set(ref _amount, value) && !_applying && value >= 0) Send(new() { ["amount"] = Amounts[value] }); }
     }
+
+    public int Speed
+    {
+        get => _speed;
+        set { if (Set(ref _speed, value) && !_applying && value >= 0) Send(new() { ["speed"] = Speeds[value] }); }
+    }
+
+    /// <summary>Lower every application channel and nothing else.</summary>
+    public void ChooseAllApplications()
+    {
+        if (!CanEdit) return;
+        SetChannels([.. _layoutChannels.Where(c => c.Application && c.Id != _key).Select(c => c.Id)]);
+    }
+
+    /// <summary>Lower no channel: ducking then lowers nothing until one is ticked.</summary>
+    public void ChooseNoChannels()
+    {
+        if (!CanEdit) return;
+        SetChannels([]);
+    }
+
+    private void SetChannels(List<string> channels)
+    {
+        if (channels.SequenceEqual(_channels)) return;
+        _channels = channels;
+        Send(new() { ["channels"] = _channels.ToArray() });
+        RefreshLists();
+        RaiseState();
+    }
+
+    private void ChannelToggled(DuckingChoice choice)
+    {
+        // A list being refilled can write its old rows back as it lets them go: that is not a choice.
+        if (_applying || !Channels.Contains(choice)) return;
+        // Ticks in layout order, plus any channel the list does not show (one whose jack the unit lacks).
+        string[] shown = [.. Channels.Select(c => c.Id)];
+        SetChannels([.. Channels.Where(c => c.IsChecked).Select(c => c.Id), .. _channels.Where(c => !shown.Contains(c))]);
+    }
+
+    private void MixToggled(DuckingChoice choice)
+    {
+        if (_applying || !Mixes.Contains(choice)) return;
+        string[] shown = [.. Mixes.Select(m => m.Id)];
+        List<string> mixes = [.. Mixes.Where(m => m.IsChecked).Select(m => m.Id), .. _mixes.Where(m => !shown.Contains(m))];
+        if (mixes.SequenceEqual(_mixes)) return;
+        _mixes = mixes;
+        Send(new() { ["mixes"] = _mixes.ToArray() });
+        RaiseState();
+    }
+
+    /// <summary>The unit that can run ducking itself is attached: the "Runs on" choice shows.</summary>
+    public bool HasProcessingChoice => _hasDevice;
+
+    /// <summary>The user's choice of where it runs: <c>device</c> or <c>software</c>.</summary>
+    public string Processing => _processing;
+
+    /// <summary>The "This unit" side is lit.</summary>
+    public bool ProcessOnDevice => _processing == "device";
+
+    /// <summary>The "This computer" side is lit.</summary>
+    public bool ProcessInSoftware => _processing == "software";
+
+    /// <summary>The "This unit" side's tooltip: where the unit listens and what it lowers.</summary>
+    public string ProcessOnDeviceTip => Localizer.Format("DuckingProcessingDeviceTip", DeviceName);
+
+    /// <summary>
+    /// A side of the switch was pressed: <c>device</c> or <c>software</c>.
+    /// The side already chosen sends nothing and stays lit, so both sides are
+    /// told again either way: a toggle that a press switched off turns back on.
+    /// </summary>
+    public void ChooseProcessing(string value)
+    {
+        if (value is not ("device" or "software") || value == _processing || !HasProcessingChoice || !CanEdit)
+        {
+            Raise(nameof(ProcessOnDevice));
+            Raise(nameof(ProcessInSoftware));
+            return;
+        }
+        _processing = value;
+        Expect("processing", value);
+        Refusal = null;
+        _ = Run(_commands.SetDuckingProcessingAsync(value), new() { ["processing"] = value });
+        RaiseState();
+    }
+
+    /// <summary>Which backend runs the setup: <c>device</c>, <c>software</c>, or null while nothing does.</summary>
+    public string? Backend => _backend;
+
+    /// <summary>The unit's own processor runs it: the EQ editor's badge shows.</summary>
+    public bool OnDevice => _backend == "device";
+
+    public string BadgeTip => Localizer.Format("DuckingHardwareBadgeTip", DeviceName);
+
+    private string DeviceName => _deviceName ?? Localizer.Text("EqTheInterface");
+
+    private string KeyName => _layoutChannels.FirstOrDefault(c => c.Id == _key)?.Name ?? _key;
+
+    /// <summary>
+    /// Why the unit does not run the setup while it is the one chosen. The
+    /// reasons that name no channel or mix read from the catalogue; the
+    /// others name them, so the daemon's own sentence is shown, as it is for
+    /// a reason this window does not know.
+    /// </summary>
+    public string? Note
+    {
+        get
+        {
+            if (!_hasDevice || !CanEdit || _processing != "device" || _deviceReady) return null;
+            return _reason switch
+            {
+                "mixerOff" => null,
+                "keyNotSupported" => Localizer.Format("DuckingDeviceKeyNotSupported", DeviceName),
+                "failed" => Localizer.Format("DuckingDeviceFailed", DeviceName),
+                "unsupportedBlock" => Localizer.Format("DuckingDeviceUnsupported", DeviceName),
+                _ => _note ?? Localizer.Format("DuckingDeviceNotReady", DeviceName),
+            };
+        }
+    }
+
+    public bool HasNote => Note is not null;
+
+    /// <summary>Switched on with no channel or no mix chosen: nothing is lowered.</summary>
+    public bool NothingChosen => _targetsReported && (_channels.Count == 0 || _mixes.Count == 0);
+
+    // The software side cannot run: no helper, or a stage that kept failing.
+    private bool SoftwareBroken => _backend != "device" && (!_available || _error is not null);
+
+    /// <summary>What runs ducking and where it sits in the signal, or why nothing runs it.</summary>
+    public string Status =>
+        !_mixerRunning || _reason == "mixerOff" ? Localizer.Text("DuckingMixerOff")
+        : !_enabled ? Localizer.Text("DuckingStatusOff")
+        : NothingChosen ? Localizer.Text("DuckingNothingChosen")
+        : SoftwareBroken ? _error ?? Localizer.Text("DuckingNotRunning")
+        : _backend == "device" ? _held ? Localizer.Format("DuckingStatusOnUnit", DeviceName) : Localizer.Text("DuckingNotHeld")
+        : _backend == "software" ? Localizer.Format("DuckingStatusOnComputer", KeyName)
+        : Localizer.Text("DuckingNotRunning");
+
+    /// <summary>The status says something is wrong: nothing runs a setup that is on, or the unit does not hold it.</summary>
+    public bool Warns => _mixerRunning && _reason != "mixerOff" && _enabled && !NothingChosen
+        && (SoftwareBroken || (_backend == "device" ? !_held : _backend != "software"));
+
+    /// <summary>The reduction bar shows while this computer runs it.</summary>
+    public bool ShowReduction => CanEdit && _enabled && _backend == "software";
+
+    /// <summary>The largest reduction across the ducked mixes now, in dB.</summary>
+    public double Reduction => _reduction;
+
+    /// <summary>The bar's fill, 0 to 1 of <see cref="FullScaleDb"/>.</summary>
+    public double ReductionLevel => Math.Clamp(_reduction / FullScaleDb, 0, 1);
+
+    public string ReductionText => Localizer.Format("DuckingReductionValue", Math.Round(_reduction));
+
+    /// <summary>The daemon refused the last change, and why; the controls show its state again.</summary>
+    public string? Refusal
+    {
+        get => _refusal;
+        private set { if (Set(ref _refusal, value)) Raise(nameof(HasRefusal)); }
+    }
+
+    public bool HasRefusal => _refusal is not null;
+
+    /// <summary>
+    /// Take the meters frame's <c>duck:&lt;mix&gt;</c> readings: the largest
+    /// across the mixes, or 0 when the frame has none.
+    /// </summary>
+    public void ApplyMeters(JsonObject levels)
+    {
+        double largest = 0;
+        foreach ((string key, JsonNode? value) in levels)
+        {
+            if (!key.StartsWith("duck:", StringComparison.Ordinal)) continue;
+            double reading = value is JsonArray { Count: > 0 } array ? Number(array[0]) : Number(value);
+            if (double.IsFinite(reading)) largest = Math.Max(largest, reading);
+        }
+        if (Math.Abs(largest - _reduction) < 0.01) return;
+        _reduction = largest;
+        Raise(nameof(Reduction));
+        Raise(nameof(ReductionLevel));
+        Raise(nameof(ReductionText));
+    }
+
+    private static double Number(JsonNode? node)
+    {
+        try { return node?.GetValue<double>() ?? 0; }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException) { return 0; }
+    }
+
+    /// <summary>Take a state push: its <c>ducking</c> and the mixer the lists are drawn from.</summary>
+    public void Apply(JsonNode? ducking, JsonNode? mixer)
+    {
+        _mixerRunning = mixer is JsonObject;
+        ReadLayout(mixer);
+        if (ducking is not JsonObject)
+        {
+            _reported = false;
+            _reportedNode = null;
+            _awaiting.Clear();
+            RefreshLists();
+            RaiseState();
+            return;
+        }
+        _reported = true;
+        _reportedNode = ducking.DeepClone();
+        Take(ducking);
+        RefreshLists();
+        RaiseState();
+    }
+
+    private void ReadLayout(JsonNode? mixer)
+    {
+        if (mixer?["channels"] is JsonArray channels)
+            _layoutChannels = [.. channels.OfType<JsonObject>().Where(c => Text(c["id"]) is not null).Select(c =>
+            {
+                string id = Text(c["id"])!;
+                bool hardware = Flag(c["hardware"]) ?? false;
+                bool capture = Text(c["captureSource"]) is not null;
+                // A daemon from before the field: XLR 1 and XLR 2 are the microphones.
+                bool microphone = Flag(c["microphone"]) ?? id is "xlr1" or "xlr2";
+                return new LayoutChannel(id, Text(c["name"]) ?? id, microphone, !hardware && !capture, Flag(c["present"]) ?? true);
+            })];
+        if (mixer?["mixes"] is JsonArray mixes)
+            _layoutMixes = [.. mixes.OfType<JsonObject>().Where(m => Text(m["id"]) is not null)
+                .Select(m => (Text(m["id"])!, Text(m["name"]) ?? Text(m["id"])!))];
+    }
+
+    private void Take(JsonNode ducking)
+    {
+        _applying = true;
+        try
+        {
+            if (Fresh("enabled", ducking["enabled"])) _enabled = Flag(ducking["enabled"]) ?? false;
+            if (Fresh("key", ducking["key"])) _key = Text(ducking["key"]) ?? "xlr1";
+            _targetsReported = ducking["channels"] is JsonArray && ducking["mixes"] is JsonArray;
+            if (Fresh("channels", ducking["channels"])) _channels = Words(ducking["channels"]);
+            if (Fresh("mixes", ducking["mixes"])) _mixes = Words(ducking["mixes"]);
+            if (Fresh("sensitivity", ducking["sensitivity"])) Sensitivity = Index(Sensitivities, ducking["sensitivity"]);
+            if (Fresh("amount", ducking["amount"])) Amount = Index(Amounts, ducking["amount"]);
+            if (Fresh("speed", ducking["speed"])) Speed = Index(Speeds, ducking["speed"]);
+            if (Fresh("processing", ducking["processing"])) _processing = Text(ducking["processing"]) is "software" ? "software" : "device";
+            _backend = Text(ducking["backend"]);
+            _available = Flag(ducking["available"]) ?? true;
+            _error = Text(ducking["error"]);
+            JsonNode? device = ducking["device"];
+            _hasDevice = device is JsonObject;
+            _deviceReady = Flag(device?["ready"]) ?? false;
+            _held = Flag(device?["held"]) ?? true;
+            _deviceName = Text(device?["name"]);
+            _reason = Text(device?["reason"]);
+            _note = Text(device?["note"]);
+        }
+        finally { _applying = false; }
+    }
+
+    /// <summary>
+    /// The report for a field wins unless the user changed that field less
+    /// than <see cref="EchoWait"/> ago and the report still says otherwise.
+    /// </summary>
+    private bool Fresh(string field, JsonNode? reported)
+    {
+        if (!_awaiting.TryGetValue(field, out (string Json, long Since) awaited)) return true;
+        if (awaited.Json != Json(reported) && _time.GetElapsedTime(awaited.Since) < EchoWait) return false;
+        _awaiting.Remove(field);
+        return true;
+    }
+
+    private void Expect(string field, object value) => _awaiting[field] = (Json(JsonSerializer.SerializeToNode(value)), _time.GetTimestamp());
+
+    private static string Json(JsonNode? node) => node?.ToJsonString() ?? "null";
+
+    private void Send(Dictionary<string, object> fields)
+    {
+        foreach ((string field, object value) in fields) Expect(field, value);
+        Refusal = null;
+        _ = Run(_commands.SetDuckingAsync(fields), fields);
+    }
+
+    /// <summary>
+    /// Send one command. A refusal gives the fields it carried back to the
+    /// daemon's last report; an edit to another field still waiting for its
+    /// echo keeps its wait, so a report older than that edit cannot undo it.
+    /// </summary>
+    private async Task Run(Task<string?> command, Dictionary<string, object> fields)
+    {
+        string? error;
+        try { error = await command; }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Net.WebSockets.WebSocketException or TimeoutException) { error = ex.Message; }
+        if (error is null) return;
+        // The daemon kept its setup for these fields: show it again, and why.
+        foreach ((string field, object value) in fields)
+            if (_awaiting.TryGetValue(field, out (string Json, long Since) awaited) && awaited.Json == Json(JsonSerializer.SerializeToNode(value)))
+                _awaiting.Remove(field);
+        Refusal = error;
+        if (_reportedNode is { } reported) Take(reported);
+        RefreshLists();
+        RaiseState();
+    }
+
+    /// <summary>Redraw the key picker and both checklists from the layout and the setup.</summary>
+    private void RefreshLists()
+    {
+        _applying = true;
+        try
+        {
+            List<DuckingKeyChoice> keys = [.. _layoutChannels.Where(c => c.Microphone && (c.Present || c.Id == _key))
+                .Select(c => new DuckingKeyChoice(c.Id, c.Name))];
+            if (_reported && keys.All(k => k.Id != _key)) keys.Add(new DuckingKeyChoice(_key, _key));
+            if (!keys.SequenceEqual(Keys))
+            {
+                Keys.Clear();
+                foreach (DuckingKeyChoice key in keys) Keys.Add(key);
+            }
+            _selectedKey = Keys.FirstOrDefault(k => k.Id == _key);
+            Raise(nameof(SelectedKey));
+
+            Sync(Channels, [.. _layoutChannels.Where(c => c.Id != _key && (c.Present || _channels.Contains(c.Id))).Select(c => (c.Id, c.Name))],
+                _channels, ChannelToggled);
+            Sync(Mixes, _layoutMixes, _mixes, MixToggled);
+        }
+        finally { _applying = false; }
+    }
+
+    private static void Sync(ObservableCollection<DuckingChoice> list, IReadOnlyList<(string Id, string Name)> items,
+        IReadOnlyList<string> chosen, Action<DuckingChoice> toggled)
+    {
+        if (!items.SequenceEqual(list.Select(c => (c.Id, c.Name))))
+        {
+            list.Clear();
+            foreach ((string id, string name) in items) list.Add(new DuckingChoice(id, name, chosen.Contains(id), toggled));
+            return;
+        }
+        foreach (DuckingChoice choice in list) choice.Show(chosen.Contains(choice.Id));
+    }
+
+    private void RaiseState()
+    {
+        Raise(nameof(IsReported));
+        Raise(nameof(CanEdit));
+        Raise(nameof(Enabled));
+        Raise(nameof(SelectedKey));
+        Raise(nameof(HasTargets));
+        Raise(nameof(Sensitivity));
+        Raise(nameof(Amount));
+        Raise(nameof(Speed));
+        Raise(nameof(HasProcessingChoice));
+        Raise(nameof(Processing));
+        Raise(nameof(ProcessOnDevice));
+        Raise(nameof(ProcessInSoftware));
+        Raise(nameof(ProcessOnDeviceTip));
+        Raise(nameof(Backend));
+        Raise(nameof(OnDevice));
+        Raise(nameof(BadgeTip));
+        Raise(nameof(Note));
+        Raise(nameof(HasNote));
+        Raise(nameof(NothingChosen));
+        Raise(nameof(Status));
+        Raise(nameof(Warns));
+        Raise(nameof(ShowReduction));
+    }
+
+    private static string? Text(JsonNode? node) => node is JsonValue value && value.TryGetValue(out string? text) ? text : null;
+
+    private static bool? Flag(JsonNode? node) => node is JsonValue value && value.TryGetValue(out bool flag) ? flag : null;
+
+    private static List<string> Words(JsonNode? node) => node is JsonArray array ? [.. array.Select(Text).OfType<string>()] : [];
+
+    // A word the window does not know shows as no choice, as before.
+    private static int Index(string[] words, JsonNode? node) => Array.IndexOf(words, Text(node));
 }

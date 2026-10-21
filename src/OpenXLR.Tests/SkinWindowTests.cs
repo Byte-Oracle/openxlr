@@ -843,6 +843,7 @@ public sealed partial class SkinWindowTests
             ("apps", new AppsWindow { DataContext = vm }),
             ("layout", new MixerSetupWindow { DataContext = vm }),
             ("exclusive-groups", new ExclusiveGroupsWindow(vm)),
+            ("ducking", new DuckingWindow { DataContext = vm.Ducking }),
             ("mix-inserts", new MixInsertsWindow { DataContext = vm.Mixes[0].Inserts }),
             ("insert-controls", new InsertControlsWindow { DataContext = vm.Inserts.Items[0] }),
             ("plugin-picker", new PluginPickerWindow { DataContext = vm.Inserts }),

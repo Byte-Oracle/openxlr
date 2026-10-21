@@ -2753,17 +2753,80 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="DuckingStatusOff" xml:space="preserve">
     <value>Off.</value>
   </data>
-  <data name="DuckingStatusDevice" xml:space="preserve">
-    <value>On, running on the {0}'s own processor.</value>
-  </data>
-  <data name="DuckingStatusSoftware" xml:space="preserve">
-    <value>On, running on this computer.</value>
-  </data>
   <data name="DuckingHardwareBadgeTip" xml:space="preserve">
     <value>Ducking runs on the {0}'s own processor.</value>
   </data>
   <data name="DuckingNotRunning" xml:space="preserve">
     <value>Nothing runs this setup.</value>
+  </data>
+  <data name="DuckingButtonTip" xml:space="preserve">
+    <value>Lower other audio while a microphone is loud: the key, the channels, the mixes, the presets and where it runs.</value>
+  </data>
+  <data name="DuckingKey" xml:space="preserve">
+    <value>Key microphone</value>
+  </data>
+  <data name="DuckingKeyTip" xml:space="preserve">
+    <value>The microphone whose voice lowers the other audio. It is never lowered itself.</value>
+  </data>
+  <data name="DuckingChannels" xml:space="preserve">
+    <value>Lower these channels</value>
+  </data>
+  <data name="DuckingMixes" xml:space="preserve">
+    <value>In these mixes</value>
+  </data>
+  <data name="DuckingAllApplications" xml:space="preserve">
+    <value>All application channels</value>
+  </data>
+  <data name="DuckingNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="DuckingNoneTip" xml:space="preserve">
+    <value>Lower no channel. Ducking then lowers nothing until you tick one.</value>
+  </data>
+  <data name="DuckingProcessingLabel" xml:space="preserve">
+    <value>Runs on</value>
+  </data>
+  <data name="DuckingProcessingDevice" xml:space="preserve">
+    <value>This unit</value>
+  </data>
+  <data name="DuckingProcessingSoftware" xml:space="preserve">
+    <value>This computer</value>
+  </data>
+  <data name="DuckingProcessingDeviceTip" xml:space="preserve">
+    <value>Duck on the {0}'s own processor. It listens to XLR 1 as the unit hears it, before USB, so before the EQ in software, the inserts and any gate on this computer. A noise gate or suppressor on XLR 1 does not stop it ducking on noise. It lowers the finished mix as the unit plays it on its outputs, after everything on this computer. If a gate on XLR 1 should stop false triggers, choose this computer.</value>
+  </data>
+  <data name="DuckingProcessingSoftwareTip" xml:space="preserve">
+    <value>Duck on this computer. The key is the microphone after its EQ, inserts and Sound Check loop, before its volume and sends, so a gate on it stops false triggers. The chosen channels dip inside each mix, before that mix's own plugins and latency delay. The unit's own ducking is switched off.</value>
+  </data>
+  <data name="DuckingStatusOnUnit" xml:space="preserve">
+    <value>On, running on the {0}'s own processor. It hears XLR 1 before USB, ahead of every gate and plugin on this computer, and lowers the finished mix on the unit's outputs.</value>
+  </data>
+  <data name="DuckingStatusOnComputer" xml:space="preserve">
+    <value>On, running on this computer. It hears {0} after its EQ, inserts and Sound Check loop, and lowers the chosen channels inside each mix, before the mix's own plugins.</value>
+  </data>
+  <data name="DuckingMixerOff" xml:space="preserve">
+    <value>The software mixer is off, so ducking does not run. Switch it on under Options, AUDIO.</value>
+  </data>
+  <data name="DuckingNothingChosen" xml:space="preserve">
+    <value>On, but nothing is lowered. Choose at least one channel and one mix.</value>
+  </data>
+  <data name="DuckingDeviceKeyNotSupported" xml:space="preserve">
+    <value>The {0} ducks only with XLR 1 as the key.</value>
+  </data>
+  <data name="DuckingDeviceFailed" xml:space="preserve">
+    <value>The {0} did not keep the ducking written to it. Switch ducking off and on to try the unit again.</value>
+  </data>
+  <data name="DuckingDeviceUnsupported" xml:space="preserve">
+    <value>The {0} did not answer a read of its ducking block.</value>
+  </data>
+  <data name="DuckingDeviceNotReady" xml:space="preserve">
+    <value>The {0} cannot run this setup.</value>
+  </data>
+  <data name="DuckingReduction" xml:space="preserve">
+    <value>Reduction</value>
+  </data>
+  <data name="DuckingReductionValue" xml:space="preserve">
+    <value>{0:0} dB</value>
   </data>
   <data name="CaptureBindingHint" xml:space="preserve">
     <value>Choose a source and port for {0}. Its sends, volume, inserts and group stay in place. Monitor sends start muted and Sound Check ends after a change. Remove its inserts before changing between mono and stereo.</value>
