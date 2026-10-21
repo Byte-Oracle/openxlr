@@ -2986,9 +2986,8 @@ that changes several flags in the same sweep is treated as one press;
 changes arriving in separate sweeps are separate actions. For direct monitor
 control that does not mute an application routing sink even briefly, bind
 OpenXLR's desktop mute key to a selected physical monitor output, use the
-MONITOR button or press the Deck monitor dial. Those actions use the daemon's
-current pause state, so rapid presses do not depend on a delayed slider or
-button update.
+MONITOR button or press the Deck monitor dial. The keys and dial use the daemon's
+current pause state, and the MONITOR button sets the pause to its checked value.
 
 Select **Switch system output** entries to register keys which select and
 enforce that default sink. **Follow selected monitor output** follows the

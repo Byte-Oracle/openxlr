@@ -641,7 +641,7 @@ public sealed partial class MainViewModel : ViewModelBase
     public bool MonitorMuted
     {
         get => _monitorMuted;
-        set { if (Set(ref _monitorMuted, value) && !_applying) _ = _client.ToggleMonitorMutedAsync(); }
+        set { if (Set(ref _monitorMuted, value) && !_applying) _ = _client.SetMonitorMutedAsync(value); }
     }
 
     private bool _hasMixer;
