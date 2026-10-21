@@ -336,6 +336,12 @@ public sealed class WindowLayoutTests
                 Assert.Single(sourcePicker.Items);
                 Assert.Equal("test_source", ((AudioDeviceItem)sourcePicker.Items[0]!).Name);
                 sourcePicker.SelectedIndex = 0;
+                Layout(captureDialog, 360, 340);
+                // The picker shows the source's label, never the record's text.
+                Assert.Contains(sourcePicker.GetVisualDescendants().OfType<TextBlock>(),
+                    t => t.Text == ((AudioDeviceItem)sourcePicker.Items[0]!).Label);
+                Assert.DoesNotContain(sourcePicker.GetVisualDescendants().OfType<TextBlock>(),
+                    t => t.Text?.StartsWith(nameof(AudioDeviceItem), StringComparison.Ordinal) == true);
                 var portPicker = captureDialog.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "CapturePort");
                 Assert.Equal(32, portPicker.Items.OfType<InputBindingDialog.PortChoice>().Count(p => p.Stereo));
                 Assert.Equal(64, portPicker.Items.OfType<InputBindingDialog.PortChoice>().Count(p => !p.Stereo));
