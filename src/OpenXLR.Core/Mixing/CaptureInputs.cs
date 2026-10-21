@@ -27,25 +27,32 @@ public sealed partial class Mixer
     private readonly Dictionary<string, PortLink> _captureFeeds = [];
 
     /// <summary>
-    /// Adopt a mono port only after saved chains have been restored. The
+    /// Adopt a mono port only after saved chains have been restored, and
+    /// remember an attached unit while the exact source is present. The
     /// caller saves the changed layout; existing links need no change.
     /// </summary>
-    public bool MigrateCaptureInputs()
+    public bool MigrateCaptureInputs(Func<string, string?>? unitForSource = null)
     {
         lock (_gate)
         {
             if (!_built || !_config.Channels.Any(c => c.CaptureSource is not null
-                && c.CapturePair == 0 && c.CaptureMonoChannel is null && InsertsFor(c.Id).Count == 0)) return false;
+                && (c.CaptureUnit is null && unitForSource is not null
+                    || c.CapturePair == 0 && c.CaptureMonoChannel is null && InsertsFor(c.Id).Count == 0))) return false;
             IReadOnlyList<AudioNode> sources = _pw.ListDevices();
             bool changed = false;
             _config = _config with { Channels = [.. _config.Channels.Select(ch =>
             {
                 ChannelDefinition next = CaptureBinding.MigrateMono(ch, sources, InsertsFor(ch.Id));
                 if (!ReferenceEquals(ch, next))
-                {
-                    changed = true;
                     _pw.Note($"Capture input {ch.Id} now takes mono port 1 of {ch.CaptureSource}.");
+                if (ch.CaptureSource is { } source && ch.CaptureUnit is null
+                    && sources.Count(s => s.Kind == AudioNodeKind.Source && !s.IsOwn && s.Name == source) == 1
+                    && unitForSource?.Invoke(source) is { } unit && SourceBinding.IsUnitId(unit))
+                {
+                    next = next with { CaptureUnit = unit };
+                    _pw.Note($"Capture input {ch.Id} now follows interface {unit}.");
                 }
+                changed |= !ReferenceEquals(ch, next);
                 return next;
             })] };
             return changed;
@@ -56,26 +63,40 @@ public sealed partial class Mixer
         => channel.CaptureSource is not null && (InputRouteLocked(channel, null).ActiveInserts
             || _soundCheck is not null && _soundCheckChannel == channel.Id);
 
+    // The exact name wins, as before, without asking for its ports on every
+    // sweep. Only while it is missing does a capture input on a supported
+    // unit follow the unit's card, through the bound strips' rule.
     private string? ResolveCaptureSourceLocked(ChannelDefinition channel, IReadOnlyList<AudioNode> sources)
     {
-        int matches = sources.Count(s => s.Name == channel.CaptureSource && s.Kind == AudioNodeKind.Source && !s.IsOwn);
-        string? warning = matches switch
+        List<AudioNode> candidates = [.. sources.Where(s => s.Kind == AudioNodeKind.Source && !s.IsOwn)];
+        int matches = candidates.Count(s => s.Name == channel.CaptureSource);
+        string? source;
+        string? warning;
+        if (matches == 0 && channel.CaptureUnit is not null)
+            source = BoundSourceLocked(new SourceBinding(channel.CaptureSource!, channel.CapturePair, channel.CaptureMonoChannel)
+                { Unit = channel.CaptureUnit }, candidates, out warning);
+        else
         {
-            0 => $"{channel.CaptureSource} is not connected. The channel stays silent until it returns.",
-            1 => null,
-            _ => $"More than one source is named {channel.CaptureSource}. The channel stays silent until the name is unique.",
-        };
+            warning = matches switch
+            {
+                0 => $"{channel.CaptureSource} is not connected. The channel stays silent until it returns.",
+                1 => null,
+                _ => $"More than one source is named {channel.CaptureSource}. The channel stays silent until the name is unique.",
+            };
+            source = warning is null ? channel.CaptureSource : null;
+        }
         NoteCaptureLocked(channel.Id, warning);
-        return warning is null ? channel.CaptureSource : null;
+        return source;
     }
 
     /// <summary>Transfer a capture channel back to its direct feed, before stopping its chain.</summary>
-    private void RestoreCaptureFeedLocked(ChannelDefinition channel)
+    private string? RestoreCaptureFeedLocked(ChannelDefinition channel)
     {
+        string? source = ResolveCaptureSourceLocked(channel, _pw.ListDevices());
         PortLink? next = _captureFeeds.GetValueOrDefault(channel.Id);
-        if (next is null || _pw.EnsureLinks(next) == LinkHealth.Broken)
+        if (next is null || source is null || !next.Pairs.All(p => p.From.StartsWith(source + ":", StringComparison.Ordinal))
+            || _pw.EnsureLinks(next) == LinkHealth.Broken)
         {
-            string? source = ResolveCaptureSourceLocked(channel, _pw.ListDevices());
             next = source is null ? null : RouteInputLocked(source, channel.SinkName, channel);
             if (next is { Pairs.Count: 0 }) next = null;
             if (source is not null && next is null && _chains.TryGetValue(channel.Id, out FilterHandle? running) && running.IsAlive)
@@ -87,6 +108,7 @@ public sealed partial class Mixer
         }
         RemoveCaptureRouteLocked(channel.Id, next);
         if (next is not null) NoteCaptureLocked(channel.Id, null);
+        return next is not null ? source : null;
     }
 
     private void RemoveCaptureRouteLocked(string id, PortLink? retained = null)
@@ -150,22 +172,21 @@ public sealed partial class Mixer
                 _insertErrors.Remove(channel.Id);
                 changed = true;
             }
+            string? warning = _captureWarnings.GetValueOrDefault(channel.Id);
+            string? captureSource = ResolveCaptureSourceLocked(channel, sources);
+            changed |= warning != _captureWarnings.GetValueOrDefault(channel.Id);
             if (_captureFeeds.TryGetValue(channel.Id, out PortLink? existing))
             {
-                LinkHealth health = _pw.EnsureLinks(existing);
+                LinkHealth health = captureSource is not null && existing.Pairs.All(p => p.From.StartsWith(captureSource + ":", StringComparison.Ordinal))
+                    ? _pw.EnsureLinks(existing) : LinkHealth.Broken;
                 if (health != LinkHealth.Broken) { changed |= health == LinkHealth.Relinked; continue; }
                 RemoveCaptureFeedLocked(channel.Id);
                 changed = true;
             }
-            string? warning = _captureWarnings.GetValueOrDefault(channel.Id);
-            if (ResolveCaptureSourceLocked(channel, sources) is null)
-            {
-                changed |= warning != _captureWarnings.GetValueOrDefault(channel.Id);
-                continue;
-            }
+            if (captureSource is null) continue;
             // External sources need not use the hardware driver's capture_
             // prefix. Direction and the exact node name identify their ports.
-            PortLink feed = _pw.LinkNodes(channel.CaptureSource!, "", channel.SinkName, "playback",
+            PortLink feed = _pw.LinkNodes(captureSource, "", channel.SinkName, "playback",
                 fromPairOffset: channel.CapturePair, fromChannel: channel.CaptureMonoChannel);
             // Capture channels have stereo sinks; mono sources also need a
             // link to each side. Do not retain a partial route as healthy.

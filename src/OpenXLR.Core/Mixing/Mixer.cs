@@ -249,12 +249,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     StopSoundCheckLocked(restore: false, error: "Sound Check stopped because its audio path was lost.");
                 try
                 {
-                    RestoreCaptureFeedLocked(ch);
-                    if (CaptureRouteLocked(ch) && _captureFeeds.Remove(ch.Id, out PortLink? direct))
+                    string? source = RestoreCaptureFeedLocked(ch);
+                    if (source is not null && CaptureRouteLocked(ch) && _captureFeeds.Remove(ch.Id, out PortLink? direct))
                     {
                         _inputFeeds[ch.Id] = direct;
-                        _stripSources[ch.Id] = ch.CaptureSource!;
-                        _inputHeads[ch.Id] = ch.CaptureSource!;
+                        _stripSources[ch.Id] = source;
+                        _inputHeads[ch.Id] = source;
                     }
                 }
                 catch (Exception restore) { NoteCaptureLocked(ch.Id, restore.Message); }
@@ -1502,7 +1502,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 InputBindings = _bindings.Count == 0 ? null : new Dictionary<string, SourceBinding>(_bindings),
                 ExclusiveGroups = ExclusiveGroupsModel.Copy(_config.ExclusiveGroups),
                 UserChannels = [.. _config.Channels.Where(c => c.InputPair is null)
-                    .Select(c => new UserChannelDefinition(c.Id, c.Name, c.CaptureSource, c.CapturePair, c.CaptureMonoChannel))],
+                    .Select(c => new UserChannelDefinition(c.Id, c.Name, c.CaptureSource, c.CapturePair, c.CaptureMonoChannel, c.CaptureUnit))],
                 UserMixes = [.. _config.Mixes.Where(m => m.IsEditable)
                     .Select(m => new UserMixDefinition(m.Id, m.Name) { Kind = KindName(m.Kind) })],
                 MixVolumes = new Dictionary<string, double>(_mixVolume),

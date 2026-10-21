@@ -33,9 +33,9 @@ public sealed record SourceBinding(string Source, int Pair = 0, int? MonoChannel
     /// <summary>The model part of a unit id, which decides what the unit's inputs are.</summary>
     internal static string ModelOf(string unit) => unit.Length > 9 ? unit[..9] : unit;
 
-    /// <summary>The zero-based source port the strip takes.</summary>
+    /// <summary>The zero-based mono port, or the first port of a capture pair.</summary>
     [JsonIgnore]
-    public int Port => MonoChannel ?? 0;
+    public int Port => MonoChannel ?? Pair * 2;
 }
 
 /// <summary>
@@ -323,8 +323,11 @@ public sealed partial class Mixer
 
     // The same rule without asking whether a unit is driven: the Pro's
     // direct path only runs while the daemon drives one.
+    // A unit id that two attached units share matches no saved unit; the
+    // strip on the interface and the exact node still carry the inputs.
     private string? CarrierOfLocked(int input)
-        => UnitInputChannel(_config.Channels, _bindings, _inputDevice, _deviceXlrInputs ?? 1, input, _drivenUnit);
+        => UnitInputChannel(_config.Channels, _bindings, _inputDevice, _deviceXlrInputs ?? 1, input,
+            AmbiguousUnitLocked(_drivenUnit) ? null : _drivenUnit);
 
     /// <inheritdoc cref="UnitInputChannelLocked"/>
     internal static string? UnitInputChannel(IReadOnlyList<ChannelDefinition> channels,
@@ -335,7 +338,7 @@ public sealed partial class Mixer
         if (strip is not null && !bindings.ContainsKey(strip.Id)) return strip.Id;
         return CarrierOn(channels, bindings, input,
             binding => unitId is not null && binding.Unit == unitId || unitNode is not null && binding.Source == unitNode,
-            source => unitNode is not null && source == unitNode);
+            capture => unitId is not null && capture.CaptureUnit == unitId || unitNode is not null && capture.CaptureSource == unitNode);
     }
 
     /// <summary>
@@ -348,19 +351,20 @@ public sealed partial class Mixer
         IReadOnlyDictionary<string, SourceBinding> bindings, AttachedUnit unit, int input)
     {
         if (!unit.Driven || unit.Fragments.Count == 0 || input is not (1 or 2) || input > unit.XlrInputs) return null;
-        return CarrierOn(channels, bindings, input, binding => binding.Unit == unit.Id || unit.Owns(binding.Source), unit.Owns);
+        return CarrierOn(channels, bindings, input, binding => binding.Unit == unit.Id || unit.Owns(binding.Source),
+            capture => capture.CaptureUnit == unit.Id || unit.Owns(capture.CaptureSource!));
     }
 
     // The strips bound to a unit at the input's port come first, then the
     // capture channels on its node, each in layout order.
     private static string? CarrierOn(IReadOnlyList<ChannelDefinition> channels, IReadOnlyDictionary<string, SourceBinding> bindings,
-        int input, Func<SourceBinding, bool> boundToUnit, Func<string, bool> unitNode)
+        int input, Func<SourceBinding, bool> boundToUnit, Func<ChannelDefinition, bool> captureOnUnit)
     {
         int port = input == 1 ? 0 : 2;
         ChannelDefinition? bound = channels.FirstOrDefault(c => c.InputPair is not null
             && bindings.TryGetValue(c.Id, out SourceBinding? b) && b.Port == port && boundToUnit(b));
         if (bound is not null) return bound.Id;
-        return channels.FirstOrDefault(c => c.CaptureSource is { } source && unitNode(source)
+        return channels.FirstOrDefault(c => c.CaptureSource is not null && captureOnUnit(c)
             && (c.CaptureMonoChannel == port || c.CaptureMonoChannel is null && c.CapturePair == input - 1))?.Id;
     }
 
@@ -377,7 +381,7 @@ public sealed partial class Mixer
                 if (UnitInputChannelLocked(input) is { } channel) carried.TryAdd(channel, new(primary, input, Primary: true));
         foreach (AttachedUnit unit in _units)
         {
-            if (unit.Id == _drivenUnit) continue;
+            if (unit.Id == _drivenUnit || AmbiguousUnitLocked(unit.Id)) continue;
             for (int input = 1; input <= 2; input++)
                 if (AdditionalUnitInputChannel(_config.Channels, _bindings, unit, input) is { } channel)
                     carried.TryAdd(channel, new(unit.Id, input, Primary: false));
@@ -392,7 +396,7 @@ public sealed partial class Mixer
                 ? new("source", b.Source, b.Pair, b.MonoChannel, b.Unit)
                 : new("unit", Pair: pair);
         return channel.CaptureSource is { } source
-            ? new("source", source, channel.CapturePair, channel.CaptureMonoChannel)
+            ? new("source", source, channel.CapturePair, channel.CaptureMonoChannel, channel.CaptureUnit)
             : new("apps");
     }
 
@@ -429,6 +433,10 @@ public sealed partial class Mixer
         return source;
     }
 
+    private bool AmbiguousUnitLocked(string? unit)
+        => unit is { Length: 9 } && _units.Count(u => SourceBinding.ModelOf(u.Id) == unit)
+            + (_drivenUnit is { } primary && SourceBinding.ModelOf(primary) == unit && !_units.Any(u => u.Id == primary) ? 1 : 0) > 1;
+
     /// <summary>
     /// The node a binding is fed from now, or null with the reason. The exact
     /// name wins. While it is missing, a binding to a supported unit's node
@@ -443,6 +451,11 @@ public sealed partial class Mixer
         int matches = sources.Count(s => s.Name == binding.Source);
         if (matches == 0 && binding.Unit is not null)
         {
+            if (AmbiguousUnitLocked(binding.Unit))
+            {
+                warning = $"{binding.Source} is gone and more than one attached interface has model {binding.Unit}. The strip stays silent until it is bound again.";
+                return null;
+            }
             string card = InterfaceNodes.CardKey(binding.Source);
             List<AudioNode> renamed = [.. sources.Where(s => !s.IsOwn && InterfaceNodes.CardKey(s.Name) == card)];
             if (renamed.Count == 1)
