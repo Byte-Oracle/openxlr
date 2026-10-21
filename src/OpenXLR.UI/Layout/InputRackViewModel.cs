@@ -79,8 +79,9 @@ public sealed class InputRackViewModel : IDisposable
     {
         InputStripKind.Xlr1 or InputStripKind.Xlr2 => SkinStripParts.InputRow,
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
-        // A capture channel carrying the interface's microphone also has its switches.
-        InputStripKind.Capture => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
+        // A capture channel has its source chip and its chain, and the interface's
+        // gain and switches while it carries the interface's microphone.
+        InputStripKind.Capture => SkinStripParts.InputRow,
         // An application channel's gain part holds its channel volume alone.
         _ => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
     };
@@ -184,8 +185,12 @@ public sealed class InputStripViewModel : ViewModelBase
         (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         (InputStripKind.Xlr2 or InputStripKind.Capture, SkinStripParts.HardwareControls) => CarriesUnit || CarriesExtraUnit,
         (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
+        (InputStripKind.Capture, SkinStripParts.Binding) => CapturePartOrdered(part),
+        (InputStripKind.Capture, SkinStripParts.Effects) => Channel.HasInserts && CapturePartOrdered(part),
         _ => true,
     };
+
+    private bool CapturePartOrdered(string part) => _rack.Options.ExplicitOrder is not { } order || order.Contains(part);
 
     /// <summary>The interface's input this strip carries, whose controls it draws, or null.</summary>
     public UnitInputViewModel? Unit => Channel.ShownUnitInput is 1 or 2 ? Main.UnitInputOf(Channel.ShownUnitInput) : null;
@@ -206,13 +211,18 @@ public sealed class InputStripViewModel : ViewModelBase
     {
         Spec = CreateSpec();
         Raise(nameof(Spec));
+        Raise(nameof(ShowsCaptureLabel));
     }
 
-    /// <summary>The input's plugin chain, for the two XLR inputs; null for every other channel.</summary>
+    /// <summary>A capture strip whose skin leaves the source chip out keeps the connection line it had before.</summary>
+    public bool ShowsCaptureLabel => Kind == InputStripKind.Capture && !Spec.Parts.Contains(SkinStripParts.Binding, StringComparer.Ordinal);
+
+    /// <summary>The input's plugin chain, when the daemon supports one.</summary>
     public InsertsViewModel? Inserts => Kind switch
     {
         InputStripKind.Xlr1 => _rack.Main.Inserts,
         InputStripKind.Xlr2 => _rack.Main.Inserts2,
+        InputStripKind.Capture => Channel.Inserts,
         _ => null,
     };
 
@@ -221,6 +231,7 @@ public sealed class InputStripViewModel : ViewModelBase
     {
         InputStripKind.Xlr1 => "xlr1",
         InputStripKind.Xlr2 => "xlr2",
+        InputStripKind.Capture when Channel.HasInserts => Channel.Id,
         _ => null,
     };
 
@@ -253,6 +264,7 @@ public sealed class InputStripViewModel : ViewModelBase
             case nameof(ChannelViewModel.IsEditable): Raise(nameof(HandleHidden)); break;
             case nameof(ChannelViewModel.Name): Raise(nameof(LeftLevelName)); Raise(nameof(RightLevelName)); break;
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); Raise(nameof(ShowsVolume)); break;
+            case nameof(ChannelViewModel.Inserts): Raise(nameof(Inserts)); Raise(nameof(InsertsKey)); RefreshSpec(); break;
             case nameof(ChannelViewModel.ShownUnitInput):
                 Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); RefreshSpec();
                 break;

@@ -448,9 +448,20 @@
                              IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
                   <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
                              TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <!-- a capture input's source under its name, as an XLR row draws its binding: lit
+                       while linked. It changes nothing, so it is no target; its tooltip says why the
+                       input is silent. A skin whose order leaves the part out gets the connection line. -->
+                  <Grid Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="4"
+                        Name="MatrixCaptureBinding" IsVisible="{Binding ShowsBinding}"
+                        AutomationProperties.Name="{Binding Channel.CaptureChipName}" ToolTip.Tip="{Binding Channel.BindingTip}">
+                    <skin:StatusLed IsOn="{Binding Channel.CaptureConnected}" VerticalAlignment="Center"
+                                    AutomationProperties.AccessibilityView="Raw"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Channel.BindingLabel}" Classes="hint" FontSize="11"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                  </Grid>
                   <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Channel.CaptureLabel}" Classes="hint" FontSize="11"
                              TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Channel.CaptureLabel}"
-                             IsVisible="{Binding Channel.CaptureLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                             IsVisible="{Binding ShowsCaptureLabel}"/>
                   <!-- the microphone's switches behind one button at the end of the name column, wherever the
                        order puts the part, so the source controls keep their room: lettered as a lit chain while
                        one is on, with the interface's phantom power lamp, lit while phantom power is on -->
@@ -476,12 +487,12 @@
                 <StackPanel layout:StripPanel.Part="meter" Orientation="Vertical" Spacing="1" VerticalAlignment="Center"
                             ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
                   <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
-                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" Classes.monoSpare="{Binding Channel.MonoMeter}" AutomationProperties.Name="{Binding RightLevelName}"/>
                 </StackPanel>
                 <StackPanel layout:StripPanel.Part="gain" Name="MatrixLevels" Spacing="2" VerticalAlignment="Center">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding HasGainFader}">
                     <!-- the interface's gain, while this capture channel carries the interface's microphone -->
-                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}" Mono="{Binding Channel.MonoMeter}"
                                        LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
                                        IsVisible="{Binding CarriesUnit}">
                       <Slider Name="MatrixUnitGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Unit.GainMaxDb, FallbackValue=80}"
@@ -489,7 +500,7 @@
                               AutomationProperties.Name="{Binding Unit.GainName}"/>
                     </layout:MeterFader>
                     <!-- an additional interface's gain, while this row carries that interface's input -->
-                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}" Mono="{Binding Channel.MonoMeter}"
                                        LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
                                        IsVisible="{Binding CarriesExtraUnit}">
                       <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
@@ -501,7 +512,7 @@
                        otherwise; while the Wave XLR Pro's direct path carries this channel to the jacks, a
                        mark says it reaches the mixes only -->
                   <Grid Name="MatrixVolumeLine" ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding ShowsVolume}">
-                    <layout:MeterFader ShowsMeter="{Binding VolumeShowsMeter}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                    <layout:MeterFader ShowsMeter="{Binding VolumeShowsMeter}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}" Mono="{Binding Channel.MonoMeter}"
                                        LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
                       <Slider Name="MatrixVolume" Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
                               Value="{Binding Channel.Volume, Mode=TwoWay}"
@@ -525,6 +536,15 @@
                                 AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MixMuteName}}"
                                 ToolTip.Tip="{loc:Text Key=TheDeviceMutesThisInputForAbout13}"/>
                 </Panel>
+                <!-- a capture input's plugin chain, the button an XLR row has, without the EQ over it.
+                     The part is in the row's spec only while the daemon reports the input's chain
+                     width, and the strip panel alone decides whether a part is shown. -->
+                <Button layout:StripPanel.Part="effects" Name="MatrixCaptureInserts" Classes="matrixEffects fx" Content="{loc:Text Key=MatrixEffects}"
+                        Classes.fxOn="{Binding Inserts.IsProcessing, FallbackValue=False}" Classes.fxOff="{Binding Inserts.IsOff, FallbackValue=False}"
+                        Padding="5,2" FontSize="11" VerticalAlignment="Center" HorizontalContentAlignment="Center"
+                        MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                        Click="OnXlrInserts" AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=InsertsTitle}}"
+                        ToolTip.Tip="{loc:Text Key=InputChainHint}"/>
               </layout:StripPanel>
             </Border>
           </DockPanel>
@@ -625,7 +645,7 @@
                                       MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                                       AutomationProperties.Name="{Binding MuteName}" ToolTip.Tip="{Binding MuteName}"/>
                         <layout:MeterFader layout:StripPanel.Part="fader" ShowsMeter="{Binding MeterUnderFader}"
-                                           LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                           LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}" Mono="{Binding Channel.MonoMeter}"
                                            LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}"
                                            VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
                           <Slider Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"

@@ -321,12 +321,18 @@
                   <TextBlock Grid.Column="1" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
                              TextTrimming="CharacterEllipsis" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
                 </Grid>
+                <!-- the connection line, while the skin leaves the source chip out -->
                 <TextBlock Text="{Binding Channel.CaptureLabel}" Classes="h" FontSize="11" TextTrimming="CharacterEllipsis"
-                           IsVisible="{Binding Channel.CaptureLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                           IsVisible="{Binding ShowsCaptureLabel}"/>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="binding" Spacing="2">
+                <views:CaptureSourceChip DataContext="{Binding Channel}" HorizontalAlignment="Left"/>
+                <TextBlock Text="{Binding Channel.BindingWarning}" Classes="hint" FontSize="11"
+                           TextWrapping="Wrap" IsVisible="{Binding Channel.HasBindingWarning}"/>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="meter" Orientation="{Binding Spec.MeterPairOrientation}" Spacing="1">
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
-                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" Classes.monoSpare="{Binding Channel.MonoMeter}" AutomationProperties.Name="{Binding RightLevelName}"/>
               </StackPanel>
               <StackPanel layout:StripPanel.Part="gain" Classes="dev" Spacing="4">
                 <!-- the interface's gain, while this capture channel carries its microphone -->
@@ -382,6 +388,7 @@
                   <views:WaveUnitControls Name="RackExtraSwitches" Part="Switches" DataContext="{Binding ExtraUnit}"/>
                 </Panel>
               </StackPanel>
+              <views:CaptureInsertsView layout:StripPanel.Part="effects" DataContext="{Binding Channel}"/>
             </layout:StripPanel>
           </DockPanel>
         </Border>

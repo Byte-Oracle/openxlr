@@ -37,6 +37,9 @@ public sealed class MeterFader : Panel
     public static readonly StyledProperty<bool> ShowsMeterProperty =
         AvaloniaProperty.Register<MeterFader, bool>(nameof(ShowsMeter), true);
 
+    public static readonly StyledProperty<bool> MonoProperty =
+        AvaloniaProperty.Register<MeterFader, bool>(nameof(Mono));
+
     /// <summary>The groove keys the framework's and the console fader's templates paint with; the meter takes their place.</summary>
     private static readonly string[] GrooveKeys =
     [
@@ -81,19 +84,23 @@ public sealed class MeterFader : Panel
     /// <summary>True while the meter runs under the fader; false leaves a plain fader with its own groove.</summary>
     public bool ShowsMeter { get => GetValue(ShowsMeterProperty); set => SetValue(ShowsMeterProperty, value); }
 
+    /// <summary>A microphone input draws one meter.</summary>
+    public bool Mono { get => GetValue(MonoProperty); set => SetValue(MonoProperty, value); }
+
     /// <summary>The meter drawn under the fader, for the tests.</summary>
     internal StackPanel Meters => _meters;
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == ShowsMeterProperty) UpdateMeter();
+        if (change.Property == ShowsMeterProperty || change.Property == MonoProperty) UpdateMeter();
     }
 
     private void UpdateMeter()
     {
         bool shows = ShowsMeter;
         _meters.IsVisible = shows;
+        _meters.Children[1].IsVisible = !Mono;
         foreach (string key in GrooveKeys)
         {
             if (shows) Resources[key] = Brushes.Transparent;

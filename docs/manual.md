@@ -2810,12 +2810,29 @@ phantom power, and adds each one's microphone as a capture channel; see
 [Multiple Wave interfaces](wave-interfaces.md). The software low cut,
 ClipGuard and microphone EQ stay on the XLR strips.
 
-Capture channels can host LV2, CLAP and VST3 inserts through the
-[HTTP API](http-api.md). The desktop and terminal chain controls still show
-XLR and mix chains. A capture input on one mono port takes a mono chain;
-a stereo pair takes a stereo chain. A capture input on the first pair of a
-source that has just one channel, with no inserts, is changed to take that
-one port; the daemon saves the change and its audio links stay as they were.
+Capture channels host LV2, CLAP and VST3 inserts in the window and through
+the [HTTP API](http-api.md). In the classic window, INPUTS shows one block
+per capture input after Aux In, in layout order. Each block has its name, a
+read-only source chip with a connection light and any warning, its volume,
+and an **Inserts** button with the chain below it. The chip does not change
+the source. An input rack shows the source in its `binding` part and the
+chain in `effects`. Broadcast and Wave put the source under the channel's
+name and the chain behind the row head's **FX** button. A skin can leave
+these parts out. The Flow window lists the plugins inside the capture
+channel's card.
+
+The chain window has the same presets, A/B, copy and paste, plugin controls,
+native editors and latency readouts as an XLR chain. Its picker offers only
+plugins that fit the input's width. A capture input on one microphone port
+draws one meter bar and a stereo pair draws two; XLR 1 and XLR 2 keep their
+two. An older daemon that does not report a chain width shows no capture
+Inserts button. Sound Check and EQ remain on XLR 1 and XLR 2, and the
+terminal mixer still edits only XLR and mix chains.
+
+A capture input on one mono port takes a mono chain; a stereo pair takes a
+stereo chain. A capture input on the first pair of a source that has just
+one channel, with no inserts, is changed to take that one port; the daemon
+saves the change and its audio links stay as they were.
 An input with saved inserts keeps its width.
 
 Each chain processes before the channel's sends, volume and meter. Replacing

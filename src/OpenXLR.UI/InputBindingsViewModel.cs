@@ -371,6 +371,13 @@ public sealed partial class MainViewModel
     /// </summary>
     private string BindingLabelOf(ChannelViewModel channel)
     {
+        if (channel.CaptureSource is { } capture)
+        {
+            string source = Inputs.FirstOrDefault(i => i.Name == capture)?.Description is { Length: > 0 } label ? label : capture;
+            return channel.CaptureMonoChannel is int port
+                ? Localizer.Format("InputBindingSourcePort", source, port + 1)
+                : Localizer.Format("CaptureSourcePair", source, channel.CapturePair + 1);
+        }
         if (!channel.IsBindable) return "";
         if (channel.Binding is not { Kind: "source", Source: { } name } binding)
             return !UnitXlrJacks ? Localizer.Text("UnitCapsule")

@@ -67,7 +67,8 @@ internal sealed record FlowGraph(IReadOnlyList<FlowNode> Nodes, IReadOnlyList<Fl
             }
             string chain = channel.Id switch
             {
-                "xlr1" => Inserts(vm.Inserts), "xlr2" => Inserts(vm.Inserts2), _ => "",
+                "xlr1" => Inserts(vm.Inserts), "xlr2" => Inserts(vm.Inserts2),
+                _ => channel.Inserts is { } inserts ? Inserts(inserts) : "",
             };
             if (chain.Length > 0) stages.Add(chain);
             string processing = string.Join("\n", stages);

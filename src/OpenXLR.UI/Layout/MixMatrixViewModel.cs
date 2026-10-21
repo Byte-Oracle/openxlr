@@ -119,9 +119,9 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
         // A capture channel's gain part holds its channel volume, under the
         // interface's gain while it carries the interface's microphone, which
-        // also brings the interface's mute and switches.
-        InputStripKind.Capture => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.Mute,
-            SkinMatrixParts.Processing],
+        // also brings the interface's mute and switches. Its source and its
+        // chain follow the binding and effects parts; see Available and ShowsBinding.
+        InputStripKind.Capture => SkinMatrixParts.RowHead,
         // An application channel's gain part holds its channel volume alone.
         _ => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
     };
@@ -472,8 +472,11 @@ public sealed class MatrixRowViewModel : ViewModelBase
             Unit is { HasSwitches: true } || ExtraUnit is { HasSwitches: true } || ShowsSoftware,
         (InputStripKind.AuxIn, SkinStripParts.Gain) => Main.CapAuxInput || Channel.HasVolume,
         (_, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
+        (InputStripKind.Capture, SkinStripParts.Effects) => Channel.HasInserts && CapturePartOrdered(part),
         _ => true,
     };
+
+    private bool CapturePartOrdered(string part) => Matrix.Options.RowHead.ExplicitOrder is not { } order || order.Contains(part);
 
     internal void RefreshSpec()
     {
@@ -565,9 +568,13 @@ public sealed class MatrixRowViewModel : ViewModelBase
     /// </summary>
     public bool Tall => Stacked || ShowsEq && Spec.Parts.Contains(SkinStripParts.Effects, StringComparer.Ordinal);
 
-    /// <summary>The head draws the strip's binding chip under the name: XLR 1 or XLR 2, unless the skin hides it.</summary>
-    public bool ShowsBinding => Kind is InputStripKind.Xlr1 or InputStripKind.Xlr2
-        && Matrix.Options.RowHead.Shows(SkinStripParts.Binding);
+    /// <summary>The head draws the input's binding under the name, unless the skin hides it.</summary>
+    public bool ShowsBinding => Kind is InputStripKind.Xlr1 or InputStripKind.Xlr2 or InputStripKind.Capture
+        && Matrix.Options.RowHead.Shows(SkinStripParts.Binding)
+        && (Kind != InputStripKind.Capture || CapturePartOrdered(SkinStripParts.Binding));
+
+    /// <summary>A capture row whose skin leaves the binding out keeps the connection line it had before.</summary>
+    public bool ShowsCaptureLabel => Kind == InputStripKind.Capture && !ShowsBinding;
 
     /// <summary>One cell per column, in the columns' order.</summary>
     public ObservableCollection<MatrixCellViewModel> Cells { get; } = [];
@@ -586,11 +593,12 @@ public sealed class MatrixRowViewModel : ViewModelBase
     /// <summary>True when the meter runs under this row's faders.</summary>
     public bool MeterUnderFader => Matrix.MeterUnderFader;
 
-    /// <summary>The input's plugin chain, for the two XLR inputs; null for every other channel.</summary>
+    /// <summary>The input's plugin chain, when the daemon supports one.</summary>
     public InsertsViewModel? Inserts => Kind switch
     {
         InputStripKind.Xlr1 => Main.Inserts,
         InputStripKind.Xlr2 => Main.Inserts2,
+        InputStripKind.Capture => Channel.Inserts,
         _ => null,
     };
 
@@ -599,6 +607,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
     {
         InputStripKind.Xlr1 => "xlr1",
         InputStripKind.Xlr2 => "xlr2",
+        InputStripKind.Capture when Channel.HasInserts => Channel.Id,
         _ => null,
     };
 
@@ -656,6 +665,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
                 foreach (MatrixCellViewModel cell in Cells) cell.RefreshNames();
                 break;
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
+            case nameof(ChannelViewModel.Inserts): Raise(nameof(Inserts)); Raise(nameof(InsertsKey)); RefreshSpec(); break;
             case nameof(ChannelViewModel.HasEq): Raise(nameof(ShowsEq)); Raise(nameof(Tall)); break;
             case nameof(ChannelViewModel.ShownUnitInput):
                 Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); WatchUnits(); RefreshSpec(); RaiseSwitches();

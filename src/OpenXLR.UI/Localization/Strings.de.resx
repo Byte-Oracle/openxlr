@@ -2655,4 +2655,13 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="FlowEq" xml:space="preserve">
     <value>EQ, {0} von 4 Bändern an</value>
   </data>
+  <data name="CaptureSourceChipName" xml:space="preserve">
+    <value>Quelle von {0}: {1}</value>
+  </data>
+  <data name="CaptureSourcePair" xml:space="preserve">
+    <value>{0}, Paar {1}</value>
+  </data>
+  <data name="StereoInputPickerHint" xml:space="preserve">
+    <value>Plugins für einen Stereoeingang mit zwei Ein- und zwei Ausgängen</value>
+  </data>
 </root>

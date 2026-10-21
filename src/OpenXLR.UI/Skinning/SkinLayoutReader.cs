@@ -565,7 +565,10 @@ public static class SkinLayoutReader
         SkinMatrixMuted? mutedStyle = muted && fields.TryGetValue("muted", out JsonElement mutedElement)
             ? Name(mutedElement, path + ".muted", MatrixMuted, "a muted cell style") == "dim" ? SkinMatrixMuted.Dim : SkinMatrixMuted.Tint
             : null;
-        return (new SkinMatrixPartOptions(order, hidden, style), mutedStyle);
+        return (new SkinMatrixPartOptions(order, hidden, style)
+        {
+            ExplicitOrder = parts == SkinMatrixParts.RowHead && fields.ContainsKey("parts") ? ordered : null,
+        }, mutedStyle);
     }
 
     /// <summary>
@@ -639,7 +642,10 @@ public static class SkinLayoutReader
         SkinFaderOptions faderOptions = fields.TryGetValue("fader", out JsonElement faderElement)
             ? ReadFader(faderElement, path + ".fader", upright)
             : upright ? new SkinFaderOptions(SkinLayoutOrientation.Vertical) : SkinFaderOptions.Default;
-        return new SkinStripOptions(template, order, hidden, label, meter, faderOptions);
+        return new SkinStripOptions(template, order, hidden, label, meter, faderOptions)
+        {
+            ExplicitOrder = !fader && fields.ContainsKey("partsOrder") ? ordered : null,
+        };
     }
 
     private static SkinMasterOptions ReadMaster(JsonElement element, string path)

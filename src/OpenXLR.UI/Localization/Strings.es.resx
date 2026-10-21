@@ -2655,4 +2655,13 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="FlowEq" xml:space="preserve">
     <value>EQ, {0} de 4 bandas activas</value>
   </data>
+  <data name="CaptureSourceChipName" xml:space="preserve">
+    <value>Fuente de {0}: {1}</value>
+  </data>
+  <data name="CaptureSourcePair" xml:space="preserve">
+    <value>{0}, par {1}</value>
+  </data>
+  <data name="StereoInputPickerHint" xml:space="preserve">
+    <value>Plugins compatibles con una entrada estéreo (dos entradas, dos salidas)</value>
+  </data>
 </root>
