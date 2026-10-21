@@ -14,8 +14,9 @@ including mono capture inputs. Input labels are the daemon's channel names:
 Wave:3's capsule or on another microphone a strip is bound to, and the saved
 name of a capture input. Stereo capture inputs stay out of the bar. An older
 daemon without `microphone` keeps the XLR-only rule. An input's
-label and meter dim to 45% opacity while the interface's mute applies to
-it, which is only while the strip carries the interface's input; their
+label and meter dim to 45% opacity while the mute of the interface, or
+of the driven additional interface, whose input the strip carries applies
+to it; their
 weight and size stay the same.
 Glyph cells and labels share the font's line height and vertical centre.
 
@@ -95,9 +96,9 @@ Popout meters use the OpenXLR skin whose id matches the active Omarchy
 theme. The plugin watches
 `$HOME/.local/state/omarchy/current/theme.name`, so a theme switch repaints
 the open mixer without a shell restart. Eleven Omarchy themes have a
-matching skin. `Skins.js` also carries Deck and Broadcast, which no
-Omarchy theme is named after; their rows are meter colours only, and
-Broadcast's layout never reaches the plugin. An unknown theme, a missing file or an unreadable file uses
+matching skin. `Skins.js` also carries Deck, Broadcast, Nyan Pink and
+Wave, which no Omarchy theme is named after; their rows are meter colours
+only, and the Broadcast and Wave layouts never reach the plugin. An unknown theme, a missing file or an unreadable file uses
 the popout foreground shades instead. The old Omarchy 3 configuration
 symlink is not used.
 
@@ -202,7 +203,8 @@ runtime directory is unset. It connects only to
 `ws://127.0.0.1:37890/api/v1/events`, sends `auth` first and `getState`
 next. Authenticated sockets receive state changes and 15 Hz meter frames
 without a subscription command. It uses `setLevel`, `setChannelMuted`,
-`setMixVolume`, `setMixMuted` and `set` for hardware mute, as documented
+`setMixVolume`, `setMixMuted`, `set` for the primary's hardware mute and
+`setWaveControl` for an additional interface's, as documented
 in [api.md](api.md). There is no HTTP or meter polling loop.
 
 An unavailable daemon leaves a dim `XLR off` indicator, empty meters and
