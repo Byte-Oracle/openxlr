@@ -241,8 +241,8 @@ debounced, retried behaviour.
   routed to it, remembered assignments included, and whatever is playing
   into its sink at that moment move to the fallback application channel
   (`system`, or the remaining application channel whose id sorts first);
-  then its sink is unloaded, and a capture channel's links, insert hosts
-  and session stop with it. Its insert key is removed from the saved settings. The last application channel stays.
+  then its sink is unloaded, and a capture channel's links, insert hosts,
+  EQ stage and session stop with it. Its insert key and its `eq` entry are removed from the saved settings. The last application channel stays.
 - `createMix {name, kind?, icon?}` adds a user mix after the existing ones,
   ahead of Aux, with `icon` as `createChannel` takes it. Without `kind`, or with `kind: "virtualMic"`, it is a virtual
   microphone. With `kind: "monitor"` it is a monitor mix: one sink and no
@@ -391,11 +391,14 @@ unambiguous source fragments.
 
 Multiple interfaces can therefore supply audio simultaneously, independently
 of the interface selected for hardware controls. Hardware controls still
-target their unit. The software low cut, ClipGuard and microphone EQ stay
-on the XLR strips.
+target their unit. The software low cut and ClipGuard stay on the XLR
+strips.
 Capture inputs host their own insert chains through the API. A binding with
 `captureMonoChannel` has `microphone: true` and `chainWidth: 1`; a pair has
-`microphone: false` and `chainWidth: 2`, even while disconnected.
+`microphone: false` and `chainWidth: 2`, even while disconnected. A
+microphone capture input also has the microphone EQ, which runs in software
+and is saved in `mixer.json` under `eq` by its channel id, like XLR 1's
+([api.md](api.md#eq-on-capture-inputs)).
 
 The daemon moves a pair-0 capture input with no mono port to
 `captureMonoChannel: 0` when its source reports `audio.channels: 1` and its

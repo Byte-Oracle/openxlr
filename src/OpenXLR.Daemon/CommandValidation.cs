@@ -301,12 +301,14 @@ public static class CommandValidation
     }
 
     /// <summary>
-    /// The microphone EQ commands: a microphone channel, and values inside
+    /// The microphone EQ commands: a microphone channel (XLR 1, XLR 2 or a
+    /// capture input on one mono port), and values inside
     /// the EQ's ranges. A value outside a range is refused, not clamped; the
     /// mixer snaps what it takes onto the EQ's steps. Switching the EQ on is
     /// refused at once when the native helper is not installed and no unit
     /// runs the channel's EQ, since nothing could run it; values can still be
-    /// set. Where the EQ runs is <c>device</c> or <c>software</c>.
+    /// set. Where the EQ runs is <c>device</c> or <c>software</c>, and is
+    /// refused on a capture input, whose EQ always runs on this computer.
     /// </summary>
     internal static string? CheckEq(Command cmd, ILayoutInfo layout, bool hostInstalled)
     {
@@ -322,6 +324,7 @@ public static class CommandValidation
                 if (MicEq.Read(cmd.Eq, out string? error) is not { } eq) return $"setEq: {error}";
                 return eq.Enabled && !hostInstalled && !layout.EqRunsOnDevice(cmd.Channel) ? Mixer.EqNeedsHost : null;
             case "setEqProcessing":
+                if (layout.EqRunsInSoftwareOnly(cmd.Channel)) return Mixer.EqSoftwareOnly(Short(cmd.Channel));
                 return cmd.Value.ValueKind == JsonValueKind.String && MicEqProcessing.IsValid(cmd.Value.GetString())
                     ? null : "setEqProcessing: value must be 'device' or 'software'";
             default:

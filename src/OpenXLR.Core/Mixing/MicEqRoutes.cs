@@ -3,18 +3,20 @@ using OpenXLR.Core.Devices;
 namespace OpenXLR.Core.Mixing;
 
 /// <summary>
-/// The microphone EQ on XLR 1 and XLR 2. It runs on the unit's own DSP when
+/// The microphone EQ on XLR 1, XLR 2 and every capture input on one mono
+/// port. On XLR 1 and XLR 2 it runs on the unit's own DSP when
 /// the channel carries a unit input whose unit runs it (the MK.2 family from
 /// firmware 1.0.15, each of the Wave XLR Pro's two inputs from 1.0.14), the
 /// channel's choice is <c>device</c>, and no Sound
-/// Check session runs on it; otherwise in software. A unit-run EQ starts no
+/// Check session runs on it; otherwise in software. A capture input's EQ
+/// always runs in software, whatever source feeds it. A unit-run EQ starts no
 /// stage: its values go to the device side through <see cref="IDeviceEqPort"/>.
 /// Moving between the two switches the leaving one off first, so a voice is
 /// never equalised twice.
 ///
 /// The software stage sits at the head of the
 /// input's route, between the source (or Sound Check's loop) and the software
-/// low cut, ClipGuard and inserts:
+/// low cut, ClipGuard and inserts (a capture input has only its inserts):
 ///
 ///   source -> OpenXLR_eq_&lt;id&gt;_&lt;gen&gt; -> OpenXLR_lc_&lt;id&gt;_&lt;gen&gt; (when a chain runs) -> OpenXLR_ch_&lt;id&gt;
 ///
@@ -34,11 +36,27 @@ public sealed partial class Mixer
     /// <summary>What an EQ the restart policy has given up on says.</summary>
     internal const string EqGivenUp = "the EQ kept failing and is off; switch it off and on to try again";
 
-    /// <summary>The channels that carry a microphone EQ: XLR 1 and XLR 2, until capture microphones take one.</summary>
+    /// <summary>The hardware strips that carry a microphone EQ, which their unit can run: XLR 1 and XLR 2.</summary>
     public static bool IsMicrophoneId(string? id) => id is "xlr1" or "xlr2";
 
-    /// <summary>A microphone input of this layout.</summary>
-    public bool IsMicrophoneChannel(string id) { lock (_gate) return IsMicrophoneId(id) && _config.Channels.Any(c => c.Id == id); }
+    /// <summary>
+    /// Whether a channel carries the microphone EQ: XLR 1, XLR 2, or a
+    /// capture input on one mono port. The software stage is mono, so a
+    /// capture input on a stereo pair has none.
+    /// </summary>
+    public static bool CarriesEq(ChannelDefinition channel)
+        => IsMicrophoneId(channel.Id) || channel.CaptureSource is not null && channel.Microphone;
+
+    /// <summary>A microphone input of this layout: a channel that carries the EQ.</summary>
+    public bool IsMicrophoneChannel(string id) { lock (_gate) return _config.Channels.Any(c => c.Id == id && CarriesEq(c)); }
+
+    /// <summary>A microphone whose EQ only ever runs on this computer: a capture input, which has no device choice.</summary>
+    public bool EqRunsInSoftwareOnly(string id)
+    {
+        lock (_gate) return !IsMicrophoneId(id) && _config.Channels.Any(c => c.Id == id && CarriesEq(c));
+    }
+
+    private bool CarriesEqLocked(string id) => _config.Channels.Any(c => c.Id == id && CarriesEq(c));
 
     private static string EqKey(string channel) => "eq:" + channel;
 
@@ -97,10 +115,14 @@ public sealed partial class Mixer
 
     private MicEq EqLocked(string channel) => _eq.GetValueOrDefault(channel) ?? MicEq.Default;
 
-    /// <summary>The channel's choice of where its EQ runs: <c>device</c> unless set to <c>software</c>.</summary>
+    /// <summary>
+    /// The channel's choice of where its EQ runs: <c>device</c> unless set to
+    /// <c>software</c>. A capture input's is always <c>software</c>.
+    /// </summary>
     public string EqProcessingFor(string channel) { lock (_gate) return EqProcessingLocked(channel); }
 
-    private string EqProcessingLocked(string channel) => _eqProcessing.GetValueOrDefault(channel) ?? MicEqProcessing.Device;
+    private string EqProcessingLocked(string channel)
+        => !IsMicrophoneId(channel) ? MicEqProcessing.Software : _eqProcessing.GetValueOrDefault(channel) ?? MicEqProcessing.Device;
 
     /// <summary>Whether a channel's EQ runs on its unit now.</summary>
     public bool EqRunsOnDevice(string channel) { lock (_gate) return _eqDevices.ContainsKey(channel); }
@@ -145,6 +167,7 @@ public sealed partial class Mixer
         lock (_gate)
         {
             RequireMicrophoneLocked(channel);
+            if (!IsMicrophoneId(channel)) throw new ArgumentException(EqSoftwareOnly(channel));
             if (value == MicEqProcessing.Device) _eqProcessing.Remove(channel);
             else _eqProcessing[channel] = value;
             ForgetDeviceEqFailureLocked(channel);
@@ -182,8 +205,12 @@ public sealed partial class Mixer
         return carried.TryGetValue(channel, out unit) && _unitEq.TryGetValue(unit.Unit, out support) && unit.Input <= support.Inputs;
     }
 
+    /// <summary>What <c>setEqProcessing</c> on a capture input is refused with.</summary>
+    public static string EqSoftwareOnly(string channel)
+        => $"setEqProcessing: '{channel}' is a capture input, whose EQ always runs on this computer";
+
     /// <summary>Whether a route built now would put a software EQ stage at the channel's head.</summary>
-    internal bool EqWantsSoftwareStage(string channel) { lock (_gate) return IsMicrophoneId(channel) && SoftwareEqLocked(channel).Enabled; }
+    internal bool EqWantsSoftwareStage(string channel) { lock (_gate) return CarriesEqLocked(channel) && SoftwareEqLocked(channel).Enabled; }
 
     /// <summary>Whether a channel's EQ is software's to run: no unit runs it and none is still letting it go.</summary>
     private bool EqInSoftwareLocked(string channel) => !_eqDevices.ContainsKey(channel) && !_eqReleasing.ContainsKey(channel);
@@ -367,7 +394,7 @@ public sealed partial class Mixer
 
     private void RequireMicrophoneLocked(string channel)
     {
-        if (!IsMicrophoneId(channel) || _config.Channels.All(c => c.Id != channel))
+        if (!CarriesEqLocked(channel))
             throw new ArgumentException($"'{channel}' is not a microphone input");
     }
 
@@ -409,13 +436,25 @@ public sealed partial class Mixer
             SpliceEqLocked(channel, replace: true);
             return;
         }
-        if (eq.Enabled) SpliceEqLocked(channel, replace: false);
+        if (!eq.Enabled) return;
+        // A capture input without inserts plays on its direct feed, which
+        // has no head to splice into: it moves to its own route, with the
+        // stage at the head, as an insert would move it. A source that is
+        // missing waits for the sweep, which builds that route when it
+        // returns.
+        if (_config.Channels.FirstOrDefault(c => c.Id == channel) is { CaptureSource: not null } capture
+            && !_inputFeeds.ContainsKey(channel))
+        {
+            if (_captureFeeds.ContainsKey(channel)) WireInputFeedsLocked([capture.Id]);
+            return;
+        }
+        SpliceEqLocked(channel, replace: false);
     }
 
     /// <summary>Every microphone's running EQ brought to its saved values, after a recall.</summary>
     private void SyncEqStagesLocked()
     {
-        foreach (ChannelDefinition ch in _config.Channels.Where(c => IsMicrophoneId(c.Id)).ToList())
+        foreach (ChannelDefinition ch in _config.Channels.Where(CarriesEq).ToList())
             ApplyEqLocked(ch.Id);
     }
 
@@ -490,7 +529,7 @@ public sealed partial class Mixer
     /// </summary>
     private bool SpliceEqLocked(string channel, bool replace)
     {
-        ChannelDefinition? ch = _config.Channels.FirstOrDefault(c => c.Id == channel && c.InputPair is not null);
+        ChannelDefinition? ch = _config.Channels.FirstOrDefault(c => c.Id == channel && (c.InputPair is not null || c.CaptureSource is not null));
         if (ch is null || !_inputFeeds.TryGetValue(channel, out PortLink? feed) || !_stripSources.TryGetValue(channel, out string? input))
             return false;
         InputRoute route = InputRouteLocked(ch, input);
@@ -559,7 +598,7 @@ public sealed partial class Mixer
             changed = true;
         }
         if (!_pw.EqHostInstalled) return changed;
-        foreach (ChannelDefinition ch in _config.Channels.Where(c => IsMicrophoneId(c.Id) && c.InputPair is not null).ToList())
+        foreach (ChannelDefinition ch in _config.Channels.Where(CarriesEq).ToList())
             if (!_eqStages.ContainsKey(ch.Id) && SoftwareEqLocked(ch.Id).Enabled && !_restarts.Blocked(EqKey(ch.Id))
                 && _eqErrors.ContainsKey(ch.Id) && _inputFeeds.ContainsKey(ch.Id))
                 changed |= SpliceEqLocked(ch.Id, replace: false);
@@ -598,10 +637,14 @@ public sealed partial class Mixer
         return new MicEqState(eq.Enabled, eq.Bands, backend, installed && !blocked, error) { Processing = processing, Device = device };
     }
 
-    /// <summary>The unit a microphone carries, while that unit's model has a hardware EQ.</summary>
+    /// <summary>
+    /// The unit a microphone carries, while that unit's model has a hardware
+    /// EQ. Never on a capture input: its EQ runs on this computer, even when
+    /// an additional unit's microphone feeds it.
+    /// </summary>
     private MicEqDevice? EqDeviceStateLocked(string channel, IReadOnlyDictionary<string, UnitInputStatus> carried)
     {
-        if (!EqCarrierLocked(channel, carried, out UnitInputStatus? unit, out UnitEqSupport? support)) return null;
+        if (!IsMicrophoneId(channel) || !EqCarrierLocked(channel, carried, out UnitInputStatus? unit, out UnitEqSupport? support)) return null;
         string? failure = _eqDeviceFailed.GetValueOrDefault(new EqUnitInput(unit.Unit, unit.Input).Key);
         return new MicEqDevice(unit.Unit, unit.Input, support.Name, support.Firmware, support.Ready && failure is null,
             failure is null ? support.Reason : EqDeviceFailedReason, failure is null ? support.Note : $"The {support.Name} {failure}, so the EQ runs in software.")
@@ -610,7 +653,7 @@ public sealed partial class Mixer
         };
     }
 
-    /// <summary>Every microphone's EQ, for a profile: a recall then names every microphone.</summary>
+    /// <summary>Every microphone's EQ, for a profile: a recall then names every microphone, capture inputs included.</summary>
     private Dictionary<string, MicEq> SceneEqLocked()
-        => _config.Channels.Where(c => IsMicrophoneId(c.Id)).ToDictionary(c => c.Id, c => EqLocked(c.Id), StringComparer.Ordinal);
+        => _config.Channels.Where(CarriesEq).ToDictionary(c => c.Id, c => EqLocked(c.Id), StringComparer.Ordinal);
 }

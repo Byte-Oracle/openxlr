@@ -82,7 +82,10 @@ public sealed class SoundCheckTests
         if (channel == "mono")
         {
             Assert.Contains("Mono microphone", Assert.Throws<InvalidOperationException>(() => mixer.SoundCheck(channel, "record")).Message);
-            Assert.Throws<ArgumentException>(() => mixer.SetEqEnabled(channel, true));
+            // A capture microphone has the EQ too, in software; a stereo pair has none.
+            mixer.SetEqEnabled(channel, true);
+            Assert.True(mixer.EqFor(channel).Enabled);
+            Assert.Throws<ArgumentException>(() => mixer.SetEqEnabled("stereo", true));
         }
         else if (!valid) Assert.Throws<ArgumentException>(() => mixer.SoundCheck(channel, "record"));
     }

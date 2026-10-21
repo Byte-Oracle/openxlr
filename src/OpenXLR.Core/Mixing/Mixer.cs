@@ -226,7 +226,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// port of the exact source the strip is bound to. The interface is found
     /// by name; a strip whose source is absent is silent and the others keep
     /// playing. Capture inputs use their binding and chain width, and enter
-    /// this path only while an insert or Sound Check needs it.
+    /// this path only while an insert, the EQ or Sound Check needs it.
     /// Each chained input is wired from its <see cref="InputRoute"/>.
     /// <paramref name="only"/> limits the work to those inputs: the rest keep
     /// their feeds and chains untouched, so their plugins keep running. Safe
@@ -275,6 +275,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     }
                 }
                 catch (Exception restore) { NoteCaptureLocked(ch.Id, restore.Message); }
+                // An EQ that is on and lost its stage with the route is
+                // tried again by the sweep, on its own restart budget.
+                if (InputRouteLocked(ch, null).Eq && !_eqStages.ContainsKey(ch.Id)) _eqErrors[ch.Id] = ex.Message;
             }
         }
     }
@@ -2886,7 +2889,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     BindingWarning = BindingWarningLocked(c),
                     UnitInput = unitInputs.GetValueOrDefault(c.Id),
                     Volume = ChannelVolumeLocked(c.Id),
-                    Eq = IsMicrophoneId(c.Id) ? EqStateLocked(c.Id, unitInputs) : null,
+                    Eq = CarriesEq(c) ? EqStateLocked(c.Id, unitInputs) : null,
                 })],
                 RenamedSinceStart = _renamedSinceBuild,
                 MonitorOutput = _monitorOutputs.FirstOrDefault(),

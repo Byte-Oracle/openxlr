@@ -86,7 +86,7 @@ public sealed partial class Mixer
         return new InputRoute(ch, input, bound, looped, lc ? _lowCutHz : 0, cg, inserts, anyInsert)
         {
             Source = looped ? _soundCheck!.SourceName : input,
-            Eq = IsMicrophoneId(ch.Id) && SoftwareEqLocked(ch.Id).Enabled,
+            Eq = CarriesEq(ch) && SoftwareEqLocked(ch.Id).Enabled,
         };
     }
 

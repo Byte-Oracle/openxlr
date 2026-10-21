@@ -184,6 +184,8 @@ public sealed partial class Mixer
             var movedOverrides = Matcher.Overrides.Where(kv => kv.Value == id).Select(kv => kv.Key).ToList();
             var movedApps = _apps.Where(kv => kv.Value.ChannelId == id).ToDictionary(kv => kv.Key, kv => kv.Value);
             _inserts.Remove(id, out List<InsertDefinition>? previousInserts);
+            // The saved file loses the channel's EQ with the channel.
+            _eq.Remove(id, out MicEq? previousEq);
             CellSnapshot cells = TakeChannelCellsLocked(id, previous.Mixes);
             _config = next;
             foreach (string identity in movedOverrides) Matcher.SetOverride(identity, fallback.Id);
@@ -193,6 +195,7 @@ public sealed partial class Mixer
             {
                 _config = previous;
                 if (previousInserts is not null) _inserts[id] = previousInserts;
+                if (previousEq is not null) _eq[id] = previousEq;
                 cells.Restore(this);
                 foreach (string identity in movedOverrides) Matcher.SetOverride(identity, id);
                 foreach ((string identity, StreamAssignment app) in movedApps) _apps[identity] = app;
@@ -228,7 +231,8 @@ public sealed partial class Mixer
             _restarts.Forget(id);
             _inserts.Remove(id);
             _insertErrors.Remove(id);
-            _eq.Remove(id);
+            _eqErrors.Remove(id);
+            _restarts.Forget(EqKey(id));
             _channelVolume.Remove(id);
             bool loaded = _combineModules.Remove(id, out uint module);
             // Before the unload, which can fail: a removed key must not stay
