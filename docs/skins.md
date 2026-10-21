@@ -1263,7 +1263,7 @@ An input row's parts, in their default order, are `identity`, `binding`,
 | Part | What it is |
 |---|---|
 | `identity` | the channel's icon and name. It cannot be hidden |
-| `binding` | XLR 1's or XLR 2's input binding: a chip naming the interface's jack or the capture source that feeds the strip, with a light that is on while the feed is linked and, under it, why the strip is silent. Clicking an XLR chip opens the binding dialog. A capture input has a read-only source chip with the same light and warning |
+| `binding` | XLR 1's or XLR 2's input binding: a chip naming the interface's jack or the capture source that feeds the strip, with a light that is on while the feed is linked and, under it, why the strip is silent. Clicking opens the binding dialog. A capture input has a source chip with the same light and warning, opening the dialog's capture form with mono ports and stereo pairs |
 | `meter` | the channel's own level meter, left and right. A capture input on one microphone port draws one bar and leaves the second bar's room empty |
 | `gain` | the input's hardware gain or Aux In's level, with the channel's own volume under it; on an application or capture channel, its own volume |
 | `hardware-controls` | the input's switches, or Aux In's level lock |
@@ -1509,7 +1509,7 @@ cell's are `mute`, `fader` and `value`.
 | Matrix part | Where | What it is |
 |---|---|---|
 | `identity` | row head, column head | the channel's or the mix's icon and name. It cannot be hidden. In a row head it is the name column, on the left unless `parts` puts it last |
-| `binding` | row head | XLR 1's or XLR 2's input binding as a line under the name in the name column, wherever `parts` puts it: a light that is on while the feed is linked and the interface's jack or the source's name. The name and this line are one target that opens the binding dialog, and its tooltip says why the strip is silent. A capture input draws the same line for its source. It opens nothing, and its tooltip says why the input is silent |
+| `binding` | row head | XLR 1's or XLR 2's input binding as a line under the name in the name column, wherever `parts` puts it: a light that is on while the feed is linked and the interface's jack or the source's name. The name and this line are one target that opens the binding dialog, and its tooltip says why the strip is silent. A capture input draws the same line for its source and opens the dialog's capture form |
 | `meter` | row head | the channel's meter as a part of its own. Under the faders it is the gain's track instead, so a channel with gain draws it there |
 | `gain` | row head | the input's hardware gain, or Aux In's level and level lock, with the channel's own volume as a second fader under it; a channel without a gain shows its volume alone. A capture channel carrying the interface's microphone shows the interface's gain over its volume |
 | `mute` | row head, column head, cell | the input's hardware mute, the mix's mute, or the send's mute in the column's mix. A capture channel carrying the interface's microphone has the interface's mute |
@@ -1523,7 +1523,7 @@ cell's are `mute`, `fader` and `value`.
 For capture row heads, an explicit `rowHead.parts` list shows `binding`
 and `effects` only when it names them, and a row without `binding` keeps
 its connection line under the name. With no list, both use their default
-places. The source line is read-only, and capture inputs have no EQ button.
+places. The source line opens the binding dialog, and capture inputs have no EQ button.
 A capture input on one microphone port draws one meter bar, including under
 the source and send faders; a stereo capture input draws two.
 

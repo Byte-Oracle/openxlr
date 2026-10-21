@@ -15,10 +15,10 @@ using OpenXLR.UI.Layout;
 namespace OpenXLR.UI;
 
 /// <summary>
-/// The one dialog that binds XLR 1 or XLR 2, opened from the strip's chip,
-/// from Options and from the header. It lists the interface's own jack, then
-/// every capture source that is not one of OpenXLR's nodes or the primary
-/// interface's, with a port chooser sized from the source. Replacing a strip
+/// The dialog that binds XLR 1, XLR 2 or a capture input, opened from its chip,
+/// from Options and from the header. Hardware strips list the interface's
+/// own jack first; capture inputs list its source alongside every other
+/// external source, with a port chooser sized from the source. Replacing a strip
 /// that has a connected interface behind it offers to keep the interface's
 /// microphone as a capture channel, and choosing another supported unit that
 /// is not driven offers to drive it as an additional interface, so its
@@ -27,8 +27,12 @@ namespace OpenXLR.UI;
 /// </summary>
 internal static class InputBindingDialog
 {
-    /// <summary>One port of a capture source, numbered from 1 and named by its channel position when PipeWire gives one.</summary>
-    internal sealed record PortChoice(int Index, string Label);
+    /// <summary>A mono port or stereo pair, numbered from 1 and named by its channel positions when PipeWire gives them.</summary>
+    internal sealed record PortChoice(int Index, string Label, bool Stereo = false)
+    {
+        public int Pair => Stereo ? Index : 0;
+        public int? MonoChannel => Stereo ? null : Index;
+    }
 
     /// <summary>
     /// The ports a source offers: one per channel when PipeWire reports the
@@ -45,6 +49,32 @@ internal static class InputBindingDialog
         if (keep is int saved && saved >= count && saved < 64)
             ports.Add(new(saved, (saved + 1).ToString(CultureInfo.CurrentCulture)));
         return ports;
+    }
+
+    /// <summary>Named stereo pairs and mono ports, including a saved choice on an absent port.</summary>
+    internal static List<PortChoice> CapturePortChoices(AudioDeviceItem? device, int pair = 0, int? mono = null)
+    {
+        List<PortChoice> ports = PortChoices(device, mono);
+        int count = Math.Clamp(device?.Channels ?? 64, 1, 64);
+        var pairs = Enumerable.Range(0, Math.Max(1, count / 2)).ToList();
+        if (mono is null && !pairs.Contains(pair)) pairs.Add(pair);
+        return [.. pairs.Select(i => new PortChoice(i,
+            Localizer.Format("CaptureStereoPorts", i * 2 + 1, i * 2 + 2,
+                device?.PositionOf(i * 2) is { Length: > 0 } left && device.PositionOf(i * 2 + 1) is { Length: > 0 } right
+                    ? $" ({left}, {right})" : ""), Stereo: true)),
+            .. ports.Select(p => p with { Label = Localizer.Format("CaptureMonoPort", p.Label) })];
+    }
+
+    internal static ComboBox PortPicker(string name)
+        => new() { Name = name, HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemTemplate = new FuncDataTemplate<PortChoice>((choice, _) =>
+                new TextBlock { Text = choice?.Label, TextTrimming = TextTrimming.CharacterEllipsis }) };
+
+    internal static void FillCapturePorts(ComboBox picker, AudioDeviceItem? device, int pair = 0, int? mono = null)
+    {
+        List<PortChoice> ports = CapturePortChoices(device, pair, mono);
+        picker.ItemsSource = ports;
+        picker.SelectedItem = ports.First(p => p.Pair == pair && p.MonoChannel == mono);
     }
 
     /// <summary>
@@ -80,21 +110,23 @@ internal static class InputBindingDialog
         if (Build(main, channelId) is { } dialog) await dialog.ShowDialog(owner);
     }
 
-    /// <summary>The dialog for XLR 1 or XLR 2, not yet shown; null when the mixer has no such strip.</summary>
+    /// <summary>The binding dialog, not yet shown; null when the channel takes no capture source.</summary>
     internal static Window? Build(MainViewModel main, string channelId)
     {
-        if (main.Channels.FirstOrDefault(c => c.IsBindable && c.Id == channelId) is not { } strip) return null;
+        if (main.Channels.FirstOrDefault(c => (c.IsBindable || c.CaptureSource is not null) && c.Id == channelId) is not { } strip) return null;
+        bool capture = strip.CaptureSource is not null;
         int input = channelId == "xlr2" ? 2 : 1;
-        string? current = strip.IsSourceBound ? strip.Binding!.Source : null;
+        string? current = capture ? strip.Binding?.Source ?? strip.CaptureSource : strip.IsSourceBound ? strip.Binding!.Source : null;
 
         // The primary interface's own nodes are its jacks, the first entry;
         // another supported unit's are offered like any source.
         string? primary = main.WaveInterfaces.FirstOrDefault(w => w.Active)?.Id;
-        var choices = main.Inputs.Where(i => !i.IsOwn && (i.DrivenUnit is null || i.DrivenUnit != primary))
+        var choices = main.Inputs.Where(i => !i.IsOwn && (capture || i.DrivenUnit is null || i.DrivenUnit != primary))
             .Select(i => new DeviceChoice(i.Name, i.Description)).ToList();
         // The interface's own input: an XLR jack, or a USB microphone's capsule.
-        choices.Insert(0, new(null, main.UnitXlrJacks ? Localizer.Format("InputBindingInterfaceJack", input)
-            : Localizer.Format("InputBindingUnitCapsule", main.UnitName)));
+        if (!capture)
+            choices.Insert(0, new(null, main.UnitXlrJacks ? Localizer.Format("InputBindingInterfaceJack", input)
+                : Localizer.Format("InputBindingUnitCapsule", main.UnitName)));
         // A unit's node renamed since the binding (driven, or its card profile
         // switched) is the source the strip plays from now.
         if (current is not null && !choices.Any(c => c.Name == current) && strip.Binding?.Unit is { } boundUnit
@@ -107,25 +139,32 @@ internal static class InputBindingDialog
             SelectedItem = choices.First(c => c.Name == current), HorizontalAlignment = HorizontalAlignment.Stretch,
             ItemTemplate = new FuncDataTemplate<DeviceChoice>((choice, _) =>
                 new TextBlock { Text = choice?.Label, TextTrimming = TextTrimming.CharacterEllipsis }) };
-        var port = new ComboBox { Name = "InputBindingPort", HorizontalAlignment = HorizontalAlignment.Stretch,
-            ItemTemplate = new FuncDataTemplate<PortChoice>((choice, _) =>
-                new TextBlock { Text = choice?.Label, TextTrimming = TextTrimming.CharacterEllipsis }) };
+        var port = PortPicker("InputBindingPort");
         Avalonia.Automation.AutomationProperties.SetName(source, Localizer.Format("InputBindingSourceName", strip.Name));
         Avalonia.Automation.AutomationProperties.SetName(port, Localizer.Text("InputBindingPort"));
         AudioDeviceItem? DeviceOf(DeviceChoice? choice) => choice?.Name is { } name ? main.Inputs.FirstOrDefault(i => i.Name == name) : null;
-        void ListPorts(int? keep)
+        void ListPorts(bool keep)
         {
-            List<PortChoice> ports = PortChoices(DeviceOf(source.SelectedItem as DeviceChoice), keep);
+            AudioDeviceItem? device = DeviceOf(source.SelectedItem as DeviceChoice);
+            if (capture)
+            {
+                FillCapturePorts(port, device, keep ? strip.Binding?.Pair ?? strip.CapturePair : 0,
+                    keep ? strip.Binding?.MonoChannel ?? strip.CaptureMonoChannel
+                        : (strip.Binding?.MonoChannel ?? strip.CaptureMonoChannel) is not null ? 0 : null);
+                return;
+            }
+            int? saved = keep && current is not null ? strip.Binding!.Port : null;
+            List<PortChoice> ports = PortChoices(device, saved);
             port.ItemsSource = ports;
-            port.SelectedItem = ports.FirstOrDefault(p => p.Index == (keep ?? 0)) ?? ports[0];
+            port.SelectedItem = ports.FirstOrDefault(p => p.Index == (saved ?? 0)) ?? ports[0];
         }
-        ListPorts(current is null ? null : strip.Binding!.Port);
+        ListPorts(true);
 
         // The interface's own microphone, kept as an ordinary capture channel on
         // the unit's node at this strip's port, as the additional interfaces'
         // Add input channel makes one. Offered only while the strip is on the
         // interface and the unit's node is known, and only once.
-        (string Node, string Unit)? unitNode = strip.IsUnitBound ? UnitNodeOf(main, strip) : null;
+        (string Node, string Unit)? unitNode = !capture && strip.IsUnitBound ? UnitNodeOf(main, strip) : null;
         int unitPort = (input - 1) * 2;
         bool kept = unitNode is { } known && main.Channels.Any(c => c.CaptureSource == known.Node
             && c.Binding is { } b && (b.MonoChannel is int mono ? mono == unitPort : b.Pair == input - 1));
@@ -151,7 +190,8 @@ internal static class InputBindingDialog
                 Margin = new Thickness(18), Spacing = 10,
                 Children =
                 {
-                    new TextBlock { Text = Localizer.Format("InputBindingHint", strip.Name), TextWrapping = TextWrapping.Wrap, Classes = { "hint" } },
+                    new TextBlock { Text = capture ? Localizer.Format("CaptureBindingHint", strip.Name) : Localizer.Format("InputBindingHint", strip.Name),
+                        TextWrapping = TextWrapping.Wrap, Classes = { "hint" } },
                     source, bluetooth, new TextBlock { Text = Localizer.Text("InputBindingPort") }, port, keep, drive, note,
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { cancel, save } },
                 },
@@ -170,8 +210,8 @@ internal static class InputBindingDialog
             bluetooth.IsVisible = chosen?.StartsWith("bluez_input.", StringComparison.Ordinal) == true;
             save.IsEnabled = !saving && !done && (chosen is null || port.SelectedItem is PortChoice);
         }
-        // A different source starts at its first port, the usual microphone.
-        source.SelectionChanged += (_, _) => { ListPorts(null); RefreshControls(); };
+        // A different source starts at its first port or pair, keeping the input's width.
+        source.SelectionChanged += (_, _) => { ListPorts(false); RefreshControls(); };
         port.SelectionChanged += (_, _) => RefreshControls();
         RefreshControls();
         save.Click += async (_, _) =>
@@ -183,7 +223,10 @@ internal static class InputBindingDialog
             saving = true;
             note.Text = "";
             RefreshControls();
-            string? error = await main.SetInputBinding(strip.Id, choice.Name, chosenPort);
+            PortChoice? selected = port.SelectedItem as PortChoice;
+            string? error = capture
+                ? await main.SetCaptureSource(strip.Id, choice.Name!, selected!.Pair, selected.MonoChannel)
+                : await main.SetInputBinding(strip.Id, choice.Name, chosenPort);
             if (error is not null) { note.Text = error; saving = false; RefreshControls(); return; }
             // The strip is bound; what follows is reported on its own.
             List<string> failures = [];

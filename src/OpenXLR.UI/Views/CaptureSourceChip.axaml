@@ -7,9 +7,7 @@
 
   <!-- A capture input's source, with the LED lit while the source is linked.
        Its face is XLR 1's binding chip, a button in the badge colour, so it
-       wears whatever button the skin chooses. It changes nothing, so the face
-       takes no pointer and no focus; the transparent frame around it carries
-       the tooltip and the name a screen reader reads. -->
+       wears whatever button the skin chooses. Clicking opens the binding dialog. -->
   <UserControl.Styles>
     <Style Selector="Button.captureChip">
       <Setter Property="Background" Value="{DynamicResource Ox.Badge.Background}"/>
@@ -22,10 +20,9 @@
     </Style>
   </UserControl.Styles>
 
-  <Border Name="Frame" Background="Transparent"
-          AutomationProperties.Name="{Binding CaptureChipName}" ToolTip.Tip="{Binding BindingTip}">
-    <Button Name="Chip" Classes="captureChip" IsHitTestVisible="False" Focusable="False"
-            AutomationProperties.AccessibilityView="Raw">
+  <Border Name="Frame" Background="Transparent">
+    <Button Name="Chip" Classes="captureChip" Click="OnChip"
+            AutomationProperties.Name="{Binding BindingChipName}" ToolTip.Tip="{Binding BindingTip}">
       <!-- a grid, not a horizontal stack: the source's name gets what the LED leaves and trims -->
       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
         <skin:StatusLed IsOn="{Binding CaptureConnected}" VerticalAlignment="Center"

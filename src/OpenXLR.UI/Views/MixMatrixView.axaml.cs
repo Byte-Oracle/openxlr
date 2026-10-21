@@ -35,10 +35,11 @@ public partial class MixMatrixView : UserControl
         if ((sender as Control)?.DataContext is MatrixRowViewModel row) row.Main.CycleSoftLowCut();
     }
 
-    /// <summary>An XLR row's name and binding line: open the binding dialog for the strip.</summary>
+    /// <summary>An input row's name and binding line: open its binding dialog.</summary>
     private void OnBinding(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is MatrixRowViewModel { Channel.IsBindable: true } row)
+        if ((sender as Control)?.DataContext is MatrixRowViewModel row
+            && (row.Channel.IsBindable || row.Channel.CaptureSource is not null))
             _ = InputBindingDialog.OpenFrom((Control)sender!, row.Channel.Id);
     }
 

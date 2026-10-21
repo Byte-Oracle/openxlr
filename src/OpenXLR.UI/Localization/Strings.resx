@@ -33,7 +33,7 @@
     <value>Add capture input</value>
   </data>
   <data name="AddCaptureInputHint" xml:space="preserve">
-    <value>Choose a microphone, capture card or another Wave interface. Pair 1 also works for mono sources. The new input starts muted in every mix and stays silent while its source is offline.</value>
+    <value>Choose a source and one mono port or a stereo pair. Mono inputs can use Sound Check. The new input starts muted in every mix and stays silent while its source is offline.</value>
   </data>
   <data name="AddChannel" xml:space="preserve">
     <value>Add channel</value>
@@ -238,9 +238,6 @@
   </data>
   <data name="CaptureOfflinePort" xml:space="preserve">
     <value>Offline · port {0}</value>
-  </data>
-  <data name="CapturePairNumber" xml:space="preserve">
-    <value>Pair {0}</value>
   </data>
   <data name="CaptureSourcePlaceholder" xml:space="preserve">
     <value>Capture source</value>
@@ -2690,9 +2687,6 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="FlowEqDevice" xml:space="preserve">
     <value>EQ on the {1}, {0} of 4 bands on</value>
   </data>
-  <data name="CaptureSourceChipName" xml:space="preserve">
-    <value>{0} source: {1}</value>
-  </data>
   <data name="CaptureSourcePair" xml:space="preserve">
     <value>{0}, pair {1}</value>
   </data>
@@ -2779,5 +2773,14 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   </data>
   <data name="DuckingNotRunning" xml:space="preserve">
     <value>Nothing runs this setup.</value>
+  </data>
+  <data name="CaptureBindingHint" xml:space="preserve">
+    <value>Choose a source and port for {0}. Its sends, volume, inserts and group stay in place. Monitor sends start muted and Sound Check ends after a change. Remove its inserts before changing between mono and stereo.</value>
+  </data>
+  <data name="CaptureMonoPort" xml:space="preserve">
+    <value>Mono port {0}</value>
+  </data>
+  <data name="CaptureStereoPorts" xml:space="preserve">
+    <value>Stereo ports {0} + {1}{2}</value>
   </data>
 </root>

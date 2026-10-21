@@ -1662,7 +1662,6 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         {
             if (!Set(ref _name, value)) return;
             Raise(nameof(BindingChipName));
-            Raise(nameof(CaptureChipName));
             if (_eq is not null) _eq.ChannelName = value;
             if (_inserts is not null) _inserts.Title = value;
         }
@@ -1818,14 +1817,13 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
 
     private string _bindingLabel = "";
     /// <summary>The chip's text: the interface's jack, or the bound source's description.</summary>
-    public string BindingLabel { get => _bindingLabel; internal set { if (Set(ref _bindingLabel, value)) { Raise(nameof(BindingTip)); Raise(nameof(BindingChipName)); Raise(nameof(CaptureChipName)); } } }
+    public string BindingLabel { get => _bindingLabel; internal set { if (Set(ref _bindingLabel, value)) { Raise(nameof(BindingTip)); Raise(nameof(BindingChipName)); } } }
 
     /// <summary>The chip's tooltip: what feeds the strip, and why it is silent when it is.</summary>
     public string BindingTip => HasBindingWarning ? $"{_bindingLabel}\n{_bindingWarning}" : _bindingLabel;
 
     /// <summary>The chip's name for a screen reader: whose input, what it is, and that it opens the picker.</summary>
     public string BindingChipName => Localizer.Format("InputBindingChipName", Name, _bindingLabel);
-    public string CaptureChipName => Localizer.Format("CaptureSourceChipName", Name, _bindingLabel);
 
     private string _captureLabel = "";
     public string CaptureLabel { get => _captureLabel; set => Set(ref _captureLabel, value); }

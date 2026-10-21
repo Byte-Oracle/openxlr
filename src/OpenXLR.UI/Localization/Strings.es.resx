@@ -33,7 +33,7 @@
     <value>Añadir entrada de captura</value>
   </data>
   <data name="AddCaptureInputHint" xml:space="preserve">
-    <value>Elige un micrófono, una capturadora u otra interfaz Wave. El par 1 también sirve para fuentes mono. La nueva entrada comienza silenciada en todas las mezclas y permanece en silencio mientras su fuente no esté conectada.</value>
+    <value>Elige una fuente y un puerto mono o un par estéreo. Las entradas mono pueden usar Sound Check. La nueva entrada empieza silenciada en todas las mezclas y permanece en silencio mientras su fuente está desconectada.</value>
   </data>
   <data name="AddChannel" xml:space="preserve">
     <value>Añadir canal</value>
@@ -238,9 +238,6 @@
   </data>
   <data name="CaptureOfflinePort" xml:space="preserve">
     <value>Desconectado · puerto {0}</value>
-  </data>
-  <data name="CapturePairNumber" xml:space="preserve">
-    <value>Par {0}</value>
   </data>
   <data name="CaptureSourcePlaceholder" xml:space="preserve">
     <value>Fuente de captura</value>
@@ -2679,9 +2676,6 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="FlowEqDevice" xml:space="preserve">
     <value>EQ en {1}, {0} de 4 bandas activas</value>
   </data>
-  <data name="CaptureSourceChipName" xml:space="preserve">
-    <value>Fuente de {0}: {1}</value>
-  </data>
   <data name="CaptureSourcePair" xml:space="preserve">
     <value>{0}, par {1}</value>
   </data>
@@ -2768,5 +2762,14 @@ Selecciona la interfaz que controla OpenXLR</value>
   </data>
   <data name="DuckingNotRunning" xml:space="preserve">
     <value>Nada ejecuta este ajuste.</value>
+  </data>
+  <data name="CaptureBindingHint" xml:space="preserve">
+    <value>Elige una fuente y un puerto para {0}. Se conservan sus envíos, volumen, efectos y grupo. Tras el cambio, los envíos a monitores se silencian y Sound Check termina. Quita los efectos antes de cambiar entre mono y estéreo.</value>
+  </data>
+  <data name="CaptureMonoPort" xml:space="preserve">
+    <value>Puerto mono {0}</value>
+  </data>
+  <data name="CaptureStereoPorts" xml:space="preserve">
+    <value>Puertos estéreo {0} + {1}{2}</value>
   </data>
 </root>
