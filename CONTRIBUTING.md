@@ -99,10 +99,12 @@ The private PipeWire runner also checks profile startup ordering. To exercise
 ClipGuard with recorded test audio, low cut and a native LSP gate, run
 `OPENXLR_TEST_DSP=1 python3 tools/test-monitor-volume.py` after a native-enabled
 build, with swh-plugins and LSP LV2 plugins installed. The same run checks
-latency compensation against the fixture `make -C native test-lv2` builds,
-which needs `native/tests` on the path, for example
-`LV2_PATH=/usr/lib/lv2:$PWD/native/tests`. The runner isolates
-plugin scans from user-installed CLAP and VST3 bundles.
+latency compensation against the fixture in `native/tests`, which needs that
+folder on the path, for example `LV2_PATH=/usr/lib/lv2:$PWD/native/tests`.
+Unless it is given `--command`, the runner first builds the LV2 test bundles
+there with `make -C native test-fixtures`; capture chains, Sound Check and
+input chains load them as inserts and hear silence without their binaries.
+The runner isolates plugin scans from user-installed CLAP and VST3 bundles.
 CI installs the DSP test plugins, rebuilds with the native helper and runs
 this check separately with
 `OPENXLR_TEST_FILTER="FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests"`.
