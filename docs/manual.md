@@ -2276,8 +2276,8 @@ MONITOR card, set its feed picker to the new mix, then open the sends you
 want. Its master is a desktop volume like Monitor A and B, so the desktop's
 volume and mute controls move it, and it goes to 150%. It publishes no
 microphone. Both kinds count toward one limit of 16 mixes you can edit,
-Stream and Chat included. Monitor A+B in the feed picker stays the sum of
-those two mixes; a sum with a monitor mix you added goes through the API.
+Stream and Chat included. In each output's feed picker, tick any combination
+of mixes, including the monitor mixes you added, to hear their sum.
 
 Reordering updates the open UI as soon as the daemon publishes the saved
 layout, including changes made through the API. Channel tiles, mix controls
