@@ -72,7 +72,7 @@ tests/lifecycle.o: tests/lifecycle.c host.c $(HEADERS)
 tests/lifecycle: tests/lifecycle.o lv2.o clap.o vst3.o
 	$(CXX) $^ -o $@ $(LDFLAGS) $(LDLIBS)
 
-.PHONY: test test-editor test-audio test-clap test-lv2 test-vst3 test-scan clean
+.PHONY: test test-editor test-audio test-clap test-lv2 test-vst3 test-scan test-fixtures clean
 # The editor tests need a display; the others need nothing.
 test: test-audio test-clap test-lv2 test-vst3 test-scan test-editor
 
@@ -91,7 +91,11 @@ test-audio: tests/audio
 test-clap: tests/clap
 	./tests/clap
 
-test-lv2: tests/lv2 tests/latency.lv2/latency.so tests/gain.lv2/gain.so
+# The LV2 bundles under tests/ that the private PipeWire tests load as inserts.
+test-fixtures: tests/latency.lv2/latency.so tests/gain.lv2/gain.so
+	@:
+
+test-lv2: tests/lv2 test-fixtures
 	./tests/lv2
 
 test-vst3: tests/vst3

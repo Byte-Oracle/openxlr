@@ -23,6 +23,12 @@ def main():
                    PULSE_SERVER="unix:" + runtime + "/pulse/native",
                    PIPEWIRE_REMOTE="pipewire-0", OPENXLR_TEST_MONITOR_VOLUME="1")
         fixtures = str(Path(__file__).resolve().parent.parent / "native" / "tests")
+        if sys.argv[1:2] != ["--command"]:
+            # Capture chains, Sound Check and input chains load these bundles
+            # as inserts. Without their binaries PipeWire builds the chain and
+            # only fails when the graph starts, so the tests see silence.
+            subprocess.run(["make", "-s", "--no-print-directory", "-C", str(Path(fixtures).parent),
+                            "test-fixtures"], check=True)
         env["LV2_PATH"] = fixtures + ":" + env.get("LV2_PATH", "/usr/lib/lv2:/usr/local/lib/lv2")
         processes = []
         with open(runtime + "/servers.log", "w+") as log:
