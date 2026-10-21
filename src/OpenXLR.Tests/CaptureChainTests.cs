@@ -113,7 +113,7 @@ public sealed class CaptureChainTests
     }
 
     [Fact]
-    public void ExistingInsertCommandsAcceptCaptureKeysWhileEqAndSoundCheckStayOnXlr()
+    public void ExistingInsertCommandsAcceptCaptureKeysWhileEqStaysOnXlr()
     {
         using var mixer = Layout();
         foreach (string key in new[] { "mono", "stereo" })
@@ -125,7 +125,6 @@ public sealed class CaptureChainTests
             Assert.Null(CommandValidation.Check(new() { Cmd = "setInsertParam", Channel = key, InsertId = "gain", Symbol = "gain",
                 Value = JsonSerializer.SerializeToElement(.5) }, mixer, _ => controls));
             Assert.NotNull(CommandValidation.Check(new() { Cmd = "setEqEnabled", Channel = key, Value = JsonSerializer.SerializeToElement(true) }, mixer, _ => Plugin));
-            Assert.NotNull(CommandValidation.Check(new() { Cmd = "soundCheck", Channel = key, Action = "record" }, mixer, _ => Plugin));
             // An existing misfit can still be removed or reordered.
             Assert.Null(CommandValidation.Check(new() { Cmd = "setInserts", Channel = key, Inserts = [Insert] }, mixer, _ => Plugin));
         }

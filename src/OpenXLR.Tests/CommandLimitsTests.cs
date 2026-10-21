@@ -31,6 +31,16 @@ public sealed class CommandLimitsTests
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static Command Cmd(string json) => JsonSerializer.Deserialize<Command>(json, Json)!;
 
+    [Fact]
+    public void LegacyLayoutsKeepSoundCheckOnExistingXlrChannelsOnly()
+    {
+        ILayoutInfo layout = new Layout();
+        Assert.True(layout.IsSoundCheckChannel("xlr1"));
+        Assert.False(layout.IsSoundCheckChannel("xlr2"));
+        Assert.False(layout.IsSoundCheckChannel("system"));
+        Assert.False(layout.IsSoundCheckChannel("mix:monitor"));
+    }
+
     [Theory]
     [InlineData("""{"cmd":"setLevel","channel":"system","mix":"monitor","value":0.5}""", null)]
     [InlineData("""{"cmd":"setOutputDeviceVolume","device":"alsa_output.headset","value":1.5}""", null)]

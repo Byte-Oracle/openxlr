@@ -219,7 +219,7 @@ that final acknowledgement (or an `error` without a request id):
 | `getNativeEditorRules` | none | read release defaults and explicit user overrides for native editor compatibility |
 | `setNativeEditorRule` | `kind`, `plugin`, `name?`, `blocked?` | set `blocked:true` to use OpenXLR controls, `false` to allow the native editor, or null/absent to remove the override and follow release defaults. Saved atomically before success; answered with `nativeEditorRules` |
 | `showInsertUi` | `channel`, `insertId` | open an enabled insert's native editor when the optional host is installed and the editor policy allows it; a blocked editor is refused without changing the audio instance |
-| `soundCheck` | `channel`, `action` | Sound Check on `xlr1` or `xlr2`; no other channel takes it. `record` starts a session if none runs and records up to ten seconds, replacing an earlier sample; `loop` plays the sample into the channel in place of the microphone and needs at least a tenth of a second recorded; `live` goes back to the microphone and keeps the sample; `stop` ends the session and discards the sample. One session at a time: `record`, `loop` and `live` for the other channel are refused, and its `stop` does nothing. Every action but `stop` is refused at once when the native plugin host is not installed. Never saved. See [Sound Check](#sound-check) |
+| `soundCheck` | `channel`, `action` | Sound Check on any channel whose `microphone` is true: `xlr1`, `xlr2` or a mono capture input. Stereo capture inputs, Aux In, application channels and mixes are refused. `record` starts a session if none runs and records up to ten seconds, replacing an earlier sample; `loop` plays the sample into the channel in place of the microphone and needs at least a tenth of a second recorded; `live` goes back to the microphone and keeps the sample; `stop` ends the session and discards the sample. One session at a time across all microphones: `record`, `loop` and `live` for another channel are refused with the active channel's name, and its `stop` does nothing. Every action but `stop` is refused at once when the native plugin host is not installed. Never saved. See [Sound Check](#sound-check) |
 | `setEq` | `channel`, `eq` | replace a microphone's whole EQ: `eq` is `{enabled, bands}` with exactly four bands, each `{enabled, type, frequency, gain, q}` with every field. `channel` is `xlr1` or `xlr2`; any other channel is refused. See [microphone EQ](#microphone-eq) |
 | `setEqEnabled` | `channel`, `value` | the EQ's own switch, a boolean. Off bypasses inside the running stage, so on and off compare at once |
 | `setEqBand` | `channel`, `band`, at least one of `enabled`, `type`, `frequency`, `gain`, `q` | change part of one band, 1 to 4; an absent field keeps its value. Values outside the ranges are refused, not clamped, and what is taken is snapped onto the EQ's steps. Switching the EQ on, here or through `setEq`, is refused at once when the native plugin host is not installed and no unit runs the channel's EQ |
@@ -481,8 +481,9 @@ in `Protocol.cs`, both under `src/OpenXLR.Daemon/`.
 Each channel in the state carries `microphone` and `chainWidth`. An older
 daemon sends neither, and a client then keeps to mono chains on `xlr1` and
 `xlr2`. `chainWidth` is written as null on a channel that cannot host a
-chain. Sound Check and the microphone EQ commands still accept only `xlr1`
-and `xlr2`, even on a capture input that reports `microphone: true`.
+chain. Sound Check accepts channels whose `microphone` is true. The
+microphone EQ commands still accept only `xlr1` and `xlr2`; capture inputs
+have no built-in EQ.
 
 The `mixer.inserts` map also accepts capture channel ids. `setInserts`,
 `setInsertBypass`, `setInsertParam`, `renameInsert` and `showInsertUi` use
@@ -1003,28 +1004,41 @@ query.
 ### Sound Check
 
 `mixer.soundCheck` is `{channel, mode, seconds, error}`. `channel` is the
-microphone channel of the session, null when there is none. `mode` is what
+microphone channel of the session, including a mono capture input id, null
+when there is none. `mode` is what
 the helper last did: `recording`, `looping` or `live`, and `idle` without a
 session. `seconds` is the length recorded, 0 to 10, and the daemon pushes
 state as it grows. `error` says why a session ended by itself.
 
-The sample is taken from the interface's capture pair, after the hardware
-gain and processing, and enters the channel ahead of the software low cut,
-ClipGuard and the inserts, so every change to those is heard on the next
-pass. What the channel sends, the loop included, goes wherever the channel
+The sample is taken from the channel's route source and selected mono port,
+after any hardware gain and processing. It enters ahead of the channel's
+inserts and, on XLR strips, its software processing, so every change to
+those is heard on the next pass. A capture input without inserts uses the
+loop helper directly and returns to its direct source feed on stop. What
+the channel sends, the loop included, goes wherever the channel
 goes: the monitor mixes and the virtual microphones alike. The sample lives
 in the helper's memory and is never written to disk, `mixer.json` or a
-profile. While a session runs on XLR 1, the Wave XLR Pro's zero-latency
-hardware microphone path is off, so jacks fed by a monitor mix hear the loop
+profile. While a session runs on the channel carrying the Pro's first input,
+including a capture input, the Wave XLR Pro's zero-latency hardware
+microphone path is off, so jacks fed by a monitor mix hear the loop
 through the software send rather than the live microphone.
 
-A session ends by itself when its strip's source changes (the interface's
-node, or the bound source and port; another strip's change leaves it
+A session ends by itself when its channel's source changes (the interface's
+node, or the bound source and port; another channel's change leaves it
 alone), when the helper or its input link goes away, when the audio graph
-is rebuilt, or ten minutes after it started. The microphone is then wired
-back, and the state keeps `channel` with `mode` `idle` and the reason in
-`error`, so a client shows it on that microphone only, until a `stop` for
-that channel clears it or a new `record` replaces it.
+is rebuilt, when its capture channel is deleted, or ten minutes after it
+started. A channel still in the layout is then wired back, and the state
+keeps `channel` with `mode` `idle` and the reason in `error`, so a client
+shows it on that microphone only, until a `stop` for
+that channel clears it or a new `record` replaces it. After deletion only
+a new recording can replace the notice, since the old id is no longer valid.
+
+An invalid channel or action is refused with "soundCheck: need a microphone
+channel and action 'record', 'loop', 'live' or 'stop'". A missing capture
+source refuses `record` with "The microphone is not connected.", the channel's
+name and its `bindingWarning`. A source missing the selected port refuses
+with "The microphone's capture port is unavailable." An older window has
+only its XLR Sound Check views and does not show a capture session.
 
 ### Microphone EQ
 

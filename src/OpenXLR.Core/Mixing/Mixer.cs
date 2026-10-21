@@ -229,6 +229,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 if (CaptureRouteLocked(ch))
                 {
                     WireInputFeedLocked([ch.Id]);
+                    if (_soundCheckChannel == ch.Id && !_inputFeeds.ContainsKey(ch.Id))
+                        throw new InvalidOperationException("Sound Check could not connect its audio path.");
                     if (_captureFeeds.Remove(ch.Id, out PortLink? old))
                         UnlinkDiscardedInputFeed(old, _inputFeeds.GetValueOrDefault(ch.Id));
                 }
@@ -243,6 +245,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             {
                 _insertErrors[ch.Id] = ex.Message;
                 _restarts.Failed(ch.Id, ex.Message);
+                if (_soundCheckChannel == ch.Id)
+                    StopSoundCheckLocked(restore: false, error: "Sound Check stopped because its audio path was lost.");
                 try
                 {
                     RestoreCaptureFeedLocked(ch);
@@ -552,12 +556,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         }
         if (unitTouched) _inputDevice = unitNode;
 
-        // With a chain in the path, a direct input-to-channel link that this
-        // daemon does not track (left by an earlier run, or auto-linked by
+        // With processing or a loop in the path, a direct input-to-channel
+        // link this daemon does not track (left by an earlier run, or auto-linked by
         // the session manager) would double the unfiltered signal onto the
         // filtered one. Clear such links now that the chain route is live;
         // the chain's own links are between other nodes and untouched.
-        foreach (string key in nextChains.Keys.Union(nextEqStages.Keys))
+        foreach (string key in nextChains.Keys.Union(nextEqStages.Keys).Union(routes.Where(r => r.Value.Looped).Select(r => r.Key)))
         {
             if (carried.Contains(key)) continue;
             ChannelDefinition? ch = _config.Channels.FirstOrDefault(c => c.Id == key);

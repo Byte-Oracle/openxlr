@@ -20,6 +20,8 @@ public interface ILayoutInfo
     bool IsMonitorOutput(string device);
     /// <summary>A hardware strip that takes an input binding: XLR 1 or XLR 2, never Aux In.</summary>
     bool HasBindableStrip(string id) => Mixer.IsBindableStrip(id) && HasChannel(id);
+    /// <summary>A microphone input that can record a mono Sound Check take.</summary>
+    bool IsSoundCheckChannel(string id) => id is "xlr1" or "xlr2" && HasChannel(id);
     /// <summary>A microphone input, which carries the microphone EQ: XLR 1 or XLR 2.</summary>
     bool IsMicrophoneChannel(string id) => Mixer.IsMicrophoneId(id) && HasChannel(id);
     /// <summary>Whether a microphone's EQ runs on its unit now, so switching it on needs no native helper.</summary>

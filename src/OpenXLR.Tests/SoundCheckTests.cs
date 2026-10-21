@@ -41,11 +41,50 @@ public sealed class SoundCheckTests
     [InlineData(null, "record", false)]
     [InlineData("xlr1", "unknown", false)]
     [InlineData("xlr1", null, false)]
-    public void OnlyTheXlrChannelsAndTheFourActionsAreAccepted(string? channel, string? action, bool valid)
+    public void UnknownChannelsAndActionsAreRefused(string? channel, string? action, bool valid)
     {
         using var mixer = new Mixer();
         Assert.Equal(valid, CommandValidation.Check(
             new Command { Cmd = "soundCheck", Channel = channel, Action = action }, mixer, _ => null, nativeHostInstalled: true) is null);
+    }
+
+    [Theory]
+    [InlineData("xlr1", true)]
+    [InlineData("xlr2", true)]
+    [InlineData("mono", true)]
+    [InlineData("stereo", false)]
+    [InlineData("aux", false)]
+    [InlineData("system", false)]
+    [InlineData("apps", false)]
+    [InlineData("mix:monitor", false)]
+    [InlineData("mix:chat", false)]
+    [InlineData("missing", false)]
+    public void SoundCheckValidationUsesTheLayoutsMicrophones(string channel, bool valid)
+    {
+        using var mixer = new Mixer();
+        typeof(Mixer).GetField("_config", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(mixer, MixerConfig.Default() with { Channels = [.. MixerConfig.Default().Channels,
+                new("mono", "Mono microphone") { CaptureSource = "absent_mic", CaptureMonoChannel = 2 },
+                new("stereo", "Stereo input") { CaptureSource = "absent_pair", CapturePair = 1 }, new("apps", "Applications")] });
+        Assert.Equal(valid, mixer.IsSoundCheckChannel(channel));
+        foreach (string action in new[] { "record", "loop", "live", "stop" })
+        {
+            var command = new Command { Cmd = "soundCheck", Channel = channel, Action = action };
+            string? error = CommandValidation.Check(command, mixer, _ => null, nativeHostInstalled: true);
+            if (valid)
+            {
+                Assert.Null(error);
+                Assert.Equal(action == "stop" ? null : Mixer.SoundCheckNeedsHost,
+                    CommandValidation.Check(command, mixer, _ => null, nativeHostInstalled: false));
+            }
+            else Assert.Equal("soundCheck: need a microphone channel and action 'record', 'loop', 'live' or 'stop'", error);
+        }
+        if (channel == "mono")
+        {
+            Assert.Contains("Mono microphone", Assert.Throws<InvalidOperationException>(() => mixer.SoundCheck(channel, "record")).Message);
+            Assert.Throws<ArgumentException>(() => mixer.SetEqEnabled(channel, true));
+        }
+        else if (!valid) Assert.Throws<ArgumentException>(() => mixer.SoundCheck(channel, "record"));
     }
 
     [Fact]
