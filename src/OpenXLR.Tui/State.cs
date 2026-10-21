@@ -82,6 +82,9 @@ internal sealed record ChannelEntry
     /// <summary>The driven unit's microphone input this channel carries, or null.</summary>
     public UnitInputEntry? UnitInput { get; init; }
 
+    /// <summary>A microphone's EQ, or null for a channel that has none and from a daemon that predates it.</summary>
+    public EqEntry? Eq { get; init; }
+
     /// <summary>XLR 1 or XLR 2, the strips a binding can move to another source.</summary>
     public bool Bindable => Hardware && Id is "xlr1" or "xlr2";
 
@@ -240,6 +243,69 @@ internal sealed record UnitInputEntry
     public string Unit { get; init; } = string.Empty;
     public int Input { get; init; }
     public bool Primary { get; init; }
+}
+
+/// <summary>
+/// A microphone's EQ as far as the terminal shows it: its switch, what runs
+/// it and the choice of where. The bands are the window's to edit.
+/// </summary>
+internal sealed record EqEntry
+{
+    public bool Enabled { get; init; }
+
+    /// <summary><c>device</c> while the unit's own processor runs it, <c>software</c>, or null while nothing does.</summary>
+    public string? Backend { get; init; }
+    public bool Available { get; init; } = true;
+    public string? Error { get; init; }
+
+    /// <summary>The channel's choice, <c>device</c> or <c>software</c>; null from a daemon that predates it.</summary>
+    public string? Processing { get; init; }
+
+    /// <summary>The unit the channel carries while its model runs the EQ itself, or null.</summary>
+    public EqDeviceEntry? Device { get; init; }
+
+    /// <summary>The choice can be made here: a unit that runs the EQ, and a daemon that reports the choice.</summary>
+    [JsonIgnore]
+    public bool Offered => Device is not null && Processing is "device" or "software";
+
+    /// <summary>What runs the EQ, in a few words.</summary>
+    [JsonIgnore]
+    public string Status => Error is { Length: > 0 } error ? error
+        : !Available ? "cannot run"
+        : !Enabled ? "off"
+        : Backend switch
+        {
+            "device" => $"on, on the {Device?.Name ?? "interface"}",
+            "software" => "on, in software",
+            _ => "on, starting",
+        };
+
+    /// <summary>
+    /// Why the unit does not run it, while the choice is the unit and the
+    /// unit cannot; null otherwise.
+    /// </summary>
+    [JsonIgnore]
+    public string? Why => Device is not { Ready: false } device || Backend == "device" ? null : device.Reason switch
+    {
+        "firmwareOld" => $"firmware {device.Firmware ?? "?"}, needs {device.MinimumFirmware ?? "1.0.15"}",
+        "firmwareUnknown" => $"firmware unknown, needs {device.MinimumFirmware ?? "1.0.15"}",
+        "unsupportedBlock" => "EQ settings not recognised",
+        "failed" => "the unit did not keep the EQ",
+        _ => device.Note,
+    };
+}
+
+/// <summary>The unit behind a microphone's EQ: its model, firmware and whether it runs the EQ now.</summary>
+internal sealed record EqDeviceEntry
+{
+    public string Unit { get; init; } = string.Empty;
+    public int Input { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string? Firmware { get; init; }
+    public bool Ready { get; init; }
+    public string? Reason { get; init; }
+    public string? Note { get; init; }
+    public string? MinimumFirmware { get; init; }
 }
 
 /// <summary>An interface attached to the machine, whether or not it is the active one.</summary>

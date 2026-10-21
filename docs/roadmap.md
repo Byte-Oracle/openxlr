@@ -288,11 +288,11 @@ while fixes to existing hosts remain part of normal maintenance.
   and paste between microphones, opened from INPUTS, an input rack and the
   matrix row heads ([manual](manual.md#microphone-eq)). The daemon also
   runs it on the MK.2 family's own DSP from firmware 1.0.15, with the
-  editor's badge and older-firmware note
-  ([api.md](api.md#where-the-eq-runs)); the editor's switch between the
-  unit and software comes next. Then the terminal mixer and the OpenDeck
-  plugin together with capture microphones, then the Wave XLR Pro's
-  hardware EQ once its protocol is captured.
+  editor's badge, older-firmware note and switch between the unit and
+  software, which the terminal mixer offers too
+  ([api.md](api.md#where-the-eq-runs)). Then the terminal mixer's editor
+  and the OpenDeck plugin together with capture microphones, then the
+  Wave XLR Pro's hardware EQ once its protocol is captured.
 
 ## Next: daemon and integrations
 
@@ -381,10 +381,11 @@ while fixes to existing hosts remain part of normal maintenance.
   bit set, its filters match the software EQ's for the same values, and
   the daemon now drives it there ([api.md](api.md#where-the-eq-runs)).
   Every other model and older firmware keep the
-  [microphone EQ](#later-plugins) in software. Still open: acceptance on
-  both units, the editor's switch between the unit and software, and the
-  Pro's equalizer, which Elgato describes as onboard: once a capture maps
-  it, the same EQ drives it on the device instead of in software.
+  [microphone EQ](#later-plugins) in software. The editor and the terminal
+  mixer switch each microphone between the unit and software. Still open:
+  acceptance on both units, and the Pro's equalizer, which Elgato
+  describes as onboard: once a capture maps it, the same EQ drives it on
+  the device instead of in software.
 - [ ] Ducking on the Pro, which lowers the other mixes while you speak
   and is applied per mix. It is the one onboard effect that touches the
   mix matrix rather than the microphone path, so it is worth capturing

@@ -34,7 +34,8 @@ namespace OpenXLR.Tests;
 /// pointer sends setEqBand with snapped values at most every 20 ms and the
 /// editor then shows what the daemon reports; the wheel, the keyboard, a
 /// double click and the type menu each send their one change; the switch and
-/// the comparison send setEqEnabled; paste and reset send setEq; and nothing
+/// the comparison send setEqEnabled; paste and reset send setEq; the footer's
+/// switch between the unit and software sends setEqProcessing; and nothing
 /// else goes out. A state without an EQ draws no button. Run on its own,
 /// with OPENXLR_TEST_EQ=1 under xvfb-run, so the window layout run keeps
 /// within its watchdog.
@@ -42,7 +43,7 @@ namespace OpenXLR.Tests;
 [Collection("xdg-config")]
 public sealed class EqEditorWindowTests
 {
-    private static readonly string[] EqCommands = ["setEq", "setEqEnabled", "setEqBand"];
+    private static readonly string[] EqCommands = ["setEq", "setEqEnabled", "setEqBand", "setEqProcessing"];
 
     /// <summary>A Wave XLR Pro with XLR 1 and XLR 2, each with an EQ the daemon's own model keeps.</summary>
     private sealed class EqDaemon
@@ -50,8 +51,14 @@ public sealed class EqEditorWindowTests
         private readonly object _gate = new();
         public readonly Dictionary<string, DaemonEq> Eqs = new() { ["xlr1"] = DaemonEq.Default, ["xlr2"] = DaemonEq.Default };
         public bool WithEq = true;
-        /// <summary>XLR 1's unit: null for none, <c>unit</c> when its DSP runs the EQ, <c>old</c> on firmware before 1.0.15.</summary>
+        /// <summary>XLR 1's unit: null for none, <c>unit</c> when its DSP can run the EQ, <c>old</c> when it cannot.</summary>
         public string? Device;
+        /// <summary>Why an <c>old</c> unit cannot run the EQ, as the daemon names it.</summary>
+        public string Reason = "firmwareOld";
+        /// <summary>Each microphone's choice of where its EQ runs.</summary>
+        public readonly Dictionary<string, string> Processing = new() { ["xlr1"] = "device", ["xlr2"] = "device" };
+        /// <summary>A daemon from before the hardware EQ: no choice and no unit in the state.</summary>
+        public bool Legacy;
         /// <summary>A capture source's description for XLR 2 to take in place of the interface's second input; null for the jack.</summary>
         public string? Xlr2Source;
         public readonly ConcurrentQueue<(long At, JsonNode Command)> Commands = new();
@@ -77,7 +84,16 @@ public sealed class EqEditorWindowTests
                 foreach (JsonNode? channel in state["mixer"]!["channels"]!.AsArray())
                 {
                     channel!["volume"] = 0.8;
-                    if (WithEq) channel["eq"] = Json(Eqs[channel["id"]!.GetValue<string>()], channel["id"]!.GetValue<string>() == "xlr1" ? Device : null);
+                    if (!WithEq) continue;
+                    string id = channel["id"]!.GetValue<string>();
+                    channel["eq"] = Json(Eqs[id], id == "xlr1" ? Device : null, Processing[id], Reason);
+                    if (Legacy)
+                    {
+                        // It ran every EQ in software.
+                        channel["eq"]!["backend"] = Eqs[id].Enabled ? "software" : null;
+                        channel["eq"]!.AsObject().Remove("processing");
+                        channel["eq"]!.AsObject().Remove("device");
+                    }
                 }
                 state["type"] = "state";
                 state["daemonVersion"] = AppVersion.Current;
@@ -85,22 +101,22 @@ public sealed class EqEditorWindowTests
             }
         }
 
-        private static JsonNode Json(DaemonEq eq, string? device) => new JsonObject
+        private static JsonNode Json(DaemonEq eq, string? device, string processing, string reason) => new JsonObject
         {
             ["enabled"] = eq.Enabled,
             ["bands"] = new JsonArray([.. eq.Bands.Select(b => (JsonNode)new JsonObject
             {
                 ["enabled"] = b.Enabled, ["type"] = b.Type, ["frequency"] = b.Frequency, ["gain"] = b.Gain, ["q"] = b.Q,
             })]),
-            ["backend"] = device == "unit" ? "device" : eq.Enabled ? "software" : null,
+            ["backend"] = device == "unit" && processing == "device" ? "device" : eq.Enabled ? "software" : null,
             ["available"] = true,
             ["error"] = null,
-            ["processing"] = "device",
+            ["processing"] = processing,
             ["device"] = device is null ? null : new JsonObject
             {
                 ["unit"] = "0fd9:00c7@0123456789abcdef", ["input"] = 1, ["name"] = "Wave XLR Dock MK.2",
                 ["firmware"] = device == "unit" ? "1.0.15" : "1.0.0", ["ready"] = device == "unit",
-                ["reason"] = device == "unit" ? null : "firmwareOld", ["minimumFirmware"] = "1.0.15",
+                ["reason"] = device == "unit" ? null : reason, ["minimumFirmware"] = "1.0.15",
                 ["note"] = device == "unit" ? null : "This Wave XLR Dock MK.2 has firmware 1.0.0. From 1.0.15 the unit runs the EQ itself; Elgato's updater is in Wave Link on Windows or macOS.",
             },
         };
@@ -118,6 +134,11 @@ public sealed class EqEditorWindowTests
                 {
                     case "setEqEnabled":
                         Eqs[channel] = eq with { Enabled = cmd["value"]!.GetValue<bool>() };
+                        break;
+                    case "setEqProcessing":
+                        string value = cmd["value"]!.GetValue<string>();
+                        Assert.Contains(value, new[] { "device", "software" });
+                        Processing[channel] = value;
                         break;
                     case "setEq":
                         Eqs[channel] = DaemonEq.Read(System.Text.Json.JsonDocument.Parse(cmd["eq"]!.ToJsonString()).RootElement, out string? error)
@@ -406,13 +427,22 @@ public sealed class EqEditorWindowTests
     /// processor runs it, inside the editor from 640 to 2400 pixels; a note
     /// above the footer when the unit is on firmware before 1.0.15; the EQ
     /// button's tooltip saying the same; neither while the state names no unit.
+    /// The footer's switch between the unit and this computer shows only while
+    /// a unit is offered and the state names the choice: the real pointer on
+    /// the other side sends setEqProcessing, on the side already chosen sends
+    /// nothing, and the switch follows the daemon. With the longest note the
+    /// footer, the bands and the graph still fit from 640 to 2400 pixels in
+    /// both sizings.
     /// </summary>
     private static async Task Hardware(MainWindow window, EqWindow editor, EqDaemon daemon, MicEqViewModel eq)
     {
         Border badge = editor.FindControl<Border>("EqHardwareBadge")!;
         TextBlock note = editor.FindControl<TextBlock>("EqDeviceNote")!;
+        WrapPanel choice = editor.FindControl<WrapPanel>("EqProcessing")!;
+        ToggleButton onUnit = editor.FindControl<ToggleButton>("EqOnUnit")!, inSoftware = editor.FindControl<ToggleButton>("EqInSoftware")!;
         Assert.False(badge.IsVisible);
         Assert.False(note.IsVisible);
+        Assert.False(choice.IsVisible);
         daemon.Device = "unit";
         daemon.Pushes.Release();
         await Until(() => eq.OnDevice);
@@ -430,31 +460,179 @@ public sealed class EqEditorWindowTests
         if (eq.Enabled && !eq.Comparing)
             Assert.Equal(Localizer.Format("EqStatusDeviceNamed", "Wave XLR Dock MK.2"), editor.FindControl<TextBlock>("EqStatus")!.Text);
         Assert.Equal(Localizer.Format("EqButtonTipDevice", "Wave XLR Dock MK.2"), ToolTip.GetTip(window.FindControl<Button>("Xlr1Eq")!));
+
+        // The switch, on the unit.
+        Assert.True(choice.IsEffectivelyVisible);
+        Assert.True(onUnit.IsChecked);
+        Assert.False(inSoftware.IsChecked);
+        Assert.Equal(Localizer.Text("EqProcessingDevice"), onUnit.Content);
+        Assert.Equal(Localizer.Text("EqProcessingSoftware"), inSoftware.Content);
+        Assert.Equal(Localizer.Format("EqProcessingDeviceTip", "Wave XLR Dock MK.2"), ToolTip.GetTip(onUnit));
+        Assert.Equal(Localizer.Text("EqProcessingSoftwareTip"), ToolTip.GetTip(inSoftware));
+        CheckFooter(editor, "on the unit");
         Layout(editor, 820, 600);
         Capture(editor, "eq-editor-on-the-unit");
+        CaptureBothSizings(editor, "eq-footer-on-the-unit");
 
+        // The real pointer on the side already chosen sends nothing and leaves it lit.
+        daemon.Commands.Clear();
+        PointerClick(editor, onUnit);
+        Pump(120);
+        Assert.Empty(daemon.Commands);
+        Assert.True(onUnit.IsChecked);
+        Assert.False(inSoftware.IsChecked);
+
+        // In software: one setEqProcessing, and the editor follows the daemon.
+        PointerClick(editor, inSoftware);
+        JsonNode sent = (await Sent(daemon, 1))[0];
+        Assert.Equal("setEqProcessing", sent["cmd"]!.GetValue<string>());
+        Assert.Equal("xlr1", sent["channel"]!.GetValue<string>());
+        Assert.Equal("software", sent["value"]!.GetValue<string>());
+        await Until(() => eq.Processing == "software" && !eq.OnDevice);
+        Pump(30);
+        Assert.True(inSoftware.IsChecked);
+        Assert.False(onUnit.IsChecked);
+        Assert.False(badge.IsVisible);
+        // The switch says it is software by choice; the note under it has nothing to add.
+        Assert.False(note.IsVisible);
+        if (eq.Enabled && !eq.Comparing)
+            Assert.Equal(Localizer.Text("EqStatusSoftware"), editor.FindControl<TextBlock>("EqStatus")!.Text);
+        Assert.Equal(Localizer.Text("EqButtonTip") + " " + Localizer.Format("EqDeviceBySoftware", "Wave XLR Dock MK.2"),
+            ToolTip.GetTip(window.FindControl<Button>("Xlr1Eq")!));
+        CheckFooter(editor, "in software");
+        Layout(editor, 820, 600);
+        CaptureBothSizings(editor, "eq-footer-in-software");
+        PointerClick(editor, inSoftware);
+        Pump(120);
+        Assert.Empty(daemon.Commands);
+        Assert.True(inSoftware.IsChecked);
+
+        // Back on the unit.
+        PointerClick(editor, onUnit);
+        sent = (await Sent(daemon, 1))[0];
+        Assert.Equal("device", sent["value"]!.GetValue<string>());
+        await Until(() => eq.OnDevice);
+        Pump(30);
+        Assert.True(onUnit.IsChecked);
+        Assert.True(badge.IsVisible);
+
+        // Older firmware: the switch stays on the choice, and the note under it says why the unit does not run it.
         daemon.Device = "old";
         daemon.Pushes.Release();
         await Until(() => !eq.OnDevice && eq.HasDeviceNote);
         Pump(30);
         Assert.False(badge.IsVisible);
         Assert.True(note.IsEffectivelyVisible);
+        Assert.True(choice.IsEffectivelyVisible);
+        Assert.True(onUnit.IsChecked);
         Assert.Equal(Localizer.Format("EqDeviceFirmwareOld", "Wave XLR Dock MK.2", "1.0.0", "1.0.15"), note.Text);
-        foreach (double width in new[] { 640d, 2400 })
-        {
-            Layout(editor, width, width < 1000 ? 620 : 760);
-            AssertInside(note, editor);
-        }
         Layout(editor, 820, 600);
         Capture(editor, "eq-editor-older-firmware");
+        CaptureBothSizings(editor, "eq-footer-older-firmware");
+
+        // The longest note this language has, from 640 to 2400 pixels in both sizings.
+        (string reason, string text) = new[]
+        {
+            ("firmwareOld", Localizer.Format("EqDeviceFirmwareOld", "Wave XLR Dock MK.2", "1.0.0", "1.0.15")),
+            ("firmwareUnknown", Localizer.Format("EqDeviceFirmwareUnknown", "Wave XLR Dock MK.2", "1.0.15")),
+            ("unsupportedBlock", Localizer.Format("EqDeviceUnsupported", "Wave XLR Dock MK.2")),
+            ("failed", Localizer.Format("EqDeviceFailed", "Wave XLR Dock MK.2")),
+        }.MaxBy(r => r.Item2.Length);
+        daemon.Reason = reason;
+        daemon.Pushes.Release();
+        await Until(() => eq.DeviceNote == text);
+        Pump(30);
+        Assert.Equal(text, note.Text);
+        CheckFooter(editor, $"the longest note ({reason})");
+        Layout(editor, 820, 600);
+        daemon.Reason = "firmwareOld";
+
+        // A daemon from before the choice: no switch, whatever it says about the unit.
+        daemon.Device = "unit";
+        daemon.Legacy = true;
+        daemon.Pushes.Release();
+        await Until(() => !eq.HasProcessingChoice && !eq.HasDeviceNote);
+        Pump(30);
+        Assert.False(choice.IsVisible);
+        Assert.False(badge.IsVisible);
+        daemon.Legacy = false;
 
         daemon.Device = null;
         daemon.Pushes.Release();
-        await Until(() => !eq.HasDeviceNote);
+        await Until(() => !eq.HasDeviceNote && !eq.HasProcessingChoice && eq.Backend != "device");
         Pump(30);
         Assert.False(badge.IsVisible);
         Assert.False(note.IsVisible);
+        Assert.False(choice.IsVisible);
         Assert.Equal(Localizer.Text("EqButtonTip"), ToolTip.GetTip(window.FindControl<Button>("Xlr1Eq")!));
+    }
+
+    /// <summary>
+    /// The footer from 640 to 2400 pixels in Standard and Touch sizing: the
+    /// switch, the note and the status line drawn whole inside the editor, in
+    /// that order and clear of each other and of the bands, with the graph
+    /// still tall enough to work on.
+    /// </summary>
+    private static void CheckFooter(EqWindow editor, string state)
+    {
+        WrapPanel choice = editor.FindControl<WrapPanel>("EqProcessing")!;
+        TextBlock note = editor.FindControl<TextBlock>("EqDeviceNote")!, status = editor.FindControl<TextBlock>("EqStatus")!;
+        StackPanel bands = editor.FindControl<StackPanel>("EqBands")!;
+        foreach (bool touch in new[] { false, true })
+        {
+            SkinService.ApplyControlSizing(touch);
+            foreach (double width in new[] { 640d, 1040, 1800, 2400 })
+            {
+                Layout(editor, width, width < 1000 ? 620 : 760);
+                string where = $"footer {state}, {Sizing(touch)} at {width}";
+                Control[] parts = [.. new Control[] { choice, note, status }.Where(c => c.IsVisible)];
+                foreach (Control part in parts) AssertInside(part, editor);
+                foreach (Control part in choice.Children) AssertInside(part, editor);
+                AssertNoOverlap([.. parts, bands]);
+                AssertNoOverlap([.. choice.Children]);
+                // Top to bottom: the bands, then the switch, the note and the status line.
+                double last = bands.TranslatePoint(new Point(0, bands.Bounds.Height), editor)!.Value.Y;
+                foreach (Control part in parts)
+                {
+                    double top = part.TranslatePoint(default, editor)!.Value.Y;
+                    Assert.True(top >= last - 0.5, $"{part.Name} starts at {top:0.#}, above {last:0.#}, {where}");
+                    last = top + part.Bounds.Height;
+                }
+                // Each text is drawn whole, wrapped rather than cut.
+                foreach (TextBlock text in parts.OfType<TextBlock>())
+                    Assert.DoesNotContain(text.TextLayout.TextLines, l => l.HasCollapsed);
+                Assert.True(editor.Graph.Plot.Height > 120, $"the graph's plot is {editor.Graph.Plot.Height} tall, {where}");
+                foreach (EqHandle handle in editor.Graph.Handles) AssertInside(handle, editor);
+            }
+        }
+        SkinService.ApplyControlSizing(false);
+    }
+
+    /// <summary>The editor at its opening size in Standard and Touch sizing.</summary>
+    private static void CaptureBothSizings(EqWindow editor, string name)
+    {
+        foreach (bool touch in new[] { false, true })
+        {
+            SkinService.ApplyControlSizing(touch);
+            Layout(editor, 820, 600);
+            Capture(editor, $"{name}-{Sizing(touch)}");
+        }
+        SkinService.ApplyControlSizing(false);
+        Layout(editor, 820, 600);
+    }
+
+    /// <summary>Press and release the real pointer over the middle of a control.</summary>
+    private static void PointerClick(Window window, Control control)
+    {
+        using var pointer = new XPointer();
+        window.Activate();
+        Pump(40);
+        PixelPoint at = control.PointToScreen(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2));
+        pointer.MoveTo(at.X, at.Y);
+        Pump(40);
+        pointer.Click();
+        Pump(40);
+        pointer.MoveTo(0, 0);
     }
 
     /// <summary>The editor fits at every width: its actions, the graph, the handles and every band's fields.</summary>

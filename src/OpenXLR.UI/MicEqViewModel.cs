@@ -8,12 +8,14 @@ using OpenXLR.UI.Localization;
 
 namespace OpenXLR.UI;
 
-/// <summary>The three commands the EQ editor sends. The daemon client sends them; a test records them.</summary>
+/// <summary>The four commands the EQ editor sends. The daemon client sends them; a test records them.</summary>
 public interface IEqCommands
 {
     Task SetEqAsync(string channel, MicEq eq);
     Task SetEqEnabledAsync(string channel, bool enabled);
     Task SetEqBandAsync(string channel, int band, EqBandChange change);
+    /// <summary>Where the channel's EQ runs: <c>device</c> on the unit's own processor, or <c>software</c>.</summary>
+    Task SetEqProcessingAsync(string channel, string value);
 }
 
 /// <summary>
@@ -42,6 +44,10 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
     private bool _hasDevice, _deviceReady;
     private string? _deviceName, _deviceFirmware, _deviceReason, _deviceNote, _minimumFirmware;
     private string _processing = "device";
+    // The state names the choice: a daemon from before the hardware EQ does not.
+    private bool _processingReported;
+    private string? _awaitingProcessing;
+    private long _awaitingProcessingSince;
     private string _channelName;
     private EqBandViewModel? _selected;
 
@@ -156,6 +162,42 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
     /// <summary>The channel's choice of where its EQ runs: <c>device</c> or <c>software</c>.</summary>
     public string Processing => _processing;
 
+    /// <summary>
+    /// The footer offers the choice: the channel carries a unit whose model
+    /// runs the EQ itself, and the daemon reports the choice. The unit may
+    /// not be ready; the choice is kept and takes effect once it is.
+    /// </summary>
+    public bool HasProcessingChoice => _hasDevice && _processingReported;
+
+    /// <summary>The switch's "On the unit" side is lit.</summary>
+    public bool ProcessOnDevice => _processing == "device";
+
+    /// <summary>The switch's "In software" side is lit.</summary>
+    public bool ProcessInSoftware => _processing == "software";
+
+    /// <summary>The "On the unit" side's tooltip, naming the unit.</summary>
+    public string ProcessOnDeviceTip => Localizer.Format("EqProcessingDeviceTip", _deviceName ?? Localizer.Text("EqTheInterface"));
+
+    /// <summary>
+    /// A side of the switch was pressed: <c>device</c> or <c>software</c>.
+    /// The side already chosen sends nothing and stays lit, so both sides are
+    /// told again either way: a toggle that a press switched off turns back on.
+    /// </summary>
+    public void ChooseProcessing(string value)
+    {
+        if (value is not ("device" or "software") || value == _processing || !HasProcessingChoice)
+        {
+            Raise(nameof(ProcessOnDevice));
+            Raise(nameof(ProcessInSoftware));
+            return;
+        }
+        _processing = value;
+        _awaitingProcessing = value;
+        _awaitingProcessingSince = _time.GetTimestamp();
+        _ = _commands.SetEqProcessingAsync(Channel, value);
+        RaiseState();
+    }
+
     /// <summary>The badge's tooltip: which unit runs the EQ.</summary>
     public string DeviceBadgeTip => _deviceName is { } name ? Localizer.Format("EqHardwareBadgeTip", name) : Localizer.Text("EqHardwareBadgeTipUnnamed");
 
@@ -184,6 +226,14 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
     }
 
     public bool HasDeviceNote => DeviceNote is not null;
+
+    /// <summary>
+    /// The note under the editor's switch: why the unit does not run the EQ.
+    /// Software by choice needs no sentence there, since the switch shows it.
+    /// </summary>
+    public string? EditorNote => HasProcessingChoice && _deviceReady && _processing == "software" ? null : DeviceNote;
+
+    public bool HasEditorNote => EditorNote is not null;
 
     /// <summary>The EQ button's tooltip, which says where the EQ runs.</summary>
     public string ButtonTip => OnDevice
@@ -234,9 +284,15 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
         Raise(nameof(OnDevice));
         Raise(nameof(DeviceName));
         Raise(nameof(Processing));
+        Raise(nameof(HasProcessingChoice));
+        Raise(nameof(ProcessOnDevice));
+        Raise(nameof(ProcessInSoftware));
+        Raise(nameof(ProcessOnDeviceTip));
         Raise(nameof(DeviceBadgeTip));
         Raise(nameof(DeviceNote));
         Raise(nameof(HasDeviceNote));
+        Raise(nameof(EditorNote));
+        Raise(nameof(HasEditorNote));
         Raise(nameof(ButtonTip));
         Changed?.Invoke();
     }
@@ -266,7 +322,15 @@ public sealed class MicEqViewModel : ViewModelBase, IDisposable
         _available = eq["available"]?.GetValue<bool>() ?? true;
         _error = eq["error"]?.GetValue<string>();
         // An older daemon sends neither: no unit, the EQ where it always ran.
-        _processing = eq["processing"]?.GetValue<string>() ?? "device";
+        string? processing = eq["processing"]?.GetValue<string>();
+        _processingReported = processing is "device" or "software";
+        processing = _processingReported ? processing! : "device";
+        // A report that differs from the side just chosen is older than the choice, for a second at most.
+        if (!(_awaitingProcessing is { } chosen && chosen != processing && Waiting(_awaitingProcessingSince)))
+        {
+            _awaitingProcessing = null;
+            _processing = processing;
+        }
         JsonNode? device = eq["device"];
         _hasDevice = device is not null;
         _deviceReady = device?["ready"]?.GetValue<bool>() ?? false;

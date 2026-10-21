@@ -372,6 +372,10 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands
     public Task SetEqEnabledAsync(string channel, bool enabled)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "setEqEnabled", ["channel"] = channel, ["value"] = enabled });
 
+    /// <summary>Where a microphone's EQ runs: <c>device</c> on the unit's own processor, or <c>software</c>.</summary>
+    public Task SetEqProcessingAsync(string channel, string value)
+        => SendAsync(new Dictionary<string, object> { ["cmd"] = "setEqProcessing", ["channel"] = channel, ["value"] = value });
+
     /// <summary>The fields of one band (1 to 4) that the change carries; the others keep their values.</summary>
     public Task SetEqBandAsync(string channel, int band, EqBandChange change)
     {

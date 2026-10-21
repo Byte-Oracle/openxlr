@@ -2,8 +2,8 @@ namespace OpenXLR.Tui;
 
 /// <summary>
 /// The hardware: the interface's microphone inputs with their processing,
-/// what feeds XLR 1 and XLR 2, the headphone outputs, the direct monitor
-/// blend and the USB Aux return. A control the active device does not
+/// what feeds XLR 1 and XLR 2, where each microphone's EQ runs, the
+/// headphone outputs, the direct monitor blend and the USB Aux return. A control the active device does not
 /// advertise is drawn faded rather than hidden, so the same page describes
 /// every interface.
 ///
@@ -113,6 +113,7 @@ internal sealed class InputsView : View
 
         AdditionalInputs(rows, link, state);
         Bindings(rows, app, state);
+        Equalisers(rows, link, state);
 
         // The software low cut and ClipGuard run in the mixer, so they act on
         // any microphone on XLR 1; the gain lock guards the interface's gain.
@@ -222,6 +223,33 @@ internal sealed class InputsView : View
             { Note = changed ? "not applied" : null });
             rows.Add(new TextRow($"{name} feed", strip.BindingWarning is { Length: > 0 } warning ? warning
                 : strip.BindingConnected ? $"linked, {state.BindingLabel(strip)}" : "not linked"));
+        }
+    }
+
+    /// <summary>
+    /// Each microphone's EQ: what runs it, and where a unit that runs the EQ
+    /// itself carries the microphone, the choice between the unit and this
+    /// computer, which setEqProcessing sends. The bands are edited in the window.
+    /// </summary>
+    private static void Equalisers(List<Row> rows, DaemonLink link, Snapshot state)
+    {
+        List<ChannelEntry> microphones = [.. state.Mixer.Shown.Where(channel => channel.Eq is not null)];
+        if (microphones.Count == 0) return;
+        rows.Add(new HeadingRow("Microphone EQ"));
+        string[] places = ["on the unit", "in software"];
+        foreach (ChannelEntry channel in microphones)
+        {
+            EqEntry eq = channel.Eq!;
+            string id = channel.Id;
+            rows.Add(new TextRow($"{channel.Name} EQ", eq.Status));
+            if (!eq.Offered) continue;
+            rows.Add(new ChoiceRow($"{channel.Name} EQ runs", places, eq.Processing == "software" ? 1 : 0,
+                index => link.Send("setEqProcessing", body =>
+                {
+                    body["channel"] = id;
+                    body["value"] = index == 1 ? "software" : "device";
+                })));
+            if (eq.Why is { Length: > 0 } why) rows.Add(new TextRow($"{channel.Name} unit", why));
         }
     }
 
