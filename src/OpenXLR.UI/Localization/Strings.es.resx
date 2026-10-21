@@ -2694,4 +2694,73 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
     <value>¿Dejar de controlar {0}? Sus entradas de captura y cadenas de efectos se eliminarán. Este demonio no indica que permita conservarlas.</value>
   </data>
+  <data name="Ducking" xml:space="preserve">
+    <value>Atenuación automática</value>
+  </data>
+  <data name="DuckingEnabled" xml:space="preserve">
+    <value>Bajar las salidas mientras XLR 1 suena fuerte</value>
+  </data>
+  <data name="DuckingOutputs" xml:space="preserve">
+    <value>Salidas</value>
+  </data>
+  <data name="DuckingMonitorOutputs" xml:space="preserve">
+    <value>Auriculares y Line Out</value>
+  </data>
+  <data name="DuckingAuxOutput" xml:space="preserve">
+    <value>Salida USB Aux</value>
+  </data>
+  <data name="DuckingSensitivity" xml:space="preserve">
+    <value>Sensibilidad</value>
+  </data>
+  <data name="DuckingAmount" xml:space="preserve">
+    <value>Cantidad</value>
+  </data>
+  <data name="DuckingSpeed" xml:space="preserve">
+    <value>Velocidad</value>
+  </data>
+  <data name="DuckingLow" xml:space="preserve">
+    <value>Baja</value>
+  </data>
+  <data name="DuckingMedium" xml:space="preserve">
+    <value>Media</value>
+  </data>
+  <data name="DuckingHigh" xml:space="preserve">
+    <value>Alta</value>
+  </data>
+  <data name="DuckingAmountLow" xml:space="preserve">
+    <value>Baja, 6 dB</value>
+  </data>
+  <data name="DuckingAmountMedium" xml:space="preserve">
+    <value>Media, 12 dB</value>
+  </data>
+  <data name="DuckingAmountHigh" xml:space="preserve">
+    <value>Alta, 24 dB</value>
+  </data>
+  <data name="DuckingSlow" xml:space="preserve">
+    <value>Lenta</value>
+  </data>
+  <data name="DuckingFast" xml:space="preserve">
+    <value>Rápida</value>
+  </data>
+  <data name="DuckingHint" xml:space="preserve">
+    <value>El Wave XLR Pro lo hace por sí mismo. Baja toda la mezcla que OpenXLR envía a cada salida elegida, el chat incluido. La mezcla del stream mantiene su nivel. XLR 1 es la única entrada de disparo que se sabe que el equipo acepta.</value>
+  </data>
+  <data name="DuckingNotHeld" xml:space="preserve">
+    <value>El equipo aún no mantiene este ajuste; OpenXLR lo vuelve a escribir en unos segundos.</value>
+  </data>
+  <data name="DuckingStatusOff" xml:space="preserve">
+    <value>Desactivada.</value>
+  </data>
+  <data name="DuckingStatusDevice" xml:space="preserve">
+    <value>Activada, en el procesador propio del {0}.</value>
+  </data>
+  <data name="DuckingHardwareBadgeTip" xml:space="preserve">
+    <value>La atenuación funciona en el procesador propio del {0}.</value>
+  </data>
+  <data name="DuckingKeyNotSupported" xml:space="preserve">
+    <value>No funciona: el {0} solo atenúa con XLR 1 como entrada de disparo.</value>
+  </data>
+  <data name="DuckingNotRunning" xml:space="preserve">
+    <value>Nada ejecuta este ajuste.</value>
+  </data>
 </root>

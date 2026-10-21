@@ -201,7 +201,7 @@ public sealed partial class MainViewModel : ViewModelBase
         private set { if (Set(ref _deviceFirmware, value)) { Raise(nameof(FirmwareText)); Raise(nameof(ShowInterfaceCard)); } }
     }
     public string FirmwareText => DeviceFirmware.Length > 0 ? Localizer.Format("DeviceFirmware", DeviceFirmware) : "";
-    public bool ShowInterfaceCard => ShowResetDefaults || DeviceNote.Length > 0 || DeviceFirmware.Length > 0 || ShowWaveInterfaces;
+    public bool ShowInterfaceCard => ShowResetDefaults || DeviceNote.Length > 0 || DeviceFirmware.Length > 0 || ShowWaveInterfaces || ShowDucking;
 
     // The daemon-side gain lock cannot stop a physical dial, so it only
     // shows for devices without one.
@@ -783,6 +783,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 CapRetainsSettings = caps["retainsSettings"]?.GetValue<bool>() ?? true;
                 CapBuiltInDefaults = caps["builtInDefaults"]?.GetValue<bool>() ?? false;
             }
+            ApplyDucking(node["capabilities"], node["ducking"]);
 
             if (node["state"] is JsonNode s)
             {
