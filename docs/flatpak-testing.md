@@ -15,7 +15,7 @@ removed for this automated run. No host audio routes or profiles change.
 The shared runner also accepts `--command <executable> <args...>` for other
 checks that need the same private audio setup.
 
-The installed-sandbox check covers window startup, narrow and wide sizes,
+The installed-sandbox check covers UI startup, narrow and wide sizes,
 close-to-tray, restoring through a second launch, output selection and
 measured monitor attenuation. It loads an LV2 plugin from the LinuxAudio
 extension, changes a live parameter, measures its effect, opens its native

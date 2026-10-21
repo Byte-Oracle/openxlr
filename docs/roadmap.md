@@ -26,11 +26,11 @@ This is what 0.1.70 ships. A checked item is in the released packages.
 - [x] Submixer: hardware and application channels, the monitor mixes
   (Monitor A, Monitor B), virtual microphones (Stream and Chat by
   default) and Aux; an editable layout (channels and microphones added,
-  renamed, reordered and removed live from the window's layout editor
+  renamed, reordered and removed live from the UI's layout editor
   or the API, every change saved before it is acknowledged); monitoring
   on several outputs with each output choosing which mix or sum of
   mixes feeds it, the enforced default
-  output chosen from the window or a key, any PipeWire capture source as
+  output chosen from the UI or a key, any PipeWire capture source as
   an input channel, the USB Aux port as a second computer's feed, live
   meters, profiles, one profile per device recalled on connect, Wave XLR
   and the first XLR Dock restored to their last settings on connect with a
@@ -56,7 +56,7 @@ This is what 0.1.70 ships. A checked item is in the released packages.
   is asked from KWin, so focused routing is KDE Plasma only today, and
   matched to its PipeWire client.
 - [x] Terminal mixer: `openxlr-tui`, the whole mixer in a terminal over the
-  daemon's socket, with every skin the window has, one of them for each
+  daemon's socket, with every skin the UI has, one of them for each
   Omarchy palette; inserts open the plugin's own editor or generated
   controls and a picker adds plugins from the catalogue.
 - [x] Omarchy 4 bar: `openxlr.mixer`, a shell plugin showing the XLR
@@ -148,12 +148,12 @@ few releases, and they get to settle in users' hands first.
   XLR 2 keep those names only on a real XLR jack, so a Wave:3's capsule is
   Mic 1 too. A strip bound to another supported Elgato unit follows its
   source through a rename, and shows that unit's controls while it is
-  driven as an additional interface. The window, the terminal mixer, the
+  driven as an additional interface. The UI, the terminal mixer, the
   Stream Deck plugin and the Omarchy bar show each strip's source and
   connection. Most of the hardware acceptance is still open;
   [hardware-support.md](hardware-support.md#input-bindings) lists what has
   been checked on real units.
-- [x] Skins can arrange the desktop window: an optional `layout` block,
+- [x] Skins can arrange the desktop UI: an optional `layout` block,
   version 1, places the header and the five sections in a tree of stacks,
   grids and docks with bounded tracks, spans, edges and gaps, starts a
   section folded or hidden, gives it a preferred width or height that
@@ -179,7 +179,7 @@ few releases, and they get to settle in users' hands first.
   mix, each send's fader over the channel's meter where they cross, with
   the input controls in the row heads and the mix masters in the column
   heads. Broadcast ships as the complete example: the matrix across the
-  window, MONITOR's toolbar at the top right, INPUTS hidden and the other
+  UI, MONITOR's toolbar at the top right, INPUTS hidden and the other
   sections folded under it, on a dark neutral palette, with a copy to
   start from in `docs/examples/skins`.
   [skins.md](skins.md#layout)
@@ -216,10 +216,10 @@ a skin overlays values on top of them.
 - [x] System, light and dark appearance, following the desktop by default.
   Material has a light palette beside its dark one, chosen by a mode in
   Options; System follows the desktop's preference through the settings
-  portal, in the window and in the terminal mixer.
+  portal, in the UI and in the terminal mixer.
 - [x] A terminal mixer, `openxlr-tui`, for a desk without a desktop
   session and for a tiling setup where a window is the odd one out. It
-  speaks the same WebSocket the window does and draws the same skins,
+  speaks the same WebSocket the UI does and draws the same skins,
   reading the colour tokens out of the same files and following the same
   saved choice, so an appearance picked in one is the appearance in the
   other, the palette skins included. A desk of vertical sends and mix
@@ -230,7 +230,7 @@ a skin overlays values on top of them.
   dependency to any package.
 - [x] The Stream Deck plugin reading the same tokens for its key art. The
   plugin colours its keys, dials and meters from the saved skin, using the
-  palette the window publishes while it runs.
+  palette the UI publishes while it runs.
 - [x] Layout density: a compact mode for small screens and a large mode
   for touch.
 - [x] Localization infrastructure and the first translations.
@@ -265,7 +265,7 @@ while fixes to existing hosts remain part of normal maintenance.
   ours. Windows VST3 plugins arrive through yabridge as ordinary bundles.
   Scans are cached per bundle to avoid repeating expensive discovery.
   Audio remains on PipeWire ports in the same per-insert process model.
-- [x] Installing plugins from the window: pick a file or a folder and the
+- [x] Installing plugins from the UI: pick a file or a folder and the
   daemon puts it where it looks, copies Linux bundles into the home
   directories, hands Windows plugins to yabridge and syncs, and reads the
   catalogues again. A card in Options says where plugins go and whether
@@ -295,7 +295,7 @@ while fixes to existing hosts remain part of normal maintenance.
   switches, the splice at the head of the input that leaves the chain
   running, the `setEq`, `setEqEnabled` and `setEqBand` commands, the
   state, `mixer.json` and profiles ([api.md](api.md#microphone-eq)).
-  The window's editor is on `main` too: a response graph with draggable
+  The UI's editor is on `main` too: a response graph with draggable
   handles, a row of fields per band, the switch, a bypass to compare, copy
   and paste between microphones, opened from INPUTS, an input rack and the
   matrix row heads ([manual](manual.md#microphone-eq)). The daemon also
@@ -312,7 +312,7 @@ while fixes to existing hosts remain part of normal maintenance.
 ## Next: daemon and integrations
 
 - [x] Watchdog: systemd notify with a progress gate, restart on failure
-  with a start limit, a Restart button in the window, and a graceful
+  with a start limit, a Restart button in the UI, and a graceful
   signal so teardown always runs. Never a restart loop when the audio
   server is down; the daemon degrades to device control instead. The
   packaged unit is a notify service since 0.1.22.
@@ -320,16 +320,16 @@ while fixes to existing hosts remain part of normal maintenance.
   releases, presented once, never automatic installation.
 - [x] A documented, versioned local API for third parties: `/api/v1`
   over HTTP on the session token, with an OpenAPI document, next to the
-  WebSocket the window and the OpenDeck plugin use
+  WebSocket the UI and the OpenDeck plugin use
   ([docs/http-api.md](http-api.md)).
-- [x] Route the focused application to a channel from a key: the window
+- [x] Route the focused application to a channel from a key: the UI
   registers global shortcuts through the desktop portal and asks KWin for
   the focused window, and the daemon resolves that process to one
   PipeWire client, refusing to guess when several match. Other
   compositors need a focus source of their own before the key works
   there.
 - [x] Generic PipeWire output volume and mute keys, and a main-output
-  switch tied to the enforced default sink, from the window, the desktop
+  switch tied to the enforced default sink, from the UI, the desktop
   keys and the Deck.
 - [x] Graph discovery without polling: the daemon subscribes to the
   registry through one monitoring dump and keeps an incremental view, so
@@ -365,7 +365,7 @@ while fixes to existing hosts remain part of normal maintenance.
 - [ ] Flatpak on Flathub. The Flatpak mode and the manifest are on main
   as experimental ([flatpak.md](flatpak.md)): the sandbox cannot install
   the udev rules, the WirePlumber rules, the UCM profile or the systemd
-  unit, so the window starts the daemon as a child process and uses the
+  unit, so the UI starts the daemon as a child process and uses the
   background portal for login start, the daemon logs to a file instead
   of the journal, the WirePlumber rules are written to the user's config
   directory, the udev rule is a documented copy, and the UCM profile
@@ -385,7 +385,7 @@ while fixes to existing hosts remain part of normal maintenance.
 - [ ] Pro: the remaining hardware mix matrix (which return feeds which
   jack, per-return levels), now that the headphone mix bytes are known
   (see the protocol notes, block 0x0001 bytes 12 and 13). Direct control
-  of that matrix from the window is the long-term answer to the
+  of that matrix from the UI is the long-term answer to the
   crossfade and mic-monitoring questions.
 - [ ] The microphone EQ on hardware. On firmware 1.0.15 the XLR Dock
   MK.2 and the Wave XLR MK.2 run a four-band equalizer on the device

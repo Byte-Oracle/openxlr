@@ -7,7 +7,7 @@ manual at that release's tag for matching behaviour. The app's Manual links
 open this page on GitHub `main`.
 
 How to use OpenXLR day to day: what it changes on your system, the
-concepts behind the mixer window, step-by-step tasks, and what to do
+concepts behind the mixer UI, step-by-step tasks, and what to do
 when something does not work. For installing, see the README; for the
 full list of controls per device, [hardware-support.md](hardware-support.md);
 for scripting, [api.md](api.md). Every section carries a fixed anchor
@@ -19,8 +19,8 @@ keeps working when sections are renumbered.
 
 OpenXLR is two programs. The daemon (`openxlr-daemon`, a systemd user
 service) builds the PipeWire mixer, talks to an Elgato interface over USB
-when one is attached, and keeps running whether or not a window is open.
-The mixer window
+when one is attached, and keeps running whether or not the UI is open.
+The UI
 (`openxlr`) shows and changes what the daemon holds; closing it changes
 nothing.
 
@@ -47,7 +47,7 @@ happen on your system:
   the mixer, and restores the previous profile when it stops. If the
   card is unplugged in the meantime, the daemon leaves it alone.
 
-The window's header shows the connected interface with a green dot.
+The UI's header shows the connected interface with a green dot.
 "No device" means the daemon cannot open the interface: replug it once
 after installing so the udev rule applies ([section 5.1](#no-device)).
 
@@ -68,7 +68,7 @@ Application channels, virtual microphones, monitor mixes and mix inserts
 work as the rest of this manual describes. Profiles are kept under
 `generic` and hold the mixer alone.
 
-Gain controls in the window, the terminal mixer and the Stream Deck dials
+Gain controls in the UI, the terminal mixer and the Stream Deck dials
 cover the connected interface's own range: 0 to 80 dB on the Wave XLR Pro
 and the MK.2 family, 0 to 75 dB on the original Wave XLR and the first
 XLR Dock, 0 to 40 dB on the Wave:3 and Wave:1. Options shows the firmware
@@ -105,7 +105,7 @@ interface's inputs (XLR 1, XLR 2 where the device has one, Aux In for
 the Pro's Line In and USB Aux input). XLR 1 and XLR 2 can take any other
 capture source instead ([input bindings](#input-bindings)). Only the Wave
 XLR Pro has the
-second jack and the aux stage, so on every other model the window, the
+second jack and the aux stage, so on every other model the UI, the
 terminal mixer and the Omarchy bar leave those two strips out rather than
 offering a fader that reaches nothing. The channels keep their levels, so
 plugging a Pro back in brings them back as they were. While no interface is
@@ -225,12 +225,12 @@ on the original Wave XLR. See [hardware support](hardware-support.md).
 <a name="tasks"></a>
 ## 3. Tasks
 
-The mixer cards follow the window width, so a wider window shows more
-submixer strips and mix tiles before they scroll. The window has no
+The mixer cards follow the UI's width, so a wider UI shows more
+submixer strips and mix tiles before they scroll. The UI has no
 minimum width of its own: it squeezes down to about 640 pixels. Header
 actions and input toggles wrap when needed so their labels stay readable.
 Long interface names are shortened with an ellipsis and shown in full in
-their tooltip. A window shorter than its content scrolls vertically. Mix
+their tooltip. A UI shorter than its content scrolls vertically. Mix
 master cards wrap onto further rows when needed. Long plugin names are
 shortened with an ellipsis, with
 the full name in the tooltip. Plugin control and chain windows keep
@@ -366,7 +366,7 @@ stays bound and the dialog says so. While the unit is driven, its gain,
 mute, low cut, ClipGuard and phantom power, whichever it has, are on the
 strip, in the input rack's gain and switch rows, in a mix matrix row's gain
 and mute, and in the classic INPUTS panel under the strip's chip. They are
-the same controls the additional interfaces window shows for that unit, and
+the same controls the Additional interfaces window shows for that unit, and
 they act on that unit, not on the primary. Stop driving the unit and the
 controls leave the strip; the binding stays, and the strip keeps its audio.
 
@@ -405,7 +405,7 @@ when the mixer is enabled again.
 
 The [terminal mixer](#terminal) binds XLR 1 and XLR 2 from its Inputs tab.
 It, the [Stream Deck](#stream-deck) and the [Omarchy bar](#omarchy) follow
-the interface's microphone the same way the window does. The terminal mixer
+the interface's microphone the same way the UI does. The terminal mixer
 heads the interface's controls with the channel that carries them, and that
 channel's key is the interface's mute. Stream Deck keys and dials for those
 controls name that channel. The bar puts its mic button on that channel's
@@ -414,7 +414,7 @@ strip. A bound strip keeps its sends and send mutes everywhere.
 <a name="monitor"></a>
 ### 3.2 Choose what you hear and how loud
 
-The level meters show the newest reading available. If the window is
+The level meters show the newest reading available. If the UI is
 temporarily busy, it keeps one pending meter update and resumes with the
 current levels instead of replaying a backlog of older readings. This
 affects only the display; the daemon continues processing audio.
@@ -486,7 +486,7 @@ that was the default.
    too. Both show the same percentage: 100% is unity, not two thirds of
    another control's scale. The **150%** button unlocks boost above 100%;
    switching it off returns a boosted output to 100%. A boosted desktop
-   value automatically enables the expanded range so opening the window
+   value automatically enables the expanded range so opening the UI
    cannot turn the volume down. Changing the first selected device
    adopts its current volume. Relinking the same device, including after a
    monitor feed or insert change, keeps volume changes synchronized across
@@ -562,12 +562,12 @@ The setup has four parts:
   drop and come back: Slow 100 ms and 2 s, Medium 80 ms and 1.2 s, Fast
   30 ms and 0.2 s.
 
-Ducking is off until you switch it on. In the window, open **Ducking**
+Ducking is off until you switch it on. In the UI, open **Ducking**
 from the SUBMIXER header beside **Edit layout**, from the bottom row of the
 **Mixer layout** window beside **Exclusive groups**, or from **Options**,
 card AUDIO, under the software mixer switch. All three open the same
-window, on any device; the header button shows only while the software
-mixer runs, and with the mixer off the window opened from Options shows
+Ducking window, on any device; the header button shows only while the software
+mixer runs, and with the mixer off the Ducking window opened from Options shows
 the setup without letting you change it:
 
 1. Tick **Lower other audio while the key microphone is loud**.
@@ -584,7 +584,7 @@ offers **This unit** and **This computer** (see below). The line at the
 bottom says what runs ducking and where it sits in the signal, or why
 nothing runs it. While this computer runs it, **Reduction** shows how far
 the chosen channels are lowered now, the deepest of the ducked mixes. If
-the daemon refuses a change, the window shows why and puts its setup back.
+the daemon refuses a change, the Ducking window shows why and puts its setup back.
 
 On any device the [terminal mixer](#terminal-ducking) also sets the whole
 setup on its Inputs tab, a [Stream Deck key](#stream-deck) switches it on
@@ -596,7 +596,7 @@ small stage for each ducked mix that lowers only the chosen channels.
 The Wave XLR Pro has ducking on its own processor too, but for now this
 computer runs it there as well. The unit ducks inside its own mix, and
 OpenXLR feeds the jacks around that mix, so the unit's ducking is not
-heard; its USB Aux port has not been checked by ear. The window says so
+heard; its USB Aux port has not been checked by ear. The Ducking window says so
 under **Runs on**. Feeding the jacks through the unit's mix is planned, and
 then the unit takes ducking over when the setup fits what it can do. The unit only lowers a whole output, the mix OpenXLR sends to its
 jacks and Line Out or to its USB Aux port, and only with XLR 1 as the key.
@@ -619,7 +619,7 @@ When the setup does not fit, the computer runs it and the state says why
 Moving from one to the other never ducks twice. There can be a moment
 without ducking while it moves. To keep it on this computer whatever the
 setup, choose **Runs on**, **This computer** in the Ducking window
-(`setDuckingProcessing` over the API). The window shows the unit's reason
+(`setDuckingProcessing` over the API). It shows the unit's reason
 under **Runs on** while the unit is chosen and cannot run it, and the
 **Hardware processing** badge beside its title while the unit does.
 
@@ -663,7 +663,7 @@ pipewire-pulse may refuse for lack of open files; the error says so (see
 <a name="audio-flow"></a>
 ### Audio flow
 
-Open **Flow** from the main window to see inputs, channels, mixes and outputs
+Open **Flow** from the UI to see inputs, channels, mixes and outputs
 from left to right. Cyan lines connect inputs to channels, purple lines connect
 channels to mixes, and green lines connect mixes to outputs. Muted or inactive
 routes are dashed. Sends at zero have no line.
@@ -678,7 +678,7 @@ Input and mix processing appears in an FX row inside its card. Hover over the
 card for the full chain in signal order, including bypass and error states.
 Outputs follow the selected monitor feeds, including Monitor A+B, and the
 current virtual microphones. Apps left to desktop routing appear without an
-OpenXLR connection. The window sizes itself to the graph when it opens, or when
+OpenXLR connection. The Flow window sizes itself to the graph when it opens, or when
 the first routing state arrives, up to the screen's usable area. Larger layouts
 scroll horizontally and vertically. Resizing the window manually turns off automatic sizing.
 
@@ -688,18 +688,18 @@ scroll horizontally and vertically. Resizing the window manually turns off autom
 The APPLICATIONS card lists every app that is currently registered with
 PipeWire as an audio client; a green light means it is playing. Manage sits
 beside the APPLICATIONS heading, like Edit layout beside SUBMIXER. The app
-controls wrap onto further rows when the window is narrower.
+controls wrap onto further rows when the UI is narrower.
 
 Each app shows its icon before its name, the one your desktop's launcher
-shows for it. The window looks it up in your icon theme, then in hicolor
+shows for it. The UI looks it up in your icon theme, then in hicolor
 and `/usr/share/pixmaps`, and Flatpak and Snap apps get theirs too. An app
 with no icon gets the first letter of its name on a badge of the same size,
 so the names stay lined up. An app keeps its icon in the list after it
 quits. SVG icons need GdkPixbuf and its librsvg loader, which GTK desktops
-already have. Without them the window uses a PNG of the same icon if the
+already have. Without them the UI uses a PNG of the same icon if the
 theme has one, and the letter if not.
 
-Opening the window or receiving an updated app list only displays the current
+Opening the UI or receiving an updated app list only displays the current
 routing. A remembered routing change is sent when you choose a different
 channel. When the mixer stops supplying an app list, both the APPLICATIONS
 card and the Manage list clear their stale entries.
@@ -823,7 +823,7 @@ the chain's own window:
 - **Store A** and **Store B** keep the chain as it is now. **Hear A** and
   **Hear B** put that state back, so two settings can be compared by ear.
   An edit after hearing a slot is not kept in it until you store the slot
-  again. Both slots are forgotten when the window loses the daemon.
+  again. Both slots are forgotten when the UI loses the daemon.
 - Type a name and **Save current chain** to keep a preset. **Load preset**
   replaces this chain with the selected preset; a preset saved from one
   chain loads on any other.
@@ -1591,7 +1591,7 @@ them back can exceed an audio cycle. The effective limit depends on the
 distribution and user session; check the running daemon before changing it.
 
 The daemon's unit asks for the allowance with `LimitMEMLOCK=infinity`,
-in the packaged unit, the NixOS module and the one the window writes for a
+in the packaged unit, the NixOS module and the one the UI writes for a
 source build. That covers a session whose own ceiling is already high but whose
 user manager hands units less, and it costs nothing where the allowance
 was there anyway.
@@ -1646,20 +1646,20 @@ leads to the companion package instructions above.
 and Wine keeps service processes of its own behind it that stay after the
 plugin is gone. OpenXLR ends that Wine session with `wineserver -k` once
 the last bridged insert has stopped, and again when the daemon stops, so
-`systemctl --user stop openxlr-daemon` and the window's Restart finish in
+`systemctl --user stop openxlr-daemon` and the UI's Restart finish in
 a few seconds instead of waiting out the unit's stop timeout. Only the
 session OpenXLR started is ended: a plugin installer you are running, or
 another DAW with its own bridged plugins, keeps its Wine whatever OpenXLR
 does. Without `wineserver` on PATH nothing is ended, and the daemon says
 so once in its log. The unit sends SIGTERM to the daemon alone
-(`KillMode=mixed`, in the packaged unit and in the one the window writes
+(`KillMode=mixed`, in the packaged unit and in the one the UI writes
 for a source build), which is what gives it the chance: sent to the whole
 group, the signal would take `wineserver` down first and leave the rest of
 Wine to the timeout.
 
 The picker marks each plugin with its format, since the same plugin often
 ships in more than one, and its LV2, CLAP and VST3 buttons narrow the list
-to one of them. When the catalogue grows past what the window can be sent,
+to one of them. When the catalogue grows past what the UI can be sent,
 the plugins your chains already use come first, then the LV2 list, then
 the other formats in the room that is left, with copies of a plugin
 already listed going last; a set installed in two formats shows once
@@ -1671,7 +1671,7 @@ name, with an optional vendor prefix, and matching input and output widths.
 Two different names sharing only their last word remain separate plugins.
 The message limit includes escaped Unicode names, parameter labels and
 native-plugin metadata such as bundle paths. A large or unusually named
-collection is shortened before sending, so it cannot make the window
+collection is shortened before sending, so it cannot make the UI
 discard the entire list as an oversized message.
 Controls with malformed metadata are left out; the rest of the plugin and
 the catalogue remain available.
@@ -1684,7 +1684,7 @@ the catalogue remain available.
 2. Header, Profiles: type a name and press Save.
 3. To recall: Profiles, then the name. To remove: the cross next to it.
 
-Saving or loading from the window first sends any waiting slider edits.
+Saving or loading from the UI first sends any waiting slider edits.
 Saving immediately after a drag therefore includes its last value. Loading
 then restores the selected snapshot, and an older queued edit cannot overwrite
 it. If loading fails, the preceding edits remain in place.
@@ -1720,7 +1720,7 @@ instead of saving the device's boot values over them.
 If a profile's device settings apply but its mixer settings fail, the error
 says so and gives the mixer failure.
 
-If the profile files cannot be read, the window keeps showing the device
+If the profile files cannot be read, the UI keeps showing the device
 and the mixer, with a warning and no profiles to choose. Once the files are
 readable again the warning clears, without restarting the daemon.
 
@@ -1805,18 +1805,18 @@ cards keep working. Turn it on again the same way.
 <a name="autostart"></a>
 ### 3.9 Start at login, tray
 
-Options separates login startup from window behaviour.
+Options separates login startup from how the UI behaves.
 
 Under AT LOGIN:
 
 - "Start audio in the background" enables the daemon's
   systemd user service. On a packaged install this is the package's own
   unit; under Flatpak it is a background portal request instead, see
-  [Flatpak](flatpak.md). This does not start the mixer window or create a tray icon. If
+  [Flatpak](flatpak.md). This does not start the UI or create a tray icon. If
   the service cannot be enabled or disabled, Options says so and keeps
   the previous preference rather than saving one the system does not have.
 - "Start the OpenXLR app" writes a desktop autostart
-  entry for the window in `~/.config/autostart/openxlr.desktop`,
+  entry for the UI in `~/.config/autostart/openxlr.desktop`,
   including on KDE Plasma and CachyOS. The file is written the way any
   desktop application writes there: the folder keeps its own permissions,
   the entry gets the ordinary permissions your system gives new files,
@@ -1835,7 +1835,7 @@ Under AT LOGIN:
     option off and on again to get it back.
 
 The two login switches are independent. Enable both for audio and the app
-at login. Audio alone starts without a window or tray icon. The app alone
+at login. Audio alone starts without the UI or a tray icon. The app alone
 starts without the audio service, which you must start separately to use
 it. With both off, neither starts at login. The hint below the switches
 describes the combination you chose.
@@ -1844,43 +1844,43 @@ Under WINDOW:
 
 - "On launch" chooses "Show mixer" or "Tray only". It applies the next
   time the app starts, whether at login or by hand; changing it does not
-  hide the current window or enable autostart. "Tray only" starts with no
-  window at all; the tray icon shows it the first time you click it. For
+  hide the UI or enable autostart. "Tray only" starts without
+  showing the UI; the tray icon shows it the first time you click it. For
   a tray icon at login, enable "Start the OpenXLR app" and choose "Tray
-  only". The tray icon is there from the start, whether or not the window
+  only". The tray icon is there from the start, whether or not the UI
   has been shown.
 - "When closing" chooses "Keep running in tray" or "Quit app" and takes
-  effect immediately. Keeping the app in the tray hides the window
+  effect immediately. Keeping the app in the tray hides the UI
   instead of quitting; the tray icon's "Show mixer" menu item restores it,
-  including when the window was minimized. "Quit OpenXLR" in the tray
+  including when the UI was minimized. "Quit OpenXLR" in the tray
   menu always exits. Neither choice stops the background audio service,
-  except under Flatpak, where the window owns its daemon and Quit stops
+  except under Flatpak, where the UI owns its daemon and Quit stops
   both ([Flatpak](flatpak.md)).
 
-Launching OpenXLR again shows its existing window. A launch requested while
-the first process is still initializing is kept until the window is ready,
+Launching OpenXLR again shows the UI that is already running. A launch requested while
+the first process is still initializing is kept until the UI is ready,
 including when the first process was set to start in the tray. Several such
-requests show one window, rather than starting additional copies.
+requests show the UI once, rather than starting additional copies.
 
 A Linux desktop gives an application no way to find out whether a system
 tray is there, so OpenXLR cannot fall back to quitting when there is none.
 On a desktop with no tray, choose "Show mixer" on launch and "Quit app"
-when closing. These window choices do not change either login switch.
+when closing. These choices do not change either login switch.
 
-Only one window runs per user. Starting OpenXLR again, from the menu or a
-shell, brings the running window to the front, out of the tray if it is
+Only one UI runs per user. Starting OpenXLR again, from the menu or a
+shell, brings the running UI to the front, out of the tray if it is
 hidden there, instead of opening a second one.
 
 To land on a known scene at every login, mark a profile to recall on
 connect ([section 3.6](#profiles)). An interface using connect-time restoration comes back
 as you left it without one.
 
-The window also remembers which of its sections (INPUTS, HEADPHONES,
+The UI also remembers which of its sections (INPUTS, HEADPHONES,
 MONITOR, APPLICATIONS, SUBMIXER) you collapsed with the chevron in
 their header, across restarts.
 
 <a name="arrange"></a>
-**Arrange**, in the window's header between Profiles and Flow, shows a
+**Arrange**, in the UI's header between Profiles and Flow, shows a
 drag handle in each section's header and on each channel and mix tile you
 can move. Drag a section's
 handle onto another section: the arrow on the other handle shows whether
@@ -1888,30 +1888,30 @@ it lands above or below. Drag a channel's or mix's handle onto another
 tile in its row, left or right of it. Only the handles start a move;
 faders, buttons and the chevron work as usual. Focus a handle and press an
 arrow key to move it one place, or press Escape to cancel a drag. Holding
-a handle near the edge of the window or of the channel row scrolls it, and
+a handle near the edge of the UI or of the channel row scrolls it, and
 letting go anywhere but on a tile of the same kind changes nothing.
 
-The section order is a window preference, saved in `ui.json` like the
+The section order is a UI preference, saved in `ui.json` like the
 collapsed sections, and **Reset sections** puts the five back in their
 usual order. If `ui.json` cannot be written, the new order stays until the
-window closes and the note above the sections says why.
+UI closes and the note above the sections says why.
 
 A skin can place the header and the sections itself, in rows, columns,
 grids and docked sides ([Layout](skins.md#layout)). Under such a skin a
 section dropped on another trades places with it, in the same row or
-column or across from one part of the window to another; the other
+column or across from one part of the UI to another; the other
 handle shows ⇄ while you hold it there. Between neighbours in one row or
 column a drop still lands before or after, which comes to the same thing.
 The arrow keys trade places with the next section that way in the same
 row, column or grid. To move a section somewhere the arrows do not reach,
 focus its handle and press Enter or Space. A menu lists every other
 section by name, **Swap with INPUTS** and so on, and choosing one trades
-the two. Holding a handle near the edge of a layout wider than the window
+the two. Holding a handle near the edge of a layout wider than the UI
 scrolls it sideways.
 
 A skin can also hide a section. While Arrange is on, a **Hidden
 sections** line under the header lists each one with a **Show** button;
-showing it is kept for that skin. A section the window itself sets aside,
+showing it is kept for that skin. A section the UI itself sets aside,
 such as MONITOR without the software mixer, stays hidden whatever the
 skin says. A skin may start a section folded the first time you wear it;
 after that it stays folded or open as you leave it.
@@ -1978,10 +1978,10 @@ Options, APPEARANCE, **Mixer view** chooses how the SUBMIXER card is drawn:
   here.
 - **Mini** shows that channel's send into one mix, with that mix's master
   below it. A second box picks the mix, hidden mixes included. INPUTS, HEADPHONES and APPLICATIONS
-  are set aside and Arrange is off, so the window fits a narrow column with
+  are set aside and Arrange is off, so the UI fits a narrow column with
   MONITOR's output volume above the strip.
 
-In a narrow window, MONITOR puts the device picker above the volume row
+In a narrow UI, MONITOR puts the device picker above the volume row
 so both remain usable. Long device names shorten with an ellipsis; hover
 over the picker to read its full summary.
 
@@ -1989,7 +1989,7 @@ The view, the channel and the mix are saved in `ui.json`. When the chosen
 channel or mix is gone, after a layout change or with an interface that
 has no jack behind it, the view shows the first available one and goes
 back to your choice when it returns. If `ui.json` cannot be written, the
-choice stays until the window closes and a line says why: in Options for
+choice stays until the UI closes and a line says why: in Options for
 the view, above the strips for the channel and the mix. None of this
 changes a level, a mute or a route.
 
@@ -1998,7 +1998,7 @@ changes a level, a mute or a route.
 and Ducking, and appears only while a channel or a mix is hidden in the layout
 editor. Switched on, it draws the hidden channels and mixes in their
 places in every layout, faded so you can tell them apart, and they work
-as usual. This applies in the separate mixer window too. It is a window
+as usual. This applies in the separate mixer window too. It is a UI
 preference saved in `ui.json` like a folded section, so the layout, the
 profiles, the terminal mixer and the Stream Deck do not change. A skin
 sets how far they fade with `Ox.Mixer.HiddenOpacity`.
@@ -2008,17 +2008,17 @@ sets how far they fade with `Ox.Mixer.HiddenOpacity`.
 
 **Pop out** in the SUBMIXER header moves the existing channel strips and mix
 masters, or a skin's mix banks, into their own resizable window. It can sit on
-a second display while the main window is hidden in the tray. The window uses
+a second display while the UI is hidden in the tray. The separate window uses
 the same live mixer, skin, control sizing and compact or mini view selected in
 Options. It scrolls when the controls do not fit, without changing any audio
 routing.
 
 **Return mixer to main window**, or closing the separate window, returns the
-panel and shows the main window. Quitting OpenXLR closes both. The separate
+panel and shows the UI. Quitting OpenXLR closes both. The separate
 window opens when you ask for it, or once when you put on a skin that opens
 the submixer in its own window; it does not change profiles or section
 order. Arrange mode ends when the mixer is detached; arrange tiles in the
-main window after returning it.
+UI after returning it.
 
 Pressing Pop out, or returning the mixer, is remembered in `ui.json` as
 your choice. While you have made one, no skin moves the submixer: a skin
@@ -2031,8 +2031,8 @@ arrangement** in Options forgets the choice. The order is in
 [The mixer's own window](skins.md#the-mixers-own-window).
 
 Plugin windows opened from the detached mixer belong to that window and
-stay open through skin switches. Returning the mixer to the main window, or
-closing the separate window, opens them again under the main window, in
+stay open through skin switches. Returning the mixer to the UI, or
+closing the separate window, opens them again under the UI, in
 the same place, on the same chain or plugin. Deleting
 a mix closes its plugin windows. Recreating the mix opens its new chain rather
 than an older window with the same mix id. Renaming a mix updates its open
@@ -2047,15 +2047,15 @@ changes are discarded, and late bypass, host, removal or rename actions from
 the old controls cannot affect a plugin that now uses the same slot id.
 
 <a name="skins"></a>
-### 3.10 Change how the window looks
+### 3.10 Change how the UI looks
 
 Options, APPEARANCE picks a skin. OpenXLR ships sixteen, all built into
 the application, so a package brings them with it:
 
 - **Material**, the classic appearance, in a dark palette, which is what
-  the window looked like before Broadcast became the default, and a light
+  the UI looked like before Broadcast became the default, and a light
   one;
-- **Deck**, which dresses the window in the visual language of the
+- **Deck**, which dresses the UI in the visual language of the
   OpenDeck keys and the Wave interfaces: near-black faceplates, black keys
   whose lettering is backlit green when a control is on and red when
   something is muted or bypassed, console faders with a machined cap,
@@ -2066,7 +2066,7 @@ the application, so a package brings them with it:
   Kanagawa, Matte Black, Nord, Osaka Jade, Ristretto, Rose Pine and Tokyo
   Night. Catppuccin Latte and Rose Pine are light;
 - **Broadcast**, the default, a dark neutral palette that also rearranges
-  the window, described below;
+  the UI, described below;
 - **Nyan Pink**, dark plum cards, candy pink faders and cyan details,
   using the classic arrangement and your saved section order;
 - **Wave**, dark charcoal cards, blue faders and green meters, arranged
@@ -2078,9 +2078,9 @@ the application, so a package brings them with it:
 
 A new install opens on Broadcast. An install that never picked a skin
 opens on Broadcast too, so after upgrading from a version that started on
-Material the window has the mix matrix. A skin you picked yourself,
+Material the UI has the mix matrix. A skin you picked yourself,
 Material included, stays. To go back to Material, open Options and choose
-**Material** under APPEARANCE; the window rearranges at once and keeps
+**Material** under APPEARANCE; the UI rearranges at once and keeps
 Material from then on.
 
 <a name="broadcast"></a>
@@ -2124,14 +2124,14 @@ volume in a toolbar on the right. INPUTS is hidden, since the row heads
 carry the input gain, mute, switches and plugins; **Arrange** lists it with a button
 that shows it again, under the matrix. APPLICATIONS sits under the matrix,
 its applications in columns of six: the seventh starts the next column to
-the right, and columns that do not fit the window's width continue below.
+the right, and columns that do not fit the UI's width continue below.
 Every application's tile is the same width, with its channel picker lined
 up with the ones above and below it. A name too long for its tile is cut
 off at the edge; rest the pointer on the tile and the name glides to its
 end, and back when the pointer leaves. Its tooltip shows the whole name.
 Nothing starts folded, and every header action stays in the header row.
-When the matrix is wider than the window it scrolls sideways inside its
-card, the row heads with it; a window narrower than about 1000 pixels
+When the matrix is wider than the UI it scrolls sideways inside its
+card, the row heads with it; a UI narrower than about 1000 pixels
 scrolls the whole page sideways instead, since HEADPHONES and MONITOR
 share a row. In Arrange mode a
 channel's handle is on its row head and a mix's on its column head; a drop
@@ -2146,7 +2146,7 @@ The choice takes effect at once. Windows that are already open repaint;
 audio, the mixer, the routing and the layout are untouched, and nothing is
 restarted. The choice is saved in `~/.config/openxlr/ui.json` and is not
 part of a profile or of the mixer layout. A skin you install may also set
-the order of the window's sections and run them in a row; the sections
+the order of the UI's sections and run them in a row; the sections
 move in place, and [Arrange](#arrange) says how your own moves are kept
 under it. It may also draw INPUTS as a rack and the SUBMIXER as
 [mix banks](#mix-banks) or a mix matrix, as Broadcast does, MONITOR as a one-row toolbar, APPLICATIONS as a
@@ -2154,7 +2154,7 @@ list for a narrow column or in columns, and open the submixer in its own window 
 first time you put it on (see [Separate mixer window](#separate-mixer-window)).
 
 Under the skin picker, one line says what the chosen skin does to the
-window's arrangement, for example "This skin arranges the window: a grid,
+UI's arrangement, for example "This skin arranges the window: a grid,
 an input rack, 2 mix banks." A skin without a layout keeps the usual
 arrangement. The next line says where the submixer goes: where you last
 put it, or, while you have not chosen, what the skin does with it.
@@ -2165,7 +2165,7 @@ picks under other skins stay as they are. Nothing opens or closes when you
 press it; a skin that opens the submixer in its own window does so again
 the next time you put it on.
 
-Switching to a skin that rearranges the window keeps what you were doing.
+Switching to a skin that rearranges the UI keeps what you were doing.
 A fader held down stops where it is. Focus stays on the same control, or on
 the control for the same channel, mix and role when the skin draws it
 differently, and the page keeps its scroll. Folded sections, the compact
@@ -2177,11 +2177,11 @@ preference through the desktop portal and repaints the open windows when
 the desktop switches; a desktop that states no preference gets the dark
 palette. On a desktop that prefers light, Material therefore opens light
 unless you choose Dark. Other skins keep their own colours in every mode,
-so a window wearing Deck, Broadcast or an Omarchy palette looks as it did, and Mode is
+so the UI wearing Deck, Broadcast or an Omarchy palette looks as it did, and Mode is
 greyed out while one of them is chosen. The mode is saved in `ui.json`
 beside the skin.
 
-**Controls** picks **Standard** or **Touch** sizing for the mixer window.
+**Controls** picks **Standard** or **Touch** sizing for the UI.
 Touch is meant for a touch screen. Buttons, dropdowns, check boxes and fader
 caps get targets at least 44 units square, every slider row is tall enough
 to hold its cap, the rows of an open list grow to match, and channel strips
@@ -2193,12 +2193,12 @@ profile. If it cannot be saved, it is still worn for the run and Options
 says why on the line at its foot.
 
 OpenDeck keys and dials take their colours from the chosen skin and
-repaint when it changes. While the window runs they use the colours it
+repaint when it changes. While the UI runs they use the colours it
 applied, light or dark; without it the plugin reads the saved skin itself
 ([skins.md](skins.md#stream-deck-colours)).
 
 Anything wrong with a skin is listed under the picker, not in the mixer
-window. A skin that sets only part of the appearance keeps the default for
+itself. A skin that sets only part of the appearance keeps the default for
 everything else.
 
 Your own skins go in `~/.local/share/openxlr/skins/<name>/skin.json`;
@@ -2211,7 +2211,7 @@ redrawn is still the same fader underneath. A plugin's own editor window belongs
 not skinned. [skins.md](skins.md) is the full list of values and the rules
 a skin is read under.
 
-If a skin makes something unreadable, start the window once with
+If a skin makes something unreadable, start the UI once with
 
 ```sh
 OPENXLR_SKIN=default openxlr
@@ -2221,10 +2221,10 @@ which ignores the saved choice for that run, wears dark Material whatever
 the mode says, and lets you pick another one.
 
 <a name="language"></a>
-Options, APPEARANCE, **Language** picks the window's language. **System
+Options, APPEARANCE, **Language** picks the UI's language. **System
 language**, the default, follows the desktop's message language
 (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, then `LANG`) and falls back to
-English. The window reads its text when it starts, so a change applies the
+English. The UI reads its text when it starts, so a change applies the
 next time it opens. The choice is saved in `ui.json` as `language`; if it
 cannot be saved, Options says why on the line at its foot. OpenXLR ships in
 English, German and Spanish, and each further language is added by a
@@ -2235,7 +2235,7 @@ messages from the daemon are shown as they are.
 <a name="upgrade"></a>
 ### 3.11 Upgrade
 
-Packages do not restart a running daemon. After an upgrade the window
+Packages do not restart a running daemon. After an upgrade the UI
 shows a banner naming the daemon's version and its own, with a Restart
 daemon button; press it, or run
 
@@ -2243,11 +2243,11 @@ daemon button; press it, or run
 systemctl --user restart openxlr-daemon
 ```
 
-Until then the window offers only the controls the old daemon reports.
+Until then the UI offers only the controls the old daemon reports.
 Changing "Enable software mixer" in Options, AUDIO also restarts the daemon.
 
 Every client presents a token the daemon writes at start
-([section 6](#files)). A window or OpenDeck plugin older than the daemon is
+([section 6](#files)). A UI or OpenDeck plugin older than the daemon is
 refused with "unauthorized" until it is updated too; the plugin zip on
 the release page matches the daemon of that release.
 
@@ -2274,7 +2274,7 @@ microphone. Both kinds count toward one limit of 16 mixes you can edit,
 Stream and Chat included. Monitor A+B in the feed picker stays the sum of
 those two mixes; a sum with a monitor mix you added goes through the API.
 
-Reordering updates the open window as soon as the daemon publishes the saved
+Reordering updates the open UI as soon as the daemon publishes the saved
 layout, including changes made through the API. Channel tiles, mix controls
 and each channel's send rows follow the same order without resetting their
 levels or mute state. The order decides only where things are drawn. An app
@@ -2300,7 +2300,7 @@ any, and under **Text** the seven text glyphs ● ♪ ♫ ✦ ◆ ▶ ◉ that o
 layouts used. The same list sits beside the name box where you add a
 channel or a mix, starting at **Default**, so a new item gets its icon in
 the same step. Leave the colour empty to keep the skin's colours. The
-window draws the icon in that colour in every skin. The channel and mix
+UI draws the icon in that colour in every skin. The channel and mix
 tiles put it before the name on the same line, and a channel or mix with
 no icon starts its name at the tile's edge. A skin can redraw an icon but
 not choose it.
@@ -2310,7 +2310,7 @@ that channel or mix show the icon in place of their glyph; a key also takes
 the colour on its label and border, a dial only on its corner icon, unless
 the key has its own icon chosen in its settings. Mute and offline indicators keep their usual colours. An icon
 that only a skin draws shows as the kind's default in the terminal mixer,
-on the Stream Deck, and in the window under another skin.
+on the Stream Deck, and in the UI under another skin.
 The headphone outputs are listed at the top of CHANNELS: **Phones 1** and,
 on a device with a second jack, **Phones 2** open the same dialog without
 the hidden flag. Their icon, a headset until you pick another, and their
@@ -2347,7 +2347,7 @@ Appearance is part of the layout, saved with it, and not part of a profile.
 - Renaming a mix changes the name in OpenXLR and on the Stream Deck right
   away. Other applications keep listing the old device name until the
   daemon restarts, because reloading the device would throw them off it.
-  The window shows a restart hint; restart when nothing is recording.
+  The UI shows a restart hint; restart when nothing is recording.
 - Deleting a channel moves its apps to System, or to the application
   channel whose id comes first when System is gone. Deleting a virtual
   microphone removes the device, and anything recording from it loses it.
@@ -2499,7 +2499,7 @@ again even when the generated Linux wrapper did not change.
 ## 4. Stream Deck (OpenDeck)
 
 The plugin has two actions. Both are clients of the daemon and show
-its live state, so what a key displays is what the mixer window shows.
+its live state, so what a key displays is what the UI shows.
 
 **Toggle** (a key) switches one thing: a hardware control (mute,
 phantom, low cut, expander, voice tune, ClipGuard, compressor, low
@@ -2682,7 +2682,7 @@ diagnostics** in Options and open an issue with the archive.
 - `systemctl --user status openxlr-daemon` shows the state. "203/EXEC"
   in a restart loop means a stale unit in
   `~/.config/systemd/user/openxlr-daemon.service` written by a version
-  before 0.1.9. Opening the mixer window repairs it when Start audio at
+  before 0.1.9. Opening the UI repairs it when Start audio at
   login is on and OpenXLR can prove it wrote the unit; otherwise run
   `openxlr installation repair-startup`, or remove the file,
   `systemctl --user daemon-reload`, then
@@ -2728,7 +2728,7 @@ defaults it saw at start only for about half a minute after the mixer is
 built.
 
 <a name="control-not-applied"></a>
-### 5.6 A control changes in the window but not on the device
+### 5.6 A control changes in the UI but not on the device
 
 The daemon writes to the interface and reads the state back; if the
 device ignores the write, the control snaps back. On the Wave XLR Pro
@@ -2738,10 +2738,10 @@ other devices this would be new information: collect diagnostics
 ([section 5.10](#reporting)) and open an issue.
 
 <a name="daemon-hang"></a>
-### 5.7 The daemon froze, or a control hung the window
+### 5.7 The daemon froze, or a control hung the UI
 
 The header's **Restart daemon** button restarts the systemd user service.
-Audio is interrupted during the restart. The window stays responsive, and
+Audio is interrupted during the restart. The UI stays responsive, and
 the button is disabled until the service command finishes. If it fails,
 check `journalctl --user -u openxlr-daemon`. A daemon started by hand must
 be restarted by hand.
@@ -2766,7 +2766,7 @@ library runs in a small helper process of its own (the daemon binary
 started with `--usb-helper`), which is killed and started again on such
 a hang, so nothing stays stuck inside the daemon. After three hangs in
 one run the daemon stops driving that interface and says so under the
-window's header, while the submixer and any other interface keep
+UI's header, while the submixer and any other interface keep
 working. Unplug the interface and plug it back in, or restart the
 daemon, to try again. A helper whose device could not be opened at all
 (the udev rule not applied yet, see [section 5.1](#no-device)) is
@@ -2805,7 +2805,7 @@ pipewire-pulse, PipeWire's PulseAudio server, inherits systemd's default
 limit of 1024 open files. OpenXLR's send faders are streams inside that
 server, so a layout with a few channels or mixes beyond the default
 reaches the limit, and past it the server drops nodes at random: sinks
-disappear, apps fall back to the default output, and the window shows
+disappear, apps fall back to the default output, and the UI shows
 "Sink not found" errors from pactl.
 
 OpenXLR refuses to add a channel or mix when the server has no room left
@@ -2943,7 +2943,7 @@ settings. See
 | `~/.config/openxlr/mixer.json` | every mixer decision, the layout included (`userChannels`, `userMixes`, see [mixer-layout.md](mixer-layout.md)), written by the daemon |
 | `~/.config/openxlr/profiles/<vid-pid>/<name>.json` | saved profiles, one file each |
 | `~/.config/openxlr/profiles/<vid-pid>/recall-on-connect` | the profile recalled when that interface connects, when one is chosen |
-| `$XDG_RUNTIME_DIR/openxlr/token` (or `~/.config/openxlr/token` without a runtime directory) | the control API token for this daemon run, readable by your user only; the window and the OpenDeck plugin read it, a daemon older than the window will not have it ([section 3.11](#upgrade)) |
+| `$XDG_RUNTIME_DIR/openxlr/token` (or `~/.config/openxlr/token` without a runtime directory) | the control API token for this daemon run, readable by your user only; the UI and the OpenDeck plugin read it, a daemon older than the UI will not have it ([section 3.11](#upgrade)) |
 | `$XDG_RUNTIME_DIR/openxlr/daemon.lock` | held by the running daemon; a second daemon started for the same user stops at once instead of waiting for the port |
 | `~/.config/openxlr/devices/<vid-pid>/last-state.json` | the settings restored on connect when `retainsSettings` is false |
 | `~/.config/openxlr/devices/<vid-pid>/defaults.json` | the firmware defaults of such an interface, recorded after a power cycle, written back by "Reset device to defaults" (the Pro has no such file: its reset writes OpenXLR's baseline) |
@@ -2952,13 +2952,13 @@ settings. See
 | `~/.config/openxlr/wave-interfaces.json` | the units driven as additional interfaces, by instance id ([Multiple Wave interfaces](wave-interfaces.md)) |
 | `~/.config/openxlr/devices/<vid-pid>@<hash>/last-state.json` | the last settings of an additional interface that keeps none on board |
 | `~/.config/openxlr/native-editors.json` | your native editor overrides ([section 3.5](#native-editor-compatibility)) |
-| `~/.config/openxlr/desktop-keys.json` | desktop shortcut bindings, written by the window ([Desktop keys](#desktop-keys)) |
+| `~/.config/openxlr/desktop-keys.json` | desktop shortcut bindings, written by the UI ([Desktop keys](#desktop-keys)) |
 | `~/.config/openxlr/bridge/yabridgectl/config.toml` | companion bridge folder registry, separate from the system bridge |
 | `~/.local/share/openxlr/yabridge/{vst3,clap,vst2}` | companion-generated wrappers; OpenXLR loads VST3 and CLAP only |
-| `~/.config/openxlr/ui.json` | window preferences, the chosen skin, Material's mode and the language included ([section 3.10](#skins)) |
-| `~/.config/openxlr/effect-chain-presets.json` | the window's saved effect presets ([effect-presets.md](effect-presets.md)) |
-| `~/.config/openxlr/deck-palette.json` | the skin colours the window hands to the OpenDeck plugin |
-| `~/.config/autostart/openxlr.desktop` | the window's autostart entry, written by Start the OpenXLR app ([section 3.9](#autostart)) |
+| `~/.config/openxlr/ui.json` | UI preferences, the chosen skin, Material's mode and the language included ([section 3.10](#skins)) |
+| `~/.config/openxlr/effect-chain-presets.json` | the UI's saved effect presets ([effect-presets.md](effect-presets.md)) |
+| `~/.config/openxlr/deck-palette.json` | the skin colours the UI hands to the OpenDeck plugin |
+| `~/.config/autostart/openxlr.desktop` | the UI's autostart entry, written by Start the OpenXLR app ([section 3.9](#autostart)) |
 | `~/.cache/openxlr/plugin-scans/`, `~/.cache/openxlr/plugin-scan-logs/` | the plugin catalogue and the latest scan logs |
 | `$XDG_STATE_HOME/openxlr/daemon.log` | the daemon's log under Flatpak, with one rotated copy ([Flatpak](flatpak.md)) |
 | `~/.local/share/openxlr/skins/<id>/skin.json` | a skin you installed; system skins come from `$XDG_DATA_DIRS` ([skins.md](skins.md)) |
@@ -3000,14 +3000,14 @@ marker is limited to 1 KiB and must name a profile, never a path. Pipes and
 other special files are refused before reading either file. A refused
 automatic recall falls back to the last hardware settings; the journal
 reports the reason, and a marker that cannot be read also appears in the
-window's profile warning. Fix or remove that file to choose a profile again.
+UI's profile warning. Fix or remove that file to choose a profile again.
 
 The preference files, `ui.json` and `daemon.json`, are limited to 4 MiB when
-read or saved by the window, daemon or terminal mixer. Pipes and other
+read or saved by the UI, daemon or terminal mixer. Pipes and other
 special files are refused before reading, and a save that would exceed the
-limit leaves the existing file untouched. When the window saves one, it keeps
+limit leaves the existing file untouched. When the UI saves one, it keeps
 the keys it does not know, such as a setting written by a newer OpenXLR. A
-list written as `null` reads as an empty list. The window leaves a file in
+list written as `null` reads as an empty list. The UI leaves a file in
 place when it cannot read or parse it, or when the file gives a key twice.
 It then runs with default preferences and saves nothing over the file until
 you fix or remove it. Changes made in the meantime are not saved, though one
@@ -3054,7 +3054,7 @@ want to hear. To switch between mono and stereo, remove the chain's inserts
 first, including bypassed inserts. A failed save leaves the old binding,
 mutes and Sound Check take in place. Rebinding can close a plugin editor as
 the input's chain restarts. An offline source stays selected and silent until
-it returns. Capture source editing is available in the window and API; the
+it returns. Capture source editing is available in the UI and API; the
 terminal mixer and Stream Deck do not offer this picker.
 
 A capture channel on the primary interface's own source, at the first port
@@ -3067,7 +3067,7 @@ volume stays beside them. When the XLR strip takes the interface again, the
 strip has them back and the capture channel keeps only its volume.
 
 Several Wave interfaces can supply capture audio at once. The header picker
-chooses the primary interface, whose controls the main window shows and whose
+chooses the primary interface, whose controls the UI shows and whose
 microphone feeds the XLR strips. Only the picker changes it: enabling or
 disabling an additional interface leaves the primary where it is. Options, INTERFACE, **Additional
 interfaces** drives up to four more units with their own gain, mute and
@@ -3094,8 +3094,8 @@ channel stays silent if releasing the unit removes its source. With an
 older daemon that does not report a unit on capture bindings, the
 confirmation offers deletion only.
 
-Capture channels host LV2, CLAP and VST3 inserts in the window and through
-the [HTTP API](http-api.md). In the classic window, INPUTS shows one block
+Capture channels host LV2, CLAP and VST3 inserts in the UI and through
+the [HTTP API](http-api.md). In the classic layout, INPUTS shows one block
 per capture input after Aux In, in layout order. Each block has its name, a
 source chip with a connection light and any warning, on a mono port the
 **EQ** button right after the chip, its volume,
@@ -3149,15 +3149,15 @@ the application channels you want, then choose **Apply and configure keys**.
 The desktop portal asks for the shortcuts and permission to use them. For an
 OpenDeck key, choose **Route focused application** and the destination channel
 in the Toggle inspector. No PC shortcut needs to be selected for OpenDeck.
-Keep the OpenXLR window process running; hiding it in the tray keeps the keys
+Keep the OpenXLR UI process running; hiding it in the tray keeps the keys
 active. The daemon alone does not own a desktop shortcut session.
 
 The GlobalShortcuts portal registers keys on Wayland. It does not expose the
 focused application's identity. Focused routing therefore currently requires
 KDE Plasma, where a short-lived KWin script reads the active process id. It
 reads no window titles and removes its script after the query. The daemon
-uses `gdbus`, supplied by the GLib command-line tools, to ask the window for it.
-On unsupported desktops or when the window is closed, routing reports an error.
+uses `gdbus`, supplied by the GLib command-line tools, to ask the UI for it.
+On unsupported desktops or when the UI is closed, routing reports an error.
 The Flatpak has no access to KWin, so focused routing reports an error there
 on every desktop.
 
@@ -3270,7 +3270,7 @@ switch followed by a volume change.
 ## The terminal mixer
 
 `openxlr-tui` is the same mixer in a terminal. It talks to the same daemon
-the window does, over the same socket, so the two can be open at once and
+the UI does, over the same socket, so the two can be open at once and
 each shows what the other changed. Run it on a machine with no desktop
 session, over ssh, or on a tiling setup where one floating window is the
 odd one out.
@@ -3395,9 +3395,9 @@ input stays in the mixer and Inserts tabs. Inserts lists capture chains
 in layout order and filters plugins by `chainWidth`, even while the source
 is unplugged. Microphone meters read `microphone`; an older daemon without
 these fields keeps XLR-only mono meters and XLR and mix insert targets.
-Sound Check remains a window control.
+Sound Check remains a UI control.
 
-The Bindings card chooses what feeds XLR 1 and XLR 2, the choice the window
+The Bindings card chooses what feeds XLR 1 and XLR 2, the choice the UI
 makes in [Use another microphone on XLR 1 or XLR 2](#input-bindings).
 Each strip has four rows. The source lists the interface's own input first,
 Interface jack (XLR 1) or Built-in microphone on a Wave:3 or Wave:1. Every
@@ -3416,8 +3416,8 @@ source that is unplugged stays listed as missing, and a strip on an Elgato
 interface whose source was renamed shows the source it plays from now.
 Choosing a Bluetooth
 headset adds a row saying it stays in headset mode while bound. The terminal
-mixer does not offer the window's capture channel for the interface's own
-microphone; bind from the window when you want to keep it in the mixer.
+mixer does not offer the UI's capture channel for the interface's own
+microphone; bind from the UI when you want to keep it in the mixer.
 
 <a name="terminal-ducking"></a>
 The Ducking card on Inputs holds the whole [ducking](#ducking) setup, on
@@ -3438,7 +3438,7 @@ reads XLR 1 before inserts: the Pro listens to its own input, so a gate
 or noise suppressor on XLR 1 does not stop the unit ducking on noise. On
 this computer it reads after the EQ and inserts. While the unit is chosen
 and the setup does not fit it, **Not on unit** gives the reason in a few
-words; the window shows the whole sentence. While this computer runs it,
+words; the UI shows the whole sentence. While this computer runs it,
 **Lowered by** is a short bar of how far the channels are down right now,
 the deepest of the ducked mixes. If the software side cannot run,
 **Software** shows the daemon's reason. In hardware-control mode the card
@@ -3473,12 +3473,12 @@ The terminal requests the catalogue when Inserts is first shown and refreshes
 it after chain or native editor rule changes. It keeps the descriptions for
 plugins in the chains. Escape returns to the chain, and `r` restores every
 declared parameter to its default. These edits use the same live parameters
-and persistence as the window.
+and persistence as the UI.
 
-The terminal mixer wears the same skins as the window. It reads the same
+The terminal mixer wears the same skins as the UI. It reads the same
 files, in the same order, and the choice in Options is the same choice, so
 picking Gruvbox in one picks it in the other ([skins.md](skins.md)).
-With no saved choice it wears Broadcast, as the window does, and writes
+With no saved choice it wears Broadcast, as the UI does, and writes
 nothing. If the saved choice cannot be read, the terminal mixer uses
 Material for that run and leaves the file as it is. Material's mode is shared too:
 **Material mode** on the Options tab changes it with Left and Right, and in
@@ -3539,7 +3539,7 @@ The popout uses the terminal mixer's strips with the bar's colours and
 font. Its meters take the OpenXLR skin matching the active Omarchy theme,
 and repaint on a theme change. An unmatched theme or unreadable theme
 file uses foreground shades. Bar meters remain monochrome.
-It needs the daemon, but the window can be closed. When the daemon
+It needs the daemon, but the UI can be closed. When the daemon
 is absent the widget dims, clears its meters and waits to reconnect.
 `omarchy plugin disable openxlr.mixer` removes it from the bar.
 [omarchy.md](omarchy.md) covers installation, package changes, commands

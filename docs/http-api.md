@@ -228,7 +228,7 @@ an empty chain. The reply follows the saved binding; unlike creation, the
 source may be offline. See [capture inputs](mixer-layout.md#capture-inputs).
 
 `{"cmd":"routeFocusedApp","channel":"music"}` uses the same focused-application
-routing as PC and OpenDeck keys. Enable **Desktop keys** in the running window.
+routing as PC and OpenDeck keys. Enable **Desktop keys** in the running UI.
 KDE Plasma supplies the focused process; GLib's `gdbus` must be installed.
 An unavailable desktop service, absent audio client or ambiguous identity
 returns the normal command error response and does not select a guessed app.

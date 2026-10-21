@@ -6,9 +6,9 @@
   `pw-cli`, `pw-link`, `pw-dump`, `pw-loopback`, `parec`, `wpctl` and
   `amixer` on PATH
 - `gdbus` (the GLib command-line tools) for focused application routing
-  from desktop and Deck keys; `xdg-open` for the links the window opens
+  from desktop and Deck keys; `xdg-open` for the links the UI opens
 - gdk-pixbuf with the librsvg loader for the applications' own desktop
-  icons; without them the window falls back to PNG icons
+  icons; without them the UI falls back to PNG icons
 - `swh-plugins` (LADSPA) for the software ClipGuard; everything else
   works without it
 - `lilv` for LV2 discovery and compatible LV2, CLAP or VST3 plugins

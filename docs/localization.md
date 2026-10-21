@@ -1,6 +1,6 @@
 # Localization
 
-The mixer window can be translated. Every string it shows lives in one
+The UI can be translated. Every string it shows lives in one
 English catalogue, and a language is a second catalogue with the same keys.
 OpenXLR ships in English, German (Deutsch) and Spanish (Español). Other
 languages come from contributors who read and write them, one pull request
@@ -8,7 +8,7 @@ per language.
 
 ## The catalogue
 
-`src/OpenXLR.UI/Localization/Strings.resx` holds the window's English text.
+`src/OpenXLR.UI/Localization/Strings.resx` holds the UI's English text.
 Each entry is a key and a value:
 
 ```xml
@@ -55,7 +55,7 @@ are not part of the catalogue.
 2. Read it by its literal key: `{loc:Text Key=MyKey}` in markup,
    `Localizer.Text("MyKey")` in code. Keep the key in the call, not in a
    variable, so the tests can see it.
-3. Run the tests. `LocalizationTests` fails when the window reads a key
+3. Run the tests. `LocalizationTests` fails when the UI reads a key
    the catalogue lacks, when an entry is never read, when markup carries
    text of its own, or when a key is built at run time. Its line-break
    and literal-command checks run per language from `InlineData` rows
@@ -93,7 +93,7 @@ so a change of meaning gets a new key.
    The tests check that the language is listed, that the catalogue has no
    key English lacks, and that every placeholder of the English entry is
    in the translation.
-5. Run the window in the language, with **System language** chosen in
+5. Run the UI in the language, with **System language** chosen in
    Options, and go through each window at its smallest size: Options, the layout editor, the plugin windows and the
    dialogs. A longer caption should wrap, not clip.
 
@@ -104,7 +104,7 @@ so a change of meaning gets a new key.
 6. Open a pull request with the one language. Say which windows you
    looked at, and whether a second speaker has read it.
 
-## What the window does when an entry is missing
+## What the UI does when an entry is missing
 
 An entry missing from a translation reads from the English catalogue. A
 key missing from English shows as the key itself, so the mistake is
@@ -112,7 +112,7 @@ visible rather than a crash; the tests catch it before a release.
 
 ## How the language is chosen
 
-The window chooses its language once, when it starts:
+The UI chooses its language once, when it starts:
 
 1. The language picked in Options, APPEARANCE, **Language**, saved as
    `language` in `~/.config/openxlr/ui.json`.
@@ -120,7 +120,7 @@ The window chooses its language once, when it starts:
    language: the `LANGUAGE` list in order, then `LC_ALL`, `LC_MESSAGES`
    and `LANG`, as gettext reads them. `LANGUAGE` is ignored when the
    locale is `C` or `POSIX`, or when none of the three is set.
-3. A regional tag the window does not ship reads its base language, so
+3. A regional tag the UI does not ship reads its base language, so
    `de_AT.UTF-8` gets `de`. Chinese is matched by script: `zh_TW`,
    `zh_HK` and `zh_MO` mean Traditional (`zh-Hant`), other regions mean
    Simplified (`zh-Hans`), and the old .NET names `zh-CHT` and `zh-CHS`
@@ -129,8 +129,8 @@ The window chooses its language once, when it starts:
    ignored; an invalid entry in `LANGUAGE` does not stop later entries
    from being tried.
 
-A change in Options applies the next time the window starts. Only the
-catalogue changes: numbers, dates and the values the window sends to the
+A change in Options applies the next time the UI starts. Only the
+catalogue changes: numbers, dates and the values the UI sends to the
 daemon keep the format they had.
 The picker shows the resolved language for a saved regional tag without
 rewriting it. The system choice continues to follow the desktop.
@@ -138,8 +138,8 @@ rewriting it. The system choice continues to follow the desktop.
 ## Scripts and layout
 
 Text aligns by its own script: a right-to-left caption, or a channel named
-in Arabic or Hebrew, starts at the right edge. The window's layout stays
+in Arabic or Hebrew, starts at the right edge. The UI's layout stays
 left to right, since channel order and the left and right of audio do not
-change with the language. The window draws with the Inter font and takes
+change with the language. The UI draws with the Inter font and takes
 other scripts from the desktop's fonts, so a language in another script
 needs a font for it installed, such as Noto.

@@ -20,7 +20,7 @@ clients alone). Nothing is sent before it;
 anything else as a first message, or nothing within 5 s, closes the
 socket with code 1008 and the reason `unauthorized` or `authentication
 timeout`. Another local user cannot read the file, so the loopback
-port alone does not hand them the mixer. The window and the OpenDeck
+port alone does not hand them the mixer. The UI and the OpenDeck
 plugin read the file themselves; a script does the same:
 
 ```sh
@@ -46,7 +46,7 @@ characters, more than 4096 ports, or one that would push the message
 past 7 MiB is left out of `plugins` altogether, and at most 512
 controls, 256 scale points and 64 required features are read per plugin;
 a plugin that is listed with `supported: false` is a different case, one
-the chain host cannot run. The window and terminal accept only text messages
+the chain host cannot run. The UI and terminal accept only text messages
 up to 8 MiB, including all fragments. They reconnect when a binary or
 oversized message arrives. The terminal ignores malformed message envelopes
 without stopping its receive loop. The native host's own protocol is bounded the
@@ -67,7 +67,7 @@ may miss transient `meters` frames. If a state update, rule notification or
 command reply cannot be queued, the daemon disconnects that client so it
 cannot silently retain stale state. Reconnect and authenticate again to
 receive a fresh snapshot; reload any cached plugin catalogue and editor rules.
-The window, terminal mixer and OpenDeck plugin reconnect automatically.
+The UI, terminal mixer and OpenDeck plugin reconnect automatically.
 
 Messages from the daemon, each a JSON object with a `type` field:
 
@@ -880,7 +880,7 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
   `{"version":1,"overrides":[{"kind":"vst3","plugin":"<class-id>","name":"Plugin name","blocked":true}]}`.
   Release defaults are not copied into this file. Remove an override through
   `setNativeEditorRule` with null `blocked` to follow release defaults again.
-- `ui.json`: window preferences (tray, start minimized, autostart
+- `ui.json`: UI preferences (tray, start minimized, autostart
   toggles, the chosen skin, collapsed sections and `sectionOrder`, the
   order of the five sections, and the submixer view: `mixerView`
   (`compact`, `mini`, or absent for the full mixer), `compactChannel`
@@ -888,9 +888,9 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
   hidden draws hidden channels and mixes faded)
 - `wave-interfaces.json`: the additional interfaces the user enabled, at
   most four instance ids. Written by the daemon.
-- `desktop-keys.json`: the window's desktop key settings. Written by the
+- `desktop-keys.json`: the UI's desktop key settings. Written by the
   UI only.
-- `effect-chain-presets.json`: the window's saved effect presets, 0600.
+- `effect-chain-presets.json`: the UI's saved effect presets, 0600.
   Written by the UI only; the daemon never reads it. Format in
   [effect-presets.md](effect-presets.md).
 
@@ -1087,7 +1087,7 @@ An invalid channel or action is refused with "soundCheck: need a microphone
 channel and action 'record', 'loop', 'live' or 'stop'". A missing capture
 source refuses `record` with "The microphone is not connected.", the channel's
 name and its `bindingWarning`. A source missing the selected port refuses
-with "The microphone's capture port is unavailable." An older window has
+with "The microphone's capture port is unavailable." An older UI has
 only its XLR Sound Check views and does not show a capture session.
 
 ### Microphone EQ

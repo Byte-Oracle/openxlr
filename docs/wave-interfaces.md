@@ -2,7 +2,7 @@
 
 OpenXLR drives one primary interface: the one in the header picker, whose
 microphone feeds XLR 1 and the other hardware strips and whose controls fill
-the main window. Up to four more attached units can be driven next to it as
+the UI. Up to four more attached units can be driven next to it as
 additional interfaces. Each gets its own hardware controls and feeds its own
 capture channel. Two pairings have run on hardware, a Wave XLR Pro beside an
 XLR Dock and beside a Wave:3; the rest rests on simulated units, see
@@ -65,7 +65,7 @@ OpenXLR looks for, in order:
 A name that matches the nodes of two cards is two units that cannot be told
 apart, and the strips stay silent rather than take either microphone. With
 more than one interface attached and none driven, the strips also stay
-silent. In both cases the warning under the window's header says why.
+silent. In both cases the warning under the UI's header says why.
 
 The daemon switches a Wave XLR Pro's card to its pro-audio profile and lists
 its Headphones 1, Headphones 2 and Line Out outputs. It finds that card and
@@ -94,14 +94,14 @@ every unit enabled before that is not attached now. The button shows once
 more than one unit is attached or one is enabled. Tick **Drive as an
 additional interface** to enable a unit. The choice is kept in
 `~/.config/openxlr/wave-interfaces.json`. If that file cannot be written, the
-choice holds until the daemon restarts and the warning under the window's
+choice holds until the daemon restarts and the warning under the UI's
 header says so. If it cannot be read, no additional unit is driven until the
 next change writes it again.
 
 An additional unit gets its own device manager, with the primary's USB
 isolation, reconnect backoff, gain lock, phantom power settling and last
 settings, stored under its instance id in `~/.config/openxlr/devices/`. The
-window shows gain, mute, low cut, ClipGuard and phantom power for each input
+UI shows gain, mute, low cut, ClipGuard and phantom power for each input
 the model has; the API reaches every control the model exposes. The software
 low cut and ClipGuard stay on the primary's XLR 1 and the XLR inserts on its
 XLR channels; an additional unit's capture channel has an insert chain of its
@@ -115,7 +115,7 @@ Pick one of them as the primary instead.
 Choosing a unit as the primary in the picker stops its additional manager
 before the primary opens it, so a unit is never driven twice. A command for that unit
 then reaches the primary. Disabling an additional unit releases its USB
-handle. With capture inputs, the window asks whether to keep them and their
+handle. With capture inputs, the UI asks whether to keep them and their
 insert chains, defaulting to deletion. Kept channels retain their sends,
 binding and chains and play while their source is available; their hardware
 controls disappear. Deletion uses the saved `captureUnit`, even while the

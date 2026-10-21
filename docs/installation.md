@@ -104,7 +104,7 @@ only unchanged owned files, restoring a recorded original where applicable.
 It does not delete directories or infer ownership from a filename. Existing
 directories at startup-file paths are rejected before recording a write.
 
-On upgrade, startup files identical to the window's generated templates or
+On upgrade, startup files identical to the UI's generated templates or
 the source guide's reference unit are adopted before removal. The templates
 of every release since v0.1.0 are recognized: the launch path is read from
 the file's own `Exec` or `ExecStart` line and the file must equal that
@@ -120,7 +120,7 @@ require inspection, and a refused startup change leaves every file as it
 was. If restoration leaves an original user unit shadowing the packaged
 one, enabling is refused and its owned enable link is removed, so the
 original is not silently started at the next login. A restored foreign
-desktop entry may still start the window, so Options reports that startup
+desktop entry may still start the UI, so Options reports that startup
 could not be disabled.
 
 ```sh

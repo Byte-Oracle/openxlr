@@ -52,18 +52,18 @@ ignored. Existing monitor-feed settings and profile semantics are unchanged.
 
 This file owns the channels and mixes: which exist, their names, their
 order, their routing and their per-item appearance. It says nothing about
-how the desktop window arranges its sections. Where the window's header
+how the desktop UI arranges its sections. Where the UI's header
 and five sections go, whether a section starts folded or hidden, and the
 order of the header's actions come from the skin's optional `layout`
 ([skins.md](skins.md#layout)), and the moves a user makes with Arrange,
-including the hidden sections they show again, are window preferences in
+including the hidden sections they show again, are UI preferences in
 `ui.json`.
 Choosing a skin never sends a layout command, and a channel or mix order
 set here never moves a section. Under a skin that draws the submixer as
-mix banks, the mix each bank shows is a window preference in `ui.json`
+mix banks, the mix each bank shows is a UI preference in `ui.json`
 too. Picking one never changes the order kept here, and the banks list
-the channels in that order. Whether the submixer sits in the main window
-or its own is a window preference in `ui.json` as well, and so is the
+the channels in that order. Whether the submixer sits in the UI
+or in a window of its own is a UI preference in `ui.json` as well, and so is the
 record of which skins' pop-out defaults have applied; neither is part of
 this file or of a profile.
 
@@ -137,12 +137,12 @@ writes `inputBindings` only. `setInputBinding` changes the field live; see
 
 The daemon checks a name's shape only, so a layout may keep the name of an
 icon only one skin draws. A client that cannot draw a name draws the
-default instead: the window when it wears another skin, the terminal mixer
+default instead: the UI when it wears another skin, the terminal mixer
 and the Stream Deck plugin always, unless the name is in the built-in set.
 The terminal mixer draws each built-in icon as one text character.
 
 `colour` is `#RRGGBB`; absent or null keeps the skin's colours. `hidden`
-leaves a channel's strip out of the window's and the terminal mixer's full
+leaves a channel's strip out of the UI's and the terminal mixer's full
 mixer; the channel keeps its sends, meter, applications and audio, and
 stays in the layout editor, the application pickers and the Stream Deck
 targets.
@@ -150,7 +150,7 @@ targets.
 A mix takes `hidden` under the same rule, Monitor A, Monitor B, Stream,
 Chat and Aux included. A hidden mix keeps its audio, its outputs and
 monitor feeds, its sends, volume, mute and plugin chain; only its master
-and its column leave the full mixer. The window's classic strips drop its
+and its column leave the full mixer. The UI's classic strips drop its
 master tile and the send rows into it. Mix banks leave it out of their
 pickers. A mix matrix drops its column head and the cell under it in
 every row, so the other columns stay lined up. The compact view draws
@@ -162,12 +162,12 @@ Stream Deck targets. With every mix hidden the full mixer draws the
 channels with no sends and the matrix has row heads and no columns. The
 MONITOR and HEADPHONES cards are not mixes and never hide.
 
-The window's **Show hidden**, in the SUBMIXER header, draws hidden
+The UI's **Show hidden**, in the SUBMIXER header, draws hidden
 channels and mixes in their places, faded to `Ox.Mixer.HiddenOpacity`
-and fully usable. It is a window preference in `ui.json`
+and fully usable. It is a UI preference in `ui.json`
 (`showHiddenItems`); the layout and the profiles do not change.
 The two headphone outputs are hardware, not channels: they take an icon
-and a colour, drawn before their labels in the window's HEADPHONES card,
+and a colour, drawn before their labels in the UI's HEADPHONES card,
 default to `headset` and are never hidden.
 A key of more than 44 characters or a value outside these rules is
 dropped and logged; an entry for an id the layout does not hold is dropped
@@ -213,7 +213,7 @@ time the selection is written.
 
 ## Editing while running
 
-The window's Edit layout button, and the commands below over the API,
+The UI's Edit layout button, and the commands below over the API,
 edit the running graph. Adding or reordering preserves existing routes;
 renaming an application channel can cause a short gap on that channel,
 and deleting a virtual microphone disconnects its recorders. A command
@@ -256,7 +256,7 @@ debounced, retried behaviour.
 - `renameMix {mix, name}` changes the name of a user mix in OpenXLR only.
   Reloading its sink or capture device would drop every app using it onto
   another device, so the PipeWire description keeps the old name until the
-  daemon restarts; the state carries `renamedSinceStart` and the window
+  daemon restarts; the state carries `renamedSinceStart` and the UI
   shows a restart hint.
 - `deleteMix {mix}` removes a user mix with its sends and inserts, and a
   virtual microphone's capture device with it; anything recording from that
@@ -275,7 +275,7 @@ debounced, retried behaviour.
   once; hardware inputs, Monitor A/B and Aux keep their positions. No node
   changes. Open windows apply the published order to channel tiles, mix
   controls and send rows while retaining the existing controls and their
-  values. The layout editor's arrows, a tile dragged in the window's
+  values. The layout editor's arrows, a tile dragged in the UI's
   Arrange mode and Ctrl+Left/Right in the terminal mixer all send this
   command with both complete lists; a drag places the item before or
   after the tile it was dropped on.

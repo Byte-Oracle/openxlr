@@ -1,31 +1,31 @@
 # Skins
 
-A skin changes how the OpenXLR window looks. It is a folder with a
+A skin changes how the OpenXLR UI looks. It is a folder with a
 `skin.json` in it and, optionally, a few images beside it. It sets named
 appearance values and, if it wants, where the header and the
-window's sections go ([Layout](#layout)); it carries no markup, no script and
+UI's sections go ([Layout](#layout)); it carries no markup, no script and
 no code, and it cannot reach a file outside its own folder.
 
 OpenXLR ships sixteen appearances, all compiled into the application, so
 every package has them and there is nothing to install:
 
 - **Material**, the classic appearance, in a dark and a light palette (see
-  [Material's mode](#materials-mode)). The dark palette is what the window
+  [Material's mode](#materials-mode)). The dark palette is what the UI
   looked like before Broadcast became the default, and it is what every
   unset value falls back to.
-- **Deck**, which dresses the window in the visual language of the
+- **Deck**, which dresses the UI in the visual language of the
   OpenDeck keys and the Wave interfaces: near-black faceplates, black keys
   whose lettering is backlit green when a control is on and red when
   something is muted, bypassed or destructive, console faders with a
   machined cap, indicator lamps in a bezel, and meters that run green to
   amber to red across the scale.
 - Eleven built from the [Omarchy](https://omarchy.org) palettes, so the
-  window matches the rest of a themed desktop: Catppuccin, Catppuccin
+  UI matches the rest of a themed desktop: Catppuccin, Catppuccin
   Latte, Everforest, Gruvbox, Kanagawa, Matte Black, Nord, Osaka Jade,
   Ristretto, Rose Pine and Tokyo Night. Rose Pine and Catppuccin Latte
   are the light ones.
 - **Broadcast**, the default, a dark layout skin: the submixer as
-  a mix matrix across the window, a row per channel and a column per mix,
+  a mix matrix across the UI, a row per channel and a column per mix,
   with each channel's send into each mix where its row crosses the mix's
   column. HEADPHONES and MONITOR's toolbar share the row above it, INPUTS
   is hidden because the matrix's row heads carry the input gain, mute,
@@ -45,12 +45,12 @@ every package has them and there is nothing to install:
 
 Pick one in Options under APPEARANCE. A new install starts on Broadcast,
 and so does an install whose user never picked a skin, so upgrading from a
-version that started on Material moves that window to Broadcast. A skin you
+version that started on Material moves the UI to Broadcast. A skin you
 picked stays picked, Material included. To go back to Material, choose
 **Material** under APPEARANCE in Options; `ui.json` then holds
 `"skin": "default"`. Nothing is written until you choose, and a missing or
 empty `"skin"` always means Broadcast. If Broadcast itself cannot be read,
-because a copy of it in your skin folder is broken, the window starts on
+because a copy of it in your skin folder is broken, the UI starts on
 Material instead.
 
 The terminal mixer reads the same
@@ -59,11 +59,11 @@ picked in one is the appearance in the other. A terminal has no gradients,
 images or corner radii, so it takes a gradient at its first stop. It also
 reads `controls`: console faders get a three-cell cap, cap keys get
 brackets and lamp LEDs get a square face rather than a round one. The pixel sizes and segment counts
-remain the window's; the terminal sizes these drawings to its cells. A
+remain the UI's; the terminal sizes these drawings to its cells. A
 meter is a solid bar in eighth blocks whichever appearance is named, and
 its colour blends from `Ox.Meter.Fill` through `Ox.Meter.Warning` to
 `Ox.Meter.Hot` along the scale, anchored at the warning and hot levels.
-The terminal requires `schema: 1`, as do the window and Deck. A missing,
+The terminal requires `schema: 1`, as do the UI and Deck. A missing,
 invalid or newer schema leaves the whole terminal palette at its defaults.
 Within a supported document, malformed terminal palette fields keep their
 default while valid fields still apply. Names use the same bounded,
@@ -83,18 +83,18 @@ If the terminal cannot read `ui.json`, it uses the default appearance.
 A malformed document, including duplicate keys or a value other than a
 JSON object, is left untouched when saving a terminal skin choice. Repair
 the file before saving a new choice; settings unrelated to the skin are
-preserved in a valid object. The window does the same. It wears the chosen
+preserved in a valid object. The UI does the same. It wears the chosen
 skin for that run, leaves a `ui.json` it cannot read untouched, and says on
 the line at the bottom of Options why the choice was not saved.
 
-If a skin ever makes something unreadable, start the window once with
+If a skin ever makes something unreadable, start the UI once with
 
 ```sh
 OPENXLR_SKIN=default openxlr
 ```
 
 which ignores the saved choice for that run and leaves it saved, so you
-can pick another one from Options. With `default` the window wears dark
+can pick another one from Options. With `default` the UI wears dark
 Material whatever the saved mode says. Options says when a run was started
 that way, and choosing a skin there ends the override for the rest of the
 run. Any id works there, not only `default`, which is the quickest
@@ -110,8 +110,8 @@ reports it, and repaints the open windows when the desktop switches. A
 desktop that states no preference, or no portal at all, gets the dark
 palette.
 
-On a desktop that prefers light, a window on Material with no saved mode
-therefore opens in the light palette. A window wearing any other skin looks
+On a desktop that prefers light, the UI on Material with no saved mode
+therefore opens in the light palette. On any other skin the UI looks
 as it did. Deck, Broadcast, the Omarchy palettes and installed skins are one set of
 values each and keep them in every mode, and the Mode picker is greyed out
 while one of them is chosen. The mode is kept for when Material is chosen
@@ -145,27 +145,27 @@ palettes travel with the plugin; regenerate `skin-palettes.json` with
 `python3 tools/deck-skins.py` after changing embedded skins or colour defaults.
 CI checks the generated table and tests its defaults against `SkinTokens`.
 
-The window publishes its realised palette to the private
+The UI publishes its realised palette to the private
 `~/.config/openxlr/deck-palette.json` when it applies a skin. This also carries
 the effective light or dark colours without a second desktop-theme connection
-in the plugin. The file is an atomic, schema-1 object containing `skin`, the window process `pid` and
+in the plugin. The file is an atomic, schema-1 object containing `skin`, the UI process `pid` and
 `tokens`, with only the twelve colour and meter values the keys need. It does
 not change `ui.json` or audio profiles. A write failure appears in the skin's
 errors and leaves the plugin's file-based fallback available.
 
-Without a matching palette from a running window, the plugin reads the saved `skin` from
+Without a matching palette from a running UI, the plugin reads the saved `skin` from
 `ui.json` and the selected package from the usual XDG skin roots, user first,
 then system, then the embedded palette. No saved skin is Broadcast, as in the
-window. Unknown ids and invalid documents fall back to Material. `OPENXLR_SKIN` in the plugin's own environment overrides the
+UI. Unknown ids and invalid documents fall back to Material. `OPENXLR_SKIN` in the plugin's own environment overrides the
 saved choice and the published palette for that run. Empty variables are unset.
 File events follow atomic saves and newly created or removed skin folders;
 unchanged colours cause no redraw. Meter updates perform no filesystem work.
 
 The Deck preserves its owned glyphs and key geometry. Gradients on surfaces
-use their first stop; images and control templates stay in the window. Hex
+use their first stop; images and control templates stay in the UI. Hex
 RGB and alpha-first ARGB colours are accepted, as are black, white,
 transparent, red, green, blue, yellow, gray and grey. Other named colours use
-the token default unless the window publishes their resolved colour. Only
+the token default unless the UI publishes their resolved colour. Only
 entries declared in the named-colour table qualify; inherited JavaScript
 properties such as `constructor` or `__proto__` are not colours, including
 when used as gradient stops. Meter
@@ -196,7 +196,7 @@ Anything OpenXLR could not use is listed under the picker, with the token
 name and the reason.
 
 Edit, press Reload, look. Reload rereads the folders, so a skin you have
-just edited, added or removed is picked up without restarting the window.
+just edited, added or removed is picked up without restarting the UI.
 
 ### Start from a working skin
 
@@ -301,7 +301,7 @@ name.
 | `author` | no | shown under the picker as "By ..." |
 | `controls` | no | one of OpenXLR's own appearances per control, see [Controls](#controls) |
 | `tokens` | yes | the appearance values, see [The tokens](#the-tokens) |
-| `layout` | no | where the header and the window's sections go, see [Layout](#layout) |
+| `layout` | no | where the header and the UI's sections go, see [Layout](#layout) |
 | `icons` | no | the skin's own channel and mix icons as path data, see [Icons](#icons) |
 
 `name`, `description` and `author` are cut at 400 characters, and control
@@ -335,7 +335,7 @@ value of the wrong type, a number outside its bounds, an unreadable or
 oversized image, an icon whose path is not plain path data: each of those
 costs you that one value and nothing else.
 Every token the file does not mention keeps the default. A partial skin is
-an overlay, not a half-painted window, which is also what makes a skin
+an overlay, not a half-painted UI, which is also what makes a skin
 written for a later OpenXLR usable here as far as this version
 understands it.
 
@@ -347,7 +347,7 @@ Unknown fields at the top level of the file are ignored without comment,
 which is what lets `$schema` sit there. Unknown names inside `tokens` and
 `controls` are reported, since those are almost always a typo.
 
-The complaints appear in Options under the picker. The mixer window never
+The complaints appear in Options under the picker. The rest of the UI never
 shows them.
 
 ## Controls
@@ -374,7 +374,7 @@ draws, and then tint and size it with the tokens further down.
 | `led` | `flat` (default), `lamp` | `flat` is a filled dot. `lamp` puts the dot in a bezel ring and gives it a halo while it is lit |
 | `mute` | `flat` (default), `cap` | `flat` is the framework's button. `cap` is the same raised key the `button` slot draws, so the mute matches the controls around it |
 
-A control a skin does not mention keeps the appearance the window has
+A control a skin does not mention keeps the appearance the UI has
 always had. The `button` slot covers the plain button, the toggle and the
 dropdown button together on purpose: a skin picks a key face, and every
 key wears it.
@@ -460,7 +460,7 @@ names the toolkit knows, in any case, or a number from 1 to 1000.
 
 ## The tokens
 
-Every value the window has is below. The **default** column is Material's
+Every value the UI has is below. The **default** column is Material's
 dark palette, which is what a value a skin leaves out falls back to: a `#rrggbb` or `#aarrggbb` colour, a
 number, or `framework`, which means OpenXLR sets nothing there and the
 toolkit's own value stays. **Range** is the bounds a number, a radius or a
@@ -510,7 +510,7 @@ without a row here fails the build.
 | `Ox.Link.ForegroundPointerOver` | brush | #8cc4ff |  | a link under the pointer |
 
 A colour given to one channel or mix in the layout editor paints that
-item's name and icon in place of `Ox.Text.Primary`, in the window, the
+item's name and icon in place of `Ox.Text.Primary`, in the UI, the
 terminal mixer and on Stream Deck keys, whatever the skin. It is part of
 the mixer layout, not of a skin
 ([Saved mixer layout](mixer-layout.md#appearance)).
@@ -521,7 +521,7 @@ the mixer layout, not of a skin
 |---|---|---|---|---|
 | `Ox.Label.FontSize` | number | 12 | 8 to 24 | section headings and labels |
 | `Ox.Label.FontWeight` | weight | SemiBold |  | those same headings and labels |
-| `Ox.Title.FontSize` | number | 20 | 10 to 40 | the window's own title line |
+| `Ox.Title.FontSize` | number | 20 | 10 to 40 | the UI's own title line |
 | `Ox.Title.FontWeight` | weight | Bold |  | that title line |
 | `Ox.Strip.FontWeight` | weight | SemiBold |  | the name over a channel strip or a mix |
 | `Ox.Value.FontFamily` | family | monospace |  | the numeric readouts |
@@ -529,7 +529,7 @@ the mixer layout, not of a skin
 
 ### Indicators
 
-These six reach the window through code as well as through markup, so they
+These six reach the UI through code as well as through markup, so they
 must be flat colours. A gradient or an image in one of them is refused
 with a message saying why.
 
@@ -826,7 +826,7 @@ small file that claims to be enormous is refused rather than unpacked. An
 image that breaks one of these rules is reported in Options and that one
 token keeps its default.
 
-Images are paintable wherever a brush is: a faceplate behind the window, a
+Images are paintable wherever a brush is: a faceplate behind the UI, a
 texture on a card, a metal face on a key. They are not available to a
 token of kind colour.
 
@@ -873,14 +873,14 @@ The rules an `icons` object is held to:
 
 A bad entry is reported in Options and that one icon is dropped; an item
 that names it wears the built-in icon of that name, or its default. Skin
-icons reach only the window. The terminal mixer and the Stream Deck
+icons reach only the UI. The terminal mixer and the Stream Deck
 plugin draw the built-in icon of the same name if there is one, and the
 item's default otherwise, so a layout that names a skin's icon still reads
 on every client.
 
 ## Layout
 
-A skin can also say where the main window's parts go: the header and the
+A skin can also say where the UI's parts go: the header and the
 five sections, placed in a tree of stacks, grids and docks, with a few
 options for each of them. That is the optional `layout` object, beside
 `tokens` and `controls`. It moves what the application builds; it never
@@ -898,7 +898,7 @@ under them.
 Then come INPUTS, `"hidden"` since the matrix's row heads carry the input
 gain, mute, microphone switches and plugins, and the applications as `"application-columns"`
 of 6, each across the whole width. Nothing starts folded. The tree leaves the
-header out, so the header stays across the top of the window, with every
+header out, so the header stays across the top of the UI, with every
 action in its row and none in the overflow menu. Showing INPUTS from
 Arrange mode puts it under the matrix. HEADPHONES beside the toolbar asks
 for about 1000 pixels, so a narrower window scrolls the tree sideways, as
@@ -1003,7 +1003,7 @@ rest of the skin unreadable to an older OpenXLR.
 | Field | Required | What it is |
 |---|---|---|
 | `version` | yes | the layout format this block is written for, `1` |
-| `main` | no | the window's tree: a stack, a grid or a dock. Without it the sections keep the classic arrangement |
+| `main` | no | the UI's tree: a stack, a grid or a dock. Without it the sections keep the classic arrangement |
 | `regions` | no | options for the header and the sections, by region id |
 
 ### The tree
@@ -1022,7 +1022,7 @@ A stack puts its children one after another:
 
 | Field | Required | What it is |
 |---|---|---|
-| `orientation` | yes | `"vertical"` puts them one above the other, the classic window. `"horizontal"` puts them side by side in one row |
+| `orientation` | yes | `"vertical"` puts them one above the other, the classic arrangement. `"horizontal"` puts them side by side in one row |
 
 A grid puts its children in cells:
 
@@ -1057,7 +1057,7 @@ A child that is not a container is a region:
 | Field | Required | What it is |
 |---|---|---|
 | `kind` | yes | `"region"` |
-| `region` | yes | which part of the window goes here, by the ids below |
+| `region` | yes | which part of the UI goes here, by the ids below |
 
 | Region | What it is |
 |---|---|
@@ -1070,8 +1070,8 @@ A child that is not a container is a region:
 
 `main` places each of the five sections exactly once, and the header at
 most once. A tree that leaves the header out sits under it. The header
-stays at the top of the window, as wide as the window, and the tree goes
-below it, as in the classic window. A stack of the five sections without
+stays at the top of the UI, across its whole width, and the tree goes
+below it, as in the classic arrangement. A stack of the five sections without
 the header therefore looks the way it always has. A tree that places the
 header puts it where it says.
 
@@ -1081,12 +1081,12 @@ rows and 8 columns. Options in the header is always shown, so the way back
 is always reachable wherever the header goes. The notes the application
 shows, such as an update or a daemon left running across an upgrade, stay
 above the tree: under the header when the tree leaves it out, at the top
-of the window when the tree places it.
+of the UI when the tree places it.
 
-A section the window sets aside, such as INPUTS, HEADPHONES and
+A section the UI sets aside, such as INPUTS, HEADPHONES and
 APPLICATIONS in the mini view, or MONITOR without the software mixer,
 stays hidden wherever the skin puts it. A skin can hide a section; it can
-never bring back one the window hides.
+never bring back one the UI hides.
 
 ### Sizes
 
@@ -1118,7 +1118,7 @@ id, with only the options that region has:
 
 | Option | Region | What it is |
 |---|---|---|
-| `visibility` | the five sections | `"visible"`, the default. `"collapsed"` folds the section the first time the window wears the skin, and after that the section stays as you leave it. `"hidden"` leaves it out of the window and out of the tab order until you show it from Arrange mode |
+| `visibility` | the five sections | `"visible"`, the default. `"collapsed"` folds the section the first time the UI wears the skin, and after that the section stays as you leave it. `"hidden"` leaves it out of the UI and out of the tab order until you show it from Arrange mode |
 | `width` | the five sections | a preferred width in pixels, from 120 to 4000 |
 | `height` | the five sections | a preferred height in pixels, from 120 to 4000 |
 | `actions` | `header` | header action ids in the order the header shows them |
@@ -1600,7 +1600,7 @@ to main window** brings it back. A skin's `popOut` says where the submixer
 starts out under that skin, and it is a default only. Where the submixer
 goes is decided in this order:
 
-1. The window's own reasons. With no mixer there is nothing to pop out, and
+1. The UI's own reasons. With no mixer there is nothing to pop out, and
    a skin never brings back what the view sets aside.
 2. Your choice. Pressing Pop out, or closing the mixer's window, is kept in
    `ui.json` as `mixerDocked`, `false` after popping it out and `true` after
@@ -1608,8 +1608,8 @@ goes is decided in this order:
 3. The skin's `popOut`. With `"detached"`, and no choice of yours, putting
    the skin on opens the mixer's window once. That is recorded in `ui.json`
    under `skinPopOutsApplied`, one entry for each skin and layout version,
-   so it does not open again. Put on while the main window is hidden in the
-   tray, it waits until the window shows.
+   so it does not open again. Put on while the UI is hidden in the
+   tray, it waits until the UI shows.
 4. Docked, as the mixer has always started.
 
 Reading the skin again with **Reload**, or changing colours or Touch
@@ -1628,11 +1628,11 @@ screen; a template that needs less leaves the width as you set it.
 ### Switching skins
 
 Putting on a skin that only changes colours or control appearances
-repaints the window and does nothing else. Putting on one whose layout
+repaints the UI and does nothing else. Putting on one whose layout
 differs moves the regions and changes templates, and keeps to these rules:
 
 - A drag in progress ends first: an Arrange drag, the swap menu, and a
-  fader held down in the main window or in the mixer's window. The fader
+  fader held down in the UI or in the mixer's own window. The fader
   keeps the value it had reached and sends nothing more until it is
   pressed again.
 - The submixer changes template in whichever window holds it.
@@ -1648,8 +1648,8 @@ differs moves the regions and changes templates, and keeps to these rules:
 - Every channel, mix and send is the same object before and after. No
   level, mute, routing or layout order is sent to the daemon, and a plugin
   window stays open under the window that opened it. When the mixer's
-  window closes, the plugin windows opened from it open again under the
-  main window.
+  window closes, the plugin windows opened from it move back to the
+  UI.
 
 #### A complete example with a toolbar, a list and its own window
 
@@ -1756,12 +1756,12 @@ A layout is taken whole or not at all. Any of these drops the whole
 
 The complaint names where in the file the fault is, for example
 `layout.main.children[2].region`, and appears in Options under the picker
-with the others. The skin's tokens and controls still apply; the window
+with the others. The skin's tokens and controls still apply; the UI
 wears its colours in the classic arrangement.
 
 Anything that reads skins only for their colours ignores `layout`: the
 terminal mixer, the Omarchy bar plugin and the Stream Deck plugin. An older
-OpenXLR window ignores it as well, since it skips top-level fields it does
+OpenXLR UI ignores it as well, since it skips top-level fields it does
 not know, and wears the skin in the classic arrangement.
 
 ### Your own arrangement
@@ -1797,7 +1797,7 @@ on the skin:
 The tree, the gaps and the sizes always come from the skin. If a skin
 update changes its tree so that your entry names a place or a section the
 tree no longer has, the whole entry is dropped rather than half applied,
-the window says so once in the note under the header, and the skin's own
+the UI says so once in the note under the header, and the skin's own
 arrangement is used. OpenXLR never rewrites a skin. Collapsed sections stay
 collapsed whichever skin is worn, as before; a skin's `"collapsed"` only
 sets where a section starts the first time, recorded in `ui.json` under
@@ -1826,7 +1826,7 @@ sets where a section starts the first time, recorded in `ui.json` under
   skin.
 - It cannot change the OpenDeck plugin's key art. The plugin draws its own
   images on the device; the Deck skin borrows that visual language for the
-  window, not the other way round.
+  UI, not the other way round.
 - It cannot hold a light and a dark version of itself, or follow the
   desktop's preference. A skin is one set of values. Only Material has a
   light and a dark palette, chosen by its mode. The toolkit values a skin
@@ -1848,7 +1848,7 @@ you intend to share is worth checking against the same ones by eye:
 - a control is never made harder to hit than the shipped appearance makes
   it. Sizes are bounded, but a fader cap of 4 pixels or a 2 pixel meter is
   within the bounds and still a bad idea;
-- the names a screen reader reads come from the window, not from the skin,
+- the names a screen reader reads come from the UI, not from the skin,
   and a focused control still shows its focus adorner. Nothing a skin can
   set changes either, but a face with no contrast against the focus ring
   hides it in practice.
@@ -1876,13 +1876,13 @@ their own copy of the same id shadows it.
 
 To stop using a skin, pick another one in Options. To remove it, delete
 its folder and press Reload. A folder that is gone while its skin is the
-chosen one leaves the window on Material, and `ui.json` keeps the name
+chosen one leaves the UI on Material, and `ui.json` keeps the name
 until you choose something else, so putting the folder back brings it
 straight back.
 
 To return to the classic look, choose Material and System in Options. To
-reset the appearance completely, close the window and delete the `"skin"`
-and `"appearanceMode"` lines from `~/.config/openxlr/ui.json`; the window
+reset the appearance completely, close the UI and delete the `"skin"`
+and `"appearanceMode"` lines from `~/.config/openxlr/ui.json`; the UI
 then starts on Broadcast, the default. Those lines are
 the whole of the appearance's presence on your machine, and nothing about
 the mixer, the daemon or your audio devices is kept in that file at all, so
@@ -1890,8 +1890,8 @@ neither route can disturb what is playing.
 
 ## Adding a token
 
-For the record, since the format is only as complete as the window: a
-value the window hard-codes cannot be skinned. If something you want to
+For the record, since the format is only as complete as the UI: a
+value the UI hard-codes cannot be skinned. If something you want to
 change has no token here, that is a missing token rather than a limit of
 the format, and it is a small change to the source. See
 [AGENTS.md](../AGENTS.md) and open an issue or a pull request.
