@@ -5,8 +5,9 @@ resolved the input and output-selector controls described here; use
 [wave-xlr-pro-protocol.md, section 6](wave-xlr-pro-protocol.md#6-capture-2-xlrpro2pcapng-2026-08-25-with-ordered-action-log-outputs-mic-dsp-usb-aux)
 for current offsets. The steps below are retained as the methodology for
 capturing another device, not as the current protocol specification.
-Hardware EQ and the remaining mix matrix still need separate captures;
-see [hardware support](hardware-support.md) and the [roadmap](roadmap.md#devices).
+The hardware EQ was captured on 2026-10-21 (section 10 of the protocol
+notes); the remaining mix matrix still needs separate captures; see
+[hardware support](hardware-support.md) and the [roadmap](roadmap.md#devices).
 
 Goal: capture every USB control transfer Wave Link sends to the Wave XLR Pro so its vendor
 protocol can be reimplemented in a Linux backend. The device has

@@ -9,7 +9,7 @@ brand works in the mixer without hardware controls; see
 
 | Device | USB id | Status |
 |---|---|---|
-| Wave XLR Pro | `0fd9:00b4` | exposed controls verified on hardware |
+| Wave XLR Pro | `0fd9:00b4` | exposed controls verified on hardware, except the microphone EQ on the unit: captured from Wave Link, not yet heard on Linux |
 | XLR Dock | `0fd9:00a6` | exposed controls verified on hardware |
 | Wave XLR | `0fd9:007d` | core controls verified on hardware by community testers on two units (0.1.13) |
 | Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester |
@@ -47,17 +47,41 @@ the commit block every selector write needs.
 | Physical output routing | verified | HP1, HP2, Line Out, USB Aux; verified by listening on both jacks |
 | USB Aux input level + lock, aux return | verified | return routing latches at stream open; the daemon bounces the stream |
 | Reset to OpenXLR's baseline | verified | the device keeps its settings, so the reset writes a known set (gain 30 dB, everything off, levels at half, crossfade on PC) instead of recorded firmware defaults |
+| Microphone EQ on the unit, firmware 1.0.14 or later | coded | both inputs, captured from Wave Link 3.5 on firmware 1.0.14; the encoder reproduces the captured writes byte for byte. OpenXLR driving it has not been heard on Linux yet, and the Pro's filters have not been measured. On older firmware, or when the version or the EQ fields cannot be read, both inputs' EQ runs in software |
 
-The Pro's onboard EQ, ducking, mix maximizer and channel booster have no
-mapped OpenXLR controls. Elgato describes all four as running on the
-device: a four-band equalizer, ducking that lowers the other mixes while
-you speak and is applied per mix, a maximizer per mix, and a booster
-worth up to 12 dB above the normal ceiling on any input. The MK.2
-models have no ducking. They run a four-band equalizer on the device from
-firmware 1.0.15, switched on by a master enable bit, and OpenXLR's
-microphone EQ runs there on those units, as Wave Link 3.5 does
-([findings](mk2-eq-findings.md), and the MK.2 section below). The full hardware mix matrix is also
-unfinished.
+The [microphone EQ](api.md#where-the-eq-runs) runs on the Pro from
+firmware 1.0.14, the version Wave Link 3.5 ran on in captures 16 to 20 of
+2026-10-21. A newer version is allowed; an older or unreadable one leaves
+the EQ to software. Block 0x0004 holds each input's EQ in the MK.2
+family's layout, XLR 1's in its struct at offset 0 and XLR 2's at 38. The
+switch is bit 0 of byte 2, or byte 40 for XLR 2, beside ClipGuard's
+inverted bit 2. Four five-byte bands follow at 18 to 37, or 56 to 75, each
+holding flags, gain in quarter decibels, frequency in hertz and the Q
+byte. The idle block decoded to Wave Link's saved EQ on both inputs. Wave
+Link switched each input's EQ on by writing that one bit and wrote band
+2's gain and frequency live during a drag. Every write read back on the
+next poll with no 0x0003 commit.
+
+Wave Link sends the commit on its own timing, which looks like a save for
+standalone use, so OpenXLR sends none with an EQ write. Nobody has checked
+yet whether an EQ written without it survives a power cycle; OpenXLR
+writes its own EQ again at every connect anyway. Wave Link left this Pro
+with both inputs' EQ on and band 2 at +12 dB. On connect OpenXLR writes
+each microphone's own EQ over that, or switches it off where the EQ runs
+in software or the strip is bound to another source. The diagnostics
+archive carries block 0x0000 and both inputs' EQ decoded. Still open:
+acceptance by ear on Linux, the curves against the software EQ's, and
+whether the EQ reaches the zero-latency headphone path.
+
+The Pro's ducking, mix maximizer and channel booster have no mapped
+OpenXLR controls. Elgato describes them as running on the device: ducking
+that lowers the other mixes while you speak and is applied per mix, a
+maximizer per mix, and a booster worth up to 12 dB above the normal
+ceiling on any input. The MK.2 models have no ducking. They run a
+four-band equalizer on the device from firmware 1.0.15, switched on by a
+master enable bit, and OpenXLR's microphone EQ runs there on those units,
+as Wave Link 3.5 does ([findings](mk2-eq-findings.md), and the MK.2
+section below). The full hardware mix matrix is also unfinished.
 Elgato's [Pro feature guide](https://www.elgato.com/us/en/explorer/products/wave/wave-xlr-pro-give-your-setup-superpowers/)
 distinguishes those onboard effects from VST processing on the computer.
 OpenXLR exposes Voice Tune and the other DSP controls listed above; its

@@ -55,8 +55,11 @@ The daemon drives it after every other supported device.
 
 The XLR Dock MK.2 and the Wave XLR MK.2 run OpenXLR's
 [microphone EQ](#software-controls) on their own DSP from firmware 1.0.15,
-the way Wave Link 3.5 does ([findings](mk2-eq-findings.md)); every other
-model and older firmware run it in software. The Pro's equalizer, ducking, mix
+and the Wave XLR Pro on each of its two inputs from firmware 1.0.14, the
+way Wave Link 3.5 does ([findings](mk2-eq-findings.md),
+[Pro](hardware-support.md#wave-xlr-pro-0fd900b4)); every other model and
+older firmware run it in software. The Pro's EQ follows Wave Link
+captures; nobody has confirmed it by ear on Linux yet. The Pro's ducking, mix
 maximizer, channel booster and remaining hardware mix matrix are
 unmapped. Wave Link configures those onboard effects on supported systems;
 OpenXLR's LV2, CLAP and VST3 inserts process audio on the Linux host.
@@ -135,13 +138,15 @@ physical gain dial.
   handles take the keyboard and carry names for screen readers. A drag
   sends each band's changes at most every 20 ms, and the editor shows the
   values the daemon keeps. The [control API](api.md#microphone-eq) drives
-  the same EQ. On a Wave XLR MK.2 or XLR Dock MK.2 from firmware 1.0.15
-  the unit's own DSP runs it instead, with the same values and the same
+  the same EQ. On a Wave XLR MK.2 or XLR Dock MK.2 from firmware 1.0.15,
+  and on a Wave XLR Pro from 1.0.14 for each of its inputs, the unit's own
+  DSP runs it instead, with the same values and the same
   curves: each change is one write of the unit's settings block, at most
   ten a second, read back by the next poll. Moving between the unit and
   software switches the leaving one off first, so a voice is never
   equalised twice. The editor shows a Hardware processing badge while the
-  unit runs it, and a note when the unit's firmware is older than 1.0.15.
+  unit runs it, and a note when the unit's firmware is older than the
+  version its model needs.
   A switch in its footer, **On the unit** or **In software**, sets where
   each microphone's EQ runs. The terminal mixer's Inputs tab offers the
   same choice and says what runs each EQ, and `setEqProcessing` sets it
