@@ -335,7 +335,12 @@ without pausing monitoring. Application sinks stay open so their audio can
 still reach recording and streaming mixes. The desktop's mute icon
 can therefore return to its previous state while monitoring stays paused;
 `monitorMuted` is the persistent monitoring status. Monitor mix sinks retain
-the per-mix behaviour above.
+the per-mix behaviour above. After a blanket desktop mute, restoring their
+previous mute choices stays pending until a native read confirms it. Failed
+restorations retry on later sweeps without changing those choices. A
+reconnected physical output keeps its previous mute choice while native and
+registry identities disagree. Identity reads and their fallback mute reads
+back off together when the helper fails.
 
 ### Waiting for the audio server
 
@@ -730,7 +735,10 @@ names them (see above). The Wave XLR Pro's direct microphone path
 follows the same channel: XLR 1 while it takes the interface, or the capture
 channel on the Pro's own node at its first port while XLR 1 is bound
 elsewhere. The daemon turns the path on while every monitor output is a Pro
-jack and that channel is unmuted in the mix feeding them, and mutes that
+jack and at least one mix feeding them is unmuted and carries that channel
+unmuted. Muting the feeding mix turns the direct path off. For a summed feed,
+it stays on while any feeding mix and that channel's send to it are both
+unmuted. The daemon mutes that
 channel's monitor send in the graph meanwhile so the microphone is not
 heard twice; it never uses the path while monitoring is paused or that channel
 is in an exclusive group or under Sound Check. With no channel carrying the Pro's first input

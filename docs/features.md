@@ -829,9 +829,12 @@ tray. The daemon owns no shortcut session. A key routes the application
 that has the focus to a chosen channel, steps an output's volume by five
 percentage points within 0 to 150%, toggles its mute, or switches the
 enforced system output. A volume or mute key follows the current default
-output or stays bound to a named output or monitor mix; on a selected
-monitor output the mute key mutes the mixes feeding it, the same as a
-dial press, so the window, the dial rings and the keys agree. Focus
+output or stays bound to a named output or monitor mix. On a selected
+physical monitor output the mute key pauses the whole monitor selection,
+the same as MONITOR's Mute button or a Deck monitor dial press. Mix and
+channel mutes keep their values, and recording and streaming continue.
+On a monitor mix sink the key toggles only that mix; on any other output
+it toggles the sink's native mute. Focus
 identity comes from KDE Plasma's KWin; on other desktops the routing key
 reports that it cannot identify the application. See
 [Desktop keys](manual.md#desktop-keys) and

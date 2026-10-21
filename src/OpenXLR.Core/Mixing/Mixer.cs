@@ -2023,7 +2023,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 _mixVolume[mix.Id] = volume;
                 changed = true;
             }
-            changed |= sink.Muted ? _mixMuted.Add(mix.Id) : _mixMuted.Remove(mix.Id);
+            if (_desktopMixMuteResets.ContainsKey(sink.Name)) RestoreDesktopMixMuteLocked(sink.Name, mix.Id);
+            else changed |= sink.Muted ? _mixMuted.Add(mix.Id) : _mixMuted.Remove(mix.Id);
         }
         return changed;
     }

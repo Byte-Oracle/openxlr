@@ -389,6 +389,41 @@ public sealed class MonitorVolumeSyncTests
     }
 
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void RegistryDiscoveryBeforeNativeDiscoveryKeepsAReconnectedOutputMuted(bool paused, bool nativeMissing)
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        sinks.Mixer.SetMonitorMuted(paused);
+
+        sinks.Dump(1, externalMuted: false, externalSerial: 2);
+        sinks.NativeSerial(1);
+        sinks.NativeMissing(nativeMissing);
+        int snapshots = sinks.NativeSnapshots;
+        for (int sweep = 0; sweep < 3; sweep++)
+        {
+            Assert.False(sinks.Mixer.SyncDeviceVolumes());
+            Assert.Equal(paused, sinks.Mixer.MonitorMuted);
+        }
+        Assert.Equal(snapshots + 3, sinks.NativeSnapshots);
+
+        sinks.NativeMissing(false);
+        sinks.NativeSerial(2);
+        sinks.DirectMute(false);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(paused, sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
+        Assert.DoesNotContain("set-sink-mute external toggle", sinks.Writes);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public void ANewOutputConfirmsItsBaselineBeforeTheNextNativeMuteKey(bool muted)
@@ -404,30 +439,6 @@ public sealed class MonitorVolumeSyncTests
         Assert.Equal(!muted, sinks.Mixer.SyncDeviceVolumes());
         Assert.Equal(!muted, sinks.Mixer.MonitorMuted);
         Assert.False(sinks.Adapter.GetSinkMuted("external"));
-    }
-
-    [Fact]
-    public void AnApplicationPulseAlsoConfirmsPhysicalFlagsWhoseRegistryEchoIsLate()
-    {
-        using var sinks = new Sinks();
-        sinks.ApplicationChannel();
-        sinks.SelectExternalOutput();
-        sinks.DirectMute(true);
-        sinks.Dump(0.6, externalMuted: true);
-        sinks.Mixer.SyncDeviceVolumes();
-
-        // The internal mute is already visible, but the physical output's
-        // registry still shows its baseline. Repairing the internal sink
-        // leaves the fake native flag false, as the physical toggle did.
-        sinks.Dump(0.6, internalSink: true, externalMuted: true);
-        Assert.True(sinks.Mixer.SyncOwnSinkLevels(out _));
-        Assert.True(sinks.Mixer.MonitorMuted);
-        sinks.Mixer.SyncDeviceVolumes();
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
-
-        sinks.Dump(0.6, externalMuted: false); // The delayed physical echo arrives.
-        Assert.False(sinks.Mixer.SyncDeviceVolumes());
-        Assert.True(sinks.Mixer.MonitorMuted);
     }
 
     [Theory]
@@ -489,29 +500,6 @@ public sealed class MonitorVolumeSyncTests
             if (application) sinks.Mixer.SyncOwnSinkLevels(out _);
             sinks.Mixer.SyncDeviceVolumes();
         }
-    }
-
-    [Fact]
-    public void AGraphFailureDoesNotSuppressTheNextPhysicalKeyAsPartOfAnOldApplicationPulse()
-    {
-        using var sinks = new Sinks();
-        sinks.ApplicationChannel();
-        sinks.SelectExternalOutput();
-        sinks.DirectMute(false);
-        sinks.Dump(1, externalMuted: false);
-        sinks.Mixer.SyncDeviceVolumes();
-        sinks.DirectMute(true);
-        sinks.Dump(1, internalSink: true, externalMuted: false);
-        Assert.True(sinks.Mixer.SyncOwnSinkLevels(out _));
-        sinks.GraphUnavailable(true);
-        Assert.False(sinks.Mixer.SyncDeviceVolumes());
-        Assert.True(sinks.Mixer.MonitorMuted);
-        sinks.GraphUnavailable(false);
-
-        sinks.DirectMute(true);
-        sinks.Dump(1, externalMuted: true);
-        Assert.True(sinks.Mixer.SyncDeviceVolumes());
-        Assert.False(sinks.Mixer.MonitorMuted);
     }
 
     [Theory]
@@ -767,8 +755,10 @@ public sealed class MonitorVolumeSyncTests
         Assert.False(sinks.Mixer.SyncDeviceVolumes());
         Assert.False(sinks.Mixer.SyncDeviceVolumes());
         int snapshots = sinks.NativeSnapshots;
+        int muteReads = sinks.Writes.Count(w => w == "get-sink-mute external");
         for (int sweep = 0; sweep < 5; sweep++) Assert.False(sinks.Mixer.SyncDeviceVolumes());
         Assert.Equal(snapshots, sinks.NativeSnapshots);
+        Assert.Equal(muteReads, sinks.Writes.Count(w => w == "get-sink-mute external"));
         Assert.True(sinks.Adapter.GetSinkMuted("external"));
         sinks.FailNativeSnapshot(malformed: false, fail: false);
         sinks.Now = 1_000;

@@ -531,6 +531,9 @@ Monitor mix drives that hardware path: unmuted, you hear yourself with
 zero latency; muted, you do not. If another device (speakers, a headset)
 is ticked as well, the microphone reaches everything through the
 software mix instead, with a few milliseconds of delay.
+Muting the mix feeding the jacks also turns off the direct microphone path.
+For a summed feed, it stays on while at least one feeding mix and the
+microphone's send to that mix are both unmuted.
 
 <a name="audio-flow"></a>
 ### Audio flow
@@ -3003,7 +3006,11 @@ and **OpenXLR Monitor B** keep their individual mix mute controls.
 Selecting an output preserves its existing native mute state; a mute key
 pressed immediately after selection already controls the monitoring pause.
 Reconnecting an output keeps its previous mute state. Delayed device
-information does not count as another mute press.
+information does not count as another mute press. OpenXLR waits for the
+native and registry identities to agree before accepting a reconnected
+output's mute flag. If restoring a mix's mute after a blanket desktop mute
+fails, OpenXLR retries on later sweeps and keeps the previous mute choice
+until the restoration is confirmed.
 Unmuting an already muted output in the desktop applet leaves it unmuted
 without changing the monitoring pause; the next mute press toggles the pause.
 
