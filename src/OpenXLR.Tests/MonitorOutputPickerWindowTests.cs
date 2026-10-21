@@ -1,10 +1,12 @@
 using System.Collections.Concurrent;
 using System.Text.Json.Nodes;
 using Avalonia.Controls;
+using Avalonia;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
 using OpenXLR.UI.Localization;
+using OpenXLR.UI.Skinning;
 
 namespace OpenXLR.Tests;
 
@@ -25,6 +27,7 @@ internal static class MonitorOutputPickerWindowTests
     {
         public volatile bool HeadsetPresent = true;
         public volatile string[] Selected = [Headset];
+        public ConcurrentDictionary<string, string> Feeds { get; } = new();
 
         public JsonNode State()
         {
@@ -39,12 +42,15 @@ internal static class MonitorOutputPickerWindowTests
                 ["devices"] = devices,
                 ["mixer"] = new JsonObject
                 {
-                    ["mixes"] = new JsonArray(
+                    ["mixes"] = new JsonArray([..
+                        new[] {
                         new JsonObject { ["id"] = "monitor", ["name"] = "Monitor A", ["kind"] = "monitor" },
-                        new JsonObject { ["id"] = "monitor2", ["name"] = "Monitor B", ["kind"] = "monitor" }),
+                        new JsonObject { ["id"] = "monitor2", ["name"] = "Monitor B", ["kind"] = "monitor" } }
+                        .Concat(Enumerable.Range(1, 18).Select(i => new JsonObject {
+                            ["id"] = "custom" + i, ["name"] = "A very long renamed headphone monitor mix " + i, ["kind"] = "monitor" }))]),
                     ["channels"] = new JsonArray(),
                     ["monitorOutputs"] = new JsonArray([.. Selected.Select(s => (JsonNode)JsonValue.Create(s))]),
-                    ["monitorFeeds"] = new JsonObject(),
+                    ["monitorFeeds"] = new JsonObject(Feeds.Select(pair => new KeyValuePair<string, JsonNode?>(pair.Key, JsonValue.Create(pair.Value)))),
                     ["enforcedDefaultSink"] = "OpenXLR_ch_system",
                 },
             };
@@ -57,8 +63,9 @@ internal static class MonitorOutputPickerWindowTests
         DateTime deadline = DateTime.UtcNow.AddSeconds(60);
         while (!pending.IsCompleted && DateTime.UtcNow < deadline)
         {
-            Dispatcher.UIThread.RunJobs();
-            Thread.Sleep(5);
+            using var stop = new CancellationTokenSource();
+            DispatcherTimer.RunOnce(stop.Cancel, TimeSpan.FromMilliseconds(20));
+            Dispatcher.UIThread.MainLoop(stop.Token);
         }
         Assert.True(pending.IsCompleted, "The monitor output picker check hung.");
         pending.GetAwaiter().GetResult();
@@ -68,6 +75,7 @@ internal static class MonitorOutputPickerWindowTests
     {
         var daemon = new Daemon();
         var sent = new ConcurrentQueue<string[]>();
+        var feeds = new ConcurrentQueue<(string Device, string Mix)>();
         var push = new SemaphoreSlim(0);
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
@@ -85,11 +93,22 @@ internal static class MonitorOutputPickerWindowTests
                 }
                 JsonNode cmd = await receive;
                 receive = SocketTestServer.Receive(socket, stop);
-                if (cmd["cmd"]?.GetValue<string>() != "setMonitorOutputs") continue;
-                string[] devices = [.. cmd["devices"]!.AsArray().Select(d => d!.GetValue<string>())];
-                sent.Enqueue(devices);
-                daemon.Selected = devices;
+                if (cmd["cmd"]?.GetValue<string>() == "setMonitorFeed")
+                {
+                    string device = cmd["device"]!.GetValue<string>(), mix = cmd["mix"]!.GetValue<string>();
+                    daemon.Feeds[device] = mix;
+                    feeds.Enqueue((device, mix));
+                }
+                else if (cmd["cmd"]?.GetValue<string>() == "setMonitorOutputs")
+                {
+                    string[] devices = [.. cmd["devices"]!.AsArray().Select(d => d!.GetValue<string>())];
+                    sent.Enqueue(devices);
+                    daemon.Selected = devices;
+                }
+                else continue;
                 await SocketTestServer.Send(socket, daemon.State(), stop);
+                if (cmd["requestId"] is { } request)
+                    await SocketTestServer.Send(socket, new { type = "commandResult", requestId = request.GetValue<string>(), error = (string?)null }, stop);
             }
         });
 
@@ -102,7 +121,60 @@ internal static class MonitorOutputPickerWindowTests
             WindowLayoutTests.Layout(window, 1040, 1200);
             var picker = window.FindControl<DropDownButton>("MonitorDestination")!;
             Assert.True(picker.IsEffectivelyVisible);
-            var list = (ItemsControl)((Flyout)picker.Flyout!).Content!;
+            var list = (ItemsControl)((ScrollViewer)((Flyout)picker.Flyout!).Content!).Content!;
+            bool touch = SkinService.TouchControls;
+            try
+            {
+                foreach (bool large in new[] { false, true })
+                {
+                    SkinService.ApplyControlSizing(large);
+                    WindowLayoutTests.Layout(window, 640, 1200);
+                    picker.BringIntoView();
+                    picker.Flyout.ShowAt(picker);
+                    await Until(() => list.GetVisualDescendants().OfType<DropDownButton>().Count() == 2);
+                    DropDownButton feedButton = list.GetVisualDescendants().OfType<DropDownButton>()
+                        .Single(button => ((MonitorOutputItem)button.DataContext!).Name == Headset);
+                    feedButton.Flyout!.ShowAt(feedButton);
+                    var scroll = (ScrollViewer)((Flyout)feedButton.Flyout).Content!;
+                    var mixList = (ItemsControl)scroll.Content!;
+                    await Until(() => mixList.GetVisualDescendants().OfType<CheckBox>().Count() == 20);
+                    window.UpdateLayout();
+                    Assert.InRange(scroll.Bounds.Height, 1, 320);
+                    Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
+                    CheckBox[] choices = [.. mixList.GetVisualDescendants().OfType<CheckBox>()];
+                    Assert.False(choices[0].IsEnabled);
+                    if (large) Assert.All(choices, choice => Assert.True(choice.Bounds.Height >= SkinTokens.TouchTarget));
+                    WindowLayoutTests.Capture(window, "output-mixes-640-" + (large ? "touch" : "standard"), mixList);
+                    using var pointer = new XPointer();
+                    pointer.Focus(TopLevel.GetTopLevel(mixList)!.TryGetPlatformHandle()!.Handle);
+                    Assert.True(choices[1].Focus());
+                    pointer.Key(XPointer.Escape);
+                    await Until(() => !feedButton.Flyout.IsOpen);
+                    picker.Flyout.Hide();
+                }
+            }
+            finally { SkinService.ApplyControlSizing(touch); }
+            WindowLayoutTests.Layout(window, 1040, 1200);
+
+            picker.Flyout.ShowAt(picker);
+            await Until(() => list.GetVisualDescendants().OfType<DropDownButton>().Count() == 2);
+            var chooseMix = list.GetVisualDescendants().OfType<DropDownButton>()
+                .Single(button => ((MonitorOutputItem)button.DataContext!).Name == Headset);
+            chooseMix.Flyout!.ShowAt(chooseMix);
+            var chooseList = (ItemsControl)((ScrollViewer)((Flyout)chooseMix.Flyout).Content!).Content!;
+            await Until(() => chooseList.GetVisualDescendants().OfType<CheckBox>().Count() == 20);
+            var second = chooseList.GetVisualDescendants().OfType<CheckBox>().ElementAt(1);
+            using (var pointer = new XPointer())
+            {
+                PixelPoint at = second.PointToScreen(new Point(second.Bounds.Width / 2, second.Bounds.Height / 2));
+                pointer.MoveTo(at.X, at.Y);
+                pointer.Click();
+            }
+            await Until(() => Item(main, Headset)!.Feed?.Id == "monitor+monitor2" && daemon.Feeds.GetValueOrDefault(Headset) == "monitor+monitor2");
+            Assert.True(feeds.TryDequeue(out var combined));
+            Assert.Equal((Headset, "monitor+monitor2"), combined);
+            chooseMix.Flyout.Hide();
+            picker.Flyout.Hide();
 
             // The headset's sink goes away and comes back, with the picker
             // open (its rows realised) and closed. Nothing is sent, and the

@@ -64,6 +64,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 Inserts.ResetForNewConnection(); Inserts2.ResetForNewConnection();
                 foreach (MixViewModel mv in Mixes) mv.Inserts.ResetForNewConnection();
                 foreach (ChannelViewModel channel in Channels) channel.Inserts?.ResetForNewConnection();
+                foreach (MonitorOutputItem output in MonitorOutputs) output.CancelFeedEdit();
             }
             else { Inserts.EnsurePluginsLoaded(); Inserts2.EnsurePluginsLoaded(); }
         });
@@ -1017,6 +1018,7 @@ public sealed partial class MainViewModel : ViewModelBase
         // dropdowns and checkbox states survive routine pushes.
         if (!wanted.Select(w => (w.Name, w.Present)).SequenceEqual(MonitorOutputs.Select(m => (m.Name, m.IsPresent))))
         {
+            foreach (MonitorOutputItem output in MonitorOutputs) output.CancelFeedEdit();
             MonitorOutputs.Clear();
             foreach (var w in wanted)
                 MonitorOutputs.Add(new MonitorOutputItem(w.Name, w.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged, w.Present));
@@ -1031,19 +1033,21 @@ public sealed partial class MainViewModel : ViewModelBase
         foreach (MonitorOutputItem item in MonitorOutputs) item.Sync(current.Contains(item.Name));
 
         var allMixes = (mixer?["mixes"] as JsonArray)?.Where(m => m is not null).ToList() ?? [];
-        var monitorMixes = allMixes.Where(m => m!["id"]?.GetValue<string>() is "monitor" or "monitor2")
-            .Select(m => new MixOption(m!["id"]!.GetValue<string>(), m["name"]?.GetValue<string>() ?? m["id"]!.GetValue<string>())).ToList();
-        // An output can also hear the two built-in monitor mixes,
-        // summed: "Monitor A+B" for headphones that want the desktop from A
-        // and a separately processed mic from B.
-        if (monitorMixes.Count > 1)
-            monitorMixes.Add(new MixOption(string.Join("+", monitorMixes.Select(m => m.Id)), SummedName(monitorMixes.Select(m => m.Name))));
-        monitorMixes.AddRange(allMixes.Where(m => m!["id"]?.GetValue<string>() is not ("monitor" or "monitor2"))
-            .Select(m => new MixOption(m!["id"]!.GetValue<string>(), m["name"]?.GetValue<string>() ?? m["id"]!.GetValue<string>())));
+        var mixOptions = allMixes.Select(m => new MixOption(m!["id"]!.GetValue<string>(),
+            m["name"]?.GetValue<string>() ?? m["id"]!.GetValue<string>())).ToList();
+        var monitors = allMixes.Where(m => m!["kind"]?.GetValue<string>() == "monitor"
+            || m["kind"] is null && m["id"]?.GetValue<string>() is "monitor" or "monitor2")
+            .Select(m => m!["id"]!.GetValue<string>()).ToList();
+        string? primaryMonitor = mixer?["defaultMonitorMix"]?.GetValue<string>();
+        if (!monitors.Contains(primaryMonitor ?? ""))
+            primaryMonitor = monitors.FirstOrDefault(); // Older daemons use layout order for the implicit feed.
         var feeds = mixer?["monitorFeeds"] as JsonObject;
-        string primaryMonitor = monitorMixes.FirstOrDefault()?.Id ?? "monitor";
         foreach (MonitorOutputItem item in MonitorOutputs)
-            item.SyncFeed(monitorMixes, feeds?[item.Name]?.GetValue<string>() ?? primaryMonitor);
+        {
+            var included = (feeds?[item.Name]?.GetValue<string>()?.Split('+') ?? []).ToHashSet(StringComparer.Ordinal);
+            string feed = string.Join('+', mixOptions.Where(m => included.Contains(m.Id)).Select(m => m.Id));
+            item.SyncFeed(mixOptions, feed.Length > 0 ? feed : primaryMonitor);
+        }
         Raise(nameof(MonitorSummary));
     }
 
@@ -1057,9 +1061,12 @@ public sealed partial class MainViewModel : ViewModelBase
         return string.Join("+", list);
     }
 
-    private void OnMonitorFeedChanged(string output, string mixId)
+    private async Task<string?> OnMonitorFeedChanged(string output, string mixId)
     {
-        if (!_applying) _ = _client.SetMonitorFeedAsync(output, mixId);
+        if (_applying) return null;
+        string? error = await _client.SetMonitorFeedAsync(output, mixId);
+        if (error is not null) Status = error;
+        return error;
     }
 
     /// <summary>AudioNodeKind arrives as the enum's number (0 = Sink) or name.</summary>
@@ -1428,89 +1435,6 @@ public sealed record AudioDeviceItem(string Name, string Description, bool IsOwn
     /// <summary>The position of a zero-based port ("MONO", "FR", "AUX2"), or null when unknown.</summary>
     public string? PositionOf(int port)
         => Positions?.Split(',') is { } names && port >= 0 && port < names.Length ? names[port] : null;
-}
-
-/// <summary>
-/// One entry in the multi-select Monitor dropdown: a sink plus a checkbox
-/// state. Toggling notifies the owning view model, which sends the full
-/// selection to the daemon.
-/// </summary>
-/// <summary>A monitor mix as a feed choice for an output; shows its name in pickers.</summary>
-public sealed record MixOption(string Id, string Name)
-{
-    public override string ToString() => Name;
-}
-
-public sealed class MonitorOutputItem : ViewModelBase
-{
-    private readonly Action _changed;
-    private readonly Action<string, string> _feedChanged;
-    private bool _syncing;
-
-    public MonitorOutputItem(string name, string label, Action changed, Action<string, string> feedChanged, bool isPresent = true)
-    {
-        Name = name;
-        Label = label;
-        IsPresent = isPresent;
-        _changed = changed;
-        _feedChanged = feedChanged;
-    }
-
-    public string Name { get; }
-    public string Label { get; }
-
-    /// <summary>False for a selected output whose device is missing; it stays selected until unticked.</summary>
-    public bool IsPresent { get; }
-
-    /// <summary>The mixes this output can be fed by.</summary>
-    public ObservableCollection<MixOption> Feeds { get; } = [];
-
-    private MixOption? _feed;
-    /// <summary>The mix feeding this output; picking one tells the daemon.</summary>
-    public MixOption? Feed
-    {
-        get => _feed;
-        set
-        {
-            if (value is null || !Set(ref _feed, value) || _syncing) return;
-            _feedChanged(Name, value.Id);
-        }
-    }
-
-    /// <summary>Set the choices and the current feed without notifying the daemon.</summary>
-    public void SyncFeed(IReadOnlyList<MixOption> options, string mixId)
-    {
-        _syncing = true;
-        try
-        {
-            // Preserve an API-selected sum in the picker without offering
-            // every possible combination of the layout's mixes.
-            if (!options.Any(o => o.Id == mixId))
-            {
-                string[] ids = mixId.Split('+');
-                if (ids.Length > 1 && ids.All(id => options.Any(o => o.Id == id)))
-                    options = [.. options, new MixOption(mixId, string.Join(" + ", ids.Select(id => options.First(o => o.Id == id).Name)))];
-            }
-            if (!options.Select(o => (o.Id, o.Name)).SequenceEqual(Feeds.Select(f => (f.Id, f.Name))))
-            {
-                Feeds.Clear();
-                foreach (MixOption o in options) Feeds.Add(o);
-                _feed = null;   // the combo lost its selection with the items
-            }
-            Feed = Feeds.FirstOrDefault(f => f.Id == mixId) ?? Feeds.FirstOrDefault();
-        }
-        finally { _syncing = false; }
-    }
-
-    /// <summary>Set without notifying the daemon (state pushes).</summary>
-    public void Sync(bool selected) { if (Set(ref _isSelected, selected, nameof(IsSelected))) { } }
-
-    private bool _isSelected;
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set { if (Set(ref _isSelected, value)) _changed(); }
-    }
 }
 
 /// <summary>A mix (monitor/stream/chat): master level and mute.</summary>

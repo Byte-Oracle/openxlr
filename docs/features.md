@@ -212,6 +212,10 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   microphone), and Aux (what a second computer on the USB Aux port
   receives)
 - Per-channel, per-mix send levels and mutes; per-mix masters
+- Multiple mixes per output, chosen by checkboxes in MONITOR. Each mix can
+  feed several devices, and a device can hear several mixes summed at
+  unity. This uses the mix-to-output routes already in the daemon, with
+  no extra mixer or hidden nodes. The Pro's own jacks share one feed
 - A volume for every channel that scales every send of the channel at
   once, like the channel level in Wave Link 3. It is folded into the send
   streams the mixer already has, so it adds no node and no delay. XLR 1,

@@ -27,15 +27,191 @@ public sealed class MonitorFeedTests
     public void FeedPickerKeepsApiSumsAndRenamedMixesWithoutSendingCommands()
     {
         int changed = 0;
-        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => changed++);
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => { changed++; return Task.FromResult<string?>(null); });
         output.SyncFeed([new("monitor", "Monitor A"), new("stream", "Stream"), new("chat", "Chat")], "stream+chat");
         Assert.Equal("stream+chat", output.Feed!.Id);
-        Assert.Equal("Stream + Chat", output.Feed.Name);
+        Assert.Equal("Stream+Chat", output.Feed.Name);
         output.SyncFeed([new("monitor", "Monitor A"), new("stream", "Recording"), new("chat", "Chat")], "stream+chat");
-        Assert.Equal("Recording + Chat", output.Feed!.Name);
+        Assert.Equal("Recording+Chat", output.Feed!.Name);
         Assert.Equal(0, changed);
-        output.Feed = output.Feeds[0];
+        output.Sync(true);
+        output.FeedMixes[0].IsSelected = true;
+        Assert.Equal("monitor+stream+chat", output.Feed!.Id);
         Assert.Equal(1, changed);
+    }
+
+    [Fact]
+    public void CheckedMixesSendEachNewSumAndKeepAtLeastOneChoice()
+    {
+        var sent = new List<string>();
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, feed) => { sent.Add(feed); return Task.FromResult<string?>(null); });
+        output.Sync(true);
+        output.SyncFeed([new("desk", "Desk"), new("booth", "Booth"), new("chat", "Chat")], "desk");
+        Assert.False(output.FeedMixes[0].CanToggle);
+        output.FeedMixes[0].IsSelected = false;
+        Assert.Equal("desk", output.Feed!.Id);
+        Assert.Empty(sent);
+        output.FeedMixes[1].IsSelected = true;
+        output.FeedMixes[2].IsSelected = true;
+        output.FeedMixes[0].IsSelected = false;
+        output.FeedMixes[1].IsSelected = false;
+        Assert.Equal(["desk+booth", "desk+booth+chat", "booth+chat", "chat"], sent);
+        Assert.False(output.FeedMixes[2].CanToggle);
+        Assert.All(output.FeedMixes.Take(2), choice => Assert.True(choice.CanToggle));
+    }
+
+    [Fact]
+    public void StateRefreshPreservesChoiceObjectsAndNeverSendsFeedCommands()
+    {
+        int sent = 0;
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => { sent++; return Task.FromResult<string?>(null); });
+        MixOption[] mixes = [new("desk", "Desk"), new("booth", "Booth")];
+        output.Sync(true);
+        output.SyncFeed(mixes, "booth+desk");
+        MonitorMixChoice first = output.FeedMixes[0];
+        output.SyncFeed(mixes, "desk+booth");
+        Assert.Same(first, output.FeedMixes[0]);
+        output.SyncFeed([new("booth", "Studio")], "booth");
+        Assert.Equal("Studio", output.Feed!.Name);
+        Assert.Equal("booth", Assert.Single(output.FeedMixes).Id);
+        output.SyncFeed([], null);
+        Assert.Empty(output.FeedMixes);
+        Assert.Null(output.Feed);
+        Assert.Equal(0, sent);
+    }
+
+    [Fact]
+    public void SharedMixesAreSelectedIndependentlyForEveryOutput()
+    {
+        var sent = new List<(string, string)>();
+        MixOption[] mixes = [new("desk", "Desk"), new("booth", "Booth")];
+        MonitorOutputItem Output(string name)
+        {
+            var result = new MonitorOutputItem(name, name, () => { }, (device, feed) => { sent.Add((device, feed)); return Task.FromResult<string?>(null); });
+            result.Sync(true);
+            result.SyncFeed(mixes, "desk");
+            return result;
+        }
+        var headset = Output("headset");
+        var speakers = Output("speakers");
+        headset.FeedMixes[1].IsSelected = true;
+        Assert.Equal("desk", speakers.Feed!.Id);
+        speakers.FeedMixes[1].IsSelected = true;
+        Assert.Equal([("headset", "desk+booth"), ("speakers", "desk+booth")], sent);
+        speakers.Sync(false);
+        speakers.FeedMixes[0].IsSelected = false;
+        Assert.Equal(2, sent.Count);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PendingEditsKeepTheLatestSelectionAcrossOldStateAndOldReplies(bool oldReplyFails)
+    {
+        var replies = new Queue<TaskCompletionSource<string?>>();
+        var sent = new List<string>();
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, feed) =>
+        {
+            sent.Add(feed);
+            var reply = new TaskCompletionSource<string?>();
+            replies.Enqueue(reply);
+            return reply.Task;
+        });
+        MixOption[] mixes = [new("desk", "Desk"), new("booth", "Booth"), new("chat", "Chat")];
+        output.Sync(true);
+        output.SyncFeed(mixes, "desk");
+        output.FeedMixes[1].IsSelected = true;
+        output.SyncFeed(mixes, "desk");
+        Assert.Equal("desk+booth", output.Feed!.Id);
+        output.FeedMixes[2].IsSelected = true;
+        replies.Dequeue().SetResult(oldReplyFails ? "refused" : null);
+        await Task.Yield();
+        output.SyncFeed(mixes, "desk+booth");
+        Assert.Equal("desk+booth+chat", output.Feed!.Id);
+        output.SyncFeed(mixes, "desk+booth+chat");
+        replies.Dequeue().SetResult(null);
+        await Task.Yield();
+        Assert.Equal(["desk+booth", "desk+booth+chat"], sent);
+        Assert.Equal("desk+booth+chat", output.Feed!.Id);
+    }
+
+    [Theory]
+    [InlineData("delete")]
+    [InlineData("deselect")]
+    [InlineData("disconnect")]
+    public async Task AReplyCannotRestoreAnObsoleteFeedAfterItsContextChanges(string change)
+    {
+        var reply = new TaskCompletionSource<string?>();
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => reply.Task);
+        output.Sync(true);
+        output.SyncFeed([new("desk", "Desk"), new("booth", "Booth")], "desk");
+        output.FeedMixes[1].IsSelected = true;
+        if (change == "deselect") output.Sync(false);
+        if (change == "disconnect") output.CancelFeedEdit();
+        output.SyncFeed([new("desk", "Desk")], "desk");
+        reply.SetResult("refused");
+        await Task.Yield();
+        Assert.Equal("desk", output.Feed!.Id);
+        Assert.Single(output.FeedMixes);
+    }
+
+    [Fact]
+    public async Task ARejectedFeedReturnsToTheLatestDaemonSelection()
+    {
+        var reply = new TaskCompletionSource<string?>();
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => reply.Task);
+        MixOption[] mixes = [new("desk", "Desk"), new("booth", "Booth")];
+        output.Sync(true);
+        output.SyncFeed(mixes, "desk");
+        output.FeedMixes[1].IsSelected = true;
+        output.SyncFeed(mixes, "desk");
+        reply.SetResult("disk full");
+        await Task.Yield();
+        Assert.Equal("desk", output.Feed!.Id);
+        Assert.False(output.FeedMixes[1].IsSelected);
+    }
+
+    [Theory]
+    [InlineData(null, "studio")]
+    [InlineData("desk", "desk")]
+    [InlineData("removed", "studio")]
+    public async Task OutputDefaultsUseTheReportedMonitorOrTheOlderDaemonsMonitorFallback(string? reported, string expected)
+    {
+        await using var client = new DaemonClient();
+        var model = new MainViewModel(client);
+        var state = System.Text.Json.Nodes.JsonNode.Parse("""
+            {"mixes":[{"id":"chat","name":"Chat","kind":"virtualMic"},
+                       {"id":"studio","name":"Studio","kind":"monitor"},
+                       {"id":"desk","name":"Desk","kind":"monitor"}],
+             "monitorOutputs":["headset"],"monitorFeeds":{}}
+            """)!;
+        if (reported is not null) state["defaultMonitorMix"] = reported;
+        var apply = typeof(MainViewModel).GetMethod("ApplyDevices", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        apply.Invoke(model, [new System.Text.Json.Nodes.JsonArray(), state]);
+        Assert.Equal(expected, Assert.Single(model.MonitorOutputs).Feed!.Id);
+        state["mixes"]!.AsArray().RemoveAt(2);
+        state["mixes"]!.AsArray().RemoveAt(1);
+        apply.Invoke(model, [new System.Text.Json.Nodes.JsonArray(), state]);
+        Assert.Null(Assert.Single(model.MonitorOutputs).Feed);
+    }
+
+    [Theory]
+    [InlineData("removed", "monitor")]
+    [InlineData("removed+desk", "desk")]
+    [InlineData("desk+monitor+removed", "monitor+desk")]
+    public async Task StaleSavedMixIdsShowOnlyTheRoutesTheDaemonCanActuallyUse(string reported, string expected)
+    {
+        await using var client = new DaemonClient();
+        var model = new MainViewModel(client);
+        var state = System.Text.Json.Nodes.JsonNode.Parse("""
+            {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor"},
+                       {"id":"desk","name":"Desk","kind":"monitor"}],
+             "monitorOutputs":["headset"],"monitorFeeds":{}}
+            """)!;
+        state["monitorFeeds"]!["headset"] = reported;
+        typeof(MainViewModel).GetMethod("ApplyDevices", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(model, [new System.Text.Json.Nodes.JsonArray(), state]);
+        Assert.Equal(expected, Assert.Single(model.MonitorOutputs).Feed!.Id);
     }
 
     [Fact]
