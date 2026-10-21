@@ -435,6 +435,136 @@ public sealed class DeviceEqMixerTests
         finally { Directory.Delete(dir, true); }
     }
 
+    private const string Pro = "0fd9:00b4@00112233445566aa";
+
+    private static UnitEqSupport ProReady() => new("Wave XLR Pro", "1.0.14", true) { Inputs = 2, MinimumFirmware = "1.0.14" };
+
+    /// <summary>The Wave XLR Pro as the primary, both jacks in the layout, its EQ ready on both inputs.</summary>
+    private static Mixer Pro2(Port port)
+    {
+        var mixer = new Mixer { Time = new ManualTime() };
+        mixer.SetInputJacks(2, true);
+        mixer.SetDrivenUnit(Pro);
+        mixer.SetDeviceEqPort(port);
+        mixer.SetUnitEqSupport(new Dictionary<string, UnitEqSupport> { [Pro] = ProReady() });
+        return mixer;
+    }
+
+    /// <summary>
+    /// The Wave XLR Pro: XLR 1's EQ goes to its input 1 and XLR 2's to its
+    /// input 2, each with its own switch and choice, and the state names the
+    /// Pro, the input and its minimum firmware, 1.0.14. Sound Check on XLR 1
+    /// moves XLR 1's EQ alone to software.
+    /// </summary>
+    [Fact]
+    public void TheProRunsEachMicrophonesEqOnItsOwnInput()
+    {
+        var port = new Port { AutoSweep = true };
+        using Mixer mixer = Pro2(port);
+        mixer.SetEqEnabled("xlr1", true);
+        mixer.SetEqEnabled("xlr2", true);
+        mixer.SetEqBand("xlr2", 2, new(Gain: 12));
+        Assert.True(mixer.EqRunsOnDevice("xlr1"));
+        Assert.True(mixer.EqRunsOnDevice("xlr2"));
+        Assert.True(port.UnitOn(Pro, 1));
+        Assert.True(port.UnitOn(Pro, 2));
+        Assert.Equal(48, port.Held[(Pro, 2)].Bands![1].Gain);
+        Assert.NotEqual(48, port.Held[(Pro, 1)].Bands![1].Gain);
+        Assert.Equal(new MicEqDevice(Pro, 2, "Wave XLR Pro", "1.0.14", true) { MinimumFirmware = "1.0.14" }, Eq(mixer, "xlr2").Device);
+        Assert.Equal(1, Eq(mixer).Device!.Input);
+
+        // XLR 2 in software: its input alone switches off, XLR 1 keeps the unit.
+        int posts = port.Posts.Count;
+        mixer.SetEqProcessing("xlr2", "software");
+        mixer.SyncDeviceEq();
+        Assert.Equal((Pro, 2, DeviceEq.Off), port.Posts[posts]);
+        Assert.False(port.UnitOn(Pro, 2));
+        Assert.True(port.UnitOn(Pro, 1));
+        Assert.True(mixer.EqWantsSoftwareStage("xlr2"));
+        Assert.False(mixer.EqWantsSoftwareStage("xlr1"));
+        NeverDoubled(mixer, port, "xlr2", Pro, 2);
+        mixer.SetEqProcessing("xlr2", "device");
+        port.Sweep();
+        Assert.True(port.UnitOn(Pro, 2));
+
+        // Sound Check on XLR 1: its EQ leaves the unit before the take; XLR 2's stays.
+        posts = port.Posts.Count;
+        Assert.Throws<InvalidOperationException>(() => mixer.SoundCheck("xlr1", "record"));
+        Assert.Contains(port.Posts.Skip(posts), p => p == (Pro, 1, DeviceEq.Off));
+        Assert.DoesNotContain(port.Posts.Skip(posts), p => p.Input == 2);
+        Assert.True(port.UnitOn(Pro, 2));
+    }
+
+    /// <summary>
+    /// XLR 2 bound to another microphone: its EQ runs in software on that
+    /// source and nothing of it reaches the Pro's input 2, which is held off
+    /// once per connection so an EQ Wave Link left on (+12 dB on band 2) does
+    /// not stay on the Pro's own paths. The same holds when the binding is in
+    /// place before the Pro connects. Bound back to the Pro's own node at the
+    /// second input's port, the Pro runs it again.
+    /// </summary>
+    [Fact]
+    public void AnInputBoundToAnotherSourceNeverTakesTheProsEqAndHoldsItOff()
+    {
+        var waveLink = new DeviceEq(true, [new(true, 0, 0, 60, -10), new(true, 1, 48, 227, -1), new(true, 2, -12, 860, -14), new(true, 2, 7, 10237, -24)]);
+        var port = new Port { AutoSweep = true };
+        port.Held[(Pro, 1)] = waveLink;
+        port.Held[(Pro, 2)] = waveLink;
+        var mixer = new Mixer { Time = new ManualTime() };
+        using (mixer)
+        {
+            mixer.SetInputJacks(2, true);
+            mixer.SetInputBinding("xlr2", new SourceBinding("alsa_input.usb-Some_Mic-00.mono-fallback", 0, 0));
+            mixer.SetEqEnabled("xlr2", true);
+            mixer.SetDrivenUnit(Pro);
+            mixer.SetDeviceEqPort(port);
+            mixer.SetUnitEqSupport(new Dictionary<string, UnitEqSupport> { [Pro] = ProReady() });
+            mixer.SyncDeviceEq();
+            Assert.False(mixer.EqRunsOnDevice("xlr2"));
+            Assert.True(mixer.EqWantsSoftwareStage("xlr2"));
+            Assert.Null(Eq(mixer, "xlr2").Device);
+            // Input 2 held off, once; input 1 carries XLR 1, whose EQ is off and on the unit.
+            Assert.Single(port.Posts, p => p.Input == 2);
+            Assert.Equal(DeviceEq.Off, port.Posts.Single(p => p.Input == 2).Eq);
+            Assert.False(port.UnitOn(Pro, 2));
+            Assert.False(port.UnitOn(Pro, 1));
+            Assert.Equal(waveLink.Bands, port.Held[(Pro, 2)].Bands);
+            // XLR 2's edits stay in software.
+            mixer.SetEqBand("xlr2", 2, new(Gain: 6));
+            mixer.SyncDeviceEq();
+            Assert.Single(port.Posts, p => p.Input == 2);
+            // A reconnect: said again.
+            port.Reconnect(Pro);
+            mixer.SyncDeviceEq();
+            Assert.Equal(2, port.Posts.Count(p => p.Input == 2 && p.Eq == DeviceEq.Off));
+
+            // Bound to the Pro's own node at XLR 2's port: the Pro runs XLR 2's EQ.
+            mixer.SetInputBinding("xlr2", new SourceBinding("alsa_input.usb-Elgato_Systems_Elgato_Wave_XLR_Pro-00.pro-input-0", 0, 2) { Unit = Pro });
+            mixer.SyncDeviceEq();
+            port.Sweep();
+            mixer.SyncDeviceEq();
+            Assert.True(mixer.EqRunsOnDevice("xlr2"));
+            Assert.Equal(2, Eq(mixer, "xlr2").Device!.Input);
+            Assert.True(port.UnitOn(Pro, 2));
+            NeverDoubled(mixer, port, "xlr2", Pro, 2);
+        }
+
+        // The binding made while the Pro is driven: the move releases input 2, as on the MK.2.
+        port = new Port { AutoSweep = true };
+        using Mixer moved = Pro2(port);
+        moved.SetEqEnabled("xlr2", true);
+        Assert.True(port.UnitOn(Pro, 2));
+        moved.SetInputBinding("xlr2", new SourceBinding("alsa_input.usb-Some_Mic-00.mono-fallback", 0, 0));
+        moved.SyncDeviceEq();
+        moved.SyncDeviceEq();
+        Assert.False(port.UnitOn(Pro, 2));
+        Assert.True(moved.EqWantsSoftwareStage("xlr2"));
+        NeverDoubled(moved, port, "xlr2", Pro, 2);
+        int posts = port.Posts.Count;
+        moved.SyncDeviceEq();
+        Assert.Equal(posts, port.Posts.Count);
+    }
+
     private sealed class Layout(bool onDevice) : ILayoutInfo
     {
         public bool HasChannel(string id) => id is "xlr1" or "xlr2" or "aux";

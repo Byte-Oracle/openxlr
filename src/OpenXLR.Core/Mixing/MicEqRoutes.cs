@@ -263,7 +263,32 @@ public sealed partial class Mixer
                 && port.Status(unit.Unit, unit.Input).Phase == DeviceEqPhase.None)
                 port.Post(unit.Unit, unit.Input, DeviceEq.Off, ChannelNameLocked(ch));
         }
+        HoldUncarriedInputsOffLocked(port, carried);
         return changed;
+    }
+
+    /// <summary>
+    /// The primary unit's inputs that no microphone carries, a strip bound to
+    /// another source for one, hold their EQ off, said once per connection.
+    /// It is the state a binding moving the strip off the unit leaves, reached
+    /// the same way when the unit connects with the binding already in place,
+    /// so an EQ Wave Link left on cannot stay on the unit's own paths. An
+    /// additional unit's input that no microphone carries is never written:
+    /// nothing in OpenXLR edits its EQ.
+    /// </summary>
+    private void HoldUncarriedInputsOffLocked(IDeviceEqPort port, IReadOnlyDictionary<string, UnitInputStatus> carried)
+    {
+        if (_drivenUnit is not { } primary || !_unitEq.TryGetValue(primary, out UnitEqSupport? support) || !support.Ready) return;
+        var taken = new HashSet<EqUnitInput>(carried.Where(c => IsMicrophoneId(c.Key)).Select(c => new EqUnitInput(c.Value.Unit, c.Value.Input)));
+        taken.UnionWith(_eqDevices.Values.Select(b => b.Target));
+        taken.UnionWith(_eqReleasing.Values.Select(r => r.Backend.Target));
+        for (int input = 1; input <= support.Inputs; input++)
+        {
+            if (taken.Contains(new EqUnitInput(primary, input)) || port.Status(primary, input).Phase != DeviceEqPhase.None) continue;
+            string owner = _config.Channels.FirstOrDefault(c => c.InputPair == input - 1) is { } strip
+                ? ChannelNameLocked(strip) : $"{support.Name} input {input}";
+            port.Post(primary, input, DeviceEq.Off, owner);
+        }
     }
 
     /// <summary>
