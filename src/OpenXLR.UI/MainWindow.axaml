@@ -702,16 +702,20 @@
       </Border.IsVisible>
       <Expander Name="MonitorTile" Classes="section" Theme="{StaticResource TileExpanderTheme}" IsExpanded="True">
         <Expander.Header>
-          <StackPanel Orientation="Horizontal" Spacing="6">
+          <WrapPanel ItemSpacing="6" LineSpacing="6">
             <Button Classes="ghost reorderHandle" Content="↕" Tag="MonitorTile" AutomationProperties.Name="{loc:Text Key=MoveMonitor}"
                     ToolTip.Tip="{loc:Text Key=DragToAnotherSectionArrowKeysMove}"/>
             <TextBlock Text="{loc:Text Key=MONITOR}" Classes="h" VerticalAlignment="Center"/>
+            <ToggleButton Name="MonitorMute" Content="{loc:Text Key=Mute}" Classes="mute"
+                          IsChecked="{Binding MonitorMuted, Mode=TwoWay}"
+                          Padding="8,1" FontSize="{DynamicResource Ox.Label.FontSize}" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center"
+                          AutomationProperties.Name="{loc:Text Key=MuteMonitoring}" ToolTip.Tip="{loc:Text Key=MuteMonitoringTip}"/>
             <ToggleButton Name="OutputBoost" Content="150%" IsChecked="{Binding OutputVolumeRange.Boost, Mode=TwoWay}"
                           Padding="8,1" FontSize="{DynamicResource Ox.Label.FontSize}" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center"
                           ToolTip.Tip="{loc:Text Key=AllowOutputVolumeAbove100UpTo}"/>
             <TextBlock Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center" Margin="0,-1,0,0" Cursor="Help"
                        ToolTip.Tip="{loc:Text Key=TickTheOutputsYouWantToHearChoose}"/>
-          </StackPanel>
+          </WrapPanel>
         </Expander.Header>
       <StackPanel Classes="dev" Spacing="4">
         <Grid Name="MonitorControls" ColumnDefinitions="90,*,20,90,*,64" SizeChanged="OnMonitorSizeChanged">

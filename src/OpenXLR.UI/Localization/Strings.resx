@@ -1122,6 +1122,12 @@
   <data name="MuteInput2" xml:space="preserve">
     <value>Mute input 2</value>
   </data>
+  <data name="MuteMonitoring" xml:space="preserve">
+    <value>Mute monitoring</value>
+  </data>
+  <data name="MuteMonitoringTip" xml:space="preserve">
+    <value>Mute all selected monitor outputs without changing mix or channel mutes. Recording and streaming continue.</value>
+  </data>
   <data name="MutedInactive" xml:space="preserve">
     <value>Muted / inactive</value>
   </data>

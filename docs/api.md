@@ -123,6 +123,8 @@ is the unit's instance id, see [additional interface state](#additional-interfac
 and `waveInterfaces`. The
 mixer state carries `mixes`, `channels`, `monitorOutput` (the first selected
 output), `monitorOutputs`, `monitorFeeds`, `outputVolume`,
+`monitorMuted` (the selected outputs are paused, independently of mix and
+channel mutes; saved in `mixer.json`, never recalled by a profile),
 `softLowCutApplicable` and `softClipGuardApplicable` (true when XLR 1's
 signal has no hardware low cut or ClipGuard in front of it: XLR 1 is bound
 to a source, or the driven unit lacks the control, so `lowCutHz` and
@@ -197,6 +199,7 @@ that final acknowledgement (or an `error` without a request id):
 | `setMonitorFeed` | `device`, `mix` | what feeds one selected output: any existing mix id, including `stream`, `chat`, `auxout` and user mixes of either kind, or distinct ids joined with `+` to sum them. The Pro's own jacks follow one feed together. The state's `monitorFeeds` lists exceptions from the first monitor mix in layout order. Unknown or repeated mix ids and unselected outputs are rejected. Deleting the last included mix returns that output to the first monitor mix; deliberately silent matrix outputs stay silent |
 | `setAuxPortEnabled` | `value` | send the Aux mix to the USB Aux port |
 | `setOutputVolume` | `value` | volume of the selected monitor devices, 0 to 1.5; the range the devices themselves take, so a desktop level above unity can be held and written back unchanged. Values outside it are clamped, and the state reports what reached the devices. With no output selected the command succeeds and changes nothing |
+| `setMonitorMuted` | `value` | boolean only; pause or resume OpenXLR's feeds to all selected monitor outputs, including the Pro's direct microphone monitoring. Mix and channel mutes, levels, feeds and recording outputs stay unchanged. The state reports `monitorMuted`; saved in `mixer.json`, not in profiles, and profile recall keeps the current pause |
 | `listPlugins` | none | the installed LV2, CLAP and VST3 plugins, answered with a `plugins` message |
 | `getPluginDiagnostics` | none | read bridge status and existing native scan evidence without syncing, rescanning or changing inserts; answered with `pluginDiagnostics` |
 | `getPluginSetup` | none | where plugins are installed and what bridges Windows ones, answered with a `pluginSetup` message |
@@ -226,7 +229,7 @@ that final acknowledgement (or an `error` without a request id):
 | `setEqProcessing` | `channel`, `value` | where a microphone's EQ runs when the unit it carries can run it: `device` (the default) on the unit's own DSP, or `software` on this computer. Any other value is refused. Saved in `mixer.json` under `eqProcessing`, never in a profile. Moving between the two switches the leaving one off first. See [where the EQ runs](#where-the-eq-runs) |
 | `adjustOutputVolume` | optional `device`, `value` | change a PipeWire output by desktop percentage points (`0.05` is 5%). Finite steps from -0.5 to 0.5, final volume clamped to 0 through 1.5. Omit `device` for the current desktop default |
 | `setOutputDeviceVolume` | optional `device`, `value` | set a PipeWire output's desktop volume; `value` finite, 0 to 1.5 on the desktop scale (1.0 is 100%), rejected outside that range. A monitor mix sink is set through its mix master; a selected monitor output follows the linked monitor-volume behaviour. Omit `device` for the current desktop default; device names are accepted and rejected as for `adjustOutputVolume` |
-| `toggleOutputMute` | optional `device` | toggle an output's mute; omit `device` for the current desktop default. On one of the selected monitor outputs it toggles the mute of the mixes feeding that output (what pressing a Deck dial on the monitor does), so the mixer window, dial rings and keys agree; on a monitor mix sink it toggles that mix; on any other output it toggles the sink's mute at the audio server |
+| `toggleOutputMute` | optional `device` | toggle an output's mute; omit `device` for the current desktop default. On a selected physical monitor output it toggles `monitorMuted` for the whole monitor selection, as pressing a Deck monitor dial does; on a monitor mix sink it toggles only that mix; on any other output it toggles the sink's mute at the audio server |
 | `setMainOutput` | `device` | select and enforce an available PipeWire output as the system default, or `@monitor` for the first selected monitor output. Retains capture-default policy and mixer feeds |
 | `routeFocusedApp` | `channel` | route the focused KDE application to an application channel and remember the assignment; requires the running UI with Desktop keys enabled and `gdbus`. Missing or ambiguous process identity is an error, with no guessed routing. One request runs at a time; another sent while it runs is refused |
 | `assignApp` | `identity`, `channel`, `label?` | route an app (creates a registry entry if unseen); `channel: "ignore"` stops managing it, its streams go back to the system default output and stay wherever the desktop routes them |
@@ -322,6 +325,14 @@ and writes percentages back with `pactl`.
 sends and other mixes unchanged. Monitor gain is applied once, at the mix
 sink before its inserts. Non-monitor masters still apply to the channel
 sends and retain their 0 to 1 range.
+
+A desktop mute change on a selected physical output, or a mute on an internal
+application sink, toggles `mixer.monitorMuted`. The daemon restores selected
+outputs' previous native mute flags and keeps application sinks open so their
+audio can still reach recording and streaming mixes. The desktop's mute icon
+can therefore return to its previous state while monitoring stays paused;
+`monitorMuted` is the persistent monitoring status. Monitor mix sinks retain
+the per-mix behaviour above.
 
 ### Waiting for the audio server
 
@@ -708,8 +719,8 @@ channel on the Pro's own node at its first port while XLR 1 is bound
 elsewhere. The daemon turns the path on while every monitor output is a Pro
 jack and that channel is unmuted in the mix feeding them, and mutes that
 channel's monitor send in the graph meanwhile so the microphone is not
-heard twice; it never uses the path while that channel is in an exclusive
-group or under Sound Check. With no channel carrying the Pro's first input
+heard twice; it never uses the path while monitoring is paused or that channel
+is in an exclusive group or under Sound Check. With no channel carrying the Pro's first input
 the path is off, and a bound XLR 1 reaches the jacks through the software
 mix.
 
@@ -798,7 +809,8 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
 - `installation.lock`: serializes installation inventory writes
 - `mixer.json`: every mixer decision: the layout (`userChannels`,
   `userMixes`, `appearance`, see [mixer-layout.md](mixer-layout.md)), levels, mutes,
-  device choices, the app registry, enforced defaults, the software low
+  device choices, the app registry, enforced defaults, `monitorMuted` (the
+  monitoring pause, never part of a profile), the software low
   cut, the insert chains, the microphone EQs (`eq`), and `inputBindings`, the hardware strips bound to
   a source. The bindings are machine wiring and never part of a profile. A
   file written before `inputBindings` existed carries XLR 1's source as
@@ -1189,9 +1201,10 @@ monitor master and linked output synchronization as desktop volume changes;
 it never uses the client's previous slider value. Named keys remain bound to
 that output across default changes. A key with no device resolves the desktop
 default anew on every press. `setOutputDeviceVolume` takes the same targets
-and sets the level outright. A mute toggle on one of the selected monitor
-outputs toggles the mixes feeding that output, so the mixer window, the Deck
-dial rings and the keys agree; on a monitor mix sink it goes through the
-existing mix setter, so state and graph updates follow the same path as the
-mixer mute control; on any other output it uses pipewire-pulse's atomic
-toggle. The daemon pushes state whenever a sink's volume or mute changes.
+and sets the level outright. A mute toggle on one of the selected physical
+monitor outputs toggles `monitorMuted` for the whole monitor selection,
+preserving mix and channel mutes and recording feeds. On a monitor mix sink
+it goes through the existing mix setter, so state and graph updates follow
+the same path as the mixer mute control; on any other output it uses
+pipewire-pulse's atomic toggle. The daemon pushes state whenever a sink's
+volume or mute changes.

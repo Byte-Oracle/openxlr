@@ -334,6 +334,28 @@ public sealed class PipeWireAdapter
     /// </summary>
     public IReadOnlyList<OwnSinkLevel> OwnSinkLevels() => OwnSinkLevels(GraphObjects());
 
+    /// <summary>Selected sinks' mute flags from the shared registry, without another helper or device catalogue.</summary>
+    public IReadOnlyDictionary<string, (string Identity, bool Muted)> ObservedSinkMutes(IReadOnlySet<string> names)
+    {
+        var result = new Dictionary<string, (string, bool)>(StringComparer.Ordinal);
+        if (names.Count == 0) return result;
+        foreach (JsonElement node in GraphObjects())
+        {
+            if (!node.TryGetProperty("type", out var type) || type.GetString() != "PipeWire:Interface:Node"
+                || !node.TryGetProperty("info", out var info) || !info.TryGetProperty("props", out var props)
+                || !props.TryGetProperty("node.name", out var name) || name.GetString() is not string sink
+                || !names.Contains(sink) || !props.TryGetProperty("media.class", out var kind)
+                || kind.GetString() != "Audio/Sink") continue;
+            if (SinkLevel(info) is (_, _, bool muted))
+            {
+                string identity = props.TryGetProperty("object.serial", out var serial) ? "serial:" + serial.ToString()
+                    : node.TryGetProperty("id", out var id) ? "node:" + id.ToString() : "";
+                result[sink] = (identity, muted);
+            }
+        }
+        return result;
+    }
+
     internal static IReadOnlyList<OwnSinkLevel> OwnSinkLevels(byte[] json)
     {
         return OwnSinkLevels(ParseObjects(json));
@@ -1514,6 +1536,38 @@ public sealed class PipeWireAdapter
             try { Run("pw-link", "-d", from, to); }
             catch (InvalidOperationException) { /* already gone */ }
         }
+    }
+
+    /// <summary>Confirm removal without recreating any pair; a refused removal keeps its owner pending.</summary>
+    public bool EnsureUnlinked(PortLink link)
+    {
+        if (link.Pairs.Count == 0) return true;
+        HashSet<(string From, string To)>? observed = null;
+        bool inspected = false;
+        bool removed = true;
+        foreach ((string from, string to) in link.Pairs)
+        {
+            try { Run("pw-link", "-d", from, to); }
+            catch (InvalidOperationException ex)
+            {
+                if (ex.Message.EndsWith(": failed to unlink ports: No such file or directory", StringComparison.Ordinal)) continue;
+                if (!inspected)
+                {
+                    inspected = true;
+                    // Our own link writes can precede their registry echo.
+                    // Only a fresh snapshot can confirm a refused unlink is
+                    // already absent; an unavailable graph keeps ownership.
+                    try
+                    {
+                        using JsonDocument snapshot = PipeWireSnapshot.Parse(RunBytes("pw-dump"));
+                        observed = ParseGraphLinks(snapshot.RootElement.EnumerateArray());
+                    }
+                    catch (Exception error) when (error is InvalidOperationException or IOException or JsonException) { }
+                }
+                if (observed is null || observed.Contains((from, to))) removed = false;
+            }
+        }
+        return removed;
     }
 
     /// <summary>

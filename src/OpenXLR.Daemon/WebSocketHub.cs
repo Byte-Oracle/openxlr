@@ -390,6 +390,7 @@ public sealed class WebSocketHub
             case "forgetApp":
             case "setMonitorOutput":
             case "setMonitorOutputs":
+            case "setMonitorMuted":
             case "setMonitorFeed":
             case "setOutputVolume":
             case "setEnforcedDefaults":

@@ -208,6 +208,10 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   channel it carries
 - Bidirectional Linux volume and mute controls for every monitor mix,
   with an explicit 150% boost button for monitor masters and output volume
+- A MONITOR mute that pauses every selected output while recording and
+  streaming continue. Resuming keeps mix and channel mutes, levels and feeds
+  as they were. The window, terminal mixer and Deck share the same pause,
+  saved with mixer settings and left unchanged by profile recall
 - An editable layout: Edit layout in the SUBMIXER card adds, renames,
   reorders and removes application channels, virtual microphones and
   monitor mixes while audio plays, as does the API, with stable ids so

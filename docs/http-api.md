@@ -229,8 +229,12 @@ by five percentage points; an optional `device` binds an exact output name.
 `{"cmd":"setOutputDeviceVolume","value":1.0}` sets that output to 100%,
 `value` from 0 to 1.5 on the desktop scale.
 `{"cmd":"toggleOutputMute"}` toggles the current output's mute; on a selected
-monitor output it toggles the mixes feeding that output, on a monitor mix
-sink that mix.
+physical monitor output it toggles the whole monitor selection's pause, on a
+monitor mix sink that mix.
+`{"cmd":"setMonitorMuted","value":true}` pauses all selected monitor outputs
+without changing mix or channel mutes or stopping recording and streaming.
+Use `false` to resume. The `/mixer` resource reports the current `monitorMuted`;
+it is saved with mixer settings and left unchanged by profile recall.
 `{"cmd":"setMainOutput","device":"alsa_output.usb-headset"}` selects and enforces
 that output. `@monitor` follows the selected monitor output. Limits, rejected
 targets and linked-monitor behavior match the [WebSocket contract](api.md).

@@ -479,6 +479,15 @@
                   }
                 },
                 "additionalProperties": true
+              },
+              "examples": {
+                "muteMonitoring": {
+                  "summary": "Pause selected monitor outputs while recording and streaming continue",
+                  "value": {
+                    "cmd": "setMonitorMuted",
+                    "value": true
+                  }
+                }
               }
             }
           }

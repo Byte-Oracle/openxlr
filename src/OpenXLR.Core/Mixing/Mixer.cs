@@ -40,6 +40,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     // by physical link target, so several pseudo-outputs sharing one underlying
     // route (the Wave XLR Pro's jacks all ride its monitor bus) make one link.
     private readonly Dictionary<string, PortLink> _monitorRoutes = [];
+    private bool _monitorMuted;
     private readonly List<string> _monitorOutputs = [];
     // Output name -> mix ids feeding it. Absent = the first
     // monitor mix, so the dictionary only holds the exceptions (issue #21).
@@ -742,8 +743,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             sink = _auxTargetSink;
             if (sink is null || !_built) return;
-            foreach (PortLink route in _monitorRoutes.Values) _pw.Unlink(route);
-            _monitorRoutes.Clear();
+            DisconnectMonitorRoutesLocked();
             if (_auxRoute is not null) { _pw.Unlink(_auxRoute); _auxRoute = null; }
         }
         _pw.BounceSink(sink);
@@ -1511,6 +1511,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 ChannelVolumes = ExportChannelVolumesLocked(),
                 ChannelMuted = [.. _muted],
                 MonitorOutputs = [.. _monitorOutputs],
+                MonitorMuted = _monitorMuted,
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
                 KnownApps = [.. _apps.Values.Select(a => new SavedApp(a.Identity, a.Label, a.ChannelId))],
@@ -1572,6 +1573,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             if (!_built) return;
+            if (s.MonitorMuted) SetMonitorMuted(true);
             SetInputBindings(s.InputBindings);
             RestoreAppearanceLocked(s.Appearance);
 
@@ -1615,6 +1617,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             _monitorFeeds.Clear();
             foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
             SetMonitorOutputsLocked(savedOutputs);
+            // Resume at the saved selection, not the output it replaced.
+            SetMonitorMuted(s.MonitorMuted);
             _enforcedSink = s.EnforcedDefaultSink;
             _enforcedSource = s.EnforcedDefaultSource;
 
@@ -1920,7 +1924,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 foreach ((string sink, double owed) in _outputVolumeDue.Due())
                     WriteFollowerVolumeLocked(sink, owed);
             _outputVolume = outV;
-            return changed;
+            return ReadOutputMonitorMuteLocked() || changed;
         }
 
         static bool Differs(double? a, double? b)
@@ -1954,8 +1958,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             restored = [];
             if (!_built) return false;
             IReadOnlyList<OwnSinkLevel> levels = _pw.OwnSinkLevels();
+            bool changed = ReadDesktopMonitorMuteLocked(ref levels);
             restored = EnsureOwnSinkLevelsLocked(levels);
-            return SyncMonitorVolumesLocked(levels);
+            return SyncMonitorVolumesLocked(levels) || changed;
         }
     }
 
@@ -1975,13 +1980,17 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         var restored = new List<string>();
         foreach (OwnSinkLevel sink in levels)
         {
-            if (_config.Mixes.Any(m => m.Kind == MixKind.Monitor && m.SinkName == sink.Name)) continue;
+            if (MonitorMixForSinkLocked(sink.Name) is not null) continue;
             bool off = Math.Abs(sink.Volume - 1.0) > 0.01;
             if (!off && !sink.Muted) continue;
             try
             {
                 if (off) _pw.SetSinkVolume(sink.Name, 1.0);
-                if (sink.Muted) _pw.SetSinkMuted(sink.Name, false);
+                if (sink.Muted)
+                {
+                    _pw.SetSinkMuted(sink.Name, false);
+                    _desktopMutePulses.Remove(sink.Name);
+                }
                 restored.Add(sink.Name);
             }
             catch (InvalidOperationException) { /* the sink went away; the next sweep sees the rest */ }
@@ -2001,7 +2010,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         bool changed = false;
         foreach (OwnSinkLevel sink in levels)
         {
-            MixDefinition? mix = _config.Mixes.FirstOrDefault(m => m.Kind == MixKind.Monitor && m.SinkName == sink.Name);
+            MixDefinition? mix = MonitorMixForSinkLocked(sink.Name);
             if (mix is null) continue;
             double volume = Math.Min(sink.DesktopVolume, PipeWireAdapter.MaxSinkVolume);
             if (sink.DesktopVolume > PipeWireAdapter.MaxSinkVolume)
@@ -2021,6 +2030,41 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
     /// <summary>All selected monitor outputs, in selection order.</summary>
     public IReadOnlyList<string> MonitorOutputs { get { lock (_gate) return [.. _monitorOutputs]; } }
+
+    /// <summary>Pause listening without changing any mix, send, capture or Aux state.</summary>
+    public bool MonitorMuted { get { lock (_gate) return _monitorMuted; } }
+
+    public void SetMonitorMuted(bool muted)
+    {
+        lock (_gate)
+        {
+            if (_monitorMuted == muted) return;
+            if (!muted && _built && !RemovePausedMonitorRoutesLocked())
+                throw new InvalidOperationException("Monitor routes could not be disconnected; listening stays paused until they can be removed.");
+            _monitorMuted = muted;
+            if (!_built) return;
+            if (muted) RemovePausedMonitorRoutesLocked();
+            else SetMonitorOutputsLocked([.. _monitorOutputs]);
+        }
+    }
+
+    private bool RemovePausedMonitorRoutesLocked()
+    {
+        foreach ((string key, PortLink route) in _monitorRoutes.ToArray())
+            if (_pw.EnsureUnlinked(route)) _monitorRoutes.Remove(key);
+        _incompleteMonitorRoutes.Clear();
+        return _monitorRoutes.Count == 0;
+    }
+
+    private void DisconnectMonitorRoutesLocked()
+    {
+        if (_monitorMuted) RemovePausedMonitorRoutesLocked();
+        else
+        {
+            foreach (PortLink route in _monitorRoutes.Values) _pw.Unlink(route);
+            _monitorRoutes.Clear();
+        }
+    }
 
     public bool IsChannelMutedIn(string channelId, string mixId)
     {
@@ -2055,8 +2099,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             string? channel = DirectPathChannelLocked();
-            on &= channel is not null && GroupForChannelLocked(channel) is null && _soundCheckChannel != channel
-                && (whenHeardIn is null || MonitorFeed.Parts(whenHeardIn).Any(m => !_muted.Contains(Cell(channel, m))));
+            on &= !_monitorMuted && channel is not null && GroupForChannelLocked(channel) is null && _soundCheckChannel != channel
+                && (whenHeardIn is null || MonitorFeed.Parts(whenHeardIn).Any(m => !_mixMuted.Contains(m) && !_muted.Contains(Cell(channel, m))));
             SetHardwareMicChannelLocked(on ? channel : null);
             return on;
         }
@@ -2092,8 +2136,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             string? pseudo = _monitorOutputs.FirstOrDefault(o => o.Contains('#'));
             if (pseudo is null) return;
             sink = pseudo[..pseudo.IndexOf('#')];
-            foreach (PortLink route in _monitorRoutes.Values) _pw.Unlink(route);
-            _monitorRoutes.Clear();
+            DisconnectMonitorRoutesLocked();
         }
         _pw.BounceSink(sink);
         lock (_gate)
@@ -2125,8 +2168,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private void SetMonitorOutputsLocked(IReadOnlyList<string> sinkNames)
     {
         string? previousSink = ResolveDefaultSink(FollowMonitorOutput, _monitorOutputs);
-        foreach (PortLink route in _monitorRoutes.Values) _pw.Unlink(route);
-        _monitorRoutes.Clear();
+        DisconnectMonitorRoutesLocked();
         _monitorOutputs.Clear();
         foreach (string name in sinkNames.Where(n => !string.IsNullOrEmpty(n)).Distinct())
         {
@@ -2159,6 +2201,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         }
         _incompleteMonitorRoutes.Clear();
         RefreshHardwareMicCellsLocked(_hardwareMicChannel);
+        if (_monitorMuted) return;
         foreach ((string key, string target) in MonitorRouteTargetsLocked())
         {
             PortLink? route = RouteFeedLocked(target);
@@ -2270,6 +2313,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// </summary>
     private PortLink? RouteFeedLocked(string target)
     {
+        if (_monitorMuted) return null;
         List<MixDefinition> mixes = MixesForOutputLocked(target);
         string key = OutputRouteKey(target);
         _incompleteMonitorRoutes.Remove(key);
@@ -2383,7 +2427,14 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         lock (_gate)
         {
-            if (!_built || _monitorOutputs.Count == 0) return false;
+            if (!_built) return false;
+            if (_monitorMuted)
+            {
+                int pending = _monitorRoutes.Count;
+                RemovePausedMonitorRoutesLocked();
+                return _monitorRoutes.Count != pending;
+            }
+            if (_monitorOutputs.Count == 0) return false;
             bool changed = false;
             foreach ((string key, string target) in MonitorRouteTargetsLocked())
             {
@@ -2779,6 +2830,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 RenamedSinceStart = _renamedSinceBuild,
                 MonitorOutput = _monitorOutputs.FirstOrDefault(),
                 MonitorOutputs = [.. _monitorOutputs],
+                MonitorMuted = _monitorMuted,
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 OutputVolume = _outputVolume,
                 LowCutHz = _lowCutHz,
@@ -2990,12 +3042,14 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
     private void TearDownLocked()
     {
+        ResetDesktopMonitorMuteLocked();
         if (_soundCheck is not null)
             StopSoundCheckLocked(restore: false, error: "Sound Check stopped because the audio graph was rebuilt.");
         _meters.Dispose();
         _meters = new MeterReader();   // Dispose is terminal; a rebuild needs a fresh reader
         foreach (PortLink route in _monitorRoutes.Values) _pw.Unlink(route);
         _monitorRoutes.Clear();
+        _monitorMuted = false;
         _monitorOutputs.Clear();
         _monitorFeeds.Clear();
         _incompleteMonitorRoutes.Clear();

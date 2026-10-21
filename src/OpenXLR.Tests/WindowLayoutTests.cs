@@ -88,6 +88,7 @@ public sealed class WindowLayoutTests
                     Layout(main, width, 900);
                     Assert.Equal(width, main.ClientSize.Width);
                     MainWindowLabelTests.Check(main);
+                    AssertMonitorMute(main);
                     ApplicationIconWindowTests.Check(main, $"at {width}");
                     if (width == 640) MainWindowLabelTests.CheckLongDeviceLabels(main);
                     if (width == 640)
@@ -816,6 +817,17 @@ public sealed class WindowLayoutTests
         DispatcherTimer.RunOnce(stop.Cancel, TimeSpan.FromMilliseconds(100));
         Dispatcher.UIThread.MainLoop(stop.Token);
         window.UpdateLayout();
+    }
+
+    /// <summary>The shared monitor action remains visible and named under every skin and width.</summary>
+    internal static void AssertMonitorMute(MainWindow main)
+    {
+        var mute = main.FindControl<Avalonia.Controls.Primitives.ToggleButton>("MonitorMute")!;
+        Assert.True(mute.IsEffectivelyVisible);
+        Assert.Equal(Localizer.Text("MuteMonitoring"), AutomationProperties.GetName(mute));
+        Assert.Equal(Localizer.Text("Mute"), mute.Content);
+        Assert.True(mute.Bounds.Width > 40, $"Monitoring mute shrank to {mute.Bounds.Width}.");
+        AssertInside(mute, main.FindControl<Expander>("MonitorTile")!);
     }
 
     /// <summary>

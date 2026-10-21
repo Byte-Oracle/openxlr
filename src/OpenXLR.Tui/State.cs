@@ -360,6 +360,7 @@ internal sealed record MixerSnapshot
     public List<string> MonitorOutputs { get; init; } = [];
     public Dictionary<string, string> MonitorFeeds { get; init; } = [];
     public double? OutputVolume { get; init; }
+    public bool MonitorMuted { get; init; }
     public bool AuxPortEnabled { get; init; }
     public int LowCutHz { get; init; }
     public bool SoftClipGuard { get; init; }

@@ -369,6 +369,7 @@ function outputDevices() {
 // ---------- state readers ----------
 const dev = () => daemonState?.state ?? null;
 const mixer = () => daemonState?.mixer ?? null;
+const monitorMuted = () => mixer()?.monitorMuted === true;
 const mixOf = (id) => mixer()?.mixes?.find((x) => x.id === id);
 const chOf = (id) => mixer()?.channels?.find((x) => x.id === id);
 // The device's highest gain (40 dB on the Wave:3); 80 from a daemon that does not say.
@@ -471,8 +472,7 @@ const nextFeed = (feed) => {
     ...mixes.filter(m => !Object.hasOwn(FEED_LETTER, m.id)).map(m => m.id)];
   return choices.length ? choices[(choices.indexOf(feed) + 1) % choices.length] : "monitor";
 };
-// The mixes the monitor dial's press mutes: what the first selected
-// monitor output hears.
+// The first selected monitor output's mixes, for the dial's audible state.
 const monitorDialMixes = () => {
   const first = mixer()?.monitorOutputs?.[0];
   return first ? feedOf(first).split("+") : ["monitor"];
@@ -488,14 +488,14 @@ const outputDeviceName = (name) => {
   return enforced && deviceOf(enforced) ? enforced : null;
 };
 // Muted as toggleOutputMute sees it: a mix sink is its mix, a monitor output
-// is every mix feeding it or the sink itself, any other sink is the server's
-// own flag. null when unknown.
+// follows the global monitor pause, its feeds and the sink itself. Any other
+// sink uses the server's own flag. null when unknown.
 function outputMuted(name) {
   const mix = name?.startsWith("OpenXLR_mix_") ? mixOf(name.slice(12)) : null;
   if (mix) return mix.muted ?? null;
   const own = deviceOf(name)?.muted ?? null;
   if (mixer()?.monitorOutputs?.includes(name))
-    return feedOf(name).split("+").every((id) => mixOf(id)?.muted === true) || own === true;
+    return monitorMuted() || feedOf(name).split("+").every((id) => mixOf(id)?.muted === true) || own === true;
   return own;
 }
 function outputVolume(name) {
@@ -655,7 +655,7 @@ function dialValue(target, inst) {
   switch (target) {
     case "outputVolume": {
       const v = dialNow(target, x?.outputVolume ?? 0);
-      const muted = monitorDialMixes().every((id) => mixOf(id)?.muted === true);
+      const muted = monitorMuted() || monitorDialMixes().every((id) => mixOf(id)?.muted === true);
       return { label: "Monitor", pct: pct(v), maxPct: 150, text: muted ? "MUTED" : `${pct(v)}%`, muted };
     }
     case "gain": case "gain2": {
@@ -847,10 +847,7 @@ function onDialPress(context, inst) {
     const muted = dev()?.[control];
     if (muted != null) cmd({ cmd: "set", control, value: !muted });
   } else if (t === "outputVolume") {
-    const ids = monitorDialMixes(), states = ids.map((id) => mixOf(id)?.muted);
-    if (!states.every((m) => m != null)) return;
-    const allMuted = states.every(Boolean);
-    for (const id of ids) cmd({ cmd: "setMixMuted", mix: id, value: !allMuted });
+    if (mixer()) cmd({ cmd: "setMonitorMuted", value: !monitorMuted() });
   } else if (t.startsWith("output:")) {
     cmd({ cmd: "toggleOutputMute", device: t.slice(7) || null });
   } else if (t === "hp" || t === "hp2") {

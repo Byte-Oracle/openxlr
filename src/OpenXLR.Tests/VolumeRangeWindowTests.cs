@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Threading;
 using OpenXLR.UI;
 
@@ -71,6 +73,80 @@ internal static class VolumeRangeWindowTests
             Assert.False(vm.HasVolumeRangeError);
         }
         finally { main.Quit(); }
+
+        Task pending = CheckMonitorMuteBinding();
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!pending.IsCompleted && DateTime.UtcNow < deadline)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(5);
+        }
+        Assert.True(pending.IsCompleted, "Monitoring mute binding check hung.");
+        pending.GetAwaiter().GetResult();
+    }
+
+    private static async Task CheckMonitorMuteBinding()
+    {
+        var commands = new ConcurrentQueue<JsonNode>();
+        await using var server = await SocketTestServer.Start(async (socket, stop) =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                JsonNode command = await SocketTestServer.Receive(socket, stop);
+                if (command["cmd"]!.GetValue<string>() == "auth") continue;
+                commands.Enqueue(command);
+                if (command["requestId"] is not { } requestId) continue;
+                if (command["cmd"]!.GetValue<string>() == "listPlugins")
+                    await SocketTestServer.Send(socket, new { type = "plugins", plugins = Array.Empty<object>() }, stop);
+                await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>() }, stop);
+            }
+        });
+        await using var client = new DaemonClient(server.Url);
+        var connected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        client.ConnectionChanged += up => { if (up) connected.TrySetResult(); };
+        MainWindow? window = null;
+        try
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                window = new MainWindow(client);
+                window.Show();
+            });
+            await connected.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var model = (MainViewModel)window!.DataContext!;
+                var mute = window.FindControl<ToggleButton>("MonitorMute")!;
+                Assert.False(model.MonitorMuted);
+                Assert.False(mute.IsChecked);
+                Apply(model, """{"devices":[],"mixer":{"monitorMuted":true,"mixes":[],"channels":[],"inserts":{}}}""");
+                Assert.True(model.MonitorMuted);
+                Assert.True(mute.IsChecked);
+                Apply(model, """{"devices":[],"mixer":{"mixes":[],"channels":[],"inserts":{}}}""");
+                Assert.False(model.MonitorMuted); // An older daemon must clear a previously read pause.
+                Assert.False(mute.IsChecked);
+                Apply(model, """{"mixer":{"monitorMuted":true}}""");
+                Assert.True(mute.IsChecked); // The state does not depend on device enumeration.
+                Apply(model, """{"devices":[]}""");
+                Assert.False(mute.IsChecked);
+            });
+            // An acknowledged command on the same socket is a barrier for
+            // any accidental edits caused by the preceding binding readback.
+            Assert.Null(await client.AdjustOutputVolumeAsync("fixture", 0));
+            Assert.DoesNotContain(commands, command => command["cmd"]!.GetValue<string>() == "setMonitorMuted");
+            foreach (bool value in new[] { true, false })
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => window!.FindControl<ToggleButton>("MonitorMute")!.IsChecked = value);
+                Assert.Null(await client.AdjustOutputVolumeAsync("fixture", 0));
+            }
+            JsonNode[] edits = commands.Where(command => command["cmd"]!.GetValue<string>() == "setMonitorMuted").ToArray();
+            Assert.Equal(new[] { true, false }, edits.Select(command => command["value"]!.GetValue<bool>()));
+            Assert.All(edits, command => Assert.Equal(2, command.AsObject().Count));
+        }
+        finally
+        {
+            if (window is not null) await Dispatcher.UIThread.InvokeAsync(window.Quit);
+        }
     }
 
     private static void Apply(MainViewModel model, string state)

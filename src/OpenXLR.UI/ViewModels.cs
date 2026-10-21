@@ -636,6 +636,14 @@ public sealed partial class MainViewModel : ViewModelBase
     }
     public string OutputVolumeText => $"{_outputVolume * 100:0}%";
 
+    private bool _monitorMuted;
+    /// <summary>Monitoring is paused; recording mixes and their saved mutes are unchanged.</summary>
+    public bool MonitorMuted
+    {
+        get => _monitorMuted;
+        set { if (Set(ref _monitorMuted, value) && !_applying) _ = _client.SetMonitorMutedAsync(value); }
+    }
+
     private bool _hasMixer;
     public bool HasMixer { get => _hasMixer; private set { if (Set(ref _hasMixer, value)) { Raise(nameof(MixerPlaceholder)); Raise(nameof(CanEditLayout)); Raise(nameof(ShowApplications)); } } }
 
@@ -1158,6 +1166,7 @@ public sealed partial class MainViewModel : ViewModelBase
 
     private void ApplyMixer(JsonNode? mixer)
     {
+        MonitorMuted = mixer?["monitorMuted"]?.GetValue<bool>() ?? false;
         if (mixer is null)
         {
             Inserts.SoundCheck.Apply(null); Inserts2.SoundCheck.Apply(null);

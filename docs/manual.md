@@ -511,7 +511,13 @@ that was the default.
    so and the buttons show the range Plasma holds. Without `kreadconfig6`
    the buttons work inside OpenXLR alone. On other desktops this does
    nothing, and each **150%** button keeps its own range.
-5. The HEADPHONES card holds the interface's own headphone volume,
+5. **Mute** in the MONITOR header pauses every selected monitor output,
+   including the direct microphone path on the Pro. Recording and streaming
+   continue. Press it again to resume: mix mutes, channel sends, levels and
+   output feeds keep their settings, so a mix or send that was already muted
+   stays muted. The pause survives a daemon restart and profile recall leaves
+   it unchanged. The terminal mixer's Outputs tab has **Mute monitoring** too.
+6. The HEADPHONES card holds the interface's own headphone volume,
    low-impedance mode, and on the Pro the Mic ↔ PC crossfade, which is
    the zero-latency direct monitor inside the device: left is only your
    microphone, right is only computer audio.
@@ -2934,10 +2940,20 @@ Ordinary internal OpenXLR application sinks are not volume targets because
 their gains must stay at unity.
 
 What the mute key toggles depends on the output. On one of the selected
-monitor outputs it mutes and unmutes the mixes feeding that output, the same
-as pressing a Deck dial on the monitor, so the mixer window, the dial rings
-and the keys agree. On a monitor mix sink it toggles that mix. On any other
-output it toggles the sink's mute at the audio server.
+physical monitor outputs it pauses and resumes the whole monitor selection,
+the same as MONITOR's **Mute** button or pressing a Deck monitor dial.
+Mix and channel mutes keep their values, and recording and streaming continue.
+On a monitor mix sink it toggles that mix. On any other output it toggles the
+sink's mute at the audio server.
+
+If Linux's native mute key targets a selected physical output or an internal
+application sink such as **OpenXLR System**, OpenXLR treats the press as a
+monitoring toggle. It restores physical outputs' previous mute flags and keeps
+application routing sinks open so recording and streaming continue. The mute
+icon in the Linux applet can return to its previous state while monitoring
+remains paused. The **Mute** button in OpenXLR's MONITOR header shows the
+monitoring state; another mute press resumes monitoring. **OpenXLR Monitor A**
+and **OpenXLR Monitor B** keep their individual mix mute controls.
 
 Select **Switch system output** entries to register keys which select and
 enforce that default sink. **Follow selected monitor output** follows the

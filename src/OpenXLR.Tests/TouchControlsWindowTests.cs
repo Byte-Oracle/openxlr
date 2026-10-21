@@ -140,6 +140,7 @@ internal static class TouchControlsWindowTests
 
     private static void CheckTargets(MainWindow main, string skin)
     {
+        WindowLayoutTests.AssertMonitorMute(main);
         var sliders = main.GetVisualDescendants().OfType<Slider>()
             .Where(s => s.IsEffectivelyVisible && s.Bounds.Width > 0).ToArray();
         Assert.NotEmpty(sliders);

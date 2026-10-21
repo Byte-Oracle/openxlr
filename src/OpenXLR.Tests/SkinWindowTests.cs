@@ -703,6 +703,7 @@ public sealed partial class SkinWindowTests
             {
                 Layout(main, width, 900);
                 MainWindowLabelTests.Check(main);
+                WindowLayoutTests.AssertMonitorMute(main);
                 if (width == 640) MainWindowLabelTests.CheckLongDeviceLabels(main);
                 Capture(main, $"labels-{skin.Id}-{width}");
             }

@@ -2,7 +2,7 @@ namespace OpenXLR.Tui;
 
 /// <summary>
 /// Where the monitor mixes go: which sinks are fed, what feeds each one, the
-/// volume the selected outputs share, and the system defaults the daemon
+/// volume and monitoring pause the selected outputs share, and the system defaults the daemon
 /// holds.
 /// </summary>
 internal sealed class OutputsView : View
@@ -44,6 +44,9 @@ internal sealed class OutputsView : View
             Enabled = selected.Count > 0,
             Note = selected.Count == 0 ? "no output selected" : null,
         });
+        rows.Add(new ToggleRow("Mute monitoring", state.Mixer.MonitorMuted,
+            value => link.Send("setMonitorMuted", body => body["value"] = value))
+        { Note = "recording and streaming continue" });
 
         rows.Add(new HeadingRow("Outputs"));
         if (sinks.Count == 0) rows.Add(new TextRow("None found", "is PipeWire running"));

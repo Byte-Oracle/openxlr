@@ -16,6 +16,7 @@ public sealed class MonitorVolumeSyncTests
         public Mixer Mixer { get; }
         public string[] Writes => File.ReadAllLines(Path.Combine(_dir, "writes"));
         public int Dumps => File.ReadAllLines(Path.Combine(_dir, "reads")).Length;
+        public long Now { get; set; }
 
         public Sinks()
         {
@@ -24,20 +25,45 @@ public sealed class MonitorVolumeSyncTests
                 echo read >> "$dir/reads"
                 /bin/cat "$dir/dump.json"
                 """);
+            ExecutableScript.Write(Path.Combine(_dir, "pw-link"), "exit 0\n");
             ExecutableScript.Write(Path.Combine(_dir, "pactl"), """
                 dir=${0%/*}
                 echo "$*" >> "$dir/writes"
+                if [ "$1" = get-sink-mute ]; then
+                    /bin/cat "$dir/mute"
+                    exit
+                fi
+                if [ "$1" = set-sink-mute ]; then
+                    if [ -f "$dir/fail" ]; then
+                        left=$(/bin/cat "$dir/fail")
+                        if [ "$left" -gt 0 ]; then
+                            printf '%s\n' "$((left - 1))" > "$dir/fail"
+                            echo 'transient mute failure' >&2
+                            exit 1
+                        fi
+                    fi
+                    case "$3" in 0) printf 'Mute: no\n' > "$dir/mute" ;; 1) printf 'Mute: yes\n' > "$dir/mute" ;; esac
+                fi
                 """);
             Environment.SetEnvironmentVariable("PATH", _dir);
             Adapter.SetSinkMuted("OpenXLR_mix_monitor", false);
             File.WriteAllText(Path.Combine(_dir, "writes"), "");
-            Mixer = new(Adapter);
+            Mixer = new(Adapter) { Clock = () => Now };
             typeof(Mixer).GetField("_built", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(Mixer, true);
             typeof(Mixer).GetField("_config", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(Mixer,
                 new MixerConfig { Channels = [], Mixes = [new("monitor", "Monitor", MixKind.Monitor)] });
         }
 
-        public void Dump(double volume, bool muted = false, bool internalSink = false)
+        public void ApplicationChannel() => typeof(Mixer).GetField("_config", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(Mixer, new MixerConfig { Channels = [new("system", "System")], Mixes = [new("monitor", "Monitor", MixKind.Monitor)] });
+
+        public void SelectExternalOutput() => ((List<string>)typeof(Mixer).GetField("_monitorOutputs", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(Mixer)!).Add("external");
+
+        public void DirectMute(bool muted) => File.WriteAllText(Path.Combine(_dir, "mute"), muted ? "Mute: yes\n" : "Mute: no\n");
+        public void FailMuteWrites(int count) => File.WriteAllText(Path.Combine(_dir, "fail"), count.ToString(CultureInfo.InvariantCulture));
+
+        public void Dump(double volume, bool muted = false, bool internalSink = false, bool? externalMuted = null, int externalSerial = 1)
         {
             string amplitude = Math.Pow(volume, 3).ToString("R", CultureInfo.InvariantCulture);
             string monitor = $$$$"""
@@ -48,7 +74,17 @@ public sealed class MonitorVolumeSyncTests
                 {"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"OpenXLR_ch_system","media.class":"Audio/Sink"},
                 "params":{"Props":[{"channelVolumes":[0.125],"mute":true}]}}}
                 """;
-            File.WriteAllText(Path.Combine(_dir, "dump.json"), "[" + monitor + (internalSink ? "," + channel : "") + "]");
+            string external = externalMuted is bool value ? "," + JsonSerializer.Serialize(new
+            {
+                type = "PipeWire:Interface:Node", info = new
+                {
+                    props = new Dictionary<string, string> { ["node.name"] = "external", ["media.class"] = "Audio/Sink",
+                        ["object.serial"] = externalSerial.ToString(CultureInfo.InvariantCulture) },
+                    @params = new { Props = new[] { new { channelVolumes = new[] { 1.0 }, mute = value } } },
+                },
+            }) : "";
+            File.WriteAllText(Path.Combine(_dir, "dump.json"), "[" + monitor + (internalSink ? "," + channel : "") + external + "]");
+            typeof(PipeWireAdapter).GetMethod("InvalidateDump", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(Adapter, null);
         }
 
         public void Dispose()
@@ -128,5 +164,158 @@ public sealed class MonitorVolumeSyncTests
         var mix = Assert.Single(sinks.Mixer.Snapshot().Mixes);
         Assert.Equal(mute ? 0.6 : 0.8, mix.Volume);
         Assert.Equal(mute, mix.Muted);
+    }
+
+    [Fact]
+    public void AStaleApplicationMuteEchoDoesNotBecomeAnotherKeyPress()
+    {
+        using var sinks = new Sinks();
+        sinks.ApplicationChannel();
+        sinks.DirectMute(true);
+        sinks.Dump(0.6, internalSink: true);
+
+        Assert.True(sinks.Mixer.SyncOwnSinkLevels(out _));
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Mixer.SyncOwnSinkLevels(out _));
+        Assert.True(sinks.Mixer.MonitorMuted);
+    }
+
+    [Fact]
+    public void LinuxCanStillEditAnIndividualMixMuteWhileMonitoringIsPaused()
+    {
+        using var sinks = new Sinks();
+        sinks.Mixer.SetMonitorMuted(true);
+        sinks.Dump(0.6, muted: true);
+        Assert.True(sinks.Mixer.SyncOwnSinkLevels(out _));
+        Assert.True(Assert.Single(sinks.Mixer.Snapshot().Mixes).Muted);
+        sinks.Dump(0.6, muted: false);
+        Assert.True(sinks.Mixer.SyncOwnSinkLevels(out _));
+        Assert.False(Assert.Single(sinks.Mixer.Snapshot().Mixes).Muted);
+        Assert.True(sinks.Mixer.MonitorMuted);
+    }
+
+    [Fact]
+    public void ARefusedNativeMuteResetBacksOffAndRecoversWithoutForgettingTheNextKey()
+    {
+        using var sinks = new Sinks();
+        sinks.SelectExternalOutput();
+        sinks.Dump(0.6, externalMuted: false);
+        sinks.DirectMute(false);
+        sinks.Mixer.SyncDeviceVolumes();
+        sinks.Dump(0.6, externalMuted: true);
+        sinks.DirectMute(true);
+        sinks.FailMuteWrites(4);
+
+        Assert.True(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        int beforeBackoff = sinks.Writes.Count(w => w.StartsWith("set-sink-mute external ", StringComparison.Ordinal));
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.Equal(beforeBackoff, sinks.Writes.Count(w => w.StartsWith("set-sink-mute external ", StringComparison.Ordinal)));
+        sinks.Now = 1_000;
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        sinks.Now = 3_000;
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+
+        sinks.DirectMute(true);
+        Assert.True(sinks.Mixer.SyncDeviceVolumes());
+        Assert.False(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Fact]
+    public void AStaleOutputMuteEchoCannotAcknowledgeARefusedReset()
+    {
+        using var sinks = new Sinks();
+        sinks.SelectExternalOutput();
+        sinks.Dump(0.6, externalMuted: false);
+        sinks.DirectMute(false);
+        sinks.Mixer.SyncDeviceVolumes();
+        sinks.Dump(0.6, externalMuted: true);
+        sinks.DirectMute(true);
+        sinks.FailMuteWrites(4);
+        Assert.True(sinks.Mixer.SyncDeviceVolumes());
+
+        sinks.Dump(0.6, externalMuted: false);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        sinks.Dump(0.6, externalMuted: true);
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void AReconnectedOutputRestoresItsPriorMuteWithoutBecomingAKeyPress(bool paused, bool sawRemoval)
+    {
+        using var sinks = new Sinks();
+        sinks.SelectExternalOutput();
+        sinks.Dump(0.6, externalMuted: true);
+        sinks.DirectMute(true);
+        sinks.Mixer.SyncDeviceVolumes();
+        sinks.Mixer.SetMonitorMuted(paused);
+
+        if (sawRemoval)
+        {
+            sinks.Dump(0.6); // The selected device has gone away.
+            sinks.Mixer.SyncDeviceVolumes();
+        }
+        sinks.Dump(0.6, externalMuted: false, externalSerial: 2); // A new node starts unmuted.
+        sinks.DirectMute(false);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        Assert.Equal(paused, sinks.Mixer.MonitorMuted);
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.Equal(paused, sinks.Mixer.MonitorMuted);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ANewOutputConfirmsItsBaselineBeforeTheNextNativeMuteKey(bool muted)
+    {
+        using var sinks = new Sinks();
+        sinks.SelectExternalOutput();
+        sinks.Dump(0.6, externalMuted: !muted); // Discovery can precede the native mute echo.
+        sinks.DirectMute(muted);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        sinks.Dump(0.6, externalMuted: !muted);
+        sinks.DirectMute(!muted);
+        Assert.True(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.Equal(muted, sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Fact]
+    public void AnApplicationPulseAlsoConfirmsPhysicalFlagsWhoseRegistryEchoIsLate()
+    {
+        using var sinks = new Sinks();
+        sinks.ApplicationChannel();
+        sinks.SelectExternalOutput();
+        sinks.DirectMute(true);
+        sinks.Dump(0.6, externalMuted: true);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        // The internal mute is already visible, but the physical output's
+        // registry still shows its baseline. Repairing the internal sink
+        // leaves the fake native flag false, as the physical toggle did.
+        sinks.Dump(0.6, internalSink: true, externalMuted: true);
+        Assert.True(sinks.Mixer.SyncOwnSinkLevels(out _));
+        Assert.True(sinks.Mixer.MonitorMuted);
+        sinks.Mixer.SyncDeviceVolumes();
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
+
+        sinks.Dump(0.6, externalMuted: false); // The delayed physical echo arrives.
+        Assert.False(sinks.Mixer.SyncDeviceVolumes());
+        Assert.True(sinks.Mixer.MonitorMuted);
     }
 }
