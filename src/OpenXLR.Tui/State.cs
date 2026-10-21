@@ -63,6 +63,19 @@ internal sealed record ChannelEntry
     public int CapturePair { get; init; }
     public bool CaptureConnected { get; init; }
 
+    /// <summary>Null from a daemon that predates capture microphones.</summary>
+    public bool? Microphone { get; init; }
+
+    private int? _chainWidth;
+    private bool _hasChainWidth;
+
+    /// <summary>The chain's width, or the XLR-only rule when the field is absent.</summary>
+    public int? ChainWidth
+    {
+        get => _hasChainWidth ? _chainWidth : Id is "xlr1" or "xlr2" ? 1 : null;
+        init { _chainWidth = value; _hasChainWidth = true; }
+    }
+
     /// <summary>
     /// False when the active device has no jack behind this channel, which is
     /// XLR 2 and Aux In on everything but the Wave XLR Pro. The daemon keeps
@@ -95,11 +108,11 @@ internal sealed record ChannelEntry
     public bool UnitBound => Hardware && (Binding is null || Binding.Kind == "unit");
 
     /// <summary>
-    /// True for the XLR microphone inputs, which are mono. The daemon still
-    /// sends a pair for every channel and repeats the one reading in both
+    /// True for microphone inputs, with the XLR-only rule on an older daemon.
+    /// The daemon sends a pair for every channel and repeats the one reading in both
     /// sides of it, so a stereo meter here would draw the same bar twice.
     /// </summary>
-    public bool Mono => Id is "xlr1" or "xlr2";
+    public bool Mono => Microphone ?? Id is "xlr1" or "xlr2";
 
     public double Level(string mix) => Levels.TryGetValue(mix, out double value) ? value : 0;
 
@@ -472,16 +485,16 @@ internal sealed record Snapshot
     }
 
     /// <summary>
-    /// The source a bindable strip plays from: the name it was bound to, or,
+    /// The source a strip or capture input plays from: the name it was bound to, or,
     /// for a strip bound to a supported unit whose node was renamed (driven,
     /// or its card profile switched), the one node that unit publishes now.
     /// </summary>
     public string? BoundSource(ChannelEntry strip)
     {
-        if (!strip.SourceBound) return null;
-        string source = strip.Binding!.Source!;
+        string? source = strip.SourceBound ? strip.Binding!.Source : strip.CaptureSource;
+        if (source is null) return null;
         if (Devices.Any(device => !device.IsSink && device.Name == source)) return source;
-        return strip.Binding.Unit is { } unit
+        return strip.Binding?.Unit is { } unit
             && Devices.Where(device => !device.IsSink && !device.IsOwn && device.DrivenUnit == unit).ToArray() is [var renamed]
             ? renamed.Name : source;
     }

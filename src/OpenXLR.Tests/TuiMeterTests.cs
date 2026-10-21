@@ -1,9 +1,59 @@
+using System.Text.Json.Nodes;
 using OpenXLR.Tui;
 
 namespace OpenXLR.Tests;
 
 public sealed class TuiMeterTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
+    public void CaptureMetersReadTheMicrophoneFlagAndOlderStateStaysStereo(bool? microphone)
+    {
+        JsonNode state = JsonNode.Parse("""
+            {"type":"state","mixer":{"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor"}],
+              "channels":[{"id":"guest","name":"Guest","captureSource":"usb","captureMonoChannel":0,
+                "captureConnected":true,"levels":{"monitor":1}}]}}
+            """)!;
+        if (microphone is bool mono) state["mixer"]!["channels"]![0]!["microphone"] = mono;
+        DaemonLink link = new();
+        link.Receive(state.ToJsonString());
+        Assert.Equal(microphone == true, link.State!.Mixer.Channels[0].Mono);
+        link.Receive("""{"type":"meters","levels":{"ch:guest":[0.2,0.7]}}""");
+        App app = new(link, Theme.Material);
+        Screen screen = new(150, 42);
+        app.Draw(screen);
+        string[] desk = Lines(screen);
+        int plate = Array.FindIndex(desk, row => row.Contains("Guest", StringComparison.Ordinal));
+        Assert.True(plate > 0);
+        Assert.Equal(microphone == true ? 1 : 2, desk[plate + 3].Split("L R", StringSplitOptions.None).Length - 1);
+
+        app.ShowTab(1);
+        app.Draw(screen);
+        string[] matrix = Lines(screen);
+        int name = Array.FindIndex(matrix, row => row.Contains("Guest", StringComparison.Ordinal));
+        Assert.True(name > 0);
+        Assert.Equal(microphone != true, matrix[name - 1].Contains(" L ", StringComparison.Ordinal));
+        Assert.Equal(microphone != true, matrix[name + 1].Contains(" R ", StringComparison.Ordinal));
+        screen.Resize(80, 24);
+        app.Draw(screen);
+        Assert.Contains("Guest", string.Join('\n', Lines(screen)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OlderStateKeepsXlrMonoAndAnExplicitMicrophoneFlagWins()
+    {
+        Snapshot state = Snapshot.Parse("""
+            {"mixer":{"channels":[{"id":"xlr1"},{"id":"xlr2"},{"id":"aux"},
+              {"id":"capture","captureMonoChannel":0},{"id":"xlr1","microphone":false}]}}
+            """)!;
+        Assert.Equal([true, true, false, false, false], state.Mixer.Channels.Select(channel => channel.Mono));
+    }
+
+    private static string[] Lines(Screen screen) => Enumerable.Range(0, screen.Height).Select(y =>
+        new string(Enumerable.Range(0, screen.Width).Select(x => screen.At(x, y).Ch).ToArray())).ToArray();
+
     private static Theme Zones() => Theme.FromJson("""
         {"schema":1,"tokens":{"Ox.Meter.Fill":"#00ff00","Ox.Meter.Warning":"#ffff00","Ox.Meter.Hot":"#ff0000"}}
         """, "test", "Test");

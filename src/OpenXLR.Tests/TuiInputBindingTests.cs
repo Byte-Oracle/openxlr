@@ -375,6 +375,89 @@ public sealed class TuiInputBindingTests
         Assert.DoesNotContain("Also drive", frame, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true, 1, 160, 60)]
+    [InlineData(false, 1, 160, 60)]
+    [InlineData(true, 2, 160, 60)]
+    [InlineData(false, 2, 160, 60)]
+    [InlineData(true, 1, 80, 24)]
+    [InlineData(false, 1, 80, 24)]
+    public void CaptureMicrophonesShowTheirSourceAndWriteTheirCarriedUnitsControls(bool primary, int input, int width, int height)
+    {
+        string unit = primary ? Unit : Wave3;
+        string json = Edit(root =>
+        {
+            JsonNode capture = Channel(root, "cap1");
+            capture["microphone"] = true;
+            capture["chainWidth"] = 1;
+            capture["binding"]!["unit"] = unit;
+            capture["unitInput"] = new JsonObject { ["unit"] = unit, ["input"] = input, ["primary"] = primary };
+            if (primary && input == 2) Channel(root, "xlr2").AsObject().Remove("unitInput");
+            root["waveInterfaces"]![1]!["capabilities"]!["xlrInputs"] = 2;
+            root["waveInterfaces"]![1]!["state"]!["gain2Db"] = 25;
+            root["waveInterfaces"]![1]!["state"]!["mute2"] = false;
+            root["waveInterfaces"]![1]!["enabled"] = true;
+            // The saved source no longer exists. Resolve its unit's current source.
+            capture["captureSource"] = "saved.node";
+            capture["binding"]!["source"] = "saved.node";
+        });
+        (App app, List<string> sent) = Ready(json, tab: 2, width: width, height: height);
+        Press(app, Key.Down, primary ? 11 : 20);
+        string frame = Draw(app, width, height);
+        Assert.Contains("PRO MIC", frame.ToUpperInvariant(), StringComparison.Ordinal);
+        app.Handle(new KeyPress(Key.Right));
+        JsonElement gain = Last(sent);
+        Assert.Equal("setWaveControl", gain.GetProperty("cmd").GetString());
+        Assert.Equal(unit, gain.GetProperty("device").GetString());
+        Assert.Equal(input == 2 ? "gain2" : "gain", gain.GetProperty("control").GetString());
+        Assert.Equal(primary ? input == 2 ? 31 : 53 : input == 2 ? 26 : 31, gain.GetProperty("value").GetInt32());
+        sent.Clear();
+        app.Handle(new KeyPress(Key.Down));
+        app.Handle(new KeyPress(Key.Char, ' '));
+        JsonElement mute = Last(sent);
+        Assert.Equal("setWaveControl", mute.GetProperty("cmd").GetString());
+        Assert.Equal(unit, mute.GetProperty("device").GetString());
+        Assert.Equal(input == 2 ? "mute2" : "mute", mute.GetProperty("control").GetString());
+        Assert.Equal(!(primary && input == 2), mute.GetProperty("value").GetBoolean());
+        Snapshot state = app.Link.State!;
+        ChannelEntry channel = state.Mixer.Channels.Single(entry => entry.Id == "cap1");
+        Assert.Equal(primary ? "alsa_input.usb-Elgato_Wave_XLR_Pro" : "alsa_input.usb-Elgato_Wave_3", state.BoundSource(channel));
+        if (width == 160)
+        {
+            Assert.Contains(primary ? "Wave XLR Pro, port 1" : "Wave:3, port 1", frame, StringComparison.Ordinal);
+            Assert.Contains("linked", frame, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void CaptureMicrophonesWithoutAUnitShowTheirConnectionAndOlderStateKeepsTheOldInputs()
+    {
+        string json = Edit(root =>
+        {
+            JsonNode capture = Channel(root, "cap1");
+            capture["microphone"] = true;
+            capture["chainWidth"] = 1;
+            capture["captureConnected"] = false;
+            capture["bindingWarning"] = "The guest microphone is not connected.";
+            capture.AsObject().Remove("unitInput");
+            root["mixer"]!["channels"]!.AsArray().Add(new JsonObject
+            {
+                ["id"] = "line", ["name"] = "Stereo capture", ["captureSource"] = "line.source",
+                ["microphone"] = false, ["chainWidth"] = 2,
+            });
+        });
+        (App app, _) = Ready(json, tab: 2, width: 160, height: 80);
+        string frame = Draw(app, 160, 80);
+        Assert.Contains("The guest microphone is not connected.", frame, StringComparison.Ordinal);
+        Assert.DoesNotContain("Stereo capture", frame, StringComparison.Ordinal);
+        (App older, List<string> sent) = Ready(tab: 2, width: 160, height: 80);
+        frame = Draw(older, 160, 80);
+        Assert.DoesNotContain("Connection", frame, StringComparison.Ordinal);
+        Assert.Contains("Input 1 on Pro mic", frame, StringComparison.Ordinal);
+        older.Handle(new KeyPress(Key.Right));
+        Assert.Equal("set", Last(sent).GetProperty("cmd").GetString());
+    }
+
     [Fact]
     public void BindingToAnotherUnitAlsoDrivesItUnlessTheBoxIsCleared()
     {

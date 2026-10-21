@@ -26,7 +26,7 @@ Item {
     readonly property var channels: Mixer.shownChannels(mixer.channels)
     readonly property var mixes: mixer.mixes || []
     readonly property var inputs: channels.filter(function (channel) {
-        return Mixer.mono(channel.id);
+        return Mixer.mono(channel);
     })
     readonly property var feeds: Mixer.monitorFeeds(mixer)
     readonly property string mixId: mixes.some(function (mix) {

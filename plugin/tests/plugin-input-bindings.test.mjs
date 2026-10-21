@@ -98,6 +98,73 @@ test("hardware keys stay unit controls and are named after the carrying channel"
     daemon.receive({type:"meters", levels:{"ch:xlr1":[0,0], "ch:cap1":[0.8,0.8]}});
     assert.match(svg(meter("gain-dial")), /<rect width="104" height="6"/);
 
+    // Channel controls use the current carrier, including input 2 and a
+    // renamed source on an additional unit with a lower gain ceiling.
+    key("channel-mute", "chmute:cap1");
+    host.receive({event:"keyDown",context:"channel-mute"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setWaveControl",device:unit,control:"mute",value:true});
+    key("channel-phantom", "chphantom:xlr2");
+    state.state.phantom2 = false;
+    daemon.receive(state);
+    host.receive({event:"keyDown",context:"channel-phantom"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setWaveControl",device:unit,control:"phantom2",value:true});
+    const wave3 = "0fd9:0070@fedcba9876543210";
+    state.waveInterfaces = [{id:wave3, enabled:true, connected:true,
+      capabilities:{gain:true, mute:true, clipGuard:true, gainMaxDb:40}, state:{gainDb:39, mute:false, clipGuard:true}}];
+    const capture = state.mixer.channels[2];
+    capture.microphone = true;
+    capture.chainWidth = 1;
+    capture.binding.unit = wave3;
+    capture.unitInput = {unit:wave3,input:1,primary:false};
+    capture.name = "Guest";
+    daemon.receive(state);
+    host.receive({event:"keyDown",context:"channel-mute"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setWaveControl",device:wave3,control:"mute",value:true});
+    assert.ok(keyImage("channel-mute").includes(">Guest</text>"));
+    host.receive({event:"willAppear",context:"channel-gain",action:"com.emaspa.openxlr.dial",payload:{settings:{target:"chgain:cap1"}}});
+    assert.equal(feedback("channel-gain").value, "39");
+    host.receive({event:"dialRotate",context:"channel-gain",payload:{ticks:5}});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setWaveControl",device:wave3,control:"gain",value:40});
+    host.receive({event:"dialDown",context:"channel-gain"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setWaveControl",device:wave3,control:"mute",value:true});
+    daemon.receive({type:"meters",levels:{"ch:cap1":[0.2,0.6]}});
+    assert.match(svg(meter("channel-gain")), /<rect width="78" height="6"/);
+    assert.equal((svg(meter("channel-gain")).match(/fill="url\(#level\)"/g) ?? []).length, 1);
+    key("unavailable-phantom", "chphantom:cap1");
+    const beforeUnsupported = daemon.messages.length;
+    host.receive({event:"keyDown",context:"unavailable-phantom"});
+    assert.equal(daemon.messages.length, beforeUnsupported);
+    state.waveInterfaces[0].connected = false;
+    daemon.receive(state);
+    host.receive({event:"dialRotate",context:"channel-gain",payload:{ticks:1}});
+    host.receive({event:"dialDown",context:"channel-gain"});
+    host.receive({event:"keyDown",context:"channel-mute"});
+    assert.equal(daemon.messages.length, beforeUnsupported);
+    assert.equal(alerted("channel-gain"), 2);
+
+    // Capture insert choices and commands keep their keys across a rename.
+    state.mixer.inserts.cap1 = [{insert:{id:"fx",kind:"lv2",plugin:"urn:gain",label:"Gain",params:{gain:0.5}}}];
+    daemon.receive({type:"plugins",plugins:[{plugin:"urn:gain",params:[{symbol:"gain",name:"Gain",min:0,max:1,default:0.5}]}]});
+    for (const name of ["Guest", "Visitor"]) {
+      capture.name = name;
+      daemon.receive(state);
+      host.receive({event:"sendToPlugin",context:"capture-pi",payload:{request:"inserts"}});
+      const choices = host.messages.at(-1).payload;
+      assert.equal(choices.inserts[0].target, "insert|cap1|fx");
+      assert.equal(choices.chains[0].target, "inschain|cap1");
+      assert.equal(choices.params[0].target, "insparam|cap1|fx|gain");
+      assert.equal(choices.inserts[0].label, `${name}: Gain`);
+      assert.equal(choices.params[0].label, `${name}: Gain: Gain`);
+    }
+    key("capture-insert", "insert|cap1|fx");
+    host.receive({event:"keyDown",context:"capture-insert"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setInsertBypass",channel:"cap1",insertId:"fx",value:true});
+    host.receive({event:"willAppear",context:"capture-param",action:"com.emaspa.openxlr.dial",payload:{settings:{target:"insparam|cap1|fx|gain"}}});
+    host.receive({event:"dialRotate",context:"capture-param",payload:{ticks:1}});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setInsertParam",channel:"cap1",insertId:"fx",symbol:"gain",value:0.51});
+    capture.unitInput = {unit,input:1,primary:true};
+    capture.name = "Pro mic";
+
     // With the interface's microphone out of the mixer the faces say so by
     // number and the gain dial's bar empties.
     delete state.mixer.channels[2].unitInput;
@@ -106,6 +173,12 @@ test("hardware keys stay unit controls and are named after the carrying channel"
     assert.ok(svg(feedback("gain-dial").title).includes("Input 1 gain"));
     daemon.receive({type:"meters", levels:{"ch:xlr1":[0.9,0.9], "ch:cap1":[0.8,0.8]}});
     assert.ok(!svg(meter("gain-dial")).includes('fill="url(#level)"'));
+
+    const beforeMissingCarrier = daemon.messages.length;
+    host.receive({event:"keyDown",context:"channel-mute"});
+    host.receive({event:"dialRotate",context:"channel-gain",payload:{ticks:1}});
+    assert.equal(daemon.messages.length, beforeMissingCarrier);
+    assert.ok(!svg(meter("channel-gain")).includes('fill="url(#level)"'));
 
     // Back on the jack, XLR 1 is the strip and its own name returns.
     Object.assign(state.mixer.channels[0], {name:"XLR 1", binding:{kind:"unit",pair:0}, unitInput:{unit,input:1,primary:true}});

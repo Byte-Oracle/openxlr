@@ -7,7 +7,9 @@ function tokenPath(runtime, config, home) {
     return (runtime || config || home + "/.config") + "/openxlr/token";
 }
 
-function mono(id) { return id === "xlr1" || id === "xlr2"; }
+function mono(channel) {
+    return typeof channel.microphone === "boolean" ? channel.microphone : channel.id === "xlr1" || channel.id === "xlr2";
+}
 function sendMuted(channel, mix) { return (channel.mutedIn || []).indexOf(mix) >= 0; }
 function level(channel, mix) { return clamp((channel.levels || {})[mix], 1); }
 function ceiling(mix) { return mix.kind === "monitor" ? 1.5 : 1; }
@@ -16,11 +18,11 @@ function rms(level) { return level <= 0 ? "<-60" : String(Math.round(level * 60 
 function barName(name) { return String(name || "").replace(/^Monitor /, "Mon "); }
 
 var inputHoldMs = 10000;
-function shownInputs(lastActive, now) {
-    return Object.keys(lastActive).filter(function (id) {
-        var time = lastActive[id];
-        return mono(id) && typeof time === "number" && isFinite(time) && time <= now && now - time < inputHoldMs;
-    });
+function shownInputs(channels, lastActive, now) {
+    return shownChannels(channels).filter(function (channel) {
+        var time = lastActive[channel.id];
+        return mono(channel) && typeof time === "number" && isFinite(time) && time <= now && now - time < inputHoldMs;
+    }).slice(0, 4).map(function (channel) { return channel.id; });
 }
 
 function feedLevel(levels, ids) {
