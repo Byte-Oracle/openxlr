@@ -180,9 +180,10 @@ public sealed record DeviceCapabilities
     /// The unit's DSP runs the microphone EQ and the driver can write it:
     /// the Wave XLR MK.2 and the XLR Dock MK.2 from firmware 1.0.15, whose
     /// settings block holds four bands and a switch they apply (measured on
-    /// both). False on every other model and on older firmware, where the
-    /// microphone's EQ runs in software; the Wave XLR Pro's EQ protocol is
-    /// not known yet.
+    /// both), and the Wave XLR Pro from firmware 1.0.14 on each of its two
+    /// inputs (captured from Wave Link; not yet measured by ear on Linux).
+    /// False on every other model and on older firmware, where the
+    /// microphone's EQ runs in software.
     /// </summary>
     public bool HardwareEq { get; init; }
 

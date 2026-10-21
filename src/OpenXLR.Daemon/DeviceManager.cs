@@ -1145,7 +1145,11 @@ public sealed class DeviceManager : BackgroundService
             State = _last ?? (_unansweredId == id && _lastGoodId == id ? _lastGood : null),
         };
         UnitEqSupport? eq = dev.EqSupport is { } support
-            ? new UnitEqSupport(dev.Info.Model, dev.Firmware, support.Ready, support.Reason, support.Note) { Inputs = dev.Capabilities.XlrInputs }
+            ? new UnitEqSupport(dev.Info.Model, dev.Firmware, support.Ready, support.Reason, support.Note)
+            {
+                Inputs = dev.Capabilities.XlrInputs,
+                MinimumFirmware = support.MinimumFirmware ?? WaveFxEq.Format(WaveFxEq.Mk2EqFirmware),
+            }
             : null;
         _published = new Published(msg, dev.Info, eq);
         return msg;

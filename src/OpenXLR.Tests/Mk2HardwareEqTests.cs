@@ -72,7 +72,7 @@ public sealed class Mk2HardwareEqTests
         dock.Connect();
         Assert.Equal("1.0.15", dock.Firmware);
         Assert.True(dock.Capabilities.HardwareEq);
-        Assert.Equal(new DeviceEqSupport(true), dock.EqSupport);
+        Assert.Equal(new DeviceEqSupport(true) { MinimumFirmware = "1.0.15" }, dock.EqSupport);
         // The dock on 1.0.15 stalls at 0x0103 and answers at 0x0203; the
         // three blocks found the bank and every transfer after stays on it.
         unit.Calls.Clear();

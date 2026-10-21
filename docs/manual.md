@@ -853,8 +853,10 @@ and Q steps of 3.75 percent. The editor shows the values the daemon keeps.
   with `setEq`, `setEqEnabled` and `setEqBand`.
 
 **Where the EQ runs.** A Wave XLR MK.2 or XLR Dock MK.2 on firmware 1.0.15
-or later runs the EQ on its own processor, before USB, the way Wave Link
-3.5 does. The editor then shows **Hardware processing** in its header and
+or later, and a Wave XLR Pro on firmware 1.0.14 or later, runs the EQ on
+its own processor, before USB, the way Wave Link 3.5 does. On the Pro, XLR
+1 and XLR 2 each have their own EQ on the unit, with their own switch and
+their own choice of where it runs. The editor then shows **Hardware processing** in its header and
 names the unit in the line at the bottom, and the **EQ** button's tooltip
 says the same. Everything else stays as described above: the same values,
 the same curve, **Compare**, Copy and Paste, profiles. Nothing is added to
@@ -871,7 +873,8 @@ the input's route, and the plugin host is not needed.
   choice.
 - On older firmware the EQ runs on this computer, and the switch keeps
   your choice for when the unit is updated. A note under the switch names
-  the unit's firmware and the version it needs. Elgato's updater is in
+  the unit's firmware and the version it needs: 1.0.15 on the MK.2 models,
+  1.0.14 on the Pro. Elgato's updater is in
   Wave Link on Windows or macOS. The same note appears when the firmware
   version or the unit's EQ settings cannot be read, or when the unit did
   not keep an EQ written to it; switch the EQ off and on, or choose **In
@@ -879,7 +882,9 @@ the input's route, and the plugin host is not needed.
 - Only the microphone the unit carries is equalised there: XLR 1 or XLR 2
   on the unit's own input, an additional interface's input, or a strip
   bound to the unit's own capture node. A microphone bound to any other
-  source uses the EQ on this computer. On the unit, the EQ is in the
+  source uses the EQ on this computer, and the unit's EQ on the input that
+  strip would otherwise carry is switched off, so XLR 2 bound to a USB
+  microphone leaves the Pro's second input plain. On the unit, the EQ is in the
   unit's own signal, so every channel and program that takes that unit's
   audio hears it, a capture channel on its node included, as they hear its
   low cut.
@@ -895,15 +900,17 @@ the input's route, and the plugin host is not needed.
   off before the new one comes on, so your voice is never equalised twice;
   you may hear a moment without the EQ.
 - When OpenXLR stops, or you unplug the unit, the unit keeps running the
-  EQ it last held, as it keeps its gain and low cut. So does a unit no
-  channel carries, with the submixer turned off for instance. Switch the
+  EQ it last held, as it keeps its gain and low cut. So does an
+  additional interface no microphone carries, and every unit while the
+  submixer is turned off. Switch the
   EQ off in the editor, or choose **In software**, first if you want the
   unit plain without OpenXLR. Moving a microphone to another source, or
   keeping it in software, switches only the unit's EQ off and keeps its
   bands.
 - A measurement on the XLR Dock MK.2 suggests the unit's EQ also acts on
   its own zero-latency headphone monitoring, which an EQ in software never
-  reaches, but this is not settled.
+  reaches, but this is not settled. Nobody has measured this on the Pro
+  yet, or compared the Pro's EQ by ear with the one on this computer.
 - `setEqProcessing` in the [control API](api.md#where-the-eq-runs) sets the
   same choice from a script.
 

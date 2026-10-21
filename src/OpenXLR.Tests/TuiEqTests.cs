@@ -205,6 +205,51 @@ public sealed class TuiEqTests
         }
     }
 
+    /// <summary>
+    /// A Wave XLR Pro: XLR 2's EQ on the Pro's second input has its own rows
+    /// and its own key, and an older Pro names its own minimum, 1.0.14.
+    /// </summary>
+    [Fact]
+    public void TheProOffersTheChoiceOnXlr2AndNamesItsOwnMinimum()
+    {
+        const string pro = "0fd9:00b4@00112233445566aa";
+        JsonNode Device(int input, bool ready) => new JsonObject
+        {
+            ["unit"] = pro, ["input"] = input, ["name"] = "Wave XLR Pro", ["firmware"] = ready ? "1.0.14" : "1.0.13",
+            ["ready"] = ready, ["reason"] = ready ? null : "firmwareOld", ["note"] = null, ["minimumFirmware"] = "1.0.14",
+        };
+        string ProJson(bool ready) => Edit(root =>
+        {
+            root["device"] = new JsonObject { ["vendor"] = "Elgato", ["model"] = "Wave XLR Pro", ["usbId"] = "0fd9:00b4" };
+            root["capabilities"]!["xlrInputs"] = 2;
+            JsonNode xlr2 = root["mixer"]!["channels"]![1]!;
+            xlr2["present"] = true;
+            xlr2["unitInput"] = new JsonObject { ["unit"] = pro, ["input"] = 2, ["primary"] = true };
+            xlr2["eq"]!["enabled"] = true;
+            xlr2["eq"]!["backend"] = ready ? "device" : "software";
+            xlr2["eq"]!["device"] = Device(2, ready);
+            Eq(root)["backend"] = ready ? "device" : "software";
+            Eq(root)["device"] = Device(1, ready);
+        });
+
+        (App app, List<string> sent) = Ready(ProJson(ready: true));
+        string[] frame = Draw(app);
+        Assert.Contains(frame, line => line.Contains("XLR 2 EQ", StringComparison.Ordinal) && line.Contains("on, on the Wave XLR Pro", StringComparison.Ordinal));
+        Assert.Contains(frame, line => line.Contains("XLR 2 EQ runs", StringComparison.Ordinal) && line.Contains("on the unit", StringComparison.Ordinal));
+        Select(app, "XLR 2 EQ runs");
+        app.Handle(new KeyPress(Key.Char, ' '));
+        JsonElement command = Last(sent);
+        Assert.Equal("setEqProcessing", command.GetProperty("cmd").GetString());
+        Assert.Equal("xlr2", command.GetProperty("channel").GetString());
+        Assert.Equal("software", command.GetProperty("value").GetString());
+
+        Snapshot old = Snapshot.Parse(ProJson(ready: false))!;
+        Assert.Equal("firmware 1.0.13, needs 1.0.14", old.Mixer.Channels[0].Eq!.Why);
+        Assert.Equal("firmware 1.0.13, needs 1.0.14", old.Mixer.Channels[1].Eq!.Why);
+        Assert.Contains(Draw(Ready(ProJson(ready: false)).App), line => line.Contains("XLR 2 unit", StringComparison.Ordinal)
+            && line.Contains("firmware 1.0.13, needs 1.0.14", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void ADaemonWithoutTheChoiceOrTheEqGetsNeitherRow()
     {

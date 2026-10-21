@@ -16,7 +16,8 @@ The current implementation of this protocol is
 `src/OpenXLR.Core/Devices/WaveXlrProDevice.cs` (libusb control transfers,
 read-modify-write of the blocks below, commit block after selector
 writes): both XLR structures, both headphone volumes, the USB Aux input
-stage, the physical output selectors and the commit sequence. The mic map
+stage, the physical output selectors and the commit sequence, and each
+input's microphone EQ (section 10). The mic map
 as finally verified (section 6): flags bit 1 = phantom, bit 4 = low cut,
 bit 5 = expander, bit 6 = voice tune, bit 7 = compressor; ClipGuard is the
 inverted `0x04` value at structure offset 2. There is no polarity control.
@@ -380,3 +381,47 @@ the kernel caches feature unit values and does not re-read them, so a
 block write behind ALSA's back would leave the two disagreeing. An ALSA
 write shows up in the block at once. Phantom power and low impedance
 have no ALSA control and always go through the block.
+
+## 10. Captures 16 to 20 (2026-10-21): the microphone EQ in block 0x0004
+
+Wave Link 3.5.0.4892 on Windows, the Pro on firmware 1.0.14 (block 0x0000,
+117 bytes, bytes 5 to 7 `01 00 0e`), bank 0x0103, hardware mixing on. Wave
+Link polls blocks 0x0008, 0x0001, 0x0004, 0x0005, 0x0006 and 0x0002 at
+about 30 Hz and writes `41 01 <block> 0103`, the whole block.
+
+Each input's 38-byte struct in block 0x0004 carries the four-band EQ in
+the layout the Wave XLR MK.2 and XLR Dock MK.2 use from firmware 1.0.15
+([findings](mk2-eq-findings.md)), XLR 1's at offset 0 and XLR 2's at 38:
+
+| Offset (XLR 1 / XLR 2) | Field | Encoding |
+|---|---|---|
+| 2 / 40, bit 0 | EQ on | 1 = on; bit 2 of the same byte is ClipGuard off |
+| 18, 23, 28, 33 / 56, 61, 66, 71 | band flags | bit 0 band on, bits 1 to 3 type (0 high pass, 1 low shelf, 2 bell, 3 notch, 4 high shelf, 5 low pass), bits 4 and 5 unknown and kept |
+| next byte | gain | int8, quarter dB |
+| next two | frequency | uint16 little endian, Hz |
+| next byte | Q | int8, round(64 log10 Q) |
+
+Bytes 76 to 79 are the USB Aux input tail (section 6).
+
+- **16, idle.** the block was constant over 801 reads and decoded on both
+  inputs to Wave Link's saved EQ (60 Hz high pass, a +3.25 dB low shelf at
+  227 Hz, a -3 dB bell at 860 Hz, a +1.75 dB bell at 10237 Hz), with the
+  switch clear on both, as Wave Link had both EQs off.
+- **17 and 19, the switch.** XLR Mic 1's EQ on wrote byte 2 `00` to `01`,
+  XLR Mic 2's wrote byte 40 `04` to `05`, nothing else, each read back on
+  the next poll.
+- **18 and 20, band 2 dragged to +12 dB.** 18 and 16 whole-block writes,
+  changing only band 2's gain byte (24 or 62) and frequency (25 and 26 or
+  63 and 64), 13 of 13 gains and every frequency matching Wave Link's log,
+  the carry at 256 Hz included.
+- **No commit for EQ writes.** Wave Link sends the 0x0003 commit `04 00`
+  followed by zeros only on its own "Synced standalone parameters" timing,
+  2.5 s to minutes after a change, which looks like a save for standalone
+  use; EQ changes read back without it. Whether an EQ written without the
+  commit survives a power cycle was not captured.
+
+OpenXLR drives this from firmware 1.0.14 through the same codec as the MK.2
+family, at the struct's base offset, through the block's one
+read-modify-write path ([api.md](api.md#where-the-eq-runs)). Acceptance by
+ear on Linux, the filters' curves and the zero-latency headphone path are
+still open.

@@ -9,6 +9,15 @@ namespace OpenXLR.Core.Devices;
 /// Each block is a fixed-size property bank; individual controls are byte fields
 /// at fixed offsets. Writes are read-modify-write of the whole block. Needs the
 /// udev rule granting access to 0fd9:00b4 (MODE 0660 / uaccess).
+///
+/// Each input's 38-byte struct in block 0x0004 carries the four-band EQ the
+/// unit runs on its own DSP, in the MK.2 family's layout (<see cref="WaveFxEq"/>):
+/// XLR 1's switch at byte 2 bit 0 and bands at 18 to 37, XLR 2's at byte 40
+/// and 56 to 75. Wave Link 3.5 writes it on firmware 1.0.14 as a whole block
+/// per change with no commit, and the change reads back on the next poll
+/// (captures 16 to 20 of 2026-10-21). Block 0x0000 (117 bytes) holds the
+/// firmware version at bytes 5 to 7, read once at connect; the EQ is driven
+/// from 1.0.14.
 /// </summary>
 public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
 {
@@ -17,7 +26,19 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
 
     public DeviceInfo Info { get; } = UsbTransport.WithLocation(new("Elgato", "Wave XLR Pro", VendorId, ProductId));
 
-    public DeviceCapabilities Capabilities { get; } = new()
+    /// <summary>The model's controls, with <see cref="DeviceCapabilities.HardwareEq"/> set at connect.</summary>
+    public DeviceCapabilities Capabilities { get; private set; }
+
+    /// <summary>The version block 0x0000 reports, as major.minor.patch; null until read.</summary>
+    public string? Firmware { get; private set; }
+
+    /// <summary>Whether this unit runs the EQ, decided at connect by its firmware and its block.</summary>
+    public DeviceEqSupport? EqSupport { get; private set; }
+
+    /// <summary>Said once at connect when the EQ fields do not decode.</summary>
+    public string? ConnectionNote { get; private set; }
+
+    private static readonly DeviceCapabilities ModelCapabilities = new()
     {
         Gain = true,
         PhysicalControls = true, Mute = true, LowCut = true, Expander = true, VoiceTune = true,
@@ -29,6 +50,8 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     };
 
     private const ushort VIndex = 0x0103;
+    private const ushort BlockIdentity = 0x0000; // firmware version at bytes 5 to 7
+    private const int IdentityLen = 117;
     private const byte VReq = 0x01;
     private const byte RtRead = 0xC1;
     private const byte RtWrite = 0x41;
@@ -113,19 +136,88 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     public const int VoiceTuneStrengthMax = 100;
     public const int CrossfadeMax = 200;
 
-    private readonly IUsbTransport _usb = UsbTransport.Create();
+    private readonly IUsbTransport _usb;
     private readonly object _lock = new();
+
+    // The settings block as the last poll or EQ write left it, which ReadEq
+    // decodes without a transfer.
+    private byte[]? _settings;
+
+    public WaveXlrProDevice() : this(UsbTransport.Create()) { }
+
+    internal WaveXlrProDevice(IUsbTransport usb)
+    {
+        _usb = usb;
+        Capabilities = ModelCapabilities;
+    }
 
     public bool Connected => _usb.IsOpen;
 
     public void Connect()
     {
-        if (!_usb.Open(VendorId, ProductId))
-            throw new InvalidOperationException(
-                "Wave XLR Pro not found or no permission (install the udev rule for 0fd9:00b4).");
+        lock (_lock)
+        {
+            ForgetUnitLocked();
+            if (!_usb.Open(VendorId, ProductId))
+                throw new InvalidOperationException(
+                    "Wave XLR Pro not found or no permission (install the udev rule for 0fd9:00b4).");
+            try { ReadEqSupport(); }
+            catch
+            {
+                _usb.Close();
+                ForgetUnitLocked();
+                throw;
+            }
+        }
     }
 
-    public void Disconnect() => _usb.Close();
+    public void Disconnect()
+    {
+        lock (_lock)
+        {
+            _usb.Close();
+            ForgetUnitLocked();
+        }
+    }
+
+    // What one connection learnt about its unit; a reconnect learns it again,
+    // since a firmware update re-enumerates the unit.
+    private void ForgetUnitLocked()
+    {
+        Firmware = null;
+        EqSupport = null;
+        ConnectionNote = null;
+        Capabilities = ModelCapabilities;
+        _settings = null;
+    }
+
+    /// <summary>
+    /// The firmware gate: block 0x0000 once, then the settings block when the
+    /// version is 1.0.14 or later, whose EQ fields must decode in both input
+    /// structs. Anything else leaves both inputs' EQ to software and says
+    /// why. A unit that stalls or answers short here is not refused: only its
+    /// EQ runs in software.
+    /// </summary>
+    private void ReadEqSupport()
+    {
+        var identity = new byte[IdentityLen];
+        int n = Transfer(RtRead, VReq, BlockIdentity, identity, IdentityLen);
+        Version? version = n > 0 ? WaveFxEq.FirmwareVersion(identity.AsSpan(0, n)) : null;
+        Firmware = version is null ? null : WaveFxEq.Format(version);
+        byte[]? block = null;
+        EqSupport = WaveFxEq.Gate(Info.Model, version, WaveFxEq.ProEqFirmware, () =>
+        {
+            block = new byte[SettingsLen];
+            return Transfer(RtRead, VReq, BlockSettings, block, SettingsLen) == SettingsLen
+                && WaveFxEq.Decodes(EqOf(block, 1)) && WaveFxEq.Decodes(EqOf(block, 2));
+        });
+        if (EqSupport.Ready) _settings = block;
+        else if (EqSupport.Reason == DeviceEqSupport.UnsupportedBlock) ConnectionNote = WaveFxEq.UnsupportedBlockNote;
+        Capabilities = ModelCapabilities with { HardwareEq = EqSupport.Ready };
+    }
+
+    private static DeviceEq? EqOf(byte[] settings, int input)
+        => WaveFxEq.Decode(settings.AsSpan(WaveFxEq.InputBase(input), WaveFxEq.StructLength));
 
     /// <summary>
     /// All control transfers go through here. A transfer that never returns
@@ -178,6 +270,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     {
         byte[] b1 = Read(BlockCrossfade, CrossfadeLen);
         byte[] b4 = Read(BlockSettings, SettingsLen);
+        lock (_lock) _settings = b4;
         byte[] b5 = Read(BlockHp, HpLen);
         byte f = b4[FlagsOffset];
         byte f2 = b4[Xlr2Base + FlagsOffset];
@@ -385,16 +478,63 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
         Write(BlockSettings, b);
     }
 
-    /// <summary>Every readable vendor block as hex, for tester diagnostics.</summary>
+    // --- the microphone EQ on the unit's DSP (block 0x0004, one struct per input) ---
+
+    /// <summary>
+    /// Write one input's EQ into its struct through a read of the settings
+    /// block and one write of the whole block, under the lock every other
+    /// setter's read-modify-write takes. No commit: Wave Link sends none for
+    /// EQ writes, and they read back on the next poll. Every byte the EQ does
+    /// not own, the other input's struct and the aux tail included, goes back
+    /// as read. False when the unit already held it and nothing was written.
+    /// </summary>
+    public bool SetEq(int input, DeviceEq eq)
+    {
+        if (input is not (1 or 2) || EqSupport?.Ready != true)
+            throw new InvalidOperationException($"{Info.Model}: this unit does not run the EQ on input {input}");
+        lock (_lock)
+        {
+            byte[] b = Read(BlockSettings, SettingsLen);
+            byte[] held = (byte[])b.Clone();
+            WaveFxEq.Encode(b.AsSpan(WaveFxEq.InputBase(input), WaveFxEq.StructLength), eq);
+            if (b.AsSpan().SequenceEqual(held))
+            {
+                _settings = held;
+                return false;
+            }
+            Write(BlockSettings, b);
+            _settings = b;
+            return true;
+        }
+    }
+
+    public DeviceEq? ReadEq(int input)
+    {
+        lock (_lock)
+            return input is 1 or 2 && EqSupport?.Ready == true && _settings is { Length: SettingsLen } s ? EqOf(s, input) : null;
+    }
+
+    /// <summary>Every readable vendor block as hex, for tester diagnostics, with the firmware and each input's EQ decoded.</summary>
     public IReadOnlyDictionary<string, string> DumpBlocks()
     {
         var blocks = new Dictionary<string, string>();
         foreach ((ushort block, int len) in new (ushort, int)[]
-                 { (0x0001, 108), (0x0002, 150), (0x0004, 80), (0x0005, 8), (0x0006, 29), (0x0008, 96) })
+                 { (BlockIdentity, IdentityLen), (0x0001, 108), (0x0002, 150), (0x0004, 80), (0x0005, 8), (0x0006, 29), (0x0008, 96) })
         {
-            try { blocks[$"0x{block:X4}"] = Convert.ToHexString(Read(block, len)); }
+            try
+            {
+                byte[] read = Read(block, len);
+                blocks[$"0x{block:X4}"] = Convert.ToHexString(read);
+                if (block == BlockSettings)
+                    for (int input = 1; input <= 2; input++)
+                        blocks[$"eq{input}"] = EqOf(read, input) is { } eq
+                            ? eq + (WaveFxEq.Decodes(eq) ? "" : " (outside the EQ's ranges)")
+                            : "too short to hold the EQ";
+            }
             catch (IOException ex) { blocks[$"0x{block:X4}"] = $"read failed: {ex.Message}"; }
         }
+        blocks["firmware"] = Firmware ?? "not read";
+        blocks["eqSupport"] = EqSupport is { } support ? support.Ready ? "on the unit" : $"in software: {support.Reason}" : "not decided";
         return blocks;
     }
 

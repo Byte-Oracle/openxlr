@@ -5,7 +5,8 @@ namespace OpenXLR.Core.Mixing;
 /// <summary>
 /// The microphone EQ on XLR 1 and XLR 2. It runs on the unit's own DSP when
 /// the channel carries a unit input whose unit runs it (the MK.2 family from
-/// firmware 1.0.15), the channel's choice is <c>device</c>, and no Sound
+/// firmware 1.0.15, each of the Wave XLR Pro's two inputs from 1.0.14), the
+/// channel's choice is <c>device</c>, and no Sound
 /// Check session runs on it; otherwise in software. A unit-run EQ starts no
 /// stage: its values go to the device side through <see cref="IDeviceEqPort"/>.
 /// Moving between the two switches the leaving one off first, so a voice is
@@ -262,7 +263,32 @@ public sealed partial class Mixer
                 && port.Status(unit.Unit, unit.Input).Phase == DeviceEqPhase.None)
                 port.Post(unit.Unit, unit.Input, DeviceEq.Off, ChannelNameLocked(ch));
         }
+        HoldUncarriedInputsOffLocked(port, carried);
         return changed;
+    }
+
+    /// <summary>
+    /// The primary unit's inputs that no microphone carries, a strip bound to
+    /// another source for one, hold their EQ off, said once per connection.
+    /// It is the state a binding moving the strip off the unit leaves, reached
+    /// the same way when the unit connects with the binding already in place,
+    /// so an EQ Wave Link left on cannot stay on the unit's own paths. An
+    /// additional unit's input that no microphone carries is never written:
+    /// nothing in OpenXLR edits its EQ.
+    /// </summary>
+    private void HoldUncarriedInputsOffLocked(IDeviceEqPort port, IReadOnlyDictionary<string, UnitInputStatus> carried)
+    {
+        if (_drivenUnit is not { } primary || !_unitEq.TryGetValue(primary, out UnitEqSupport? support) || !support.Ready) return;
+        var taken = new HashSet<EqUnitInput>(carried.Where(c => IsMicrophoneId(c.Key)).Select(c => new EqUnitInput(c.Value.Unit, c.Value.Input)));
+        taken.UnionWith(_eqDevices.Values.Select(b => b.Target));
+        taken.UnionWith(_eqReleasing.Values.Select(r => r.Backend.Target));
+        for (int input = 1; input <= support.Inputs; input++)
+        {
+            if (taken.Contains(new EqUnitInput(primary, input)) || port.Status(primary, input).Phase != DeviceEqPhase.None) continue;
+            string owner = _config.Channels.FirstOrDefault(c => c.InputPair == input - 1) is { } strip
+                ? ChannelNameLocked(strip) : $"{support.Name} input {input}";
+            port.Post(primary, input, DeviceEq.Off, owner);
+        }
     }
 
     /// <summary>
@@ -580,7 +606,7 @@ public sealed partial class Mixer
         return new MicEqDevice(unit.Unit, unit.Input, support.Name, support.Firmware, support.Ready && failure is null,
             failure is null ? support.Reason : EqDeviceFailedReason, failure is null ? support.Note : $"The {support.Name} {failure}, so the EQ runs in software.")
         {
-            MinimumFirmware = $"{WaveFxEq.EqFirmware.Major}.{WaveFxEq.EqFirmware.Minor}.{WaveFxEq.EqFirmware.Build}",
+            MinimumFirmware = support.MinimumFirmware,
         };
     }
 
