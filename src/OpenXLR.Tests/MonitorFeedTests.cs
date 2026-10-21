@@ -110,13 +110,14 @@ public sealed class MonitorFeedTests
     {
         var replies = new Queue<TaskCompletionSource<string?>>();
         var sent = new List<string>();
+        var errors = new List<string>();
         var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, feed) =>
         {
             sent.Add(feed);
             var reply = new TaskCompletionSource<string?>();
             replies.Enqueue(reply);
             return reply.Task;
-        });
+        }, reportError: errors.Add);
         MixOption[] mixes = [new("desk", "Desk"), new("booth", "Booth"), new("chat", "Chat")];
         output.Sync(true);
         output.SyncFeed(mixes, "desk");
@@ -133,6 +134,7 @@ public sealed class MonitorFeedTests
         await Task.Yield();
         Assert.Equal(["desk+booth", "desk+booth+chat"], sent);
         Assert.Equal("desk+booth+chat", output.Feed!.Id);
+        Assert.Empty(errors);
     }
 
     [Theory]
@@ -142,7 +144,8 @@ public sealed class MonitorFeedTests
     public async Task AReplyCannotRestoreAnObsoleteFeedAfterItsContextChanges(string change)
     {
         var reply = new TaskCompletionSource<string?>();
-        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => reply.Task);
+        var errors = new List<string>();
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => reply.Task, reportError: errors.Add);
         output.Sync(true);
         output.SyncFeed([new("desk", "Desk"), new("booth", "Booth")], "desk");
         output.FeedMixes[1].IsSelected = true;
@@ -153,13 +156,15 @@ public sealed class MonitorFeedTests
         await Task.Yield();
         Assert.Equal("desk", output.Feed!.Id);
         Assert.Single(output.FeedMixes);
+        Assert.Empty(errors);
     }
 
     [Fact]
     public async Task ARejectedFeedReturnsToTheLatestDaemonSelection()
     {
         var reply = new TaskCompletionSource<string?>();
-        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => reply.Task);
+        var errors = new List<string>();
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => reply.Task, reportError: errors.Add);
         MixOption[] mixes = [new("desk", "Desk"), new("booth", "Booth")];
         output.Sync(true);
         output.SyncFeed(mixes, "desk");
@@ -169,6 +174,7 @@ public sealed class MonitorFeedTests
         await Task.Yield();
         Assert.Equal("desk", output.Feed!.Id);
         Assert.False(output.FeedMixes[1].IsSelected);
+        Assert.Equal(["disk full"], errors);
     }
 
     [Theory]

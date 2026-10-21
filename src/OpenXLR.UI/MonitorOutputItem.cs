@@ -38,19 +38,22 @@ public sealed class MonitorOutputItem : ViewModelBase
 {
     private readonly Action _changed;
     private readonly Func<string, string, Task<string?>> _feedChanged;
+    private readonly Action<string>? _reportError;
     private MixOption? _feed;
     private bool _isSelected;
     private string? _pendingFeed;
     private string? _reportedFeed;
     private long _editVersion;
 
-    public MonitorOutputItem(string name, string label, Action changed, Func<string, string, Task<string?>> feedChanged, bool isPresent = true)
+    public MonitorOutputItem(string name, string label, Action changed, Func<string, string, Task<string?>> feedChanged,
+        bool isPresent = true, Action<string>? reportError = null)
     {
         Name = name;
         Label = label;
         IsPresent = isPresent;
         _changed = changed;
         _feedChanged = feedChanged;
+        _reportError = reportError;
     }
 
     public string Name { get; }
@@ -118,7 +121,11 @@ public sealed class MonitorOutputItem : ViewModelBase
         string? error = await _feedChanged(Name, feed);
         if (version != _editVersion) return;
         _pendingFeed = null;
-        if (error is not null) SyncFeed([.. FeedMixes.Select(f => new MixOption(f.Id, f.Name))], _reportedFeed);
+        if (error is not null)
+        {
+            SyncFeed([.. FeedMixes.Select(f => new MixOption(f.Id, f.Name))], _reportedFeed);
+            _reportError?.Invoke(error);
+        }
     }
 
     private void UpdateFeed()

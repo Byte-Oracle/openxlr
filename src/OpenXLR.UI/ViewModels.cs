@@ -1021,7 +1021,8 @@ public sealed partial class MainViewModel : ViewModelBase
             foreach (MonitorOutputItem output in MonitorOutputs) output.CancelFeedEdit();
             MonitorOutputs.Clear();
             foreach (var w in wanted)
-                MonitorOutputs.Add(new MonitorOutputItem(w.Name, w.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged, w.Present));
+                MonitorOutputs.Add(new MonitorOutputItem(w.Name, w.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged,
+                    w.Present, error => Status = error));
         }
 
         EnforcedDefaultSink = mixer?["enforcedDefaultSink"]?.GetValue<string>();
@@ -1061,13 +1062,8 @@ public sealed partial class MainViewModel : ViewModelBase
         return string.Join("+", list);
     }
 
-    private async Task<string?> OnMonitorFeedChanged(string output, string mixId)
-    {
-        if (_applying) return null;
-        string? error = await _client.SetMonitorFeedAsync(output, mixId);
-        if (error is not null) Status = error;
-        return error;
-    }
+    private Task<string?> OnMonitorFeedChanged(string output, string mixId)
+        => _applying ? Task.FromResult<string?>(null) : _client.SetMonitorFeedAsync(output, mixId);
 
     /// <summary>AudioNodeKind arrives as the enum's number (0 = Sink) or name.</summary>
     private static bool IsSink(JsonNode? kind) => kind switch
