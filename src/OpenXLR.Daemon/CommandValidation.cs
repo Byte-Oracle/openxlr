@@ -97,10 +97,16 @@ public static class CommandValidation
                 if (cmd.Channel is null || TooLong(cmd.Channel, 36) || !layout.HasBindableStrip(cmd.Channel))
                     return "setInputBinding: need channel 'xlr1' or 'xlr2'";
                 return CheckBinding(cmd);
+            case "setCaptureSource":
             case "createCaptureChannel":
-                if (BadName(cmd.Name)) return "createCaptureChannel: name must contain 1 to 60 printable characters";
+                if (cmd.Cmd == "setCaptureSource")
+                {
+                    if (cmd.Channel is null || TooLong(cmd.Channel, 36) || !layout.HasCaptureChannel(cmd.Channel))
+                        return "setCaptureSource: need a capture input channel";
+                }
+                else if (BadName(cmd.Name)) return "createCaptureChannel: name must contain 1 to 60 printable characters";
                 return CaptureBinding.IsValid(cmd.Source, cmd.CapturePair, cmd.CaptureMonoChannel) ? null
-                    : "createCaptureChannel: need an external source, a pair from 0 to 31, and with pair 0 an optional mono port from 0 to 63";
+                    : $"{cmd.Cmd}: need an external source, a pair from 0 to 31, and with pair 0 an optional mono port from 0 to 63";
             case "createMix":
                 if (cmd.Kind is not (null or "virtualMic" or "monitor"))
                     return "createMix: kind must be virtualMic or monitor";

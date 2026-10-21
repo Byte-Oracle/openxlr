@@ -82,9 +82,9 @@ public sealed record Command
     /// <summary>"setEnforcedDefaults": devices to hold as system defaults (null = don't enforce).</summary>
     [JsonPropertyName("sink")] public string? Sink { get; init; }
     [JsonPropertyName("source")] public string? Source { get; init; }
-    /// <summary>Zero-based stereo pair for createCaptureChannel, default 0.</summary>
+    /// <summary>Zero-based stereo pair for createCaptureChannel or setCaptureSource, default 0.</summary>
     [JsonPropertyName("capturePair")] public int CapturePair { get; init; }
-    /// <summary>Optional zero-based mono port for createCaptureChannel or setInputBinding, fed to both sides; requires pair 0.</summary>
+    /// <summary>Optional zero-based mono port for capture commands or setInputBinding, fed to both sides; requires pair 0.</summary>
     [JsonPropertyName("captureMonoChannel")] public int? CaptureMonoChannel { get; init; }
 
     /// <summary>"saveProfile" / "loadProfile" / "deleteProfile": the profile name;
