@@ -48,6 +48,21 @@ public sealed record MixerScene
     /// leaves the others.
     /// </summary>
     public Dictionary<string, MicEq>? Eq { get; init; }
+
+    /// <summary>The ducking setup without machine processing. Absent in older profiles, which leave it alone.</summary>
+    public DuckingScene? Ducking { get; init; }
+}
+
+/// <summary>A profile's ducking choices. Where they run belongs only to mixer settings.</summary>
+public record DuckingScene
+{
+    public bool Enabled { get; init; }
+    public string Key { get; init; } = ProDucking.KeyXlr1;
+    public IReadOnlyList<string> Channels { get; init; } = [];
+    public IReadOnlyList<string> Mixes { get; init; } = ["monitor"];
+    public string Sensitivity { get; init; } = ProDucking.Medium;
+    public string Amount { get; init; } = ProDucking.Medium;
+    public string Speed { get; init; } = ProDucking.Medium;
 }
 
 /// <summary>
