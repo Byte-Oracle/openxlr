@@ -804,6 +804,207 @@ public sealed class SkinPackageTests : IDisposable
         }
     }
 
+    // --- the starting skin ---
+
+    /// <summary>
+    /// A launch with its own preferences and skin folders, no override, and
+    /// Material put back afterwards for the tests that follow.
+    /// </summary>
+    private string StartingFixture()
+    {
+        string config = Path.Combine(_root, "config");
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", config);
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_root, "home"));
+        Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(_root, "none"));
+        Environment.SetEnvironmentVariable(SkinService.OverrideVariable, null);
+        return Path.Combine(config, "openxlr", "ui.json");
+    }
+
+    private static void Launch(string? overrideId = null)
+    {
+        string? previous = Environment.GetEnvironmentVariable(SkinService.OverrideVariable);
+        Environment.SetEnvironmentVariable(SkinService.OverrideVariable, overrideId);
+        try { SkinService.Initialize(); }
+        finally { Environment.SetEnvironmentVariable(SkinService.OverrideVariable, previous); }
+    }
+
+    private static void PutMaterialBack() => SkinService.Apply(new SkinEntry(SkinPackage.Default, []));
+
+    /// <summary>A new install: no ui.json at all starts on Broadcast's layout, and writes nothing.</summary>
+    [Fact]
+    public void ANewInstallStartsOnBroadcastWithoutWritingAnything()
+    {
+        string uiJson = StartingFixture();
+        try
+        {
+            Launch();
+            Assert.Equal(SkinPackage.StartingId, SkinService.Current.Id);
+            Assert.Equal("broadcast", SkinPackage.StartingId);
+            Assert.Equal("Broadcast", SkinService.Current.Name);
+            Assert.NotNull(SkinService.Layout);
+            Assert.False(SkinService.Overridden);
+            Assert.False(SkinService.CanChooseMode);
+            Assert.Empty(SkinService.Errors);
+            Assert.False(File.Exists(uiJson));
+            Assert.False(Directory.Exists(Path.GetDirectoryName(uiJson)));
+        }
+        finally { PutMaterialBack(); }
+    }
+
+    /// <summary>
+    /// An install whose user never picked a skin moves to Broadcast too, on
+    /// every start, and the file is left byte for byte as it was: the choice
+    /// is still the user's to make.
+    /// </summary>
+    [Theory]
+    [InlineData("""{ "minimizeToTray": true, "appearanceMode": "light", "futureChoice": { "density": "touch" } }""")]
+    [InlineData("""{ "skin": null, "minimizeToTray": true }""")]
+    [InlineData("""{ "skin": "", "minimizeToTray": true }""")]
+    public void AnInstallThatNeverChoseASkinStartsOnBroadcastAndKeepsItsFile(string text)
+    {
+        string uiJson = StartingFixture();
+        Directory.CreateDirectory(Path.GetDirectoryName(uiJson)!);
+        File.WriteAllText(uiJson, text);
+        DateTime written = File.GetLastWriteTimeUtc(uiJson);
+        try
+        {
+            for (int start = 0; start < 2; start++)
+            {
+                Launch();
+                Assert.Equal("broadcast", SkinService.Current.Id);
+                Assert.NotNull(SkinService.Layout);
+                Assert.Equal(text, File.ReadAllText(uiJson));
+                Assert.Equal(written, File.GetLastWriteTimeUtc(uiJson));
+            }
+            Assert.True(UiSettings.Load().MinimizeToTray);
+            Assert.Equal(["ui.json"], Directory.GetFiles(Path.GetDirectoryName(uiJson)!).Select(Path.GetFileName));
+        }
+        finally { PutMaterialBack(); }
+    }
+
+    /// <summary>
+    /// A skin the user saved is the one worn, and that includes Material:
+    /// "default" in ui.json is a deliberate pick, so Material with its mode
+    /// stays where it was.
+    /// </summary>
+    [Theory]
+    [InlineData("default", "Material")]
+    [InlineData("opendeck", "Deck")]
+    [InlineData("nord", "Nord")]
+    [InlineData("broadcast", "Broadcast")]
+    public void ASavedSkinIsKept(string id, string name)
+    {
+        string uiJson = StartingFixture();
+        Assert.Null(new UiSettings { Skin = id, AppearanceMode = AppearanceModes.Light }.Save());
+        string text = File.ReadAllText(uiJson);
+        try
+        {
+            Launch();
+            Assert.Equal(id, SkinService.Current.Id);
+            Assert.Equal(name, SkinService.Current.Name);
+            Assert.Equal(id == SkinPackage.DefaultId, SkinService.CanChooseMode);
+            Assert.Equal(AppearanceModes.Light, SkinService.Mode);
+            Assert.Equal(text, File.ReadAllText(uiJson));
+        }
+        finally { PutMaterialBack(); }
+    }
+
+    /// <summary>
+    /// Material chosen in Options is saved by its id, so the next start keeps
+    /// it rather than reading no choice as Broadcast.
+    /// </summary>
+    [Fact]
+    public void ChoosingMaterialIsSavedAndSurvivesTheNextStart()
+    {
+        StartingFixture();
+        Assert.Null(new UiSettings { MinimizeToTray = true, Skin = "opendeck" }.Save());
+        try
+        {
+            Launch();
+            Assert.Equal("opendeck", SkinService.Current.Id);
+            SkinService.Choose(SkinPackage.DefaultId, out string? saveError);
+            Assert.Null(saveError);
+            Assert.Equal("default", UiSettings.Load().Skin);
+            Assert.True(UiSettings.Load().MinimizeToTray);
+            Launch();
+            Assert.Equal("default", SkinService.Current.Id);
+            Assert.True(SkinService.CanChooseMode);
+        }
+        finally { PutMaterialBack(); }
+    }
+
+    /// <summary>
+    /// OPENXLR_SKIN=default is still the way back to Material, on a new
+    /// install as much as over a saved skin, and nothing is written.
+    /// </summary>
+    [Fact]
+    public void TheMaterialOverrideBeatsTheStartingSkin()
+    {
+        string uiJson = StartingFixture();
+        try
+        {
+            Launch("default");
+            Assert.True(SkinService.Overridden);
+            Assert.Equal("default", SkinService.Current.Id);
+            Assert.Null(SkinService.Layout);
+            Assert.False(File.Exists(uiJson));
+
+            Assert.Null(new UiSettings { Skin = "broadcast" }.Save());
+            Launch("default");
+            Assert.Equal("default", SkinService.Current.Id);
+            Assert.Equal("broadcast", UiSettings.Load().Skin);
+
+            // Any other id works as before, and an empty one is no override.
+            Launch("nord");
+            Assert.Equal("nord", SkinService.Current.Id);
+            Launch("");
+            Assert.False(SkinService.Overridden);
+            Assert.Equal("broadcast", SkinService.Current.Id);
+        }
+        finally { PutMaterialBack(); }
+    }
+
+    /// <summary>
+    /// A user's Broadcast folder shadows the built-in one. When its document
+    /// cannot be read the window starts on Material instead of wearing an
+    /// empty placeholder, and nothing is written; a readable copy is worn.
+    /// </summary>
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("""{"schema":2,"name":"Broadcast"}""")]
+    [InlineData("oversized")]
+    public void AnUnreadableBroadcastFallsBackToMaterial(string document)
+    {
+        string uiJson = StartingFixture();
+        if (document == "oversized") document = new string(' ', SkinFormat.MaxDocumentBytes + 1);
+        Skin("home", "broadcast", document);
+        try
+        {
+            SkinEntry shadow = SkinCatalog.Find("broadcast")!;
+            Assert.False(shadow.Usable);
+            Assert.NotEmpty(shadow.Errors);
+            Launch();
+            Assert.Equal("default", SkinService.Current.Id);
+            Assert.Null(SkinService.Layout);
+            Assert.False(File.Exists(uiJson));
+        }
+        finally { PutMaterialBack(); }
+    }
+
+    [Fact]
+    public void AReadableBroadcastCopyIsWorn()
+    {
+        StartingFixture();
+        Skin("home", "broadcast", Doc(Tok("Ox.Card.Background", "\"#123456\"")));
+        try
+        {
+            Launch();
+            Assert.Equal("broadcast", SkinService.Current.Id);
+            Assert.Equal(SkinOrigin.User, SkinService.Current.Package.Origin);
+        }
+        finally { PutMaterialBack(); }
+    }
+
     // --- accessibility ---
 
     /// <summary>

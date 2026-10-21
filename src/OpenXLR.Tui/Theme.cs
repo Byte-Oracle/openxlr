@@ -14,7 +14,7 @@ internal sealed record SkinEntry(string Id, string Name, string? Description, st
 /// </summary>
 internal sealed class Theme
 {
-    /// <summary>The shipped appearance, which is the window's own defaults (SkinTokens.cs).</summary>
+    /// <summary>Material, which is the window's own defaults (SkinTokens.cs) and the fallback for a missing skin.</summary>
     public static Theme Material { get; } = new();
 
     /// <summary>
@@ -275,8 +275,40 @@ internal static class SkinCatalog
         }
 
         List<SkinEntry> ordered = found.Values.OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase).ToList();
-        ordered.Insert(0, new SkinEntry("default", "Material", "The appearance OpenXLR ships with", "OpenXLR", () => null));
+        ordered.Insert(0, new SkinEntry("default", "Material", "The classic appearance, with a light and a dark mode", "OpenXLR", () => null));
         return ordered;
+    }
+
+    /// <summary>The skin worn while ui.json holds no choice, as in the window.</summary>
+    internal const string StartingId = "broadcast";
+
+    /// <summary>
+    /// The theme for the choice ui.json holds. No choice, an absent or empty
+    /// <c>skin</c>, is Broadcast, the window's starting skin, or Material when
+    /// Broadcast is missing or its document cannot be read. Nothing is
+    /// written for it.
+    /// </summary>
+    public static Theme LoadSaved(string? id)
+    {
+        if (!string.IsNullOrEmpty(id)) return Load(id);
+        SkinEntry? entry = Scan().FirstOrDefault(skin => skin.Id == StartingId);
+        return entry?.Read() is { } json && IsSkinDocument(json)
+            ? Theme.FromJson(json, entry.Id, entry.Name)
+            : Theme.Material;
+    }
+
+    /// <summary>True for a JSON object that declares schema 1, the least a skin document is.</summary>
+    private static bool IsSkinDocument(string json)
+    {
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(json);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("schema", out JsonElement schema)
+                && schema.ValueKind == JsonValueKind.Number
+                && schema.TryGetInt32(out int version) && version == 1;
+        }
+        catch (JsonException) { return false; }
     }
 
     /// <summary>The theme for an id, or Material when it is not there or cannot be read.</summary>

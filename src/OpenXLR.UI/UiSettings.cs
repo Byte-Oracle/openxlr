@@ -110,8 +110,10 @@ public sealed record UiSettings
     /// </summary>
     public bool ShowHiddenItems { get; init; }
     /// <summary>
-    /// The appearance the window wears, by skin id; null is the one the
-    /// application ships with. It lives here and nowhere else: the mixer
+    /// The appearance the window wears, by skin id; <c>default</c> is
+    /// Material. Null or empty is no choice made, which wears Broadcast
+    /// (<see cref="Skinning.SkinPackage.StartingId"/>) without writing it
+    /// here. It lives here and nowhere else: the mixer
     /// layout, the daemon's preferences and the audio profiles know nothing
     /// about it, so changing appearance cannot disturb what is playing.
     /// </summary>

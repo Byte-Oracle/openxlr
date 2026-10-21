@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {execFileSync, spawnSync} from 'node:child_process';
-import {SkinPalette, paletteFrom} from '../com.emaspa.openxlr.sdPlugin/skin-palette.mjs';
+import {SkinPalette, STARTING, paletteFrom} from '../com.emaspa.openxlr.sdPlugin/skin-palette.mjs';
 
 const CARD = 'Ox.Card.Background', INK = 'Ox.Text.Primary';
 const defaults = paletteFrom({});
@@ -81,6 +81,31 @@ test('saved choice, root precedence and override use the same bounded ids', t =>
   assert.deepEqual(p.colours, defaults);
   const forced = new SkinPalette(null, {env:{...f.env, OPENXLR_SKIN:'opendeck'}}); t.after(() => forced.close());
   assert.equal(forced.colours[CARD], '#222222');
+});
+
+test('no saved choice is Broadcast like the window, and a saved Material stays Material', t => {
+  const f = fixture(t);
+  const broadcast = paletteFrom(JSON.parse(fs.readFileSync(new URL('../com.emaspa.openxlr.sdPlugin/skin-palettes.json', import.meta.url), 'utf8')).broadcast);
+  assert.notDeepEqual(broadcast, defaults);
+  const p = new SkinPalette(null, {env:f.env}); t.after(() => p.close());
+  assert.equal(STARTING, 'broadcast');
+  assert.equal(p.id, 'broadcast');
+  assert.deepEqual(p.colours, broadcast);
+  assert.equal(fs.existsSync(f.ui), false, 'the deck never writes the choice');
+  for (const prefs of [{minimizeToTray:true}, {skin:null}, {skin:''}]) {
+    f.write(f.ui, prefs); p.reload();
+    assert.equal(p.id, 'broadcast', JSON.stringify(prefs));
+    assert.deepEqual(p.colours, broadcast);
+  }
+  f.write(f.ui, {skin:'default'}); p.reload();
+  assert.equal(p.id, 'default'); assert.deepEqual(p.colours, defaults);
+  const forced = new SkinPalette(null, {env:{...f.env, OPENXLR_SKIN:'default'}}); t.after(() => forced.close());
+  f.write(f.ui, {}); forced.reload();
+  assert.equal(forced.id, 'default'); assert.deepEqual(forced.colours, defaults);
+  // An unreadable local Broadcast falls back to Material's colours.
+  fs.mkdirSync(path.join(f.root, 'data/openxlr/skins/broadcast'), {recursive:true});
+  fs.writeFileSync(path.join(f.root, 'data/openxlr/skins/broadcast/skin.json'), '{');
+  p.reload(); assert.equal(p.id, 'broadcast'); assert.deepEqual(p.colours, defaults);
 });
 
 test('invalid, oversized and nonregular documents leave valid fallbacks', t => {

@@ -41,49 +41,8 @@ internal static partial class SkinLayoutWindowTests
         bool touch = SkinService.TouchControls;
         try
         {
-            Assert.Equal(40, LongName.Length);
             var model = (MainViewModel)window.DataContext!;
-            string mixer = """
-                {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor","appearance":{"defaultIcon":"headset"}},
-                          {"id":"monitor2","name":"Monitor B","kind":"monitor","appearance":{"defaultIcon":"headset"}},
-                          {"id":"stream","name":"Stream","kind":"virtualMic","appearance":{"defaultIcon":"broadcast","colour":"#FF7A00"}},
-                          {"id":"chat","name":"Chat","kind":"virtualMic","appearance":{"defaultIcon":"people"}},
-                          {"id":"auxout","name":"Aux","kind":"auxPort","appearance":{"defaultIcon":"jack"}},
-                          {"id":"music-bed","name":"Music bed","kind":"virtualMic","appearance":{"icon":"music","defaultIcon":"podcast"}}],
-                 "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":0.8,"stream":0.6},"volume":0.7,"appearance":{"defaultIcon":"mic"}},
-                             {"id":"xlr2","name":"XLR 2","hardware":true,"present":false,"appearance":{"defaultIcon":"mic"}},
-                             {"id":"aux","name":"Aux In","hardware":true,"volume":1,"appearance":{"defaultIcon":"jack"}},
-                             {"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.4},"mutedIn":["stream"],"volume":0.9,"appearance":{"icon":"♫","defaultIcon":"music"}},
-                             {"id":"board","name":"LONGNAME","levels":{"monitor":1,"stream":1},"volume":1,"appearance":{"defaultIcon":"apps"}},
-                             {"id":"game","name":"Game","levels":{"monitor":1,"stream":1},"appearance":{"defaultIcon":"game"}},
-                             {"id":"cam","name":"Capture card","captureSource":"alsa_input.usb-capture","captureConnected":false,"volume":0.75,"appearance":{"defaultIcon":"camera"}}],
-                 "monitorOutputs":["speakers"],"outputVolume":0.6,"inserts":{}}
-                """.Replace("LONGNAME", LongName);
-            typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [JsonNode.Parse(mixer)]);
-            typeof(MainViewModel).GetMethod("ApplyDevices", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [JsonNode.Parse("""
-                [{"kind":0,"name":"speakers","description":"Desk speakers with a long description from the driver"},
-                 {"kind":0,"name":"headset","description":"USB headset"}]
-                """), JsonNode.Parse(mixer)]);
-            ChannelChoice[] choices = [new("music", "Music"), new("game", "Game"), new("board", LongName)];
-            foreach (string name in new[] { "Google Chrome with a very long window title", "Discord" })
-            {
-                var app = new AppStreamViewModel(new DaemonClient("ws://127.0.0.1:1/ws"), name, name, choices);
-                app.ApplyFromDaemon("music", true, true);
-                model.Apps.Add(app);
-                model.ActiveApps.Add(app);
-            }
-            ApplicationIconWindowTests.Assign(model.Apps);
-            // A Wave XLR Pro's view of the inputs: one XLR input, so XLR 2 is
-            // not there, and the daemon says so of its channel too.
-            model.HasXlr2 = false;
-            // Levels under the faders, so the screenshots show the meter as the faders' track.
-            double[] levels = [0.82, 0, 0.4, 0.62, 0.95, 0.55, 0];
-            for (int i = 0; i < model.Channels.Count; i++)
-            {
-                model.Channels[i].MeterL = levels[i];
-                model.Channels[i].MeterR = levels[i] * 0.9;
-            }
-            foreach (MixViewModel mix in model.Mixes) { mix.MeterL = 0.6; mix.MeterR = 0.58; }
+            string mixer = FillBroadcastModel(model);
             MethodInfo apply = typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!;
             ChannelViewModel[] channels = [.. model.Channels];
             MixViewModel[] mixes = [.. model.Mixes];
@@ -462,6 +421,125 @@ internal static partial class SkinLayoutWindowTests
             window.Close();
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         }
+    }
+
+    /// <summary>
+    /// A new install: no ui.json and no skin folders of the user's. The launch
+    /// puts Broadcast on without writing anything, and a window built after it
+    /// opens on the mix matrix from the start, not by a switch, and fits at
+    /// the widths and sizings the Broadcast checks use.
+    /// </summary>
+    private static void CheckFreshStart()
+    {
+        string dir = Directory.CreateTempSubdirectory("openxlr-fresh-start-").FullName;
+        string[] names = ["XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_DATA_DIRS", SkinService.OverrideVariable];
+        string?[] old = [.. names.Select(Environment.GetEnvironmentVariable)];
+        SkinEntry skin = SkinService.Current;
+        string mode = SkinService.Mode;
+        bool touch = SkinService.TouchControls;
+        Avalonia.Styling.ThemeVariant? variant = Application.Current!.RequestedThemeVariant;
+        MainWindow? window = null;
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(dir, "config"));
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(dir, "data"));
+            Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(dir, "none"));
+            Environment.SetEnvironmentVariable(SkinService.OverrideVariable, null);
+            string uiJson = Path.Combine(dir, "config", "openxlr", "ui.json");
+
+            SkinService.Initialize();
+            Assert.Equal(SkinPackage.StartingId, SkinService.Current.Id);
+            Assert.False(SkinService.TouchControls);
+            Assert.False(File.Exists(uiJson));
+
+            window = new MainWindow(new DaemonClient("ws://127.0.0.1:1/ws"));
+            var model = (MainViewModel)window.DataContext!;
+            FillBroadcastModel(model);
+            window.Show();
+            Layout(window, 1040, 1400);
+            Assert.IsType<MixMatrixViewModel>(window.MixMatrix);
+            Assert.Null(window.MixBanks);
+            Assert.False(((Border)window.FindControl<Expander>("InputsTile")!.Parent!).IsVisible);
+            foreach (bool enlarged in new[] { false, true })
+            {
+                SkinService.ApplyControlSizing(enlarged);
+                foreach (double width in new[] { 640d, 1040, 2560 })
+                {
+                    Layout(window, width, 1400);
+                    CheckBroadcastAt(window, model, $"fresh start {(enlarged ? "touch" : "standard")} at {width}");
+                }
+            }
+            SkinService.ApplyControlSizing(false);
+            Layout(window, 1040, 1400);
+            Capture(window, "skin-broadcast-fresh-start");
+            Assert.Equal("broadcast", SkinService.Current.Id);
+            // Whatever the window keeps for itself, the skin choice is still nobody's.
+            Assert.Null(UiSettings.Load().Skin);
+        }
+        finally
+        {
+            window?.Close();
+            for (int i = 0; i < names.Length; i++) Environment.SetEnvironmentVariable(names[i], old[i]);
+            SkinService.ApplyMode(mode, skin);
+            SkinService.ApplyControlSizing(touch);
+            Application.Current!.RequestedThemeVariant = variant;
+            SkinService.Apply(skin);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Directory.Delete(dir, true);
+        }
+    }
+
+    /// <summary>
+    /// The fixture every Broadcast check draws: six mixes, an interface
+    /// without XLR 2, a capture channel that is not connected, a 40 character
+    /// name, two applications and levels under the faders. Returns the mixer
+    /// state it applied, for the checks that change it.
+    /// </summary>
+    private static string FillBroadcastModel(MainViewModel model)
+    {
+        Assert.Equal(40, LongName.Length);
+        string mixer = """
+            {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor","appearance":{"defaultIcon":"headset"}},
+                      {"id":"monitor2","name":"Monitor B","kind":"monitor","appearance":{"defaultIcon":"headset"}},
+                      {"id":"stream","name":"Stream","kind":"virtualMic","appearance":{"defaultIcon":"broadcast","colour":"#FF7A00"}},
+                      {"id":"chat","name":"Chat","kind":"virtualMic","appearance":{"defaultIcon":"people"}},
+                      {"id":"auxout","name":"Aux","kind":"auxPort","appearance":{"defaultIcon":"jack"}},
+                      {"id":"music-bed","name":"Music bed","kind":"virtualMic","appearance":{"icon":"music","defaultIcon":"podcast"}}],
+             "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":0.8,"stream":0.6},"volume":0.7,"appearance":{"defaultIcon":"mic"}},
+                         {"id":"xlr2","name":"XLR 2","hardware":true,"present":false,"appearance":{"defaultIcon":"mic"}},
+                         {"id":"aux","name":"Aux In","hardware":true,"volume":1,"appearance":{"defaultIcon":"jack"}},
+                         {"id":"music","name":"Music","levels":{"monitor":0.5,"stream":0.4},"mutedIn":["stream"],"volume":0.9,"appearance":{"icon":"♫","defaultIcon":"music"}},
+                         {"id":"board","name":"LONGNAME","levels":{"monitor":1,"stream":1},"volume":1,"appearance":{"defaultIcon":"apps"}},
+                         {"id":"game","name":"Game","levels":{"monitor":1,"stream":1},"appearance":{"defaultIcon":"game"}},
+                         {"id":"cam","name":"Capture card","captureSource":"alsa_input.usb-capture","captureConnected":false,"volume":0.75,"appearance":{"defaultIcon":"camera"}}],
+             "monitorOutputs":["speakers"],"outputVolume":0.6,"inserts":{}}
+            """.Replace("LONGNAME", LongName);
+        typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [JsonNode.Parse(mixer)]);
+        typeof(MainViewModel).GetMethod("ApplyDevices", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [JsonNode.Parse("""
+            [{"kind":0,"name":"speakers","description":"Desk speakers with a long description from the driver"},
+             {"kind":0,"name":"headset","description":"USB headset"}]
+            """), JsonNode.Parse(mixer)]);
+        ChannelChoice[] choices = [new("music", "Music"), new("game", "Game"), new("board", LongName)];
+        foreach (string name in new[] { "Google Chrome with a very long window title", "Discord" })
+        {
+            var app = new AppStreamViewModel(new DaemonClient("ws://127.0.0.1:1/ws"), name, name, choices);
+            app.ApplyFromDaemon("music", true, true);
+            model.Apps.Add(app);
+            model.ActiveApps.Add(app);
+        }
+        ApplicationIconWindowTests.Assign(model.Apps);
+        // A Wave XLR Pro's view of the inputs: one XLR input, so XLR 2 is
+        // not there, and the daemon says so of its channel too.
+        model.HasXlr2 = false;
+        // Levels under the faders, so the screenshots show the meter as the faders' track.
+        double[] levels = [0.82, 0, 0.4, 0.62, 0.95, 0.55, 0];
+        for (int i = 0; i < model.Channels.Count; i++)
+        {
+            model.Channels[i].MeterL = levels[i];
+            model.Channels[i].MeterR = levels[i] * 0.9;
+        }
+        foreach (MixViewModel mix in model.Mixes) { mix.MeterL = 0.6; mix.MeterR = 0.58; }
+        return mixer;
     }
 
     /// <summary>

@@ -46,7 +46,7 @@ public sealed class TrayWindowTests
                 // the developer's real desktop tray.
                 Environment.SetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent");
                 Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", config);
-                new UiSettings { MinimizeToTray = true }.Save();
+                WindowLayoutTests.PinMaterial(new UiSettings { MinimizeToTray = true });
                 AppBuilder.Configure<App>().UseSkia().UseHarfBuzz().UseX11().SetupWithoutStarting();
                 TrayRegistrationSurvivesHidingAndIsRemovedOnQuit();
                 MeterBurstsApplyOnlyTheNewestFrame();

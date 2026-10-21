@@ -11,6 +11,13 @@ public sealed record SkinEntry(SkinPackage Package, IReadOnlyList<string> Errors
 {
     public string Id => Package.Id;
     public string Name => Package.Name;
+
+    /// <summary>
+    /// False for the placeholder of a skin folder whose document could not be
+    /// read at all, which carries only the reasons. Wearing it looks like
+    /// Material; a skin chosen by nobody is never put on in that state.
+    /// </summary>
+    public bool Usable { get; init; } = true;
 }
 
 /// <summary>
@@ -159,5 +166,5 @@ public static class SkinCatalog
     private static SkinEntry Broken(string id, SkinOrigin origin, string folder, IReadOnlyList<string> errors) =>
         new(new SkinPackage(SkinReader.IsValidId(id) ? id : "unreadable", id, null, null,
             SkinFormat.Schema, origin, folder, new Dictionary<string, SkinValue>(StringComparer.Ordinal),
-            new Dictionary<string, string>(StringComparer.Ordinal)), errors);
+            new Dictionary<string, string>(StringComparer.Ordinal)), errors) { Usable = false };
 }

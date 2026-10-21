@@ -1779,6 +1779,7 @@ public sealed partial class SkinWindowTests
                 Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", config);
                 Environment.SetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent");
                 Environment.SetEnvironmentVariable("OPENXLR_SKIN", null);
+                WindowLayoutTests.PinMaterial();
                 AppBuilder.Configure<App>().UseSkia().UseHarfBuzz().UseX11().SetupWithoutStarting();
                 Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
 

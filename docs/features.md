@@ -812,10 +812,12 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   its scale, so a skin can give it a hi-fi green, amber and red ladder
   without the bar ever repainting itself end to end. What a skin leaves out
   keeps the shipped default. Sixteen appearances ship, all compiled into
-  the application: Material, the window's own, Deck, built from the
+  the application: Material, the classic look, Deck, built from the
   OpenDeck plugin's key and dial art, one for each of the eleven
   Omarchy palettes, two of them light, Nyan Pink, Broadcast and Wave. The
-  last two also arrange the window. The picker is in Options, the
+  last two also arrange the window. Broadcast is the default: a new
+  install, or one that never picked a skin, starts on it, and a skin the
+  user picked, Material included, is kept. The picker is in Options, the
   choice lives in `ui.json` alone, and switching
   repaints open windows without touching audio or the layout. A skin is
   data. It carries no markup and no code, reaches no file outside its own

@@ -997,7 +997,7 @@
     <value>Manual</value>
   </data>
   <data name="MaterialDescription" xml:space="preserve">
-    <value>La apariencia incluida con la aplicación.</value>
+    <value>La apariencia clásica, con modo claro y oscuro.</value>
   </data>
   <data name="MemoryLockSetup" xml:space="preserve">
     <value>Configurar bloqueo de memoria</value>

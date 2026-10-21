@@ -997,7 +997,7 @@
     <value>Manual</value>
   </data>
   <data name="MaterialDescription" xml:space="preserve">
-    <value>The appearance the application ships with.</value>
+    <value>The classic appearance, with a light and a dark mode.</value>
   </data>
   <data name="MemoryLockSetup" xml:space="preserve">
     <value>Memory-lock setup</value>

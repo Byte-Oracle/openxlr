@@ -127,7 +127,7 @@ internal static class Program
     {
         // An empty variable or argument is no override, as in the window.
         if (string.IsNullOrEmpty(skin)) skin = null;
-        Theme theme = SkinCatalog.Load(skin ?? UiSettingsFile.ReadSkin());
+        Theme theme = skin is not null ? SkinCatalog.Load(skin) : SkinCatalog.LoadSaved(UiSettingsFile.ReadSkin());
         return new App(link, theme, UiSettingsFile.ReadAppearanceMode(), skinOverride: skin is not null);
     }
 

@@ -9,9 +9,10 @@ no code, and it cannot reach a file outside its own folder.
 OpenXLR ships sixteen appearances, all compiled into the application, so
 every package has them and there is nothing to install:
 
-- **Material**, the default, in a dark and a light palette (see
+- **Material**, the classic appearance, in a dark and a light palette (see
   [Material's mode](#materials-mode)). The dark palette is what the window
-  has always looked like, and it is what every unset value falls back to.
+  looked like before Broadcast became the default, and it is what every
+  unset value falls back to.
 - **Deck**, which dresses the window in the visual language of the
   OpenDeck keys and the Wave interfaces: near-black faceplates, black keys
   whose lettering is backlit green when a control is on and red when
@@ -23,7 +24,7 @@ every package has them and there is nothing to install:
   Latte, Everforest, Gruvbox, Kanagawa, Matte Black, Nord, Osaka Jade,
   Ristretto, Rose Pine and Tokyo Night. Rose Pine and Catppuccin Latte
   are the light ones.
-- **Broadcast**, a dark layout skin: the submixer as
+- **Broadcast**, the default, a dark layout skin: the submixer as
   a mix matrix across the window, a row per channel and a column per mix,
   with each channel's send into each mix where its row crosses the mix's
   column. HEADPHONES and MONITOR's toolbar share the row above it, INPUTS
@@ -42,7 +43,17 @@ every package has them and there is nothing to install:
   It uses the same routing and controls as the other skins; no Elgato
   artwork or additional software is needed.
 
-Pick one in Options under APPEARANCE. The terminal mixer reads the same
+Pick one in Options under APPEARANCE. A new install starts on Broadcast,
+and so does an install whose user never picked a skin, so upgrading from a
+version that started on Material moves that window to Broadcast. A skin you
+picked stays picked, Material included. To go back to Material, choose
+**Material** under APPEARANCE in Options; `ui.json` then holds
+`"skin": "default"`. Nothing is written until you choose, and a missing or
+empty `"skin"` always means Broadcast. If Broadcast itself cannot be read,
+because a copy of it in your skin folder is broken, the window starts on
+Material instead.
+
+The terminal mixer reads the same
 folders and the same saved choice, on its own Options tab, so an appearance
 picked in one is the appearance in the other. A terminal has no gradients,
 images or corner radii, so it takes a gradient at its first stop. It also
@@ -144,8 +155,8 @@ errors and leaves the plugin's file-based fallback available.
 
 Without a matching palette from a running window, the plugin reads the saved `skin` from
 `ui.json` and the selected package from the usual XDG skin roots, user first,
-then system, then the embedded palette. Unknown ids and invalid documents fall
-back to Material. `OPENXLR_SKIN` in the plugin's own environment overrides the
+then system, then the embedded palette. No saved skin is Broadcast, as in the
+window. Unknown ids and invalid documents fall back to Material. `OPENXLR_SKIN` in the plugin's own environment overrides the
 saved choice and the published palette for that run. Empty variables are unset.
 File events follow atomic saves and newly created or removed skin folders;
 unchanged colours cause no redraw. Meter updates perform no filesystem work.
@@ -449,8 +460,8 @@ names the toolkit knows, in any case, or a number from 1 to 1000.
 
 ## The tokens
 
-Every value the window has is below. The **default** column is the
-appearance OpenXLR ships with: a `#rrggbb` or `#aarrggbb` colour, a
+Every value the window has is below. The **default** column is Material's
+dark palette, which is what a value a skin leaves out falls back to: a `#rrggbb` or `#aarrggbb` colour, a
 number, or `framework`, which means OpenXLR sets nothing there and the
 toolkit's own value stays. **Range** is the bounds a number, a radius or a
 thickness is held to; a value outside them is refused and the default
@@ -1867,9 +1878,10 @@ chosen one leaves the window on Material, and `ui.json` keeps the name
 until you choose something else, so putting the folder back brings it
 straight back.
 
-To reset the appearance completely, choose Material and System in
-Options, or close the window and delete the `"skin"` and
-`"appearanceMode"` lines from `~/.config/openxlr/ui.json`. Those lines are
+To return to the classic look, choose Material and System in Options. To
+reset the appearance completely, close the window and delete the `"skin"`
+and `"appearanceMode"` lines from `~/.config/openxlr/ui.json`; the window
+then starts on Broadcast, the default. Those lines are
 the whole of the appearance's presence on your machine, and nothing about
 the mixer, the daemon or your audio devices is kept in that file at all, so
 neither route can disturb what is playing.
