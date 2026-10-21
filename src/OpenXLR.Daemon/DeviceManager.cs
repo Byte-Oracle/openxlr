@@ -1066,10 +1066,12 @@ public sealed class DeviceManager : BackgroundService
     /// Drive the Pro's headphone-mix membership toward the wanted state (issue
     /// #8): the Monitor stream's return pair must be a member for the jacks to
     /// hear the Monitor mix at all, and the mic's hardware direct path follows
-    /// the software mixer. Returns true when a bit was written, so the caller
-    /// can restart the playback stream, which is what latches the change.
+    /// the software mixer. A null <paramref name="monitorReturn"/> leaves the
+    /// return pair as the unit holds it. Returns true when a bit was written,
+    /// so the caller can restart the playback stream, which is what latches
+    /// the change.
     /// </summary>
-    public bool EnsureHeadphoneMix(bool monitorReturn, bool micDirect)
+    public bool EnsureHeadphoneMix(bool? monitorReturn, bool micDirect)
     {
         lock (_gate)
         {
@@ -1079,11 +1081,11 @@ public sealed class DeviceManager : BackgroundService
             try
             {
                 bool changed = false;
-                if (s.HpMixMonitorReturn != monitorReturn) { _device.SetHpMixMonitorReturn(monitorReturn); changed = true; }
+                if (monitorReturn is { } ret && s.HpMixMonitorReturn != ret) { _device.SetHpMixMonitorReturn(ret); changed = true; }
                 if (s.HpMixMicDirect != micDirect) { _device.SetHpMixMicDirect(micDirect); changed = true; }
                 if (changed)
                 {
-                    _log.LogInformation("headphone mix: monitor return {ret}, mic direct {mic}", monitorReturn, micDirect);
+                    _log.LogInformation("headphone mix: monitor return {ret}, mic direct {mic}", monitorReturn ?? s.HpMixMonitorReturn, micDirect);
                     _last = Stamp(_device.ReadState());
                     RaiseFromLocked();
                 }
