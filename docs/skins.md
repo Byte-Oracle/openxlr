@@ -478,10 +478,10 @@ without a row here fails the build.
 | `Ox.Tile.BorderBrush` | brush | #00000000 |  | that tile's border |
 | `Ox.Tile.BorderThickness` | thickness | 0 | 0 to 16 | that border's width |
 | `Ox.Tile.CornerRadius` | radius | 6 | 0 to 48 | that tile's corners |
-| `Ox.Dialog.Background` | brush | #1d2027 |  | the small confirmation and rename dialogs |
+| `Ox.Dialog.Background` | brush | #1d2027 |  | the small dialogs: confirmations, rename and the input binding dialog |
 | `Ox.Danger.Background` | brush | #a03434 |  | a button that deletes something |
 | `Ox.Danger.Foreground` | brush | #f6dede |  | that button's label |
-| `Ox.Badge.Background` | brush | #2a2e38 |  | the small format badge beside a plugin name |
+| `Ox.Badge.Background` | brush | #2a2e38 |  | a small badge: the format badge beside a plugin name, a strip's binding or capture source chip, and the hardware badge in the EQ editor and the Ducking window |
 | `Ox.Divider` | brush | #2d313c |  | the rule under a plugin control group |
 
 ### Text
@@ -494,7 +494,7 @@ without a row here fails the build.
 | `Ox.Text.Detail` | brush | #b9bfcc |  | paragraphs in About, release notes, plugin group headings |
 | `Ox.Text.Warning` | brush | #e0a05a |  | something went wrong |
 | `Ox.Text.Alert` | brush | #e0a030 |  | something needs attention |
-| `Ox.Text.Info` | brush | #5ba8f5 |  | an update is available |
+| `Ox.Text.Info` | brush | #5ba8f5 |  | informational lines: an available update, and the hardware badge's lettering in the EQ editor and the Ducking window |
 | `Ox.Link.Foreground` | brush | #5ba8f5 |  | a link |
 | `Ox.Link.ForegroundPointerOver` | brush | #8cc4ff |  | a link under the pointer |
 
@@ -741,8 +741,8 @@ ordinary controls in the skin's appearance for them.
 | `Ox.Eq.CurveThickness` | number | 2.5 | 1 to 8 | the width of the sum's line |
 | `Ox.Eq.BandCurveThickness` | number | 1.25 | 0.5 to 6 | the width of each band's own curve |
 | `Ox.Eq.HandleSize` | number | 18 | 12 to 48 | the diameter of a band's handle; the pointer takes it within 20 units of its centre, or the compact control minimum under Touch sizing |
-| `Ox.Eq.LabelFontSize` | number | 10 | 8 to 24 | the size of the axis labels, the region names and the readout |
-| `Ox.Eq.CornerRadius` | radius | 6 | 0 to 48 | the graph's corners |
+| `Ox.Eq.LabelFontSize` | number | 10 | 8 to 24 | the size of the axis labels, the region names and the readout, and of the hardware badge's text in the EQ editor and the Ducking window |
+| `Ox.Eq.CornerRadius` | radius | 6 | 0 to 48 | the graph's corners, and the hardware badge's in the EQ editor and the Ducking window |
 
 ### Mixer control sizing
 
@@ -762,7 +762,7 @@ their sizes.
 | `Ox.Mixer.ControlMinSize` | number | framework | 0 to 64 | the smallest width and height of a mixer button, dropdown, check box, text box, slider and fader cap |
 | `Ox.Mixer.SliderMinHeight` | number | framework | 0 to 96 | the smallest height of a mixer slider |
 | `Ox.Mixer.DeviceSliderHeight` | number | 30 | 30 to 96 | the height of a slider in the interface's control rows |
-| `Ox.Mixer.SmallControlMinSize` | number | 0 | 0 to 64 | the smallest size of the compact controls: the interface rows' buttons and sliders, the tile headers and their buttons, the Arrange buttons and drag handles, the gain lock, the inserts buttons and a send's mute |
+| `Ox.Mixer.SmallControlMinSize` | number | 0 | 0 to 64 | the smallest size of the compact controls: the interface rows' buttons and sliders, the tile headers and their buttons, the Arrange buttons and drag handles, the gain lock, the binding and capture source chips, the inserts buttons, the SUBMIXER header's buttons, a send's mute and the EQ graph's handle target |
 | `Ox.Mixer.InsertControlMinSize` | number | 24 | 16 to 64 | the smallest width and height of an insert row's own process, bypass and controls buttons |
 | `Ox.Mixer.ChannelWidth` | number | 132 | 132 to 400 | the width of a submixer channel strip |
 | `Ox.Mixer.MixWidth` | number | 232 | 232 to 500 | the width of a mix master tile |
@@ -816,8 +816,8 @@ image that breaks one of these rules is reported in Options and that one
 token keeps its default.
 
 Images are paintable wherever a brush is: a faceplate behind the window, a
-texture on a card, a metal face on a key. They are not available to the
-six flat indicator colours.
+texture on a card, a metal face on a key. They are not available to a
+token of kind colour.
 
 ## Icons
 
@@ -1051,7 +1051,7 @@ A child that is not a container is a region:
 | Region | What it is |
 |---|---|
 | `header` | the header: Options, the interface status and the header actions |
-| `inputs` | INPUTS: the gain, the input switches and the microphone inserts |
+| `inputs` | INPUTS: the gain, the input binding, the input switches, the EQ and the microphone inserts |
 | `headphones` | HEADPHONES: the headphone levels and the direct monitor blend |
 | `monitor` | MONITOR: the output picker and its volume |
 | `applications` | APPLICATIONS: the running applications and their channels |
@@ -1841,9 +1841,9 @@ you intend to share is worth checking against the same ones by eye:
   hides it in practice.
 
 Walk the windows before you share a skin: the mixer, Options, the audio
-flow window, the plugin controls window, the mixer layout window, the
-desktop keys dialog, a confirmation dialog, a tooltip
-and a dropdown list. The pointer-over, pressed, checked and disabled
+flow window, the plugin controls window, the mixer layout window, the EQ
+editor, the Ducking window, the input binding dialog, the desktop keys
+dialog, a confirmation dialog, a tooltip and a dropdown list. The pointer-over, pressed, checked and disabled
 states are separate tokens, and an appearance that only sets the resting
 ones looks broken as soon as the pointer moves.
 

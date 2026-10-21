@@ -169,8 +169,9 @@ and fully usable. It is a window preference in `ui.json`
 The two headphone outputs are hardware, not channels: they take an icon
 and a colour, drawn before their labels in the window's HEADPHONES card,
 default to `headset` and are never hidden.
-An entry for an id the layout does not hold, a key of more than 44
-characters, or a value outside these rules is dropped and logged. An entry
+A key of more than 44 characters or a value outside these rules is
+dropped and logged; an entry for an id the layout does not hold is dropped
+without a note. An entry
 equal to the default is not written. Deleting a channel or a mix deletes
 its entry. Appearance belongs to the layout, so profiles neither save nor
 recall it.
@@ -199,8 +200,11 @@ every save. Every field is optional on read; an absent one is empty or off.
 | `lowCutHz` | the software low cut, 0, 80 or 120 |
 | `softClipGuard` | the software ClipGuard |
 | `inserts` | insert chains by `xlr1`, `xlr2`, capture channel id or `mix:<id>` |
+| `eq` | the [microphone EQ](api.md#microphone-eq) of `xlr1` and `xlr2`, by channel id |
+| `eqProcessing` | channel id to `device` or `software`, where that microphone's EQ runs; machine wiring, never in a profile |
+| `compensateMixLatency` | the latency compensation switch across mixes, see [api.md](api.md) |
 | `exclusiveGroups` | exclusive channel groups, see [Exclusive groups](#exclusive-groups) |
-| `ducking` | the [ducking](api.md#ducking) setup, `{enabled, key, channels, mixes, sensitivity, amount, speed, processing}`; absent takes the defaults, off, and the next save writes them. Unknown ids and words are dropped with a note |
+| `ducking` | the [ducking](api.md#ducking) setup, `{enabled, key, channels, mixes, sensitivity, amount, speed, processing}`; absent takes the defaults, off, and the next save writes them. Unknown ids are dropped and an unknown preset or processing word is reset to its default, each with a note |
 
 A null field or a null entry inside one is dropped and logged; so is a
 non-finite number in `mixVolumes`, `levels`, `channelVolumes` or an insert's `params`. A
