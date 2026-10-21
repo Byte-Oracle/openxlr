@@ -28,6 +28,39 @@ test("editable names are paired with stable ids", () => {
   assert.equal(mixName(mixer, "broadcast-vod"), "Broadcast + VOD");
 });
 
+test("microphone controls follow primary and additional carriers by channel id", () => {
+  const state = {...mixer, channels:[
+    {id:"primary", name:"Pro mic", captureSource:"old.primary.node", microphone:true, chainWidth:1,
+      binding:{unit:"pro"}, unitInput:{unit:"pro", input:2, primary:true}},
+    {id:"guest", name:"Guest", captureSource:"old.guest.node", microphone:true, chainWidth:1,
+      binding:{unit:"wave3"}, unitInput:{unit:"wave3", input:1, primary:false}},
+    {id:"usb", name:"USB mic", microphone:true, chainWidth:1},
+  ]};
+  const choices = layoutChoices(state);
+  assert.deepEqual(choices.levelGroups.find(g => g.id === "layout-microphone-gains"), {
+    id:"layout-microphone-gains", label:"Microphone controls", items:[
+      {target:"chgain:primary", label:"Pro mic gain"}, {target:"chgain:guest", label:"Guest gain"},
+    ]});
+  assert.deepEqual(choices.toggleGroups.find(g => g.id === "layout-microphone-controls").items.map(i => i.target),
+    ["chmute:primary", "chphantom:primary", "chlowcut:primary", "chclipguard:primary",
+      "chmute:guest", "chphantom:guest", "chlowcut:guest", "chclipguard:guest"]);
+  state.channels[1].name = "Visitor";
+  state.channels[1].appearance = {icon:"●", colour:"#123456"};
+  assert.deepEqual(layoutChoices(state).levelGroups.find(g => g.id === "layout-microphone-gains").items[1],
+    {target:"chgain:guest", label:"Visitor gain"});
+  for (const target of ["chgain:guest", "chmute:guest", "chphantom:guest", "chlowcut:guest", "chclipguard:guest"])
+    assert.deepEqual(targetAppearance(state, target), {icon:"●", path:null, colour:"#123456"});
+  state.channels.splice(1, 1);
+  assert.doesNotMatch(JSON.stringify(layoutChoices(state)), /chgain:guest|chmute:guest/);
+});
+
+test("older state without capture fields keeps layout choices without microphone controls", () => {
+  const choices = layoutChoices({...mixer, channels:[...mixer.channels, {id:"capture", name:"Capture", captureSource:"usb"}]});
+  assert.equal(choices.toggleGroups.find(g => g.id === "layout-microphone-controls"), undefined);
+  assert.equal(choices.levelGroups.find(g => g.id === "layout-microphone-gains"), undefined);
+  assert.ok(choices.levelGroups.some(g => g.items.some(i => i.target === "send:capture:all")));
+});
+
 test("deleted layout entries disappear from new choices", () => {
   const afterDelete = {
     mixes: mixer.mixes.filter((entry) => entry.id !== "broadcast-vod"),

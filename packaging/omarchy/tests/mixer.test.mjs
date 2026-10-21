@@ -46,13 +46,61 @@ test('bar names shorten only the leading Monitor label', () => {
 });
 
 test('input visibility lasts ten seconds from the last above-floor frame', () => {
+  const channels = [{ id: "xlr1" }, { id: "xlr2" }, { id: "music" }];
   const seen = { xlr1: 1000, xlr2: 5000, music: 9000 };
-  assert.deepEqual(plain(mixer.shownInputs(seen, 10999)), ['xlr1', 'xlr2']);
-  assert.deepEqual(plain(mixer.shownInputs(seen, 11000)), ['xlr2']);
-  assert.deepEqual(plain(mixer.shownInputs(seen, 15000)), []);
-  assert.deepEqual(plain(mixer.shownInputs({}, 1000)), []);
-  assert.deepEqual(plain(mixer.shownInputs({ xlr1: NaN, xlr2: Infinity }, 1000)), []);
+  assert.deepEqual(plain(mixer.shownInputs(channels, seen, 10999)), ['xlr1', 'xlr2']);
+  assert.deepEqual(plain(mixer.shownInputs(channels, seen, 11000)), ['xlr2']);
+  assert.deepEqual(plain(mixer.shownInputs(channels, seen, 15000)), []);
+  assert.deepEqual(plain(mixer.shownInputs(channels, {}, 1000)), []);
+  assert.deepEqual(plain(mixer.shownInputs(channels, { xlr1: NaN, xlr2: Infinity }, 1000)), []);
   assert.deepEqual(seen, { xlr1: 1000, xlr2: 5000, music: 9000 });
+});
+
+test('the bar holds at most four microphones in layout order and leaves stereo captures out', () => {
+  const channels = [
+    {id:'guest', microphone:true}, {id:'xlr2'}, {id:'line', microphone:false},
+    {id:'usb', microphone:true}, {id:'xlr1'}, {id:'fifth', microphone:true},
+    {id:'absent', microphone:true, present:false}, {id:'old-capture', captureSource:'usb'},
+  ];
+  const seen = Object.fromEntries(channels.map(c => [c.id, 1000]));
+  assert.deepEqual(plain(mixer.shownInputs(channels, seen, 10999)), ['guest', 'xlr2', 'usb', 'xlr1']);
+  seen.guest = 999;
+  assert.deepEqual(plain(mixer.shownInputs(channels, seen, 10999)), ['xlr2', 'usb', 'xlr1', 'fifth']);
+  assert.deepEqual(plain(mixer.shownInputs(channels, seen, 11000)), []);
+  assert.equal(mixer.mono({id:'xlr1', microphone:false}), false);
+  assert.equal(mixer.mono({id:'usb', microphone:true}), true);
+  assert.equal(mixer.mono({id:'old-capture', captureMonoChannel:0}), false);
+  assert.deepEqual(plain(mixer.pair({'ch:guest':[0.2,0.7]}, 'ch:guest', mixer.mono(channels[0]))), [0.7,0.7]);
+});
+
+test('capture carriers keep primary and additional mute targets after their unit source is renamed', () => {
+  const primary = 'pro', additional = 'wave3';
+  const snapshot = {connected:true, capabilities:{mute:true}, state:{mute2:true},
+    waveInterfaces:[{id:additional, enabled:true, connected:true, capabilities:{mute:true}, state:{mute:false}}],
+    devices:[{name:'renamed.primary', kind:1, drivenUnit:primary}, {name:'renamed.additional', kind:1, drivenUnit:additional}],
+    mixer:{channels:[
+      {id:'pro-mic', captureSource:'old.primary', microphone:true, binding:{unit:primary},
+        unitInput:{unit:primary,input:2,primary:true}},
+      {id:'guest', captureSource:'old.additional', microphone:true, binding:{unit:additional},
+        unitInput:{unit:additional,input:1,primary:false}},
+    ]}};
+  assert.deepEqual(plain(mixer.muteTarget(snapshot, 'pro-mic')), {device:'',control:'mute2'});
+  assert.deepEqual(plain(mixer.muteCommandFor(snapshot, 'pro-mic', false)), {cmd:'set',control:'mute2',value:false});
+  assert.deepEqual(plain(mixer.muteCommandFor(snapshot, 'guest', true)),
+    {cmd:'setWaveControl',device:additional,control:'mute',value:true});
+  assert.equal(mixer.hardwareMuted(snapshot, 'pro-mic'), true);
+  assert.equal(mixer.muteAvailable(snapshot, 'guest'), true);
+  // An older state has neither the microphone flag nor followed unit binding.
+  for (const channel of snapshot.mixer.channels) {
+    delete channel.microphone;
+    delete channel.binding.unit;
+  }
+  assert.equal(mixer.muteAvailable(snapshot, 'pro-mic'), true);
+  assert.equal(mixer.muteAvailable(snapshot, 'guest'), true);
+  delete snapshot.mixer.channels[0].unitInput;
+  delete snapshot.mixer.channels[1].unitInput;
+  assert.equal(mixer.muteTarget(snapshot, 'pro-mic'), null);
+  assert.equal(mixer.muteTarget(snapshot, 'guest'), null);
 });
 
 test('the feed meter uses the louder stereo side and loudest mix in a sum', () => {
@@ -160,8 +208,8 @@ test('stereo stays apart, XLR is mono, and invalid levels do not poison the othe
   assert.deepEqual(plain(mixer.pair({ x: [0.2, 0.8] }, 'x', true)), [0.8, 0.8]);
   assert.deepEqual(plain(mixer.pair({ x: [NaN, 0.8] }, 'x', false)), [0, 0.8]);
   assert.deepEqual(plain(mixer.pair({ x: [Infinity, -1] }, 'x', false)), [0, 0]);
-  assert.equal(mixer.mono('xlr2'), true);
-  assert.equal(mixer.mono('aux'), false);
+  assert.equal(mixer.mono({id:'xlr2'}), true);
+  assert.equal(mixer.mono({id:'aux'}), false);
 });
 
 test('block glyphs use the TUI fractions and its dBFS scale', () => {

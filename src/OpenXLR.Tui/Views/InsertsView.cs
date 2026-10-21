@@ -16,6 +16,7 @@ internal sealed class InsertsView : View
     private RowList _controls = new();
     private RowList _picker = new();
     private bool _picking;
+    private string _pickTarget = string.Empty;
     private string _filter = string.Empty;
     private int _target;
     private EditTarget? _editing;
@@ -52,7 +53,7 @@ internal sealed class InsertsView : View
         Update(app, state);
         if (_picking)
         {
-            (string key, string name) = Targets(state)[_target];
+            (string key, string name, _) = Targets(state).First(target => target.Key == _pickTarget);
             _header.Draw(screen, area with { Height = 2 }, app.Theme,
                 [new HeadingRow($"Add to {name}"), new TextRow("Filter", _filter.Length > 0 ? _filter : "type to narrow the list")],
                 labelWidth: 22, focus: false);
@@ -92,7 +93,7 @@ internal sealed class InsertsView : View
                     _filter += key.Char;
                     return true;
                 default:
-                    return _picker.Handle(key, PickRows(app, Targets(state)[_target].Key));
+                    return _picker.Handle(key, PickRows(app, _pickTarget));
             }
         }
         if (_editing is not null && key.Key == Key.Escape) { CloseControls(); return true; }
@@ -111,6 +112,8 @@ internal sealed class InsertsView : View
         if (key.Is('a') && _editing is null && Targets(state).Count > 0)
         {
             _picking = true;
+            var targets = Targets(state);
+            _pickTarget = targets[Math.Clamp(_target, 0, targets.Count - 1)].Key;
             _filter = string.Empty;
             _picker = new RowList();
             return true;
@@ -121,6 +124,7 @@ internal sealed class InsertsView : View
     private void ClosePicker()
     {
         _picking = false;
+        _pickTarget = string.Empty;
         _filter = string.Empty;
     }
 
@@ -128,9 +132,7 @@ internal sealed class InsertsView : View
     private List<Row> PickRows(App app, string target)
     {
         if (!app.Link.PluginsLoaded) return [new TextRow("Plugins", "Waiting for the plugin catalogue")];
-        // An input's chain is mono and a mix's is stereo, which is the width
-        // a plugin has to fit, as the window's picker decides it too.
-        int channels = target.StartsWith("xlr", StringComparison.Ordinal) ? 1 : 2;
+        int channels = Targets(State(app)!).FirstOrDefault(entry => entry.Key == target).Width;
         List<Row> rows = [];
         foreach (PluginChoice choice in app.Link.Choices)
         {
@@ -234,6 +236,11 @@ internal sealed class InsertsView : View
     private void Update(App app, Snapshot state)
     {
         app.Link.EnsurePlugins();
+        if (_picking && !Targets(state).Any(target => target.Key == _pickTarget))
+        {
+            ClosePicker();
+            app.Say("The channel no longer has an insert chain");
+        }
         if (_editing is null) return;
         InsertEntry? entry = Find(state);
         if (entry is null)
@@ -356,18 +363,22 @@ internal sealed class InsertsView : View
     }
 
     /// <summary>The chains the daemon reports, in the order the window lists them.</summary>
-    private static List<(string Key, string Name)> Targets(Snapshot state)
+    private static List<(string Key, string Name, int Width)> Targets(Snapshot state)
     {
-        List<(string, string)> targets = [];
-        int inputs = Math.Max(1, state.Count("xlrInputs"));
-        for (int input = 1; input <= inputs; input++) targets.Add(($"xlr{input}", $"XLR {input}"));
-        foreach (MixEntry mix in state.Mixer.Mixes) targets.Add(($"mix:{mix.Id}", mix.Name));
+        List<(string, string, int)> targets = [];
+        foreach (ChannelEntry channel in state.Mixer.Shown)
+            if (channel.ChainWidth is 1 or 2)
+                targets.Add((channel.Id, channel.Name, channel.ChainWidth.Value));
+        if (state.Mixer.Channels.Count == 0)
+            for (int input = 1; input <= Math.Max(1, state.Count("xlrInputs")); input++)
+                targets.Add(($"xlr{input}", $"XLR {input}", 1));
+        foreach (MixEntry mix in state.Mixer.Mixes) targets.Add(($"mix:{mix.Id}", mix.Name, 2));
         return targets;
     }
 
     private List<Row> Build(App app, Snapshot state)
     {
-        List<(string Key, string Name)> targets = Targets(state);
+        List<(string Key, string Name, int Width)> targets = Targets(state);
         if (targets.Count == 0) return [new TextRow("No chains", "the mixer is not built")];
         _target = Math.Clamp(_target, 0, targets.Count - 1);
 

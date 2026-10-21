@@ -1,12 +1,54 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { deviceTargetSupported, unitCarrier, unitDialLabel, unitInputName, unitInputOf, unitKeyLabel, unitMeterKey }
+import { channelUnitControl, channelUnitTarget, deviceTargetSupported, unitCarrier, unitDialLabel, unitInputName, unitInputOf, unitKeyLabel, unitMeterKey }
   from "../com.emaspa.openxlr.sdPlugin/unit-inputs.mjs";
 
 const unit = "0fd9:00b4@0123456789abcdef";
 const pro = {gain:true, mute:true, phantom:true, lowCut:true, expander:true, voiceTune:true, clipGuard:true,
   compressor:true, hpVolume:true, crossfade:true, outputRouting:true, auxInput:true, lowImpedance:true,
   xlrInputs:2, hpOutputs:2, xlrJacks:true};
+
+test("channel controls resolve the current primary or additional input with its own gain range", () => {
+  const state = bound();
+  state.state = {gainDb:52, mute:false, phantom2:true, lowCut2:false, clipGuard2:true};
+  assert.deepEqual(channelUnitControl(state, "cap1", "gain"), {device:unit, control:"gain", value:52, max:80});
+  for (const [control, value] of [["phantom", true], ["lowCut", false], ["clipGuard", true]])
+    assert.deepEqual(channelUnitControl(state, "xlr2", control), {device:unit, control:`${control}2`, value, max:null});
+  const wave3 = "0fd9:0070@fedcba9876543210";
+  state.waveInterfaces = [{id:wave3, enabled:true, connected:true,
+    capabilities:{gain:true, mute:true, clipGuard:true, gainMaxDb:40}, state:{gainDb:30, mute:true, clipGuard:false}}];
+  state.mixer.channels[3].unitInput = {unit:wave3, input:1, primary:false};
+  state.mixer.channels[3].binding.unit = wave3;
+  state.mixer.channels[3].binding.source = "saved.node.before.rename";
+  assert.deepEqual(channelUnitControl(state, "cap1", "gain"), {device:wave3, control:"gain", value:30, max:40});
+  assert.deepEqual(channelUnitControl(state, "cap1", "mute"), {device:wave3, control:"mute", value:true, max:null});
+  assert.equal(channelUnitControl(state, "cap1", "phantom"), null);
+  state.waveInterfaces[0].connected = false;
+  assert.equal(channelUnitControl(state, "cap1", "gain"), null);
+  state.waveInterfaces[0].connected = true;
+  state.waveInterfaces[0].enabled = false;
+  assert.equal(channelUnitControl(state, "cap1", "mute"), null);
+  assert.equal(channelUnitControl(state, "missing", "gain"), null);
+  assert.equal(channelUnitControl(state, "xlr2", "hpVolumeDb"), null);
+});
+
+test("channel targets keep their ids and labels through renames and become unavailable on older state", () => {
+  const state = bound();
+  for (const [prefix, control] of [["chgain", "gain"], ["chmute", "mute"], ["chphantom", "phantom"],
+    ["chlowcut", "lowCut"], ["chclipguard", "clipGuard"]])
+    assert.deepEqual(channelUnitTarget(`${prefix}:cap1`), {channel:"cap1", control});
+  for (const target of [undefined, "gain", "chgain:", "unknown:cap1"])
+    assert.equal(channelUnitTarget(target), null);
+  state.mixer.channels[3].name = "Guest";
+  assert.equal(unitKeyLabel(state, "chmute:cap1"), "Guest\nMute");
+  assert.equal(unitDialLabel(state, "chgain:cap1"), "Guest gain");
+  assert.equal(unitMeterKey(state.mixer, "chgain:cap1"), "ch:cap1");
+  for (const channel of state.mixer.channels) delete channel.unitInput;
+  assert.equal(channelUnitControl(state, "cap1", "gain"), null);
+  assert.equal(channelUnitControl(state, "xlr2", "mute"), null);
+  assert.equal(unitMeterKey(state.mixer, "chgain:cap1"), null);
+  assert.equal(unitCarrier(state.mixer, 2).id, "xlr2");
+});
 
 // XLR 1 takes a Yeti Nano; the Pro's own first input plays on a capture channel.
 function bound() {

@@ -14,7 +14,7 @@ Rectangle {
     required property string family
     property bool master: false
     property var meterPalette: null
-    readonly property bool mono: !master && Mixer.mono(entry.id)
+    readonly property bool mono: !master && Mixer.mono(entry)
     readonly property bool muted: master ? !!entry.muted : Mixer.sendMuted(entry, mix)
     readonly property real volume: master ? Mixer.clamp(entry.volume, maximum) : Mixer.level(entry, mix)
     readonly property real maximum: master ? Mixer.ceiling(entry) : 1

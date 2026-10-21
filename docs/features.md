@@ -409,9 +409,10 @@ button through their `binding` and `effects` parts. The chain window keeps
 presets, A/B, copy and paste, native editors and latency readouts; its picker
 filters by the input's width. Flow cards include the chain, and microphone
 capture inputs draw a one-bar meter. Older daemons without a chain width show
-no capture Inserts button. The terminal mixer still edits XLR and mix
-chains only. Sound Check also runs on mono capture inputs; the microphone
-EQ stays on XLR 1 and XLR 2.
+no capture Inserts button. The terminal mixer edits capture chains too, at
+their published mono or stereo width, and shows mono capture microphones
+with one meter bar. Sound Check also runs on mono capture inputs; the
+microphone EQ stays on XLR 1 and XLR 2.
 
 ### Separate mixer window
 
@@ -632,6 +633,12 @@ dial on a channel or mix shows the icon and colour that channel or mix was
 given in the layout editor, unless the key has its own icon; a group key
 shows its heard member's.
 
+The property inspector's Microphone controls group offers channel gain,
+mute, phantom power, low cut and ClipGuard targets for primary and additional
+unit inputs. A target resolves the channel's current unit at each press or
+turn, keeps its id through a rename, and becomes unavailable when the unit
+or control is unavailable. Legacy interface targets remain unchanged.
+
 ![Keys](plugin-keys.png)
 
 Profiles: a key can recall one of the active device's saved profiles,
@@ -645,7 +652,8 @@ stepping along the control's own scale (log, integer, enumeration,
 toggle), with its name and value on the panel and the insert's bypass
 on the press. A key or dial follows its insert by id, and falls back to
 the same plugin in the same chain when a profile recall rebuilds the
-chain.
+chain. Capture insert keys and dials keep their channel id through a rename.
+Sound Check stays in the window.
 
 Install: download `com.emaspa.openxlr.sdPlugin.zip` from the
 [latest release](https://github.com/emaspa/openxlr/releases/latest) and
@@ -673,6 +681,9 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   the selection visible. F1 or `?` lists all keys. A plugin is added from
   a picker over the catalogue, narrowed by typing, of the plugins that fit
   the chain's width
+- Capture microphones in Inputs show their source, connection and carried
+  unit controls. Inserts includes mono and stereo capture chains, using the
+  width the daemon reports; an older daemon keeps XLR and mix chains only
 - Insert editing opens the plugin's native editor. A blocked or refused
   editor falls back to terminal controls with the reason shown. Controls
   follow the catalogue's order, defaults, switches, named scale points and
@@ -690,14 +701,16 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
 
 ## Omarchy shell plugin
 
-- `openxlr.mixer`: XLR input meters and hardware mute state in the Omarchy
-  4 bar, beside the selected monitor output's feed and meter. Inputs appear
+- `openxlr.mixer`: up to four microphone meters in layout order, including
+  mono capture inputs, with hardware mute state in the Omarchy 4 bar, beside
+  the selected monitor output's feed and meter. Inputs appear
   after signal and stay for 10 seconds after it falls quiet. Muted inputs
   dim, labels keep the bar's regular body font, and levels do not move
   neighbouring widgets while an input is shown
 - A popout of channel sends and mix masters, with volume and mute
-  controls, separate XLR hardware mute, and the terminal mixer's block
-  meters and strip layout in the bar's colours and font
+  controls, hardware mute on each primary or additional unit carrier, and
+  the terminal mixer's block meters and strip layout in the bar's colours
+  and font
 - Popout meters take the OpenXLR skin matching the active Omarchy theme,
   with foreground shades for unmatched themes. Theme changes repaint the
   meters; the bar stays monochrome

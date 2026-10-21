@@ -8,9 +8,12 @@ the same changes. The plugin source is in
 ## The bar and mixer
 
 The bar uses Omarchy's body font, regular weight and bar text colour, like
-the clock. Input labels are the daemon's names for the two microphone
-strips: `XLR 1` and `XLR 2` on an XLR jack, `Mic 1` and `Mic 2` on a
-Wave:3's capsule or on another microphone a strip is bound to. An input's
+the clock. It shows at most four microphones with signal, in layout order,
+including mono capture inputs. Input labels are the daemon's channel names:
+`XLR 1` and `XLR 2` on an XLR jack, `Mic 1` and `Mic 2` on a
+Wave:3's capsule or on another microphone a strip is bound to, and the saved
+name of a capture input. Stereo capture inputs stay out of the bar. An older
+daemon without `microphone` keeps the XLR-only rule. An input's
 label and meter dim to 45% opacity while the interface's mute applies to
 it, which is only while the strip carries the interface's input; their
 weight and size stay the same.
@@ -19,7 +22,8 @@ Glyph cells and labels share the font's line height and vertical centre.
 An input appears when its RMS level has been above the -60 dBFS floor at
 any point in the last 10 seconds. This is signal detection, not cable
 detection; the daemon does not report whether an XLR cable is plugged in.
-Each input has one release timer, rearmed by an above-floor meter frame.
+Each microphone keeps its last above-floor time. One timer waits for the
+next expiry, including microphones waiting behind the first four.
 Muting does not clear that history. A muted input stays until the same
 10-second quiet period has elapsed. A shown input keeps a fixed width as
 its level changes; appearing or disappearing inputs resize the widget
@@ -45,10 +49,10 @@ control. Channels remain in layout order, with a separate bank of mix
 masters. Each bank fits only whole strips and has previous and next page
 buttons with a visible range, such as `1-4/9`. The arrows above the banks
 still choose the send mix. Every strip has its name, kind,
-percentage, vertical fader, RMS meter and bracketed mute key. XLR inputs
-have one wide meter. Other channels and masters have separate left and
-right bars. Channel send faders reach 100%; monitor masters reach 150%
-and other masters reach 100%.
+percentage, vertical fader, RMS meter and bracketed mute key. Microphone
+inputs, including mono capture inputs, have one wide meter. Other channels
+and masters have separate left and right bars. Channel send faders reach
+100%; monitor masters reach 150% and other masters reach 100%.
 
 The popout uses Omarchy's first-party `KeyboardPanel`, as its audio panel
 does. It fits the card to the screen and clamps its position inside the
@@ -61,12 +65,15 @@ that input's hardware mute, which affects every destination. Those are
 separate controls. The daemon names that channel in each channel's
 `unitInput`. It is XLR 1 or XLR 2 while the strip takes the interface, or a
 capture channel on the interface's own input while the strip is bound to
-another microphone. A strip bound to an additional interface that OpenXLR
-drives, such as a Wave:3, has that unit's button, which sends
-`setWaveControl`; it stays disabled while the unit is unplugged. A daemon that does not send the field leaves the button on
-XLR 1 and XLR 2. A bound strip has no hardware mute button, and its
-bracketed send mutes work as usual. Its kind line shows the source's
-description in place of `INPUT`, with `OFF` while the source is silent.
+another microphone. A strip or capture channel carrying an additional
+interface that OpenXLR drives, such as a Wave:3, has that unit's button,
+which sends `setWaveControl`; it stays disabled while the unit is unplugged.
+A daemon that does not send the field leaves the button on
+XLR 1 and XLR 2. Capture carriers keep their mute target when the unit
+renames its node: the daemon resolves the saved `captureUnit` and publishes
+the carrier in `unitInput`. A strip on a source without unit controls has
+no hardware mute button, and its bracketed send mutes work as usual. Its
+kind line shows the source's description in place of `INPUT`, with `OFF` while the source is silent.
 The tooltip adds the source's description and port to that input's line,
 or the daemon's sentence saying why it is silent. A binding to a supported
 interface follows that unit's unique capture node when a card profile change

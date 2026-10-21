@@ -108,7 +108,7 @@ public sealed class OmarchyPluginTests
         }
         string mixer = File.ReadAllText(Path.Combine(plugin, "Mixer.js"));
         Assert.Contains("unitInput", mixer, StringComparison.Ordinal);
-        Assert.Contains("Mixer.channelName(root.channels, modelData)",
+        Assert.Contains("Mixer.channelName(root.channels, modelData.id)",
             File.ReadAllText(Path.Combine(plugin, "BarContent.qml")), StringComparison.Ordinal);
     }
 

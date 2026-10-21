@@ -87,3 +87,33 @@ test("a removed output dial target is kept as an unavailable choice", () => {
   assert.equal(select.value, "output:");
   assert.equal(document.getElementById("unavailable-layout-target"), undefined);
 });
+
+test("channel hardware selections survive a missing carrier and return with its renamed label", () => {
+  const select = new Element("select");
+  select.id = "target";
+  const all = node => [node, ...node.children.flatMap(all)];
+  const document = {createElement: tag => new Element(tag), getElementById: id => all(select).find(node => node.id === id)};
+  const context = vm.createContext({document});
+  vm.runInContext(readFileSync(new URL("../com.emaspa.openxlr.sdPlugin/propertyInspector/layout-options.js", import.meta.url), "utf8"), context);
+  const channel = {id:"guest", name:"Guest", unitInput:{unit:"wave3",input:1,primary:false}};
+  const state = {channels:[channel], mixes:[{id:"monitor",name:"Monitor A"}]};
+  for (const prefix of ["chgain", "chmute", "chphantom", "chlowcut", "chclipguard"]) {
+    const groups = () => {
+      const choices = layoutChoices(state);
+      return prefix === "chgain" ? choices.levelGroups : choices.toggleGroups;
+    };
+    context.replaceLayoutOptions(groups(), `${prefix}:guest`);
+    select.value = `${prefix}:guest`;
+    const carrier = channel.unitInput;
+    delete channel.unitInput;
+    context.replaceLayoutOptions(groups());
+    assert.equal(select.value, `${prefix}:guest`);
+    assert.equal(document.getElementById("unavailable-layout-target").disabled, true);
+    channel.unitInput = carrier;
+    channel.name = "Visitor";
+    context.replaceLayoutOptions(groups());
+    assert.equal(select.value, `${prefix}:guest`);
+    assert.match(select.options.find(option => option.value === select.value).textContent, /^Visitor /);
+    assert.equal(document.getElementById("unavailable-layout-target"), undefined);
+  }
+});

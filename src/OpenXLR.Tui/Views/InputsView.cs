@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace OpenXLR.Tui;
 
 /// <summary>
@@ -75,40 +77,13 @@ internal sealed class InputsView : View
         List<Row> rows = [];
         DaemonLink link = app.Link;
         int inputs = Math.Max(1, state.Count("xlrInputs"));
-        int gainMax = state.Count("gainMaxDb") is int max and > 0 ? max : 80;
         const string off = "not on this device";
 
         for (int input = 1; input <= inputs; input++)
         {
-            string suffix = input == 1 ? string.Empty : input.ToString();
+            if (state.Carrier(input) is { CaptureSource: not null, Mono: true }) continue;
             rows.Add(new HeadingRow(state.InputHeading(input)) { Dial = true });
-            rows.Add(new NumberRow($"Gain", state.Number($"gain{suffix}Db"), 0, gainMax, 1,
-                value => $"{value:0} dB", value => Set(link, $"gain{suffix}", (int)Math.Round(value)))
-            {
-                Enabled = state.Can("gain"), FineStep = 1, DisabledText = off,
-                Note = state.Flag("gainLocked") ? "locked" : null,
-            });
-            rows.Add(new ToggleRow("Mute", state.Flag($"mute{suffix}"),
-                value => Set(link, $"mute{suffix}", value)) { Enabled = state.Can("mute"), DisabledText = off });
-            rows.Add(new ToggleRow("Low cut", state.Flag($"lowCut{suffix}"),
-                value => Set(link, $"lowCut{suffix}", value)) { Enabled = state.Can("lowCut"), DisabledText = off });
-            rows.Add(new ToggleRow("Expander", state.Flag($"expander{suffix}"),
-                value => Set(link, $"expander{suffix}", value)) { Enabled = state.Can("expander"), DisabledText = off });
-            rows.Add(new ToggleRow("Voice tune", state.Flag($"voiceTune{suffix}"),
-                value => Set(link, $"voiceTune{suffix}", value)) { Enabled = state.Can("voiceTune"), DisabledText = off });
-            rows.Add(new NumberRow("VT strength", state.Number($"voiceTuneStrength{suffix}"), 0, 100, 5,
-                Widgets.Percent0, value => Set(link, $"voiceTuneStrength{suffix}", (int)Math.Round(value)))
-            { Enabled = state.Can("voiceTune"), DisabledText = off });
-            rows.Add(new ToggleRow("Phantom power", state.Flag($"phantom{suffix}"),
-                value => Set(link, $"phantom{suffix}", value))
-            {
-                Enabled = state.Can("phantom"), DisabledText = off,
-                Note = state.Flag($"phantomSettling{suffix}") ? "settling" : null,
-            });
-            rows.Add(new ToggleRow("ClipGuard", state.Flag($"clipGuard{suffix}"),
-                value => Set(link, $"clipGuard{suffix}", value)) { Enabled = state.Can("clipGuard"), DisabledText = off });
-            rows.Add(new ToggleRow("Compressor", state.Flag($"compressor{suffix}"),
-                value => Set(link, $"compressor{suffix}", value)) { Enabled = state.Can("compressor"), DisabledText = off });
+            PrimaryInput(rows, link, state, input);
         }
 
         AdditionalInputs(rows, link, state);
@@ -162,6 +137,46 @@ internal sealed class InputsView : View
         }
 
         return rows;
+    }
+
+    private static void PrimaryInput(List<Row> rows, DaemonLink link, Snapshot state, int input, string? device = null)
+    {
+        string suffix = input == 1 ? string.Empty : "2";
+        int gainMax = state.Count("gainMaxDb") is int max and > 0 ? max : 80;
+        const string off = "not on this device";
+        void Write(string control, JsonNode value) => link.Send(device is null ? "set" : "setWaveControl", body =>
+        {
+            if (device is not null) body["device"] = device;
+            body["control"] = control;
+            body["value"] = value;
+        });
+        rows.Add(new NumberRow($"Gain", state.Number($"gain{suffix}Db"), 0, gainMax, 1,
+            value => $"{value:0} dB", value => Write($"gain{suffix}", (int)Math.Round(value)))
+        {
+            Enabled = state.Can("gain"), FineStep = 1, DisabledText = off,
+            Note = state.Flag("gainLocked") ? "locked" : null,
+        });
+        rows.Add(new ToggleRow("Mute", state.Flag($"mute{suffix}"),
+            value => Write($"mute{suffix}", value)) { Enabled = state.Can("mute"), DisabledText = off });
+        rows.Add(new ToggleRow("Low cut", state.Flag($"lowCut{suffix}"),
+            value => Write($"lowCut{suffix}", value)) { Enabled = state.Can("lowCut"), DisabledText = off });
+        rows.Add(new ToggleRow("Expander", state.Flag($"expander{suffix}"),
+            value => Write($"expander{suffix}", value)) { Enabled = state.Can("expander"), DisabledText = off });
+        rows.Add(new ToggleRow("Voice tune", state.Flag($"voiceTune{suffix}"),
+            value => Write($"voiceTune{suffix}", value)) { Enabled = state.Can("voiceTune"), DisabledText = off });
+        rows.Add(new NumberRow("VT strength", state.Number($"voiceTuneStrength{suffix}"), 0, 100, 5,
+            Widgets.Percent0, value => Write($"voiceTuneStrength{suffix}", (int)Math.Round(value)))
+        { Enabled = state.Can("voiceTune"), DisabledText = off });
+        rows.Add(new ToggleRow("Phantom power", state.Flag($"phantom{suffix}"),
+            value => Write($"phantom{suffix}", value))
+        {
+            Enabled = state.Can("phantom"), DisabledText = off,
+            Note = state.Flag($"phantomSettling{suffix}") ? "settling" : null,
+        });
+        rows.Add(new ToggleRow("ClipGuard", state.Flag($"clipGuard{suffix}"),
+            value => Write($"clipGuard{suffix}", value)) { Enabled = state.Can("clipGuard"), DisabledText = off });
+        rows.Add(new ToggleRow("Compressor", state.Flag($"compressor{suffix}"),
+            value => Write($"compressor{suffix}", value)) { Enabled = state.Can("compressor"), DisabledText = off });
     }
 
     /// <summary>
@@ -274,13 +289,27 @@ internal sealed class InputsView : View
     }
 
     /// <summary>
-    /// The controls of an additional unit whose microphone a channel carries,
-    /// such as a Wave:3 that XLR 1 is bound to, written with setWaveControl.
+    /// Capture microphones with their source and connection, and the controls
+    /// of each carried unit, written with setWaveControl.
     /// </summary>
     private static void AdditionalInputs(List<Row> rows, DaemonLink link, Snapshot state)
     {
         foreach (ChannelEntry channel in state.Mixer.Channels)
         {
+            bool capture = channel.CaptureSource is not null && channel.Mono;
+            if (capture)
+            {
+                rows.Add(new HeadingRow(channel.Name));
+                string source = state.BoundSource(channel)!;
+                rows.Add(new TextRow("Source", $"{state.SourceName(source)}, port {(channel.Binding?.MonoChannel ?? 0) + 1}"));
+                rows.Add(new TextRow("Connection", channel.BindingWarning is { Length: > 0 } warning ? warning
+                    : channel.CaptureConnected ? "linked" : "not linked"));
+                if (channel.UnitInput is { Primary: true } primary)
+                {
+                    rows.Add(new HeadingRow($"{state.Device?.Model ?? "Interface"} input {primary.Input} on {channel.Name}") { Dial = state.Can("gain") });
+                    PrimaryInput(rows, link, state, primary.Input, primary.Unit);
+                }
+            }
             if (channel.UnitInput is not { Primary: false } carried || state.Additional(carried.Unit) is not { Driven: true } unit)
                 continue;
             string suffix = carried.Input == 2 ? "2" : string.Empty;
