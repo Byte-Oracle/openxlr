@@ -128,6 +128,76 @@ host's control limit. Existing symbols can still update at that limit; draining
 pending changes frees their slots. These bounds protect the daemon's protocol
 buffers, not the plugin process's own memory or CPU use.
 
+## Ducking
+
+The built-in `duck` backend applies one gain to a stereo bus, detected from
+a separate mono key. It sums nothing and adds no algorithmic latency. The
+daemon does not create this stage yet.
+
+```text
+openxlr-lv2-host duck NODE 2 RATE [SYMBOL=VALUE ...]
+```
+
+`NODE` is the PipeWire node name. `RATE` is the fixed sample rate in Hz,
+8000 to 384000; a changed rate or a quantum above 8192 frames is refused
+by the host. The backend refuses any channel count other than 2. Its ports
+are `playback_0` and `playback_1` for the bus inputs, `capture_0` and
+`capture_1` for its outputs, with audio channels `FL` and `FR`. `key_0` is
+an input with audio channel `MONO`. All five carry 32-bit float mono DSP
+buffers. An unlinked key reads silence. Existing backends have no key port.
+
+| Symbol | Range | Default | Meaning |
+|---|---|---|---|
+| `enabled` | 0 or 1 | 0 | Duck while the key is above threshold |
+| `threshold` | -60 to 0 dBFS | -12 | Key threshold |
+| `depth` | 0 to 40 dB | 12 | Full reduction |
+| `attack` | 1 to 5000 ms | 80 | Time from unity to full reduction |
+| `release` | 1 to 10000 ms | 1200 | Time from full reduction to unity |
+| `key_open` | 0 or 1 | 1 | Let the detector hear the key |
+| `reduction` | 0 to 40 dB | 0 | Read-only meter of the current reduction |
+
+Initial inputs use `SYMBOL=VALUE` arguments. Each subsequent stdin line
+`set SYMBOL VALUE` changes one input, read at the start of the next audio
+block. The host clamps finite values to the ranges above and refuses
+nonfinite values, unknown symbols and writes to `reduction`. The two
+switches treat values below 0.5 as off and values at or above 0.5 as on.
+The host prints `meter reduction VALUE` on stdout when the value changes,
+checked every 33.3 ms; the audio thread updates it at each block's end.
+The ordinary `ready`, `heartbeat` and `ui-heartbeat` messages still apply.
+`quit` or stdin EOF stops the helper. This backend has no editor.
+
+For each sample, `k = abs(key[i])`, or zero while `key_open` is off or
+the sample is not finite. The double-precision peak envelope follows
+`env = max(k, env * exp(-1 / (0.050 * RATE)))`. It is above threshold at
+`env >= 10^(threshold / 20)`. The target gain is `-depth` dB while enabled
+and above, otherwise 0 dB. Gain moves linearly in dB toward that target,
+down by `depth / (attack * RATE / 1000)` per sample or up by
+`depth / (release * RATE / 1000)`. Both channels are multiplied by
+`10^(gain / 20)`, exactly `1.0f` at zero gain, and `reduction` is `-gain`.
+A depth of zero means unity. Disabling releases from the current gain;
+closing the key lets the envelope decay before release starts. The
+envelope is flushed to zero below the smallest normal double to keep long
+silences out of subnormal state. Processing allocates nothing and takes no
+locks.
+
+The Pro's sensitivity values are Low -3, Medium -12 and High -24 dBFS;
+amount is Low 6, Medium 12 and High 24 dB. Speed is Slow 100/2000,
+Medium 80/1200 or Fast 30/200 ms for attack/release. These are numeric
+controls here; preset names belong to the caller. With Medium and a
+-6 dBFS key, gain reaches -6 dB at 40 ms and -12 dB at 80 ms. After the
+key stops, the envelope holds for about 34.5 ms, then releases over
+1200 ms.
+
+`make -C native test-duck` drives the backend at 48 kHz in 256-frame
+blocks, with a shorter final block when needed and no audio server. It
+checks bit-exact idle output, the Medium timing and meter, monotonic
+release, all three depths and speeds, Low and High sensitivity, key gating,
+ignored infinite and NaN key samples, threshold equality, disabling without a gain jump, zero depth, the
+per-sample step bound and a minute of silence without nonfinite or
+subnormal state. `make -C native test-audio` checks port creation on an
+unconnected filter, including no key port for existing backends and a
+silent fallback for a missing key buffer.
+
 ## Editor failures and audio recovery
 
 Display loss or stalled editor controls do not rebuild a healthy audio

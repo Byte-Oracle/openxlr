@@ -184,6 +184,7 @@ void host_run_guarded(Host *h, void (*call)(void *), void *argument) {
 
 uint32_t host_rate(const Host *h) { return h->rate; }
 unsigned host_channels(const Host *h) { return h->channels; }
+const float *host_key(const Host *h) { return h->key; }
 unsigned long host_window(const Host *h) { return h->window; }
 void *host_impl(const Host *h) { return h->impl; }
 void host_set_impl(Host *h, void *impl) { h->impl = impl; }
@@ -286,6 +287,11 @@ static void process_audio(void *data, struct spa_io_position *position) {
     if (!out[i])
       out[i] = host_fallback(h->scratch, frames, false);
   }
+  h->key = h->silence;
+  if (h->key_port) {
+    const float *buffer = pw_filter_get_dsp_buffer(h->key_port, frames);
+    h->key = buffer ? buffer : host_fallback(h->silence, frames, true);
+  }
   // Bracket the plugin's callback so the process monitor can tell a stuck
   // one from an idle node: entered and left differ only while a call is
   // outstanding, and a stuck call keeps the same entered value.
@@ -308,6 +314,41 @@ static void state_changed(void *data, enum pw_filter_state old,
 static const struct pw_filter_events filter_events = {
     PW_VERSION_FILTER_EVENTS, .state_changed = state_changed,
     .process = process_audio};
+
+static bool add_audio_ports(Host *h) {
+  for (unsigned i = 0; i < h->channels; ++i) {
+    for (int output = 0; output < 2; ++output) {
+      char name[32];
+      snprintf(name, sizeof(name), "%s_%u", output ? "capture" : "playback",
+               i);
+      void *port = pw_filter_add_port(
+          h->filter, output ? PW_DIRECTION_OUTPUT : PW_DIRECTION_INPUT,
+          PW_FILTER_PORT_FLAG_MAP_BUFFERS, 1,
+          pw_properties_new(PW_KEY_FORMAT_DSP, "32 bit float mono audio",
+                            PW_KEY_PORT_NAME, name, PW_KEY_AUDIO_CHANNEL,
+                            h->channels == 1 ? "MONO"
+                            : i == 0         ? "FL"
+                                             : "FR",
+                            NULL),
+          NULL, 0);
+      if (!port) return false;
+      if (output)
+        h->out_ports[i] = port;
+      else
+        h->in_ports[i] = port;
+    }
+  }
+  if (h->backend->key_inputs == 1) {
+    h->key_port = pw_filter_add_port(
+        h->filter, PW_DIRECTION_INPUT, PW_FILTER_PORT_FLAG_MAP_BUFFERS, 1,
+        pw_properties_new(PW_KEY_FORMAT_DSP, "32 bit float mono audio",
+                          PW_KEY_PORT_NAME, "key_0", PW_KEY_AUDIO_CHANNEL,
+                          "MONO", NULL),
+        NULL, 0);
+    if (!h->key_port) return false;
+  }
+  return true;
+}
 
 // --- the editor's window ----------------------------------------------------
 
@@ -837,18 +878,20 @@ static void *monitor_audio(void *data) {
 
 // --- main -------------------------------------------------------------------
 
-// Sound Check and the microphone EQ live in sound-check.o and eq.o, which
-// only the helper links. The test programs that compile this file into
-// themselves leave them out, and the weak references then read as unknown
-// backends instead of failing their link.
+// The built-in stages live in their own objects, which only the helper
+// links. Tests that compile this file into themselves leave them out, and
+// the weak references read as unknown backends instead of failing the link.
 extern const Backend sound_check_backend __attribute__((weak));
 extern const Backend eq_backend __attribute__((weak));
+extern const Backend duck_backend __attribute__((weak));
 
 static const Backend *backend_named(const char *name) {
   if (!strcmp(name, "soundcheck"))
     return &sound_check_backend;
   if (!strcmp(name, "eq"))
     return &eq_backend;
+  if (!strcmp(name, "duck"))
+    return &duck_backend;
   if (!strcmp(name, "lv2"))
     return &lv2_backend;
   if (!strcmp(name, "clap"))
@@ -881,6 +924,7 @@ int main(int argc, char **argv) {
           "[SYMBOL=VALUE ...]\n"
           "       openxlr-lv2-host soundcheck NODE 1 RATE\n"
           "       openxlr-lv2-host eq NODE 1 RATE [SYMBOL=VALUE ...]\n"
+          "       openxlr-lv2-host duck NODE 2 RATE [SYMBOL=VALUE ...]\n"
           "       openxlr-lv2-host scan-clap FILE\n"
           "       openxlr-lv2-host scan-vst3 BUNDLE\n",
           stderr);
@@ -928,30 +972,9 @@ int main(int argc, char **argv) {
     h.exit_code = 1;
     goto cleanup;
   }
-  for (unsigned i = 0; i < h.channels; ++i) {
-    for (int output = 0; output < 2; ++output) {
-      char name[32];
-      snprintf(name, sizeof(name), "%s_%u", output ? "capture" : "playback",
-               i);
-      void *port = pw_filter_add_port(
-          h.filter, output ? PW_DIRECTION_OUTPUT : PW_DIRECTION_INPUT,
-          PW_FILTER_PORT_FLAG_MAP_BUFFERS, 1,
-          pw_properties_new(PW_KEY_FORMAT_DSP, "32 bit float mono audio",
-                            PW_KEY_PORT_NAME, name, PW_KEY_AUDIO_CHANNEL,
-                            h.channels == 1 ? "MONO"
-                            : i == 0        ? "FL"
-                                            : "FR",
-                            NULL),
-          NULL, 0);
-      if (!port) {
-        h.exit_code = 1;
-        goto cleanup;
-      }
-      if (output)
-        h.out_ports[i] = port;
-      else
-        h.in_ports[i] = port;
-    }
+  if (!add_audio_ports(&h)) {
+    h.exit_code = 1;
+    goto cleanup;
   }
 
   if (!backend->load(&h, argv + 2)) {

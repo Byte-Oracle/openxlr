@@ -9,7 +9,7 @@ CFLAGS += -std=c11 $(WARN)
 CXXFLAGS += -std=c++17 $(WARN) -fno-exceptions -fno-rtti
 LDLIBS += $(shell pkg-config --libs $(PKGS)) -ldl -lm -pthread
 
-OBJECTS = host.o lv2.o clap.o vst3.o sound-check.o eq.o
+OBJECTS = host.o lv2.o clap.o vst3.o sound-check.o eq.o duck.o
 HEADERS = host.h icon.h $(wildcard clap/include/clap/*.h clap/include/clap/*/*.h) \
           $(wildcard vst3/pluginterfaces/*/*.h)
 
@@ -133,3 +133,19 @@ test-eq: tests/eq
 clean: clean-eq
 clean-eq:
 	rm -f tests/eq tests/eq.o
+
+# The duck stage: detector and gain timing with no audio server.
+tests/duck.o: tests/duck.c duck.c host.c $(HEADERS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+tests/duck: tests/duck.o lv2.o clap.o vst3.o
+	$(CXX) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+
+.PHONY: test-duck clean-duck
+test: test-duck
+test-duck: tests/duck
+	./tests/duck
+
+clean: clean-duck
+clean-duck:
+	rm -f tests/duck tests/duck.o
