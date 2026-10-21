@@ -2117,8 +2117,10 @@ any, and under **Text** the seven text glyphs ● ♪ ♫ ✦ ◆ ▶ ◉ that o
 layouts used. The same list sits beside the name box where you add a
 channel or a mix, starting at **Default**, so a new item gets its icon in
 the same step. Leave the colour empty to keep the skin's colours. The
-window draws the icon above a channel's name and before a mix's, both in
-that colour, in every skin; a skin can redraw an icon but not choose it.
+window draws the icon in that colour in every skin. The channel and mix
+tiles put it before the name on the same line, and a channel or mix with
+no icon starts its name at the tile's edge. A skin can redraw an icon but
+not choose it.
 The terminal mixer puts the icon before the name on its strip as one text
 character, in the same colour. Stream Deck keys and dials whose target is
 that channel or mix show the icon in place of their glyph and the colour on

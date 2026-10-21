@@ -18,7 +18,8 @@ namespace OpenXLR.Tests;
 /// space; against a daemon that gave volumes to application and capture
 /// channels only, while any shown tile has a Volume row, a tile without one
 /// leaves an empty space exactly that tall, so Monitor A sits at one height
-/// across the panel. Run from the window layout and skin tests, on their UI
+/// across the panel. Each tile's icon stands before its name on one line.
+/// Run from the window layout and skin tests, on their UI
 /// thread, with preferences of its own.
 /// </summary>
 internal static class ChannelTileAlignmentWindowTests
@@ -33,24 +34,30 @@ internal static class ChannelTileAlignmentWindowTests
     /// Three hardware strips, two applications and a capture channel, each with
     /// the icon its kind gets, as a current daemon reports them: every channel
     /// with a volume, or, with <paramref name="hardwareVolume"/> false, as a
-    /// daemon that gave volumes to application and capture channels only.
+    /// daemon that gave volumes to application and capture channels only. With
+    /// <paramref name="awkwardNames"/>, Music has no icon and the capture
+    /// channel a name longer than its tile.
     /// </summary>
-    private static string Fixture(bool hideApps = false, string mixes = Mixes, bool hardwareVolume = true)
+    private static string Fixture(bool hideApps = false, string mixes = Mixes, bool hardwareVolume = true, bool awkwardNames = false)
     {
         string hidden = hideApps ? ",\"hidden\":true" : "";
         string hw = hardwareVolume ? "\"volume\":0.9," : "";
+        string musicIcon = awkwardNames ? "\"icon\":\"none\"," : "";
+        string camera = awkwardNames ? LongName : "Camera";
         return "{" + mixes + $$$"""
             ,"channels":[{"id":"xlr1","name":"XLR 1","hardware":true,{{{hw}}}"appearance":{"defaultIcon":"mic"},
                           "levels":{"monitor":1,"monitor2":1,"stream":1,"chat":1,"auxout":1}},
                          {"id":"xlr2","name":"XLR 2","hardware":true,{{{hw}}}"appearance":{"defaultIcon":"mic"}},
                          {"id":"aux","name":"Aux In","hardware":true,{{{hw}}}"appearance":{"defaultIcon":"jack"}},
                          {"id":"game","name":"Game","volume":1,"levels":{"monitor":1,"stream":1},"appearance":{"defaultIcon":"game"{{{hidden}}}}},
-                         {"id":"music","name":"Music","volume":0.8,"levels":{"monitor":0.8},"appearance":{"defaultIcon":"music"{{{hidden}}}}},
-                         {"id":"cam","name":"Camera","captureSource":"alsa_input.usb","captureConnected":true,"volume":0.5,
+                         {"id":"music","name":"Music","volume":0.8,"levels":{"monitor":0.8},"appearance":{{{{musicIcon}}}"defaultIcon":"music"{{{hidden}}}}},
+                         {"id":"cam","name":"{{{camera}}}","captureSource":"alsa_input.usb","captureConnected":true,"volume":0.5,
                           "appearance":{"defaultIcon":"microphone"{{{hidden}}}}}],
              "inserts":{}}
             """;
     }
+
+    private const string LongName = "Camera microphone on the desk arm";
 
     /// <summary>The same channels from a daemon that reports no channel volume.</summary>
     private static readonly string OlderDaemon = Fixture(hardwareVolume: false)
@@ -180,6 +187,7 @@ internal static class ChannelTileAlignmentWindowTests
             Layout(popped, width, 700);
             Assert.Equal(6, AssertSendRowsLineUp(popped, $"in the popped-out mixer at {width}").Length);
             AssertEveryTileHasItsVolume(popped, $"in the popped-out mixer at {width}");
+            AssertIconsShareTheNameLine(popped, $"in the popped-out mixer at {width}");
         }
         popped.Close();
         Dispatcher.UIThread.RunJobs();
@@ -215,6 +223,7 @@ internal static class ChannelTileAlignmentWindowTests
 
     private static void SweepSizes(MainWindow window, string skin)
     {
+        var model = (MainViewModel)window.DataContext!;
         foreach (bool touch in new[] { false, true })
         {
             SkinService.ApplyControlSizing(touch);
@@ -224,11 +233,92 @@ internal static class ChannelTileAlignmentWindowTests
                 string where = $"{skin}, {(touch ? "touch" : "standard")} controls, at {width}";
                 Assert.Equal(6, AssertSendRowsLineUp(window, where).Length);
                 AssertEveryTileHasItsVolume(window, where);
+                AssertIconsShareTheNameLine(window, where);
                 if (width == 1040) Capture(window, $"tiles-aligned-{skin}-{(touch ? "touch" : "standard")}-1040");
             }
+            // A channel with no icon and one whose name is longer than its tile.
+            Apply(model, Fixture(awkwardNames: true));
+            Layout(window, 640, 900);
+            string awkward = $"{skin}, {(touch ? "touch" : "standard")} controls, without an icon and with a long name";
+            AssertIconsShareTheNameLine(window, awkward);
+            Assert.False(Tile(window, "music").GetVisualDescendants().OfType<LayoutIconBlock>().Single().IsEffectivelyVisible, awkward);
+            Assert.True(IsCutShort(Tile(window, "cam").GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "ChannelName")), awkward);
+            Capture(window, $"tiles-names-{skin}-{(touch ? "touch" : "standard")}-640");
+            Apply(model, Fixture());
         }
         SkinService.ApplyControlSizing(false);
     }
+
+    /// <summary>
+    /// Every shown tile opens with one line that holds its icon and its name:
+    /// the icon at the tile's left edge and the name after it, the two centred
+    /// on each other, and the meters straight under the line, so the icon has
+    /// no row of its own. A tile without an icon starts its name at the edge.
+    /// The name stays one line inside the tile, cut short when it is longer.
+    /// </summary>
+    internal static void AssertIconsShareTheNameLine(TopLevel root, string where)
+    {
+        Border[] tiles = [.. root.GetVisualDescendants().OfType<Border>()
+            .Where(b => b.DataContext is ChannelViewModel && b.Classes.Contains("tile") && b.IsEffectivelyVisible)];
+        Assert.NotEmpty(tiles);
+        foreach (Border tile in tiles)
+        {
+            var channel = (ChannelViewModel)tile.DataContext!;
+            string what = $"{channel.Name} {where}";
+            Grid line = tile.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "ChannelNameLine");
+            LayoutIconBlock icon = line.Children.OfType<LayoutIconBlock>().Single();
+            TextBlock name = line.Children.OfType<TextBlock>().Single(t => t.Name == "ChannelName");
+            // The tile's content box: inside its border and its padding.
+            double left = tile.BorderThickness.Left + tile.Padding.Left;
+            double right = tile.Bounds.Width - tile.BorderThickness.Right - tile.Padding.Right;
+            Rect lineBox = Box(line, tile), nameBox = Box(name, tile);
+
+            // The line is the tile's first row and the meters follow it directly.
+            Assert.Equal(tile.BorderThickness.Top + tile.Padding.Top, lineBox.Top, 0.5);
+            var column = (StackPanel)line.Parent!;
+            Control next = column.Children[column.Children.IndexOf(line) + 1];
+            Assert.True(next is StackPanel && next.GetVisualDescendants().OfType<LevelMeter>().Any(), what);
+            Assert.Equal(lineBox.Bottom + column.Spacing, Box(next, tile).Top, 0.5);
+
+            Assert.True(nameBox.Left >= left - 0.5 && nameBox.Right <= right + 0.5,
+                $"{what}: the name spans {nameBox.Left:0.#} to {nameBox.Right:0.#}, outside {left:0.#} to {right:0.#}.");
+            Assert.Single(name.TextLayout.TextLines);
+            Assert.True(name.TextLayout.WidthIncludingTrailingWhitespace <= nameBox.Width + 0.5,
+                $"{what}: the name draws {name.TextLayout.WidthIncludingTrailingWhitespace:0.#} wide in {nameBox.Width:0.#}.");
+
+            Assert.Equal(channel.Appearance.HasIcon, icon.IsEffectivelyVisible);
+            if (icon.IsEffectivelyVisible)
+            {
+                Rect iconBox = Box(icon, tile);
+                Assert.True(iconBox.Width > 4 && iconBox.Height > 4, what);
+                Assert.Equal(left, iconBox.Left, 0.5);
+                Assert.True(iconBox.Right <= nameBox.Left + 0.5,
+                    $"{what}: the icon ends at {iconBox.Right:0.#}, past the name's start at {nameBox.Left:0.#}.");
+                Assert.True(Math.Abs(iconBox.Center.Y - nameBox.Center.Y) <= 0.5,
+                    $"{what}: the icon is centred at {iconBox.Center.Y:0.#}, the name at {nameBox.Center.Y:0.#}.");
+                Assert.Equal(Math.Max(iconBox.Height, nameBox.Height), lineBox.Height, 0.5);
+            }
+            else
+            {
+                Assert.Equal(left, nameBox.Left, 0.5);
+                Assert.Equal(nameBox.Height, lineBox.Height, 0.5);
+            }
+        }
+    }
+
+    /// <summary>Whether a one-line name is narrower than its whole text would be.</summary>
+    private static bool IsCutShort(TextBlock name)
+    {
+        var whole = new TextBlock
+        {
+            Text = name.Text, FontFamily = name.FontFamily, FontSize = name.FontSize,
+            FontWeight = name.FontWeight, FontStyle = name.FontStyle,
+        };
+        whole.Measure(Size.Infinity);
+        return whole.DesiredSize.Width > name.Bounds.Width + 1;
+    }
+
+    private static Rect Box(Control control, Visual to) => new(control.TranslatePoint(default, to)!.Value, control.Bounds.Size);
 
     /// <summary>
     /// The first shown send row of every shown tile starts at one height. While
