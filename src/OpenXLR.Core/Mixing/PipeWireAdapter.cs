@@ -1729,6 +1729,7 @@ public sealed class PipeWireAdapter
     public IReadOnlyList<AudioNode> ListDevices(bool exposeHardwareMonitorOutputs, IReadOnlyList<string> hardwareSinkHints)
     {
         var found = new List<AudioNode>();
+        var sourceProfiles = new List<string?>();
         foreach (JsonElement o in GraphObjects())
         {
             if (!o.TryGetProperty("type", out JsonElement t) ||
@@ -1758,7 +1759,12 @@ public sealed class PipeWireAdapter
             found.Add(new AudioNode(name, desc, isSink ? AudioNodeKind.Sink : AudioNodeKind.Source,
                 name.StartsWith("OpenXLR", StringComparison.Ordinal), physical)
                 { Volume = level?.DesktopVolume, Muted = level?.Muted, Channels = channels, Positions = positions });
+            sourceProfiles.Add(isSource && physical && props.TryGetProperty("device.profile.description", out JsonElement pd)
+                ? pd.GetString() : null);
         }
+        string[] shortNames = ShortSourceNames([.. found.Select((node, i) => (node.Description, sourceProfiles[i]))]);
+        for (int i = 0; i < found.Count; i++)
+            if (shortNames[i] != found[i].Description) found[i] = found[i] with { Description = shortNames[i] };
 
         // The Pro's physical outputs all share its hardware monitor bus, fed by
         // USB playback channels 2/3 and gated per-output by the selectors in
@@ -1791,6 +1797,25 @@ public sealed class PipeWireAdapter
             found.Remove(pro);
         }
         return found;
+    }
+
+    /// <summary>
+    /// Hardware sources named without the ALSA profile PipeWire appends
+    /// ("Elgato Wave XLR Dock MK.2 Analog Stereo" reads "Elgato Wave XLR Dock
+    /// MK.2"). The profile comes from the node's own
+    /// <c>device.profile.description</c>, so a translated desktop loses its
+    /// translated suffix. A source keeps its full name when the short one
+    /// would match another source's, as two profiles of one card would.
+    /// </summary>
+    internal static string[] ShortSourceNames(IReadOnlyList<(string Description, string? Profile)> nodes)
+    {
+        string[] shortened = [.. nodes.Select(n => n.Profile is { Length: > 0 } profile
+            && n.Description.Length > profile.Length + 1
+            && n.Description.EndsWith(" " + profile, StringComparison.Ordinal)
+                ? n.Description[..^(profile.Length + 1)].TrimEnd() : n.Description)];
+        return [.. shortened.Select((name, i) => name == nodes[i].Description
+            || Enumerable.Range(0, nodes.Count).Any(j => j != i && (shortened[j] == name || nodes[j].Description == name))
+                ? nodes[i].Description : name)];
     }
 
     /// <summary>

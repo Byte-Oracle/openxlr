@@ -141,7 +141,9 @@ to a source, or the driven unit lacks the control, so `lowCutHz` and
 `label`, `identity`, `channelId`, `active`, `running`, and `icon`; see
 [application names](#application-names) and
 [application icons](#application-icons)), `renamedSinceStart`
-and `layoutWarning`. A `devices` entry carries `name`, `description`, `kind`
+and `layoutWarning`. A `devices` entry carries `name`, `description` (a
+hardware source's description leaves out the ALSA profile PipeWire appends,
+such as "Analog Stereo", unless that would give two sources one name), `kind`
 (0 for a sink, 1 for a source), `isOwn`, `isPhysical`, for a sink
 `volume` and `muted`, and for a source `channels` (its channel count from
 PipeWire's `audio.channels`) and `positions` (its channel positions in port
