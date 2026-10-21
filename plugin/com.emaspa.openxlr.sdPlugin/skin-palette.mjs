@@ -7,6 +7,8 @@ import os from 'node:os';
 const palettes = JSON.parse(fs.readFileSync(new URL('./skin-palettes.json', import.meta.url), 'utf8'));
 const defaults = palettes.default;
 const MAX_BYTES = 256 * 1024;
+// The skin the window wears while ui.json holds no choice (SkinPackage.StartingId).
+export const STARTING = 'broadcast';
 const validId = id => typeof id === 'string' && /^[a-z0-9][a-z0-9._-]{0,63}$/.test(id);
 const named = {black:'#000000', white:'#ffffff', transparent:'#00000000',
   red:'#ff0000', green:'#008000', blue:'#0000ff', yellow:'#ffff00', gray:'#808080', grey:'#808080'};
@@ -89,6 +91,8 @@ export class SkinPalette {
   reload(notify = true) {
     if (this.closed) return;
     let id = this.override ?? readJson(this.preferences)?.skin;
+    // No saved choice is Broadcast, as in the window; an id that cannot be one is Material.
+    if (id === undefined || id === null || id === '') id = STARTING;
     if (!validId(id)) id = 'default';
     let tokens = palettes[id] ?? defaults;
     if (id !== 'default') {
