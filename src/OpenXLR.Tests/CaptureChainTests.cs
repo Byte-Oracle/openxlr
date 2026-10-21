@@ -125,7 +125,8 @@ public sealed class CaptureChainTests
             Assert.Null(CommandValidation.Check(new() { Cmd = "setInsertParam", Channel = key, InsertId = "gain", Symbol = "gain",
                 Value = JsonSerializer.SerializeToElement(.5) }, mixer, _ => controls));
             // The EQ's stage is mono: a capture microphone takes it, a stereo pair does not.
-            string? eq = CommandValidation.Check(new() { Cmd = "setEqEnabled", Channel = key, Value = JsonSerializer.SerializeToElement(true) }, mixer, _ => Plugin);
+            string? eq = CommandValidation.Check(new() { Cmd = "setEqEnabled", Channel = key, Value = JsonSerializer.SerializeToElement(true) }, mixer, _ => Plugin,
+                nativeHostInstalled: true);
             if (key == "mono") Assert.Null(eq);
             else Assert.Equal("setEqEnabled: 'stereo' is not a microphone input", eq);
             // An existing misfit can still be removed or reordered.
