@@ -212,10 +212,6 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   microphone), and Aux (what a second computer on the USB Aux port
   receives)
 - Per-channel, per-mix send levels and mutes; per-mix masters
-- Multiple mixes per output, chosen by checkboxes in MONITOR. Each mix can
-  feed several devices, and a device can hear several mixes summed at
-  unity. This uses the mix-to-output routes already in the daemon, with
-  no extra mixer or hidden nodes. The Pro's own jacks share one feed
 - A volume for every channel that scales every send of the channel at
   once, like the channel level in Wave Link 3. It is folded into the send
   streams the mixer already has, so it adds no node and no delay. XLR 1,
@@ -322,10 +318,12 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   for a narrow window. Chosen in Options and kept in `ui.json`; hidden
   channels can be picked there. See [Mixer view](manual.md#mixer-view)
 - Any mix feeds any selected output, hardware outputs included: the
-  picker beside each output names Monitor A/B, Stream, Chat, Aux or a
-  monitor mix or virtual microphone you added, and the API names a sum of
-  mixes, each a direct port link at unity so a summed feed costs no
-  node. Outputs that share a hardware bus follow one feed, and mix
+  checked picker beside each output selects one or more of Monitor A/B,
+  Stream, Chat, Aux or mixes you added. A mix can feed several devices,
+  and one device can hear several mixes summed at unity. The API uses
+  the same feeds, each a direct port link so a sum costs no node or
+  additional mixer. At least one mix stays selected; untick the output
+  to disconnect it. Outputs that share a hardware bus follow one feed, and mix
   inserts sit upstream so every output hears the processed mix. Profiles recall the feeds. A
   headset with a game sink and a chat sink hears two selections, and
   one pair of headphones can hear the desktop from A with a separately
