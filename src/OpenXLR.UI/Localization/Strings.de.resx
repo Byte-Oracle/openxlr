@@ -1120,6 +1120,12 @@
   <data name="MuteInput2" xml:space="preserve">
     <value>Eingang 2 stummschalten</value>
   </data>
+  <data name="MuteMonitoring" xml:space="preserve">
+    <value>Abhören stummschalten</value>
+  </data>
+  <data name="MuteMonitoringTip" xml:space="preserve">
+    <value>Alle ausgewählten Monitorausgänge stummschalten, ohne die Stummschaltung von Mischungen oder Kanälen zu ändern. Aufnahme und Streaming laufen weiter.</value>
+  </data>
   <data name="MutedInactive" xml:space="preserve">
     <value>Stumm / inaktiv</value>
   </data>

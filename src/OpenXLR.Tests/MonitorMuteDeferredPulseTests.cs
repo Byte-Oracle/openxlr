@@ -37,46 +37,67 @@ public sealed class MonitorMuteDeferredPulseTests
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    public void AnApplicationConsumeDeferredFromAnotherApplicationDoesNotBecomeANewKey(bool secondKey, bool readFailure)
+    [InlineData("system")]
+    [InlineData("browser")]
+    public void OnlyTheDefaultApplicationControlsMonitoringWhileOtherApplicationsAreRepaired(string id)
     {
         using var fixture = new IndependentSinks();
-        fixture.SetNative("OpenXLR_ch_system", true);
-        fixture.SetNative("OpenXLR_ch_browser", true);
-        fixture.DeferNextPulse("OpenXLR_ch_browser", readFailure);
+        string active = "OpenXLR_ch_" + id;
+        string other = "OpenXLR_ch_" + (id == "system" ? "browser" : "system");
+        fixture.SetDefault(active);
+        fixture.SetNative(other, true);
+        fixture.Sweep();
+        Assert.False(fixture.Mixer.MonitorMuted);
+        Assert.False(fixture.Native(other));
+
+        fixture.SetNative(active, true);
         fixture.Sweep();
         Assert.True(fixture.Mixer.MonitorMuted);
-        Assert.False(fixture.Native("OpenXLR_ch_system"));
-        Assert.True(fixture.Native("OpenXLR_ch_browser"));
-
-        if (secondKey) fixture.SetNative("OpenXLR_ch_browser", false);
-        fixture.Sweep();
-        Assert.Equal(!secondKey, fixture.Mixer.MonitorMuted);
-        Assert.False(fixture.Native("OpenXLR_ch_browser"));
+        Assert.False(fixture.Native(active));
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void AnApplicationConsumeDeferredWhileAPhysicalSinkCountsDoesNotBecomeANewKey(bool secondKey)
+    public void ARepairedDefaultApplicationIsNotCountedAgainAfterPhysicalAcknowledgement(bool readFailure)
     {
         using var fixture = new IndependentSinks();
         fixture.Mixer.SetMonitorOutputs(["external"]);
         fixture.SetNative("OpenXLR_ch_system", true);
         fixture.SetNative("external", true);
-        fixture.DeferNextPulse("OpenXLR_ch_system");
+        fixture.DeferNextPulse("OpenXLR_ch_system", readFailure);
         fixture.Sweep();
         Assert.True(fixture.Mixer.MonitorMuted);
-        Assert.True(fixture.Native("OpenXLR_ch_system"));
+        Assert.False(fixture.Native("OpenXLR_ch_system"));
         Assert.False(fixture.Native("external"));
 
-        if (secondKey) fixture.SetNative("OpenXLR_ch_system", false);
         fixture.Sweep();
-        Assert.Equal(!secondKey, fixture.Mixer.MonitorMuted);
+        Assert.True(fixture.Mixer.MonitorMuted);
+        fixture.SetNative("OpenXLR_ch_system", true);
+        fixture.Sweep();
+        Assert.False(fixture.Mixer.MonitorMuted);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SwitchingDefaultForgetsOldApplicationRetriesWithoutInventingKeys(bool newDefaultMuted)
+    {
+        using var fixture = new IndependentSinks();
+        fixture.SetNative("OpenXLR_ch_system", true);
+        fixture.DeferNextPulse("OpenXLR_ch_system");
+        fixture.Sweep();
+        Assert.False(fixture.Mixer.MonitorMuted);
         Assert.False(fixture.Native("OpenXLR_ch_system"));
+
+        fixture.SetDefault("OpenXLR_ch_browser");
+        fixture.SetNative("OpenXLR_ch_system", true);
+        fixture.SetNative("OpenXLR_ch_browser", newDefaultMuted);
+        fixture.Sweep();
+        Assert.Equal(newDefaultMuted, fixture.Mixer.MonitorMuted);
+        Assert.False(fixture.Native("OpenXLR_ch_system"));
+        fixture.Sweep();
+        Assert.Equal(newDefaultMuted, fixture.Mixer.MonitorMuted);
     }
 
     [Theory]
@@ -131,6 +152,9 @@ public sealed class MonitorMuteDeferredPulseTests
             fixture.Mixer.SetMonitorOutputs(["external"]);
             fixture.SetNative("external", false);
             fixture.Sweep();
+            Assert.True(fixture.Mixer.MonitorMuted);
+            fixture.SetNative("external", true);
+            fixture.Sweep();
         }
         Assert.False(fixture.Mixer.MonitorMuted);
     }
@@ -180,11 +204,13 @@ public sealed class MonitorMuteDeferredPulseTests
     public void AFailedApplicationReadDoesNotCreditAnAlreadyConsumedStaleRegistryFlag()
     {
         using var fixture = new IndependentSinks();
+        fixture.SetDefault("OpenXLR_ch_browser");
         fixture.SetNative("OpenXLR_ch_browser", true);
         fixture.Sweep();
         Assert.True(fixture.Mixer.MonitorMuted);
         Assert.False(fixture.Native("OpenXLR_ch_browser"));
 
+        fixture.SetDefault("OpenXLR_ch_system");
         fixture.SetNative("OpenXLR_ch_system", true);
         fixture.DeferNextPulse("OpenXLR_ch_browser", readFailure: true);
         fixture.Sweep(browserRegistryMuted: true);
@@ -231,6 +257,29 @@ public sealed class MonitorMuteDeferredPulseTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AnUnmuteObservedDuringIdentityFailureKeepsTheNextKeyUnlessTheOutputWasReplaced(bool replacement)
+    {
+        using var fixture = new IndependentSinks();
+        fixture.SetNative("external", true);
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.SetNative("external", false);
+        fixture.DeferNextPhysicalPulse(identityVerification: true);
+        fixture.Sweep(2);
+        Assert.False(fixture.Mixer.MonitorMuted);
+        Assert.False(fixture.Native("external"));
+
+        if (replacement) fixture.ReplaceExternal();
+        fixture.SetNative("external", true);
+        fixture.Sweep(2);
+        Assert.Equal(!replacement, fixture.Mixer.MonitorMuted);
+        Assert.Equal(replacement, fixture.Native("external"));
+        fixture.Sweep(2);
+        Assert.Equal(!replacement, fixture.Mixer.MonitorMuted);
+    }
+
     private sealed class IndependentSinks : IDisposable
     {
         private readonly string _directory = Directory.CreateTempSubdirectory("openxlr-deferred-pulse-").FullName;
@@ -242,6 +291,7 @@ public sealed class MonitorMuteDeferredPulseTests
         {
             foreach (string name in Names) SetNative(name, false);
             File.WriteAllText(Path.Combine(_directory, "native-serial"), "1");
+            SetDefault("OpenXLR_ch_system");
             ExecutableScript.Write(Path.Combine(_directory, "pw-dump"), """
                 dir=${0%/*}
                 /bin/cat "$dir/graph"
@@ -260,13 +310,14 @@ public sealed class MonitorMuteDeferredPulseTests
                     exit
                 fi
                 case "$1" in
+                  get-default-sink) /bin/cat "$dir/default" ;;
                   get-sink-volume) printf 'Volume: front-left: 65536 / 100%% / 0.00 dB\n' ;;
                   get-sink-mute)
                     if [ -f "$dir/fail-read-$2" ]; then /bin/rm "$dir/fail-read-$2"; exit 1; fi
                     mute=$(/bin/cat "$dir/$2")
                     if [ "$mute" = true ]; then echo 'Mute: yes'; else echo 'Mute: no'; fi ;;
                   set-sink-mute)
-                    if [ -f "$dir/fail-$2" ]; then
+                    if [ "$3" = toggle ] && [ -f "$dir/fail-$2" ]; then
                         /bin/rm "$dir/fail-$2"
                         echo 'temporary native consume failure' >&2
                         exit 1
@@ -288,6 +339,7 @@ public sealed class MonitorMuteDeferredPulseTests
             Publish();
         }
 
+        public void SetDefault(string name) => File.WriteAllText(Path.Combine(_directory, "default"), name);
         public void SetNative(string name, bool muted) => File.WriteAllText(Path.Combine(_directory, name), muted ? "true" : "false");
         public bool Native(string name) => File.ReadAllText(Path.Combine(_directory, name)) == "true";
         private static readonly string[] Names = ["external", "external2", "OpenXLR_ch_system", "OpenXLR_ch_browser", "OpenXLR_mix_monitor", "OpenXLR_mix_monitor_b"];

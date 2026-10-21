@@ -10,7 +10,7 @@ public sealed partial class Mixer
     // Remember the latter's native parity, not a master state to restore later.
     private readonly HashSet<string> _desktopMuteOffsets = new(StringComparer.Ordinal);
     private readonly HashSet<string> _desktopMutePending = new(StringComparer.Ordinal);
-    private sealed record DesktopOutputMute(string? Identity, string? RegistryIdentity, bool Muted);
+    private sealed record DesktopOutputMute(string? Identity, string? RegistryIdentity, bool Muted, bool UnmuteObserved = false);
     private readonly Dictionary<string, DesktopOutputMute> _outputMutes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (bool Muted, int Failures, long RetryAt)> _desktopMuteResets = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (int Failures, long RetryAt)> _desktopMuteRetries = new(StringComparer.Ordinal);
@@ -82,55 +82,48 @@ public sealed partial class Mixer
         return previous != _monitorMuted;
     }
 
-    /// <summary>Application sinks stay open to recording; their native mute is monitoring intent.</summary>
+    /// <summary>Application sinks stay open to recording; the default sink's native mute is monitoring intent.</summary>
     private bool ReadDesktopMonitorMuteLocked(ref IReadOnlyList<OwnSinkLevel> levels)
     {
         _desktopMuteConsumed = false;
         _desktopMutePending.Clear();
         var applications = _config.Channels.Where(c => c.IsApplication).Select(c => c.SinkName).ToHashSet(StringComparer.Ordinal);
+        // Idle application sinks do not need a helper to read the default.
+        string? defaultSink = levels.Any(s => applications.Contains(s.Name) && (s.Muted || _desktopMuteRetries.ContainsKey(s.Name)))
+            ? _pw.GetDefaultSink() : null;
         var present = levels.Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
-        foreach (string missing in _desktopMuteRetries.Keys.Concat(_desktopMuteOffsets).Where(n => n.StartsWith("OpenXLR_", StringComparison.Ordinal)
-                     && (!applications.Contains(n) || !present.Contains(n))).Distinct().ToArray())
-        {
-            _desktopMuteRetries.Remove(missing);
-            _desktopMuteOffsets.Remove(missing);
-        }
-        bool pulse = false, applicationAction = false;
-        var failed = new HashSet<string>(StringComparer.Ordinal);
-        foreach (OwnSinkLevel sink in levels.Where(s => applications.Contains(s.Name)
-                     && (s.Muted || _desktopMuteRetries.ContainsKey(s.Name) || _desktopMuteOffsets.Contains(s.Name))))
+        foreach (string missing in _desktopMuteRetries.Keys.Where(n => n.StartsWith("OpenXLR_", StringComparison.Ordinal)
+                     && (!present.Contains(n) || n != defaultSink)).ToArray()) _desktopMuteRetries.Remove(missing);
+        bool pulse = false, applicationAction = false, skipRepair = false;
+        foreach (OwnSinkLevel sink in levels.Where(s => s.Name == defaultSink && applications.Contains(s.Name)
+                     && (s.Muted || _desktopMuteRetries.ContainsKey(s.Name))))
         {
             try
             {
                 bool muted = _pw.GetSinkMuted(sink.Name);
-                applicationAction |= muted;
-                pulse |= ReadDesktopMutePulseLocked(sink.Name, muted);
+                applicationAction = muted;
+                if (!muted) { _desktopMuteRetries.Remove(sink.Name); skipRepair = true; continue; }
+                pulse = ConsumeDesktopMuteLocked(sink.Name);
+                skipRepair = pulse;
             }
-            catch (InvalidOperationException) { failed.Add(sink.Name); }
-        }
-        if (failed.Count > 0 && ReadNativeMuteStatesLocked(failed) is { } native)
-            foreach (string name in failed)
+            catch (InvalidOperationException)
             {
-                if (native.TryGetValue(name, out var state))
+                if (ReadNativeMuteStatesLocked(new HashSet<string>([sink.Name], StringComparer.Ordinal)) is { } native
+                    && native.TryGetValue(sink.Name, out var state))
                 {
-                    if (state.Muted) { applicationAction = true; _desktopMutePending.Add(name); }
-                    else pulse |= ReadDesktopMutePulseLocked(name, false);
-                }
-                else
-                {
-                    _desktopMuteOffsets.Remove(name);
-                    _desktopMuteRetries.Remove(name);
+                    applicationAction = state.Muted;
+                    skipRepair = !state.Muted;
                 }
             }
+        }
         bool changed = CountDesktopMutePulseLocked(pulse);
         bool restoreMonitorMutes = pulse || applicationAction;
-        if (restoreMonitorMutes || levels.Any(s => s.Muted && applications.Contains(s.Name)))
+        if (skipRepair || restoreMonitorMutes)
             levels = [.. levels.Select(s =>
             {
-                // Do not overwrite another key arriving after the consume.
-                if (applications.Contains(s.Name)) return s with { Muted = false };
-                // A blanket key can change monitor sinks before any application
-                // acknowledgement succeeds. Keep their individual mute choices.
+                // A refused consume leaves the default sink to ordinary repair.
+                // An accepted consume must not overwrite a later native key.
+                if (skipRepair && s.Name == defaultSink) return s with { Muted = false };
                 MixDefinition? mix = restoreMonitorMutes ? MonitorMixForSinkLocked(s.Name) : null;
                 if (mix is null) return s;
                 bool wanted = _mixMuted.Contains(mix.Id);
@@ -217,7 +210,9 @@ public sealed partial class Mixer
         bool changed = ApplyDesktopMonitorIntentLocked();
         HashSet<string> selected = PhysicalMonitorOutputsLocked();
         ForgetUnselectedDesktopOutputsLocked(selected);
-        var nodes = _pw.ObservedSinkMutes(selected);
+        IReadOnlyDictionary<string, (string Identity, bool Muted)> nodes;
+        try { nodes = _pw.ObservedSinkMutes(selected); }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException) { return changed; }
         // Native and registry connections can describe different generations
         // of the same name. Verify only a changed or first registry identity,
         // in one batch, against the native identity sampled with its mute.
@@ -225,7 +220,7 @@ public sealed partial class Mixer
         {
             bool present = nodes.TryGetValue(name, out var node);
             return _outputMutes.TryGetValue(name, out var previous)
-                ? present && (previous.Identity is null || previous.RegistryIdentity != node.Identity)
+                ? present && (previous.Identity is null || previous.UnmuteObserved || previous.RegistryIdentity != node.Identity)
                     || !present && previous.RegistryIdentity is not null
                 : present;
         }).ToHashSet(StringComparer.Ordinal);
@@ -241,7 +236,13 @@ public sealed partial class Mixer
                     // before crediting a source whose identity read failed.
                     if (_outputMutes.TryGetValue(name, out var baseline) && !_desktopMuteResets.ContainsKey(name))
                     {
-                        try { if (_pw.GetSinkMuted(name) != baseline.Muted) _desktopMutePending.Add(name); }
+                        try
+                        {
+                            bool muted = _pw.GetSinkMuted(name);
+                            if (!muted && baseline.Muted && baseline.Identity is not null)
+                                _outputMutes[name] = baseline with { UnmuteObserved = true };
+                            else if (muted != baseline.Muted) _desktopMutePending.Add(name);
+                        }
                         catch (InvalidOperationException) { /* No observed action to count until a read succeeds. */ }
                     }
                     continue;
@@ -256,20 +257,21 @@ public sealed partial class Mixer
                             _desktopMuteOffsets.Remove(name);
                             _desktopMutePending.Remove(name);
                         }
-                        _outputMutes[name] = missing with { RegistryIdentity = nodes.TryGetValue(name, out var absentRegistry) ? absentRegistry.Identity : null };
+                        _outputMutes[name] = missing with { RegistryIdentity = nodes.TryGetValue(name, out var absentRegistry) ? absentRegistry.Identity : null, UnmuteObserved = false };
                     }
                     continue;
                 }
                 bool known = _outputMutes.TryGetValue(name, out var previous);
-                if (known && previous!.Identity is not null && previous.Identity != state.Identity)
+                bool replaced = known && previous!.Identity is not null && previous.Identity != state.Identity;
+                if (replaced)
                 {
-                    _desktopMuteResets[name] = (previous.Muted, 0, 0);
+                    _desktopMuteResets[name] = (previous!.Muted, 0, 0);
                     _desktopMuteRetries.Remove(name);
                     _desktopMuteOffsets.Remove(name);
                     _desktopMutePending.Remove(name);
                 }
                 _outputMutes[name] = new(state.Identity, nodes.TryGetValue(name, out var registry) ? registry.Identity : null,
-                    known ? previous!.Muted : state.Muted);
+                    known ? previous!.Muted && (replaced || !previous.UnmuteObserved) : state.Muted);
                 observed[name] = state.Muted;
                 continue;
             }
@@ -290,12 +292,13 @@ public sealed partial class Mixer
             foreach (string name in failed)
                 if (fallback.TryGetValue(name, out var state) && state.Identity == _outputMutes[name].Identity)
                 {
+                    if (AcceptDesktopOutputUnmuteLocked(name, state.Muted)) continue;
                     if (state.Muted != _outputMutes[name].Muted) _desktopMutePending.Add(name);
                     else pulse |= ReadDesktopMutePulseLocked(name, false);
                 }
         foreach ((string name, bool muted) in observed)
         {
-            if (_desktopMuteResets.ContainsKey(name)) continue;
+            if (_desktopMuteResets.ContainsKey(name) || AcceptDesktopOutputUnmuteLocked(name, muted)) continue;
             pulse |= ReadDesktopMutePulseLocked(name, _outputMutes[name].Muted != muted);
         }
         changed |= CountDesktopMutePulseLocked(pulse);
@@ -325,6 +328,16 @@ public sealed partial class Mixer
             }
         }
         return changed;
+    }
+
+    private bool AcceptDesktopOutputUnmuteLocked(string name, bool muted)
+    {
+        if (muted || !_outputMutes[name].Muted || _desktopMuteResets.ContainsKey(name)) return false;
+        _outputMutes[name] = _outputMutes[name] with { Muted = false, UnmuteObserved = false };
+        _desktopMuteRetries.Remove(name);
+        _desktopMuteOffsets.Remove(name);
+        _desktopMutePending.Remove(name);
+        return true;
     }
 
     private void ResetDesktopMonitorMuteLocked()

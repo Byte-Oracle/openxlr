@@ -91,7 +91,7 @@ internal static class VolumeRangeWindowTests
         var commands = new ConcurrentQueue<JsonNode>();
         var errors = new ConcurrentQueue<string>();
         bool paused = false;
-        int rejectNextToggle = 0;
+        int rejectNextSet = 0;
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
             while (!stop.IsCancellationRequested)
@@ -99,9 +99,9 @@ internal static class VolumeRangeWindowTests
                 JsonNode command = await SocketTestServer.Receive(socket, stop);
                 if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 commands.Enqueue(command);
-                if (command["cmd"]!.GetValue<string>() == "toggleMonitorMuted")
+                if (command["cmd"]!.GetValue<string>() == "setMonitorMuted")
                 {
-                    if (Interlocked.Exchange(ref rejectNextToggle, 0) == 0) paused = !paused;
+                    if (Interlocked.Exchange(ref rejectNextSet, 0) == 0) paused = command["value"]!.GetValue<bool>();
                     else
                     {
                         await SocketTestServer.Send(socket, new { type = "error", message = "Monitor routes are unavailable" }, stop);
@@ -147,27 +147,29 @@ internal static class VolumeRangeWindowTests
             // An acknowledged command on the same socket is a barrier for
             // any accidental edits caused by the preceding binding readback.
             Assert.Null(await client.AdjustOutputVolumeAsync("fixture", 0));
-            Assert.DoesNotContain(commands, command => command["cmd"]!.GetValue<string>() == "toggleMonitorMuted");
-            for (int press = 0; press < 3; press++)
+            Assert.DoesNotContain(commands, command => command["cmd"]!.GetValue<string>() == "setMonitorMuted");
+            bool[] requested = [true, true, false, true];
+            for (int press = 0; press < requested.Length; press++)
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     var model = (MainViewModel)window!.DataContext!;
                     var mute = window.FindControl<ToggleButton>("MonitorMute")!;
-                    // Each delayed frame describes the state before the last
-                    // command. It must never determine the next command's value.
-                    if (press > 0) Apply(model, new JsonObject
+                    // A delayed frame can show an old value. The checkbox sends
+                    // the requested value even when the daemon already holds it.
+                    Apply(model, new JsonObject
                     {
-                        ["mixer"] = new JsonObject { ["monitorMuted"] = press % 2 == 0 },
+                        ["mixer"] = new JsonObject { ["monitorMuted"] = !requested[press] },
                     }.ToJsonString());
-                    mute.IsChecked = !mute.IsChecked;
+                    mute.IsChecked = requested[press];
                 });
                 Assert.Null(await client.AdjustOutputVolumeAsync("fixture", 0));
-                Assert.Equal(press % 2 == 0, paused);
+                Assert.Equal(requested[press], paused);
             }
-            JsonNode[] edits = commands.Where(command => command["cmd"]!.GetValue<string>() == "toggleMonitorMuted").ToArray();
-            Assert.Equal(3, edits.Length);
-            Assert.All(edits, command => Assert.Single(command.AsObject()));
+            JsonNode[] edits = commands.Where(command => command["cmd"]!.GetValue<string>() == "setMonitorMuted").ToArray();
+            Assert.Equal(requested, edits.Select(command => command["value"]!.GetValue<bool>()));
+            Assert.All(edits, command => Assert.Equal(2, command.AsObject().Count));
+            Assert.DoesNotContain(commands, command => command["cmd"]!.GetValue<string>() == "toggleMonitorMuted");
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -175,7 +177,7 @@ internal static class VolumeRangeWindowTests
                 Assert.True(window.FindControl<ToggleButton>("MonitorMute")!.IsChecked);
             });
 
-            Interlocked.Exchange(ref rejectNextToggle, 1);
+            Interlocked.Exchange(ref rejectNextSet, 1);
             await Dispatcher.UIThread.InvokeAsync(() => window!.FindControl<ToggleButton>("MonitorMute")!.IsChecked = false);
             Assert.Null(await client.AdjustOutputVolumeAsync("fixture", 0));
             await Dispatcher.UIThread.InvokeAsync(() =>
@@ -185,7 +187,7 @@ internal static class VolumeRangeWindowTests
             });
             Assert.True(paused);
             Assert.Contains("Monitor routes are unavailable", errors);
-            Assert.Equal(4, commands.Count(command => command["cmd"]!.GetValue<string>() == "toggleMonitorMuted"));
+            Assert.Equal(5, commands.Count(command => command["cmd"]!.GetValue<string>() == "setMonitorMuted"));
 
             await client.DisposeAsync();
             await Dispatcher.UIThread.InvokeAsync(() =>
@@ -194,7 +196,7 @@ internal static class VolumeRangeWindowTests
                 window.FindControl<ToggleButton>("MonitorMute")!.IsChecked = false;
             });
             Assert.Contains(Localizer.Text("DaemonDisconnectedNoChange"), errors);
-            Assert.Equal(4, commands.Count(command => command["cmd"]!.GetValue<string>() == "toggleMonitorMuted"));
+            Assert.Equal(5, commands.Count(command => command["cmd"]!.GetValue<string>() == "setMonitorMuted"));
         }
         finally
         {

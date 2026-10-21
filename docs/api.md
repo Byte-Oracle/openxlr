@@ -327,10 +327,12 @@ sends and other mixes unchanged. Monitor gain is applied once, at the mix
 sink before its inserts. Non-monitor masters still apply to the channel
 sends and retain their 0 to 1 range.
 
-A desktop mute change on a selected physical output, or a mute on an internal
-application sink, toggles `mixer.monitorMuted`. The daemon restores selected
-outputs' previous native mute flags and keeps application sinks open so their
-audio can still reach recording and streaming mixes. The desktop's mute icon
+A native mute on a selected physical output, or on an internal application
+sink while it is the system default, toggles `mixer.monitorMuted`. Unmuting
+an output that was already muted before selection leaves it unmuted without
+changing the monitoring pause. A mute on any other application sink is repaired
+without pausing monitoring. Application sinks stay open so their audio can
+still reach recording and streaming mixes. The desktop's mute icon
 can therefore return to its previous state while monitoring stays paused;
 `monitorMuted` is the persistent monitoring status. Monitor mix sinks retain
 the per-mix behaviour above.

@@ -2973,10 +2973,12 @@ Mix and channel mutes keep their values, and recording and streaming continue.
 On a monitor mix sink it toggles that mix. On any other output it toggles the
 sink's mute at the audio server.
 
-If Linux's native mute key targets a selected physical output or an internal
-application sink such as **OpenXLR System**, OpenXLR treats the press as a
-monitoring toggle. It restores physical outputs' previous mute flags and keeps
-application routing sinks open so recording and streaming continue. The mute
+If Linux's native mute key targets a selected physical output, or an internal
+application sink such as **OpenXLR System** while it is the default output,
+OpenXLR treats the press as a monitoring toggle. It restores physical outputs'
+previous mute flags and keeps application routing sinks open so recording and
+streaming continue. A mute on an internal application sink that is not the
+default output is undone without pausing monitoring. The mute
 icon in the Linux applet can return to its previous state while monitoring
 remains paused. The **Mute** button in OpenXLR's MONITOR header shows the
 monitoring state; another mute press resumes monitoring. **OpenXLR Monitor A**
@@ -2985,15 +2987,16 @@ Selecting an output preserves its existing native mute state; a mute key
 pressed immediately after selection already controls the monitoring pause.
 Reconnecting an output keeps its previous mute state. Delayed device
 information does not count as another mute press.
+Unmuting an already muted output in the desktop applet leaves it unmuted
+without changing the monitoring pause; the next mute press toggles the pause.
 
 Native mute flags are observed on the next mixer sweep. A desktop command
 that changes several flags in the same sweep is treated as one press;
 changes arriving in separate sweeps are separate actions. For direct monitor
 control that does not mute an application routing sink even briefly, bind
 OpenXLR's desktop mute key to a selected physical monitor output, use the
-MONITOR button or press the Deck monitor dial. Those actions use the daemon's
-current pause state, so rapid presses do not depend on a delayed slider or
-button update.
+MONITOR button or press the Deck monitor dial. The keys and dial use the daemon's
+current pause state, and the MONITOR button sets the pause to its checked value.
 
 Select **Switch system output** entries to register keys which select and
 enforce that default sink. **Follow selected monitor output** follows the
