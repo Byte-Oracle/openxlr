@@ -523,6 +523,41 @@ zero latency; muted, you do not. If another device (speakers, a headset)
 is ticked as well, the microphone reaches everything through the
 software mix instead, with a few milliseconds of delay.
 
+<a name="ducking"></a>
+#### Lower what you hear while you speak (Wave XLR Pro)
+
+The Wave XLR Pro can lower its own outputs while XLR 1 is loud and bring
+them back when you stop, with no work on the computer. OpenXLR sets it up
+under **Options**, card INTERFACE, **Ducking**:
+
+1. Tick **Lower the outputs while XLR 1 is loud**.
+2. Under **Outputs**, choose what is lowered: **Headphones and Line Out**
+   (the monitor feed OpenXLR sends to the Pro's jacks) and **USB Aux out**
+   (the Aux mix on the USB Aux port).
+3. Pick the **Sensitivity** (how quiet a voice already counts: Low reacts
+   only to a loud voice, High to a soft one), the **Amount** (6, 12 or
+   24 dB lower) and the **Speed** (how fast it lowers and recovers).
+
+OpenXLR sums its channels on the computer and hands the Pro one finished
+mix per output. So the unit lowers that whole mix, applications and chat
+alike. Lowering Music and leaving Chat alone, as Wave Link does with its own
+channels, is not possible this way. The stream and chat mixes go to other
+programs as virtual microphones and stay as they are. Your own voice keeps
+its level when every monitor output is a Pro jack, because it then rides
+the unit's direct path. With another device in the monitor set it travels
+in the software mix and dips with the rest. XLR 1 is the only key, since
+nobody knows yet how the unit encodes the others.
+
+OpenXLR saves the choice for the unit and writes it every time the unit
+connects. With ducking off, it clears any ducking Wave Link left on the
+unit. If another program changes the setting while OpenXLR runs, OpenXLR
+writes its own back within a few seconds. The **Hardware processing**
+badge beside the heading shows while the Pro runs ducking, as on the EQ
+editor, and the line under the controls says whether it is on, or that
+the unit has not taken the setting yet. Profiles do not include it. The bytes come
+from Wave Link captures on Windows, and nobody has listened to the result
+on Linux yet ([hardware support](hardware-support.md#wave-xlr-pro-0fd900b4)).
+
 <a name="audio-flow"></a>
 ### Audio flow
 
@@ -2337,7 +2372,7 @@ its live state, so what a key displays is what the mixer window shows.
 **Toggle** (a key) switches one thing: a hardware control (mute,
 phantom, low cut, expander, voice tune, ClipGuard, compressor, low
 impedance, the Pro's output selectors, the aux level lock, the gain
-lock), the software low cut (cycling Off, 80, 120), a mix or send mute,
+lock, the Pro's [ducking](#ducking) on or off), the software low cut (cycling Off, 80, 120), a mix or send mute,
 the monitor output (switching the monitor mixes to one specific device),
 an output's feed (cycling Monitor A, Monitor B, Monitor A+B and the remaining mixes, lit
 when not on A),
@@ -3074,7 +3109,7 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 |---|---|
 | 1 Mixer | channel sends, mix masters, stereo meters and level history; channel and user mix creation, renaming, removal and ordering |
 | 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. A microphone input, including a mono capture input, carries one bar rather than a pair of the same reading. A strip bound to another microphone shows its source, or why it is silent, on the row under its name, and a silent one's name is in the warning colour |
-| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing and USB Aux return |
+| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing, the Wave XLR Pro's [ducking](#ducking) and USB Aux return |
 | 4 Outputs | selected monitor sinks and their feeds, shared output volume, each sink's volume and mute, and the system default sink and source |
 | 5 Apps | every known application and its channel assignment, including the desktop's own routing |
 | 6 Inserts | the chain on each input and mix, its order, bypass and status; add a plugin from the catalogue, narrowed by typing, of those that fit the chain's width; open a plugin's native editor or edit its generated controls when the editor is blocked or refused |

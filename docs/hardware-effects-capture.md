@@ -9,7 +9,7 @@ or change a device. Software LV2, CLAP and VST3 inserts are a separate path.
 
 | Device | USB product id | Unmapped effects to capture |
 |---|---|---|
-| Wave XLR Pro | `00b4` | Ducking, mix maximizer, channel booster. For the EQ only a change of band type, band enable or Q in Wave Link; its layout, switch and band gain and frequency are mapped on firmware 1.0.14, see [hardware support](hardware-support.md#wave-xlr-pro-0fd900b4) |
+| Wave XLR Pro | `00b4` | A ducking key other than XLR Mic 1, mix maximizer, channel booster. For the EQ only a change of band type, band enable or Q in Wave Link; its layout, switch and band gain and frequency are mapped on firmware 1.0.14, see [hardware support](hardware-support.md#wave-xlr-pro-0fd900b4) |
 | Wave XLR MK.2 | `00b6` | For the EQ only a change of band type or band enable in Wave Link; the rest of its layout and its master enable are mapped on firmware 1.0.15, see the [findings](mk2-eq-findings.md) |
 | XLR Dock MK.2 | `00c7` | As for the Wave XLR MK.2: on firmware 1.0.15 the dock takes the same EQ layout. On firmware 1.0.0 Wave Link runs the EQ on the computer. See the [findings](mk2-eq-findings.md) |
 

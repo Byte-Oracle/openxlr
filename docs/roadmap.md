@@ -392,9 +392,13 @@ while fixes to existing hosts remain part of normal maintenance.
   against the software EQ's, and whether its EQ reaches the zero-latency
   headphone path.
 - [ ] Ducking on the Pro, which lowers the other mixes while you speak
-  and is applied per mix. It is the one onboard effect that touches the
-  mix matrix rather than the microphone path, so it is worth capturing
-  together with the matrix above.
+  and is applied per mix. Mapped from Wave Link 3.5 on Windows and driven
+  by the daemon, keyed by XLR 1, on the two USB pairs OpenXLR streams to
+  (the jacks' monitor feed and the USB Aux mix), from Options, the
+  terminal mixer and a deck key ([manual](manual.md#ducking)). Still
+  open: by-ear acceptance on Linux, the encoding of keys other than
+  XLR 1, and ducking single channels, which needs each channel on its own
+  pair and the rest of the mix matrix above.
 - [ ] The Pro's mix maximizer and channel booster, the other two onboard
   effects with no mapped control. The booster adds up to 12 dB above the
   normal ceiling on any input; the maximizer is per mix.
