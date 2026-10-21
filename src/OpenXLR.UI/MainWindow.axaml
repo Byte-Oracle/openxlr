@@ -620,6 +620,13 @@
                              AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
                   <TextBlock Grid.Column="3" Text="{Binding VolumeText}" Classes="val" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                 </Grid>
+                <StackPanel Name="CaptureExtraUnit" Spacing="4" IsVisible="{Binding CarriesExtraUnit}">
+                  <TextBlock Text="{Binding ExtraUnitInput.Unit.Name}" Classes="h" TextWrapping="Wrap"/>
+                  <Grid ColumnDefinitions="90,*">
+                    <TextBlock Text="{loc:Text Key=UnitInputGain}" Classes="h" VerticalAlignment="Top" Margin="0,6,0,0"/>
+                    <views:WaveUnitControls Grid.Column="1" DataContext="{Binding ExtraUnitInput}"/>
+                  </Grid>
+                </StackPanel>
                 <views:CaptureInsertsView Labelled="True" Margin="0,4,0,0" IsVisible="{Binding HasInserts}"/>
               </StackPanel>
             </DataTemplate>

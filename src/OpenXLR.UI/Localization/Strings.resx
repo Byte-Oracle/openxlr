@@ -2693,4 +2693,16 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="StereoInputPickerHint" xml:space="preserve">
     <value>Plugins that fit a stereo input (two inputs, two outputs)</value>
   </data>
+  <data name="DisableInterface" xml:space="preserve">
+    <value>Disable interface</value>
+  </data>
+  <data name="DisableInterfaceCaptureDetail" xml:space="preserve">
+    <value>Stop driving {0}? Its capture inputs and their insert chains will be deleted unless you keep them. Kept inputs play while their source is available.</value>
+  </data>
+  <data name="KeepInterfaceCaptureChannels" xml:space="preserve">
+    <value>Keep capture inputs and their chains</value>
+  </data>
+  <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
+    <value>Stop driving {0}? Its capture inputs and their insert chains will be deleted. This daemon does not report support for keeping them.</value>
+  </data>
 </root>

@@ -2682,4 +2682,16 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="StereoInputPickerHint" xml:space="preserve">
     <value>Plugins compatibles con una entrada estéreo (dos entradas, dos salidas)</value>
   </data>
+  <data name="DisableInterface" xml:space="preserve">
+    <value>Desactivar interfaz</value>
+  </data>
+  <data name="DisableInterfaceCaptureDetail" xml:space="preserve">
+    <value>¿Dejar de controlar {0}? Sus entradas de captura y cadenas de efectos se eliminarán a menos que las conserves. Las entradas conservadas seguirán sonando mientras su fuente esté disponible.</value>
+  </data>
+  <data name="KeepInterfaceCaptureChannels" xml:space="preserve">
+    <value>Conservar entradas de captura y sus cadenas</value>
+  </data>
+  <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
+    <value>¿Dejar de controlar {0}? Sus entradas de captura y cadenas de efectos se eliminarán. Este demonio no indica que permita conservarlas.</value>
+  </data>
 </root>

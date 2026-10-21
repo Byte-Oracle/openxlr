@@ -419,10 +419,11 @@ public sealed class WebSocketHub
                 bool enable = cmd.Value.GetBoolean();
                 IReadOnlyList<string> sources = enable ? [] : _waveInterfaces!.OwnSourceFragments(cmd.Device!);
                 error = _waveInterfaces!.SetEnabled(cmd.Device!, enable);
-                // A unit no longer driven takes the capture channels made from
-                // its own nodes with it, through the deleteChannel path.
-                if (error is null && sources.Count > 0 && _mixer.Snapshot() is { } mixer)
-                    foreach (string channel in WaveInterfaces.CaptureChannelsFrom(mixer.Channels, sources))
+                // Unless kept, the unit's capture channels go through the
+                // deleteChannel path, including their saved and running chains.
+                if (error is null && !enable && cmd.Device != _devices.PublishedInfo?.InstanceId && _mixer.Snapshot() is { } mixer)
+                    foreach (string channel in WaveInterfaces.CaptureChannelsFrom(mixer.Channels, sources, cmd.Device,
+                        cmd.KeepChannels.ValueKind == JsonValueKind.True))
                         if ((error = _mixer.Apply(new Command { Cmd = "deleteChannel", Channel = channel })) is not null) break;
                 stateOnError = true;
                 if (error is null) Broadcast(Snapshot());

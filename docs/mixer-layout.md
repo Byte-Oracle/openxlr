@@ -315,10 +315,16 @@ same id and display name.
 
 Bindings are stored in `userChannels`, for example
 `{"id":"second-mic","name":"Second microphone","captureSource":"alsa_input.usb-headset","capturePair":0}`.
-An entry may also carry `captureMonoChannel`. An entry without
-`captureSource` is an application channel, as in older files; one that
-carries a `capturePair` other than 0 or a `captureMonoChannel` without a
-source is dropped.
+An entry may also carry `captureMonoChannel` and `captureUnit`.
+`captureUnit` is null, an instance id such as `0fd9:0070@0123456789abcdef`,
+or a bare model id such as `0fd9:0070`, validated by `SourceBinding.IsUnitId`.
+The daemon writes it when creating a capture on a node marked with
+`devices[].drivenUnit`. An existing capture gets it once, when its exact
+source is first seen on an attached supported unit, and the layout is saved.
+It is reported as the channel's `binding.unit`, not a separate state field.
+An entry without `captureSource` is an application channel, as in older
+files; one that carries a `capturePair` other than 0, `captureMonoChannel`
+or `captureUnit` without a source is dropped.
 Invalid capture bindings are discarded, not converted into application channels.
 The binding belongs to the layout, not a profile. Rename, reorder and delete
 use the existing channel commands. Renaming leaves the capture graph running.
@@ -326,12 +332,23 @@ To use a different source or pair, create a new capture channel and remove the
 old one.
 
 Disconnected sources retain their exact binding and faders. They reconnect
-when that node and pair return, without falling back to another microphone.
+when that node and pair return. With `captureUnit`, a missing exact name
+follows the one source on that unit's card with the selected port, through
+profile changes and replugging. More than one source on the card is never
+guessed at, nor are attached units sharing an indistinguishable model id.
+The saved name, chain, sends and channel id stay unchanged.
 While two nodes share the source's name the channel stays silent with a
 warning, until the name is unique again.
 Both sides of the channel must connect before the input reports connected.
 If only one link succeeds, it is removed and the next sweep retries the
 whole connection, including the two links used for a mono source.
+
+`setWaveInterfaceEnabled {device, value: false, keepChannels: true}` leaves
+the unit's capture channels and chains in the layout. Without `keepChannels`,
+or with false, it deletes them through `deleteChannel`. The saved unit id
+finds them even while the unit is unplugged; older entries without it use
+unambiguous source fragments.
+
 Multiple interfaces can therefore supply audio simultaneously, independently
 of the interface selected for hardware controls. Hardware controls still
 target their unit. The software low cut, ClipGuard and microphone EQ stay

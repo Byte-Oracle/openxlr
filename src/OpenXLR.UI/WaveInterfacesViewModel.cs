@@ -119,14 +119,28 @@ public sealed class WaveInterfaceViewModel(DaemonClient client, MainViewModel ma
         SliderSync.Send(key, () => { if (epoch == _epoch && !_retired) _ = ControlAsync(control, value); });
     }
 
-    internal async Task EnableAsync(bool value)
+    internal bool HasCaptureChannels => main.Channels.Any(c => c.CaptureSource is { } source
+        && (c.Binding?.Unit is { } unit ? unit == Id : _captureFragments.Any(f => source.Contains(f, StringComparison.OrdinalIgnoreCase))));
+
+    // A capture binding with a unit identifies the daemon that implements keepChannels.
+    internal bool CanKeepCaptureChannels => main.Channels.Any(c => c.CaptureSource is not null && c.Binding?.Unit is not null);
+
+    private string[] _captureFragments = [];
+
+    internal async Task EnableAsync(bool value, Func<Task<bool?>>? chooseKeep = null)
     {
         if (!CanEnable) return;
         int epoch = _epoch;
         _busy = true; Raise(null);
         try
         {
-            string? error = await client.SetWaveInterfaceEnabledAsync(Id, value);
+            bool keep = false;
+            if (!value && HasCaptureChannels)
+            {
+                if (chooseKeep is null || await chooseKeep() is not bool choice || _retired || epoch != _epoch || Active) return;
+                keep = choice && CanKeepCaptureChannels;
+            }
+            string? error = await client.SetWaveInterfaceEnabledAsync(Id, value, keep);
             if (_retired || epoch != _epoch) return;
             Error = error;
             if (Error is null) _enabled = value;
@@ -208,6 +222,7 @@ public sealed class WaveInterfaceViewModel(DaemonClient client, MainViewModel ma
             // the user; a single source is.
             string hint = value["captureHint"]?.GetValue<string>() ?? "";
             string modelHint = value["captureModelHint"]?.GetValue<string>() ?? "";
+            _captureFragments = [.. new[] { hint, modelHint }.Where(f => f.Length > 0)];
             AudioDeviceItem[] choices = Matching(hint);
             if (choices.Length == 0 && modelHint != hint) choices = Matching(modelHint);
             if (!choices.Select(source => source.Name).SequenceEqual(Sources.Select(source => source.Name)))

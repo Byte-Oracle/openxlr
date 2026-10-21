@@ -2682,4 +2682,16 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="StereoInputPickerHint" xml:space="preserve">
     <value>Plugins für einen Stereoeingang mit zwei Ein- und zwei Ausgängen</value>
   </data>
+  <data name="DisableInterface" xml:space="preserve">
+    <value>Interface deaktivieren</value>
+  </data>
+  <data name="DisableInterfaceCaptureDetail" xml:space="preserve">
+    <value>{0} nicht mehr steuern? Die Aufnahmeeingänge und ihre Effektketten werden gelöscht, sofern du sie nicht behältst. Behaltene Eingänge spielen weiter, solange ihre Quelle verfügbar ist.</value>
+  </data>
+  <data name="KeepInterfaceCaptureChannels" xml:space="preserve">
+    <value>Aufnahmeeingänge und ihre Effektketten behalten</value>
+  </data>
+  <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
+    <value>{0} nicht mehr steuern? Die Aufnahmeeingänge und ihre Effektketten werden gelöscht. Dieser Daemon meldet keine Unterstützung für das Behalten der Eingänge.</value>
+  </data>
 </root>

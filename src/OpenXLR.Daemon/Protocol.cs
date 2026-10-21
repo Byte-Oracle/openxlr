@@ -67,6 +67,9 @@ public sealed record Command
     /// </summary>
     [JsonPropertyName("device")] public string? Device { get; init; }
 
+    /// <summary>For "setWaveInterfaceEnabled": keep capture channels and their chains when disabling the unit.</summary>
+    [JsonPropertyName("keepChannels")] public System.Text.Json.JsonElement KeepChannels { get; init; }
+
     /// <summary>For "setMonitorOutputs": every output the monitor mix should feed.</summary>
     [JsonPropertyName("devices")] public List<string>? Devices { get; init; }
 

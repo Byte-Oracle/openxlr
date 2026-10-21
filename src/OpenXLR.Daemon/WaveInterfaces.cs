@@ -209,9 +209,11 @@ public sealed class WaveInterfaces : BackgroundService
             if (id != primary && session.PublishedEqSupport is { } support) yield return (id, support);
     }
 
-    /// <summary>The capture channels whose source one of these fragments names.</summary>
-    internal static IReadOnlyList<string> CaptureChannelsFrom(IEnumerable<OpenXLR.Core.Mixing.ChannelStatus> channels, IReadOnlyList<string> fragments)
-        => [.. channels.Where(c => c.CaptureSource is { } source && fragments.Any(f => source.Contains(f, StringComparison.OrdinalIgnoreCase)))
+    /// <summary>The capture channels removed on disable, by saved unit or, for older entries, source fragment.</summary>
+    internal static IReadOnlyList<string> CaptureChannelsFrom(IEnumerable<OpenXLR.Core.Mixing.ChannelStatus> channels, IReadOnlyList<string> fragments,
+        string? unit = null, bool keepChannels = false)
+        => [.. channels.Where(c => !keepChannels && c.CaptureSource is { } source
+            && (c.Binding.Unit is { } id ? id == unit : fragments.Any(f => source.Contains(f, StringComparison.OrdinalIgnoreCase))))
             .Select(c => c.Id)];
 
     public string? Apply(string id, string control, JsonElement value)

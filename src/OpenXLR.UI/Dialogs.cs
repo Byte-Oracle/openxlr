@@ -54,6 +54,44 @@ internal static class Dialogs
         return result;
     }
 
+    /// <summary>Whether to keep the capture channels, or null when disabling is cancelled.</summary>
+    public static async Task<bool?> KeepCaptureChannelsAsync(Window owner, string unit, bool canKeep)
+    {
+        var keep = new CheckBox { IsVisible = canKeep,
+            Content = new TextBlock { Text = Localizer.Text("KeepInterfaceCaptureChannels"), TextWrapping = TextWrapping.Wrap } };
+        var disable = new Button { Content = Localizer.Text("DisableInterface"), IsDefault = true, Classes = { "danger" } };
+        var cancel = new Button { Content = Localizer.Text("Cancel"), IsCancel = true };
+        var dialog = new Window
+        {
+            Title = Localizer.Text("DisableInterface"),
+            SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false,
+            Classes = { "dialog" },
+            Content = new StackPanel
+            {
+                Margin = new Avalonia.Thickness(18), Spacing = 14, MaxWidth = 380,
+                Children =
+                {
+                    new TextBlock { Text = canKeep ? Localizer.Format("DisableInterfaceCaptureDetail", unit)
+                        : Localizer.Format("DisableInterfaceCaptureDeleteDetail", unit), TextWrapping = TextWrapping.Wrap },
+                    keep,
+                    new StackPanel
+                    {
+                        Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8,
+                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                        Children = { cancel, disable },
+                    },
+                },
+            },
+        };
+        bool? result = null;
+        disable.Click += (_, _) => { result = keep.IsChecked == true; dialog.Close(); };
+        cancel.Click += (_, _) => dialog.Close();
+        await dialog.ShowDialog(owner);
+        return result;
+    }
+
     /// <summary>True when the user accepts; closing the dialog any other way is a no.</summary>
     public static async Task<bool> ConfirmAsync(Window owner, string title, string message, string yesLabel)
     {

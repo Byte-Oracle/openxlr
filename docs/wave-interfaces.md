@@ -113,12 +113,13 @@ Pick one of them as the primary instead.
 Choosing a unit as the primary in the picker stops its additional manager
 before the primary opens it, so a unit is never driven twice. A command for that unit
 then reaches the primary. Disabling an additional unit releases its USB
-handle and deletes the capture channels made from its own nodes, the ones
-found by the names the source list uses, with their sends and routing, as
-deleting the channel in the layout editor would. A channel from any other
-source stays. A unit that is unplugged and still enabled keeps its channel,
-silent until the unit returns; one disabled while unplugged leaves its
-channel too, since its node names are not known without it.
+handle. With capture inputs, the window asks whether to keep them and their
+insert chains, defaulting to deletion. Kept channels retain their sends,
+binding and chains and play while their source is available; their hardware
+controls disappear. Deletion uses the saved `captureUnit`, even while the
+unit is unplugged, with unambiguous source names as a fallback for older
+entries. Other units' channels stay. An unplugged unit that remains enabled
+keeps its channels, silent until it returns.
 
 ## Adding its microphone
 
