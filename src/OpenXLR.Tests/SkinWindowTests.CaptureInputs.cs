@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
@@ -52,6 +53,18 @@ public sealed partial class SkinWindowTests
                     Assert.Equal(shown, strip.GetVisualDescendants().OfType<CaptureSourceChip>().Single().IsEffectivelyVisible);
                     // A part the skin leaves out is never drawn, so its view may hold no button at all.
                     Assert.Equal(shown, strip.GetVisualDescendants().OfType<Button>().Any(b => b.Name == "CaptureInserts" && b.IsEffectivelyVisible));
+                    // The microphone's EQ comes first in the effects part, inside the strip.
+                    Button? rackEq = strip.GetVisualDescendants().OfType<Button>().SingleOrDefault(b => b.Name == "RackEq" && b.IsEffectivelyVisible);
+                    Assert.Equal(shown, rackEq is not null);
+                    if (rackEq is not null)
+                    {
+                        WindowLayoutTests.AssertInside(rackEq, strip);
+                        Button inserts = strip.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "CaptureInserts");
+                        Assert.True(rackEq.TranslatePoint(default, strip)!.Value.Y < inserts.TranslatePoint(default, strip)!.Value.Y);
+                    }
+                    InputStripViewModel camera = window.InputRackModel!.Strips.Single(s => s.Channel.Id == "camera");
+                    Assert.DoesNotContain(window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "InputStrip" && b.DataContext == camera)
+                        .GetVisualDescendants().OfType<Button>(), b => b.Name == "RackEq" && b.IsEffectivelyVisible);
                     // One bar: the spare keeps its room and draws nothing.
                     LevelMeter[] bars = [.. strip.GetVisualDescendants().OfType<LevelMeter>().Where(m => m.IsEffectivelyVisible)];
                     Assert.Single(bars, m => m.Opacity > 0);
@@ -77,13 +90,17 @@ public sealed partial class SkinWindowTests
                     Button button = head.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "MatrixCaptureInserts");
                     Assert.Equal(shown, button.IsEffectivelyVisible);
                     if (shown) WindowLayoutTests.AssertInside(button, head);
+                    // A mono microphone's EQ over its chain; the stereo pair has none.
+                    Button eq = head.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "MatrixEq");
+                    Assert.Equal(shown && channel != "camera", eq.IsEffectivelyVisible);
+                    if (eq.IsEffectivelyVisible) WindowLayoutTests.AssertInside(eq, head);
                     MeterFader volume = head.GetVisualDescendants().OfType<MeterFader>().Single(f => f.IsEffectivelyVisible);
                     Assert.Equal(channel != "camera", volume.Mono);
                     Assert.Equal(channel == "camera" ? 2 : 1, volume.Meters.Children.Count(m => m.IsVisible));
                 }
                 if (shown)
                 {
-                    // The capture chain's FX button is XLR 1's, without the EQ over it.
+                    // The capture chain's FX and EQ buttons are XLR 1's.
                     Button xlrFx = SkinLayoutWindowTests.RowHead(window, "xlr1").GetVisualDescendants().OfType<Button>()
                         .Single(b => b.Classes.Contains("matrixEffects") && b.IsEffectivelyVisible);
                     Button captureFx = SkinLayoutWindowTests.RowHead(window, "guest").GetVisualDescendants().OfType<Button>()
@@ -91,8 +108,14 @@ public sealed partial class SkinWindowTests
                     Assert.Equal(xlrFx.FontSize, captureFx.FontSize);
                     Assert.Equal(xlrFx.Padding, captureFx.Padding);
                     Assert.Equal(xlrFx.Bounds.Height, captureFx.Bounds.Height);
-                    Assert.DoesNotContain(SkinLayoutWindowTests.RowHead(window, "guest").GetVisualDescendants().OfType<Button>(),
-                        b => b.Name == "MatrixEq" && b.IsEffectivelyVisible);
+                    // This state gives XLR 1 no EQ, so the guest's EQ is held to its own FX button, which is XLR 1's.
+                    Button captureEq = SkinLayoutWindowTests.RowHead(window, "guest").GetVisualDescendants().OfType<Button>().Single(b => b.Name == "MatrixEq");
+                    Assert.True(captureEq.IsEffectivelyVisible);
+                    Assert.Equal(captureFx.FontSize, captureEq.FontSize);
+                    Assert.Equal(captureFx.Padding, captureEq.Padding);
+                    Assert.Equal(captureFx.Bounds.Height, captureEq.Bounds.Height);
+                    Assert.Equal(captureFx.Bounds.Width, captureEq.Bounds.Width);
+                    Assert.True(captureEq.TranslatePoint(default, captureFx)!.Value.Y < 0, "the EQ sits over the chain");
                 }
                 Capture(window, $"skin-{id}-capture-chain");
                 if (id == "capture-default")
@@ -111,6 +134,7 @@ public sealed partial class SkinWindowTests
                         Border head = SkinLayoutWindowTests.RowHead(window, "guest");
                         WindowLayoutTests.AssertInside(head.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "MatrixCaptureBinding"), head);
                         WindowLayoutTests.AssertInside(head.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "MatrixCaptureInserts"), head);
+                        WindowLayoutTests.AssertInside(head.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "MatrixEq"), head);
                         Capture(window, $"skin-{id}-capture-chain-touch-{width}");
                     }
                     SkinService.ApplyControlSizing(false);

@@ -388,7 +388,15 @@
                   <views:WaveUnitControls Name="RackExtraSwitches" Part="Switches" DataContext="{Binding ExtraUnit}"/>
                 </Panel>
               </StackPanel>
-              <views:CaptureInsertsView layout:StripPanel.Part="effects" DataContext="{Binding Channel}"/>
+              <!-- the microphone's EQ, on a capture input the daemon reports one for, then its plugin chain -->
+              <StackPanel layout:StripPanel.Part="effects" Name="RackCaptureEffects" Spacing="4">
+                <Button Name="RackEq" Content="{loc:Text Key=Eq}" Classes="fx" Classes.fxOn="{Binding Channel.Eq.IsLit, FallbackValue=False}"
+                        Classes.fxOff="{Binding Channel.Eq.IsFaulty, FallbackValue=False}" HorizontalAlignment="Left"
+                        Padding="12,3" FontSize="12" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                        IsVisible="{Binding Channel.HasEq}" Click="OnEq"
+                        AutomationProperties.Name="{Binding Channel.Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{Binding Channel.Eq.ButtonTip, FallbackValue=''}"/>
+                <views:CaptureInsertsView DataContext="{Binding Channel}"/>
+              </StackPanel>
             </layout:StripPanel>
           </DockPanel>
         </Border>

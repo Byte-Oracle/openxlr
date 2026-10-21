@@ -1307,8 +1307,10 @@ Capture inputs also have `binding` and `effects`. When an input rack's
 only if that list names them, and a strip without `binding` keeps its
 connection line under the name. The listed order stays as written, and a
 part named in `hidden` stays hidden. Without an explicit order, both parts
-take their default places. Against an older daemon that does not report
-`chainWidth`, a capture input has no `effects`.
+take their default places. On a capture input on one mono port, `effects`
+holds the microphone EQ button before the chain, as on XLR 1. Against an
+older daemon that does not report `chainWidth`, a capture input has no
+`effects`.
 
 `master` takes `template`, `label`, `meter` and `fader`. Its template is
 `"master-card"`, the mix tile the channel tiles have always shown, under
@@ -1534,7 +1536,7 @@ cell's are `mute`, `fader` and `value`.
 For capture row heads, an explicit `rowHead.parts` list shows `binding`
 and `effects` only when it names them, and a row without `binding` keeps
 its connection line under the name. With no list, both use their default
-places. The source line opens the binding dialog, and capture inputs have no EQ button.
+places. The source line opens the binding dialog. A capture input on one mono port has the microphone EQ button over its chain's, as XLR 1 has; a stereo pair has none.
 A capture input on one microphone port draws one meter bar, including under
 the source and send faders; a stereo capture input draws two.
 

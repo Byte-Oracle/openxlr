@@ -2418,6 +2418,9 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="EqButtonTip" xml:space="preserve">
     <value>Der Vierband-EQ des Mikrofons, am Anfang des Eingangs vor Hochpass, ClipGuard und Plugins. Leuchtet, solange er an ist, rot, wenn er nicht laufen kann. Öffnet den Editor.</value>
   </data>
+  <data name="EqButtonTipCapture" xml:space="preserve">
+    <value>Der Vierband-EQ des Mikrofons, auf diesem Computer am Anfang des Eingangs vor den Plugins. Leuchtet, solange er an ist, rot, wenn er nicht laufen kann. Öffnet den Editor.</value>
+  </data>
   <data name="EqButtonNameOn" xml:space="preserve">
     <value>{0} EQ, an</value>
   </data>
@@ -2492,6 +2495,9 @@ Von OpenXLR gesteuertes Interface wählen</value>
   </data>
   <data name="EqStatusSoftware" xml:space="preserve">
     <value>An, läuft auf diesem Computer am Anfang des Eingangs, vor Hochpass, ClipGuard und Plugins.</value>
+  </data>
+  <data name="EqStatusSoftwareCapture" xml:space="preserve">
+    <value>An, läuft auf diesem Computer am Anfang des Eingangs, vor den Plugins.</value>
   </data>
   <data name="EqStatusDevice" xml:space="preserve">
     <value>An, läuft auf dem Interface noch vor USB, also vor den Plugins und allem anderen auf diesem Computer.</value>

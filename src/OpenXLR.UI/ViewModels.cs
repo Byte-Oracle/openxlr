@@ -1674,8 +1674,9 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
 
     private MicEqViewModel? _eq;
     /// <summary>
-    /// The microphone EQ, on a channel the daemon reports one for (XLR 1 and
-    /// XLR 2); null on every other channel and from a daemon without the EQ,
+    /// The microphone EQ, on a channel the daemon reports one for (XLR 1,
+    /// XLR 2 and capture inputs on one mono port); null on every other
+    /// channel and from a daemon without the EQ,
     /// so no client draws an EQ button there.
     /// </summary>
     public MicEqViewModel? Eq { get => _eq; private set { if (Set(ref _eq, value)) Raise(nameof(HasEq)); } }
