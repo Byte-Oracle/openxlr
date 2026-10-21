@@ -2030,8 +2030,9 @@ the old controls cannot affect a plugin that now uses the same slot id.
 Options, APPEARANCE picks a skin. OpenXLR ships sixteen, all built into
 the application, so a package brings them with it:
 
-- **Material**, the default, in a dark palette, which is what the window
-  has always looked like, and a light one;
+- **Material**, the classic appearance, in a dark palette, which is what
+  the window looked like before Broadcast became the default, and a light
+  one;
 - **Deck**, which dresses the window in the visual language of the
   OpenDeck keys and the Wave interfaces: near-black faceplates, black keys
   whose lettering is backlit green when a control is on and red when
@@ -2042,8 +2043,8 @@ the application, so a package brings them with it:
   one of them: Catppuccin, Catppuccin Latte, Everforest, Gruvbox,
   Kanagawa, Matte Black, Nord, Osaka Jade, Ristretto, Rose Pine and Tokyo
   Night. Catppuccin Latte and Rose Pine are light;
-- **Broadcast**, a dark neutral palette that also rearranges the window,
-  described below;
+- **Broadcast**, the default, a dark neutral palette that also rearranges
+  the window, described below;
 - **Nyan Pink**, dark plum cards, candy pink faders and cyan details,
   using the classic arrangement and your saved section order;
 - **Wave**, dark charcoal cards, blue faders and green meters, arranged
@@ -2052,6 +2053,13 @@ the application, so a package brings them with it:
   little closer together. Your Arrange moves are kept for each of the two
   separately. Choosing it changes appearance and arrangement, not routing
   or audio levels.
+
+A new install opens on Broadcast. An install that never picked a skin
+opens on Broadcast too, so after upgrading from a version that started on
+Material the window has the mix matrix. A skin you picked yourself,
+Material included, stays. To go back to Material, open Options and choose
+**Material** under APPEARANCE; the window rearranges at once and keeps
+Material from then on.
 
 <a name="broadcast"></a>
 **Broadcast** draws the SUBMIXER as a mix matrix. Each row is a channel and
@@ -3444,8 +3452,9 @@ and persistence as the window.
 The terminal mixer wears the same skins as the window. It reads the same
 files, in the same order, and the choice in Options is the same choice, so
 picking Gruvbox in one picks it in the other ([skins.md](skins.md)).
-If the saved choice cannot be read, the terminal mixer uses Material for
-that run and leaves the file as it is. Material's mode is shared too:
+With no saved choice it wears Broadcast, as the window does, and writes
+nothing. If the saved choice cannot be read, the terminal mixer uses
+Material for that run and leaves the file as it is. Material's mode is shared too:
 **Material mode** on the Options tab changes it with Left and Right, and in
 System the terminal follows the desktop's preference through the portal
 with `gdbus`, staying dark when there is no session bus or no `gdbus`.
