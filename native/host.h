@@ -66,6 +66,7 @@ typedef struct {
   uint32_t (*latency)(Host *h);
   // These formats can arrive through Wine and need the coordinate nudge.
   bool editor_coordinate_nudge;
+  unsigned key_inputs;  // 0, or one mono detector input separate from the audio
 } Backend;
 
 #ifndef __cplusplus
@@ -97,6 +98,8 @@ struct Host {
   struct pw_filter *filter;
   struct spa_source *timer;
   void *in_ports[MAX_CHANNELS], *out_ports[MAX_CHANNELS];
+  void *key_port;
+  const float *key;
   float *silence, *scratch;  // for a channel PipeWire gave no buffer this cycle
   _Atomic bool audio_error;
   _Atomic bool failure_explained;  // host_fail has written the reason
@@ -193,6 +196,7 @@ bool host_on_audio_thread(Host *h);
 // The same through accessors, for a backend that cannot see the structures.
 uint32_t host_rate(const Host *h);
 unsigned host_channels(const Host *h);
+const float *host_key(const Host *h);
 unsigned long host_window(const Host *h);  // the X window, or 0
 void *host_impl(const Host *h);
 void host_set_impl(Host *h, void *impl);
