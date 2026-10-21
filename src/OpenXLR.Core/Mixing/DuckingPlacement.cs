@@ -31,6 +31,10 @@ public static class DuckingPlacement
         if (support is null) return new(software, false, null, null, outputs);
         if (!view.MixerRunning) return No("mixerOff", "The software mixer is off, so ducking does not run.");
         if (!view.KeyIsUnitInput1) return No("keyNotSupported", $"The {support.Name} ducks only with XLR 1 as the key.");
+        if (!support.ReachesJacks && targets.Any(m => m.OnJacks))
+            return No("monitorReturn", $"The {support.Name} ducks inside its own mix, and OpenXLR feeds the jacks around that mix, so this computer ducks.");
+        if (!support.ReachesAux && targets.Any(m => m.OnAux))
+            return No("auxNotChecked", $"Ducking on the {support.Name}'s USB Aux port has not been checked by ear yet, so this computer ducks.");
         foreach (DuckingMixView mix in targets)
             if (mix.OtherConsumers.Count > 0 || mix.Kind == MixKind.VirtualMic
                 || mix.OnJacks && mix.Kind != MixKind.Monitor || mix.OnAux && mix.Kind != MixKind.AuxPort)

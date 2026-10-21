@@ -55,8 +55,13 @@ public interface IDeviceDuckingPort
     DeviceDuckingStatus Status(string unit);
 }
 
-/// <summary>A primary unit with hardware ducking, including any device-side refusal.</summary>
-public sealed record UnitDuckingSupport(string Name, string? Firmware, bool Ready, string? Reason = null, string? Note = null);
+/// <summary>
+/// A primary unit with hardware ducking, including any device-side refusal.
+/// <see cref="ReachesJacks"/> and <see cref="ReachesAux"/> say whether the
+/// unit's ducking is heard on that output in the routing OpenXLR drives.
+/// </summary>
+public sealed record UnitDuckingSupport(string Name, string? Firmware, bool Ready, string? Reason = null, string? Note = null,
+    bool ReachesJacks = true, bool ReachesAux = true);
 
 /// <summary>Posts changed targets once, repeating them when the device side reports a new connection.</summary>
 internal sealed class DeviceDuckingBackend(IDeviceDuckingPort port, string unit)

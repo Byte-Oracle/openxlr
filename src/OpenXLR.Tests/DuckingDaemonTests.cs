@@ -218,7 +218,11 @@ public sealed class DuckingDaemonTests
         using Mixer mixer = ProMixer(port, register: false);
         (string id, UnitDuckingSupport support) = port.Primary()!.Value;
         Assert.Equal(Pro, id);
-        mixer.SetUnitDuckingSupport(id, support);
+        // The daemon keeps the Pro's ducking off its outputs: the jacks are fed
+        // around the unit's mix and the Aux port is unchecked. The write path
+        // below is exercised as if the unit reached both.
+        Assert.Equal((false, false), (support.ReachesJacks, support.ReachesAux));
+        mixer.SetUnitDuckingSupport(id, support with { ReachesJacks = true, ReachesAux = true });
 
         // On: the jacks' pair, written by the device loop and read back held.
         mixer.SetDuckingSetup(DuckingSetup.Default(mixer.Config) with { Enabled = true, Amount = "high", Speed = "fast" }, _ => null);
