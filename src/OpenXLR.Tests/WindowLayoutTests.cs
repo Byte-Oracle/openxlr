@@ -35,6 +35,7 @@ public sealed class WindowLayoutTests
                 Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", config);
                 Environment.SetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent");
                 Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", config);
+                PinMaterial();
                 AppBuilder.Configure<App>().UseSkia().UseHarfBuzz().UseX11().SetupWithoutStarting();
                 Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
                 var main = new MainWindow();
@@ -829,6 +830,15 @@ public sealed class WindowLayoutTests
     /// and a window still at its old size answers the wrong questions, with
     /// its controls stacked for a width it no longer has.
     /// </summary>
+    /// <summary>
+    /// Save Material as the user's choice in the redirected ui.json before the
+    /// application starts. A window test that measures the classic window
+    /// would otherwise start on Broadcast, which a launch with no saved skin
+    /// now wears; the tests that check Broadcast put it on themselves.
+    /// </summary>
+    internal static void PinMaterial(UiSettings? settings = null) =>
+        Assert.Null(((settings ?? new UiSettings()) with { Skin = OpenXLR.UI.Skinning.SkinPackage.DefaultId }).Save());
+
     internal static void Layout(Window window, double width, double height)
     {
         var asked = new Size(width, height);

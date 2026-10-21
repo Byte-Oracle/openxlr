@@ -35,11 +35,13 @@ namespace OpenXLR.UI.Skinning;
 /// removed when no skin supplies it, which leaves the stock Fluent value in
 /// place: the unskinned application looks exactly as it did before skins.
 ///
-/// Material, the default, has a light and a dark palette. The dark one is the
-/// token defaults; the light one is skin data compiled into the window
-/// (Assets/Appearance/material-light.json). The saved mode picks one, and in
-/// <c>system</c> the toolkit's theme variant, which follows the desktop's
-/// preference through the settings portal, picks it. Every other skin is one
+/// Broadcast is worn while ui.json holds no choice. Material, the token
+/// defaults and the fallback for a skin that is missing, has a light and a
+/// dark palette. The dark one is the token defaults; the light one is skin
+/// data compiled into the window (Assets/Appearance/material-light.json).
+/// The saved mode picks one, and in <c>system</c> the toolkit's theme
+/// variant, which follows the desktop's preference through the settings
+/// portal, picks it. Every other skin is one
 /// set of values and keeps it whatever the mode says.
 /// </summary>
 public static class SkinService
@@ -147,9 +149,11 @@ public static class SkinService
 
     /// <summary>
     /// Put the saved appearance on before the first window is built. The launch
-    /// override wins: <c>OPENXLR_SKIN=default</c> starts the application in the
-    /// dark Material it has always shipped with, whatever the saved mode, which
-    /// is the way back from a skin that made something unreadable.
+    /// override wins: <c>OPENXLR_SKIN=default</c> starts the application in
+    /// dark Material, whatever the saved choice and mode, which is the way back
+    /// from a skin that made something unreadable. With no override and no
+    /// saved choice the window starts on Broadcast; nothing is written for
+    /// that, so the file stays as the user left it.
     /// </summary>
     public static void Initialize()
     {
@@ -157,14 +161,26 @@ public static class SkinService
         TouchControls = settings.TouchControls;
         string? id = Environment.GetEnvironmentVariable(OverrideVariable);
         Overridden = id is { Length: > 0 };
-        if (!Overridden) id = settings.Skin;
         if (!ReferenceEquals(_application, Application.Current))
         {
             if (_application is not null) _application.ActualThemeVariantChanged -= OnThemeVariantChanged;
             _application = Application.Current;
             if (_application is not null) _application.ActualThemeVariantChanged += OnThemeVariantChanged;
         }
-        ApplyMode(settings.AppearanceMode, SkinCatalog.Find(id) ?? new SkinEntry(SkinPackage.Default, []));
+        ApplyMode(settings.AppearanceMode, Resolve(Overridden ? id : settings.Skin, Overridden));
+    }
+
+    /// <summary>
+    /// The skin a launch wears. A skin named by the override or saved in
+    /// ui.json is found by its id, Material when the machine has no such skin.
+    /// No choice at all, an absent or empty <c>skin</c>, is Broadcast, or
+    /// Material when Broadcast is missing or its document cannot be read.
+    /// </summary>
+    internal static SkinEntry Resolve(string? id, bool overridden)
+    {
+        var material = new SkinEntry(SkinPackage.Default, []);
+        if (overridden || id is { Length: > 0 }) return SkinCatalog.Find(id) ?? material;
+        return SkinCatalog.Find(SkinPackage.StartingId) is { Usable: true } starting ? starting : material;
     }
 
     /// <summary>The desktop switched between light and dark; Material in system mode follows.</summary>
@@ -340,14 +356,15 @@ public static class SkinService
     /// Save this skin as the one to wear and put it on. The choice lives in
     /// ui.json alone: it is not part of the mixer layout, the daemon's
     /// preferences or any audio profile, so switching appearance never touches
-    /// what is playing. The skin goes on even when the choice cannot be
-    /// saved; <paramref name="saveError"/> then says why. A choice made here
-    /// replaces the launch override for the rest of the run.
+    /// what is playing. Material is saved by its id like any other skin, since
+    /// no saved choice now means Broadcast. The skin goes on even when the
+    /// choice cannot be saved; <paramref name="saveError"/> then says why. A
+    /// choice made here replaces the launch override for the rest of the run.
     /// </summary>
     public static IReadOnlyList<string> Choose(string id, out string? saveError)
     {
         SkinEntry entry = SkinCatalog.Find(id) ?? new SkinEntry(SkinPackage.Default, []);
-        saveError = (UiSettings.Load() with { Skin = entry.Id == SkinPackage.DefaultId ? null : entry.Id }).Save();
+        saveError = (UiSettings.Load() with { Skin = entry.Id }).Save();
         Overridden = false;
         return ApplyMode(Mode, entry);
     }

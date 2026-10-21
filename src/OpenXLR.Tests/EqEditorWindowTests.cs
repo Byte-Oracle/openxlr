@@ -183,6 +183,7 @@ public sealed class EqEditorWindowTests
                 Environment.SetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent");
                 Directory.CreateDirectory(Path.Combine(root, "config"));
                 WriteRackSkin(root);
+                WindowLayoutTests.PinMaterial();
                 AppBuilder.Configure<App>().UseSkia().UseHarfBuzz().UseX11().SetupWithoutStarting();
                 Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
                 Task pending = Check();

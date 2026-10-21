@@ -183,6 +183,7 @@ internal static partial class SkinLayoutWindowTests
             CheckTemplates(dir);
             CheckCompactTemplates(dir);
             CheckBroadcast();
+            CheckFreshStart();
             CheckApplicationColumns();
 
             // Material brings the legacy order back, in the column it always was.

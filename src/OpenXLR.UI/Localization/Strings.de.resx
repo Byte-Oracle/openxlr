@@ -995,7 +995,7 @@
     <value>Handbuch</value>
   </data>
   <data name="MaterialDescription" xml:space="preserve">
-    <value>Die mit der Anwendung ausgelieferte Darstellung.</value>
+    <value>Die klassische Darstellung mit hellem und dunklem Modus.</value>
   </data>
   <data name="MemoryLockSetup" xml:space="preserve">
     <value>Speichersperre einrichten</value>

@@ -54,6 +54,7 @@ public sealed class ToolTipInputTests
                 Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", config);
                 Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", config);
                 Environment.SetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent");
+                WindowLayoutTests.PinMaterial();
                 AppBuilder.Configure<App>().UseSkia().UseHarfBuzz().UseX11().SetupWithoutStarting();
                 Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
 

@@ -73,8 +73,18 @@ public sealed record SkinPackage(
     IReadOnlyDictionary<string, string> Controls,
     SkinLayout? Layout = null)
 {
-    /// <summary>The id of the appearance the application ships and falls back to.</summary>
+    /// <summary>
+    /// The id of Material, the token defaults with no overlay, which the
+    /// application falls back to whenever a skin is missing or unreadable.
+    /// </summary>
     public const string DefaultId = "default";
+
+    /// <summary>
+    /// The skin worn while ui.json holds no choice: a new install, or one
+    /// whose user never picked a skin. Nothing is written for it, so a choice
+    /// made later, Material included, is the one that stays.
+    /// </summary>
+    public const string StartingId = "broadcast";
 
     /// <summary>
     /// The skin's own icons, name to SVG path data, each checked by

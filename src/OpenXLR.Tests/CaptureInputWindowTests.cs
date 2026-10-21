@@ -107,6 +107,7 @@ public sealed class CaptureInputWindowTests
                 for (int i = 0; i < names.Length - 1; i++) Environment.SetEnvironmentVariable(names[i], Path.Combine(root, names[i]));
                 Environment.SetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent");
                 Directory.CreateDirectory(root);
+                WindowLayoutTests.PinMaterial();
                 AppBuilder.Configure<App>().UseSkia().UseHarfBuzz().UseX11().SetupWithoutStarting();
                 Task pending = CheckCommands();
                 DateTime deadline = DateTime.UtcNow.AddSeconds(90);
