@@ -374,7 +374,7 @@ public sealed class MixerService : IHostedService, IDisposable
         }
         SyncOutputSelectors();
 
-        if (_mixer.MigrateCaptureInputs()) ScheduleSave();
+        if (_mixer.MigrateCaptureInputs(source => _devices.SupportedUnitFor(source)?.Id)) ScheduleSave();
         _log.LogInformation("submix graph built ({mixes} mixes, {channels} channels){route}",
             _mixer.Config.Mixes.Count, _mixer.Config.Channels.Count,
             output is null ? "" : $", monitor -> {output}");
@@ -525,7 +525,7 @@ public sealed class MixerService : IHostedService, IDisposable
                     heldSends.Count, string.Join(", ", heldSends));
             stop.ThrowIfCancellationRequested();
             bool changed = _mixer.SyncStreams();
-            if (_mixer.MigrateCaptureInputs())
+            if (_mixer.MigrateCaptureInputs(source => _devices.SupportedUnitFor(source)?.Id))
             {
                 ScheduleSave();
                 changed = true;
@@ -679,7 +679,7 @@ public sealed class MixerService : IHostedService, IDisposable
                         Func<MixerSettings, string?> save = settings => settings.Save();
                         switch (cmd.Cmd)
                         {
-                            case "createCaptureChannel": _mixer.CreateCaptureChannel(cmd.Name!, cmd.Source!, cmd.CapturePair, save, cmd.CaptureMonoChannel); break;
+                            case "createCaptureChannel": _mixer.CreateCaptureChannel(cmd.Name!, cmd.Source!, cmd.CapturePair, save, cmd.CaptureMonoChannel, _devices.SupportedUnitFor(cmd.Source!)?.Id); break;
                             case "createChannel": _mixer.CreateApplicationChannel(cmd.Name!, save, cmd.Icon); break;
                             case "renameChannel": _mixer.RenameApplicationChannel(cmd.Channel!, cmd.Name!, save); break;
                             case "deleteChannel": _mixer.DeleteApplicationChannel(cmd.Channel!, save); break;

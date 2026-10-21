@@ -26,7 +26,9 @@ public static class CommandValidation
     {
         if (!WaveInterfaces.ValidId(cmd.Device)) return $"{cmd.Cmd}: need a Wave interface instance id from waveInterfaces";
         if (cmd.Cmd == "setWaveInterfaceEnabled")
-            return cmd.Value.ValueKind is JsonValueKind.True or JsonValueKind.False ? null : "setWaveInterfaceEnabled: value must be a boolean";
+            return cmd.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False) ? "setWaveInterfaceEnabled: value must be a boolean"
+                : cmd.KeepChannels.ValueKind is JsonValueKind.Undefined or JsonValueKind.True or JsonValueKind.False ? null
+                : "setWaveInterfaceEnabled: keepChannels must be a boolean";
         if (cmd.Control is not { Length: > 0 and <= 64 } || cmd.Control.Any(char.IsControl)) return "setWaveControl: need 'control'";
         return cmd.Value.ValueKind is JsonValueKind.True or JsonValueKind.False
             || (cmd.Value.ValueKind == JsonValueKind.Number && cmd.Value.TryGetDouble(out double value) && double.IsFinite(value))

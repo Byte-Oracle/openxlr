@@ -13,7 +13,7 @@
               <StackPanel Spacing="8">
                 <TextBlock Classes="body" Text="{Binding Name}" TextWrapping="Wrap"/>
                 <TextBlock Classes="hint" Text="{loc:Text Key=PrimaryInterface}" IsVisible="{Binding Active}"/>
-                <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" IsEnabled="{Binding CanEnable}" IsVisible="{Binding !Active}">
+                <CheckBox IsChecked="{Binding Enabled, Mode=OneWay}" Click="OnEnable" IsEnabled="{Binding CanEnable}" IsVisible="{Binding !Active}">
                   <TextBlock Text="{loc:Text Key=DriveAsAdditionalInterface}" TextWrapping="Wrap"/>
                 </CheckBox>
                 <StackPanel IsEnabled="{Binding CanControl}" IsVisible="{Binding Connected}" Spacing="6">

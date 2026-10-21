@@ -391,8 +391,15 @@ and healed on its own; a capture input without active inserts adds no node.
 Profiles carry capture chains, and an older profile that does not name one
 leaves it alone. When the source goes away its chain stops, and it starts
 again from the saved parameters on replug. The classic INPUTS panel lists
-each capture input after Aux In with its source, volume and inserts. Input
-racks and the Broadcast and Wave matrices show the source and the chain
+each capture input after Aux In with its source, volume and inserts.
+An additional interface's gain and switches appear in that capture block,
+labelled with the unit's name; the primary keeps its "plays on" heading.
+Capture inputs remember their Elgato unit and follow a renamed source on
+its card, keeping their chains. An ambiguous card stays silent with a
+warning. Disabling an additional unit asks whether to keep its capture
+inputs and chains, defaulting to deletion.
+
+Input racks and the Broadcast and Wave matrices show the source and the chain
 button through their `binding` and `effects` parts. The chain window keeps
 presets, A/B, copy and paste, native editors and latency readouts; its picker
 filters by the input's width. Flow cards include the chain, and microphone

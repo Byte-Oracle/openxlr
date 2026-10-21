@@ -407,8 +407,8 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands
 
     // --- additional interfaces: each call resolves to null on success or the daemon's error ---
 
-    public Task<string?> SetWaveInterfaceEnabledAsync(string device, bool enabled)
-        => EditLayoutAsync(new() { ["cmd"] = "setWaveInterfaceEnabled", ["device"] = device, ["value"] = enabled });
+    public Task<string?> SetWaveInterfaceEnabledAsync(string device, bool enabled, bool keepChannels = false)
+        => EditLayoutAsync(new() { ["cmd"] = "setWaveInterfaceEnabled", ["device"] = device, ["value"] = enabled, ["keepChannels"] = keepChannels });
     public Task<string?> SetWaveControlAsync(string device, string control, object value)
         => EditLayoutAsync(new() { ["cmd"] = "setWaveControl", ["device"] = device, ["control"] = control, ["value"] = value });
     public Task<string?> AdjustOutputVolumeAsync(string? device, double delta)

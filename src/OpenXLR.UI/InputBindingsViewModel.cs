@@ -373,7 +373,8 @@ public sealed partial class MainViewModel
     {
         if (channel.CaptureSource is { } capture)
         {
-            string source = Inputs.FirstOrDefault(i => i.Name == capture)?.Description is { Length: > 0 } label ? label : capture;
+            AudioDeviceItem? captureDevice = BoundDevice(capture, channel.Binding?.Unit);
+            string source = captureDevice?.Description is { Length: > 0 } label ? label : capture;
             return channel.CaptureMonoChannel is int port
                 ? Localizer.Format("InputBindingSourcePort", source, port + 1)
                 : Localizer.Format("CaptureSourcePair", source, channel.CapturePair + 1);
@@ -382,16 +383,18 @@ public sealed partial class MainViewModel
         if (channel.Binding is not { Kind: "source", Source: { } name } binding)
             return !UnitXlrJacks ? Localizer.Text("UnitCapsule")
                 : channel.Id == "xlr2" ? Localizer.Text("Xlr2Jack") : Localizer.Text("Xlr1Jack");
-        AudioDeviceItem? device = Inputs.FirstOrDefault(i => i.Name == name);
-        // A supported unit's node renamed by a profile switch: the strip
-        // follows the unit, and so does its label.
-        if (device is null && binding.Unit is { } unitId && Inputs.Where(i => !i.IsOwn && i.DrivenUnit == unitId).ToArray() is [var renamed])
-            device = renamed;
+        AudioDeviceItem? device = BoundDevice(name, binding.Unit);
         string description = device?.Description is { Length: > 0 } text ? text
             : binding.Unit is { } owner && WaveInterfaces.FirstOrDefault(w => w.Id == owner) is { Name.Length: > 0 } known ? known.Name : name;
         bool single = device?.Channels == 1 || device?.Channels is null && binding.Port == 0;
         return single ? description : Localizer.Format("InputBindingSourcePort", description, binding.Port + 1);
     }
+
+    // A supported unit's source can be renamed by its card profile. Both
+    // bound strips and capture inputs follow it in their source chips.
+    private AudioDeviceItem? BoundDevice(string source, string? unit)
+        => Inputs.FirstOrDefault(i => i.Name == source)
+            ?? (unit is not null && Inputs.Where(i => !i.IsOwn && i.DrivenUnit == unit).ToArray() is [var renamed] ? renamed : null);
 
     /// <summary>
     /// Bind XLR 1 or XLR 2 to a source's port, or back to the interface with

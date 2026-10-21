@@ -239,7 +239,7 @@ that final acknowledgement (or an `error` without a request id):
 | `setInputBinding` | `channel`, `source?`, `captureMonoChannel?` | bind a hardware strip to one port of a PipeWire capture source by exact node name. `channel` is `xlr1` or `xlr2`; Aux In stays on the interface. With `source` null or absent the strip returns to the interface's capture pair and takes no port. With a source, `capturePair` must be 0 and `captureMonoChannel` is the zero-based port, 0 to 63, default 0. OpenXLR nodes, monitor taps, control characters and names over 256 characters are refused. A node of an attached supported interface (a `devices` entry with `drivenUnit`) is accepted, and the binding records that unit, see [a strip on another interface](#a-strip-on-another-interface). The source may be offline. Saved before the acknowledgement, rolled back on a failed save. The strip's monitor sends start muted after a change; no other strip changes. Channel ids, software processing and inserts stay as they are. See [input bindings](#input-bindings) |
 | `setEnforcedDefaults` | `sink`, `source` | system defaults to hold; `sink: "@monitor"` follows the first selected monitor output |
 | `setActiveDevice` | `device` | switch to another attached interface: one unit by its instance id from `detected`, or the first unit of a model by `vvvv:pppp`. The one command that moves the primary; it wins over `OPENXLR_DEVICE`, and the choice stays until the next `setActiveDevice` or a restart |
-| `setWaveInterfaceEnabled` | `device`, `value` | drive an attached unit, by its instance id from `waveInterfaces`, as an additional interface (`true`) or stop driving it (`false`); at most four. Refused for a unit that is not attached, and for a Wave XLR Pro whose capture node name another attached unit shares. Enabling creates no mixer channel; disabling an attached unit deletes the capture channels whose source is one of its own nodes, as `deleteChannel` does, found by its `captureHint` and, when not empty, its `captureModelHint`; nothing is deleted while `captureHint` is a model name another attached unit shares. Neither value changes the primary, and a unit enabled here is never driven as the primary in place of an absent one; only `setActiveDevice` makes it the primary. See [additional interface state](#additional-interface-state) |
+| `setWaveInterfaceEnabled` | `device`, `value`, optional `keepChannels` | drive an attached unit, by its instance id from `waveInterfaces`, as an additional interface (`true`) or stop driving it (`false`); at most four. Refused for a unit that is not attached, and for a Wave XLR Pro whose capture node name another attached unit shares. Enabling creates no mixer channel; disabling deletes the unit's capture channels and their chains as `deleteChannel` does, unless `keepChannels` is true. Absent or false keeps deletion; any other type is refused. Channels are found by their saved `captureUnit`, even while unplugged, or by `captureHint` and `captureModelHint` for older entries without a unit. Shared model fragments alone never select another unit's channels. Kept channels retain their binding, sends and chains, and stay silent while the source is missing. Neither value changes the primary, and a unit enabled here is never driven as the primary in place of an absent one; only `setActiveDevice` makes it the primary. See [additional interface state](#additional-interface-state) |
 | `setWaveControl` | `device`, `control`, `value` | the `set` command for one unit by instance id: an additional interface, or the primary when `device` is the primary's id. Same control names, capabilities, gain lock and phantom settling as `set`; an error for a unit that is not driven |
 | `saveProfile` / `loadProfile` / `deleteProfile` | `name` | named scenes, scoped to the connected interface, or to `generic` while none is connected (see below); loading restores saved gain even while locked and leaves the lock enabled |
 | `setRecallOnConnect` | `name` | the profile recalled whenever the active device connects fresh (daemon start, replug, switch to it); empty clears it. With none chosen, a device whose capabilities say `retainsSettings: false` gets the last settings the daemon saw on it instead. Refused while no interface is connected |
@@ -640,10 +640,16 @@ Each channel in the mixer state carries:
   on the interface's capture pair; `{"kind":"source","source":"...","pair":0,"monoChannel":1}`
   is a hardware strip bound to a source, or a capture channel, which
   reports its `captureSource`, `capturePair` and `captureMonoChannel` here
-  as well (`monoChannel` is absent when it takes a pair). A strip bound to
-  a supported interface's node also carries `unit`, that unit's id as
-  `waveInterfaces` spells it; `source` stays the name it was bound to, also
-  while the strip plays from the unit's renamed node. `{"kind":"apps"}`
+  as well (`monoChannel` is absent when it takes a pair). A strip or capture
+  channel bound to a supported interface's node also carries `unit`, that
+  unit's id as `waveInterfaces` spells it. For a capture channel this comes
+  from `userChannels[].captureUnit`, filled on creation or the first sight
+  of its exact source on an attached unit. An older daemon leaves `unit`
+  absent on capture channels. `source` stays the saved name while the
+  channel plays from the unit's renamed node. The exact name wins; without
+  it, only one source on that card with the selected port qualifies. Several
+  sources on the card, or indistinguishable units sharing a bare model id,
+  leave the channel silent with `bindingWarning`. `{"kind":"apps"}`
   is an application channel. A bound hardware strip keeps `hardware` true
   and `captureSource` null, so a client that tells capture channels apart by
   `captureSource` does not mistake it for one.
@@ -667,13 +673,17 @@ Each channel in the mixer state carries:
   two XLR inputs. Otherwise the input goes to a strip bound to the unit's
   node at the input's port (the first for input 1, the third for input 2),
   then to the first capture channel, in layout order, on the unit's own
-  capture node at that port or on that input's pair; with none, no channel
-  carries it. The same rule names an additional interface's input, while
+  capture node at that port or on that input's pair. A capture channel also
+  matches by its saved `captureUnit`, so its controls survive a rename. With
+  no matching channel, no channel carries it. The same rule names an
+  additional interface's input, while
   the daemon drives that unit. A unit's input is on one channel at most, and
   a channel carries one input at most, the primary's first. The primary's
   controls stay in `state` and `capabilities` and are written with `set`; an
   additional unit's are in its `waveInterfaces` entry and are written with
-  `setWaveControl`.
+  `setWaveControl`. A client can also use `setWaveControl` for the primary
+  id: resolve `unitInput.unit`, send `{device, control, value}`, and append
+  `2` to the control for input 2.
 
 `present` follows one rule. A channel without a jack, and a strip bound to
 a source, is always present. A strip on the interface is present when the

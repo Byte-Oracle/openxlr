@@ -2844,8 +2844,25 @@ microphone feeds the XLR strips. Only the picker changes it: enabling or
 disabling an additional interface leaves the primary where it is. Options, INTERFACE, **Additional
 interfaces** drives up to four more units with their own gain, mute and
 phantom power, and adds each one's microphone as a capture channel; see
-[Multiple Wave interfaces](wave-interfaces.md). The software low cut,
-ClipGuard and microphone EQ stay on the XLR strips.
+[Multiple Wave interfaces](wave-interfaces.md). A capture input carrying an
+additional unit shows its gain and switches under its own name in classic
+INPUTS too, labelled with the unit's name. The primary unit keeps its
+"plays on" heading because those controls belong to the header's unit.
+The software low cut, ClipGuard and microphone EQ stay on the XLR strips.
+
+Capture inputs on supported Elgato units follow the unit when driving it,
+switching its card profile or replugging it renames the source. The channel
+keeps its sends and insert chain. If the card publishes several replacement
+sources, the channel stays silent with a warning rather than choosing one.
+Unplugging removes the unit's controls until it returns.
+
+Unticking an additional unit with capture inputs asks before disabling it.
+By default its channels and their chains are deleted. Tick **Keep capture
+inputs and their chains** to retain them. Their audio continues while the
+source is available, but their hardware controls leave the channel. A kept
+channel stays silent if releasing the unit removes its source. With an
+older daemon that does not report a unit on capture bindings, the
+confirmation offers deletion only.
 
 Capture channels host LV2, CLAP and VST3 inserts in the window and through
 the [HTTP API](http-api.md). In the classic window, INPUTS shows one block

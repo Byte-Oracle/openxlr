@@ -126,6 +126,8 @@ public sealed record ChannelDefinition(string Id, string Name)
 
     /// <summary>Explicit capture node name for a user input, independent of the active Wave interface.</summary>
     public string? CaptureSource { get; init; }
+    /// <summary>The supported unit whose card this source follows, or null for an exact node only.</summary>
+    public string? CaptureUnit { get; init; }
     public int CapturePair { get; init; }
     /// <summary>One zero-based port of the source, fed to both sides of the channel; null takes the pair.</summary>
     public int? CaptureMonoChannel { get; init; }

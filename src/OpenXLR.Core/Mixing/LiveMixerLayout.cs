@@ -50,14 +50,15 @@ public sealed partial class Mixer
     public void CreateApplicationChannel(string name, Func<MixerSettings, string?> persist, string? icon = null)
         => CreateUserChannel(name, null, 0, persist, icon: icon);
 
-    public void CreateCaptureChannel(string name, string source, int pair, Func<MixerSettings, string?> persist, int? monoChannel = null)
-        => CreateUserChannel(name, source, pair, persist, monoChannel);
+    public void CreateCaptureChannel(string name, string source, int pair, Func<MixerSettings, string?> persist, int? monoChannel = null, string? unit = null)
+        => CreateUserChannel(name, source, pair, persist, monoChannel, unit: unit);
 
     private void CreateUserChannel(string name, string? source, int pair, Func<MixerSettings, string?> persist,
-        int? monoChannel = null, string? icon = null)
+        int? monoChannel = null, string? icon = null, string? unit = null)
     {
         ArgumentNullException.ThrowIfNull(persist);
         if (!string.IsNullOrEmpty(icon) && !LayoutIcons.IsValidChoice(icon)) throw new InvalidOperationException("invalid icon");
+        if (!SourceBinding.IsUnitId(unit)) throw new InvalidOperationException("invalid capture unit");
         name = CleanName(name);
         lock (_gate)
         {
@@ -74,6 +75,7 @@ public sealed partial class Mixer
                 CaptureSource = source,
                 CapturePair = pair,
                 CaptureMonoChannel = monoChannel,
+                CaptureUnit = unit,
                 Levels = _config.Mixes.ToDictionary(m => m.Id, _ => 1.0),
                 MutedIn = _config.Mixes.Select(m => m.Id).ToHashSet(),
             };
