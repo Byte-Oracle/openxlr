@@ -2357,8 +2357,8 @@ label reads Input 1 or Input 2. A gain dial's meter shows the carrying
 channel, and stays empty while there is none. The targets keep their fixed
 names in the key's settings, such as XLR 1 mute, because they are the
 interface's first and second inputs, and they act on the primary interface
-only; an additional interface's controls are not deck targets. A strip bound to another microphone
-has no hardware mute. Use a send mute key for it in each mix you want it
+only. A strip bound to a source without unit controls has no hardware mute.
+Use a send mute key for it in each mix you want it
 out of, or press a dial set to it in all mixes, which mutes every send at
 once. With no interface connected the hardware keys and dials go grey, and
 a press only flashes an alert. A key's icon can be chosen in its settings, and a
@@ -2368,6 +2368,23 @@ channel or a mix with an icon or colour from the layout editor
 ([Appearance](#layout)) shows that icon and colour unless the key has its
 own icon chosen. An exclusive group key shows those of the member that is
 heard.
+
+The property inspector's **Microphone controls** group follows channels
+instead. A gain dial stores `chgain:<channel>`; mute, phantom power, low cut
+and ClipGuard keys store `chmute:<channel>`, `chphantom:<channel>`,
+`chlowcut:<channel>` and `chclipguard:<channel>`. They are labelled with the
+channel's current name and work on the primary or an additional driven
+interface. Each press or turn resolves the channel's current `unitInput`
+and writes that unit with `setWaveControl`, including input 2 where needed.
+The gain dial uses that unit's gain range, meters the channel in one lane
+and mutes its input on press. Renaming a channel or its unit's capture node
+keeps the target. A missing carrier, an unplugged unit or an unsupported
+control makes it unavailable. An older daemon without `unitInput` offers no
+channel hardware targets; the existing interface targets still work.
+
+Capture chains also appear in the insert key and dial choices, named by
+their channel. Saved insert targets keep the channel id through a rename.
+Sound Check is not offered on the Deck.
 
 **Dial** (an encoder) changes a level: the monitor output volume, a
 gain, a headphone volume, the aux level, the crossfade, a mix master, a

@@ -9,7 +9,7 @@ import { channelName, mixName, mixShortName, layoutChoices, controllableOutputs,
 import fs from "node:fs";
 import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
-import { deviceTargetSupported, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
+import { channelUnitControl, channelUnitTarget, deviceTargetSupported, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
 
 // ---------- launch arguments ----------
 const arg = (name) => {
@@ -384,6 +384,8 @@ const supported = (target) => deviceTargetSupported(daemonState?.capabilities, t
 // need the key's saved meta for id fallback, so they take the instance.
 function toggleValue(target, inst) {
   if (!target) return null;
+  const channel = channelUnitTarget(target);
+  if (channel) return channel.control === "gain" ? null : channelUnitControl(daemonState, channel.channel, channel.control)?.value ?? null;
   const output = outputKey(target);
   if (output) {
     if (!mixer()) return null;
@@ -552,7 +554,7 @@ function toggleLabel(target, inst) {
 }
 
 const isMuteLike = (t) =>
-  MUTE_LIKE.has(t) || t?.startsWith("mixmute:") || t?.startsWith("sendmute:") || t?.startsWith("outputmute:");
+  MUTE_LIKE.has(t) || t?.startsWith("chmute:") || t?.startsWith("mixmute:") || t?.startsWith("sendmute:") || t?.startsWith("outputmute:");
 
 // ---------- turning a dial ----------
 // One turn fires many rotate events inside a single daemon round trip. Stepping
@@ -602,6 +604,14 @@ function dialTurn(key, value, send) {
 // A dial target as {label, pct, maxPct, text, muted}, or null when unknown.
 function dialValue(target, inst) {
   if (!daemonState || !target) return null;
+  if (target.startsWith("chgain:")) {
+    const gain = channelUnitControl(daemonState, target.slice(7), "gain");
+    if (!gain) return null;
+    const db = dialNow(`unit:${gain.device}:${gain.control}`, gain.value);
+    const muted = channelUnitControl(daemonState, target.slice(7), "mute")?.value === true;
+    return { label: unitDialLabel(daemonState, target), pct: Math.round(db / gain.max * 100),
+             text: muted ? "MUTED" : `${db} dB`, muted };
+  }
   const pct = (v) => Math.round(v * 100);
   if (target.startsWith("insparam|")) {
     const [, ch, id, symbol] = target.split("|");
@@ -701,6 +711,12 @@ function onKeyDown(context, inst) {
   const t = inst.settings.target;
   const cur = toggleValue(t, inst);
   if (cur === null) { send({ event: "showAlert", context }); return; }
+  const channel = channelUnitTarget(t);
+  if (channel) {
+    const control = channelUnitControl(daemonState, channel.channel, channel.control);
+    if (control) cmd({ cmd: "setWaveControl", device: control.device, control: control.control, value: !cur });
+    return;
+  }
   const output = outputKey(t);
   if (output) {
     const payload = output.kind === "main" ? {cmd:"setMainOutput",device:output.device}
@@ -751,7 +767,17 @@ function onDialRotate(context, inst, ticks) {
   const level = (v, lo, hi) => Math.round(clamp(v + ticks * 0.01, lo, hi) * 100) / 100;
   const decibels = (v, size) => Math.round(clamp(v + ticks * size, -60, 0) * 10) / 10;
   let turned = true;
-  if (t.startsWith("insparam|")) {
+  if (t.startsWith("chgain:")) {
+    const channel = t.slice(7), gain = channelUnitControl(daemonState, channel, "gain");
+    if (!gain) { send({ event: "showAlert", context }); return; }
+    const key = `unit:${gain.device}:${gain.control}`;
+    const value = clamp(dialNow(key, gain.value) + ticks, 0, gain.max);
+    dialTurn(key, value, () => {
+      const current = channelUnitControl(daemonState, channel, "gain");
+      if (current?.device === gain.device && current.control === gain.control)
+        cmd({ cmd: "setWaveControl", device: gain.device, control: gain.control, value });
+    });
+  } else if (t.startsWith("insparam|")) {
     const [, ch, id, symbol] = t.split("|");
     const ins = resolveInsert(ch, id, metaOf(inst, t));
     const p = ins ? paramInfo(ins.plugin, symbol) : null;
@@ -820,7 +846,11 @@ function onDialPress(context, inst) {
   const t = activeTarget(inst);
   if (!t) return;
   if (DEVICE_DIALS.has(t) && !supported(t)) { send({ event: "showAlert", context }); return; }
-  if (t.startsWith("insparam|")) {
+  if (t.startsWith("chgain:")) {
+    const mute = channelUnitControl(daemonState, t.slice(7), "mute");
+    if (!mute) { send({ event: "showAlert", context }); return; }
+    cmd({ cmd: "setWaveControl", device: mute.device, control: mute.control, value: !mute.value });
+  } else if (t.startsWith("insparam|")) {
     // the press is the insert's bypass, like a dial's mute
     const [, ch, id] = t.split("|");
     const ins = resolveInsert(ch, id, metaOf(inst, t));
@@ -1043,7 +1073,7 @@ function dialIcon(t) {
   if (t?.startsWith("send:") || t?.startsWith("chvol:")) name = "fader";
   else if (t?.startsWith("mixvol:")) name = "speaker";
   else if (t === "outputVolume" || t?.startsWith("output:")) name = "speaker";
-  else if (t === "gain" || t === "gain2") name = "mic";
+  else if (t === "gain" || t === "gain2" || t?.startsWith("chgain:")) name = "mic";
   else if (t === "hp" || t === "hp2") name = "headphones";
   else if (t === "crossfade") name = "xfade";
   return "data:image/svg+xml;base64," + Buffer.from(
@@ -1071,7 +1101,7 @@ function meterKeyFor(t) {
   if (t.startsWith("send:") || t.startsWith("chvol:")) return `ch:${t.split(":")[1]}`;
   if (t.startsWith("mixvol:")) return `mix:${t.slice(7)}`;
   // A gain shows the channel it is heard on, wherever the layout put it.
-  if (t === "gain" || t === "gain2") return unitMeterKey(mixer(), t);
+  if (t === "gain" || t === "gain2" || t.startsWith("chgain:")) return unitMeterKey(mixer(), t);
   if (t === "auxLevel") return "ch:aux";
   if (t.startsWith("insparam|")) {
     const ch = t.split("|")[1];
@@ -1119,7 +1149,7 @@ function refreshMeters() {
     const key = meterKeyFor(target);
     // A gain whose input is not in the mixer has nothing to meter: its bar
     // empties rather than keeping the level of a channel it no longer feeds.
-    const silent = !key && (target === "gain" || target === "gain2");
+    const silent = !key && (target === "gain" || target === "gain2" || target?.startsWith("chgain:"));
     if (!silent && (!key || !(key in meterLevels))) continue;
     const lr = silent ? [0, 0] : meterLevels[key];
     const level = Math.max(lr[0] ?? 0, lr[1] ?? 0);
@@ -1207,7 +1237,7 @@ function refresh(context) {
            payload: { image: keySvg(v === true, isMuteLike(t), v !== null && daemonUp, glyphName, badge, label, offColor, appearance) } });
   } else if (inst.action === "com.emaspa.openxlr.dial") {
     const d = dialValue(t, inst);
-    const isDb = t === "gain" || t === "gain2";
+    const isDb = t === "gain" || t === "gain2" || t?.startsWith("chgain:");
     send({ event: "setFeedback", context, payload: d
       ? { title: marqueeTitle(context, d.pin ?? "", d.scroll ?? d.label),
           value: isDb && !d.muted ? d.text.replace(" dB", "") : d.text,

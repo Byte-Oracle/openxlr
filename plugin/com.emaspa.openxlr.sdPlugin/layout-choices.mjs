@@ -112,6 +112,17 @@ export function layoutChoices(mixer, devices = []) {
     label: "Channel volumes",
     items: volumes.map((channel) => option(`chvol:${channel.id}`, `${channel.name} volume`)),
   });
+  const microphones = channels.filter(channel => channel.unitInput);
+  if (microphones.length) {
+    toggleGroups.push({id:"layout-microphone-controls", label:"Microphone controls", items:microphones.flatMap(channel => [
+      option(`chmute:${channel.id}`, `${channel.name} mute`),
+      option(`chphantom:${channel.id}`, `${channel.name} phantom power`),
+      option(`chlowcut:${channel.id}`, `${channel.name} low cut`),
+      option(`chclipguard:${channel.id}`, `${channel.name} ClipGuard`),
+    ])});
+    levelGroups.push({id:"layout-microphone-gains", label:"Microphone controls", items:microphones.map(channel =>
+      option(`chgain:${channel.id}`, `${channel.name} gain`))});
+  }
   for (const mix of mixes) levelGroups.push({
     id: `layout-send-levels-${mix.id}`,
     label: `Sends: ${mix.name}`,
@@ -145,7 +156,7 @@ export function targetAppearance(mixer, target) {
   if (typeof target !== "string") return { icon: "", path: null, colour: null };
   let item;
   if (/^(mixmute|mixvol):/.test(target)) item = mixer?.mixes?.find(m => m.id === target.split(":")[1]);
-  else if (/^(sendmute|send|focus|chvol):/.test(target)) item = mixer?.channels?.find(c => c.id === target.split(":")[1]);
+  else if (/^(sendmute|send|focus|chvol|chgain|chmute|chphantom|chlowcut|chclipguard):/.test(target)) item = mixer?.channels?.find(c => c.id === target.split(":")[1]);
   else if (target.startsWith("group:")) {
     const open = openGroupMember(mixer, mixer?.exclusiveGroups?.find(g => g.id === target.slice(6)));
     item = open === null ? undefined : mixer?.channels?.find(c => c.id === open);

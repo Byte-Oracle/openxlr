@@ -19,6 +19,31 @@ const UNIT_CONTROLS = {
 };
 const UNIT_DIALS = { gain: 1, gain2: 2 };
 
+const CHANNEL_CONTROLS = { chgain: "gain", chmute: "mute", chphantom: "phantom", chlowcut: "lowCut", chclipguard: "clipGuard" };
+
+export function channelUnitTarget(target) {
+  if (typeof target !== "string") return null;
+  const [prefix, channel] = target.split(":");
+  return channel && Object.hasOwn(CHANNEL_CONTROLS, prefix) ? { channel, control: CHANNEL_CONTROLS[prefix] } : null;
+}
+
+// Resolve on each press or turn. A saved channel target follows its current
+// carrier, and becomes unavailable when that unit leaves or stops being driven.
+export function channelUnitControl(state, channel, control) {
+  if (!Object.values(CHANNEL_CONTROLS).includes(control)) return null;
+  const input = state?.mixer?.channels?.find(c => c.id === channel)?.unitInput;
+  if (!input?.unit || ![1, 2].includes(input.input)) return null;
+  const holder = input.primary === true ? state : state?.waveInterfaces?.find(unit =>
+    unit.id === input.unit && unit.active !== true && unit.enabled === true);
+  const name = control + (input.input === 2 ? "2" : "");
+  if (holder?.connected !== true || !deviceTargetSupported(holder.capabilities, name)) return null;
+  const value = holder.state?.[control === "gain" ? `${name}Db` : name];
+  if (control === "gain" ? !Number.isFinite(value) : typeof value !== "boolean") return null;
+  const max = holder.capabilities.gainMaxDb;
+  return { device: input.unit, control: name, value,
+    max: control === "gain" ? Number.isInteger(max) && max > 0 ? max : 80 : null };
+}
+
 // The input a unit control acts on, 1 or 2, or null for any other target.
 export function unitInputOf(target) {
   if (Object.hasOwn(UNIT_DIALS, target)) return UNIT_DIALS[target];
@@ -54,6 +79,11 @@ const keyLine = (name) => name.length <= 11 ? name : `${name.slice(0, 10)}…`;
 
 // A unit control's key face, as two lines, or null for any other target.
 export function unitKeyLabel(state, target) {
+  const channel = channelUnitTarget(target);
+  if (channel && channel.control !== "gain") {
+    const name = state?.mixer?.channels?.find(c => c.id === channel.channel)?.name ?? channel.channel;
+    return `${keyLine(name)}\n${UNIT_CONTROLS[channel.control][1]}`;
+  }
   if (!Object.hasOwn(UNIT_CONTROLS, target)) return null;
   const [input, word] = UNIT_CONTROLS[target];
   return `${keyLine(unitInputName(state, input))}\n${word}`;
@@ -61,12 +91,18 @@ export function unitKeyLabel(state, target) {
 
 // A gain dial's title, or null for any other target.
 export function unitDialLabel(state, target) {
+  const channel = channelUnitTarget(target);
+  if (channel?.control === "gain")
+    return `${state?.mixer?.channels?.find(c => c.id === channel.channel)?.name ?? channel.channel} gain`;
   return Object.hasOwn(UNIT_DIALS, target) ? `${unitInputName(state, UNIT_DIALS[target])} gain` : null;
 }
 
 // The meter a gain dial shows: the channel the gain is heard on, or null
 // when the input is not in the mixer.
 export function unitMeterKey(mixer, target) {
+  const channel = channelUnitTarget(target);
+  if (channel?.control === "gain")
+    return mixer?.channels?.some(c => c.id === channel.channel && c.unitInput) ? `ch:${channel.channel}` : null;
   const carrier = Object.hasOwn(UNIT_DIALS, target) ? unitCarrier(mixer, UNIT_DIALS[target]) : null;
   return carrier ? `ch:${carrier.id}` : null;
 }

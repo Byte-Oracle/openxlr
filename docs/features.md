@@ -623,6 +623,12 @@ dial on a channel or mix shows the icon and colour that channel or mix was
 given in the layout editor, unless the key has its own icon; a group key
 shows its heard member's.
 
+The property inspector's Microphone controls group offers channel gain,
+mute, phantom power, low cut and ClipGuard targets for primary and additional
+unit inputs. A target resolves the channel's current unit at each press or
+turn, keeps its id through a rename, and becomes unavailable when the unit
+or control is unavailable. Legacy interface targets remain unchanged.
+
 ![Keys](plugin-keys.png)
 
 Profiles: a key can recall one of the active device's saved profiles,
@@ -636,7 +642,8 @@ stepping along the control's own scale (log, integer, enumeration,
 toggle), with its name and value on the panel and the insert's bypass
 on the press. A key or dial follows its insert by id, and falls back to
 the same plugin in the same chain when a profile recall rebuilds the
-chain.
+chain. Capture insert keys and dials keep their channel id through a rename.
+Sound Check stays in the window.
 
 Install: download `com.emaspa.openxlr.sdPlugin.zip` from the
 [latest release](https://github.com/emaspa/openxlr/releases/latest) and
