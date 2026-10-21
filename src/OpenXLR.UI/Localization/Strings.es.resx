@@ -2494,7 +2494,7 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>Activo, funciona en este ordenador al principio de la entrada, antes del corte de graves, ClipGuard y los plugins.</value>
   </data>
   <data name="EqStatusDevice" xml:space="preserve">
-    <value>Activo, funciona en la interfaz.</value>
+    <value>Activo, funciona en la interfaz antes del USB, por delante de los plugins y de todo lo demás en este ordenador.</value>
   </data>
   <data name="EqHardwareBadge" xml:space="preserve">
     <value>Procesamiento en hardware</value>
@@ -2509,7 +2509,7 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>la interfaz</value>
   </data>
   <data name="EqStatusDeviceNamed" xml:space="preserve">
-    <value>Activo, funciona en el procesador propio de {0}.</value>
+    <value>Activo, funciona en el procesador propio de {0} antes del USB, por delante de los plugins y de todo lo demás en este ordenador.</value>
   </data>
   <data name="EqDeviceFirmwareOld" xml:space="preserve">
     <value>Funciona en software: el firmware de {0} es {1}, y la unidad ejecuta el EQ por sí misma a partir del firmware {2}. El actualizador de Elgato está en Wave Link para Windows o macOS.</value>

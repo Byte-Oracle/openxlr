@@ -2505,7 +2505,7 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>On, running on this computer at the head of the input, before the low cut, ClipGuard and the plugins.</value>
   </data>
   <data name="EqStatusDevice" xml:space="preserve">
-    <value>On, running on the interface.</value>
+    <value>On, running on the interface before USB, ahead of the plugins and everything else on this computer.</value>
   </data>
   <data name="EqHardwareBadge" xml:space="preserve">
     <value>Hardware processing</value>
@@ -2520,7 +2520,7 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>interface</value>
   </data>
   <data name="EqStatusDeviceNamed" xml:space="preserve">
-    <value>On, running on the {0}'s own processor.</value>
+    <value>On, running on the {0}'s own processor before USB, ahead of the plugins and everything else on this computer.</value>
   </data>
   <data name="EqDeviceFirmwareOld" xml:space="preserve">
     <value>Runs in software: this {0} has firmware {1}, and the unit runs the EQ itself from firmware {2}. Elgato's updater is in Wave Link on Windows or macOS.</value>
