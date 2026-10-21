@@ -419,4 +419,104 @@ public sealed class MonitorVolumeSyncTests
         Assert.True(sinks.Mixer.SyncDeviceVolumes());
         Assert.False(sinks.Mixer.MonitorMuted);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheFirstNativeKeyAfterSelectingAnOutputDoesNotWaitForTheFirstSweep(bool originalMute)
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(originalMute);
+        sinks.Dump(1, externalMuted: originalMute);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        Assert.Equal(["external"], sinks.Mixer.MonitorOutputs);
+
+        sinks.DirectMute(!originalMute);
+        sinks.Dump(1, externalMuted: !originalMute);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.Equal(originalMute, sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void SelectionRemembersAnAddressableSinkBeforeItsFirstRegistryObservation(bool originalMute, bool unavailableGraph)
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(originalMute);
+        sinks.Dump(1); // Native commands can reach a sink before its Props arrive.
+        if (unavailableGraph) sinks.GraphUnavailable(true);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        if (unavailableGraph) sinks.GraphUnavailable(false);
+        sinks.Mixer.SyncDeviceVolumes(); // Still no registry identity, so this is not a disconnect.
+
+        sinks.DirectMute(!originalMute);
+        sinks.Dump(1, externalMuted: !originalMute);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.Equal(originalMute, sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Fact]
+    public void ReselectingAnOutputEstablishesItsNewBaselineWithoutAnInterveningSweep()
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        sinks.Mixer.SyncDeviceVolumes();
+        sinks.Mixer.SetMonitorOutputs([]);
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Fact]
+    public void RelinkingTheSameSelectionKeepsAnUnconsumedNativeKey()
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+    }
+
+    [Fact]
+    public void AnUnavailableGraphDoesNotRejectSelectionOrPreventLaterMuteDiscovery()
+    {
+        using var sinks = new Sinks();
+        sinks.DirectMute(false);
+        sinks.Dump(1, externalMuted: false);
+        sinks.GraphUnavailable(true);
+        sinks.Mixer.SetMonitorOutputs(["external"]);
+        Assert.Equal(["external"], sinks.Mixer.MonitorOutputs);
+        sinks.GraphUnavailable(false);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        sinks.DirectMute(true);
+        sinks.Dump(1, externalMuted: true);
+        sinks.Mixer.SyncDeviceVolumes();
+
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+    }
 }

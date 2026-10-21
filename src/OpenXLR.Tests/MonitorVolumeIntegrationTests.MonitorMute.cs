@@ -80,16 +80,23 @@ public sealed partial class MonitorVolumeIntegrationTests
         using var registry = pw.WatchGraph();
         using var mixer = new Mixer(pw);
         mixer.Build(MonitorConfig());
-        pw.CreateNullSink("mute_first", "Monitor first");
-        pw.CreateNullSink("mute_closed", "Monitor already muted");
-        pw.SetSinkMuted("mute_first", firstWasMuted);
-        pw.SetSinkMuted("mute_closed", true);
-        mixer.SetMonitorOutputs(["mute_first", "mute_closed"]);
+        // Each case needs its own device state, including WirePlumber's saved properties.
+        string first = firstWasMuted ? "mute_first_closed" : "mute_first_open";
+        string closed = first + "_other";
+        pw.CreateNullSink(first, first);
+        pw.CreateNullSink(closed, closed);
         mixer.SetMixMuted("monitor2", true);
         mixer.SetLevel("test", "monitor", 1);
         mixer.SetLevel("test", "chat", 1);
-        pw.SetDefaultSink("mute_first");
+        SettleSends(mixer);
+        pw.SetDefaultSink(first);
+        pw.SetSinkMuted(first, firstWasMuted);
+        pw.SetSinkMuted(closed, true);
+        mixer.SetMonitorOutputs([first, closed]);
         mixer.SyncDeviceVolumes();
+        Assert.Equal(firstWasMuted, pw.GetSinkMuted(first));
+        Assert.True(pw.GetSinkMuted(closed));
+        Assert.False(mixer.MonitorMuted);
 
         foreach (bool paused in new[] { true, false, true, false })
         {
@@ -100,18 +107,44 @@ public sealed partial class MonitorVolumeIntegrationTests
                 mixer.SyncDeviceVolumes();
                 return mixer.MonitorMuted == paused;
             }, TimeSpan.FromSeconds(3)));
-            Assert.Equal(firstWasMuted, pw.GetSinkMuted("mute_first"));
-            Assert.True(pw.GetSinkMuted("mute_closed"));
+            Assert.Equal(firstWasMuted, pw.GetSinkMuted(first));
+            Assert.True(pw.GetSinkMuted(closed));
             Assert.True(mixer.Snapshot().Mixes.Single(m => m.Id == "monitor2").Muted);
             Assert.False(mixer.SyncOwnSinkLevels(out _));
             Assert.False(mixer.SyncDeviceVolumes());
             mixer.EnsureMonitorRoutes();
         }
         mixer.SetMonitorMuted(true);
-        CaptureLevel(0, "OpenXLR_ch_test", "mute_first");
+        CaptureLevel(0, "OpenXLR_ch_test", first);
+        SettleSends(mixer);
         CaptureLevel(0.1, "OpenXLR_ch_test", "OpenXLR_post_chat");
         mixer.SetMonitorMuted(false);
-        CaptureLevel(firstWasMuted ? 0 : 0.1, "OpenXLR_ch_test", "mute_first");
+        CaptureLevel(firstWasMuted ? 0 : 0.1, "OpenXLR_ch_test", first);
+    }
+
+    [MonitorPipeWireFact]
+    public void TheFirstPhysicalMuteKeyImmediatelyAfterSelectionPausesMonitoring()
+    {
+        var pw = new PipeWireAdapter();
+        using var registry = pw.WatchGraph();
+        using var mixer = new Mixer(pw);
+        mixer.Build(MonitorConfig());
+        pw.CreateNullSink("mute_immediate", "Immediate mute output");
+        mixer.SetLevel("test", "monitor", 1);
+        mixer.SetLevel("test", "chat", 1);
+        SettleSends(mixer);
+        pw.SetSinkMuted("mute_immediate", false);
+        mixer.SetMonitorOutputs(["mute_immediate"]);
+
+        pw.ToggleSinkMuted("mute_immediate");
+        Assert.True(SpinWait.SpinUntil(() =>
+        {
+            mixer.SyncDeviceVolumes();
+            return mixer.MonitorMuted;
+        }, TimeSpan.FromSeconds(3)));
+        Assert.False(pw.GetSinkMuted("mute_immediate"));
+        CaptureLevel(0, "OpenXLR_ch_test", "mute_immediate");
+        CaptureLevel(0.1, "OpenXLR_ch_test", "OpenXLR_post_chat");
     }
 
     [MonitorPipeWireFact]

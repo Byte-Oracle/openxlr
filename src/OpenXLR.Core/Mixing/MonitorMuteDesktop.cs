@@ -4,7 +4,7 @@ public sealed partial class Mixer
 {
     private bool _desktopMuteConsumed;
     private bool? _desktopMonitorIntent;
-    private readonly Dictionary<string, (string Identity, bool Muted)> _outputMutes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (string? Identity, bool Muted)> _outputMutes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (bool Muted, int Failures, long RetryAt)> _desktopMuteResets = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (int Failures, long RetryAt)> _desktopMuteRetries = new(StringComparer.Ordinal);
 
@@ -91,23 +91,53 @@ public sealed partial class Mixer
     private MixDefinition? MonitorMixForSinkLocked(string name)
         => _config.Mixes.FirstOrDefault(m => m.Kind == MixKind.Monitor && m.SinkName == name);
 
-    /// <summary>External output mute changes control OpenXLR listening, never its recording mixes.</summary>
-    private bool ReadOutputMonitorMuteLocked()
-    {
-        bool changed = ApplyDesktopMonitorIntentLocked();
-        var selected = _monitorOutputs.Select(StripMarker)
+    private HashSet<string> PhysicalMonitorOutputsLocked()
+        => _monitorOutputs.Select(StripMarker)
             .Where(n => !n.StartsWith("OpenXLR_", StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
+
+    private void ForgetUnselectedDesktopOutputsLocked(IReadOnlySet<string> selected)
+    {
         foreach (string removed in _outputMutes.Keys.Where(n => !selected.Contains(n)).ToArray())
         {
             _outputMutes.Remove(removed);
             _desktopMuteResets.Remove(removed);
             _desktopMuteRetries.Remove(removed);
         }
+    }
+
+    /// <summary>Remember new outputs before a key can arrive after selection returns.</summary>
+    private void CaptureMonitorMuteBaselinesLocked()
+    {
+        HashSet<string> selected = PhysicalMonitorOutputsLocked();
+        ForgetUnselectedDesktopOutputsLocked(selected);
+        if (selected.All(_outputMutes.ContainsKey)) return;
+        IReadOnlyDictionary<string, (string Identity, bool Muted)>? nodes = null;
+        try { nodes = _pw.ObservedSinkMutes(selected); }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException) { /* Native commands may already reach the selected sink. */ }
+        foreach (string name in selected)
+        {
+            if (_outputMutes.ContainsKey(name)) continue;
+            string? identity = nodes is not null && nodes.TryGetValue(name, out var node) ? node.Identity : null;
+            try { _outputMutes[name] = (identity, _pw.GetSinkMuted(name)); }
+            catch (InvalidOperationException) { /* An absent output is discovered by the next sweep. */ }
+        }
+    }
+
+    /// <summary>External output mute changes control OpenXLR listening, never its recording mixes.</summary>
+    private bool ReadOutputMonitorMuteLocked()
+    {
+        bool changed = ApplyDesktopMonitorIntentLocked();
+        HashSet<string> selected = PhysicalMonitorOutputsLocked();
+        ForgetUnselectedDesktopOutputsLocked(selected);
         var nodes = _pw.ObservedSinkMutes(selected);
         // Reconnection restores the original flag; it is not a native key.
-        foreach ((string name, (string identity, bool muted)) in _outputMutes.ToArray())
+        foreach ((string name, (string? identity, bool muted)) in _outputMutes.ToArray())
         {
-            if (!nodes.TryGetValue(name, out var node)) _desktopMuteResets.TryAdd(name, (muted, 0, 0));
+            if (!nodes.TryGetValue(name, out var node))
+            {
+                if (identity is not null) _desktopMuteResets.TryAdd(name, (muted, 0, 0));
+            }
+            else if (identity is null) _outputMutes[name] = (node.Identity, muted);
             else if (identity != node.Identity)
             {
                 _outputMutes[name] = (node.Identity, muted);

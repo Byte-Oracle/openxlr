@@ -2205,12 +2205,13 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         }
         _incompleteMonitorRoutes.Clear();
         RefreshHardwareMicCellsLocked(_hardwareMicChannel);
-        if (_monitorMuted) return;
-        foreach ((string key, string target) in MonitorRouteTargetsLocked())
-        {
-            PortLink? route = RouteFeedLocked(target);
-            _monitorRoutes[key] = route ?? new PortLink([]);
-        }
+        if (!_monitorMuted)
+            foreach ((string key, string target) in MonitorRouteTargetsLocked())
+            {
+                PortLink? route = RouteFeedLocked(target);
+                _monitorRoutes[key] = route ?? new PortLink([]);
+            }
+        CaptureMonitorMuteBaselinesLocked();
     }
 
     /// <summary>
