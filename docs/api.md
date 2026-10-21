@@ -99,7 +99,7 @@ failed reads and the unit has not answered yet, `state` holds the last values
 read from it and `warning` says the unit does not answer.
 
 The state message in full. At the top level: `daemonVersion`, `daemonBuildId`, `warning`,
-`connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 or Wave:1 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3, the Wave:1 and the MK.2 family), `capabilities` (`gain`,
+`connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave:3 or Wave:1 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3, the Wave:1, the MK.2 family and the Wave XLR Pro), `capabilities` (`gain`,
 `mute`, `lowCut`, `expander`, `voiceTune`, `hpVolume`, `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`, `compressor`, `outputRouting`,
 `auxInput`, `xlrInputs`, `xlrJacks` (false on the Wave:3 and Wave:1, whose one input is the microphone's own capsule rather than an XLR jack), `hpOutputs`, `physicalControls`, `retainsSettings`, `hardwareEq` (the unit's DSP runs the [microphone EQ](#microphone-eq) and the driver can write it: true on the Wave XLR MK.2 and the XLR Dock MK.2 from firmware 1.0.15 and on the Wave XLR Pro from firmware 1.0.14, false on every other model and on older firmware), `ducking` (the unit can run [ducking](#ducking) on its own processor: true on the Wave XLR Pro only),
@@ -180,7 +180,7 @@ that final acknowledgement (or an `error` without a request id):
 | `setMixLatencyCompensation` | `value` | boolean; delay the other mixes to line up with the mix whose inserts take longest (see [plugin latency](#plugin-latency)). Off by default. Either way every insert chain is rebuilt, which briefly interrupts audio |
 | `setLevel` | `channel`, `mix`, `value` | one send fader |
 | `setChannelVolume` | `channel`, `value` | a channel's own volume, 0 to 1 (values outside are clamped), which scales every send of the channel at once; see [channel volume](#channel-volume). Any channel takes one, `xlr1`, `xlr2` and `aux` included, where it comes after the interface's gain and leaves the gain alone; an unknown channel is refused |
-| `createCaptureChannel` | `name`, `source`, optional `capturePair`, `captureMonoChannel` | add an external PipeWire capture input, muted in every mix; exact source name of up to 256 characters, zero-based stereo pair 0 to 31 (default 0). `captureMonoChannel`, 0 to 63 and only with pair 0, takes that one port of the source and feeds it to both sides. A source named `OpenXLR...` or ending in `.monitor` is refused. See [capture inputs](mixer-layout.md#capture-inputs) |
+| `createCaptureChannel` | `name`, `source`, optional `capturePair`, `captureMonoChannel` | add an external PipeWire capture input, muted in every mix; exact source name of up to 256 characters, zero-based stereo pair 0 to 31 (default 0). `captureMonoChannel`, 0 to 63 and only with pair 0, takes that one port of the source and feeds it to both sides. A source named `OpenXLR...` or ending in `.monitor` is refused, and so is a source that is not present. Capture inputs count against the 32 application channels. See [capture inputs](mixer-layout.md#capture-inputs) |
 | `setCaptureSource` | `channel`, `source`, optional `capturePair`, `captureMonoChannel` | change an existing capture input's source in place. The source and port rules are those of `createCaptureChannel`, but an offline source is accepted. The channel keeps its id, name, send levels, volume, inserts, group and appearance. Its monitor sends are muted and its Sound Check session ends; other sends keep their mutes. A mono/stereo width change is refused while any insert remains, bypassed inserts included. Saves the binding and mutes before acknowledging; a failed save restores them and leaves Sound Check running. The selected source's supported unit is learned, or the old `captureUnit` is cleared when selecting another source; see [capture inputs](mixer-layout.md#capture-inputs). No new state fields. Older daemons reject this command |
 | `createChannel` | `name`, optional `icon` | add an application channel, muted in every mix, with `icon` saved in the same write (the values `setLayoutAppearance` takes; absent or empty is the default), without touching existing nodes; its generated stable id is in the next state. Undone with an error when its sends have not appeared within 3 s |
 | `renameChannel` | `channel`, `name` | rename an application or capture channel; an application channel's playback device is reloaded under the new name and the streams on it are put back (a short gap on that channel only), a capture channel's label changes without touching its route |
@@ -195,7 +195,7 @@ that final acknowledgement (or an `error` without a request id):
 | `setChannelMuted` | `channel`, `mix`, `value` | one send mute. Unmuting a send of a channel in an exclusive group first mutes every send of the group's other members, in every mix |
 | `cycleExclusiveGroup` | `group` | switch an exclusive group to its next member in member order. The next member is unmuted in every mix the current member was heard in, and the current member is muted everywhere. An error when no member is unmuted |
 | `setMixVolume` / `setMixMuted` | `mix`, `value` | mix masters; monitor volume range 0 to 1.5, other mixes 0 to 1; values outside the range are clamped |
-| `setMonitorOutputs` | `devices[]` | every sink the monitor mixes feed; a newly listed output is fed by the first monitor mix. A missing sink stays selected and saved, and is linked when it appears. A client that lists outputs for the user keeps the missing ones in the list it sends |
+| `setMonitorOutputs` | `devices[]` | every sink the monitor mixes feed, at most 16; a newly listed output is fed by the first monitor mix. A missing sink stays selected and saved, and is linked when it appears. A client that lists outputs for the user keeps the missing ones in the list it sends |
 | `setMonitorOutput` | `device` | a single monitor sink; `null` disconnects the route |
 | `setMonitorFeed` | `device`, `mix` | what feeds one selected output: any existing mix id, including `stream`, `chat`, `auxout` and user mixes of either kind, or distinct ids joined with `+` to sum them. The Pro's own jacks follow one feed together. The state's `monitorFeeds` lists exceptions from the first monitor mix in layout order. Unknown or repeated mix ids and unselected outputs are rejected. Deleting the last included mix returns that output to the first monitor mix; deliberately silent matrix outputs stay silent |
 | `setAuxPortEnabled` | `value` | send the Aux mix to the USB Aux port |
@@ -837,7 +837,11 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
   `userMixes`, `appearance`, see [mixer-layout.md](mixer-layout.md)), levels, mutes,
   device choices, the app registry, enforced defaults, `monitorMuted` (the
   monitoring pause, never part of a profile), the software low
-  cut, the insert chains, the microphone EQs (`eq`), the [ducking](#ducking) setup (`ducking`), and `inputBindings`, the hardware strips bound to
+  cut, the insert chains, the microphone EQs (`eq`) and where they run
+  (`eqProcessing`), the [ducking](#ducking) setup (`ducking`), the
+  per-channel volumes (`channelVolumes`), the exclusive groups
+  (`exclusiveGroups`), the monitor feeds (`monitorFeeds`),
+  `compensateMixLatency`, and `inputBindings`, the hardware strips bound to
   a source. The bindings are machine wiring and never part of a profile. A
   file written before `inputBindings` existed carries XLR 1's source as
   `primaryInput`; the daemon reads it as XLR 1's binding and the next save
@@ -878,6 +882,10 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
   (`compact`, `mini`, or absent for the full mixer), `compactChannel`
   and `compactMix`, and `showHiddenItems`, true while the submixer's Show
   hidden draws hidden channels and mixes faded)
+- `wave-interfaces.json`: the additional interfaces the user enabled, at
+  most four instance ids. Written by the daemon.
+- `desktop-keys.json`: the window's desktop key settings. Written by the
+  UI only.
 - `effect-chain-presets.json`: the window's saved effect presets, 0600.
   Written by the UI only; the daemon never reads it. Format in
   [effect-presets.md](effect-presets.md).
@@ -1257,7 +1265,7 @@ device}`:
   "device": {
     "unit": "0fd9:00b4@3f2a9c1d",
     "name": "Wave XLR Pro",
-    "firmware": null,
+    "firmware": "1.0.14",
     "ready": true,
     "reason": null,
     "note": null,
@@ -1292,8 +1300,8 @@ device}`:
 - `device`: null unless the primary driven unit has hardware ducking
   (`capabilities.ducking`). Otherwise `{unit, name, firmware, ready,
   reason, note, outputs, held, readback}`. `unit` is the instance id
-  `waveInterfaces` gives, `name` the model and `firmware` null, since the
-  Pro's is not read. `ready` is true while the unit can run this setup;
+  `waveInterfaces` gives, `name` the model and `firmware` the version the
+  unit reports, or null when it could not be read. `ready` is true while the unit can run this setup;
   when it is false, `reason` says why in a word and `note` in a sentence
   (see [where ducking runs](#where-ducking-runs)). A client shows `note`
   for a reason it does not know. `outputs` is what the unit would duck for
@@ -1317,7 +1325,9 @@ the unit the meters carry nothing for ducking.
 `channels`, `mixes`, `sensitivity`, `amount` and `speed`; a field left out
 keeps its value, an unknown one is refused. For example
 `{"cmd":"setDucking","value":{"enabled":true,"channels":["music","game"],"mixes":["monitor","stream"],"amount":"high"}}`.
-The errors name the field: `setDucking: key must be a microphone channel`,
+The errors name the field: `setDucking: value must be an object`,
+`setDucking: value needs at least one of enabled, key, channels, mixes,
+sensitivity, amount and speed`, `setDucking: key must be a microphone channel`,
 `setDucking: channels must be distinct channel ids other than the key`,
 `setDucking: mixes must be distinct mix ids`, `setDucking: sensitivity
 must be low, medium or high`, `setDucking: amount must be low, medium or
@@ -1327,8 +1337,9 @@ enabled must be a boolean`, `setDucking: unknown field '<name>'`.
 `setEqProcessing` does. The daemon saves the setup in `mixer.json` first
 and applies it only once the save succeeded; a failed save leaves the
 setup and both backends as they were. Both commands need the software
-mixer; in hardware-control mode they are refused, and the state shows the
-saved setup with nothing running.
+mixer; in hardware-control mode they are refused with `mixer not built
+(start the daemon with --mixer)`, and the state shows the saved setup with
+nothing running.
 
 `mixer.json` holds the setup as `ducking`, `{enabled, key, channels, mixes,
 sensitivity, amount, speed, processing}`. A file without it takes the
@@ -1342,7 +1353,9 @@ Layout edits prune the setup in the same save: a deleted channel leaves
 off and resets the key to `xlr1`. A new channel is not added. A profile
 carries `mixer.ducking` without `processing`. Recalling it replaces the
 setup, drops ids the layout lacks and turns ducking off when the key is
-missing; a profile without `ducking` leaves the setup alone.
+missing; a profile without `ducking` leaves the setup alone. A profile
+whose `ducking` holds a preset word the daemon does not know is refused
+whole, as any other invalid mixer field is.
 
 A key ducks only while it is heard: a key muted in every send it has does
 not duck. Sound Check's loop passes through the key channel, so a looped

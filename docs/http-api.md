@@ -62,7 +62,7 @@ message deadlines and command budgets remain the same on both socket paths.
 Commands use the names and fields in [the WebSocket API](api.md), including
 mix-to-output feed commands, which accept any existing mix or a sum of distinct
 mix ids. For example,
-`{"cmd":"setMonitorFeed","device":"alsa_output.headset","feed":"monitor+chat"}`
+`{"cmd":"setMonitorFeed","device":"alsa_output.headset","mix":"monitor+chat"}`
 makes an already selected headset hear Monitor A and Chat summed.
 `{"cmd":"setChannelVolume","channel":"game","value":0.5}` sets the Game
 channel's own volume, which scales every send of the channel at once, and
