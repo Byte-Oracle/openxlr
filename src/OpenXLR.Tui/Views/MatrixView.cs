@@ -76,7 +76,7 @@ internal sealed class MatrixView : View
             screen.Text(x + barWidth + 2, y + 1, Widgets.Percent(mix.Volume).PadLeft(4),
                 theme.TextDetail, back);
 
-            Widgets.MuteKey(screen, x + 1, y + 2, mix.Muted ? "MUTE" : " ON ", mix.Muted, theme, here);
+            Widgets.MuteKey(screen, x + 1, y + 2, mix.EffectiveMute(state.Mixer.MonitorMuted) ? "MUTE" : " ON ", mix.EffectiveMute(state.Mixer.MonitorMuted), theme, here);
             MeterReading level = app.Link.StereoMeter("mix", mix.Id);
             if (roomy)
             {
@@ -209,7 +209,7 @@ internal sealed class MatrixView : View
         switch (key.Char)
         {
             case ' ':
-                if (channel is null) app.Link.Send("setMixMuted", body => { body["mix"] = mix.Id; body["value"] = !mix.Muted; });
+                if (channel is null) app.Link.Send("setMixMuted", body => { body["mix"] = mix.Id; body["value"] = !mix.EffectiveMute(state.Mixer.MonitorMuted); });
                 else app.Link.Send("setChannelMuted", body =>
                 {
                     body["channel"] = channel.Id;

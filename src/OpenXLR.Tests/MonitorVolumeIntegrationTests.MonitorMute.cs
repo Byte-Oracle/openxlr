@@ -122,7 +122,7 @@ public sealed partial class MonitorVolumeIntegrationTests
                 mixer.SyncDeviceVolumes();
                 return mixer.MonitorMuted == paused;
             }, TimeSpan.FromSeconds(3)));
-            Assert.False(pw.GetSinkMuted(first));
+            Assert.Equal(paused, pw.GetSinkMuted(first));
             Assert.True(pw.GetSinkMuted(closed));
             Assert.True(mixer.Snapshot().Mixes.Single(m => m.Id == "monitor2").Muted);
             Assert.False(mixer.SyncOwnSinkLevels(out _));
@@ -186,6 +186,53 @@ public sealed partial class MonitorVolumeIntegrationTests
         }
     }
 
+    [MonitorPipeWireFact]
+    public void ExplicitlyOpeningOnePausedMonitorReplacesTheSelectionAndUnmutesOnlyItsHardwareFeeds()
+    {
+        var pw = new PipeWireAdapter();
+        using var registry = pw.WatchGraph();
+        using var mixer = new Mixer(pw);
+        mixer.Build(MonitorConfig());
+        foreach (string name in new[] { "mute_override_a", "mute_override_b", "mute_override_sum" })
+        {
+            pw.CreateNullSink(name, name);
+            pw.SetSinkMuted(name, false);
+        }
+        mixer.SetMonitorOutputs(["mute_override_a", "mute_override_b", "mute_override_sum"]);
+        Assert.Null(mixer.SetMonitorFeed("mute_override_b", "monitor2"));
+        Assert.Null(mixer.SetMonitorFeed("mute_override_sum", "monitor+monitor2"));
+        mixer.SetLevel("test", "monitor", 1);
+        mixer.SetLevel("test", "monitor2", 1);
+        mixer.SetLevel("test", "chat", 1);
+        mixer.SetMixMuted("monitor2", true);
+        SettleSends(mixer);
+        WaitForChatPost(mixer);
+        mixer.SetMonitorMuted(true);
+        Assert.True(pw.GetSinkMuted("mute_override_a"));
+        Assert.True(pw.GetSinkMuted("mute_override_b"));
+        Assert.True(pw.GetSinkMuted("mute_override_sum"));
+
+        mixer.SetMixMuted("monitor2", false);
+        SettleSends(mixer);
+        Assert.False(mixer.MonitorMuted);
+        Assert.Equal(["monitor"], mixer.ExportSettings().MixMuted);
+        Assert.True(pw.GetSinkMuted("mute_override_a"));
+        Assert.False(pw.GetSinkMuted("mute_override_b"));
+        Assert.False(pw.GetSinkMuted("mute_override_sum"));
+        CaptureLevel(0, "OpenXLR_ch_test", "mute_override_a");
+        CaptureLevel(0.1, "OpenXLR_ch_test", "mute_override_b");
+        CaptureLevel(0.1, "OpenXLR_ch_test", "mute_override_sum");
+        CaptureLevel(0.1, "OpenXLR_ch_test", "OpenXLR_post_chat");
+        mixer.ToggleMonitorMuted();
+        Assert.True(pw.GetSinkMuted("mute_override_b"));
+        mixer.ToggleMonitorMuted();
+        SettleSends(mixer);
+        Assert.True(pw.GetSinkMuted("mute_override_a"));
+        Assert.False(pw.GetSinkMuted("mute_override_b"));
+        CaptureLevel(0, "OpenXLR_ch_test", "mute_override_a");
+        CaptureLevel(0.1, "OpenXLR_ch_test", "mute_override_b");
+    }
+
     private static void WaitForChatPost(Mixer mixer)
     {
         Assert.True(SpinWait.SpinUntil(() =>
@@ -217,7 +264,7 @@ public sealed partial class MonitorVolumeIntegrationTests
             mixer.SyncDeviceVolumes();
             return mixer.MonitorMuted;
         }, TimeSpan.FromSeconds(3)));
-        Assert.False(pw.GetSinkMuted("mute_immediate"));
+        Assert.True(pw.GetSinkMuted("mute_immediate"));
         CaptureLevel(0, "OpenXLR_ch_test", "mute_immediate");
         CaptureLevel(0.1, "OpenXLR_ch_test", "OpenXLR_post_chat");
     }
@@ -249,15 +296,16 @@ public sealed partial class MonitorVolumeIntegrationTests
 
         foreach (bool paused in new[] { true, false })
         {
-            foreach (string sink in pw.OwnSinkLevels().Select(s => s.Name).Concat([first, closed]))
-                pw.SetSinkMuted(sink, true);
+            foreach (string sink in pw.OwnSinkLevels().Select(s => s.Name)) pw.SetSinkMuted(sink, true);
+            pw.ToggleSinkMuted(first);
+            pw.SetSinkMuted(closed, true);
             Assert.True(mixer.SyncOwnSinkLevels(out _));
             mixer.SyncDeviceVolumes();
             Assert.Equal(paused, mixer.MonitorMuted);
             Assert.Equal(["monitor2"], mixer.ExportSettings().MixMuted);
             Assert.True(pw.GetSinkMuted("OpenXLR_mix_monitor2"));
             Assert.False(pw.GetSinkMuted("OpenXLR_mix_monitor"));
-            Assert.False(pw.GetSinkMuted(first));
+            Assert.Equal(paused, pw.GetSinkMuted(first));
             Assert.True(pw.GetSinkMuted(closed));
             Assert.False(mixer.SyncOwnSinkLevels(out _));
             Assert.False(mixer.SyncDeviceVolumes());
@@ -299,10 +347,10 @@ public sealed partial class MonitorVolumeIntegrationTests
             foreach (string sink in pw.OwnSinkLevels().Select(s => s.Name).Concat(["mute_refused_application"]))
                 pw.SetSinkMuted(sink, true);
             Environment.SetEnvironmentVariable("PATH", directory + Path.PathSeparator + path);
-            Assert.False(mixer.SyncOwnSinkLevels(out var repaired));
+            Assert.True(mixer.SyncOwnSinkLevels(out var repaired));
             Assert.Contains("OpenXLR_ch_test", repaired);
             Assert.False(pw.GetSinkMuted("OpenXLR_ch_test"));
-            Assert.False(mixer.MonitorMuted);
+            Assert.True(mixer.MonitorMuted);
             mixer.SyncDeviceVolumes();
             Assert.True(mixer.MonitorMuted);
         }
@@ -394,7 +442,7 @@ public sealed partial class MonitorVolumeIntegrationTests
         Assert.False(mixer.MonitorMuted);
         Assert.Equal(["monitor2"], mixer.ExportSettings().MixMuted);
         Assert.True(pw.GetSinkMuted("OpenXLR_mix_monitor2"));
-        Assert.False(pw.GetSinkMuted("mute_restore_b"));
+        Assert.True(pw.GetSinkMuted("mute_restore_b"));
     }
 
     [MonitorPipeWireFact]
@@ -480,7 +528,7 @@ public sealed partial class MonitorVolumeIntegrationTests
                 {
                     mixer.SyncOwnSinkLevels(out _);
                     mixer.SyncDeviceVolumes();
-                    return mixer.MonitorMuted == expected && !pw.GetSinkMuted(sink);
+                    return mixer.MonitorMuted == expected && pw.GetSinkMuted(sink) == (sink == "OpenXLR_ch_test" ? false : expected);
                 }, TimeSpan.FromSeconds(3)), $"Lost a {count}-press burst on {sink}.");
                 Assert.True(mixer.Snapshot().Mixes.Single(m => m.Id == "monitor2").Muted);
             }
@@ -528,8 +576,8 @@ public sealed partial class MonitorVolumeIntegrationTests
         CaptureLevel(0, "mute_capture_signal", "OpenXLR_post_chat");
         CaptureLevel(0.1, "OpenXLR_ch_test", "OpenXLR_post_chat");
         Assert.True(ProcessRunner.Run("pactl", ["set-source-mute", "mute_capture_source", "0"]).Ok);
-        // Desktop-routed applications deliberately bypass OpenXLR's feeds.
-        CaptureLevel(0.1, "mute_multi_output", "mute_multi_output");
+        // A native device mute also covers applications bypassing our feeds.
+        CaptureLevel(0, "mute_multi_output", "mute_multi_output");
         mixer.ToggleMonitorMuted();
         mixer.ToggleMonitorMuted();
         Assert.True(mixer.MonitorMuted);

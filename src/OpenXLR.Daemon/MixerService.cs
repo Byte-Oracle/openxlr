@@ -174,8 +174,11 @@ public sealed class MixerService : IHostedService, IDisposable
         bool auxDesired = _mixer.AuxPortEnabled;
         bool monitorMuted = _mixer.MonitorMuted;
         _devices.EnsureOutputSelectors(
-            hp1: !monitorMuted && suffixes.Contains("hp1"), hp2: !monitorMuted && suffixes.Contains("hp2"),
-            usbAux: auxDesired, lineOut: !monitorMuted && suffixes.Contains("lineout"));
+            hp1: AudibleJack("hp1"), hp2: AudibleJack("hp2"),
+            usbAux: auxDesired, lineOut: AudibleJack("lineout"));
+
+        bool AudibleJack(string suffix) => _mixer.MonitorOutputs.Any(output =>
+            output.EndsWith("#" + suffix, StringComparison.Ordinal) && _mixer.IsMonitorOutputAudible(output));
 
         // The device latches aux-return routing at playback-stream start, so a
         // freshly enabled aux output needs the stream bounced once. The bounce

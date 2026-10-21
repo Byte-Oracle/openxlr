@@ -399,6 +399,23 @@ public sealed class TuiViewTests
         Assert.Contains("L R", desk[plate + 3], StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void AMonitorMasterKeyUsesTheEffectivePauseWithoutChangingTheRawMixMute(bool paused, bool expected)
+    {
+        (App app, List<string> sent) = Ready(tab: 1);
+        var state = System.Text.Json.Nodes.JsonNode.Parse(StateJson)!;
+        state["mixer"]!["monitorMuted"] = paused;
+        app.Link.Receive(state.ToJsonString());
+        app.Handle(new KeyPress(Key.Char, ' '));
+        JsonElement command = Command(sent);
+        Assert.Equal("setMixMuted", Text(command, "cmd"));
+        Assert.Equal("monitor", Text(command, "mix"));
+        Assert.Equal(expected, command.GetProperty("value").GetBoolean());
+        Assert.False(app.Link.State!.Mixer.Mixes[0].Muted);
+    }
+
     [Fact]
     public void AMutedSendIsUnmutedByTheSameKey()
     {

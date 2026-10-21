@@ -68,6 +68,9 @@ public sealed record MixerSettings
     /// <summary>Listening is paused without changing mix mutes. Never profile state.</summary>
     public bool MonitorMuted { get; init; }
 
+    /// <summary>Original native mute flags while OpenXLR holds selected outputs muted. Never profile state.</summary>
+    public Dictionary<string, bool> MonitorOutputMutes { get; init; } = [];
+
     /// <summary>Output name to the monitor mix feeding it; absent = the first monitor mix.</summary>
     public Dictionary<string, string> MonitorFeeds { get; init; } = [];
 

@@ -521,9 +521,14 @@ that was the default.
    output feeds keep their settings, so a mix or send that was already muted
    stays muted. The pause survives a daemon restart and profile recall leaves
    it unchanged. The terminal mixer's Outputs tab has **Mute monitoring** too.
-   This pauses OpenXLR's feeds. An application left to desktop routing bypasses
-   those feeds and remains audible; route it to an OpenXLR channel if it should
-   follow this pause.
+   Selected Linux output devices are muted too; resuming restores their previous
+   native mute flags. To start a new listening selection instead, unmute one
+   monitor mix while paused. Only that monitor opens, the other monitor mixes
+   stay individually muted, and its assigned Linux devices are unmuted. The next
+   master mute and resume keeps this new choice. A device fed by several mixes
+   stays open while any assigned mix is open. On the Pro, an active independent
+   Aux return keeps the shared Linux device open; the selected headphone and
+   line-output switches still follow the monitor feed.
 6. The HEADPHONES card holds the interface's own headphone volume,
    low-impedance mode, and on the Pro the Mic ↔ PC crossfade, which is
    the zero-latency direct monitor inside the device: left is only your
@@ -3202,12 +3207,12 @@ sink's mute at the audio server.
 
 If Linux's native mute key targets a selected physical output, or an internal
 application sink such as **OpenXLR System** while it is the default output,
-OpenXLR treats the press as a monitoring toggle. It restores physical outputs'
-previous mute flags and keeps application routing sinks open so recording and
-streaming continue. A mute on an internal application sink that is not the
+OpenXLR treats the press as a monitoring toggle. Selected physical devices
+mirror the pause and regain their previous native mute flags on resume.
+Application routing sinks stay open so recording and streaming continue. A mute on an internal application sink that is not the
 default output is undone without pausing monitoring. The mute
-icon in the Linux applet can return to its previous state while monitoring
-remains paused. The **Mute** button in OpenXLR's MONITOR header shows the
+icon on an application sink can return to its previous state while monitoring
+remains paused; physical output devices show the native pause. The **Mute** button in OpenXLR's MONITOR header shows the
 monitoring state; another mute press resumes monitoring. **OpenXLR Monitor A**
 and **OpenXLR Monitor B** keep their individual mix mute controls.
 Selecting an output preserves its existing native mute state; a mute key
@@ -3218,8 +3223,14 @@ native and registry identities to agree before accepting a reconnected
 output's mute flag. If restoring a mix's mute after a blanket desktop mute
 fails, OpenXLR retries on later sweeps and keeps the previous mute choice
 until the restoration is confirmed.
-Unmuting an already muted output in the desktop applet leaves it unmuted
-without changing the monitoring pause; the next mute press toggles the pause.
+Unmuting an output muted before selection leaves it unmuted without starting
+a monitoring pause. Unmuting a native mute authored by the global pause resumes
+monitoring. If every assigned mix was individually muted, desktop unmute only
+opens the native device: it leaves those deliberate mix mutes unchanged and
+does not start a pause. OpenXLR does not guess which of several assigned mixes
+you wanted to open. Explicitly unmuting that monitor in OpenXLR opens both the
+mix and its assigned device. A later explicit OpenXLR mute re-arms native mute
+control.
 
 Native mute flags are observed on the next mixer sweep. A desktop command
 that changes several flags in the same sweep is treated as one press;

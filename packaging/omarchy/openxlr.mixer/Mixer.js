@@ -12,6 +12,9 @@ function mono(channel) {
 }
 function sendMuted(channel, mix) { return (channel.mutedIn || []).indexOf(mix) >= 0; }
 function level(channel, mix) { return clamp((channel.levels || {})[mix], 1); }
+function masterMuted(mix, snapshot) {
+    return !!mix.muted || mix.kind === "monitor" && !!(snapshot && snapshot.mixer && snapshot.mixer.monitorMuted);
+}
 function ceiling(mix) { return mix.kind === "monitor" ? 1.5 : 1; }
 function rms(level) { return level <= 0 ? "<-60" : String(Math.round(level * 60 - 60)); }
 
@@ -217,9 +220,9 @@ function volumeCommand(entry, mix, master, value) {
     if (!master) result.channel = entry.id;
     return result;
 }
-function muteCommand(entry, mix, master) {
+function muteCommand(entry, mix, master, snapshot) {
     var result = { cmd: master ? "setMixMuted" : "setChannelMuted", mix: master ? entry.id : mix,
-        value: master ? !entry.muted : !sendMuted(entry, mix) };
+        value: master ? !masterMuted(entry, snapshot) : !sendMuted(entry, mix) };
     if (!master) result.channel = entry.id;
     return result;
 }

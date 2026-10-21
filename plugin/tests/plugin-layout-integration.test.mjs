@@ -369,9 +369,9 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     daemon.receive({type:"commandResult",requestId:pauseId});
     assert.equal(feedbackOf("monitor-dial").muteOverlay.enabled, true);
     assert.equal(feedbackOf("physical-monitor-dial").muteOverlay.enabled, true);
-    assert.equal(feedbackOf("mix-monitor-dial").muteOverlay.enabled, false, "the explicit mix sink keeps its own mute state");
+    assert.equal(feedbackOf("mix-monitor-dial").muteOverlay.enabled, true, "the explicit mix sink shows the effective monitor pause");
     assert.equal(keyFace("monitor-key"), "muted");
-    assert.equal(keyFace("mix-key"), "off");
+    assert.equal(keyFace("mix-key"), "muted");
     assert.equal(keyFace("desk-key"), "muted");
     assert.equal(keyFace("default-key"), "muted");
     const beforeMonitorResume = daemon.messages.length;
@@ -458,7 +458,13 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     assert.equal(keyFace("pro-key"), "muted");
     assert.equal(feedbackOf("physical-monitor-dial").muteOverlay.enabled, false);
     assert.equal(keyFace("monitor-key"), "off", "an unselected physical output keeps its native mute");
-    assert.equal(feedbackOf("mix-monitor-dial").muteOverlay.enabled, false);
+    assert.equal(feedbackOf("mix-monitor-dial").muteOverlay.enabled, true);
+    dialTarget("paused-mix-master", "mixvol:monitor");
+    host.receive({event:"dialDown",context:"paused-mix-master"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setMixMuted",mix:"monitor",value:false});
+    keyTarget("paused-mix-key", "mixmute:monitor");
+    host.receive({event:"keyDown",context:"paused-mix-key"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"setMixMuted",mix:"monitor",value:false});
     assert.equal(keyFace("desk-key"), "muted");
     state.mixer.monitorMuted = false;
     state.mixer.monitorOutputs.push("pro#hp2");

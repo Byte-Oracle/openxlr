@@ -10,7 +10,7 @@ public sealed partial class Mixer
     // Remember the latter's native parity, not a master state to restore later.
     private readonly HashSet<string> _desktopMuteOffsets = new(StringComparer.Ordinal);
     private readonly HashSet<string> _desktopMutePending = new(StringComparer.Ordinal);
-    private sealed record DesktopOutputMute(string? Identity, string? RegistryIdentity, bool Muted, bool UnmuteObserved = false);
+    private sealed record DesktopOutputMute(string? Identity, string? RegistryIdentity, bool Muted, bool UnmuteObserved = false, bool Released = false);
     private readonly Dictionary<string, DesktopOutputMute> _outputMutes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (bool Muted, int Failures, long RetryAt)> _desktopMuteResets = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (int Failures, long RetryAt)> _desktopMixMuteResets = new(StringComparer.Ordinal);
@@ -127,7 +127,7 @@ public sealed partial class Mixer
         }
         bool changed = CountDesktopMutePulseLocked(pulse);
         bool restoreMonitorMutes = pulse || applicationAction;
-        if (levels.Any(s => s.Muted && s.Name != defaultSink && applications.Contains(s.Name)))
+        if (restoreMonitorMutes || levels.Any(s => s.Muted && s.Name != defaultSink && applications.Contains(s.Name)))
         {
             // A desktop blanket action can target a physical default instead.
             // Read it before adopting monitor flags from that same action.
@@ -172,12 +172,13 @@ public sealed partial class Mixer
 
     private HashSet<string> PhysicalMonitorOutputsLocked()
         => _monitorOutputs.Select(StripMarker)
-            .Where(n => !n.StartsWith("OpenXLR_", StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
+            .Where(n => IsExactOutputName(n) && !n.StartsWith("OpenXLR_", StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
 
     private void ForgetUnselectedDesktopOutputsLocked(IReadOnlySet<string> selected)
     {
         foreach (string removed in _outputMutes.Keys.Where(n => !selected.Contains(n)).ToArray())
         {
+            RestoreUnselectedMonitorHardwareMuteLocked(removed);
             _outputMutes.Remove(removed);
             _desktopMuteResets.Remove(removed);
             _desktopMuteRetries.Remove(removed);
@@ -279,7 +280,7 @@ public sealed partial class Mixer
                         try
                         {
                             bool muted = _pw.GetSinkMuted(name);
-                            if (!muted && baseline.Muted && baseline.Identity is not null)
+                            if (!muted && baseline.Muted && baseline.Identity is not null && !(_monitorMuted && _monitorOutputMutes.ContainsKey(name)))
                                 _outputMutes[name] = baseline with { UnmuteObserved = true };
                             else if (muted != baseline.Muted) observedAction |= ObservePendingDesktopMuteLocked(name);
                         }
@@ -319,7 +320,8 @@ public sealed partial class Mixer
                     _desktopMutePending.Remove(name);
                 }
                 _outputMutes[name] = new(state.Identity, registryIdentity,
-                    known ? previous!.Muted && (replaced || !previous.UnmuteObserved) : state.Muted);
+                    known ? previous!.Muted && (replaced || !previous.UnmuteObserved) : state.Muted,
+                    Released: known && !replaced && (previous!.Released || previous.UnmuteObserved && !_monitorMuted && _monitorOutputMutes.ContainsKey(name)));
                 observed[name] = state.Muted;
                 continue;
             }
@@ -390,7 +392,14 @@ public sealed partial class Mixer
     private bool AcceptDesktopOutputUnmuteLocked(string name, bool muted)
     {
         if (muted || !_outputMutes[name].Muted || _desktopMuteResets.ContainsKey(name)) return false;
-        _outputMutes[name] = _outputMutes[name] with { Muted = false, UnmuteObserved = false };
+        if (_monitorOutputMutes.ContainsKey(name) && _monitorMuted)
+        {
+            // An unmute of a mute we authored is a resume key. Unlike an
+            // untouched preselection mute, it is not a new baseline alone.
+            _monitorOutputMutes[name] = false;
+            return false;
+        }
+        _outputMutes[name] = _outputMutes[name] with { Muted = false, UnmuteObserved = false, Released = _monitorOutputMutes.ContainsKey(name) };
         _desktopMuteRetries.Remove(name);
         _desktopMuteOffsets.Remove(name);
         _desktopMutePending.Remove(name);
@@ -404,6 +413,7 @@ public sealed partial class Mixer
         _desktopMuteOffsets.Clear();
         _desktopMutePending.Clear();
         _outputMutes.Clear();
+        _monitorOutputMutes.Clear();
         _desktopMuteResets.Clear();
         _desktopMixMuteResets.Clear();
         _desktopMuteRetries.Clear();

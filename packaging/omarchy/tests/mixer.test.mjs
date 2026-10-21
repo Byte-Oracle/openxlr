@@ -384,3 +384,16 @@ test('a strip on a driven additional unit carries that unit\'s mute', () => {
   assert.equal(mixer.muteTarget(snapshot, 'xlr2'), null);
   assert.equal(mixer.muteCommandFor(snapshot, 'xlr2', true), null);
 });
+
+
+test('monitor master controls show the pause and explicitly open just that monitor', () => {
+  const paused = {mixer:{monitorMuted:true}};
+  const monitor = {id:'monitor',kind:'monitor',muted:false};
+  const stream = {id:'stream',kind:'virtualMic',muted:false};
+  assert.equal(mixer.masterMuted(monitor, paused), true);
+  assert.deepEqual(plain(mixer.muteCommand(monitor, '', true, paused)), {cmd:'setMixMuted',mix:'monitor',value:false});
+  assert.equal(mixer.masterMuted(stream, paused), false);
+  assert.deepEqual(plain(mixer.muteCommand(stream, '', true, paused)), {cmd:'setMixMuted',mix:'stream',value:true});
+  assert.equal(monitor.muted, false);
+  assert.equal(mixer.masterMuted(monitor, {}), false);
+});

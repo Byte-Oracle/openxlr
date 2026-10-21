@@ -80,7 +80,7 @@ internal sealed class MixerView : View
             MixEntry mix = mixes[_mixScroll + i];
             string kind = mix.Kind == "monitor" ? "MON" : mix.Kind == "virtualMic" ? "MIC" : "AUX";
             DrawStrip(screen, Slot(masterBank, i, masterCount), app, mix.Appearance.Label(mix.Name), kind, mix.Volume, mix.Ceiling,
-                mix.Muted, app.Link.StereoMeter("mix", mix.Id), _row == 0 && _column == _mixScroll + i, true,
+                mix.EffectiveMute(state.Mixer.MonitorMuted), app.Link.StereoMeter("mix", mix.Id), _row == 0 && _column == _mixScroll + i, true,
                 last: i == masterCount - 1, accent: mix.Appearance.Accent);
         }
         if (channelCount == 0)
@@ -281,7 +281,7 @@ internal sealed class MixerView : View
             switch (key.Char)
             {
                 case ' ':
-                    if (channel is null) app.Link.Send("setMixMuted", body => { body["mix"] = mix.Id; body["value"] = !mix.Muted; });
+                    if (channel is null) app.Link.Send("setMixMuted", body => { body["mix"] = mix.Id; body["value"] = !mix.EffectiveMute(state.Mixer.MonitorMuted); });
                     else if (state.UnitMute(channel) is { } control)
                         Snapshot.Send(app.Link, control, !state.Flag(control));
                     else app.Link.Send("setChannelMuted", body =>

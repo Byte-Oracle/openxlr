@@ -1538,6 +1538,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 ChannelMuted = [.. _muted],
                 MonitorOutputs = [.. _monitorOutputs],
                 MonitorMuted = _monitorMuted,
+                MonitorOutputMutes = new Dictionary<string, bool>(_monitorOutputMutes),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
                 KnownApps = [.. _apps.Values.Select(a => new SavedApp(a.Identity, a.Label, a.ChannelId))],
@@ -1644,6 +1645,11 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 : s.MonitorOutput is not null ? [s.MonitorOutput] : [];
             _monitorFeeds.Clear();
             foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
+            _monitorOutputMutes.Clear();
+            HashSet<string> selectedHardware = savedOutputs.Select(StripMarker).ToHashSet(StringComparer.Ordinal);
+            foreach ((string output, bool muted) in s.MonitorOutputMutes ?? [])
+                if (selectedHardware.Contains(output) && IsExactOutputName(output) && !output.StartsWith("OpenXLR_", StringComparison.Ordinal))
+                    _monitorOutputMutes[output] = muted;
             SetMonitorOutputsLocked(savedOutputs);
             // Resume at the saved selection, not the output it replaced.
             SetMonitorMuted(s.MonitorMuted);
@@ -1858,7 +1864,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         catch (InvalidOperationException) { _outputVolumeDue.Failed(sink, volume); }
     }
 
-    private static string StripMarker(string name)
+    internal static string StripMarker(string name)
     {
         int marker = name.IndexOf('#');
         return marker >= 0 ? name[..marker] : name;
@@ -1947,6 +1953,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         lock (_gate)
         {
+            _readingDesktopMutes = true;
             try
             {
                 string? first = _monitorOutputs.FirstOrDefault();
@@ -1966,7 +1973,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 _outputVolume = outV;
                 return ReadOutputMonitorMuteLocked() || changed;
             }
-            finally { _desktopMuteConsumed = false; }
+            finally
+            {
+                _readingDesktopMutes = false;
+                _desktopMuteConsumed = false;
+                SyncMonitorHardwareMutesLocked();
+            }
         }
 
         static bool Differs(double? a, double? b)
@@ -2004,10 +2016,19 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             restored = [];
             if (!_built) return false;
-            IReadOnlyList<OwnSinkLevel> levels = _pw.OwnSinkLevels();
-            bool changed = ReadDesktopMonitorMuteLocked(ref levels);
-            restored = EnsureOwnSinkLevelsLocked(levels);
-            return SyncMonitorVolumesLocked(levels) || changed;
+            _readingDesktopMutes = true;
+            try
+            {
+                IReadOnlyList<OwnSinkLevel> levels = _pw.OwnSinkLevels();
+                bool changed = ReadDesktopMonitorMuteLocked(ref levels);
+                restored = EnsureOwnSinkLevelsLocked(levels);
+                return SyncMonitorVolumesLocked(levels) || changed;
+            }
+            finally
+            {
+                _readingDesktopMutes = false;
+                SyncMonitorHardwareMutesLocked();
+            }
         }
     }
 
@@ -2069,7 +2090,11 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (_desktopMixMuteResets.ContainsKey(sink.Name)) RestoreDesktopMixMuteLocked(sink.Name, mix.Id);
             else changed |= sink.Muted ? _mixMuted.Add(mix.Id) : _mixMuted.Remove(mix.Id);
         }
-        if (changed) PushDuckKeyOpenLocked();
+        if (changed)
+        {
+            SyncMonitorHardwareMutesLocked();
+            PushDuckKeyOpenLocked();
+        }
         return changed;
     }
 
@@ -2093,7 +2118,18 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             _monitorMuted = muted;
             if (!_built) return;
             if (muted) RemovePausedMonitorRoutesLocked();
-            else SetMonitorOutputsLocked([.. _monitorOutputs]);
+            else
+            {
+                try { SetMonitorOutputsLocked([.. _monitorOutputs]); }
+                catch
+                {
+                    _monitorMuted = true;
+                    RemovePausedMonitorRoutesLocked();
+                    SyncMonitorHardwareMutesLocked(explicitChange: true);
+                    throw;
+                }
+            }
+            SyncMonitorHardwareMutesLocked(explicitChange: true);
         }
     }
 
@@ -2269,6 +2305,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 _monitorRoutes[key] = route ?? new PortLink([]);
             }
         CaptureMonitorMuteBaselinesLocked();
+        SyncMonitorHardwareMutesLocked();
     }
 
     /// <summary>
@@ -2572,10 +2609,39 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             MixDefinition? monitor = MonitorMixLocked(mixId);
-            if (monitor is not null) _pw.SetSinkMuted(monitor.SinkName, muted);
-            if (muted) _mixMuted.Add(mixId); else _mixMuted.Remove(mixId);
-            if (monitor is null) ReapplyMixLocked(mixId);
-            else PushDuckKeyOpenLocked();
+            if (monitor is null)
+            {
+                if (muted) _mixMuted.Add(mixId); else _mixMuted.Remove(mixId);
+                ReapplyMixLocked(mixId);
+                SyncMonitorHardwareMutesLocked();
+                return;
+            }
+            bool replaceSelection = !muted && _monitorMuted;
+            var affected = replaceSelection ? _config.Mixes.Where(m => m.Kind == MixKind.Monitor).ToArray() : [monitor];
+            var before = affected.ToDictionary(m => m.Id, m => _mixMuted.Contains(m.Id));
+            try
+            {
+                // Commit intent only after every virtual monitor accepted it.
+                // A refused resume keeps its software routes closed.
+                foreach (MixDefinition mix in affected)
+                    _pw.SetSinkMuted(mix.SinkName, mix.Id == mixId ? muted : true);
+                foreach (MixDefinition mix in affected)
+                    if (mix.Id == mixId && !muted) _mixMuted.Remove(mix.Id); else _mixMuted.Add(mix.Id);
+                if (replaceSelection) SetMonitorMuted(false);
+            }
+            catch
+            {
+                foreach (MixDefinition mix in affected)
+                {
+                    if (before[mix.Id]) _mixMuted.Add(mix.Id); else _mixMuted.Remove(mix.Id);
+                    _desktopMixMuteResets[mix.SinkName] = (0, 0);
+                    RestoreDesktopMixMuteLocked(mix.SinkName, mix.Id);
+                }
+                throw;
+            }
+            foreach (MixDefinition mix in affected) _desktopMixMuteResets.Remove(mix.SinkName);
+            SyncMonitorHardwareMutesLocked(unmutedMix: muted ? null : mixId, explicitChange: true);
+            PushDuckKeyOpenLocked();
         }
     }
 

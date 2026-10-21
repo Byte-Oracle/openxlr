@@ -328,14 +328,15 @@ public sealed class MonitorVolumeSyncTests
         Assert.False(sinks.Mixer.SyncDeviceVolumes());
         sinks.Now = 3_000;
         Assert.True(sinks.Mixer.SyncDeviceVolumes());
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
         Assert.True(sinks.Mixer.MonitorMuted);
         Assert.False(sinks.Mixer.SyncDeviceVolumes());
 
-        sinks.DirectMute(true);
+        sinks.DirectMute(false);
+        sinks.Dump(0.6, externalMuted: false);
         Assert.True(sinks.Mixer.SyncDeviceVolumes());
         Assert.False(sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Fact]
@@ -438,7 +439,7 @@ public sealed class MonitorVolumeSyncTests
         sinks.DirectMute(!muted);
         Assert.Equal(!muted, sinks.Mixer.SyncDeviceVolumes());
         Assert.Equal(!muted, sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Theory]
@@ -518,7 +519,7 @@ public sealed class MonitorVolumeSyncTests
         sinks.Mixer.SyncDeviceVolumes();
 
         Assert.Equal(!originalMute, sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Theory]
@@ -534,16 +535,15 @@ public sealed class MonitorVolumeSyncTests
 
         sinks.DirectMute(false);
         sinks.Dump(1, externalMuted: false);
-        Assert.False(sinks.Mixer.SyncDeviceVolumes());
-        Assert.Equal(paused, sinks.Mixer.MonitorMuted);
+        Assert.Equal(paused, sinks.Mixer.SyncDeviceVolumes());
+        Assert.False(sinks.Mixer.MonitorMuted);
         Assert.False(sinks.Adapter.GetSinkMuted("external"));
-        Assert.DoesNotContain("set-sink-mute external toggle", sinks.Writes);
 
         sinks.DirectMute(true);
         sinks.Dump(1, externalMuted: true);
         Assert.True(sinks.Mixer.SyncDeviceVolumes());
-        Assert.Equal(!paused, sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.True(sinks.Mixer.MonitorMuted);
+        Assert.True(sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Theory]
@@ -566,7 +566,7 @@ public sealed class MonitorVolumeSyncTests
         sinks.Mixer.SyncDeviceVolumes();
 
         Assert.Equal(!originalMute, sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Fact]
@@ -587,7 +587,7 @@ public sealed class MonitorVolumeSyncTests
         sinks.Mixer.SyncDeviceVolumes();
 
         Assert.False(sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Fact]
@@ -604,7 +604,7 @@ public sealed class MonitorVolumeSyncTests
         sinks.Mixer.SyncDeviceVolumes();
 
         Assert.True(sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Fact]
@@ -624,7 +624,7 @@ public sealed class MonitorVolumeSyncTests
         sinks.Mixer.SyncDeviceVolumes();
 
         Assert.True(sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Theory]
@@ -643,7 +643,7 @@ public sealed class MonitorVolumeSyncTests
         sinks.Mixer.SyncDeviceVolumes();
 
         Assert.True(sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Fact]
@@ -662,7 +662,7 @@ public sealed class MonitorVolumeSyncTests
         sinks.Dump(1, externalMuted: true, externalSerial: 2);
         Assert.True(sinks.Mixer.SyncDeviceVolumes());
         Assert.True(sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Theory]
@@ -699,7 +699,7 @@ public sealed class MonitorVolumeSyncTests
 
         Assert.True(sinks.Mixer.SyncDeviceVolumes());
         Assert.True(sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Fact]
@@ -717,7 +717,7 @@ public sealed class MonitorVolumeSyncTests
 
         Assert.True(sinks.Mixer.SyncDeviceVolumes());
         Assert.True(sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 
     [Fact]
@@ -765,6 +765,6 @@ public sealed class MonitorVolumeSyncTests
 
         Assert.True(sinks.Mixer.SyncDeviceVolumes());
         Assert.True(sinks.Mixer.MonitorMuted);
-        Assert.False(sinks.Adapter.GetSinkMuted("external"));
+        Assert.Equal(sinks.Mixer.MonitorMuted, sinks.Adapter.GetSinkMuted("external"));
     }
 }
