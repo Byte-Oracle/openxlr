@@ -38,7 +38,7 @@
                           ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}"
                                  AutomationProperties.Name="{Binding LeftLevelName}"/>
-                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}"
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" Classes.monoSpare="{Binding Channel.MonoMeter}"
                                  AutomationProperties.Name="{Binding RightLevelName}"/>
               </StackPanel>
               <Panel layout:StripPanel.Part="fader">
@@ -81,7 +81,7 @@
                           VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
                 <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterL}"
                                  AutomationProperties.Name="{Binding LeftLevelName}"/>
-                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}"
+                <skin:LevelMeter Orientation="{Binding Spec.MeterOrientation}" Level="{Binding Channel.MeterR}" Classes.monoSpare="{Binding Channel.MonoMeter}"
                                  AutomationProperties.Name="{Binding RightLevelName}"/>
               </StackPanel>
               <Panel layout:StripPanel.Part="fader" VerticalAlignment="Center">

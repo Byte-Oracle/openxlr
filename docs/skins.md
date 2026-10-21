@@ -1263,11 +1263,11 @@ An input row's parts, in their default order, are `identity`, `binding`,
 | Part | What it is |
 |---|---|
 | `identity` | the channel's icon and name. It cannot be hidden |
-| `binding` | XLR 1's or XLR 2's input binding: a chip naming the interface's jack or the capture source that feeds the strip, with a light that is on while the feed is linked and, under it, why the strip is silent. Clicking it opens the binding dialog |
-| `meter` | the channel's own level meter, left and right |
+| `binding` | XLR 1's or XLR 2's input binding: a chip naming the interface's jack or the capture source that feeds the strip, with a light that is on while the feed is linked and, under it, why the strip is silent. Clicking an XLR chip opens the binding dialog. A capture input has a read-only source chip with the same light and warning |
+| `meter` | the channel's own level meter, left and right. A capture input on one microphone port draws one bar and leaves the second bar's room empty |
 | `gain` | the input's hardware gain or Aux In's level, with the channel's own volume under it; on an application or capture channel, its own volume |
 | `hardware-controls` | the input's switches, or Aux In's level lock |
-| `effects` | the input's processing in software: the microphone's **EQ** button, which opens its EQ editor, then its plugin chain's button and the chain at a glance |
+| `effects` | the input's processing in software: the microphone's **EQ** button, which opens its EQ editor, then its plugin chain's button and the chain at a glance. A capture input has the chain without EQ, only when the daemon reports `chainWidth` |
 | `fader` | the send's level into the bank's mix |
 | `value` | that level as a number |
 | `mute` | the send's mute in the bank's mix |
@@ -1291,7 +1291,13 @@ interface's gain and its `hardware-controls` part that interface's
 switches, as a capture channel on that interface's node does. A matrix row
 head draws such an interface's gain and mute in its `gain` and `mute`
 parts. Hiding a part hides the additional interface's control with it.
-Only XLR 1 and XLR 2 have a `binding` part.
+Capture inputs also have `binding` and `effects`. When an input rack's
+`strip.partsOrder` is explicit, these two parts appear on capture inputs
+only if that list names them, and a strip without `binding` keeps its
+connection line under the name. The listed order stays as written, and a
+part named in `hidden` stays hidden. Without an explicit order, both parts
+take their default places. Against an older daemon that does not report
+`chainWidth`, a capture input has no `effects`.
 
 `master` takes `template`, `label`, `meter` and `fader`. Its template is
 `"master-card"`, the mix tile the channel tiles have always shown, under
@@ -1503,16 +1509,23 @@ cell's are `mute`, `fader` and `value`.
 | Matrix part | Where | What it is |
 |---|---|---|
 | `identity` | row head, column head | the channel's or the mix's icon and name. It cannot be hidden. In a row head it is the name column, on the left unless `parts` puts it last |
-| `binding` | row head | XLR 1's or XLR 2's input binding as a line under the name in the name column, wherever `parts` puts it: a light that is on while the feed is linked and the interface's jack or the source's name. The name and this line are one target that opens the binding dialog, and its tooltip says why the strip is silent |
+| `binding` | row head | XLR 1's or XLR 2's input binding as a line under the name in the name column, wherever `parts` puts it: a light that is on while the feed is linked and the interface's jack or the source's name. The name and this line are one target that opens the binding dialog, and its tooltip says why the strip is silent. A capture input draws the same line for its source. It opens nothing, and its tooltip says why the input is silent |
 | `meter` | row head | the channel's meter as a part of its own. Under the faders it is the gain's track instead, so a channel with gain draws it there |
 | `gain` | row head | the input's hardware gain, or Aux In's level and level lock, with the channel's own volume as a second fader under it; a channel without a gain shows its volume alone. A capture channel carrying the interface's microphone shows the interface's gain over its volume |
 | `mute` | row head, column head, cell | the input's hardware mute, the mix's mute, or the send's mute in the column's mix. A capture channel carrying the interface's microphone has the interface's mute |
 | `processing` | row head | the **Mic** button that opens the input's switches in a flyout. It is lettered in `Ox.Led.On` while a switch is on, and its lamp lights while phantom power is on. It stands at the end of the name column, wherever `parts` puts it, so the source controls keep their room. A row whose input has no switch, and a channel that carries no interface's input, does not draw it. A skin that lists every other part and not this one still gets it |
-| `effects` | row head, column head | the button that opens the input's or the mix's plugin chain. On XLR 1 and XLR 2 the **EQ** button, which opens the microphone's EQ editor, stands over it in the same part, as the signal meets them, so the row grows to hold both and the source controls keep their width |
+| `effects` | row head, column head | the button that opens the input's or the mix's plugin chain, including a capture input whose daemon reports `chainWidth`. On XLR 1 and XLR 2 the **EQ** button, which opens the microphone's EQ editor, stands over it in the same part, as the signal meets them, so the row grows to hold both and the source controls keep their width |
 | `master` | column head | the mix's master level as a short fader |
 | `outputs` | column head | the outputs line |
 | `fader` | cell | the send's level as a short fader. It cannot be hidden |
 | `value` | cell | that level as a number |
+
+For capture row heads, an explicit `rowHead.parts` list shows `binding`
+and `effects` only when it names them, and a row without `binding` keeps
+its connection line under the name. With no list, both use their default
+places. The source line is read-only, and capture inputs have no EQ button.
+A capture input on one microphone port draws one meter bar, including under
+the source and send faders; a stereo capture input draws two.
 
 A column head's `identity` and `outputs` are its lines, in their order; its
 `master`, `mute` and `effects` share one row of controls, in their order,

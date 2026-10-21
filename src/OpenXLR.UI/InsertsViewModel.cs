@@ -9,7 +9,7 @@ using Avalonia.Threading;
 
 namespace OpenXLR.UI;
 
-/// <summary>A plugin the picker offers (one that can run mono, for the mic path).</summary>
+/// <summary>A plugin the picker offers at this chain's width.</summary>
 public sealed record PluginChoice(string Uri, string Name, string Category, JsonNode Params,
     bool NativeEditorAvailable = false, bool NativeEditorSupported = false, string Kind = "lv2", bool NativeUiBlocked = false)
 {
@@ -34,8 +34,8 @@ public sealed partial class InsertsViewModel : ViewModelBase
     private int _catalogGeneration;
     internal bool IsDetached { get; private set; }
 
-    /// <param name="channel">Insert key: "xlr1", "xlr2", or "mix:&lt;id&gt;".</param>
-    /// <param name="channels">1 for the mono mic path, 2 for a stereo mix.</param>
+    /// <param name="channel">Insert key: "xlr1", "xlr2", a capture id or "mix:&lt;id&gt;".</param>
+    /// <param name="channels">1 for a mono input, 2 for a stereo input or mix.</param>
     public InsertsViewModel(DaemonClient client, string channel, int channels = 1, string? title = null)
     {
         _client = client;
@@ -57,14 +57,15 @@ public sealed partial class InsertsViewModel : ViewModelBase
         => insert.IsDetached ? Task.CompletedTask : _client.ShowInsertUiAsync(_channel, insert.Id);
 
     /// <summary>Chain window subtitle: where these plugins sit in the path.</summary>
-    public string ChainHint => _channels == 1
-        ? Localizer.Text("InputChainHint")
-        : Localizer.Text("MixChainHint");
+    public string ChainHint => _channel.StartsWith("mix:", StringComparison.Ordinal)
+        ? Localizer.Text("MixChainHint")
+        : Localizer.Text("InputChainHint");
 
     /// <summary>Picker header: which plugins fit this chain.</summary>
     public string PickerHint => _channels == 1
         ? Localizer.Text("MonoPickerHint")
-        : Localizer.Text("StereoPickerHint");
+        : _channel.StartsWith("mix:", StringComparison.Ordinal) ? Localizer.Text("StereoPickerHint")
+        : Localizer.Text("StereoInputPickerHint");
 
     public ObservableCollection<InsertViewModel> Items { get; } = [];
     public ObservableCollection<PluginChoice> PluginChoices { get; } = [];
@@ -109,7 +110,7 @@ public sealed partial class InsertsViewModel : ViewModelBase
     public string? Note { get => _note; private set => Set(ref _note, value); }
 
     // One catalog fetch per daemon connection, shared by every chain (the
-    // XLR strips and all the mixes), so the controls windows can build their
+    // XLR strips, capture inputs and mixes), so the controls windows can build their
     // sliders from restored state without anyone opening a picker first.
     private static Task<JsonNode?>? _catalogTask;
 

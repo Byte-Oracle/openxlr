@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenXLR.UI"
+             xmlns:skin="using:OpenXLR.UI.Skinning"
+             xmlns:loc="using:OpenXLR.UI.Localization"
+             x:Class="OpenXLR.UI.Views.CaptureInsertsView"
+             x:DataType="vm:ChannelViewModel">
+  <!-- A capture input's plugin chain, drawn as XLR 1's: in the INPUTS panel an Inserts
+       row with the button at its end, in a rack strip the button on its own; then the
+       chain at a glance. Adding, ordering and removing live in the chain window. -->
+  <StackPanel Spacing="4" IsVisible="{Binding HasInserts}">
+    <Grid Name="InsertsRow" ColumnDefinitions="90,*,Auto">
+      <TextBlock Name="InsertsLabel" Text="{loc:Text Key=Inserts}" Classes="h" VerticalAlignment="Center"
+                 ToolTip.Tip="{loc:Text Key=InputChainHint}"/>
+      <Button Name="CaptureInserts" Grid.Column="2" Content="{Binding Inserts.ButtonText}" Classes="fx"
+              Classes.fxOn="{Binding Inserts.IsProcessing, FallbackValue=False}"
+              Classes.fxOff="{Binding Inserts.IsOff, FallbackValue=False}"
+              Padding="12,3" FontSize="12"
+              MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" Click="OnInserts"
+              AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=InsertsTitle}}"
+              ToolTip.Tip="{loc:Text Key=InputChainHint}"/>
+    </Grid>
+    <ItemsControl ItemsSource="{Binding Inserts.Items}" IsVisible="{Binding Inserts.HasItems, FallbackValue=False}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:InsertViewModel">
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,0,0,3">
+            <skin:StatusLed IsOn="{Binding IsActive}" Kind="Insert" Margin="0,0,8,0"
+                            AutomationProperties.Name="{loc:Text Key=PluginState}"/>
+            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+                  ColumnSpacing="8" VerticalAlignment="Center" ClipToBounds="True">
+              <TextBlock Text="{Binding Label}" Classes="insertName body" FontSize="12"
+                         TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}"/>
+              <TextBlock Grid.Column="1" Text="{Binding StateText}" Classes="h" FontSize="11"/>
+              <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="warn"
+                         FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
+            </Grid>
+            <ToggleButton Grid.Column="2" Content="{loc:Text Key=NativeHostLetter}" Classes="insertmini"
+                          IsChecked="{Binding NativeHost, Mode=TwoWay}" IsVisible="{Binding CanChooseNativeHost}"
+                          IsEnabled="{Binding CanTurnNativeHostOn}" Margin="4,0,0,0"
+                          AutomationProperties.Name="{loc:Text Key=RunThisPluginInItsOwnProcess}"
+                          ToolTip.Tip="{loc:Text Key=RunThisPluginInItsOwnProcessWhich}"/>
+            <ToggleButton Grid.Column="3" Content="{loc:Text Key=BypassLetter}" Classes="insertmini bypass"
+                          IsChecked="{Binding Bypass, Mode=TwoWay}" Margin="4,0,2,0"
+                          AutomationProperties.Name="{loc:Text Key=BypassThisPlugin}" ToolTip.Tip="{loc:Text Key=Bypass}"/>
+            <Button Grid.Column="4" Content="⚙" Classes="insertmini" Click="OnControls"
+                    AutomationProperties.Name="{loc:Text Key=OpenThisPluginSControls}" ToolTip.Tip="{Binding ControlsHint}"/>
+          </Grid>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

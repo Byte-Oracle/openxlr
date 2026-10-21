@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenXLR.UI"
+             xmlns:skin="using:OpenXLR.UI.Skinning"
+             x:Class="OpenXLR.UI.Views.CaptureSourceChip"
+             x:DataType="vm:ChannelViewModel">
+
+  <!-- A capture input's source, with the LED lit while the source is linked.
+       Its face is XLR 1's binding chip, a button in the badge colour, so it
+       wears whatever button the skin chooses. It changes nothing, so the face
+       takes no pointer and no focus; the transparent frame around it carries
+       the tooltip and the name a screen reader reads. -->
+  <UserControl.Styles>
+    <Style Selector="Button.captureChip">
+      <Setter Property="Background" Value="{DynamicResource Ox.Badge.Background}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="6,1"/>
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="MinHeight" Value="{DynamicResource Ox.Mixer.SmallControlMinSize}"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Border Name="Frame" Background="Transparent"
+          AutomationProperties.Name="{Binding CaptureChipName}" ToolTip.Tip="{Binding BindingTip}">
+    <Button Name="Chip" Classes="captureChip" IsHitTestVisible="False" Focusable="False"
+            AutomationProperties.AccessibilityView="Raw">
+      <!-- a grid, not a horizontal stack: the source's name gets what the LED leaves and trims -->
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+        <skin:StatusLed IsOn="{Binding CaptureConnected}" VerticalAlignment="Center"
+                        AutomationProperties.AccessibilityView="Raw"/>
+        <!-- the size XLR 1's chip letters its source in -->
+        <TextBlock Name="ChipText" Grid.Column="1" Text="{Binding BindingLabel}" Classes="body" FontSize="11"
+                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+      </Grid>
+    </Button>
+  </Border>
+</UserControl>

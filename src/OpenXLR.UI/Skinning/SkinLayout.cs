@@ -287,13 +287,16 @@ public enum SkinMatrixMeter
 /// </summary>
 public sealed record SkinMatrixPartOptions(IReadOnlyList<string> Order, IReadOnlyList<string> Hidden, SkinLabelStyle Label)
 {
+    /// <summary>The order as written, before omitted parts get their defaults; null when no order was given.</summary>
+    public IReadOnlyList<string>? ExplicitOrder { get; init; }
+
     /// <summary>The parts drawn, in the order they are drawn.</summary>
     public IReadOnlyList<string> Shown => [.. Order.Where(p => !Hidden.Contains(p, StringComparer.Ordinal))];
 
     /// <summary>True when this part is drawn.</summary>
     public bool Shows(string part) => Order.Contains(part, StringComparer.Ordinal) && !Hidden.Contains(part, StringComparer.Ordinal);
 
-    internal string Description() => $"[{string.Join(',', Shown)}]{Label}";
+    internal string Description() => $"[{string.Join(',', Shown)}]{Label}:{(ExplicitOrder is null ? "*" : string.Join(',', ExplicitOrder))}";
 }
 
 /// <summary>
@@ -383,6 +386,9 @@ public sealed record SkinStripOptions(
     SkinMeterOptions Meter,
     SkinFaderOptions Fader)
 {
+    /// <summary>The order as written, before omitted parts get their defaults; null when no order was given.</summary>
+    public IReadOnlyList<string>? ExplicitOrder { get; init; }
+
     /// <summary>An input row with every part in its default order.</summary>
     public static SkinStripOptions InputRowDefault { get; } = new(SkinLayoutTemplates.InputRow, SkinStripParts.InputRow, [],
         SkinLabelStyle.Text, SkinMeterOptions.Default, SkinFaderOptions.Default);
@@ -396,7 +402,7 @@ public sealed record SkinStripOptions(
     public IReadOnlyList<string> Shown => [.. Order.Where(p => !Hidden.Contains(p, StringComparer.Ordinal))];
 
     internal string Description() =>
-        $"{Template}[{string.Join(',', Shown)}]{Label}:{Meter.Description()}:{Fader.Description()}";
+        $"{Template}[{string.Join(',', Shown)}]{Label}:{Meter.Description()}:{Fader.Description()}:{(ExplicitOrder is null ? "*" : string.Join(',', ExplicitOrder))}";
 }
 
 /// <summary>A bank's master: its template and how its label, meter and fader are drawn.</summary>

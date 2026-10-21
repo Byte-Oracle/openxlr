@@ -2666,4 +2666,13 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="FlowEq" xml:space="preserve">
     <value>EQ, {0} of 4 bands on</value>
   </data>
+  <data name="CaptureSourceChipName" xml:space="preserve">
+    <value>{0} source: {1}</value>
+  </data>
+  <data name="CaptureSourcePair" xml:space="preserve">
+    <value>{0}, pair {1}</value>
+  </data>
+  <data name="StereoInputPickerHint" xml:space="preserve">
+    <value>Plugins that fit a stereo input (two inputs, two outputs)</value>
+  </data>
 </root>

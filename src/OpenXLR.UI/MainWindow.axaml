@@ -596,6 +596,35 @@
                      HorizontalAlignment="Right"/>
           <ToggleButton Grid.Column="4" Content="{loc:Text Key=LevelLock}" IsChecked="{Binding AuxLevelLock, Mode=TwoWay}"/>
         </Grid>
+        <ItemsControl Name="CaptureInputs" ItemsSource="{Binding CaptureInputs}" IsVisible="{Binding HasMixer}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChannelViewModel">
+              <StackPanel Name="CaptureInputBlock" Spacing="4" Margin="0,8,0,0"
+                          IsVisible="{Binding DisplayVisible}" Classes.revealed="{Binding Revealed}">
+                <!-- the gap sits on the icon, so a name without one lines up with the labels below -->
+                <Grid ColumnDefinitions="Auto,*">
+                  <vm:LayoutIconBlock Icon="{Binding Appearance.Icon}" Fallback="{Binding Appearance.DefaultIcon}" Margin="0,0,6,0"
+                                      Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}" IsVisible="{Binding Appearance.HasIcon}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="strip" Classes.layoutAccent="{Binding Appearance.HasColour}"
+                             TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
+                </Grid>
+                <views:CaptureSourceChip HorizontalAlignment="Left"/>
+                <TextBlock Text="{Binding BindingWarning}" Classes="hint" FontSize="11"
+                           TextWrapping="Wrap" IsVisible="{Binding HasBindingWarning}"/>
+                <Grid ColumnDefinitions="90,*,Auto,64" IsVisible="{Binding HasVolume}">
+                  <TextBlock Text="{loc:Text Key=Volume}" Classes="h" VerticalAlignment="Center"/>
+                  <Slider Grid.Column="1" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}"
+                          AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=ChannelVolumeName}}" ToolTip.Tip="{Binding VolumeTip}"/>
+                  <TextBlock Grid.Column="2" Text="&#x24D8;" Classes="h" FontSize="12"
+                             VerticalAlignment="Center" IsVisible="{Binding DirectMonitored}" ToolTip.Tip="{Binding VolumeTip}"
+                             AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
+                  <TextBlock Grid.Column="3" Text="{Binding VolumeText}" Classes="val" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                </Grid>
+                <views:CaptureInsertsView Labelled="True" Margin="0,4,0,0" IsVisible="{Binding HasInserts}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
       </StackPanel>
       </Panel>
       </Expander>
@@ -930,7 +959,7 @@
                     <!-- stereo level meter (L over R), dB scale -->
                     <StackPanel Spacing="1">
                       <skin:LevelMeter Level="{Binding MeterL}" AutomationProperties.Name="{loc:Text Key=LeftLevel}"/>
-                      <skin:LevelMeter Level="{Binding MeterR}" AutomationProperties.Name="{loc:Text Key=RightLevel}"/>
+                      <skin:LevelMeter Level="{Binding MeterR}" Classes.monoSpare="{Binding MonoMeter}" AutomationProperties.Name="{loc:Text Key=RightLevel}"/>
                     </StackPanel>
                     <!-- the channel's own volume, over every send below it; the row is as
                          tall in every tile, and empty only in a tile whose channel the

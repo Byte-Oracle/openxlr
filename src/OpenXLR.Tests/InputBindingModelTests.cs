@@ -130,13 +130,13 @@ public sealed class InputBindingModelTests
         Assert.DoesNotContain(SkinStripParts.Mute, Row("xlr1").Spec.Parts);
         Assert.Contains(SkinStripParts.Meter, Row("xlr1").Spec.Parts);
         // The capture channel draws the interface's gain and switches, and keeps its own volume in the rack.
-        Assert.Equal([SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
+        Assert.Equal([SkinStripParts.Identity, SkinStripParts.Binding, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
             RackStrip("promic").Spec.Parts);
         Assert.Same(model.UnitInput1, RackStrip("promic").Unit);
         Assert.True(RackStrip("promic").ShowsVolume);
         Assert.Contains(SkinStripParts.Gain, Row("promic").Spec.Parts);
         Assert.Contains(SkinStripParts.Mute, Row("promic").Spec.Parts);
-        Assert.False(Row("promic").ShowsBinding);
+        Assert.True(Row("promic").ShowsBinding);
         // Its controls are the window's own for input 1, read from the state
         // as it arrives. Nothing here is written: a write would send a command,
         // and a client with no daemon posts its error to the dispatcher, which

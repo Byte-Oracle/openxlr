@@ -60,6 +60,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 Inserts.ResetForNewConnection(); Inserts2.ResetForNewConnection();
                 Inserts.SoundCheck.Reset(); Inserts2.SoundCheck.Reset();
                 foreach (MixViewModel mv in Mixes) mv.Inserts.ResetForNewConnection();
+                foreach (ChannelViewModel channel in Channels) channel.Inserts?.ResetForNewConnection();
             }
             else { Inserts.EnsurePluginsLoaded(); Inserts2.EnsurePluginsLoaded(); }
         });
@@ -72,6 +73,7 @@ public sealed partial class MainViewModel : ViewModelBase
             InsertsViewModel.ForgetCatalogue();
             Inserts.Refetch(); Inserts2.Refetch();
             foreach (MixViewModel mv in Mixes) mv.Inserts.Refetch();
+            foreach (ChannelViewModel channel in Channels) channel.Inserts?.Refetch();
         };
     }
 
@@ -514,6 +516,8 @@ public sealed partial class MainViewModel : ViewModelBase
     // --- mixer ---
 
     public ObservableCollection<ChannelViewModel> Channels { get; } = [];
+    /// <summary>Capture inputs in layout order, for their blocks in the classic INPUTS panel.</summary>
+    public ObservableCollection<ChannelViewModel> CaptureInputs { get; } = [];
     public ObservableCollection<MixViewModel> Mixes { get; } = [];
 
     /// <summary>Running audio-capable apps (the main card shows these).</summary>
@@ -1209,7 +1213,14 @@ public sealed partial class MainViewModel : ViewModelBase
         {
             string[] mixIds = [.. Mixes.Select(m => m.Id)];
             SyncList(Channels, channels, c => c["id"]!.GetValue<string>(),
-                (c, vm) => { vm.SyncSends(mixIds); vm.ApplyFromDaemon(c); vm.ApplyEq(c["eq"], mixer["eqLimits"]); },
+                (c, vm) =>
+                {
+                    vm.SyncSends(mixIds);
+                    vm.ApplyFromDaemon(c);
+                    vm.ApplyEq(c["eq"], mixer["eqLimits"]);
+                    vm.Inserts?.Apply(mixer["inserts"]?[vm.Id]);
+                    vm.Inserts?.EnsurePluginsLoaded();
+                },
                 c => new ChannelViewModel(_client, c["id"]!.GetValue<string>(), c["name"]!.GetValue<string>(), mixIds),
                 removed => { removed.SyncSends([]); removed.Detach(); });
             // Send rows carry the mix's name, not its id.
@@ -1227,6 +1238,15 @@ public sealed partial class MainViewModel : ViewModelBase
             }
             RefreshChannelPresentation();
             RefreshBindings();
+            ChannelViewModel[] captures = [.. Channels.Where(c => c.CaptureSource is not null)];
+            for (int i = CaptureInputs.Count - 1; i >= 0; i--)
+                if (!captures.Contains(CaptureInputs[i])) CaptureInputs.RemoveAt(i);
+            for (int i = 0; i < captures.Length; i++)
+            {
+                int at = CaptureInputs.IndexOf(captures[i]);
+                if (at < 0) CaptureInputs.Insert(i, captures[i]);
+                else if (at != i) CaptureInputs.Move(at, i);
+            }
         }
     }
 
@@ -1627,7 +1647,9 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         {
             if (!Set(ref _name, value)) return;
             Raise(nameof(BindingChipName));
+            Raise(nameof(CaptureChipName));
             if (_eq is not null) _eq.ChannelName = value;
+            if (_inserts is not null) _inserts.Title = value;
         }
     }
 
@@ -1640,6 +1662,39 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     public MicEqViewModel? Eq { get => _eq; private set { if (Set(ref _eq, value)) Raise(nameof(HasEq)); } }
 
     public bool HasEq => _eq is not null;
+
+    private InsertsViewModel? _inserts;
+    /// <summary>A capture input's chain, only while the daemon reports its width.</summary>
+    public InsertsViewModel? Inserts
+    {
+        get => _inserts;
+        private set { if (Set(ref _inserts, value)) Raise(nameof(HasInserts)); }
+    }
+    public bool HasInserts => _inserts is not null;
+    private int? _chainWidth;
+
+    private bool _microphone;
+    public bool Microphone { get => _microphone; private set { if (Set(ref _microphone, value)) Raise(nameof(MonoMeter)); } }
+
+    /// <summary>
+    /// A capture microphone's meter is one bar. XLR 1 and XLR 2 keep the pair
+    /// they have always drawn; the spare bar keeps its room, so rows and tiles
+    /// still line up with their stereo neighbours.
+    /// </summary>
+    public bool MonoMeter => _microphone && _captureSource is not null;
+
+    private void ApplyChainWidth(int? width)
+    {
+        if (_chainWidth == width) return;
+        if (_inserts is { } gone)
+        {
+            Inserts = null;
+            gone.Detach();
+            InsertWindows.CloseChain(gone, Id);
+        }
+        _chainWidth = width;
+        if (width is 1 or 2) Inserts = new InsertsViewModel(_client, Id, width.Value, Name);
+    }
 
     /// <summary>Take the channel's <c>eq</c> and the mixer's <c>eqLimits</c> from a state push.</summary>
     internal void ApplyEq(JsonNode? eq, JsonNode? limits)
@@ -1672,9 +1727,12 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     }
     public bool IsEditable => !IsHardware;
     private string? _captureSource;
-    public string? CaptureSource { get => _captureSource; set { if (Set(ref _captureSource, value)) Raise(nameof(IsApplication)); } }
+    public string? CaptureSource { get => _captureSource; set { if (Set(ref _captureSource, value)) { Raise(nameof(IsApplication)); Raise(nameof(MonoMeter)); } } }
     public bool IsApplication => !IsHardware && CaptureSource is null;
-    public bool CaptureConnected { get; private set; }
+    private bool _captureConnected;
+    public bool CaptureConnected { get => _captureConnected; private set => Set(ref _captureConnected, value); }
+    public int CapturePair { get; private set; }
+    public int? CaptureMonoChannel { get; private set; }
 
     /// <summary>False when the active device has no jack behind this channel.</summary>
     public bool Present { get; private set; } = true;
@@ -1745,13 +1803,14 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
 
     private string _bindingLabel = "";
     /// <summary>The chip's text: the interface's jack, or the bound source's description.</summary>
-    public string BindingLabel { get => _bindingLabel; internal set { if (Set(ref _bindingLabel, value)) { Raise(nameof(BindingTip)); Raise(nameof(BindingChipName)); } } }
+    public string BindingLabel { get => _bindingLabel; internal set { if (Set(ref _bindingLabel, value)) { Raise(nameof(BindingTip)); Raise(nameof(BindingChipName)); Raise(nameof(CaptureChipName)); } } }
 
     /// <summary>The chip's tooltip: what feeds the strip, and why it is silent when it is.</summary>
     public string BindingTip => HasBindingWarning ? $"{_bindingLabel}\n{_bindingWarning}" : _bindingLabel;
 
     /// <summary>The chip's name for a screen reader: whose input, what it is, and that it opens the picker.</summary>
     public string BindingChipName => Localizer.Format("InputBindingChipName", Name, _bindingLabel);
+    public string CaptureChipName => Localizer.Format("CaptureSourceChipName", Name, _bindingLabel);
 
     private string _captureLabel = "";
     public string CaptureLabel { get => _captureLabel; set => Set(ref _captureLabel, value); }
@@ -1812,6 +1871,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         _detached = true;
         SliderSync.Forget($"chvol:{Id}");
         ApplyEq(null, null);
+        ApplyChainWidth(null);
     }
 
     /// <summary>Keep existing send controls in the current mix order.</summary>
@@ -1867,7 +1927,12 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         UnitInput = UnitInputInfo.From(n["unitInput"]);
         CaptureSource = n["captureSource"]?.GetValue<string>();
         CaptureConnected = n["captureConnected"]?.GetValue<bool>() ?? false;
-        int capturePair = (n["capturePair"]?.GetValue<int>() ?? 0) + 1;
+        CapturePair = n["capturePair"]?.GetValue<int>() ?? 0;
+        CaptureMonoChannel = n["captureMonoChannel"]?.GetValue<int>();
+        Microphone = n["microphone"]?.GetValue<bool>() ?? Id is "xlr1" or "xlr2";
+        ApplyChainWidth(CaptureSource is not null && n["chainWidth"]?.GetValue<int>() is 1 or 2
+            ? n["chainWidth"]!.GetValue<int>() : null);
+        int capturePair = CapturePair + 1;
         CaptureLabel = CaptureSource is null ? ""
             : n["captureMonoChannel"]?.GetValue<int>() is int port
                 ? CaptureConnected ? Localizer.Format("CaptureConnectedPort", port + 1) : Localizer.Format("CaptureOfflinePort", port + 1)

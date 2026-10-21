@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:skin="using:OpenXLR.UI.Skinning">
     <!-- Arrange mode: a handle on each section and on each tile whose place
          can change. Hardware inputs and Monitor A/B and Aux keep their place. -->
     <Style Selector="Button.reorderHandle">
@@ -115,6 +116,12 @@
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
       <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
       <Setter Property="IsExpanded" Value="True"/>
+    </Style>
+    <!-- a capture microphone's meter is one bar: the second keeps its room, so the
+         strip lines up with stereo ones, and is neither drawn nor read out -->
+    <Style Selector="skin|LevelMeter.monoSpare">
+      <Setter Property="Opacity" Value="0"/>
+      <Setter Property="AutomationProperties.AccessibilityView" Value="Raw"/>
     </Style>
     <!-- a channel or mix hidden in the layout editor, drawn because Show hidden is on -->
     <Style Selector=":is(Control).revealed">
