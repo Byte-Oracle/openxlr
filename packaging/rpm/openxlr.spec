@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.1.70
+Version: 0.2.0
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
 License:        GPL-3.0-only
@@ -178,6 +178,15 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Wed Oct 21 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.0-1
+- EQ: a four-band microphone EQ on XLR 1, XLR 2 and mono capture inputs, in software or on the Wave XLR Pro and MK.2 units, with an editor and a switch for where it runs.
+- Ducking: a key microphone lowers chosen channels in chosen mixes while it is loud, in software on every device, set up in the Ducking window, the terminal mixer and a Stream Deck key.
+- Capture inputs: any capture source as a full microphone strip with its own plugin chain, Sound Check, EQ, the controls of the Elgato unit it belongs to, and a source changed in place.
+- Mixer: a volume for every channel, hidden channels and mixes, monitor pause from desktop mute keys, and a steadier graph.
+- UI: Broadcast is the default skin for installs that never chose one; Wave and Nyan Pink skins; application icons and columns.
+- Devices: the Wave:3 capture is held open by a WirePlumber rule; a Pro direct mic path left on by another program is switched off.
+- Daemon: bounded shutdown, startup graph retry, device state from the last good read, a user service that starts where capabilities cannot be dropped.
+
 * Sun Oct 18 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.1.70-1
 - UI: skins can rearrange the UI: a layout tree of stacks, grids and docks places the header and the five sections, with templates for an input rack, mix banks, a mix matrix, an output toolbar and an application list, and Arrange mode moves sections within what the skin allows.
 - UI: Broadcast, a new skin shipped with the application, draws the submixer as a mix matrix, a row per channel and a column per mix, and is the complete example of a layout skin; a copy to start from is in docs/examples/skins.

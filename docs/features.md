@@ -66,7 +66,8 @@ and the Wave XLR Pro on each of its two inputs from firmware 1.0.14, the
 way Wave Link 3.5 does ([findings](mk2-eq-findings.md),
 [Pro](hardware-support.md#wave-xlr-pro-0fd900b4)); every other model and
 older firmware run it in software. The Pro's EQ follows Wave Link
-captures; nobody has confirmed it by ear on Linux yet. The Pro's mix
+captures and was measured once on the desk: a +12 dB bell written from
+OpenXLR read +12 dB on the unit's USB capture. The Pro's mix
 maximizer, channel booster and remaining hardware mix matrix are
 unmapped, as is any ducking key but XLR 1. Wave Link configures those onboard effects on supported systems;
 OpenXLR's LV2, CLAP and VST3 inserts process audio on the Linux host.
@@ -226,9 +227,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   capture input) lowers chosen channels in chosen mixes while it is loud,
   by 6, 12 or 24 dB with the Wave XLR Pro's sensitivity and speed presets.
   The key is never lowered. A native stage per ducked mix runs it on this
-  computer with no added latency; the Wave XLR Pro runs it on its own
-  processor instead when the setup fits, and the state says why when it
-  does not. Saved with the mixer, carried by profiles, and reported as a
+  computer with no added latency, on the Wave XLR Pro too, and the state
+  says why the Pro's own ducking is not used. Saved with the mixer, carried by profiles, and reported as a
   `duck:<mix>` reduction meter while software runs. Set up in the
   Ducking window, opened from the SUBMIXER header, the layout editor and
   Options, with
