@@ -38,7 +38,7 @@ internal static partial class InputBindingWindowTests
     /// <summary>A Wave XLR Pro primary with a Wave:3 attached beside it, changed by the commands it accepts.</summary>
     private sealed class DrivenDaemon
     {
-        public bool Bound, Kept, Enabled, Renamed, WithMix = true;
+        public bool Bound, Kept, Enabled, Renamed, CaptureCarried, OldCaptureUnit, WithMix = true;
         public int Gain = 25;
         public bool Mute;
 
@@ -65,6 +65,22 @@ internal static partial class InputBindingWindowTests
                 + "\"captureHint\":\"Wave_3_W3SER-\",\"captureModelHint\":\"\","
                 + "\"capabilities\":{\"gain\":true,\"mute\":true,\"clipGuard\":true,\"xlrInputs\":1,\"xlrJacks\":false,\"gainMaxDb\":40},"
                 + (Enabled ? "\"state\":{\"gainDb\":" + Gain + ",\"mute\":" + (Mute ? "true" : "false") + ",\"clipGuard\":true}" : "\"state\":null") + "}"));
+            if (CaptureCarried)
+            {
+                JsonArray list = state["mixer"]!["channels"]!.AsArray();
+                JsonNode strip = list.Single(c => c!["id"]!.GetValue<string>() == "xlr2")!;
+                strip["unitInput"] = null;
+                strip["binding"]!["unit"] = null;
+                strip["binding"]!["source"] = "webcam";
+                list.Add(JsonNode.Parse($$$"""
+                    {"id":"wave3mic","name":"Wave:3 microphone","captureSource":"{{{Wave3Node}}}",
+                     "captureMonoChannel":0,"capturePair":0,"captureConnected":true,"bindingConnected":true,
+                     "binding":{"kind":"source","source":"{{{Wave3Node}}}","pair":0,"monoChannel":0,"unit":"{{{Wave3}}}"},
+                     "volume":0.8,"microphone":true,"chainWidth":1,"levels":{"monitor":1}}
+                    """));
+                if (OldCaptureUnit) list.Last()!["binding"]!["unit"] = null;
+                if (Enabled) list.Last()!["unitInput"] = JsonNode.Parse($$"""{"unit":"{{Wave3}}","input":1,"primary":false}""");
+            }
             state["type"] = "state";
             return state;
         }
@@ -75,7 +91,10 @@ internal static partial class InputBindingWindowTests
             {
                 case "setInputBinding": Bound = cmd["source"]?.GetValue<string>() == Wave3Node; break;
                 case "createCaptureChannel": Kept = true; break;
-                case "setWaveInterfaceEnabled": Enabled = cmd["value"]!.GetValue<bool>(); break;
+                case "setWaveInterfaceEnabled":
+                    Enabled = cmd["value"]!.GetValue<bool>();
+                    if (!Enabled && cmd["keepChannels"]?.GetValue<bool>() != true) CaptureCarried = false;
+                    break;
                 case "setWaveControl" when cmd["control"]?.GetValue<string>() == "gain": Gain = cmd["value"]!.GetValue<int>(); break;
                 case "setWaveControl" when cmd["control"]?.GetValue<string>() == "mute": Mute = cmd["value"]!.GetValue<bool>(); break;
             }
@@ -320,6 +339,94 @@ internal static partial class InputBindingWindowTests
             Assert.DoesNotContain(RackStrip(surface, "xlr2").GetVisualDescendants().OfType<WaveUnitControls>(), c => c.IsEffectivelyVisible);
             Assert.DoesNotContain(SkinLayoutWindowTests.RowHead(surface, "xlr2").GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
             Assert.Equal("Elgato Wave:3 Mono", Chip(RackStrip(surface, "xlr2")).GetVisualDescendants().OfType<TextBlock>().Single().Text);
+
+            // A capture carrier gets the same controls in classic INPUTS, under its own name.
+            daemon.Enabled = true;
+            daemon.CaptureCarried = true;
+            ApplyState(main, daemon.State().ToJsonString());
+            ChannelViewModel capture = main.Channels.Single(c => c.Id == "wave3mic");
+            StackPanel CaptureBlock() => window.GetVisualDescendants().OfType<StackPanel>()
+                .Single(p => p.Name == "CaptureInputBlock" && p.DataContext == capture);
+            foreach (double width in new[] { 640d, 1040 })
+            {
+                Layout(window, width, 1100);
+                StackPanel block = CaptureBlock();
+                Assert.True(block.IsEffectivelyVisible);
+                Assert.True(WaveGain(block).IsEffectivelyVisible);
+                Assert.Equal(31, WaveGain(block).Value);
+                Assert.True(WaveMute(block).IsChecked);
+                AssertInside(WaveGain(block), window);
+                Assert.Contains(block.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == Wave3Name && t.IsEffectivelyVisible);
+                Assert.False(window.FindControl<Grid>("Xlr2ExtraUnit")!.IsEffectivelyVisible);
+                Capture(window, $"driven-classic-capture-{width}");
+            }
+            WaveGain(CaptureBlock()).Value = 37;
+            await Until(() => commands.Any(c => c["cmd"]!.GetValue<string>() == "setWaveControl"
+                && c["control"]!.GetValue<string>() == "gain" && c["value"]!.GetValue<int>() == 37));
+            Assert.Equal(Wave3, commands.Last(c => c["cmd"]!.GetValue<string>() == "setWaveControl")["device"]!.GetValue<string>());
+            // A profile switch renames the node. The mute's reply is the last
+            // state the daemon sends, so the window ends on the new name.
+            daemon.Renamed = true;
+            WaveMute(CaptureBlock()).IsChecked = false;
+            await Until(() => !main.WaveInterfaces.Single(w => w.Id == Wave3).Mute);
+            await Until(() => capture.BindingLabel == Localizer.Format("InputBindingSourcePort", "Elgato Wave:3 Analog Stereo", 1));
+            Assert.True(capture.CarriesExtraUnit);
+
+            // Unticking asks before any command. Cancel and window close keep the unit enabled.
+            CheckBox EnableBox() => units.GetVisualDescendants().OfType<CheckBox>()
+                .Single(c => c.DataContext is WaveInterfaceViewModel { Id: Wave3 });
+            async Task<Window> Untick()
+            {
+                CheckBox box = EnableBox();
+                box.IsChecked = false;
+                box.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                await Until(() => units.OwnedWindows.Any());
+                Window confirmation = units.OwnedWindows.Single();
+                Assert.False(confirmation.GetVisualDescendants().OfType<CheckBox>().Single().IsChecked == true);
+                return confirmation;
+            }
+            int beforeDisable = commands.Count;
+            Window cancelDisable = await Untick();
+            Assert.Equal(beforeDisable, commands.Count);
+            cancelDisable.GetVisualDescendants().OfType<Button>().Single(b => b.IsCancel).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Until(() => EnableBox().IsChecked == true && main.WaveInterfaces.Single(w => w.Id == Wave3).CanEnable);
+            Assert.Equal(beforeDisable, commands.Count);
+            Window closeDisable = await Untick();
+            closeDisable.Close();
+            await Until(() => EnableBox().IsChecked == true && main.WaveInterfaces.Single(w => w.Id == Wave3).CanEnable);
+            Assert.Equal(beforeDisable, commands.Count);
+
+            Window keepDisable = await Untick();
+            keepDisable.GetVisualDescendants().OfType<CheckBox>().Single().IsChecked = true;
+            Capture(keepDisable, "driven-keep-capture-confirmation");
+            keepDisable.GetVisualDescendants().OfType<Button>().Single(b => b.IsDefault).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Until(() => !main.WaveInterfaces.Single(w => w.Id == Wave3).Enabled && !capture.CarriesExtraUnit);
+            JsonNode keptCommand = commands.Last(c => c["cmd"]!.GetValue<string>() == "setWaveInterfaceEnabled");
+            Assert.True(keptCommand["keepChannels"]!.GetValue<bool>());
+            Assert.Contains(capture, main.CaptureInputs);
+            Layout(window, 640, 1100);
+            Assert.DoesNotContain(CaptureBlock().GetVisualDescendants().OfType<WaveUnitControls>(), c => c.IsEffectivelyVisible);
+
+            // The default choice sends false and removes the capture input after acknowledgement.
+            daemon.Enabled = true;
+            ApplyState(main, daemon.State().ToJsonString());
+            Window deleteDisable = await Untick();
+            deleteDisable.GetVisualDescendants().OfType<Button>().Single(b => b.IsDefault).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Until(() => !main.Channels.Any(c => c.Id == "wave3mic"));
+            JsonNode deletedCommand = commands.Last(c => c["cmd"]!.GetValue<string>() == "setWaveInterfaceEnabled");
+            Assert.False(deletedCommand["keepChannels"]!.GetValue<bool>());
+
+            // An older daemon cannot honor keepChannels. It gets a deletion confirmation only.
+            daemon.Enabled = true;
+            daemon.CaptureCarried = true;
+            daemon.OldCaptureUnit = true;
+            ApplyState(main, daemon.State().ToJsonString());
+            Window oldDisable = await Untick();
+            Assert.False(oldDisable.GetVisualDescendants().OfType<CheckBox>().Single().IsEffectivelyVisible);
+            Assert.Contains(oldDisable.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == Localizer.Format("DisableInterfaceCaptureDeleteDetail", Wave3Name));
+            oldDisable.GetVisualDescendants().OfType<Button>().Single(b => b.IsDefault).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Until(() => !main.Channels.Any(c => c.Id == "wave3mic"));
+            Assert.False(commands.Last(c => c["cmd"]!.GetValue<string>() == "setWaveInterfaceEnabled")["keepChannels"]!.GetValue<bool>());
         }
         finally
         {
