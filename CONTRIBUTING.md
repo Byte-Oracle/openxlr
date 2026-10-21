@@ -45,6 +45,12 @@ python3 packaging/yabridge/test-receipt.py
 node --check plugin/com.emaspa.openxlr.sdPlugin/plugin.mjs
 node --test plugin/tests/*.test.mjs
 python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
+python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
+python3 tools/deck-skins.py --check  # regenerate with no flag after changing embedded skins or colour defaults
+python3 tools/deck-icons.py --check  # regenerate with no flag after changing LayoutIcons.cs
+python3 tools/eq-reference.py --check  # regenerate with no flag after changing the EQ reference settings
+python3 packaging/flatpak/test-package.py  # the Flatpak manifest and its files
+python3 packaging/flatpak/nuget-sources.py --check  # regenerate with no flag after a package change
 shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh packaging/ppa/make-source.sh
 tools/check-version.sh                          # the five version locations agree
 tools/check-locked-restore.sh                   # every packaging path restores locked
@@ -57,7 +63,7 @@ node --test packaging/omarchy/tests/*.test.mjs
 shellcheck --severity=error packaging/omarchy/openxlr-omarchy-enable
 make -C native  # C/C++, PipeWire, lilv, LV2 and X11 development headers
 make -C native test-audio test-clap test-lv2 test-vst3 test-scan  # audio bounds, stall detection, CLAP bus layouts, latency reports, VST3 parameter and stream checks, scan phase markers
-dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~Lv2BundleTests  # run with lilv installed, even if the earlier suite ran without it
+dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~Lv2BundleTests|FullyQualifiedName~PluginSearchPathTests"  # run with lilv installed, even if the earlier suite ran without it
 python3 tools/test-monitor-volume.py  # private PipeWire server and session bus; pipewire-pulse, wireplumber, pactl, dbus-daemon
 xvfb-run -a make -C native test-editor  # also needs Xvfb and xauth
 make -C native test-sound-check  # Sound Check loop backend, no audio server
@@ -67,6 +73,8 @@ OPENXLR_TEST_DESKTOP=1 xvfb-run -a dotnet test src/OpenXLR.Tests/OpenXLR.Tests.c
 OPENXLR_TEST_LAYOUT=1 xvfb-run -a -s '-screen 0 2560x1440x24' dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~WindowLayoutTests
 OPENXLR_TEST_TOOLTIP=1 xvfb-run -a -s '-screen 0 1600x1000x24' dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~ToolTipInputTests
 OPENXLR_TEST_SKIN=1 xvfb-run -a -s '-screen 0 2560x1440x24' dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~SkinWindowTests
+OPENXLR_TEST_EQ=1 xvfb-run -a -s '-screen 0 2560x1440x24' dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~EqEditorWindowTests  # also needs libXtst
+OPENXLR_TEST_CAPTURE=1 xvfb-run -a -s '-screen 0 2560x1440x24' dotnet test src/OpenXLR.Tests/OpenXLR.Tests.csproj -c Release --no-build --filter FullyQualifiedName~CaptureInputWindowTests
 ```
 
 The monitor gain test plays a constant 0.1 signal, not a sine. On PipeWire
@@ -99,8 +107,9 @@ The private PipeWire runner also checks profile startup ordering. To exercise
 ClipGuard with recorded test audio, low cut and a native LSP gate, run
 `OPENXLR_TEST_DSP=1 python3 tools/test-monitor-volume.py` after a native-enabled
 build, with swh-plugins and LSP LV2 plugins installed. The same run checks
-latency compensation against the fixture in `native/tests`, which needs that
-folder on the path, for example `LV2_PATH=/usr/lib/lv2:$PWD/native/tests`.
+latency compensation against the fixture in `native/tests`; the runner puts
+that folder first on `LV2_PATH` itself, so the export is only needed when
+you call `dotnet test` directly.
 Unless it is given `--command`, the runner first builds the LV2 test bundles
 there with `make -C native test-fixtures`; capture chains, Sound Check and
 input chains load them as inserts and hear silence without their binaries.
@@ -225,9 +234,10 @@ brief an agent should read before working on the tree.
   helper process runs through `ProcessRunner` (C locale, deadline,
   output cap, process tree killed past either); a program handed to the
   user, such as an installer or the desktop's link opener, goes through
-  its `RunInteractiveAsync`, which sets no deadline. The one raw process
-  is the meter reader's `parec`, which streams for the sink's whole life
-  and is stopped with the meter.
+  its `RunInteractiveAsync`, which sets no deadline. The raw processes
+  are the ones that live as long as what they serve: the meter reader's
+  `parec`, the `pw-loopback` and filter-chain `pw-cli` nodes of the graph,
+  the native plugin host and the USB helper, each stopped with its owner.
 - Commands are validated in `CommandValidation` before the mixer sees
   them; a new command needs an entry there, in the hub's dispatch, in
   the API doc, and in whichever client uses it.

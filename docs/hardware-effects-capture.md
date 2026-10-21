@@ -13,7 +13,7 @@ or change a device. Software LV2, CLAP and VST3 inserts are a separate path.
 | Wave XLR MK.2 | `00b6` | For the EQ only a change of band type or band enable in Wave Link; the rest of its layout and its master enable are mapped on firmware 1.0.15, see the [findings](mk2-eq-findings.md) |
 | XLR Dock MK.2 | `00c7` | As for the Wave XLR MK.2: on firmware 1.0.15 the dock takes the same EQ layout. On firmware 1.0.0 Wave Link runs the EQ on the computer. See the [findings](mk2-eq-findings.md) |
 
-The original Wave XLR, first XLR Dock and Wave:3 do not gain these controls
+The original Wave XLR, first XLR Dock, Wave:3 and Wave:1 do not gain these controls
 by sharing the USB vendor id. Use their existing controls and host-side
 inserts. Do not copy a Pro command to another model: even the MK.2 models
 can select different property banks on different units.

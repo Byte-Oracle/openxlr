@@ -12,9 +12,9 @@ brand works in the mixer without hardware controls; see
 | Wave XLR Pro | `0fd9:00b4` | exposed controls verified on hardware, except the microphone EQ on the unit and ducking: both captured from Wave Link, not yet heard on Linux |
 | XLR Dock | `0fd9:00a6` | exposed controls verified on hardware |
 | Wave XLR | `0fd9:007d` | core controls verified on hardware by community testers on two units (0.1.13) |
-| Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester |
-| XLR Dock MK.2 | `0fd9:00c7` | MK.2 backend with bank detection; exposed controls verified on the original 0x0103 unit |
-| Wave:3 | `0fd9:0070` | beta: coded from public protocol research; on the maintainer's unit every control writes and reads back, the gain and the desktop volume controls are verified, and the checks that need someone at the microphone are open |
+| Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester, except the microphone EQ on the unit, not yet run from OpenXLR |
+| XLR Dock MK.2 | `0fd9:00c7` | MK.2 backend with bank detection; exposed controls verified on the original 0x0103 unit, except the microphone EQ on the unit, not yet run from OpenXLR |
+| Wave:3 | `0fd9:0070` | beta: coded from public protocol research; on the maintainer's unit every control writes and reads back, the gain, the monitor balance and the desktop volume controls are verified, and the checks that need someone at the microphone are open |
 | Wave:1 | `0fd9:006e` | beta: the Wave:3's backend under the Wave:1's id; an owner's two archives showed the Wave:3's block, firmware line and desktop volume mirror, and the gain, mute and headphone volume writes taking effect; ClipGuard and the mix are not yet confirmed |
 
 ## USB access
@@ -48,7 +48,7 @@ the commit block every selector write needs.
 | USB Aux input level + lock, aux return | verified | return routing latches at stream open; the daemon bounces the stream |
 | Ducking on the unit, keyed by XLR 1 | captured on Windows, not yet checked on Linux | blocks 0x0008 and 0x0001 as Wave Link 3.5 writes them (captures of 2026-10-21); the unit ducked by itself on Windows. The unit runs [ducking](manual.md#ducking) when the setup fits it: XLR 1 as the key, each ducked mix heard only on the jacks and Line Out (USB pair 2/3) or the USB Aux port (pair 10/11), and every channel heard in it ducked. Any other setup runs in software. Nothing has been checked by ear on Linux yet, on the unit or in software; other keys are unknown |
 | Reset to OpenXLR's baseline | verified | the device keeps its settings, so the reset writes a known set (gain 30 dB, everything off, levels at half, crossfade on PC) instead of recorded firmware defaults |
-| Microphone EQ on the unit, firmware 1.0.14 or later | coded | both inputs, captured from Wave Link 3.5 on firmware 1.0.14; the encoder reproduces the captured writes byte for byte. OpenXLR driving it has not been heard on Linux yet, and the Pro's filters have not been measured. On older firmware, or when the version or the EQ fields cannot be read, both inputs' EQ runs in software |
+| Microphone EQ on the unit, firmware 1.0.14 or later | coded | both inputs, captured from Wave Link 3.5 on firmware 1.0.14; the encoder reproduces the captured writes byte for byte. Measured once on the desk: a +12 dB bell at 5 kHz written from OpenXLR read +12.3 to +12.7 dB on the raw USB capture, and software mode left the capture flat. The other filter types, the zero-latency headphone path and survival across a power cycle are not checked. On older firmware, or when the version or the EQ fields cannot be read, both inputs' EQ runs in software |
 
 The [microphone EQ](api.md#where-the-eq-runs) runs on the Pro from
 firmware 1.0.14, the version Wave Link 3.5 ran on in captures 16 to 20 of
@@ -70,9 +70,11 @@ writes its own EQ again at every connect anyway. Wave Link left this Pro
 with both inputs' EQ on and band 2 at +12 dB. On connect OpenXLR writes
 each microphone's own EQ over that, or switches it off where the EQ runs
 in software or the strip is bound to another source. The diagnostics
-archive carries block 0x0000 and both inputs' EQ decoded. Still open:
-acceptance by ear on Linux, the curves against the software EQ's, and
-whether the EQ reaches the zero-latency headphone path.
+archive carries block 0x0000 and both inputs' EQ decoded. One bell was
+measured on the desk: +12 dB at 5 kHz read +12.3 to +12.7 dB on the raw
+USB capture, and software mode left it flat. Still open: the other filter
+types against the software EQ's curves, and whether the EQ reaches the
+zero-latency headphone path.
 
 The Pro's mix maximizer and channel booster have no mapped OpenXLR
 controls. Elgato describes them, and ducking, as running on the device: a
@@ -188,7 +190,7 @@ capability describes its restoration policy, not an absence of device memory.
 Hardware low cut or ClipGuard configured in Wave Link may remain active;
 OpenXLR cannot currently read or disable those settings.
 
-## Wave XLR MK.2 (0fd9:00b6) and XLR Dock MK.2 (0fd9:00c7), verified
+## Wave XLR MK.2 (0fd9:00b6) and XLR Dock MK.2 (0fd9:00c7), verified except the EQ on the unit
 
 Decoded from USB captures of Wave Link, using the Pro's protocol family
 at its own address. On 2026-09-02 a community tester
@@ -539,10 +541,9 @@ the packages include. Aux In cannot be bound.
 As a capture input (Edit layout, **Add capture input**), the source gets a
 channel of its own with sends, a volume, meters and its place in profiles,
 fed from a stereo pair, or from one mono port through the API. A capture
-input hosts an insert chain of its own, set through the
-[API](api.md) or the saved layout for now; the window shows it in a later
-release. It has no EQ or Sound Check of its own yet, and the inserts on the
-mixes it feeds process it too.
+input hosts an insert chain of its own, shown in the window's INPUTS card,
+the racks and the matrix, and a mono capture input has Sound Check. It has
+no EQ of its own, and the inserts on the mixes it feeds process it too.
 
 Everything after the inputs works the same with or without Elgato
 hardware: application channels and routing, virtual microphones, monitor
@@ -594,6 +595,9 @@ nodes. On real units, so far:
 | An XLR Dock primary with XLR 1 bound elsewhere: dock controls, live capture on return to the jack | not yet checked | |
 | A Bluetooth headset bound to XLR 1: the headset profile switch and back | not yet checked | |
 | Stream Deck keys and the Omarchy bar naming the channel that carries the interface's microphone | not yet checked | |
+| A capture input's own insert chain and Sound Check on a mono capture input, in the window and the terminal mixer | not yet checked | |
+| The unit controls following a capture input bound to an additional interface's input | not yet checked | |
+| Changing a capture input's source in place: the channel keeps its id, sends and inserts, the old source is released | not yet checked | |
 
 ## Every device gets
 
@@ -605,12 +609,15 @@ nodes. On real units, so far:
 - Last settings restored on connect for Wave XLR and the first XLR Dock,
   plus a reset to the defaults recorded after a power cycle. The Pro and the MK.2 family, the XLR
   Dock MK.2 included, keep their settings on board (verified by
-  replugging the dock)
+  replugging the dock); the Wave:3 and Wave:1 are assumed to until a
+  replug with nothing written on connect decides it (checklist step 8)
 - Multi-device switching: a header picker chooses which interface
   OpenXLR drives; the mixer's input channels follow it
 - More than one unit at once, two of one model included: up to four
-  additional interfaces next to the primary. Run only with simulated
-  units so far; [wave-interfaces.md](wave-interfaces.md#what-still-needs-hardware)
+  additional interfaces next to the primary. Run on hardware with a
+  Wave XLR Pro primary beside an XLR Dock and beside a Wave:3; two of one
+  model only with simulated units so far;
+  [wave-interfaces.md](wave-interfaces.md#what-still-needs-hardware)
   lists what an owner of two units checks
 - On switch, the hardware channels' monitor sends come up muted, so the
   newly patched mic does not reach the speakers until unmuted
@@ -662,20 +669,22 @@ diagnostics archive:
    in the state turns on if the firmware asserts it there. Raise the
    volume from the window: sound is back and `hpMute` is off.
 6. Gain from the window with the dial on gain: the microphone's own
-   gain display and the recorded level follow, or they do not and the
-   value snaps back, which is what wave3-research predicts.
-7. The crossfade from the window: with a playback stream running and
-   the microphone live, the left end leaves only the microphone in the
-   headphones and the right end only the computer. If the ends are the
-   other way round, say so.
+   gain display and the recorded level follow. Firmware 1.2.4 took the
+   write on the maintainer's unit; say if yours snaps back, which is what
+   wave3-research saw on an older firmware.
+7. The crossfade from the window, settled by ear on the maintainer's
+   unit: with a playback stream running and the microphone live, the left
+   end leaves only the microphone in the headphones and the right end
+   only the computer. Say if yours differs.
 8. Clear the "On connect" profile picker under the profile list, so
    nothing is written on connect, then unplug and replug: the settings
    from before are still there, or the microphone came back at
    defaults, which decides `retainsSettings`.
 9. Reboot with the capture-hold rule installed, play through the
    microphone's own sink before anything records from it, then record:
-   sound every time. Say whether the unit records silence without the
-   rule, and which USB port and controller it is on.
+   sound every time. One owner confirmed this over several reboots; say
+   whether your unit records silence without the rule, and which USB port
+   and controller it is on.
 10. Change the microphone's output volume and mute its input in the
     desktop's sound settings: within a second the headphones and the
     mute ring follow, and so does the window. Then turn the dial in
@@ -698,8 +707,8 @@ following, each result with the diagnostics archive:
 3. Enable the other unit under Options, INTERFACE, Additional
    interfaces. Its gain, mute and phantom power move that unit only, and
    the primary's controls move the primary only.
-4. Add its microphone with Add input channel: the new channel carries
-   that unit's microphone. On a Pro, microphone 2 carries the second
+4. Add its microphone with Add input channel in the Additional
+   interfaces window: the new channel carries that unit's microphone. On a Pro, microphone 2 carries the second
    input.
 5. With two XLR Docks, collect diagnostics with each dock as the
    primary in turn: the `paths` line names a different ALSA card each

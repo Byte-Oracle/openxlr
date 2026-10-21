@@ -20,8 +20,9 @@ is a chain with exactly one effect in it.
 
 Saved presets are one file, `effect-chain-presets.json`, under
 `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`). The window writes it
-whole through an atomic replace, with owner-only permissions. The daemon
-never reads it. The file is a JSON array of presets in the format below.
+whole through an atomic replace, with owner-only permissions, and reads
+it only when it is a regular file of at most 8 MiB; a pipe, socket or
+device in its place is refused. The daemon never reads it. The file is a JSON array of presets in the format below.
 
 Export writes one preset to a file the user picks, named
 `*.openxlr-effects.json` by default. A local file is written through the

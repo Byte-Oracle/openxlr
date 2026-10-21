@@ -129,7 +129,7 @@
         },
         "Ox.Dialog.Background": {
           "$ref": "#/$defs/brush",
-          "description": "the small confirmation and rename dialogs"
+          "description": "the small dialogs: confirmations, rename and the input binding dialog"
         },
         "Ox.Danger.Background": {
           "$ref": "#/$defs/brush",
@@ -161,7 +161,7 @@
         },
         "Ox.Text.Info": {
           "$ref": "#/$defs/brush",
-          "description": "an update is available"
+          "description": "informational lines: an available update, and the hardware badge's lettering in the EQ editor and the Ducking window"
         },
         "Ox.Text.Detail": {
           "$ref": "#/$defs/brush",
@@ -177,7 +177,7 @@
         },
         "Ox.Badge.Background": {
           "$ref": "#/$defs/brush",
-          "description": "the small format badge beside a plugin name"
+          "description": "a small badge: the format badge beside a plugin name, a strip's binding or capture source chip, and the hardware badge in the EQ editor and the Ducking window"
         },
         "Ox.Divider": {
           "$ref": "#/$defs/brush",
@@ -673,11 +673,11 @@
           "type": "number",
           "minimum": 8,
           "maximum": 24,
-          "description": "the size of the axis labels, the region names and the readout"
+          "description": "the size of the axis labels, the region names and the readout, and of the hardware badge's text in the EQ editor and the Ducking window"
         },
         "Ox.Eq.CornerRadius": {
           "$ref": "#/$defs/radius",
-          "description": "the graph's corners"
+          "description": "the graph's corners, and the hardware badge's in the EQ editor and the Ducking window"
         },
         "Ox.Mixer.ControlMinSize": {
           "type": "number",
@@ -701,7 +701,7 @@
           "type": "number",
           "minimum": 0,
           "maximum": 64,
-          "description": "the smallest size of the compact controls: the interface rows' buttons and sliders, the tile headers and their buttons, the Arrange buttons and drag handles, the gain lock, the inserts buttons and a send's mute"
+          "description": "the smallest size of the compact controls: the interface rows' buttons and sliders, the tile headers and their buttons, the Arrange buttons and drag handles, the gain lock, the binding and capture source chips, the inserts buttons, the SUBMIXER header's buttons, a send's mute and the EQ graph's handle target"
         },
         "Ox.Mixer.InsertControlMinSize": {
           "type": "number",

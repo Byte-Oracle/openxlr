@@ -29,11 +29,7 @@ Window polling retries when an editor disappears between discovery and
 the X11 status query, including on XWayland.
 
 The Flatpak workflow runs this once per tree, without a language or size
-process matrix. While the separate runtime or manifest PR is absent, it
-reports that prerequisite and skips sandbox acceptance. That skip is not
-a passed acceptance run. A combined disposable checkout can be tested
-locally before those prerequisites land.
-After acceptance succeeds, CI provides `openxlr-flatpak-x86_64` with the
+process matrix. After acceptance succeeds, CI provides `openxlr-flatpak-x86_64` with the
 tested `.flatpak` bundle and its SHA-256 checksum. This is a test artifact,
 not a Flathub release. With Flathub enabled for the user, extract both files,
 run `sha256sum -c openxlr.flatpak.sha256`, then install with

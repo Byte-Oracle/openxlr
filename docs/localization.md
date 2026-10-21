@@ -57,7 +57,9 @@ are not part of the catalogue.
    variable, so the tests can see it.
 3. Run the tests. `LocalizationTests` fails when the window reads a key
    the catalogue lacks, when an entry is never read, when markup carries
-   text of its own, or when a key is built at run time.
+   text of its own, or when a key is built at run time. Its line-break
+   and literal-command checks run per language from `InlineData` rows
+   that name `de` and `es`; add a row for the new language.
 
 A translation that has the old wording of a changed entry still shows it,
 so a change of meaning gets a new key.
@@ -96,7 +98,7 @@ so a change of meaning gets a new key.
    dialogs. A longer caption should wrap, not clip.
 
    ```sh
-   LANGUAGE=<tag> dotnet run --project src/OpenXLR.UI -c Release
+   LANG=en_US.UTF-8 LANGUAGE=<tag> dotnet run --project src/OpenXLR.UI -c Release
    ```
 
 6. Open a pull request with the one language. Say which windows you
@@ -117,7 +119,7 @@ The window chooses its language once, when it starts:
 2. With no saved language, or **System language**, the desktop's message
    language: the `LANGUAGE` list in order, then `LC_ALL`, `LC_MESSAGES`
    and `LANG`, as gettext reads them. `LANGUAGE` is ignored when the
-   locale is `C` or `POSIX`.
+   locale is `C` or `POSIX`, or when none of the three is set.
 3. A regional tag the window does not ship reads its base language, so
    `de_AT.UTF-8` gets `de`. Chinese is matched by script: `zh_TW`,
    `zh_HK` and `zh_MO` mean Traditional (`zh-Hant`), other regions mean

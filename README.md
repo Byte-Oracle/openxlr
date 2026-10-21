@@ -64,7 +64,7 @@ These Elgato devices also get their hardware controls over USB:
 
 | Device | USB id | Status |
 |---|---|---|
-| Wave XLR Pro | 0fd9:00b4 | mapped controls verified on hardware; hardware EQ and the full mix matrix remain unmapped |
+| Wave XLR Pro | 0fd9:00b4 | mapped controls verified on hardware; the EQ on the unit measured once on the desk; the full mix matrix, mix maximizer and channel booster remain unmapped |
 | XLR Dock (Stream Deck+ module) | 0fd9:00a6 | gain, mute, headphone volume, 48V phantom power, low impedance; verified on hardware |
 | Wave XLR | 0fd9:007d | gain, mute, headphone volume and low impedance verified by community testers; phantom power implemented, awaiting an OpenXLR hardware check |
 | Wave XLR MK.2 | 0fd9:00b6 | gain, mute, phantom power, DSP, ClipGuard, compressor, headphone volume, crossfade; verified on hardware by a community tester |
@@ -86,9 +86,10 @@ SUPPORT, Collect diagnostics).
   mute, low cut, expander, voice tune and phantom power per input,
   ClipGuard, compressor, aux input level and lock, two headphone
   volumes with low-impedance mode, the mic/PC crossfade, and the
-  physical output routing (HP1, HP2, Line Out, USB Aux), and the unit's
-  own ducking, keyed by XLR 1, on the headphone and Line Out feed and the
-  USB Aux port (mapped on Windows, listening checks on Linux pending). The other
+  physical output routing (HP1, HP2, Line Out, USB Aux). The Pro's own
+  ducking is mapped but not used: it acts inside the unit's mix, which
+  OpenXLR's feed to the jacks goes around, so ducking runs in software on
+  the Pro like everywhere else. The other
   devices expose the subset their protocol has; see the table above. An
   XLR Dock whose kernel driver lacks a gain, mute or headphone control
   gets that control through the dock's config block instead.
@@ -96,8 +97,9 @@ SUPPORT, Collect diagnostics).
   offers software processing in PipeWire. Gain lock is a daemon policy
   for devices without physical gain controls. The XLR Dock MK.2 and the
   Wave XLR MK.2 run the microphone EQ on their own processor from
-  firmware 1.0.15, and the Wave XLR Pro on both inputs from firmware
-  1.0.14 (not yet confirmed by ear on Linux). The Pro's mix
+  firmware 1.0.15 (coded from captures, not yet run from OpenXLR on
+  hardware), and the Wave XLR Pro on both inputs from firmware 1.0.14
+  (one bell measured on the desk). The Pro's mix
   maximizer and channel booster are not exposed; plugin effects run on
   the computer, separate from the device's onboard processing.
 - **Submixer** built from PipeWire nodes (null sinks, remap sources,
@@ -111,16 +113,22 @@ SUPPORT, Collect diagnostics).
   any selected output. The default layout is Game, Music,
   Browser, System, Voice Chat and SFX with Stream and Chat microphones;
   channels and microphones can be added, renamed, reordered and removed
-  while audio plays, from the window or the API. Per-send levels and
-  mutes, level meters, the monitor mixes on several outputs at once, and
-  an optional boost that takes the monitor volume to 150%.
+  while audio plays, from the window or the API, and a channel or a mix
+  can be hidden with its icon and colour chosen. Per-send levels and
+  mutes, a volume per channel, level meters, the monitor mixes on several
+  outputs at once with a pause for monitoring that leaves recording and
+  streaming alone, an optional boost that takes the monitor volume to
+  150%, and ducking: a key microphone lowers chosen channels in chosen
+  mixes while it is loud, on any device, set from the window, the
+  terminal mixer or a Stream Deck key.
 - **Microphone processing** on XLR 1 and XLR 2, whatever feeds them: a
   four-band EQ with Wave Link's band types, ranges and steps, and Sound
   Check, which records a take and loops it through the strip's EQ and
   inserts while you tune them. XLR 1 also has a software low cut and
   ClipGuard when it is bound to another source or the interface has no
-  hardware version of them. A capture channel has
-  none of these yet; the inserts on the mixes it feeds process it.
+  hardware version of them. A capture input has its own insert chain
+  and, when mono, Sound Check; the EQ, low cut and ClipGuard stay on the
+  XLR strips.
 - **Inserts**: LV2, CLAP and VST3 plugin chains on each XLR input and each mix, with a
   plugin picker, generated controls, bypass and native plugin editors.
   Input chains use mono effects; mix chains use stereo effects. VST3 discovery
@@ -142,7 +150,8 @@ SUPPORT, Collect diagnostics).
   PipeWire registration and routed to a channel by name rules, with the
   assignment remembered per app; an app can also be left to the
   desktop's own routing. Electron apps are identified by their process
-  binary rather than the "Chromium" name they report. Missing stream
+  binary rather than the "Chromium" name they report, and each app's
+  tile shows its own desktop icon. Missing stream
   metadata falls back to the owning client, and Windows executable names
   share an identity with their Wine/Proton client so saved routing persists.
   A desktop shortcut or a Stream Deck key routes the application that has
@@ -156,9 +165,9 @@ SUPPORT, Collect diagnostics).
   profile, with a reset to the defaults recorded after a power cycle.
   With no Elgato device connected, profiles hold the mixer alone.
 - **OpenDeck plugin**: key and dial actions for every switch, mute,
-  level, insert and output, rendered with level meters and status LEDs,
-  plus output volume and mute keys, the system output switch and
-  focused-application routing. It is a client of the daemon's API, so it
+  level, channel volume, insert and output, rendered with level meters
+  and status LEDs, plus output volume and mute keys, a ducking key, the
+  system output switch and focused-application routing. It is a client of the daemon's API, so it
   reflects changes made in the UI or on the hardware; a dial turn leads
   locally, so the daemon's echo never pulls the dial back mid-turn.
 - **Daemon and UI**: the daemon owns the device and the graph, keeps
@@ -177,9 +186,9 @@ SUPPORT, Collect diagnostics).
 - **Terminal mixer**: `openxlr-tui` is the whole mixer in a terminal, for a
   machine with no desktop session, an ssh connection or a tiling setup. It
   speaks the same socket as the window, so both can be open at once, and it
-  wears the same skins. Tabs in the manner of btop: the submix grid with
-  live meters, the hardware inputs, the outputs, the applications, the
-  insert chains, the profiles and the appearance.
+  wears the same skins. Tabs in the manner of btop: the submix with
+  live meters, the send matrix, the hardware inputs, the outputs, the
+  applications, the insert chains, the profiles and the options.
   See [the manual](docs/manual.md#terminal).
 - **Omarchy bar**: `openxlr.mixer` shows XLR meters, mute and monitor feeds
   in Omarchy 4, with channel sends and mix masters in a popout. The Arch
@@ -225,7 +234,8 @@ Packages exist for Arch Linux, CachyOS and Omarchy (AUR), Ubuntu (PPA),
 Fedora (COPR) and NixOS (flake); every release also carries a `.deb` and
 an `.rpm` for a manual install, with SHA-256 checksums and a GitHub build
 provenance attestation (`gh attestation verify <file> --owner emaspa`).
-Pick your distribution:
+An experimental Flatpak is built by CI and not yet on Flathub; see
+[docs/flatpak.md](docs/flatpak.md). Pick your distribution:
 
 **Arch Linux, CachyOS and Omarchy**, from the
 [AUR](https://aur.archlinux.org/packages/openxlr); the two derivatives

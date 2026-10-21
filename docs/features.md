@@ -25,12 +25,13 @@ Wave XLR Pro:
 - Mic/PC direct-monitor crossfade (inside the device, no host latency)
 - Physical output routing: Headphones 1, Headphones 2, Line Out and USB
   Aux are each switched in the device's hardware mixer
-- Ducking on the device: when the [ducking](#submixer) setup fits the
-  unit (XLR 1 as the key, each ducked mix heard only on the jacks and Line
-  Out or the USB Aux port, every channel in it ducked), the unit lowers
-  that whole output itself, by 6, 12 or 24 dB at a chosen sensitivity and
-  speed. Written on every connect, which clears ducking Wave Link left.
-  Mapped from Wave Link on Windows, listening checks on Linux pending
+- Ducking on the device, mapped from Wave Link on Windows but not used:
+  the unit lowers a whole output inside its own mix, and OpenXLR feeds
+  the jacks through the monitor return, which goes around that mix, so
+  on the desk the jacks did not dip. [Ducking](#submixer) runs in
+  software on the Pro, and the state says why
+  ([api.md](api.md#where-ducking-runs)). The unit is written with ducking
+  off while the submixer runs, which clears ducking Wave Link left
 
 Wave XLR MK.2 and XLR Dock MK.2: gain, mute, phantom power, low cut,
 expander, voice tune with strength, ClipGuard, compressor, headphone
@@ -42,12 +43,12 @@ Wave:3: gain (0 to 40 dB), mute, ClipGuard, headphone volume and the
 direct monitor balance, shown as the crossfade; the low cut is the
 submixer's, by design. The desktop's volume controls follow the
 microphone's mute and headphone level and can set them, and Options
-shows the firmware version. Beta: written from public protocol research,
-with detection, gain, mute, headphone volume and the monitor balance
-working in one user's quick test, and not yet checked in full on the
-microphone by anyone on the project, so with another supported
-interface attached the daemon drives that one and the Wave:3 only when
-picked from the header. [hardware-support.md](hardware-support.md)
+shows the firmware version. Beta: written from public protocol research;
+on the maintainer's unit every control writes and reads back, and the
+gain, the monitor balance and the desktop volume controls are verified,
+while the mute pad, the LED ring and a replug are not yet checked, so
+with another supported interface attached the daemon drives that one and
+the Wave:3 only when picked from the header. [hardware-support.md](hardware-support.md)
 names the sources, the bytes they dispute and what an owner checks.
 
 Wave:1: the same controls as the Wave:3, from the same backend under the
@@ -196,7 +197,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
 - Channels for the hardware inputs (XLR 1, XLR 2, Aux In), for
   application groups (Game, Music, Browser, System, Voice Chat, SFX) and
   for other PipeWire capture sources (below). XLR 2 and Aux In are shown
-  only where the device has them, which is the Wave XLR Pro; every client
+  only where the device has them, which is the Wave XLR Pro, or while XLR
+  2 is bound to another source; every client
   reads that from the state rather than deciding for itself
 - Mixes: Monitor A (what you hear), Monitor B (a second selection for
   outputs that should hear something else), the virtual microphones
@@ -225,7 +227,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   processor instead when the setup fits, and the state says why when it
   does not. Saved with the mixer, carried by profiles, and reported as a
   `duck:<mix>` reduction meter while software runs. Set up in the
-  Ducking window, opened from the layout editor and from Options, with
+  Ducking window, opened from the SUBMIXER header, the layout editor and
+  Options, with
   the key, a channel and a mix checklist, the presets, where it runs and
   a reduction bar ([manual](manual.md#ducking))
 - Bidirectional Linux volume and mute controls for every monitor mix,
@@ -246,7 +249,7 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   while its audio, sends, outputs and apps carry on. Every mix can be
   hidden, Monitor A, Monitor B, Stream, Chat and Aux included. Show hidden
   in the SUBMIXER header draws them faded in their places, as a window
-  preference. Icons come from a built-in vector set of 22, every item
+  preference. Icons come from a built-in vector set of 23, every item
   starts with one chosen by its kind, and the icon can be picked when the
   channel or mix is added. A skin may redraw an icon or add its own as
   path data. The window, the terminal mixer and the Stream Deck keys
@@ -649,7 +652,7 @@ green for an engaged feature or the active monitor output. Every
 hardware switch and mute is a key target, plus the software low cut
 (its frequency shown on the LED, cycling Off, 80, 120), ClipGuard, gain
 lock, switching the monitor output to a specific device, and cycling
-an output's feed through Monitor A, Monitor B and Monitor A+B, an
+an output's feed through Monitor A, Monitor B, Monitor A+B and then every other mix, an
 output's volume in 5% steps and its mute (red while muted), the enforced
 system output, routing the focused application to a channel, the
 next member of an exclusive group, and ducking on or off on any device. Each key
@@ -759,8 +762,8 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   at the top of the daemon process, before the device connects, since
   connecting switches the card's profile and WirePlumber then moves the
   defaults to the card's new nodes
-- Capture hold: WirePlumber rules keep the XLR Dock's and the original
-  Wave XLR's capture node running. On those devices a playback stream
+- Capture hold: WirePlumber rules keep the XLR Dock's, the original
+  Wave XLR's and the Wave:3's capture node running. On those devices a playback stream
   opened before the capture stream silences the microphone for the life
   of that capture stream, so capture is never allowed to suspend
 - Desktop monitor volume: the default output can follow the first selected
@@ -792,7 +795,9 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   that snapshot and runs `pw-link` only for a link that is missing; a
   monitor, microphone or USB Aux route that came up with a side missing
   is linked again rather than kept as healthy
-- The daemon rebuilds its graph after a pipewire-pulse restart, and
+- The daemon rebuilds its graph after a pipewire-pulse restart, retries
+  a graph build the audio server did not answer at 2, 4, 8 and 16 s and
+  then every 30 s while the state warns that the mixer is waiting, and
   refuses to grow the layout when pipewire-pulse has no open-file
   headroom left; the packages raise that limit with a systemd drop-in.
   It also holds every sink it created at full volume and unmuted, since

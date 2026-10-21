@@ -4,7 +4,8 @@ OpenXLR drives one primary interface: the one in the header picker, whose
 microphone feeds XLR 1 and the other hardware strips and whose controls fill
 the main window. Up to four more attached units can be driven next to it as
 additional interfaces. Each gets its own hardware controls and feeds its own
-capture channel. None of this has been run with two physical units yet; see
+capture channel. Two pairings have run on hardware, a Wave XLR Pro beside an
+XLR Dock and beside a Wave:3; the rest rests on simulated units, see
 [what still needs hardware](#what-still-needs-hardware).
 
 ## Telling units apart
@@ -103,8 +104,9 @@ settings, stored under its instance id in `~/.config/openxlr/devices/`. The
 window shows gain, mute, low cut, ClipGuard and phantom power for each input
 the model has; the API reaches every control the model exposes. The software
 low cut and ClipGuard stay on the primary's XLR 1 and the XLR inserts on its
-XLR channels; an additional unit's channel can use the inserts on the mixes it
-feeds.
+XLR channels; an additional unit's capture channel has an insert chain of its
+own and, when mono, Sound Check, and the inserts on the mixes it feeds process
+it too.
 
 Two Wave XLR Pros that the node name cannot tell apart cannot be made
 additional, because switching one card's profile could switch the other's.

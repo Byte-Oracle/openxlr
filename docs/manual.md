@@ -72,8 +72,9 @@ Gain controls in the window, the terminal mixer and the Stream Deck dials
 cover the connected interface's own range: 0 to 80 dB on the Wave XLR Pro
 and the MK.2 family, 0 to 75 dB on the original Wave XLR and the first
 XLR Dock, 0 to 40 dB on the Wave:3 and Wave:1. Options shows the firmware
-version under INTERFACE on an interface that reports one, today the Wave:3
-and Wave:1. On those two the desktop's sound settings and OpenXLR also
+version under INTERFACE on an interface that reports one: the Wave XLR
+Pro, the MK.2 family, the Wave:3 and the Wave:1. On the Wave:3 and Wave:1
+the desktop's sound settings and OpenXLR also
 share the microphone mute and the headphone level, so a change in either
 shows in the other within a second. Wave:3 support is in beta: it is
 written from public protocol research, and one user's quick test covered
@@ -114,13 +115,13 @@ supported interface is attached, so a desk without an Elgato interface
 shows XLR 1 alone. The rest carry
 application
 groups: Game, Music, Browser, System, Voice Chat and SFX by default, and
-whatever you add, rename or remove in the layout editor
-([section 3.12](#layout)). Each channel is a PipeWire output device an
-application can play into.
+whatever you add, rename, hide or remove in the layout editor
+([section 3.12](#layout), [Show hidden](#show-hidden)). Each channel is a
+PipeWire output device an application can play into.
 
 **Mixes** are where audio leaves. The default layout has five; Stream,
 Chat and any mix you add, a virtual microphone or a monitor mix, can be
-renamed and removed ([section 3.12](#layout)):
+renamed, hidden and removed ([section 3.12](#layout)):
 
 | Mix | What it is | Where it goes |
 |---|---|---|
@@ -207,7 +208,8 @@ system default devices are not part of a profile, so recalling one
 does not rewire the desktop.
 
 **Inserts** are LV2, CLAP or VST3 effects placed in the signal path: a mono
-chain on each XLR input, a stereo chain on each mix. On the first XLR Dock
+chain on each XLR input, a mono or stereo chain on each capture input,
+a stereo chain on each mix. On the first XLR Dock
 and original Wave XLR, OpenXLR also offers software low cut and limiting
 on XLR 1 because their backends do not expose those hardware controls.
 Intermediate DSP and mix-delay nodes are hidden from desktop device pickers
@@ -423,8 +425,8 @@ that was the default.
 
 1. In the MONITOR card, tick every device the monitor mixes should play
    on: your speakers, a headset, or several at once. On the Wave XLR
-   Pro its own outputs (Headphones 1, Headphones 2, Line Out) appear
-   here too; ticking one switches the hardware's output routing.
+   Pro its own outputs (Headphones 1 (front), Headphones 2 (rear), Line
+   Out) appear here too; ticking one switches the hardware's output routing.
    A ticked device that comes up with one side of its stereo feed
    missing, or that goes away and comes back, is linked again on the
    next sweep (about one second). While it is away it stays ticked in
@@ -564,7 +566,9 @@ Ducking is off until you switch it on. In the window, open **Ducking**
 from the SUBMIXER header beside **Edit layout**, from the bottom row of the
 **Mixer layout** window beside **Exclusive groups**, or from **Options**,
 card AUDIO, under the software mixer switch. All three open the same
-window, on any device:
+window, on any device; the header button shows only while the software
+mixer runs, and with the mixer off the window opened from Options shows
+the setup without letting you change it:
 
 1. Tick **Lower other audio while the key microphone is loud**.
 2. Pick the **Key microphone**. It leaves the channel list, since the key
@@ -763,15 +767,17 @@ your latest selection is kept. A restart that finishes after the mixer
 has stopped does not reconnect its outputs.
 
 The USB Aux *input* (what the second computer sends back) is the Aux In
-channel, with its level and lock in the INPUTS card.
+channel, with its level and **Level Lock** on the USB Aux in row of the
+INPUTS card.
 
 <a name="plugins"></a>
 ### 3.5 Add a plugin to the signal path
 
-1. Under XLR 1, XLR 2 or a mix, press "Inserts". The chain window opens
-   with that chain's plugins and an "Add plugin" button. The picker lists
-   compatible installed LV2, CLAP and VST3 effects (ones that can run
-   mono for an input, stereo for a mix), searchable by name, category or
+1. Under XLR 1, XLR 2, a capture input or a mix, press "Inserts". The
+   chain window opens with that chain's plugins and an "Add plugin"
+   button. The picker lists compatible installed LV2, CLAP and VST3
+   effects (ones that can run mono for a mono input, stereo for a stereo
+   capture input or a mix), searchable by name, category or
    format. A VST3 effect that reports stereo buses but accepts a mono
    layout when asked, as the Elgato effects do, is offered for the inputs
    too: OpenXLR asks each plugin when it scans it. Host
@@ -1783,7 +1789,8 @@ Under AT LOGIN:
 
 - "Start audio in the background" enables the daemon's
   systemd user service. On a packaged install this is the package's own
-  unit. This does not start the mixer window or create a tray icon. If
+  unit; under Flatpak it is a background portal request instead, see
+  [Flatpak](flatpak.md). This does not start the mixer window or create a tray icon. If
   the service cannot be enabled or disabled, Options says so and keeps
   the previous preference rather than saving one the system does not have.
 - "Start the OpenXLR app" writes a desktop autostart
@@ -1824,7 +1831,9 @@ Under WINDOW:
   effect immediately. Keeping the app in the tray hides the window
   instead of quitting; the tray icon's "Show mixer" menu item restores it,
   including when the window was minimized. "Quit OpenXLR" in the tray
-  menu always exits. Neither choice stops the background audio service.
+  menu always exits. Neither choice stops the background audio service,
+  except under Flatpak, where the window owns its daemon and Quit stops
+  both ([Flatpak](flatpak.md)).
 
 Launching OpenXLR again shows its existing window. A launch requested while
 the first process is still initializing is kept until the window is ready,
@@ -1963,8 +1972,8 @@ the view, above the strips for the channel and the mix. None of this
 changes a level, a mute or a route.
 
 <a name="show-hidden"></a>
-**Show hidden** sits in the SUBMIXER header beside Pop out and Edit
-layout, and appears only while a channel or a mix is hidden in the layout
+**Show hidden** sits in the SUBMIXER header beside Pop out, Edit layout
+and Ducking, and appears only while a channel or a mix is hidden in the layout
 editor. Switched on, it draws the hidden channels and mixes in their
 places in every layout, faded so you can tell them apart, and they work
 as usual. This applies in the separate mixer window too. It is a window
@@ -2218,8 +2227,8 @@ the release page matches the daemon of that release.
 The default channels and mixes are a starting point. Edit layout in the
 SUBMIXER card opens the layout editor: application channels on the left,
 mixes on the right, each with move up and down, Rename and Delete, and a
-box at the bottom to add one. Add capture input, above the channel
-list, turns another PipeWire capture source into a channel
+box at the bottom to add one. Add capture input, under that box, turns
+another PipeWire capture source into a channel
 ([Additional capture inputs](#capture-inputs)). The hardware inputs,
 Monitor A, Monitor B and Aux are listed in fixed places; only their
 appearance can change.
@@ -2267,9 +2276,9 @@ no icon starts its name at the tile's edge. A skin can redraw an icon but
 not choose it.
 The terminal mixer puts the icon before the name on its strip as one text
 character, in the same colour. Stream Deck keys and dials whose target is
-that channel or mix show the icon in place of their glyph and the colour on
-the label and border, unless the key has its own icon chosen in its
-settings. Mute and offline indicators keep their usual colours. An icon
+that channel or mix show the icon in place of their glyph; a key also takes
+the colour on its label and border, a dial only on its corner icon, unless
+the key has its own icon chosen in its settings. Mute and offline indicators keep their usual colours. An icon
 that only a skin draws shows as the kind's default in the terminal mixer,
 on the Stream Deck, and in the window under another skin.
 The headphone outputs are listed at the top of CHANNELS: **Phones 1** and,
@@ -2465,12 +2474,14 @@ its live state, so what a key displays is what the mixer window shows.
 **Toggle** (a key) switches one thing: a hardware control (mute,
 phantom, low cut, expander, voice tune, ClipGuard, compressor, low
 impedance, the Pro's output selectors, the aux level lock, the gain
-lock), [ducking](#ducking) on or off, the software low cut (cycling Off, 80, 120), a mix or send mute,
+lock), [ducking](#ducking) on or off, the software low cut (cycling Off, 80, 120), the software
+ClipGuard, the Aux mix to the USB Aux port, a mix or send mute,
 the monitor output (switching the monitor mixes to one specific device),
 an output's feed (cycling Monitor A, Monitor B, Monitor A+B and the remaining mixes, lit
 when not on A),
-the bypass of one insert or of a whole chain, a desktop output's mute or
-its selection as the enforced system default, the routing of the focused
+the bypass of one insert or of a whole chain, a desktop output's mute, a
+5% step up or down in its volume, or its selection as the enforced system
+default, the routing of the focused
 application, a profile to recall, or the next member of an
 [exclusive group](#exclusive-groups). A group key shows the group's name
 and the member that is heard, or None; a press unmutes the next member in
@@ -2495,8 +2506,8 @@ interface's first and second inputs, and they act on the primary interface
 only. A strip bound to a source without unit controls has no hardware mute.
 Use a send mute key for it in each mix you want it
 out of, or press a dial set to it in all mixes, which mutes every send at
-once. With no interface connected the hardware keys and dials go grey, and
-a press only flashes an alert. The ducking key, under **Mixer** in the
+once. With no interface connected the hardware keys go grey, the hardware
+dials show OpenXLR and "set up", and a press only flashes an alert. The ducking key, under **Mixer** in the
 key's settings, is no hardware key: it works with any device or none,
 lights while ducking is on, and a press switches only that, leaving the
 key microphone, channels, mixes and presets as they are. A daemon that
@@ -2540,7 +2551,11 @@ the device supports output routing. On volume-only jacks, such as the XLR
 Dock, it shows the volume and pressing it sends no command.
 Pressing other dials mutes (or, for a gain, mutes the input;
 for the crossfade, recentres; for a channel volume, mutes or unmutes the
-channel in every mix, as a dial on its sends in all mixes does). A dial can hold several targets, cycled
+channel in every mix, as a dial on its sends in all mixes does; for an
+insert control, toggles that insert's bypass; for a named output, toggles
+that output's mute; for the monitor output volume, pauses or resumes
+monitoring, see [output keys](#output-keys)). Pressing an Aux In level
+dial sends nothing. A dial can hold several targets, cycled
 by tap or press as chosen in its settings. A turn leads: the strip
 follows the dial at once and each tick steps from the value shown, while
 the daemon hears the first tick immediately and a fast turn as a short
@@ -2600,8 +2615,9 @@ installs WirePlumber rules that keep these capture sources always active
 from `packaging/` into `~/.config/wireplumber/wireplumber.conf.d/` and
 restart WirePlumber.
 OpenXLR links the interface's capture before it routes any mix into the
-interface, and the same goes for another Elgato interface that XLR 1 or
-XLR 2 takes its microphone from. Programs that play straight to the
+interface, waiting up to five seconds for it and then routing anyway with
+a journal line, and the same goes for another Elgato interface that XLR 1
+or XLR 2 takes its microphone from. Programs that play straight to the
 interface can still start playback first, which is why the rules matter.
 
 A second cause, when the microphone is silent only after a reboot: the
@@ -2619,6 +2635,16 @@ log when the dock connects and in Options, under INTERFACE. If the USB
 handle is not open either, because the udev rule has not applied yet
 ([section 5.1](#no-device)), the daemon reports that control unavailable
 until the dock connects again.
+The XLR Dock MK.2 answers its settings on one of two USB control banks,
+and which one follows its firmware: 1.0.0 answers on `0x0103`, 1.0.15 on
+`0x0203`. OpenXLR probes the first and falls back to the second every
+time the dock connects, and changes no microphone setting doing it. A
+dock on 1.0.15 therefore carries a connection note naming the bank it
+selected, in Options under INTERFACE; a dock that answers on neither
+bank gets a note too and still connects. The same note says when a
+1.0.15 settings block did not decode and the microphone EQ stays in
+software. With a dock that answers on neither bank, press **Collect
+diagnostics** in Options and open an issue with the archive.
 
 <a name="daemon-not-starting"></a>
 ### 5.3 Daemon does not start after an upgrade, or after a reboot
@@ -2626,16 +2652,19 @@ until the dock connects again.
 - `systemctl --user status openxlr-daemon` shows the state. "203/EXEC"
   in a restart loop means a stale unit in
   `~/.config/systemd/user/openxlr-daemon.service` written by a version
-  before 0.1.9; opening the mixer window once repairs it, or remove the
-  file, `systemctl --user daemon-reload`, then
+  before 0.1.9. Opening the mixer window repairs it when Start audio at
+  login is on and OpenXLR can prove it wrote the unit; otherwise run
+  `openxlr installation repair-startup`, or remove the file,
+  `systemctl --user daemon-reload`, then
   `systemctl --user enable --now openxlr-daemon`.
 - "another OpenXLR daemon is already running for this user": a second
   daemon was started by hand while the service runs. It stops at once;
   stop the service first if you meant to run the daemon by hand.
-- "port 37890 busy": another program holds the daemon's API port,
-  which sits inside the kernel's ephemeral range. The daemon waits up
-  to a minute for it and otherwise exits for systemd to retry; nothing
-  needs to be configured.
+- "port 37890 is in use by another local socket; waiting for it": another
+  program holds the daemon's API port, which sits inside the kernel's
+  ephemeral range. The daemon waits up to a minute for it and otherwise
+  exits for systemd to retry, which gives up after three starts in five
+  minutes; nothing needs to be configured.
 - "The mixer is waiting for the audio server": the daemon started, but
   pipewire-pulse did not answer when the daemon built the mixer. A USB
   device that stops responding can hold pipewire-pulse up for minutes.
@@ -2665,7 +2694,8 @@ until the dock connects again.
 The session manager switched the system default when a new device
 appeared. Set the defaults in Options ([section 3.7](#default-devices)), or pick the device
 you want in your desktop's sound settings once; the daemon defends the
-defaults it saw at start only for the first seconds.
+defaults it saw at start only for about half a minute after the mixer is
+built.
 
 <a name="control-not-applied"></a>
 ### 5.6 A control changes in the window but not on the device
@@ -2693,8 +2723,10 @@ and run `systemctl --user daemon-reload` followed by
 their owned unit by disabling and enabling Start audio at login in Options.
 That includes a unit you copied by hand from the reference file v0.1.37
 to v0.1.70 shipped, as long as you changed only its `ExecStart` line.
-The current unit keeps its other restrictions but does not ask the user
-manager to change its capability bounding set. Review any personal override
+The current unit keeps its other restrictions but no longer carries
+`CapabilityBoundingSet=`, `ProtectClock`, `ProtectKernelLogs` or
+`ProtectKernelModules`, the four lines that asked the user manager to drop
+capabilities. Review any personal override
 before removing it; OpenXLR never deletes an override it did not create.
 
 A USB transfer that never returns fails after a few
@@ -2812,8 +2844,9 @@ you pick, attach the diagnostics archive described below.
 Options, SUPPORT, Collect diagnostics. It writes
 `~/openxlr-diagnostics-<timestamp>.tar.gz` with the daemon's state and
 capabilities, a dump of the interface's vendor blocks, the PipeWire
-graph and device listings, the recent daemon journal, the
-configuration files and version information. Plugin evidence includes the
+graph and device listings, the last two hours of the daemon journal (under
+Flatpak, `daemon.log` and its rotated copy), `mixer.json`, `ui.json` and
+version information. Plugin evidence includes the
 catalogue, effective bridge setup and latest native scan results. The home path, host name
 and the serial numbers of attached USB devices are redacted, in the
 text files and inside the hex dump of the vendor blocks (the XLR Dock
@@ -2893,6 +2926,11 @@ settings. See
 | `~/.config/openxlr/bridge/yabridgectl/config.toml` | companion bridge folder registry, separate from the system bridge |
 | `~/.local/share/openxlr/yabridge/{vst3,clap,vst2}` | companion-generated wrappers; OpenXLR loads VST3 and CLAP only |
 | `~/.config/openxlr/ui.json` | window preferences, the chosen skin, Material's mode and the language included ([section 3.10](#skins)) |
+| `~/.config/openxlr/effect-chain-presets.json` | the window's saved effect presets ([effect-presets.md](effect-presets.md)) |
+| `~/.config/openxlr/deck-palette.json` | the skin colours the window hands to the OpenDeck plugin |
+| `~/.config/autostart/openxlr.desktop` | the window's autostart entry, written by Start the OpenXLR app ([section 3.9](#autostart)) |
+| `~/.cache/openxlr/plugin-scans/`, `~/.cache/openxlr/plugin-scan-logs/` | the plugin catalogue and the latest scan logs |
+| `$XDG_STATE_HOME/openxlr/daemon.log` | the daemon's log under Flatpak, with one rotated copy ([Flatpak](flatpak.md)) |
 | `~/.local/share/openxlr/skins/<id>/skin.json` | a skin you installed; system skins come from `$XDG_DATA_DIRS` ([skins.md](skins.md)) |
 | `openxlr-daemon.service` (systemd user unit) | the daemon; `journalctl --user -u openxlr-daemon` for its log |
 | `/usr/lib/systemd/user/pipewire-pulse.service.d/openxlr.conf` | installed by the packages: raises pipewire-pulse's open-file limit ([section 5.8](#open-files)) |
@@ -3086,6 +3124,8 @@ KDE Plasma, where a short-lived KWin script reads the active process id. It
 reads no window titles and removes its script after the query. The daemon
 uses `gdbus`, supplied by the GLib command-line tools, to ask the window for it.
 On unsupported desktops or when the window is closed, routing reports an error.
+The Flatpak has no access to KWin, so focused routing reports an error there
+on every desktop.
 
 The exact process, or a unique audio identity among its child processes,
 must appear in PipeWire. The existing application assignment is then updated
@@ -3237,9 +3277,10 @@ cell takes its colour from its place on the scale. Missing meter packets
 leave gaps in the history; a reading older than one second falls to zero.
 
 At 150 columns the usual nine channels and five masters fit side by side.
-At 120 columns the banks show fewer strips and follow the selection. At
-80x24 the section rail becomes a top row, the held reading becomes text,
-and shorter strips keep the same controls. Resizing keeps the selection.
+At 120 columns the banks show fewer strips and follow the selection.
+Below 120x30 the section rail becomes a top row, with short section names
+below 100 columns, the held reading becomes text, and shorter strips keep
+the same controls. Resizing keeps the selection.
 The counters below each bank show which strips are visible. Below 80x24,
 the terminal asks for more room and keeps the selection for when it fits.
 
@@ -3250,15 +3291,15 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 | 1 Mixer | channel sends, mix masters, stereo meters and level history; channel and user mix creation, renaming, removal and ordering |
 | 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. A microphone input, including a mono capture input, carries one bar rather than a pair of the same reading. A strip bound to another microphone shows its source, or why it is silent, on the row under its name, and a silent one's name is in the warning colour |
 | 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing, [ducking](#terminal-ducking) on any device and USB Aux return |
-| 4 Outputs | selected monitor sinks and their feeds, shared output volume, each sink's volume and mute, and the system default sink and source |
+| 4 Outputs | selected monitor sinks and their feeds, shared output volume, the monitoring pause (**Mute monitoring**, recording and streaming continue), each sink's volume and mute, and the system default sink and source |
 | 5 Apps | every known application and its channel assignment, including the desktop's own routing |
 | 6 Inserts | the chain on each input and mix, its order, bypass and status; add a plugin from the catalogue, narrowed by typing, of those that fit the chain's width; open a plugin's native editor or edit its generated controls when the editor is blocked or refused |
 | 7 Profiles | load, save over, save as, delete and recall on connect; interface selection and recorded device defaults |
-| 8 Options | the skin picker, connection status, daemon version and fresh state request |
+| 8 Options | the skin picker and **Material mode**, the interface and its warning, the layout, connection status, daemon version and fresh state request |
 
 The bottom line shows the current section's keys, with help and quit at
 its right end when there is room.
-`F1` or `?` opens the complete key table. Up and down scroll that table if
+`F1` or `?` opens a key table. Up and down scroll that table if
 it does not fit. An unadvertised hardware control is marked unavailable.
 Controls below the visible hardware cards appear as the selection moves.
 
@@ -3272,11 +3313,11 @@ Controls below the visible hardware cards appear as the selection moves.
 | Mixer | Home, End | choose the masters or the last channel |
 | Mixer | Space | mute or unmute the selected master or send |
 | Mixer | `-`, `+`, `[`, `]` | lower or raise the level by five points, or by one point |
-| Mixer, Matrix | `<`, `>`, `,`, `.` | lower or raise the selected application or capture channel's volume by five points, or by one point |
+| Mixer, Matrix | `<`, `>`, `,`, `.` | lower or raise the selected channel's volume by five points, or by one point |
 | Mixer | `M` | add a monitor mix |
 | Mixer | `r`, `n`, `N`, `c`, `d` | rename, add an application channel, add a virtual microphone, add a capture input, or delete |
 | Mixer | Ctrl+Left/Right | move the selected channel or user mix one strip along, past hidden ones to the next strip shown |
-| Matrix | Up/Down, Left/Right, Home, End | move through the grid; Home is the masters row |
+| Matrix | Up/Down, Left/Right, PageUp/PageDown, Home, End | move through the grid; Home is the masters row |
 | Matrix | Space, `-`, `+`, `[`, `]` | mute the cell, or change its level by five points or by one |
 | Lists | Up/Down, PageUp/PageDown | move between controls |
 | Inputs and numeric controls | Left/Right, `-`, `+` | change a value; Ctrl+Left/Right or `[` and `]` takes the finer step |
@@ -3292,7 +3333,7 @@ Controls below the visible hardware cards appear as the selection moves.
 | Insert controls | Up/Down, PageUp/PageDown, Left/Right, Space, Enter | select a control, change a number or choice, or toggle a switch |
 | Insert controls | `-`, `+`, `[`, `]`, Home, End | lower or raise a number, take a fine step, or set the minimum or maximum; Ctrl+Left/Right also takes a fine step |
 | Profiles, on a profile | Enter, `s`, `r`, `d` | load, overwrite, recall on connect, or delete |
-| Options | Enter, `R` | use a skin or reload the skin list |
+| Options | Enter, Space, Left/Right, `R` | use a skin, choose the Material mode, or reload the skin list |
 | Inputs, Bindings | Left/Right, Enter | choose a strip's source or port, then apply it |
 | Inputs, Ducking channels and mixes | Left/Right, Home, End, Space, Enter | move between the channels or mixes, then duck the one under the cursor or stop ducking it |
 | Text prompts | Enter, Escape | accept or cancel |
@@ -3412,8 +3453,11 @@ A skin or mode chosen there applies for the run even when `ui.json` cannot
 be written, and the bottom line says the saved choice could not be written.
 `--skin <id>` uses one appearance for this run without saving it, with
 Material held dark, and
-`--list-skins` prints what this machine has. Deck and the Omarchy skins get
-console fader caps, bracketed keys and lamps; flat skins get plain ones.
+`--list-skins` prints what this machine has, `OPENXLR_SKIN` names a skin
+the same way, and `--version` prints the version. Deck, Nyan Pink and the
+Omarchy skins get console fader caps, bracketed keys and lamps; Wave and
+Broadcast get the console cap with plain keys; Material is plain
+throughout.
 The terminal reads these choices from `controls` and derives its surfaces
 and selection from the skin's colours, including light skins. A meter is
 one solid bar whichever appearance the skin names, and its colour runs from
@@ -3465,13 +3509,3 @@ is absent the widget dims, clears its meters and waits to reconnect.
 `omarchy plugin disable openxlr.mixer` removes it from the bar.
 [omarchy.md](omarchy.md) covers installation, package changes, commands
 and the checks still needed in a running Omarchy shell.
-
-### XLR Dock MK.2 control bank
-
-Two revisions of the XLR Dock MK.2 are in the field, and they answer
-their settings on different USB addresses. OpenXLR works out which one
-it has every time it connects, and changes no microphone setting doing
-it. The usual revision needs no note. The rarer one is named in the
-Options connection note, and so is a dock that answers on neither
-address. Such a dock still connects, so save diagnostics from Options
-and open an issue with them.
