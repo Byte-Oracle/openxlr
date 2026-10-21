@@ -375,6 +375,50 @@ public sealed class TuiSkinTests : IDisposable
         return Path.Combine(config, "openxlr", "ui.json");
     }
 
+    /// <summary>
+    /// No saved choice is Broadcast here as in the window, whether ui.json is
+    /// missing or holds no skin, and the terminal writes nothing for it. A
+    /// saved skin, Material included, is kept, and --skin default is Material.
+    /// </summary>
+    [Fact]
+    public void NoSavedChoiceStartsOnBroadcastLikeTheWindow()
+    {
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_root, "home"));
+        Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(_root, "system"));
+        string path = PreferencePath();
+
+        Assert.Equal("broadcast", SkinCatalog.LoadSaved(UiSettingsFile.ReadSkin()).Id);
+        Assert.Equal("Broadcast", SkinCatalog.LoadSaved(null).Name);
+        Assert.True(SkinCatalog.LoadSaved(null).ConsoleFaders);
+        Assert.False(File.Exists(path));
+
+        foreach (string text in new[] { """{ "minimizeToTray": true }""", """{ "skin": "" }""", """{ "skin": null }""" })
+        {
+            File.WriteAllText(path, text);
+            Assert.Equal("broadcast", SkinCatalog.LoadSaved(UiSettingsFile.ReadSkin()).Id);
+            Assert.Equal(text, File.ReadAllText(path));
+        }
+
+        foreach (string id in new[] { "default", "nord", "broadcast" })
+        {
+            Assert.True(UiSettingsFile.WriteSkin(id));
+            Assert.Equal(id, SkinCatalog.LoadSaved(UiSettingsFile.ReadSkin()).Id);
+        }
+        Assert.Same(Theme.Material, SkinCatalog.LoadSaved("default"));
+        Assert.Same(Theme.Material, SkinCatalog.Load("default"));
+    }
+
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("""{"schema":2,"name":"Broadcast","tokens":{"Ox.Card.Background":"#123456"}}""")]
+    public void AnUnreadableBroadcastLeavesMaterialOn(string document)
+    {
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_root, "home"));
+        Environment.SetEnvironmentVariable("XDG_DATA_DIRS", Path.Combine(_root, "system"));
+        Skin("home", "broadcast", document);
+        Assert.Same(Theme.Material, SkinCatalog.LoadSaved(null));
+    }
+
     [Fact]
     public void OversizedPreferencesCannotBeAppliedOrOverwritten()
     {

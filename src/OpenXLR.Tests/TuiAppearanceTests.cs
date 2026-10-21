@@ -83,7 +83,12 @@ public sealed class TuiAppearanceTests : IDisposable
     [InlineData("")]
     public void AnEmptyStartupOverrideUsesTheSavedSkinAndMode(string? skin)
     {
+        // Nothing saved yet: Broadcast, as in the window, and no file written.
+        Assert.Equal("broadcast", TuiProgram.CreateApp(new DaemonLink(), skin).Theme.Id);
+        Assert.False(File.Exists(Path.Combine(_root, "openxlr", "ui.json")));
         Assert.True(UiSettingsFile.WriteAppearanceMode("light"));
+        // A mode alone is no skin choice.
+        Assert.Equal("broadcast", TuiProgram.CreateApp(new DaemonLink(), skin).Theme.Id);
         Assert.True(UiSettingsFile.WriteSkin("default"));
         App material = TuiProgram.CreateApp(new DaemonLink(), skin);
         Assert.Same(Theme.MaterialLight, material.Theme);
