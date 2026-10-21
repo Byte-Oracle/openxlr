@@ -434,7 +434,8 @@ that was the default.
    daemon restart. OpenXLR never moves the monitor to another output in
    its place. Only a recalled profile, loaded by hand or on connect,
    changes the selection, to the outputs that profile saved. Ticking
-   another device adds it. Untick the missing one to drop it. A mono device needs only its one
+   another device adds it. A rejected selection returns to the daemon's
+   reported outputs and shows the reason. Untick the missing one to drop it. A mono device needs only its one
    channel. The microphone channels recover the same way when the
    interface returns, and a microphone feed missing one side keeps its
    working side while the other is repaired.

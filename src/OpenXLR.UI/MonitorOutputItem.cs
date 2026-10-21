@@ -92,7 +92,8 @@ public sealed class MonitorOutputItem : ViewModelBase
             FeedMixes.Clear();
             foreach (MixOption option in options) FeedMixes.Add(new(option, OnFeedChanged));
         }
-        var selected = ((_pendingFeed ?? mixId)?.Split('+') ?? []).ToHashSet(StringComparer.Ordinal);
+        var selected = ((_pendingFeed ?? mixId)?.Split('+',
+            StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? []).ToHashSet(StringComparer.Ordinal);
         foreach (MonitorMixChoice choice in FeedMixes) choice.Sync(selected.Contains(choice.Id), true);
         UpdateFeed();
     }

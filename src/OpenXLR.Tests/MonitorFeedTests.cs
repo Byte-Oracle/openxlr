@@ -205,6 +205,9 @@ public sealed class MonitorFeedTests
     [InlineData("removed", "monitor")]
     [InlineData("removed+desk", "desk")]
     [InlineData("desk+monitor+removed", "monitor+desk")]
+    [InlineData(" desk ", "desk")]
+    [InlineData("monitor + desk", "monitor+desk")]
+    [InlineData("+ monitor ++ desk +", "monitor+desk")]
     public async Task StaleSavedMixIdsShowOnlyTheRoutesTheDaemonCanActuallyUse(string reported, string expected)
     {
         await using var client = new DaemonClient();

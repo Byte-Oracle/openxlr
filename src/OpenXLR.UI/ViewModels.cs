@@ -65,6 +65,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 foreach (MixViewModel mv in Mixes) mv.Inserts.ResetForNewConnection();
                 foreach (ChannelViewModel channel in Channels) channel.Inserts?.ResetForNewConnection();
                 foreach (MonitorOutputItem output in MonitorOutputs) output.CancelFeedEdit();
+                CancelMonitorSelectionEdit();
             }
             else { Inserts.EnsurePluginsLoaded(); Inserts2.EnsurePluginsLoaded(); }
         });
@@ -567,14 +568,45 @@ public sealed partial class MainViewModel : ViewModelBase
         // The daemon's order first, so the output the desktop volume drives
         // stays first, then what was just ticked.
         var ticked = MonitorOutputs.Where(o => o.IsSelected).Select(o => o.Name).ToHashSet();
-        var names = _monitorSelection.Where(ticked.Contains)
-            .Concat(MonitorOutputs.Where(o => o.IsSelected && !_monitorSelection.Contains(o.Name)).Select(o => o.Name))
+        List<string> previous = _pendingMonitorSelection ?? _monitorSelection;
+        var names = previous.Where(ticked.Contains)
+            .Concat(MonitorOutputs.Where(o => o.IsSelected && !previous.Contains(o.Name)).Select(o => o.Name))
             .ToList();
-        _ = _client.SetMonitorOutputsAsync(names);
+        _pendingMonitorSelection = names;
+        _ = SubmitMonitorSelectionAsync(names, ++_monitorSelectionVersion);
+    }
+
+    private async Task SubmitMonitorSelectionAsync(List<string> names, long version)
+    {
+        string? error = await _client.SetMonitorOutputsAsync(names);
+        if (version != _monitorSelectionVersion) return;
+        _pendingMonitorSelection = null;
+        if (error is null) return;
+        RestoreReportedMonitorSelection();
+        Status = error;
+    }
+
+    private void RestoreReportedMonitorSelection()
+    {
+        bool applying = _applying;
+        _applying = true;
+        try { ApplyDevices(_reportedMonitorDevices, _reportedMonitorMixer); }
+        finally { _applying = applying; }
+    }
+
+    internal void CancelMonitorSelectionEdit()
+    {
+        _monitorSelectionVersion++;
+        bool pending = _pendingMonitorSelection is not null;
+        _pendingMonitorSelection = null;
+        if (pending) RestoreReportedMonitorSelection();
     }
 
     // The monitor outputs as the daemon last reported them, in its order.
     private List<string> _monitorSelection = [];
+    private List<string>? _pendingMonitorSelection;
+    private long _monitorSelectionVersion;
+    private JsonNode? _reportedMonitorDevices, _reportedMonitorMixer;
     // Device descriptions seen this session, to name a selected output while it is missing.
     private readonly Dictionary<string, string> _outputLabels = [];
 
@@ -979,6 +1011,10 @@ public sealed partial class MainViewModel : ViewModelBase
     /// </summary>
     private void ApplyDevices(JsonNode? devices, JsonNode? mixer)
     {
+        // Retain the latest report for a rejected selection, without copying
+        // the state or guessing the feed of an output that was missing.
+        _reportedMonitorDevices = devices;
+        _reportedMonitorMixer = mixer;
         if (devices is not JsonArray arr) { Outputs.Clear(); Inputs.Clear(); return; }
 
         var sinks = new List<AudioDeviceItem>();
@@ -1003,7 +1039,8 @@ public sealed partial class MainViewModel : ViewModelBase
 
         _monitorSelection = (mixer?["monitorOutputs"] as JsonArray)?.Select(n => n?.GetValue<string>())
             .Where(n => n is not null).Select(n => n!).Distinct().ToList() ?? [];
-        var current = new HashSet<string>(_monitorSelection);
+        List<string> selection = _pendingMonitorSelection ?? _monitorSelection;
+        var current = new HashSet<string>(selection);
         foreach (AudioDeviceItem s in sinks) _outputLabels[s.Name] = s.Label;
 
         // A selected output whose device is unplugged, asleep or not yet
@@ -1011,18 +1048,26 @@ public sealed partial class MainViewModel : ViewModelBase
         // keeps it selected and routes to it again when it returns; a list
         // without it would send a selection that drops it at the next tick.
         var wanted = sinks.Where(s => !s.IsOwn).Select(s => (s.Name, s.Label, Present: true)).ToList();
-        foreach (string name in _monitorSelection.Where(n => !sinks.Any(s => s.Name == n)))
+        foreach (string name in selection.Where(n => !sinks.Any(s => s.Name == n)))
             wanted.Add((name, Localizer.Format("MonitorOutputMissing", _outputLabels.GetValueOrDefault(name) ?? name), false));
 
         // Rebuild the multi-select list only when membership changed, so open
         // dropdowns and checkbox states survive routine pushes.
         if (!wanted.Select(w => (w.Name, w.Present)).SequenceEqual(MonitorOutputs.Select(m => (m.Name, m.IsPresent))))
         {
-            foreach (MonitorOutputItem output in MonitorOutputs) output.CancelFeedEdit();
-            MonitorOutputs.Clear();
-            foreach (var w in wanted)
-                MonitorOutputs.Add(new MonitorOutputItem(w.Name, w.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged,
-                    w.Present, error => Status = error));
+            var items = wanted.Select(w => MonitorOutputs.FirstOrDefault(output => output.Name == w.Name && output.IsPresent == w.Present)
+                ?? new MonitorOutputItem(w.Name, w.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged,
+                    w.Present, error => Status = error)).ToList();
+            // Adding or losing another device must not cancel this output's
+            // pending feed edit or replace its open picker rows.
+            foreach (MonitorOutputItem output in MonitorOutputs.Where(output => !items.Contains(output))) output.CancelFeedEdit();
+            for (int i = 0; i < items.Count; i++)
+            {
+                int existing = MonitorOutputs.IndexOf(items[i]);
+                if (existing < 0) MonitorOutputs.Insert(i, items[i]);
+                else if (existing != i) MonitorOutputs.Move(existing, i);
+            }
+            while (MonitorOutputs.Count > items.Count) MonitorOutputs.RemoveAt(MonitorOutputs.Count - 1);
         }
 
         EnforcedDefaultSink = mixer?["enforcedDefaultSink"]?.GetValue<string>();
@@ -1045,7 +1090,8 @@ public sealed partial class MainViewModel : ViewModelBase
         var feeds = mixer?["monitorFeeds"] as JsonObject;
         foreach (MonitorOutputItem item in MonitorOutputs)
         {
-            var included = (feeds?[item.Name]?.GetValue<string>()?.Split('+') ?? []).ToHashSet(StringComparer.Ordinal);
+            var included = (feeds?[item.Name]?.GetValue<string>()?.Split('+',
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? []).ToHashSet(StringComparer.Ordinal);
             string feed = string.Join('+', mixOptions.Where(m => included.Contains(m.Id)).Select(m => m.Id));
             item.SyncFeed(mixOptions, feed.Length > 0 ? feed : primaryMonitor);
         }

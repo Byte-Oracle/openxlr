@@ -156,7 +156,9 @@ internal static partial class SkinLayoutWindowTests
             DropDownButton[] feeds = [.. list.GetVisualDescendants().OfType<DropDownButton>().Where(c => c.IsEffectivelyVisible)];
             Assert.Equal(2, feeds.Length);
             Assert.Equal("monitor2", ((MonitorOutputItem)feeds[1].DataContext!).Feed!.Id);
-            boxes[2].IsChecked = true;
+            // This layout fixture has no live transport. Supply the daemon's
+            // selection; real clicks and rejected edits run against the fake server.
+            model.MonitorOutputs[2].Sync(true);
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
             Assert.True(model.MonitorOutputs[2].IsSelected);
             Assert.Equal(3, list.GetVisualDescendants().OfType<DropDownButton>().Count(c => c.IsEffectivelyVisible));
