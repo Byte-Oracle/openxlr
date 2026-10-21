@@ -301,7 +301,7 @@ public sealed class WaveFxEqTests
         Assert.Equal(new Version(1, 0, 15), WaveFxEq.FirmwareVersion(Hex("0205040000" + "01000f")));
         Assert.Equal(new Version(1, 0, 0), WaveFxEq.FirmwareVersion(Hex("010d000000" + "010000")));
         Assert.Null(WaveFxEq.FirmwareVersion(Hex("0205040000" + "0100")));
-        Assert.True(new Version(1, 0, 16) >= WaveFxEq.EqFirmware);
-        Assert.True(new Version(1, 0, 0) < WaveFxEq.EqFirmware);
+        Assert.True(new Version(1, 0, 16) >= WaveFxEq.Mk2EqFirmware);
+        Assert.True(new Version(1, 0, 0) < WaveFxEq.Mk2EqFirmware);
     }
 }

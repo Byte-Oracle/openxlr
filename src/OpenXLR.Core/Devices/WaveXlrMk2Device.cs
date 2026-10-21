@@ -205,30 +205,16 @@ public class WaveXlrMk2Device : IAudioDevice
             int n = TransferWithRetry(RtRead, VReq, BlockIdentity, identity, IdentityLen);
             if (n > 0) version = WaveFxEq.FirmwareVersion(identity.AsSpan(0, n));
         }
-        Firmware = version is null ? null : $"{version.Major}.{version.Minor}.{version.Build}";
-        string model = Info.Model;
-        if (version is null)
-            EqSupport = new(false, DeviceEqSupport.FirmwareUnknown,
-                $"The firmware version of this {model} could not be read, so its EQ runs in software.");
-        else if (version < WaveFxEq.EqFirmware)
-            EqSupport = new(false, DeviceEqSupport.FirmwareOld,
-                $"This {model} has firmware {Firmware}. From 1.0.15 the unit runs the EQ itself; Elgato's updater is in Wave Link on Windows or macOS.");
-        else
+        Firmware = version is null ? null : WaveFxEq.Format(version);
+        byte[]? block = null;
+        EqSupport = WaveFxEq.Gate(Info.Model, version, WaveFxEq.Mk2EqFirmware, () =>
         {
-            byte[] block = Read(BlockSettings, SettingsLen, used: 0);
-            if (block.Length >= WaveFxEq.StructLength && WaveFxEq.Decodes(WaveFxEq.Decode(block)))
-            {
-                _settings = block;
-                EqSupport = new(true);
-            }
-            else
-            {
-                EqSupport = new(false, DeviceEqSupport.UnsupportedBlock,
-                    $"This {model} holds EQ settings OpenXLR does not recognise, so its EQ runs in software. Collect diagnostics for a device report.");
-                string note = "the EQ fields of the settings block do not decode, so the microphone EQ runs in software. Collect diagnostics for a device report.";
-                ConnectionNote = ConnectionNote is null ? note : $"{ConnectionNote} Also, {note}";
-            }
-        }
+            block = Read(BlockSettings, SettingsLen, used: 0);
+            return block.Length >= WaveFxEq.StructLength && WaveFxEq.Decodes(WaveFxEq.Decode(block));
+        });
+        if (EqSupport.Ready) _settings = block;
+        else if (EqSupport.Reason == DeviceEqSupport.UnsupportedBlock)
+            ConnectionNote = ConnectionNote is null ? WaveFxEq.UnsupportedBlockNote : $"{ConnectionNote} Also, {WaveFxEq.UnsupportedBlockNote}";
         Capabilities = _modelCapabilities with { HardwareEq = EqSupport.Ready };
     }
 

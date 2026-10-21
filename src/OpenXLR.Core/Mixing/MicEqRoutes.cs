@@ -5,7 +5,8 @@ namespace OpenXLR.Core.Mixing;
 /// <summary>
 /// The microphone EQ on XLR 1 and XLR 2. It runs on the unit's own DSP when
 /// the channel carries a unit input whose unit runs it (the MK.2 family from
-/// firmware 1.0.15), the channel's choice is <c>device</c>, and no Sound
+/// firmware 1.0.15, each of the Wave XLR Pro's two inputs from 1.0.14), the
+/// channel's choice is <c>device</c>, and no Sound
 /// Check session runs on it; otherwise in software. A unit-run EQ starts no
 /// stage: its values go to the device side through <see cref="IDeviceEqPort"/>.
 /// Moving between the two switches the leaving one off first, so a voice is
@@ -580,7 +581,7 @@ public sealed partial class Mixer
         return new MicEqDevice(unit.Unit, unit.Input, support.Name, support.Firmware, support.Ready && failure is null,
             failure is null ? support.Reason : EqDeviceFailedReason, failure is null ? support.Note : $"The {support.Name} {failure}, so the EQ runs in software.")
         {
-            MinimumFirmware = $"{WaveFxEq.EqFirmware.Major}.{WaveFxEq.EqFirmware.Minor}.{WaveFxEq.EqFirmware.Build}",
+            MinimumFirmware = support.MinimumFirmware,
         };
     }
 

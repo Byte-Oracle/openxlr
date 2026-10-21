@@ -53,6 +53,9 @@ public sealed record UnitEqSupport(string Name, string? Firmware, bool Ready, st
     /// carrier: its channel's EQ runs in software, with nothing failed.
     /// </summary>
     public int Inputs { get; init; } = 1;
+
+    /// <summary>The first firmware the model runs the EQ on, as major.minor.patch.</summary>
+    public string MinimumFirmware { get; init; } = WaveFxEq.Format(WaveFxEq.Mk2EqFirmware);
 }
 
 /// <summary>One input of one unit, by the unit's instance id and the input's number (1 or 2).</summary>
