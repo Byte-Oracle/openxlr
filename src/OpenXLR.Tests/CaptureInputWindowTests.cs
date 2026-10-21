@@ -94,7 +94,7 @@ public sealed class CaptureInputWindowTests
     }
 
     [CaptureWindowFact]
-    public void CaptureButtonsSendTheirIdsAndOlderStatesRemoveTheButtons()
+    public void CaptureButtonsAndSoundCheckSendTheirIdsAndOlderStatesRemoveTheButtons()
     {
         string root = Path.Combine(Path.GetTempPath(), "openxlr-capture-window-" + Guid.NewGuid());
         string[] names = ["XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_DATA_DIRS", "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS"];
@@ -133,6 +133,7 @@ public sealed class CaptureInputWindowTests
     private static async Task CheckCommands()
     {
         var commands = new ConcurrentQueue<JsonNode>();
+        var soundCommands = new ConcurrentQueue<JsonNode>();
         var gate = new object();
         JsonNode state = State();
         using var pushes = new SemaphoreSlim(0);
@@ -178,6 +179,19 @@ public sealed class CaptureInputWindowTests
                                 [.. cmd["inserts"]!.AsArray().Select(i => (JsonNode)new JsonObject { ["insert"] = i!.DeepClone() })]);
                         await Send(Snapshot());
                     }
+                    else if (name == "soundCheck")
+                    {
+                        soundCommands.Enqueue(cmd);
+                        string action = cmd["action"]!.GetValue<string>();
+                        lock (gate)
+                            state["mixer"]!["soundCheck"] = new JsonObject
+                            {
+                                ["channel"] = action == "stop" ? null : cmd["channel"]!.GetValue<string>(),
+                                ["mode"] = action switch { "record" => "recording", "loop" => "looping", "live" => "live", _ => "idle" },
+                                ["seconds"] = action == "stop" ? 0 : 1.5,
+                            };
+                        await Send(Snapshot());
+                    }
                     // Like the daemon: a reply, then the commandResult that says which request it answers.
                     if (cmd["requestId"] is { } requestId)
                         await Send(new { type = "commandResult", requestId = requestId.GetValue<string>(), error = (string?)null });
@@ -208,7 +222,10 @@ public sealed class CaptureInputWindowTests
                 Layout(chain, 560, 360);
                 InsertsViewModel model = main.CaptureInputs.Single(c => c.Id == id).Inserts!;
                 Assert.Same(model, chain.DataContext);
-                Assert.False(model.CanSoundCheck);
+                Assert.Equal(id == "guest", model.CanSoundCheck);
+                Button soundCheck = chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("SoundCheck")));
+                Assert.Equal(id == "guest", soundCheck.IsEffectivelyVisible);
+                if (id == "guest") await SoundCheckWindowTests.CheckCaptureChain(main, chain, soundCommands);
                 chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("AddPlugin")))
                     .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 await Until(() => chain.OwnedWindows.OfType<PluginPickerWindow>().Any(w => w.IsVisible));

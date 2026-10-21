@@ -1923,7 +1923,7 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>Detener y descartar</value>
   </data>
   <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
-    <value>Detén la sesión o cierra esta ventana para recuperar el micrófono y descartar la muestra. La sesión también termina si se pierde el dispositivo, se reinicia el demonio o pasan diez minutos. Los cambios en los efectos se conservan.</value>
+    <value>Detén la sesión o cierra esta ventana para recuperar el micrófono y descartar la muestra. La sesión también termina si se cambia la fuente, se pierde el dispositivo, se elimina el canal, se reinicia el demonio o pasan diez minutos. Los cambios en los efectos se conservan.</value>
   </data>
   <data name="StoreA" xml:space="preserve">
     <value>Guardar A</value>

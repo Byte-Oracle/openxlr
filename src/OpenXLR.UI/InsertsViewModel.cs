@@ -43,14 +43,16 @@ public sealed partial class InsertsViewModel : ViewModelBase
         _channels = channels;
         _title = title ?? channel;
         SoundCheck = new SoundCheckViewModel(client, channel);
+        _canSoundCheck = channel is "xlr1" or "xlr2";
     }
 
     private string _title;
     /// <summary>What the chain belongs to, for window titles ("XLR 1", "Stream mix").</summary>
     public string Title { get => _title; internal set => Set(ref _title, value); }
 
-    /// <summary>Sound Check runs on the two XLR microphone chains only.</summary>
-    public bool CanSoundCheck => _channel is "xlr1" or "xlr2";
+    private bool _canSoundCheck;
+    /// <summary>Sound Check runs on channels the daemon reports as microphones.</summary>
+    public bool CanSoundCheck { get => _canSoundCheck; internal set => Set(ref _canSoundCheck, value); }
     public SoundCheckViewModel SoundCheck { get; }
 
     public Task ShowNativeEditorAsync(InsertViewModel insert)
@@ -182,6 +184,7 @@ public sealed partial class InsertsViewModel : ViewModelBase
 
     public void ResetForNewConnection()
     {
+        SoundCheck.Reset();
         _catalogGeneration++;
         _pluginsRequested = false;
         _catalogTask = null;
@@ -211,6 +214,7 @@ public sealed partial class InsertsViewModel : ViewModelBase
     {
         if (IsDetached) return;
         IsDetached = true;
+        SoundCheck.Reset();
         _catalogGeneration++;
         ResetEffectWorkflow();
         Apply(null);
