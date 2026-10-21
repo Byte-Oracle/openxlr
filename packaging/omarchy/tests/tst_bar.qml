@@ -93,6 +93,47 @@ TestCase {
             return bar.implicitWidth > feedOnlyWidth;
         });
     }
+    function test_fourMicrophonesFollowLayoutOrderAndKeepTheHold(): void {
+        var snapshot = snapshotFor(false);
+        snapshot.mixer.channels = [
+            { id: "guest", name: "Guest", microphone: true },
+            { id: "xlr2", name: "XLR 2" },
+            { id: "line", name: "Line", microphone: false },
+            { id: "usb", name: "USB mic", microphone: true },
+            { id: "xlr1", name: "XLR 1" },
+            { id: "fifth", name: "Fifth", microphone: true },
+            { id: "old", name: "Old capture", captureSource: "usb" }
+        ];
+        fakeLink.snapshot = snapshot;
+        fakeLink.levels = {
+            "ch:guest": [0.2, 0.7], "ch:xlr2": [0.3, 0.3], "ch:line": [0.8, 0.4],
+            "ch:usb": [0.5, 0.5], "ch:xlr1": [0.6, 0.6], "ch:fifth": [0.4, 0.4], "ch:old": [0.8, 0.8]
+        };
+        wait(0);
+        compare(bar.shownInputs.join(","), "guest,xlr2,usb,xlr1");
+        var previous = -1;
+        for (const id of bar.shownInputs) {
+            const input = findChild(bar, "input-" + id);
+            compare(input.visible, true);
+            tryVerify(function () { return input.x > previous; });
+            previous = input.x;
+            compare(findChild(input, "meter").lanes, 1);
+        }
+        compare(findChild(bar, "input-guest").level, 0.7);
+        for (const id of ["line", "fifth", "old"])
+            compare(findChild(bar, "input-" + id).visible, false);
+        fakeLink.levels = ({});
+        compare(bar.shownInputs.join(","), "guest,xlr2,usb,xlr1");
+        // Expire the first microphone without making the other three wait.
+        var seen = Object.assign({}, bar.lastActive);
+        seen.guest = Date.now() - 10000;
+        bar.lastActive = seen;
+        bar.observe(false);
+        compare(bar.shownInputs.join(","), "xlr2,usb,xlr1,fifth");
+        fakeLink.ready = false;
+        compare(bar.shownInputs.length, 0);
+        compare(findChild(bar, "release").running, false);
+    }
     function test_anInputTheDeviceCannotFeedNeverAppears(): void {
         // Only the Wave XLR Pro has a second jack, so the daemon marks XLR 2
         // absent on every other model. Signal on an absent channel must not
@@ -160,14 +201,14 @@ TestCase {
         fakeLink.levels = {
             "ch:xlr1": [0.5, 0.5]
         };
-        var firstSeen = input.lastActive.xlr1;
+        var firstSeen = bar.lastActive.xlr1;
         wait(40);
         // Even an unchanged positive reading rearms the single release timer.
         fakeLink.levels = {
             "ch:xlr1": [0.5, 0.5]
         };
-        verify(input.lastActive.xlr1 > firstSeen);
-        var release = findChild(input, "release");
+        verify(bar.lastActive.xlr1 > firstSeen);
+        var release = findChild(bar, "release");
         compare(release.interval, 10000);
         compare(release.repeat, false);
         fakeLink.levels = ({});
@@ -199,11 +240,11 @@ TestCase {
         };
         fakeLink.snapshot = null;
         fakeLink.ready = false;
-        compare(findChild(bar, "input-xlr1").visible, false);
-        compare(findChild(findChild(bar, "input-xlr1"), "release").running, false);
+        compare(bar.shownInputs.length, 0);
+        compare(findChild(bar, "release").running, false);
         fakeLink.ready = true;
         fakeLink.levels = ({});
-        compare(findChild(bar, "input-xlr1").visible, false);
+        compare(bar.shownInputs.length, 0);
     }
     function test_labelsAreTheDaemonsChannelNames(): void {
         // A Wave:3's capsule, or a strip bound to another microphone, is Mic 1.

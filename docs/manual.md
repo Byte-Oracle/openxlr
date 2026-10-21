@@ -3210,15 +3210,17 @@ It needs a terminal. With its output piped somewhere it says so and stops.
 
 On Omarchy 4 the AUR package carries the shell plugin when it is built
 there. Run `openxlr-omarchy-enable` once after installing it. The bar
-then shows XLR input meters,
-dimmed for hardware mute, and the first selected monitor output's feed and
+then shows up to four microphone input meters in layout order, including
+mono capture inputs, dimmed for hardware mute, and the first selected monitor output's feed and
 meter. An input appears only while it has had signal above -60 dBFS within
 the last 10 seconds. Muting keeps that history; a quiet input disappears
-when those 10 seconds elapse. Labels use the bar's regular body font.
+when those 10 seconds elapse. Stereo capture inputs stay out of the bar.
+An older daemon without `microphone` keeps the XLR-only bar. Labels use the
+bar's regular body font.
 Click it for
 the mixer, and use the arrows to choose the mix whose sends you are editing.
-The bracketed mute key affects that send or master; each XLR strip's
-separate mic button affects its hardware mute in every destination.
+The bracketed mute key affects that send or master; a carrying channel's
+separate mic button affects its unit's hardware mute in every destination.
 Input labels are the daemon's strip names: XLR 1 on an XLR jack, Mic 1 on
 a Wave:3's capsule or another microphone. The mic button belongs to the
 channel that carries the interface's input. A strip

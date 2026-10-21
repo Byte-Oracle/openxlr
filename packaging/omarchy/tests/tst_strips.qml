@@ -273,6 +273,21 @@ TestCase {
         mouseClick(findChild(strip, "sendMute"));
         compare(sent.length, 0);
     }
+    function test_captureMetersUseTheMicrophoneFlagAndOlderStateStaysStereo(): void {
+        fakeLink.levels = { "ch:guest": [0.2, 0.7] };
+        strip.entry = { id: "guest", name: "Guest", captureSource: "usb", microphone: true };
+        compare(strip.mono, true);
+        compare(strip.meter[0], 0.7);
+        compare(strip.meter[1], 0.7);
+        strip.entry = { id: "guest", name: "Guest", captureSource: "usb", microphone: false };
+        compare(strip.mono, false);
+        compare(strip.meter[0], 0.2);
+        compare(strip.meter[1], 0.7);
+        strip.entry = { id: "guest", name: "Guest", captureSource: "usb", captureMonoChannel: 0 };
+        compare(strip.mono, false);
+        strip.entry = { id: "xlr1", name: "XLR 1" };
+        compare(strip.mono, true);
+    }
     function test_monitorMasterReaches150Percent(): void {
         strip.master = true;
         strip.entry = {

@@ -31,6 +31,52 @@ Item {
     implicitWidth: readouts.implicitWidth
     implicitHeight: metrics.height
 
+    property var lastActive: ({})
+    property var shownInputs: []
+
+    function observe(signal: bool): void {
+        release.stop();
+        const now = Date.now();
+        const seen = {};
+        var next = Mixer.inputHoldMs;
+        if (link.ready) {
+            channels.forEach(function (channel) {
+                if (!Mixer.mono(channel))
+                    return;
+                var time = root.lastActive[channel.id];
+                if (signal && Mixer.pair(root.link.levels, "ch:" + channel.id, true)[0] > 0)
+                    time = now;
+                if (typeof time === "number" && now - time < Mixer.inputHoldMs) {
+                    seen[channel.id] = time;
+                    next = Math.min(next, time + Mixer.inputHoldMs - now);
+                }
+            });
+        }
+        lastActive = seen;
+        shownInputs = Mixer.shownInputs(channels, seen, now);
+        if (Object.keys(seen).length) {
+            release.interval = Math.max(1, next);
+            release.start();
+        }
+    }
+    Timer {
+        id: release
+        objectName: "release"
+        repeat: false
+        onTriggered: root.observe(false)
+    }
+    Connections {
+        target: root.link
+        function onLevelsChanged(): void {
+            root.observe(true);
+        }
+        function onReadyChanged(): void {
+            root.observe(true);
+        }
+    }
+    onChannelsChanged: observe(false)
+    Component.onCompleted: observe(true)
+
     FontMetrics {
         id: metrics
         font.family: root.fontFamily
@@ -81,66 +127,14 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 10
         Repeater {
-            model: ["xlr1", "xlr2"]
+            model: root.mixer.channels || []
             Readout {
-                id: input
-                required property string modelData
-                objectName: "input-" + modelData
-                property var lastActive: ({})
-                property bool held: false
-                readonly property bool present: root.channels.some(function (channel) {
-                    return channel.id === input.modelData;
-                })
-                visible: root.link.ready && present && held
-                // The daemon's name: XLR 1 on an XLR jack, Mic 1 on a capsule or another microphone.
-                text: Mixer.channelName(root.channels, modelData)
-                level: Mixer.pair(root.link.levels, "ch:" + modelData, true)[0]
-                // Dimmed only by the interface's mute, and only while this strip carries its input.
-                muted: Mixer.hardwareMuted(root.link.snapshot, modelData)
-
-                function observe(): void {
-                    if (!root.link.ready) {
-                        release.stop();
-                        lastActive = ({});
-                        held = false;
-                        return;
-                    }
-                    // Read the frame directly: a levelsChanged handler can run
-                    // before this delegate's level binding has reevaluated.
-                    if (Mixer.pair(root.link.levels, "ch:" + modelData, true)[0] > 0) {
-                        const seen = {};
-                        seen[modelData] = Date.now();
-                        lastActive = seen;
-                        release.interval = Mixer.inputHoldMs;
-                        release.restart();
-                    }
-                    held = Mixer.shownInputs(lastActive, Date.now()).indexOf(modelData) >= 0;
-                }
-                Timer {
-                    id: release
-                    objectName: "release"
-                    interval: Mixer.inputHoldMs
-                    repeat: false
-                    onTriggered: {
-                        input.held = Mixer.shownInputs(input.lastActive, Date.now()).indexOf(input.modelData) >= 0;
-                        // A timer delivered just before the deadline waits only
-                        // the remaining time. No polling timer runs between frames.
-                        if (input.held) {
-                            interval = Math.max(1, input.lastActive[input.modelData] + Mixer.inputHoldMs - Date.now());
-                            restart();
-                        }
-                    }
-                }
-                Connections {
-                    target: root.link
-                    function onLevelsChanged(): void {
-                        input.observe();
-                    }
-                    function onReadyChanged(): void {
-                        input.observe();
-                    }
-                }
-                Component.onCompleted: observe()
+                required property var modelData
+                objectName: "input-" + modelData.id
+                visible: root.shownInputs.indexOf(modelData.id) >= 0
+                text: Mixer.channelName(root.channels, modelData.id)
+                level: Mixer.pair(root.link.levels, "ch:" + modelData.id, true)[0]
+                muted: Mixer.hardwareMuted(root.link.snapshot, modelData.id)
             }
         }
         Readout {
