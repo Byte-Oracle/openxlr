@@ -36,6 +36,7 @@ const DEVICE_TOGGLES = {
   outHp1: "HP 1\nOut", outHp2: "HP 2\nOut", outLineOut: "Line\nOut",
   gainLocked: "Gain\nLock",
   softClipGuard: "Clip\nGuard",
+  ducking: "Ducking",
 };
 // Targets whose ON state means "muted" (shown red instead of lit green).
 const MUTE_LIKE = new Set(["mute", "mute2"]);
@@ -451,6 +452,8 @@ function toggleValue(target, inst) {
     return group ? groupOpenMember(group) !== null : null;
   }
   if (Object.hasOwn(DEVICE_TOGGLES, target) && !supported(target)) return null;
+  // The unit's own ducking is a setting of its own, not a field of the state block.
+  if (target === "ducking") return daemonState?.ducking?.enabled ?? null;
   return dev()?.[target] ?? null;
 }
 
@@ -744,6 +747,7 @@ function onKeyDown(context, inst) {
   }
   else if (t === "softClipGuard") cmd({ cmd: "setSoftClipGuard", value: !cur });
   else if (t === "gainLocked") cmd({ cmd: "set", control: "gainLock", value: !cur });
+  else if (t === "ducking") cmd({ cmd: "setDucking", value: { enabled: !cur } });
   else if (t.startsWith("monitor:")) cmd({ cmd: "setMonitorOutputs", devices: [t.slice(8)] });
   else if (t.startsWith("feed:")) cmd({ cmd: "setMonitorFeed", device: t.slice(5), mix: nextFeed(feedOf(t.slice(5))) });
   else if (t.startsWith("mixmute:"))
