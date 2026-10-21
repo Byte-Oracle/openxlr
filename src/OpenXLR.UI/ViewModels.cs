@@ -1041,7 +1041,11 @@ public sealed partial class MainViewModel : ViewModelBase
         monitorMixes.AddRange(allMixes.Where(m => m!["id"]?.GetValue<string>() is not ("monitor" or "monitor2"))
             .Select(m => new MixOption(m!["id"]!.GetValue<string>(), m["name"]?.GetValue<string>() ?? m["id"]!.GetValue<string>())));
         var feeds = mixer?["monitorFeeds"] as JsonObject;
-        string primaryMonitor = monitorMixes.FirstOrDefault()?.Id ?? "monitor";
+        DefaultMonitorMix = mixer?["defaultMonitorMix"]?.GetValue<string>()
+            ?? allMixes.Where(m => m!["kind"]?.GetValue<string>() == "monitor")
+                .Select(m => m!["id"]!.GetValue<string>()).OrderBy(id => id == "monitor" ? 0 : 1)
+                .ThenBy(id => id, StringComparer.Ordinal).FirstOrDefault() ?? "monitor";
+        string primaryMonitor = DefaultMonitorMix;
         foreach (MonitorOutputItem item in MonitorOutputs)
             item.SyncFeed(monitorMixes, feeds?[item.Name]?.GetValue<string>() ?? primaryMonitor);
         Raise(nameof(MonitorSummary));
@@ -1056,6 +1060,9 @@ public sealed partial class MainViewModel : ViewModelBase
             return firstWords[0] + " " + string.Join("+", list.Select(n => n.Split(' ', 2)[1]));
         return string.Join("+", list);
     }
+
+    /// <summary>The daemon's implicit monitor feed; old daemons use their first monitor.</summary>
+    public string DefaultMonitorMix { get; private set; } = "monitor";
 
     private void OnMonitorFeedChanged(string output, string mixId)
     {
@@ -1559,6 +1566,9 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     /// <summary>The daemon owns editability; older daemons only allow virtual microphones.</summary>
     public bool IsEditable => _editable ?? Kind == "virtualMic";
 
+    private bool? _deletable;
+    public bool IsDeletable => _deletable ?? IsEditable;
+
     /// <summary>What a structural mix is, for the layout editor.</summary>
     public string KindLabel => Kind switch { "monitor" => Localizer.Text("MonitorMixKind"), "auxPort" => Localizer.Text("UsbAuxPortKind"), _ => "" };
 
@@ -1570,7 +1580,7 @@ public sealed class MixViewModel : ViewModelBase, IHasId
 
     private string _kind = "monitor";
     /// <summary>"monitor", "virtualMic" or "auxPort", as the daemon reports it.</summary>
-    public string Kind { get => _kind; set { if (Set(ref _kind, value)) { Raise(nameof(IsEditable)); Raise(nameof(KindLabel)); Raise(nameof(IsMonitor)); } } }
+    public string Kind { get => _kind; set { if (Set(ref _kind, value)) { Raise(nameof(IsEditable)); Raise(nameof(IsDeletable)); Raise(nameof(KindLabel)); Raise(nameof(IsMonitor)); } } }
     public bool IsMonitor => Kind == "monitor";
     public VolumeRangeViewModel VolumeRange { get; }
 
@@ -1623,7 +1633,9 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     {
         Appearance.Apply(n["appearance"]);
         bool? editable = n["editable"]?.GetValue<bool>();
-        if (_editable != editable) { _editable = editable; Raise(nameof(IsEditable)); }
+        if (_editable != editable) { _editable = editable; Raise(nameof(IsEditable)); Raise(nameof(IsDeletable)); }
+        bool? deletable = n["deletable"]?.GetValue<bool>();
+        if (_deletable != deletable) { _deletable = deletable; Raise(nameof(IsDeletable)); }
         _applying = true;
         try
         {

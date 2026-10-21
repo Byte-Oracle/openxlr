@@ -55,7 +55,8 @@ internal sealed class OutputsView : View
             bool on = selected.Contains(sink.Name);
             string feed = state.Mixer.MonitorFeeds.TryGetValue(sink.Name, out string? value) && value.Length > 0
                 ? value
-                : state.Mixer.Mixes.FirstOrDefault(mix => mix.Kind == "monitor")?.Id ?? "monitor";
+                : state.Mixer.DefaultMonitorMix ?? state.Mixer.Mixes.Where(mix => mix.Kind == "monitor").OrderBy(mix => mix.Id == "monitor" ? 0 : 1)
+                    .ThenBy(mix => mix.Id, StringComparer.Ordinal).FirstOrDefault()?.Id ?? "monitor";
             rows.Add(new OutputRow(sink, on, feed, state, link, app));
         }
 

@@ -553,7 +553,8 @@ The setup has four parts:
   or a capture input on one mono port can be the key too.
 - The **channels** to lower. By default every application channel: Game,
   Music, Browser, System, Voice Chat and SFX. The key is never lowered.
-- The **mixes** to lower them in. By default Monitor A, what you hear.
+- The **mixes** to lower them in. By default the default monitor mix,
+  Monitor A until it is removed.
   Add Stream to dip the music your viewers hear while you talk.
 - Three presets, with the Wave XLR Pro's own numbers. **Sensitivity** is
   how quiet a voice already counts: Low reacts only to a loud voice
@@ -1962,8 +1963,9 @@ Channel and mix tiles follow the mixer layout's one order, the same one
 the layout editor's arrows and the terminal mixer change. A drop sends
 the new order to the daemon, and the tiles move when it has saved it; a
 failed save leaves them where they were and the note shows the error.
-Hardware inputs, Monitor A, Monitor B and Aux keep their place and have no
-handle. A hidden channel keeps its place in the order. Moving tiles
+Hardware inputs and Aux keep their place and have no handle. Every monitor
+mix, Monitor A/B included, can move. A hidden channel keeps its place in the
+order. Moving tiles
 changes no routing; [Edit the mixer layout](#layout) says where an app
 goes when its channel is deleted, which never depends on the order.
 
@@ -2259,9 +2261,9 @@ SUBMIXER card opens the layout editor: application channels on the left,
 mixes on the right, each with move up and down, Rename and Delete, and a
 box at the bottom to add one. Add capture input, under that box, turns
 another PipeWire capture source into a channel
-([Additional capture inputs](#capture-inputs)). The hardware inputs,
-Monitor A, Monitor B and Aux are listed in fixed places; only their
-appearance can change.
+([Additional capture inputs](#capture-inputs)). The hardware inputs and Aux
+are listed in fixed places; only their appearance can change. Every monitor mix, Monitor A/B included, can be
+renamed, reordered and removed. The last remaining monitor cannot be deleted.
 
 Under MIXES, enter a name, pick **Virtual microphone** or **Monitor mix**
 and press Add mix. A virtual microphone is a source a recorder or a call
@@ -2270,8 +2272,9 @@ speakers that should not get Monitor A or B: tick the output in the
 MONITOR card, set its feed picker to the new mix, then open the sends you
 want. Its master is a desktop volume like Monitor A and B, so the desktop's
 volume and mute controls move it, and it goes to 150%. It publishes no
-microphone. Both kinds count toward one limit of 16 mixes you can edit,
-Stream and Chat included. Monitor A+B in the feed picker stays the sum of
+microphone. Both kinds count toward one limit of 18 editable mixes,
+Monitor A, Monitor B, Stream and Chat included. Monitor A+B in the feed
+picker stays the sum of
 those two mixes; a sum with a monitor mix you added goes through the API.
 
 Reordering updates the open UI as soon as the daemon publishes the saved
@@ -2352,7 +2355,9 @@ Appearance is part of the layout, saved with it, and not part of a profile.
   channel whose id comes first when System is gone. Deleting a virtual
   microphone removes the device, and anything recording from it loses it.
   Outputs that followed only the deleted mix
-  return to Monitor A, while summed feeds keep their other mixes. If the
+  return to the default monitor mix, while summed feeds keep their other mixes.
+  The default is Monitor A while it exists, otherwise the monitor whose stable
+  id sorts first. Reordering or renaming mixes never changes that choice. If the
   mix was the enforced system default output or input, that choice is
   cleared and the desktop picks the default.
 
@@ -2940,7 +2945,7 @@ settings. See
 | `~/.config/openxlr/installation-backups/<sha256>` | private originals for startup restoration |
 | `~/.config/openxlr/installation-history/<sha256>.json` | retained package inventories for doctor |
 | `~/.config/openxlr/installation.lock` | serializes installation inventory writes |
-| `~/.config/openxlr/mixer.json` | every mixer decision, the layout included (`userChannels`, `userMixes`, see [mixer-layout.md](mixer-layout.md)), written by the daemon |
+| `~/.config/openxlr/mixer.json` | every mixer decision, the layout included (`userChannels`, `mixes`, see [mixer-layout.md](mixer-layout.md)), written by the daemon |
 | `~/.config/openxlr/profiles/<vid-pid>/<name>.json` | saved profiles, one file each |
 | `~/.config/openxlr/profiles/<vid-pid>/recall-on-connect` | the profile recalled when that interface connects, when one is chosen |
 | `$XDG_RUNTIME_DIR/openxlr/token` (or `~/.config/openxlr/token` without a runtime directory) | the control API token for this daemon run, readable by your user only; the UI and the OpenDeck plugin read it, a daemon older than the UI will not have it ([section 3.11](#upgrade)) |

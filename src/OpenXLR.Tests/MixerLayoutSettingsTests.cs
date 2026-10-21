@@ -72,7 +72,7 @@ public sealed class MixerLayoutSettingsTests
         Assert.All(config.Channels, c => { Assert.Contains("phones", c.MutedIn); Assert.Contains("old", c.MutedIn); });
         var bounded = MixerConfig.FromSettings(settings with { UserMixes = Enumerable.Range(0, 30)
             .Select(i => new UserMixDefinition($"mix{i}", "Mix") { Kind = i % 2 == 0 ? "monitor" : "virtualMic" }).ToList() });
-        Assert.Equal(MixerConfig.MaxUserMixes, bounded.Mixes.Count(m => m.IsEditable));
+        Assert.Equal(MixerConfig.MaxEditableMixes, bounded.Mixes.Count(m => m.IsEditable));
     }
 
     [Fact]

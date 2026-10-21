@@ -334,7 +334,7 @@ public sealed class MatrixColumnViewModel : ViewModelBase
     /// <summary>True when the controls row has anything in it.</summary>
     public bool HasControls => ControlSpec.Parts.Count > 0;
 
-    /// <summary>True when this column head shows no Arrange handle: Monitor A and B and Aux keep their place.</summary>
+    /// <summary>True when this column head shows no Arrange handle: Aux keeps its place.</summary>
     public bool HandleHidden => !Mix.IsEditable;
 
     public bool ShowsIcon => TextSpec.WantsIcon && Mix.Appearance.HasIcon;

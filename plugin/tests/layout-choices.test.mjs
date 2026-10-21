@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { channelName, layoutChoices, mixName, controllableOutputs, outputKey, targetAppearance, iconPath } from "../com.emaspa.openxlr.sdPlugin/layout-choices.mjs";
+import { channelName, layoutChoices, mixName, defaultMonitorMix, controllableOutputs, outputKey, targetAppearance, iconPath } from "../com.emaspa.openxlr.sdPlugin/layout-choices.mjs";
 
 const mixer = {
   mixes: [
@@ -165,4 +165,14 @@ test("a named icon draws the built-in path, an unknown or empty one the default,
   state.channels[0].appearance = {icon: "", defaultIcon: '"/><script/>'};
   assert.equal(targetAppearance(state, "focus:c").path, null);
   assert.equal(iconPath("__proto__"), null);
+});
+
+test("default monitor follows the daemon and stays stable after deleting or reordering built-ins", () => {
+  const mixes = [{id:"stream",kind:"virtualMic"}, {id:"monitor2",kind:"monitor"}, {id:"aaa",kind:"monitor"}];
+  assert.equal(defaultMonitorMix({mixes, defaultMonitorMix:"monitor2"}), "monitor2");
+  assert.equal(defaultMonitorMix({mixes}), "aaa");
+  assert.equal(defaultMonitorMix({mixes:[...mixes].reverse()}), "aaa");
+  assert.equal(defaultMonitorMix({mixes:[...mixes, {id:"monitor",kind:"monitor"}]}), "monitor");
+  assert.equal(defaultMonitorMix({mixes, defaultMonitorMix:"stream"}), "aaa");
+  assert.equal(defaultMonitorMix({mixes:[{id:"monitor2"},{id:"monitor"}]}), "monitor");
 });

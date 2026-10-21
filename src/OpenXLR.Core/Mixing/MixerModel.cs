@@ -79,8 +79,8 @@ public enum MixKind
 
 public sealed record MixDefinition(string Id, string Name, MixKind Kind)
 {
-    /// <summary>User mixes can be edited; the two built-in monitors and Aux stay structural.</summary>
-    public bool IsEditable => Kind == MixKind.VirtualMic || Kind == MixKind.Monitor && Id is not ("monitor" or "monitor2");
+    /// <summary>Monitor mixes and virtual microphones are editable; Aux stays structural.</summary>
+    public bool IsEditable => Kind is MixKind.VirtualMic or MixKind.Monitor;
 
     public double Volume { get; init; } = 1.0;
     public bool Muted { get; init; }
@@ -168,12 +168,15 @@ public sealed record MixerState
     /// <summary>node.names of every sink the monitor mixes feed.</summary>
     public IReadOnlyList<string> MonitorOutputs { get; init; } = [];
 
+    /// <summary>The implicit output feed: monitor when present, otherwise the lowest monitor id.</summary>
+    public string? DefaultMonitorMix { get; init; }
+
     /// <summary>Selected monitor routes are paused; mix and channel mutes stay independent.</summary>
     public bool MonitorMuted { get; init; }
 
     /// <summary>
     /// Which monitor mix feeds an output, by output name; an output absent
-    /// here is fed by the first monitor mix.
+    /// here is fed by DefaultMonitorMix.
     /// </summary>
     public IReadOnlyDictionary<string, string> MonitorFeeds { get; init; } = new Dictionary<string, string>();
 
@@ -236,8 +239,12 @@ public sealed record MixerState
 }
 
 /// <param name="Kind">"monitor", "virtualMic" or "auxPort", so clients can tell monitor mixes apart.</param>
-/// <param name="Editable">A user mix that can be renamed, reordered and removed.</param>
-public sealed partial record MixStatus(string Id, string Name, double Volume, bool Muted, string Kind = "monitor", bool Editable = false);
+/// <param name="Editable">A mix that can be renamed and reordered.</param>
+public sealed partial record MixStatus(string Id, string Name, double Volume, bool Muted, string Kind = "monitor", bool Editable = false)
+{
+    /// <summary>Editable, and not the last remaining monitor mix.</summary>
+    public bool Deletable { get; init; }
+}
 
 /// <param name="Present">
 /// False when the active device has no jack behind this channel, so a client

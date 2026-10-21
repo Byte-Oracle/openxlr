@@ -269,16 +269,22 @@ public sealed partial class Mixer
             if (kind is not (MixKind.Monitor or MixKind.VirtualMic))
                 throw new InvalidOperationException("only monitor mixes and virtual microphones can be added");
             EnsurePulseHeadroomLocked(newStreams: _config.Channels.Count, newNodes: kind == MixKind.Monitor ? 1 : 4);
-            string id = MixerConfig.NewId(name, "mix", _config.Mixes.Select(m => m.Id));
+            string id = MixerConfig.NewId(name, "mix", _config.Mixes.Select(m => m.Id).Concat(["monitor", "monitor2"]));
             var mix = new MixDefinition(id, name, kind);
             MixerConfig previous = _config;
             MixerConfig next = _config.WithMix(mix);   // validates the limit before any node is loaded
             string key = MixKey(mix);
             var previousAppearance = _appearance;
+            string? previousDefault = PrimaryMonitorLocked()?.Id;
+            var previousFeeds = new Dictionary<string, string>(_monitorFeeds);
             try
             {
                 _mixModules[id] = _pw.CreateNullSink(mix.SinkName, $"OpenXLR {name}");
                 _config = next;   // leg discovery and the cell faders go by the mix list
+                // A new lower id must not silently change existing outputs.
+                if (previousDefault is not null && PrimaryMonitorLocked()?.Id != previousDefault)
+                    foreach (string output in _monitorOutputs.Where(output => !_monitorFeeds.ContainsKey(output)))
+                        _monitorFeeds[output] = previousDefault;
                 _mixVolume[id] = 1.0;
                 foreach (ChannelDefinition ch in _config.Channels)
                 {
@@ -303,6 +309,8 @@ public sealed partial class Mixer
             {
                 _config = previous;
                 _appearance = previousAppearance;
+                _monitorFeeds.Clear();
+                foreach (var (output, feed) in previousFeeds) _monitorFeeds[output] = feed;
                 RemoveMixChainLocked(key);
                 RemoveMixCellsLocked(id);
                 var cleanupErrors = new List<Exception>();
@@ -362,6 +370,7 @@ public sealed partial class Mixer
                 ?? throw new InvalidOperationException($"'{id}' is not an editable mix");
             string key = MixKey(mix);
             MixerConfig previous = _config;
+            bool wasDefault = PrimaryMonitorLocked()?.Id == id;
             _config = _config.WithoutMix(id);
             _inserts.Remove(key, out List<InsertDefinition>? savedInserts);
             string? previousSource = _enforcedSource;
@@ -391,7 +400,8 @@ public sealed partial class Mixer
             }
 
             PruneDuckPlanLocked();   // the bus goes before the mix it feeds
-            if (previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id)))
+            if (previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id))
+                || wasDefault && _monitorOutputs.Any(output => !previousFeeds.ContainsKey(output)))
                 SetMonitorOutputsLocked([.. _monitorOutputs]);
             SyncDuckingLocked();
             RemoveMixChainLocked(key);

@@ -23,6 +23,15 @@ export function mixName(mixer, id) {
     ?? LEGACY_MIXES[id] ?? id;
 }
 
+// The implicit feed is independent of display order, including on an older daemon.
+export function defaultMonitorMix(mixer) {
+  const monitors = (mixer?.mixes ?? []).filter(mix => mix.kind === "monitor"
+    || mix.kind == null && (mix.id === "monitor" || mix.id === "monitor2"));
+  return monitors.find(mix => mix.id === mixer?.defaultMonitorMix)?.id
+    ?? monitors.find(mix => mix.id === "monitor")?.id
+    ?? monitors.map(mix => mix.id).sort()[0] ?? "monitor";
+}
+
 export function mixShortName(mixer, id) {
   if (id === "all") return "All";
   const name = mixName(mixer, id);

@@ -198,7 +198,10 @@ function shownChannels(channels) {
 
 function monitorFeeds(mixer) {
     var mixes = mixer.mixes || [];
-    var first = mixes.filter(function (mix) { return mix.kind === "monitor"; })[0];
+    var monitors = mixes.filter(function (mix) { return mix.kind === "monitor"; });
+    var first = monitors.filter(function (mix) { return mix.id === mixer.defaultMonitorMix; })[0]
+        || monitors.filter(function (mix) { return mix.id === "monitor"; })[0]
+        || monitors.slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; })[0];
     var outputs = mixer.monitorOutputs || (mixer.monitorOutput ? [mixer.monitorOutput] : []);
     return outputs.map(function (output) {
         var feeds = mixer.monitorFeeds || {};

@@ -542,6 +542,24 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     host.receive({event:"willAppear",context:"icon-settings",action:"com.emaspa.openxlr.toggle",payload:{settings:{target:"mixmute:monitor",icon:"mic"}}});
     const chosen = host.messages.filter(m => m.event === "setImage" && m.context === "icon-settings").at(-1).payload.image;
     assert.ok(Buffer.from(chosen.split(",")[1], "base64").toString().includes('x="58" y="30"'));
+
+    // Deleted built-ins leave the daemon's default and renamed monitor in control.
+    state.mixer.mixes = state.mixer.mixes.filter(m => m.id !== "monitor");
+    const remainingMonitor = state.mixer.mixes.find(m => m.id === "monitor2");
+    remainingMonitor.name = "Studio";
+    remainingMonitor.muted = true;
+    state.mixer.defaultMonitorMix = "monitor2";
+    state.mixer.monitorFeeds = {};
+    state.mixer.monitorOutputs = ["qa-output"];
+    state.mixer.monitorMuted = false;
+    state.mixer.channels[0].levels.monitor2 = .42;
+    daemon.receive(state);
+    assert.equal(feedbackOf("monitor-dial").muteOverlay.enabled, true);
+    host.receive({event:"titleParametersDidChange",context:"feed-key",payload:{title:""}});
+    assert.ok(keyImage("feed-key").includes("Studio"));
+    assert.equal(keyFace("feed-key"), "off");
+    dialTarget("all-sends-dial", "send:system:all");
+    assert.equal(feedbackOf("all-sends-dial").value, "42%");
   }
   finally {
     if (oldSkin === undefined) delete process.env.OPENXLR_SKIN;

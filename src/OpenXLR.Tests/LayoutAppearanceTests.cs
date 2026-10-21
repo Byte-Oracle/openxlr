@@ -171,13 +171,13 @@ public sealed class LayoutAppearanceTests
         var config = MixerConfig.Default();
         string[] apps = [.. config.Channels.Where(c => c.InputPair is null).Select(c => c.Id)];
         Assert.Equal("system", config.FallbackApplicationChannel!.Id);
-        Assert.Equal("system", config.WithOrder([.. apps.Reverse()], ["stream", "chat"]).ResolveApplicationChannel("gone"));
+        Assert.Equal("system", config.WithOrder([.. apps.Reverse()], ["monitor", "monitor2", "stream", "chat"]).ResolveApplicationChannel("gone"));
 
         var withoutSystem = config.WithoutChannel("system");
         string[] rest = [.. apps.Where(id => id != "system")];
         Assert.Equal("browser", withoutSystem.ResolveApplicationChannel("gone"));
-        Assert.Equal("browser", withoutSystem.WithOrder([.. rest.Reverse()], ["stream", "chat"]).ResolveApplicationChannel("gone"));
-        Assert.Equal("browser", withoutSystem.WithOrder(["sfx", .. rest.Where(id => id != "sfx")], ["stream", "chat"])
+        Assert.Equal("browser", withoutSystem.WithOrder([.. rest.Reverse()], ["monitor", "monitor2", "stream", "chat"]).ResolveApplicationChannel("gone"));
+        Assert.Equal("browser", withoutSystem.WithOrder(["sfx", .. rest.Where(id => id != "sfx")], ["monitor", "monitor2", "stream", "chat"])
             .FallbackApplicationChannel!.Id);
         Assert.Equal("ignore", withoutSystem.ResolveApplicationChannel("ignore"));
         Assert.Equal("browser", withoutSystem.ResolveApplicationChannel("xlr1"));

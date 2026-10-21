@@ -384,3 +384,13 @@ test('a strip on a driven additional unit carries that unit\'s mute', () => {
   assert.equal(mixer.muteTarget(snapshot, 'xlr2'), null);
   assert.equal(mixer.muteCommandFor(snapshot, 'xlr2', true), null);
 });
+
+test('implicit monitor follows the daemon and does not follow layout order', () => {
+  const source = {monitorOutputs:['headset'], mixes:[
+    {id:'stream', name:'Stream', kind:'virtualMic'},
+    {id:'monitor2', name:'Studio', kind:'monitor'},
+    {id:'aaa', name:'Speakers', kind:'monitor'}]};
+  assert.equal(mixer.monitorFeeds({...source, defaultMonitorMix:'monitor2'})[0].name, 'Studio');
+  assert.equal(mixer.monitorFeeds(source)[0].name, 'Speakers');
+  assert.equal(mixer.monitorFeeds({...source, mixes:[...source.mixes].reverse()})[0].name, 'Speakers');
+});

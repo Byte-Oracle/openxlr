@@ -242,7 +242,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   saved with mixer settings and left unchanged by profile recall
 - An editable layout: Edit layout in the SUBMIXER card adds, renames,
   reorders and removes application channels, virtual microphones and
-  monitor mixes while audio plays, as does the API, with stable ids so
+  monitor mixes, including Monitor A/B, while audio plays, as does the API.
+  At least one monitor remains. Stable ids mean
   profiles and Stream Deck keys survive a rename. Every change is saved before it is
   confirmed. The order is only where things are drawn: an app whose
   channel is deleted goes to System, or to the first application channel

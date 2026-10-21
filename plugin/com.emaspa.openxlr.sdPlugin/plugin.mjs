@@ -5,7 +5,7 @@
 
 import process from "node:process";
 import { KeyCommands } from "./key-commands.mjs";
-import { channelName, mixName, mixShortName, layoutChoices, controllableOutputs, outputKey, targetAppearance, openGroupMember } from "./layout-choices.mjs";
+import { channelName, mixName, mixShortName, defaultMonitorMix, layoutChoices, controllableOutputs, outputKey, targetAppearance, openGroupMember } from "./layout-choices.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
@@ -434,13 +434,13 @@ function toggleValue(target, inst) {
     const outs = mixer()?.monitorOutputs;
     return outs ? outs.includes(target.slice(8)) : null;
   }
-  // What feeds an output: dark = Monitor A, lit = Monitor B or A+B;
+  // What feeds an output: dark = the default monitor, lit = another feed;
   // disabled while the output is not a monitor output at all.
   if (target.startsWith("feed:")) {
     const out = target.slice(5);
     const outs = mixer()?.monitorOutputs;
     if (!outs || !outs.includes(out)) return null;
-    return feedOf(out) !== "monitor";
+    return feedOf(out) !== defaultMonitorMix(mixer());
   }
   if (target.startsWith("mixmute:")) return mixOf(target.slice(8))?.muted ?? null;
   if (target.startsWith("sendmute:")) {
@@ -464,10 +464,10 @@ const groupOpenMember = (group) => openGroupMember(mixer(), group);
 
 // An output's feed as the daemon stores it: any mix id, or ids
 // joined with '+' when the output hears them summed.
-const feedOf = (sink) => mixer()?.monitorFeeds?.[sink] ?? "monitor";
+const feedOf = (sink) => mixer()?.monitorFeeds?.[sink] ?? defaultMonitorMix(mixer());
 const FEED_LETTER = { monitor: "A", monitor2: "B" };
 const feedLetters = (feed) => feed.split("+").map((id) => FEED_LETTER[id] ?? mixName(mixer(), id)).join("+");
-const feedLabel = (feed) => feed === "" ? "Silent" : feed.split("+").every(id => Object.hasOwn(FEED_LETTER, id))
+const feedLabel = (feed) => feed === "" ? "Silent" : feed.split("+").every(id => Object.hasOwn(FEED_LETTER, id) && mixName(mixer(), id) === `Monitor ${FEED_LETTER[id]}`)
   ? `Monitor ${feedLetters(feed)}` : feed.split("+").map(id => mixName(mixer(), id)).join(" + ");
 // Keep A, B, A+B first, then include every other live mix.
 const nextFeed = (feed) => {
@@ -475,12 +475,12 @@ const nextFeed = (feed) => {
   const monitors = mixes.filter(m => Object.hasOwn(FEED_LETTER, m.id)).map(m => m.id);
   const choices = [...monitors, ...(monitors.length > 1 ? [monitors.join("+")] : []),
     ...mixes.filter(m => !Object.hasOwn(FEED_LETTER, m.id)).map(m => m.id)];
-  return choices.length ? choices[(choices.indexOf(feed) + 1) % choices.length] : "monitor";
+  return choices.length ? choices[(choices.indexOf(feed) + 1) % choices.length] : defaultMonitorMix(mixer());
 };
 // The first selected monitor output's mixes, for the dial's audible state.
 const monitorDialMixes = () => {
   const first = mixer()?.monitorOutputs?.[0];
-  return first ? feedOf(first).split("+") : ["monitor"];
+  return first ? feedOf(first).split("+") : [defaultMonitorMix(mixer())];
 };
 
 // ---------- outputs at the audio server ----------
@@ -538,7 +538,7 @@ function toggleLabel(target, inst) {
     const sink = target.slice(8);
     const d = daemonState?.devices?.find((x) => x.name === sink);
     const name = d?.description ?? sink.split(".").pop();
-    // The output follows Monitor A unless its feed was switched.
+    // The output follows the default monitor unless its feed was switched.
     return `${feedLabel(feedOf(sink))}\n${name}`;
   }
   if (target.startsWith("feed:")) {
@@ -633,7 +633,7 @@ function dialValue(target, inst) {
     const [, chId, mix] = target.split(":");
     const ch = chOf(chId);
     if (!ch) return null;
-    const shown = mix === "all" ? "monitor" : mix;   // the whole-channel dial reads Monitor A
+    const shown = mix === "all" ? defaultMonitorMix(mixer()) : mix;   // the whole-channel dial reads the default monitor
     const v = dialNow(`lvl:${chId}:${shown}`, ch.levels?.[shown] ?? 0);
     const muted = mix === "all"
       ? Object.keys(ch.levels ?? {}).every((m) => ch.mutedIn?.includes(m))

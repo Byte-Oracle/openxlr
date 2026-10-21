@@ -112,6 +112,8 @@ public sealed class TuiViewTests
         Assert.True(JsonSerializer.Deserialize<MixEntry>("""{"Kind":"monitor","Editable":true}""")!.IsEditable);
         Assert.False(JsonSerializer.Deserialize<MixEntry>("""{"Kind":"monitor","Editable":false}""")!.IsEditable);
         Assert.True(new MixEntry { Kind = "virtualMic" }.IsEditable);
+        Assert.False(new MixEntry { Kind = "monitor", Editable = true, Deletable = false }.IsDeletable);
+        Assert.True(new MixEntry { Kind = "monitor", Editable = true, Deletable = true }.IsDeletable);
     }
 
     // --- the state ---
