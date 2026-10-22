@@ -660,14 +660,14 @@ public sealed class WindowLayoutTests
         Assert.Equal(4, music.Length);
         Assert.IsType<ChannelViewModel>(music[0].DataContext);
         Assert.Equal(0.4, music[0].Value);
-        Assert.Equal("music volume", Avalonia.Automation.AutomationProperties.GetName(music[0]));
+        Assert.Equal(Localizer.Format("ChannelVolumeName", "music"), Avalonia.Automation.AutomationProperties.GetName(music[0]));
         Assert.All(music[1..], s => Assert.IsType<SendViewModel>(s.DataContext));
         // A hardware input has one too, over its sends the same way.
         Slider[] game = [.. channels[1].GetVisualDescendants().OfType<Slider>().Where(s => s.IsEffectivelyVisible)
             .OrderBy(s => s.TranslatePoint(default, channels[1])!.Value.Y)];
         Assert.IsType<ChannelViewModel>(game[0].DataContext);
         Assert.Equal(0.5, game[0].Value);
-        Assert.Equal("game volume", Avalonia.Automation.AutomationProperties.GetName(game[0]));
+        Assert.Equal(Localizer.Format("ChannelVolumeName", "game"), Avalonia.Automation.AutomationProperties.GetName(game[0]));
         Assert.Equal(music[1].TranslatePoint(default, main)!.Value.Y, game[1].TranslatePoint(default, main)!.Value.Y, 0.5);
         LiveLayoutOrderTests.Apply(model, ["music", "game"], ["monitor", "chat", "stream"]);
         Layout(main, 1040, 900);

@@ -166,7 +166,7 @@ internal static partial class SkinLayoutWindowTests
                     Slider micVolume = Assert.Single(head.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
                     Assert.Equal("MatrixVolume", micVolume.Name);
                     Assert.Equal(0.7, micVolume.Value);
-                    Assert.Equal("Mic 1 volume", AutomationProperties.GetName(micVolume));
+                    Assert.Equal(Localizer.Format("ChannelVolumeName", "Mic 1"), AutomationProperties.GetName(micVolume));
                     Assert.Equal(matrix.MeterUnderFader,
                         head.GetVisualDescendants().OfType<MeterFader>().Single(f => f.IsEffectivelyVisible).Meters.IsEffectivelyVisible);
                     Assert.Equal(RowHeightOf(window), head.Bounds.Height, 0.5);
@@ -203,7 +203,7 @@ internal static partial class SkinLayoutWindowTests
             Assert.True(cam.IsEffectivelyVisible);
             Slider camVolume = Assert.Single(cam.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
             Assert.Equal(0.75, camVolume.Value);
-            Assert.Equal("Capture card volume", AutomationProperties.GetName(camVolume));
+            Assert.Equal(Localizer.Format("ChannelVolumeName", "Capture card"), AutomationProperties.GetName(camVolume));
             // The interface's gain is not drawn: this channel does not carry the interface's microphone.
             Assert.True(cam.GetVisualDescendants().OfType<MeterFader>().Single(f => f.IsEffectivelyVisible).Meters.IsEffectivelyVisible);
             Assert.False(Part(cam, SkinStripParts.Meter).IsEffectivelyVisible);
@@ -222,7 +222,7 @@ internal static partial class SkinLayoutWindowTests
                 .OrderBy(s => s.TranslatePoint(default, xlr1)!.Value.Y)];
             Assert.Equal(2, xlr1Faders.Length);
             Assert.Equal(model.UnitInput1.GainName, AutomationProperties.GetName(xlr1Faders[0]));
-            Assert.Equal("XLR 1 volume", AutomationProperties.GetName(xlr1Faders[1]));
+            Assert.Equal(Localizer.Format("ChannelVolumeName", "XLR 1"), AutomationProperties.GetName(xlr1Faders[1]));
             Assert.Equal(0.7, xlr1Faders[1].Value);
             MeterFader[] xlr1Tracks = [.. xlr1.GetVisualDescendants().OfType<MeterFader>().Where(f => f.IsEffectivelyVisible)
                 .OrderBy(f => f.TranslatePoint(default, xlr1)!.Value.Y)];
