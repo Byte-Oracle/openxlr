@@ -147,6 +147,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             if (_built) TearDownLocked();
             _config = config;
+            PruneBrowserChannelsLocked();
             _duckingSetup = _duckingSetup is null ? DuckingSetup.Default(config) : DuckingSetup.Prune(_duckingSetup, config);
 
             // A crashed or killed daemon never runs its teardown, and loading
@@ -1559,6 +1560,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MonitorOutputMutes = new Dictionary<string, bool>(_monitorOutputMutes),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
+                PreserveBrowserOutputs = _preserveBrowserOutputs,
+                BrowserSiteChannels = _browserSiteChannels.Where(p => HasApplicationChannel(p.Value))
+                    .ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal),
                 KnownApps = [.. _apps.Values.Select(a => new SavedApp(a.Identity, a.Label, a.ChannelId))],
                 EnforcedDefaultSink = _enforcedSink,
                 EnforcedDefaultSource = _enforcedSource,
@@ -1618,6 +1622,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         lock (_gate)
         {
+            RestoreBrowserSettingsLocked(s);
             SetMonitorMuteMicrophones(s.MonitorMuteMicrophones);
             _duckingSetup = DuckingSetup.Prune(s.Ducking ?? DuckingSetup.Default(_config), _config);
             if (!_built) { SyncDuckingLocked(); return; }
@@ -2780,6 +2785,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 string identity = s.Identity;
                 seen.Add(s.Id);
                 liveIdentities.Add(identity);
+                bool browser = BrowserTabRouting.IsChromium(s.Binary);
+                if (browser) _browserIdentities.Add(identity);
                 if (_streams.TryGetValue(s.Id, out StreamAssignment? previous))
                 {
                     // Registry ids are reused, and an app can publish its
@@ -2792,6 +2799,31 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 }
 
                 string channelId = _config.ResolveApplicationChannel(Matcher.Match(s));
+                if (_preserveBrowserOutputs && browser)
+                {
+                    // Browser output selection: the stream stays where the
+                    // browser or desktop put it, which can be an OpenXLR
+                    // channel the session manager restored it to. The app
+                    // keeps its assignment, so mixer.json does not change and
+                    // the assignment applies again when the option is off;
+                    // the entry says where the stream plays meanwhile.
+                    string? sink;
+                    try { sink = _pw.StreamSinkName(s.Serial); }
+                    catch (InvalidOperationException) { continue; }
+                    string assigned = channelId == StreamMatcher.Ignore ? channelId
+                        : (_config.Channels.FirstOrDefault(c => c.Id == channelId && c.IsApplication)
+                           ?? _config.FallbackApplicationChannel)?.Id ?? channelId;
+                    var held = new StreamAssignment(s.Id, s.Serial, s.Label, identity, assigned)
+                    {
+                        BrowserHeld = true,
+                        OutputChannelId = sink is null ? null
+                            : _config.Channels.FirstOrDefault(c => c.IsApplication && c.SinkName == sink)?.Id,
+                    };
+                    _streams[s.Id] = held;
+                    if (!PipeWireAdapter.IsPlumbingIdentity(identity)) _apps[identity] = held;
+                    changed = true;
+                    continue;
+                }
                 if (channelId == StreamMatcher.Ignore)
                 {
                     // Not managed: the stream stays where the desktop put it.
@@ -2848,10 +2880,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 string identity = client.Identity;
                 if (PipeWireAdapter.IsPlumbingIdentity(identity)) continue;
                 runningIdentities.Add(identity);
+                if (BrowserTabRouting.IsChromium(client.Binary)) _browserIdentities.Add(identity);
                 if (!_apps.ContainsKey(identity))
                 {
                     _apps[identity] = new StreamAssignment(0, 0, client.Label, identity,
-                        _config.ResolveApplicationChannel(Matcher.Match(client))) { Active = false, Running = true };
+                        _config.ResolveApplicationChannel(Matcher.Match(client)))
+                        { Active = false, Running = true, BrowserHeld = BrowserHeldLocked(identity) };
                     changed = true;
                 }
                 else if (!_apps[identity].Active && _apps[identity].Label != client.Label &&
@@ -2874,13 +2908,15 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 bool runningNow = activeNow || runningIdentities.Contains(identity);
                 string? icon = icons.GetValueOrDefault(identity) ?? app.Icon
                     ?? _icons.Resolve(ApplicationIconHints.Remembered(identity, app.Label))?.Icon;
-                if (app.Active != activeNow || app.Running != runningNow || app.Icon != icon)
+                // Only a live stream plays anywhere.
+                string? output = activeNow ? app.OutputChannelId : null;
+                if (app.Active != activeNow || app.Running != runningNow || app.Icon != icon || app.OutputChannelId != output)
                 {
                     _apps[identity] = app with
                     {
                         Active = activeNow, Running = runningNow,
                         Id = activeNow ? app.Id : 0, Serial = activeNow ? app.Serial : 0,
-                        Icon = icon,
+                        Icon = icon, OutputChannelId = output,
                     };
                     changed = true;
                 }
@@ -2955,7 +2991,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 EnsureOverrideCapacity(identity);
                 Matcher.SetOverride(identity, StreamMatcher.Ignore);
                 foreach ((int id, StreamAssignment placed) in _streams.ToList())
-                    if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase)
+                        && !BrowserHeldLocked(identity))
                     {
                         try { ReleaseStreamLocked(placed.Serial); }
                         catch (InvalidOperationException) { /* the sweep retries */ }
@@ -2964,7 +3001,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 if (_apps.TryGetValue(identity, out StreamAssignment? ignored))
                     _apps[identity] = ignored with { ChannelId = StreamMatcher.Ignore };
                 else
-                    _apps[identity] = new StreamAssignment(0, 0, label ?? identity, identity, StreamMatcher.Ignore) { Active = false, Running = false };
+                    _apps[identity] = new StreamAssignment(0, 0, label ?? identity, identity, StreamMatcher.Ignore)
+                        { Active = false, Running = false, BrowserHeld = BrowserHeldLocked(identity) };
                 return;
             }
             ChannelDefinition? ch = _config.Channels.FirstOrDefault(c => c.Id == channelId && c.IsApplication);
@@ -2973,7 +3011,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             Matcher.SetOverride(identity, channelId);
 
             foreach ((int id, StreamAssignment placed) in _streams.ToList())
-                if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase)
+                    && !BrowserHeldLocked(identity))
                 {
                     try { _pw.MoveStreamToSink(placed.Serial, ch.SinkName); }
                     catch (InvalidOperationException) { /* the sweep retries */ }
@@ -2985,7 +3024,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             else
                 // Pre-registered by hand (e.g. from the installed-apps picker):
                 // listed silent until its first stream shows up and confirms.
-                _apps[identity] = new StreamAssignment(0, 0, label ?? identity, identity, channelId) { Active = false, Running = false };
+                _apps[identity] = new StreamAssignment(0, 0, label ?? identity, identity, channelId)
+                    { Active = false, Running = false, BrowserHeld = BrowserHeldLocked(identity) };
         }
     }
 
@@ -3004,7 +3044,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (channelId == StreamMatcher.Ignore)
             {
                 EnsureOverrideCapacity(existing.Identity);
-                ReleaseStreamLocked(existing.Serial);
+                if (!BrowserHeldLocked(existing.Identity)) ReleaseStreamLocked(existing.Serial);
                 Matcher.SetOverride(existing.Identity, StreamMatcher.Ignore);
                 _streams.Remove(streamId);   // the next sweep lists it as unmanaged
                 return;
@@ -3013,7 +3053,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (ch is null) return;
 
             EnsureOverrideCapacity(existing.Identity);
-            _pw.MoveStreamToSink(existing.Serial, ch.SinkName);
+            if (!BrowserHeldLocked(existing.Identity)) _pw.MoveStreamToSink(existing.Serial, ch.SinkName);
             Matcher.SetOverride(existing.Identity, channelId);
             _streams.Remove(streamId); // the next sweep confirms the destination
         }
@@ -3076,6 +3116,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 AuxPortEnabled = _auxPortEnabled,
                 Streams = [.. _apps.Values
                     .OrderByDescending(a => a.Active).ThenBy(a => a.Label, StringComparer.OrdinalIgnoreCase)],
+                PreserveBrowserOutputs = _preserveBrowserOutputs,
+                BrowserTabs = BrowserTabsLocked(),
             });
         }
     }

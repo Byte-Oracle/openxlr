@@ -1,0 +1,12 @@
+:root { color-scheme: light dark; font: 14px system-ui, sans-serif; }
+body { margin: 0; padding: 16px; color: CanvasText; background: Canvas; min-width: 300px; }
+main { max-width: 42rem; margin: auto; }
+h1 { font-size: 1.15rem; margin: 0 0 12px; }
+p { line-height: 1.45; overflow-wrap: anywhere; }
+label { display: block; margin: 12px 0; }
+select, button { font: inherit; padding: 8px; max-width: 100%; }
+select { display: block; width: 100%; margin-top: 6px; }
+button { cursor: pointer; margin: 4px 4px 4px 0; }
+button:disabled { cursor: default; }
+.status { border-inline-start: 3px solid AccentColor; padding-inline-start: 10px; }
+#error { white-space: pre-wrap; }

@@ -101,6 +101,14 @@ jobs:
           python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
           node --test plugin/tests/*.test.mjs
 
+      - name: Validate Chromium browser routing
+        run: |
+          python3 -m json.tool browser/chromium/manifest.json >/dev/null
+          python3 -m json.tool browser/native-host.json >/dev/null
+          for file in browser/chromium/*.mjs; do node --check "$file"; done
+          node --test browser/tests/*.test.mjs
+          node --check browser/tests/chromium-integration.mjs
+
       - name: Validate the Omarchy bar plugin
         run: |
           node --test packaging/omarchy/tests/*.test.mjs

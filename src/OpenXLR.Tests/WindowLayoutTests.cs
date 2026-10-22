@@ -58,6 +58,7 @@ public sealed class WindowLayoutTests
                 CaptureInputWindowTests.ThreeCaptureInputsFitClassicWidths();
                 VolumeRangeWindowTests.Check();
                 LocalizationRenderingTests.Check();
+                BrowserTabsWindowTests.Check();
                 var vm = new MainViewModel(new DaemonClient());
                 main.DataContext = vm;
                 typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.Instance | BindingFlags.NonPublic)!

@@ -58,6 +58,27 @@ scan plugins or start helpers, so they share the one HTTP command slot: while
 a command or another of these reads is in flight they answer 429.
 Changes still go through `/commands`.
 
+The mixer resource also reports `preserveBrowserOutputs` and `browserTabs`
+as documented in [browser tabs](api.md#browser-tabs). Use
+`{"cmd":"setPreserveBrowserOutputs","value":true}` to preserve browser-selected
+outputs. While it is on, `assignApp` and `assignStream` for a recognized
+browser return success and save the assignment without moving its audio.
+Then use `assignBrowserTab` with a connected tab's `session`, `tabId`,
+and expected `site`, an application `channel` or `null`, and boolean `remember`.
+The required `site` must still match the tab's current canonical origin;
+a stale choice returns HTTP 400 before changing the tab or saving anything.
+A remembered choice is written before success is returned. `channel:null, remember:true`
+forgets the website default; `remember:false` keeps that default and changes
+only the tab. Companion registration and metadata publication,
+`getBrowserSession` and `syncBrowserTabs`, require an authenticated WebSocket
+because its lifetime owns the runtime tabs. They are refused over HTTP.
+
+For example, selecting a Teams tab on Voice Chat while remembering that website:
+
+```json
+{"cmd":"assignBrowserTab","session":"e3b0c44298fc4c14b9afbf4c8996fb92","tabId":42,"site":"https://teams.microsoft.com","channel":"voicechat","remember":true}
+```
+
 Both WebSocket paths require the existing first-message authentication:
 `{"cmd":"auth","token":"..."}`. They send no state before authentication.
 HTTP's Bearer header does not replace that WebSocket exchange. Ping, close,

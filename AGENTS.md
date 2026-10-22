@@ -44,6 +44,8 @@ python3 tools/deck-skins.py --check  # regenerate with no flag after changing em
 python3 tools/deck-icons.py --check  # regenerate with no flag after changing LayoutIcons.cs
 node --check plugin/com.emaspa.openxlr.sdPlugin/plugin.mjs
 node --test plugin/tests/*.test.mjs
+node --test browser/tests/*.test.mjs
+node --check browser/tests/chromium-integration.mjs
 python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
 python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
 python3 packaging/flatpak/test-package.py  # the Flatpak manifest and its files

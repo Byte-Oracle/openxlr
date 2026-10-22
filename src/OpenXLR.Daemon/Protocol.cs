@@ -59,6 +59,14 @@ public sealed record Command
     /// <summary>"assignStream": the PipeWire stream (sink-input) id to route.</summary>
     [JsonPropertyName("streamId")] public int? StreamId { get; init; }
 
+    /// <summary>Browser companion session, assigned to its authenticated WebSocket.</summary>
+    [JsonPropertyName("session")] public string? Session { get; init; }
+    [JsonPropertyName("tabId")] public int? TabId { get; init; }
+    /// <summary>assignBrowserTab: the origin the caller saw when it selected the tab.</summary>
+    [JsonPropertyName("site")] public string? Site { get; init; }
+    [JsonPropertyName("tabs")] public List<BrowserTabRegistration>? Tabs { get; init; }
+    [JsonPropertyName("remember")] public System.Text.Json.JsonElement Remember { get; init; }
+
     /// <summary>
     /// "setMonitorOutput": PipeWire node.name (null disconnects);
     /// "setMonitorFeed": the selected output whose feed changes (with "mix");
@@ -349,6 +357,11 @@ public sealed record MetersMessage
 
     [JsonPropertyName("type")] public string Type => "meters";
     [JsonPropertyName("levels")] public IReadOnlyDictionary<string, double[]> Levels { get; }
+}
+
+public sealed record BrowserSessionMessage(string Session)
+{
+    [JsonPropertyName("type")] public string Type => "browserSession";
 }
 
 public sealed record ErrorMessage

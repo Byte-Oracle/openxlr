@@ -86,6 +86,12 @@ public sealed record MixerSettings
     /// <summary>Application identity to channel id, from manual assignments.</summary>
     public Dictionary<string, string> AppOverrides { get; init; } = [];
 
+    /// <summary>Leave Chromium output selection to the browser companion and desktop. Machine state only.</summary>
+    public bool PreserveBrowserOutputs { get; init; }
+
+    /// <summary>Remembered browser origins and their application channel. Titles and runtime tab ids are never saved.</summary>
+    public Dictionary<string, string> BrowserSiteChannels { get; init; } = [];
+
     /// <summary>Every app ever seen, so the list survives silence and restarts.</summary>
     public List<SavedApp> KnownApps { get; init; } = [];
 

@@ -83,6 +83,7 @@ public static class CommandValidation
                 return CheckPluginWineTrace(cmd);
             case "setMixLatencyCompensation":
             case "setMonitorMuted":
+            case "setPreserveBrowserOutputs":
             case "setMonitorMuteMicrophones":
                 return cmd.Value.ValueKind is JsonValueKind.True or JsonValueKind.False
                     ? null : $"{cmd.Cmd}: value must be a boolean";
@@ -190,6 +191,16 @@ public static class CommandValidation
             case "assignStream":
                 if (cmd.Channel is not null && !IsChannelOrIgnore(layout, cmd.Channel)) return $"assignStream: unknown channel '{Short(cmd.Channel)}'";
                 return null;
+            case "assignBrowserTab":
+                if (!BrowserTabRouting.ValidSession(cmd.Session) || cmd.TabId is not >= 0) return "assignBrowserTab: supply a browser session and tabId";
+                if (BrowserTabRouting.CanonicalSite(cmd.Site) is null) return "assignBrowserTab: supply the tab's HTTP or HTTPS origin";
+                if (cmd.Channel is not null && !layout.HasApplicationChannel(cmd.Channel)) return "assignBrowserTab: select an application channel or browser default";
+                return cmd.Remember.ValueKind is JsonValueKind.True or JsonValueKind.False ? null : "assignBrowserTab: remember must be a boolean";
+            case "getBrowserSession":
+                return null;
+            case "syncBrowserTabs":
+                return !BrowserTabRouting.ValidSession(cmd.Session) ? "syncBrowserTabs: supply the connection's browser session"
+                    : BrowserTabRouting.CheckTabs(cmd.Tabs);
             case "assignApp":
                 if (cmd.Channel is not null && !IsChannelOrIgnore(layout, cmd.Channel)) return $"assignApp: unknown channel '{Short(cmd.Channel)}'";
                 if (TooLong(cmd.Identity, MaxText)) return "assignApp: identity too long";

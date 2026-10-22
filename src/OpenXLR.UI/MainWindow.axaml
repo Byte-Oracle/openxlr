@@ -36,7 +36,7 @@
           <views:ApplicationIconView Icon="{Binding Icon}" Label="{Binding Label}"/>
           <TextBlock Text="{Binding Label}" Classes="body" VerticalAlignment="Center"/>
           <ComboBox Name="ApplicationChannel" ItemsSource="{Binding Channels}" MinWidth="110"
-                    SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                    SelectedItem="{Binding SelectedChannel, Mode=TwoWay}" ToolTip.Tip="{Binding BrowserHeldNote}"
                     AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=ApplicationChannelName}}"/>
         </StackPanel>
       </Border>
@@ -68,7 +68,7 @@
           </layout:ScrollingName>
           <ComboBox Grid.Column="3" Name="ApplicationChannel" ItemsSource="{Binding Channels}" MinWidth="110"
                     HorizontalAlignment="Stretch"
-                    SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                    SelectedItem="{Binding SelectedChannel, Mode=TwoWay}" ToolTip.Tip="{Binding BrowserHeldNote}"
                     AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=ApplicationChannelName}}">
             <ComboBox.SelectionBoxItemTemplate>
               <DataTemplate x:DataType="vm:ChannelChoice">
@@ -99,7 +99,7 @@
           <TextBlock Grid.Column="2" Text="{Binding Label}" Classes="body" VerticalAlignment="Center"
                      TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}"/>
           <ComboBox Grid.Column="3" Name="ApplicationChannel" ItemsSource="{Binding Channels}" MinWidth="110" MaxWidth="160"
-                    SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                    SelectedItem="{Binding SelectedChannel, Mode=TwoWay}" ToolTip.Tip="{Binding BrowserHeldNote}"
                     AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=ApplicationChannelName}}">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="vm:ChannelChoice">
@@ -829,8 +829,11 @@
         </Expander.Header>
         <!-- the chips, the list or the columns, as the skin's template picks
              (ApplicationChip, ApplicationLine and their panels above) -->
-        <ItemsControl Name="ApplicationRows" ItemsSource="{Binding ActiveApps}"
-                      ItemsPanel="{StaticResource ApplicationChipsPanel}" ItemTemplate="{StaticResource ApplicationChip}"/>
+        <StackPanel Spacing="8">
+          <ItemsControl Name="ApplicationRows" ItemsSource="{Binding ActiveApps}"
+                        ItemsPanel="{StaticResource ApplicationChipsPanel}" ItemTemplate="{StaticResource ApplicationChip}"/>
+          <views:BrowserTabsView/>
+        </StackPanel>
       </Expander>
     </Border>
 

@@ -2856,4 +2856,61 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
     <value>Este escritorio no puede volver a abrir el editor de atajos. Cambia las asignaciones en la configuración de atajos del escritorio.</value>
   </data>
+  <data name="PreserveBrowserOutputs" xml:space="preserve">
+    <value>Activar el enrutamiento individual de pestañas del navegador</value>
+  </data>
+  <data name="PreserveBrowserOutputsHint" xml:space="preserve">
+    <value>Mientras está activado, OpenXLR no mueve el audio del navegador y las asignaciones de todo el navegador quedan en pausa hasta que lo desactives. Las pestañas sin canal propio conservan la salida que eligió el navegador o el escritorio, que puede ser un canal de OpenXLR al que el escritorio las devolvió.</value>
+  </data>
+  <data name="BrowserOutputHeld" xml:space="preserve">
+    <value>El enrutamiento individual de pestañas del navegador está activado, así que OpenXLR no mueve este navegador. El canal elegido aquí se aplica cuando desactives esa opción.</value>
+  </data>
+  <data name="BrowserOutputHeldOnChannel" xml:space="preserve">
+    <value>El enrutamiento individual de pestañas del navegador está activado, así que OpenXLR no mueve este navegador. Ahora suena en {0}, donde lo dejó el navegador o el escritorio. El canal elegido aquí se aplica cuando desactives esa opción.</value>
+  </data>
+  <data name="BrowserOutputHeldElsewhere" xml:space="preserve">
+    <value>El enrutamiento individual de pestañas del navegador está activado, así que OpenXLR no mueve este navegador. Suena en la salida que eligió el navegador o el escritorio, fuera de los canales de aplicación de OpenXLR. El canal elegido aquí se aplica cuando desactives esa opción.</value>
+  </data>
+  <data name="BrowserTabsHeading" xml:space="preserve">
+    <value>PESTAÑAS DEL NAVEGADOR</value>
+  </data>
+  <data name="BrowserTabCaptureHint" xml:space="preserve">
+    <value>Activa el audio de cada pestaña en la extensión del navegador. Elegir un canal aquí no activa el audio de la pestaña.</value>
+  </data>
+  <data name="BrowserTabCaptureState" xml:space="preserve">
+    <value>Estado del audio de la pestaña</value>
+  </data>
+  <data name="BrowserTabChannelName" xml:space="preserve">
+    <value>Canal de la pestaña del navegador {0}</value>
+  </data>
+  <data name="BrowserTabRemember" xml:space="preserve">
+    <value>Recordar sitio web</value>
+  </data>
+  <data name="BrowserTabDefault" xml:space="preserve">
+    <value>Predeterminado del navegador</value>
+  </data>
+  <data name="BrowserTabRoutingDisabled" xml:space="preserve">
+    <value>Activa el enrutamiento individual de pestañas del navegador para asignar esta pestaña.</value>
+  </data>
+  <data name="BrowserTabApplying" xml:space="preserve">
+    <value>Aplicando la asignación de la pestaña...</value>
+  </data>
+  <data name="BrowserTabCapturing" xml:space="preserve">
+    <value>Audio de la pestaña activo</value>
+  </data>
+  <data name="BrowserTabActivationRequired" xml:space="preserve">
+    <value>Activa el audio de la pestaña en la extensión del navegador.</value>
+  </data>
+  <data name="BrowserTabUsesDefault" xml:space="preserve">
+    <value>Usa el destino predeterminado del navegador</value>
+  </data>
+  <data name="BrowserTabRememberHint" xml:space="preserve">
+    <value>Si está desactivado, los cambios solo se aplican a esta pestaña. Una elección guardada antes para el sitio web se mantiene para las demás pestañas.</value>
+  </data>
+  <data name="BrowserTabForgetWebsite" xml:space="preserve">
+    <value>Olvidar sitio web</value>
+  </data>
+  <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
+    <value>Olvida el destino guardado de este sitio web y usa el predeterminado del navegador para esta pestaña.</value>
+  </data>
 </root>

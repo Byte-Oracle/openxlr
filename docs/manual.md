@@ -784,6 +784,19 @@ An app that is missing from the card is not registered with PipeWire
 as a client. That happens with some applications until they start
 playing.
 
+For separate Teams, YouTube or other browser tabs, the optional
+[Chromium companion](browser-routing.md) adds individual tab entries here
+and in Manage. Enable browser output selection, choose a channel and
+activate each tab from the browser. Remember website saves its origin's
+default across restarts. Browser permission must be granted again for
+each tab after restarting the browser. While browser output selection is
+on, OpenXLR does not move the browser itself. Its row keeps the channel
+it is assigned to, which applies again when you turn the option off, and
+the picker's tooltip names the channel the browser plays into meanwhile,
+or says it plays outside OpenXLR's application channels. Choosing another
+channel for the whole browser then only saves it, and so does a routing
+key on an OpenDeck or the keyboard.
+
 OpenXLR remembers up to 512 explicit app assignments. Once that limit is
 reached, existing assignments can still be changed, including "Not managed".
 Forget an unused assignment before adding a new one. A refused assignment
@@ -2943,7 +2956,11 @@ text files and inside the hex dump of the vendor blocks (the XLR Dock
 stores its serial in one). Your login name is redacted where it names
 your account: in `pactl info`, in the `user@host` part of each client in
 `wpctl status`, in PipeWire's user and core names in the graph dump, and
-in paths under `/home`, `/media`, `/run/media` and `/mnt`. Files inside
+in paths under `/home`, `/media`, `/run/media` and `/mnt`. The titles of
+browser tabs listed by the [Chromium companion](browser-routing.md) are
+redacted, and so is the website of each tab left at the browser default.
+A tab routed to a channel keeps its website, and `mixer.json` keeps the
+remembered website defaults. Files inside
 the archive carry no owner name or id. Review the archive anyway before
 attaching it to a public issue. Nothing is uploaded automatically. An archive is
 created as a new private file; an existing file or symbolic link at its

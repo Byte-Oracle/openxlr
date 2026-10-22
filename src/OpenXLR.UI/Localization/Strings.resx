@@ -2846,6 +2846,63 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="CaptureStereoPorts" xml:space="preserve">
     <value>Stereo ports {0} + {1}{2}</value>
   </data>
+  <data name="PreserveBrowserOutputs" xml:space="preserve">
+    <value>Enable individual browser tab routing</value>
+  </data>
+  <data name="PreserveBrowserOutputsHint" xml:space="preserve">
+    <value>While enabled, OpenXLR does not move browser audio, and browser-wide assignments are suspended until you turn this off. Tabs without a tab channel keep the output the browser or desktop chose, which can be an OpenXLR channel the desktop restored them to.</value>
+  </data>
+  <data name="BrowserOutputHeld" xml:space="preserve">
+    <value>Individual browser tab routing is on, so OpenXLR does not move this browser. The channel chosen here applies when that option is off.</value>
+  </data>
+  <data name="BrowserOutputHeldOnChannel" xml:space="preserve">
+    <value>Individual browser tab routing is on, so OpenXLR does not move this browser. It plays on {0} now, where the browser or desktop put it. The channel chosen here applies when that option is off.</value>
+  </data>
+  <data name="BrowserOutputHeldElsewhere" xml:space="preserve">
+    <value>Individual browser tab routing is on, so OpenXLR does not move this browser. It plays on the output the browser or desktop chose, outside OpenXLR's application channels. The channel chosen here applies when that option is off.</value>
+  </data>
+  <data name="BrowserTabsHeading" xml:space="preserve">
+    <value>BROWSER TABS</value>
+  </data>
+  <data name="BrowserTabCaptureHint" xml:space="preserve">
+    <value>Activate audio for each tab in the browser extension. Choosing a channel here does not activate tab audio.</value>
+  </data>
+  <data name="BrowserTabCaptureState" xml:space="preserve">
+    <value>Browser tab audio state</value>
+  </data>
+  <data name="BrowserTabChannelName" xml:space="preserve">
+    <value>Channel for browser tab {0}</value>
+  </data>
+  <data name="BrowserTabRemember" xml:space="preserve">
+    <value>Remember website</value>
+  </data>
+  <data name="BrowserTabDefault" xml:space="preserve">
+    <value>Browser default</value>
+  </data>
+  <data name="BrowserTabRoutingDisabled" xml:space="preserve">
+    <value>Enable individual browser tab routing to assign this tab.</value>
+  </data>
+  <data name="BrowserTabApplying" xml:space="preserve">
+    <value>Applying tab assignment...</value>
+  </data>
+  <data name="BrowserTabCapturing" xml:space="preserve">
+    <value>Tab audio active</value>
+  </data>
+  <data name="BrowserTabActivationRequired" xml:space="preserve">
+    <value>Activate tab audio in the browser extension.</value>
+  </data>
+  <data name="BrowserTabUsesDefault" xml:space="preserve">
+    <value>Uses the browser default destination</value>
+  </data>
+  <data name="BrowserTabRememberHint" xml:space="preserve">
+    <value>When off, changes apply only to this tab. A previous saved website choice remains for other tabs.</value>
+  </data>
+  <data name="BrowserTabForgetWebsite" xml:space="preserve">
+    <value>Forget website</value>
+  </data>
+  <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
+    <value>Forget the saved destination for this website and use the browser default for this tab.</value>
+  </data>
   <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
     <value>Mute microphone sends with monitoring</value>
   </data>

@@ -44,6 +44,8 @@ python3 tools/test-installation-receipt.py
 python3 packaging/yabridge/test-receipt.py
 node --check plugin/com.emaspa.openxlr.sdPlugin/plugin.mjs
 node --test plugin/tests/*.test.mjs
+node --test browser/tests/*.test.mjs
+node --check browser/tests/chromium-integration.mjs
 python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
 python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
 python3 tools/deck-skins.py --check  # regenerate with no flag after changing embedded skins or colour defaults
@@ -93,6 +95,21 @@ The desktop keys tests in the main suite start a private session bus with
 `dbus-daemon` and skip when it is not installed. `OPENXLR_TEST_KWIN=1` adds
 a check that asks a running KDE Plasma session for its focused process; it
 routes no audio and is not part of CI.
+
+The optional Chromium acceptance run needs Playwright and Chrome for Testing
+151 or newer. Set `OPENXLR_PLAYWRIGHT_MODULE` to its `playwright/index.mjs`
+and `OPENXLR_TEST_CHROMIUM` to the Chrome executable, then run in a container
+without sound, USB or hidraw devices and with port 37890 free:
+
+```sh
+python3 tools/test-monitor-volume.py --command node browser/tests/chromium-integration.mjs
+```
+
+Use Xvfb for a visible browser or leave DISPLAY unset for headless mode.
+`OPENXLR_TEST_BROWSER_SCREENSHOT` optionally names a new popup PNG. The run
+uses its own browser profile and daemon configuration. It checks separate
+tab audio, live channel changes, navigation and daemon restart. A real Teams
+call still needs a listening check for delay and echo cancellation.
 
 The idle graph allocation check measures reads on a dedicated warmed thread,
 so test-runner diagnostic allocations are outside the measured interval. It

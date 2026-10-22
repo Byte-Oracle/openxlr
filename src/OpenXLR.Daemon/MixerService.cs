@@ -741,6 +741,26 @@ public sealed class MixerService : IHostedService, IDisposable
         Interlocked.Exchange(ref _graphWatch, null)?.Dispose();
     }
 
+    public string OpenBrowserSession(Guid owner) => _mixer.OpenBrowserSession(owner);
+
+    public void RemoveBrowserSession(Guid owner)
+    {
+        if (_mixer.RemoveBrowserSession(owner)) Changed?.Invoke();
+    }
+
+    public string? SyncBrowserTabs(Guid owner, Command command)
+    {
+        string? invalid = CommandValidation.Check(command, _mixer, _ => null);
+        if (invalid is not null) return invalid;
+        try
+        {
+            _mixer.SyncBrowserTabs(owner, command.Session!, command.Tabs!);
+            Changed?.Invoke();
+            return null;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return ex.Message; }
+    }
+
     /// <summary>Apply a mixer command. Returns null on success, else an error.</summary>
     public string? Apply(Command cmd)
     {
@@ -751,6 +771,16 @@ public sealed class MixerService : IHostedService, IDisposable
         {
             switch (cmd.Cmd)
             {
+                case "assignBrowserTab":
+                    if (cmd.Remember.GetBoolean())
+                        _saves.RunSaved(() => _mixer.AssignBrowserTab(cmd.Session!, cmd.TabId!.Value, cmd.Site!, cmd.Channel, true, s => s.Save()));
+                    else _mixer.AssignBrowserTab(cmd.Session!, cmd.TabId!.Value, cmd.Site!, cmd.Channel, false, _ => null);
+                    Changed?.Invoke();
+                    return null;
+                case "setPreserveBrowserOutputs":
+                    _saves.RunSaved(() => _mixer.SetPreserveBrowserOutputs(cmd.Value.GetBoolean(), s => s.Save()));
+                    Changed?.Invoke();
+                    return null;
                 case "setInputBinding":
                 {
                     string strip = cmd.Channel!;

@@ -115,6 +115,34 @@ public sealed class AppStreamStateTests
         Assert.Empty(model.ActiveApps);
     }
 
+    [Fact]
+    public async Task AHeldBrowserSaysWhereItPlaysAndKeepsItsAssignment()
+    {
+        await using var client = new DaemonClient();
+        var model = new MainViewModel(client);
+        model.Channels.Add(new(client, "music", "Music", []));
+        model.Channels.Add(new(client, "system", "System", []));
+        JsonObject Chrome(string? output, bool active = true)
+        {
+            JsonObject app = App("chrome", "music", active);
+            app["browserHeld"] = true;
+            if (output is not null) app["outputChannelId"] = output;
+            return app;
+        }
+
+        Apply(model, State(Chrome("system")));
+        AppStreamViewModel chrome = Assert.Single(model.Apps);
+        Assert.Equal("music", chrome.ChannelId);
+        Assert.Equal(OpenXLR.UI.Localization.Localizer.Format("BrowserOutputHeldOnChannel", "System"), chrome.BrowserHeldNote);
+        Apply(model, State(Chrome(null)));
+        Assert.Equal(OpenXLR.UI.Localization.Localizer.Text("BrowserOutputHeldElsewhere"), chrome.BrowserHeldNote);
+        Apply(model, State(Chrome(null, active: false)));
+        Assert.Equal(OpenXLR.UI.Localization.Localizer.Text("BrowserOutputHeld"), chrome.BrowserHeldNote);
+        Apply(model, State(App("chrome", "music")));
+        Assert.Null(chrome.BrowserHeldNote);
+        Assert.Equal("music", chrome.ChannelId);
+    }
+
     private static JsonObject App(string identity, string channel, bool active = true, bool running = true, string? label = null)
         => new() { ["identity"] = identity, ["label"] = label ?? identity, ["channelId"] = channel,
             ["active"] = active, ["running"] = running };

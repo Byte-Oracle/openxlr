@@ -14,6 +14,7 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (BrowserNativeHost.TryRun(args)) return;
         if (InstallationCommands.TryRun(args)) return;
         // A window is already open: it shows itself, this process is done.
         Instance = SingleInstance.TryBecomePrimary();

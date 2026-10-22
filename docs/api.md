@@ -81,6 +81,7 @@ Messages from the daemon, each a JSON object with a `type` field:
 | `windowsPluginFiles` | in answer to `getWindowsPluginFiles` | `ok`, `message` and `plugins`; each plugin file carries `path`, `name`, `format`, `enabled`, `canDelete`, `winePrefix` and `inUse`. Excluded files remain listed |
 | `nativeEditorRules` | in answer to `getNativeEditorRules` or `setNativeEditorRule` | `rules` with `kind`, `plugin`, `name`, `reason`, `defaultBlocked`, `override` and effective `blocked`; `error` describes a refused change or unreadable configuration |
 | `nativeEditorRulesChanged` | after a successful rule change | notification to refresh the catalogue and editor availability; no plugin rescan is needed |
+| `browserSession` | in answer to `getBrowserSession` over WebSocket | `session`, a server-generated 32-character hexadecimal id owned by that connection; see [browser tabs](#browser-tabs) |
 | `pluginDiagnostics` | in answer to `getPluginDiagnostics` | `discovery`: daemon host/controller paths, Wine prefix, architecture, effective search paths, bounded `yabridgectl status` output and latest completed CLAP/VST3 scan reports. A scan entry that failed carries `logId`, the name of the file holding that attempt's bounded scanner output, or `logNote` saying why there is none; both are absent from an entry that did not fail and from one an older daemon recorded. `scanLogs` gives the `directory` those files are in and the bounds they are kept under (`stderrCapBytes`, `traceStderrCapBytes`, `traceCaptureBytes`, `stdoutCapBytes`, `maxFiles`, `maxTotalBytes`). Reading the reply or the directory scans nothing and starts no process |
 | `pluginInstall` | in answer to `installPlugin`, `addPluginSearchPath`, `removePluginSearchPath`, `addWindowsPluginFolder`, `removeWindowsPluginFolder`, `removeWindowsPluginInserts`, `setWindowsPluginEnabled`, `deleteWindowsPlugin`, `syncWindowsPlugins` and `rescanPlugins` | `ok`, `message` (a sentence or two for the user, ending with the bundles the scan that followed could not read, up to three by name and the rest as a count), `installed` (the bundles or folders put in place), `added` (plugins in the catalogue that were not before) and `total` |
 | `error` | when a command without a `requestId` is rejected | `message`; for the mixer commands a `state` follows, so an optimistic edit can be reverted |
@@ -125,6 +126,9 @@ mixer state carries `mixes`, `channels`, `monitorOutput` (the first selected
 output), `monitorOutputs`, `monitorFeeds`, `outputVolume`,
 `monitorMuted` (the selected outputs are paused, independently of mix and
 channel mutes; saved in `mixer.json`, never recalled by a profile),
+`preserveBrowserOutputs` (leave Chromium-family playback at the output its
+browser selects; false by default), `browserTabs` (connected companion tabs,
+see [browser tabs](#browser-tabs)),
 `monitorMuteMicrophones` (the opt-in microphone pause) and
 `microphonePausePending` (a requested microphone pause or resume is not yet confirmed),
 `softLowCutApplicable` and `softClipGuardApplicable` (true when XLR 1's
@@ -142,7 +146,9 @@ to a source, or the driven unit lacks the control, so `lowCutHz` and
 [exclusive groups](mixer-layout.md#exclusive-groups)), `enforcedDefaultSink`, `enforcedDefaultSource`, `streams` (`id`, `serial`,
 `label`, `identity`, `channelId`, `active`, `running`, and `icon`; see
 [application names](#application-names) and
-[application icons](#application-icons)), `renamedSinceStart`
+[application icons](#application-icons); a browser held by browser output
+selection also carries `browserHeld` and `outputChannelId`, see
+[browser tabs](#browser-tabs)), `renamedSinceStart`
 and `layoutWarning`. A `devices` entry carries `name`, `description` (a
 hardware source's description leaves out the ALSA profile PipeWire appends,
 such as "Analog Stereo", unless that would give two sources one name), `kind`
@@ -207,6 +213,10 @@ that final acknowledgement (or an `error` without a request id):
 | `setOutputVolume` | `value` | volume of the selected monitor devices, 0 to 1.5; the range the devices themselves take, so a desktop level above unity can be held and written back unchanged. Values outside it are clamped, and the state reports what reached the devices. With no output selected the command succeeds and changes nothing |
 | `setMonitorMuted` | `value` | boolean only; pause or resume OpenXLR's feeds to all selected monitor outputs, including the Pro's direct microphone monitoring. Selected physical sinks mirror the pause, preserving their previous native mutes for resume. Raw mix and channel mutes, levels and feeds stay unchanged. Recording stays live unless `monitorMuteMicrophones` is enabled. The state reports `monitorMuted`; saved in `mixer.json`, not in profiles, and profile recall keeps the current pause |
 | `toggleMonitorMuted` | none | atomically toggle the same monitor pause. Use this for keys and repeated presses instead of reading `monitorMuted` and sending its inverse; each accepted command toggles once |
+| `getBrowserSession` | none | WebSocket only; register this connection as a browser companion and return its `browserSession`. Repeated calls on the same connection return the same id |
+| `syncBrowserTabs` | `session`, `tabs` | WebSocket only; replace this companion's complete tab list. Only the connection that obtained the session may publish it; see [browser tabs](#browser-tabs) |
+| `assignBrowserTab` | `session`, `tabId`, `site`, `channel`, `remember` | select an application channel or `null` for browser default for a connected tab. Required `site` is the origin the caller saw; an assignment is refused if that tab has navigated to another origin. `remember` must be boolean; true saves the website origin preference, and `channel:null, remember:true` forgets it. False changes only this tab |
+| `setPreserveBrowserOutputs` | `value` | boolean only; explicitly enable or disable preservation of Chromium-family playback outputs. Saved in `mixer.json`, never recalled by a profile. Registration alone does not enable it |
 | `setMonitorMuteMicrophones` | `value` | boolean only, false by default; include XLR 1, XLR 2 and mono capture channels in the monitoring pause, across every OpenXLR mix. Stereo captures, Aux In and application channels keep playing. Saved only in `mixer.json`; takes effect immediately without restarting the daemon. See [monitoring and microphones](#monitoring-and-microphones) |
 | `listPlugins` | none | the installed LV2, CLAP and VST3 plugins, answered with a `plugins` message |
 | `getPluginDiagnostics` | none | read bridge status and existing native scan evidence without syncing, rescanning or changing inserts; answered with `pluginDiagnostics` |
@@ -239,9 +249,9 @@ that final acknowledgement (or an `error` without a request id):
 | `setOutputDeviceVolume` | optional `device`, `value` | set a PipeWire output's desktop volume; `value` finite, 0 to 1.5 on the desktop scale (1.0 is 100%), rejected outside that range. A monitor mix sink is set through its mix master; a selected monitor output follows the linked monitor-volume behaviour. Omit `device` for the current desktop default; device names are accepted and rejected as for `adjustOutputVolume` |
 | `toggleOutputMute` | optional `device` | toggle an output's mute; omit `device` for the current desktop default. On a selected physical monitor output it toggles `monitorMuted` for the whole monitor selection, as pressing a Deck monitor dial does; on a monitor mix sink it toggles only that mix; on any other output it toggles the sink's mute at the audio server |
 | `setMainOutput` | `device` | select and enforce an available PipeWire output as the system default, or `@monitor` for the first selected monitor output. Retains capture-default policy and mixer feeds |
-| `routeFocusedApp` | `channel` | route the focused KDE application to an application channel and remember the assignment; requires the running UI with Desktop keys enabled and `gdbus`. Missing or ambiguous process identity is an error, with no guessed routing. One request runs at a time; another sent while it runs is refused |
-| `assignApp` | `identity`, `channel`, `label?` | route an app (creates a registry entry if unseen); `channel: "ignore"` stops managing it, its streams go back to the system default output and stay wherever the desktop routes them |
-| `assignStream` | `streamId`, `channel` | route one live stream by its PipeWire id; also remembered for the app; `ignore` works here too |
+| `routeFocusedApp` | `channel` | route the focused KDE application to an application channel and remember the assignment; requires the running UI with Desktop keys enabled and `gdbus`. Missing or ambiguous process identity is an error, with no guessed routing. One request runs at a time; another sent while it runs is refused. For a browser held by `preserveBrowserOutputs` it only saves the assignment, as `assignApp` does |
+| `assignApp` | `identity`, `channel`, `label?` | route an app (creates a registry entry if unseen); `channel: "ignore"` stops managing it, its streams go back to the system default output and stay wherever the desktop routes them. For a browser held by `preserveBrowserOutputs` the command succeeds and saves the assignment without moving any stream; it applies when the option is turned off |
+| `assignStream` | `streamId`, `channel` | route one live stream by its PipeWire id; also remembered for the app; `ignore` works here too. A held browser stream is not moved, as with `assignApp` |
 | `forgetApp` | `identity` | drop an app and its remembered channel |
 | `setInputBinding` | `channel`, `source?`, `captureMonoChannel?` | bind a hardware strip to one port of a PipeWire capture source by exact node name. `channel` is `xlr1` or `xlr2`; Aux In stays on the interface. With `source` null or absent the strip returns to the interface's capture pair and takes no port. With a source, `capturePair` must be 0 and `captureMonoChannel` is the zero-based port, 0 to 63, default 0. OpenXLR nodes, monitor taps, control characters and names over 256 characters are refused. A node of an attached supported interface (a `devices` entry with `drivenUnit`) is accepted, and the binding records that unit, see [a strip on another interface](#a-strip-on-another-interface). The source may be offline. Saved before the acknowledgement, rolled back on a failed save. The strip's monitor sends start muted after a change; no other strip changes. Channel ids, software processing and inserts stay as they are. See [input bindings](#input-bindings) |
 | `setEnforcedDefaults` | `sink`, `source` | system defaults to hold; `sink: "@monitor"` follows the first selected monitor output |
@@ -918,6 +928,84 @@ before a changed state is broadcast. These updates are serialized outside
 the USB poll loops, so a read stalled on one interface does not block a
 command or state notification from another interface.
 
+## Browser tabs
+
+The Chromium companion captures tabs the user explicitly starts and sends
+their audio to the selected OpenXLR application channel inside the browser.
+The daemon exchanges metadata and output choices; audio does not pass
+through this protocol. Browser process ids and application identities
+cannot distinguish tabs that share a browser audio process.
+
+The user enables `preserveBrowserOutputs` before using tab routing. While
+enabled, OpenXLR does not move or unmute recognized Chrome, Chromium, Brave,
+Edge, Vivaldi and Opera playback streams, including streams already playing
+when the mode changes. A browser is recognized by the process binary
+PipeWire reports, never by `application.name`: Electron apps such as Discord
+call themselves `Chromium` there and keep their usual routing. Browser-wide
+`assignApp` and `assignStream` choices remain saved but are suspended until
+the mode is disabled. Those commands, and `routeFocusedApp` on a browser
+window, still succeed: they save the assignment and move nothing, and the
+command result carries no note saying so. Browser audio without a tab choice
+plays where the browser or desktop puts it. That is often the Linux
+default, but it can be an OpenXLR channel: a stream already on one when the
+mode is enabled stays there, and the session manager can restore a new
+browser stream to the channel the browser was last routed to. Other
+applications and the existing `ignore` behavior keep their usual routing.
+
+While the mode holds a browser, its `streams` entry keeps the saved
+assignment in `channelId`, so `knownApps` in `mixer.json` does not change,
+and adds `browserHeld:true`. A playing entry also carries `outputChannelId`,
+the application channel its stream plays into now, which is absent when it
+plays on another output. Turning the mode off drops both fields and moves
+the browser's streams to `channelId`.
+
+A companion authenticates a WebSocket, calls `getBrowserSession`, then
+publishes `syncBrowserTabs` with that session and its full `tabs` array.
+Each entry has `id` (a distinct non-negative integer), `site` (an HTTP or
+HTTPS origin, at most 512 characters), `title` (at most 160 characters),
+`capturing` (boolean), and optional `error` (at most 200 characters).
+Origins cannot contain credentials, a browsing path, query or fragment.
+Titles and errors cannot contain control characters. The daemon normalizes
+origins to the form a Chromium browser serializes them in, for example
+`https://EXAMPLE.com:443/` becomes `https://example.com` and
+`http://[::ffff:1.2.3.4]` becomes `http://[::ffff:102:304]`. A host the
+daemon cannot parse, such as one holding `*`, `!` or `&`, has no canonical
+form, and a list that contains one is refused. The browser's native host
+leaves such tabs out of the list it sends, so the other tabs still
+register. The normal 64 KiB incoming-frame limit also applies.
+At most eight companions and 128 tabs per companion can be registered.
+
+The mixer state's `browserTabs` entries carry `session`, `id`, `site`,
+`title`, `channelId`, `remember`, `capturing` and optional `error`.
+`channelId:null` explicitly means browser default. Title and capture updates
+on the same origin preserve the tab's choice. Navigation to another origin
+clears its temporary choice and uses the new origin's saved default, if any.
+`capturing` and `error` describe the browser's last report,
+not an audio-server confirmation. Authenticated controllers can select a
+connected tab with `assignBrowserTab`, including the `site` from the tab
+state they selected. The daemon compares canonical origins under the same
+lock as the assignment: a queued choice for an origin the tab has left is
+refused before any runtime or saved preference changes. Equivalent forms
+such as `https://EXAMPLE.com:443/` and `https://example.com` match. Only the
+owning socket can replace the tab metadata. Closing it removes its runtime
+tabs and frees the companion slot. Reconnect, authenticate, get a new session and resync;
+there is no heartbeat or persisted session id.
+
+With `remember:true`, a non-null channel saves a default for the origin and
+applies to other tabs from it that have no tab-only choice. At most 128
+origins can be remembered. A `remember:false` choice is a tab-only override,
+including a null choice, and keeps the saved website preference intact.
+To forget a website, send `channel:null, remember:true`: its saved default
+is removed, this tab returns to browser default, and other explicit tab
+overrides remain. A successful remembered choice or mode change is saved
+before acknowledgement; a failed write keeps the previous choice.
+
+Only origin-to-channel defaults and the preservation flag survive daemon
+restarts in `mixer.json`. Titles, errors, capture status, tab ids and session
+ids are runtime state. These settings are machine wiring, absent from
+profiles. Deleting an application channel removes its website defaults and
+returns affected tabs to browser default.
+
 ## Configuration files
 
 All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
@@ -930,7 +1018,9 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
   `mixes`, with `userMixes` kept for 0.2.0, `appearance`, see [mixer-layout.md](mixer-layout.md)), levels, mutes,
   device choices, the app registry, enforced defaults, `monitorMuted` (the
   monitoring pause, never part of a profile), `monitorMuteMicrophones` (the
-  opt-in microphone pause, also never part of a profile), the software low
+  opt-in microphone pause, also never part of a profile), `preserveBrowserOutputs` and
+  `browserSiteChannels` (origin-to-channel defaults, both machine settings
+  absent from profiles), the software low
   cut, the insert chains, the microphone EQs (`eq`) and where they run
   (`eqProcessing`), the [ducking](#ducking) setup (`ducking`), the
   per-channel volumes (`channelVolumes`), the exclusive groups

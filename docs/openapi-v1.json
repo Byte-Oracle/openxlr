@@ -463,7 +463,7 @@
     },
     "/api/v1/commands": {
       "post": {
-        "description": "Execute the existing cmd protocol. Foreign browser origins are rejected. Maximum UTF-8 body size is 65536 bytes, including chunked requests.",
+        "description": "Execute the existing cmd protocol. Foreign browser origins are rejected. Maximum UTF-8 body size is 65536 bytes, including chunked requests. Browser output preservation and connected-tab assignment are supported; getBrowserSession and syncBrowserTabs require an authenticated WebSocket whose lifetime owns the tabs.",
         "requestBody": {
           "required": true,
           "content": {
@@ -492,6 +492,35 @@
                   "summary": "Atomically toggle monitoring without reading the previous state",
                   "value": {
                     "cmd": "toggleMonitorMuted"
+                  }
+                },
+                "preserveBrowserOutputs": {
+                  "summary": "Leave Chromium-family playback at browser-selected outputs",
+                  "value": {
+                    "cmd": "setPreserveBrowserOutputs",
+                    "value": true
+                  }
+                },
+                "assignBrowserTab": {
+                  "summary": "Remember a connected tab's website on an application channel",
+                  "value": {
+                    "cmd": "assignBrowserTab",
+                    "session": "e3b0c44298fc4c14b9afbf4c8996fb92",
+                    "tabId": 42,
+                    "site": "https://teams.microsoft.com",
+                    "channel": "voicechat",
+                    "remember": true
+                  }
+                },
+                "forgetBrowserWebsite": {
+                  "summary": "Forget the website default while retaining other tab-only overrides",
+                  "value": {
+                    "cmd": "assignBrowserTab",
+                    "session": "e3b0c44298fc4c14b9afbf4c8996fb92",
+                    "tabId": 42,
+                    "site": "https://teams.microsoft.com",
+                    "channel": null,
+                    "remember": true
                   }
                 },
                 "includeMicrophonesInMonitoringPause": {
