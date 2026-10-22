@@ -534,7 +534,9 @@ that was the default.
    Adding a monitor during the pause leaves it individually muted. Renaming
    keeps the remembered selection; deleting removes only that monitor. If the
    last previously open monitor is deleted, the pause clears and the remaining
-   individually muted monitors stay muted. These choices survive a restart.
+   individually muted monitors stay muted. With **Mute microphone sends with
+   monitoring** on, the microphones then resume in every mix, Stream and Chat
+   included. These choices survive a restart.
    Selected Linux output devices are muted too; resuming restores their previous
    native mute flags. The original flags are saved with the monitor selection
    so they can be restored after a daemon restart too. To start a new listening
@@ -3341,7 +3343,10 @@ The option starts off and is saved in `mixer.json`, outside profiles. The pause
 and the option survive a daemon restart. They leave individual sends, mix
 mutes and hardware microphone mute choices intact. Resuming reveals those
 choices, including changes made while paused; explicitly opening a monitor
-also resumes the linked microphones.
+also resumes the linked microphones. Deleting the last monitor mix that was
+open when you paused ends the pause as well, so the microphones resume in
+every mix, Stream and Chat included, even though the remaining monitor mixes
+stay muted.
 
 The microphone pause affects audio routed through OpenXLR, including its
 virtual microphones used by Discord or a recording program. It does not mute

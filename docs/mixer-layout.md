@@ -27,7 +27,8 @@ survives a restart. When both fields exist, `mixes` wins.
 While monitoring is paused, adding a monitor keeps its master muted. Deleting
 one removes only its id from the paused listening selection. The pause clears
 if its last previously open monitor is deleted; remaining individual mutes stay
-closed. If a paused output route refuses removal, deletion is refused before
+closed. When microphones are included in the pause, they resume in every mix
+at that point. If a paused output route refuses removal, deletion is refused before
 saving, with the layout and pause retained. Renaming changes no id or mute. The pause, mutes and layout edits are
 saved together and restored after a daemon restart. Clients resolve saved output
 feeds by surviving mix ids, ignoring whitespace and removed ids. An empty or
