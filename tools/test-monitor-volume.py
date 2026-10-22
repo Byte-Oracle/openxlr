@@ -4,6 +4,8 @@
 Arguments are passed on to `dotnet test`, so a build that lives somewhere
 other than the default output can be tested with `--artifacts-path <dir>`.
 OPENXLR_TEST_FILTER selects a focused regression instead of the full audio suite.
+OPENXLR_TEST_SHARD=N/M runs the Nth of M slices of the selected tests, so CI
+can spread the suite over parallel jobs, each with its own private servers.
 """
 import os
 import json
@@ -12,6 +14,32 @@ import subprocess
 import sys
 import tempfile
 import time
+
+ROOT = Path(__file__).resolve().parent.parent
+PROJECT = "src/OpenXLR.Tests/OpenXLR.Tests.csproj"
+DEFAULT_FILTER = ("FullyQualifiedName~MonitorVolumeIntegrationTests|FullyQualifiedName~FilterStateIntegrationTests"
+                  "|FullyQualifiedName~ProfileStartupTests|FullyQualifiedName~DspAudioIntegrationTests"
+                  "|FullyQualifiedName~MixDelayIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests"
+                  "|FullyQualifiedName~SoundCheckIntegrationTests")
+
+
+def shard_filter(test_filter, shard, arguments):
+    """Narrow the filter to every Mth test, by sorted name, starting at the Nth."""
+    index, count = (int(part) for part in shard.split("/"))
+    if not 1 <= index <= count:
+        raise ValueError("OPENXLR_TEST_SHARD must be N/M with 1 <= N <= M, not " + shard)
+    listing = subprocess.run(["dotnet", "test", PROJECT, "-c", "Release", "--no-build", "--list-tests",
+                              "--filter", test_filter, *arguments],
+                             check=True, capture_output=True, text=True, cwd=ROOT).stdout
+    # xUnit lists each test by its fully qualified name, indented under a
+    # header, and each theory case with its arguments after the name. The
+    # filter takes the method name alone and runs every case of a theory.
+    names = sorted({line.strip().split("(")[0] for line in listing.splitlines() if line.startswith("    ")})
+    if not names:
+        raise RuntimeError("no tests match " + test_filter)
+    selected = names[index - 1::count]
+    print(f"Shard {shard}: {len(selected)} of {len(names)} tests", flush=True)
+    return "|".join("FullyQualifiedName=" + name for name in selected)
 
 
 def main():
@@ -22,7 +50,10 @@ def main():
                    CLAP_PATH=runtime + "/plugins", VST3_PATH=runtime + "/plugins",
                    PULSE_SERVER="unix:" + runtime + "/pulse/native",
                    PIPEWIRE_REMOTE="pipewire-0", OPENXLR_TEST_MONITOR_VOLUME="1")
-        fixtures = str(Path(__file__).resolve().parent.parent / "native" / "tests")
+        fixtures = str(ROOT / "native" / "tests")
+        test_filter = os.environ.get("OPENXLR_TEST_FILTER", DEFAULT_FILTER)
+        if sys.argv[1:2] != ["--command"] and os.environ.get("OPENXLR_TEST_SHARD"):
+            test_filter = shard_filter(test_filter, os.environ["OPENXLR_TEST_SHARD"], sys.argv[1:])
         if sys.argv[1:2] != ["--command"]:
             # Capture chains, Sound Check and input chains load these bundles
             # as inserts. Without their binaries PipeWire builds the chain and
@@ -72,15 +103,14 @@ def main():
                     policies = [["--config-file", "main.conf"], ["--config-file", "policy.conf"]]
                 for policy in policies:
                     processes.append(subprocess.Popen(["wireplumber", *policy], env=env, stdout=log, stderr=log))
-                command = ["dotnet", "test", "src/OpenXLR.Tests/OpenXLR.Tests.csproj",
-                                "-c", "Release", "--no-build", "--filter",
-                                os.environ.get("OPENXLR_TEST_FILTER", "FullyQualifiedName~MonitorVolumeIntegrationTests|FullyQualifiedName~FilterStateIntegrationTests|FullyQualifiedName~ProfileStartupTests|FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~MixDelayIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests|FullyQualifiedName~SoundCheckIntegrationTests"), *sys.argv[1:]]
+                command = ["dotnet", "test", PROJECT, "-c", "Release", "--no-build", "--filter",
+                           test_filter, *sys.argv[1:]]
                 if sys.argv[1:2] == ["--command"]:
                     command = sys.argv[2:]
                     if not command: raise ValueError("--command needs an executable")
                 subprocess.run(command,
                                env=env, check=True, timeout=900,
-                               cwd=Path(__file__).resolve().parent.parent)
+                               cwd=ROOT)
             except Exception:
                 log.flush()
                 log.seek(0)
