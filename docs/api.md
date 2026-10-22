@@ -404,6 +404,10 @@ virtual microphones, without rewriting each send. Application audio, stereo
 capture inputs and Aux In are outside this microphone option. Sound Check
 is stopped and its sample discarded on a combined pause; recording, looping
 and live actions are refused until it ends. Stop remains available.
+A paused microphone that is the [ducking](#ducking) key stops ducking in
+software until it resumes. Its channel's `meters` entry keeps showing the
+microphone input during the pause, because the meter reads the channel
+before the mute.
 If restoring the live input after stopping Sound Check fails, the requested
 pause and microphone option are still saved. The command reports the cleanup
 error; clients read the resulting state rather than assuming the pause reverted.
@@ -1468,7 +1472,8 @@ whose `ducking` holds a preset word the daemon does not know is refused
 whole, as any other invalid mixer field is.
 
 A key ducks only while it is heard: a key muted in every send it has does
-not duck. Sound Check's loop passes through the key channel, so a looped
+not duck, and in software neither does a microphone key while
+`monitorMuteMicrophones` and `monitorMuted` pause it. Sound Check's loop passes through the key channel, so a looped
 take ducks the targets in software. On the unit the loop does not key the
 ducking, since the unit hears the live microphone.
 

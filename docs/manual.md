@@ -671,7 +671,8 @@ result on Linux yet
 ([hardware support](hardware-support.md#wave-xlr-pro-0fd900b4)).
 
 A muted key does not duck: XLR 1 muted in every mix it is sent to lowers
-nothing. On this computer, [Sound Check](#sound-check)'s loop plays through
+nothing. On this computer, a key paused by **Mute microphone sends with
+monitoring** lowers nothing either until monitoring resumes. On this computer, [Sound Check](#sound-check)'s loop plays through
 the key channel, so a looped take ducks the music, which is a quick way to
 try a sensitivity. On the Pro the unit hears the live microphone, so the
 loop does not duck.
@@ -3346,7 +3347,10 @@ The microphone pause affects audio routed through OpenXLR, including its
 virtual microphones used by Discord or a recording program. It does not mute
 applications capturing a physical microphone directly, stereo capture channels
 or Aux/Line In. It stops Sound Check and discards its take; a new recording is
-refused until microphones resume. If the audio server refuses a microphone
+refused until microphones resume. A paused microphone that is the
+[ducking](#ducking) key stops lowering the other channels on this computer.
+Its strip meter keeps moving while you speak, because the meter reads the
+microphone before the pause mutes it. If the audio server refuses a microphone
 mute, Options shows that silence is not yet confirmed and the daemon retries.
 Do not treat that pending state as a confirmed microphone mute.
 

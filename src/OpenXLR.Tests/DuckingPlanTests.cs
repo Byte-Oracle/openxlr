@@ -127,6 +127,29 @@ public sealed class DuckingPlanTests
     }
 
     [Fact]
+    public void AMicrophoneKeyClosesOnlyWhileMicrophonesArePausedWithMonitoring()
+    {
+        // A paused microphone's sink is muted, but its monitor still feeds the key.
+        using var f = new Sends();
+        f.Mixer.SetDuckingPlan(Plan("xlr1", "music|monitor"));
+        f.Mixer.SetMonitorMuted(true);
+        Assert.True(f.KeyOpen);
+        f.Mixer.SetMonitorMuteMicrophones(true);
+        Assert.False(f.KeyOpen);
+        f.Mixer.SetDuckingPlan(Plan("xlr2", "music|monitor"));
+        Assert.False(f.KeyOpen);
+        f.Mixer.SetDuckingPlan(Plan("chat", "music|monitor"));
+        Assert.True(f.KeyOpen);
+        f.Mixer.SetDuckingPlan(Plan("xlr1", "music|monitor"));
+        f.Mixer.SetMonitorMuted(false);
+        Assert.True(f.KeyOpen);
+        f.Mixer.SetMonitorMuted(true);
+        Assert.False(f.KeyOpen);
+        f.Mixer.SetMonitorMuteMicrophones(false);
+        Assert.True(f.KeyOpen);
+    }
+
+    [Fact]
     public void AFailedInactiveLegWriteNeverOpensTheOtherPath()
     {
         using var f = new Sends();
