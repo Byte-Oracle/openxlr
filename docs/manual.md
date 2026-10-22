@@ -3430,6 +3430,11 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 
 In Outputs, quick Space presses keep the complete selection while the daemon
 acknowledges it. Feed arrows likewise keep each step separately for each output.
+The arrows choose one mix at a time. On an output that sums two or more mixes,
+ticked in the desktop UI's feed picker, the first Left or Right sends nothing:
+the bottom line says how many mixes the output hears and which one the same
+arrow, pressed again, feeds alone. Only that second press, made while the line
+shows and before any other key, replaces the sum.
 A refused edit returns to the reported setting and shows the error; reconnecting
 discards any unconfirmed choice. The terminal, Stream
 Deck and Omarchy clients use the daemon's reported default monitor mix, or the
@@ -3461,7 +3466,7 @@ Controls below the visible hardware cards appear as the selection moves.
 | Inputs and numeric controls | Left/Right, `-`, `+` | change a value; Ctrl+Left/Right or `[` and `]` takes the finer step |
 | Inputs and numeric controls | Home, End | set the minimum or maximum |
 | Toggles and choices | Space, Enter, Left/Right | toggle or choose a value |
-| Outputs, on a sink | Space, Left/Right, Enter | select the sink, choose its feed, or make it the main output |
+| Outputs, on a sink | Space, Left/Right, Enter | select the sink, choose its feed (a summed feed asks for a second press), or make it the main output |
 | Outputs, on a sink | `-`, `+`, `m` | change its volume or toggle its mute |
 | Apps | Left/Right, `i`, `f` | assign a channel, leave routing to the desktop, or forget the assignment |
 | Inserts | Space, Ctrl+Up/Down, `d`, `e` | bypass, reorder, remove, or open the plugin's native editor, with generated controls when blocked or refused |
