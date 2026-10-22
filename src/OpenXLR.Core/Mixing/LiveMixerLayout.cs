@@ -206,6 +206,7 @@ public sealed partial class Mixer
             // the registry's view and PipeWire's own (the session manager
             // may have moved a stream since the last sweep).
             ChannelDefinition gone = previous.Channels.First(c => c.Id == id);
+            PruneBrowserChannelsLocked();
             var serials = new HashSet<int>(_pw.StreamSerialsOnSink(gone.SinkName));
             foreach ((int streamId, StreamAssignment placed) in _streams.Where(kv => kv.Value.ChannelId == id).ToList())
             {

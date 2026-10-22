@@ -45,6 +45,7 @@ internal static class SavedMixerValidation
             MonitorOutputMutes = MonitorOutputMutes(settings, notes),
             MonitorFeeds = Mapping(settings.MonitorFeeds, "monitorFeeds", notes),
             AppOverrides = Mapping(settings.AppOverrides, "appOverrides", notes),
+            BrowserSiteChannels = BrowserSites(settings.BrowserSiteChannels, notes),
             KnownApps = Apps(settings.KnownApps, notes),
             Inserts = Inserts(settings, notes),
             Eq = Eq(settings.Eq, notes),
@@ -202,6 +203,13 @@ internal static class SavedMixerValidation
         if (entries is null) { notes.Add($"{field}: {NullEntry}"); return []; }
         var kept = entries.Where(pair => pair.Value is not null).ToDictionary();
         if (kept.Count != entries.Count) notes.Add($"{field}: {NullEntry}");
+        return kept;
+    }
+
+    private static Dictionary<string, string> BrowserSites(Dictionary<string, string>? entries, List<string> notes)
+    {
+        Dictionary<string, string> kept = BrowserTabRouting.SiteChannels(entries);
+        if (entries is null || kept.Count != entries.Count) notes.Add("browserSiteChannels: invalid or excessive site preference");
         return kept;
     }
 

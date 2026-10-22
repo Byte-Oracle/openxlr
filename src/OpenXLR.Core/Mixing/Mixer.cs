@@ -147,6 +147,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             if (_built) TearDownLocked();
             _config = config;
+            PruneBrowserChannelsLocked();
             _duckingSetup = _duckingSetup is null ? DuckingSetup.Default(config) : DuckingSetup.Prune(_duckingSetup, config);
 
             // A crashed or killed daemon never runs its teardown, and loading
@@ -1545,6 +1546,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MonitorOutputMutes = _monitorOutputMutes.Where(pair => _monitorOutputs.Any(o => StripMarker(o) == pair.Key)).ToDictionary(),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
+                PreserveBrowserOutputs = _preserveBrowserOutputs,
+                BrowserSiteChannels = _browserSiteChannels.Where(p => HasApplicationChannel(p.Value))
+                    .ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal),
                 KnownApps = [.. _apps.Values.Select(a => new SavedApp(a.Identity, a.Label, a.ChannelId))],
                 EnforcedDefaultSink = _enforcedSink,
                 EnforcedDefaultSource = _enforcedSource,
@@ -1604,6 +1608,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         lock (_gate)
         {
+            RestoreBrowserSettingsLocked(s);
             _duckingSetup = DuckingSetup.Prune(s.Ducking ?? DuckingSetup.Default(_config), _config);
             if (!_built) { SyncDuckingLocked(); return; }
             if (_config.RepairedMonitorMix is { } repaired)
@@ -2733,6 +2738,14 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 }
 
                 string channelId = _config.ResolveApplicationChannel(Matcher.Match(s));
+                if (_preserveBrowserOutputs && BrowserTabRouting.IsChromium(s.Binary ?? s.AppName))
+                {
+                    var preserved = new StreamAssignment(s.Id, s.Serial, s.Label, identity, StreamMatcher.Ignore);
+                    _streams[s.Id] = preserved;
+                    _apps[identity] = preserved;
+                    changed = true;
+                    continue;
+                }
                 if (channelId == StreamMatcher.Ignore)
                 {
                     // Not managed: the stream stays where the desktop put it.
@@ -2896,7 +2909,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 EnsureOverrideCapacity(identity);
                 Matcher.SetOverride(identity, StreamMatcher.Ignore);
                 foreach ((int id, StreamAssignment placed) in _streams.ToList())
-                    if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase)
+                        && !(_preserveBrowserOutputs && BrowserTabRouting.IsChromium(identity)))
                     {
                         try { ReleaseStreamLocked(placed.Serial); }
                         catch (InvalidOperationException) { /* the sweep retries */ }
@@ -2914,7 +2928,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             Matcher.SetOverride(identity, channelId);
 
             foreach ((int id, StreamAssignment placed) in _streams.ToList())
-                if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase)
+                    && !(_preserveBrowserOutputs && BrowserTabRouting.IsChromium(identity)))
                 {
                     try { _pw.MoveStreamToSink(placed.Serial, ch.SinkName); }
                     catch (InvalidOperationException) { /* the sweep retries */ }
@@ -2945,7 +2960,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (channelId == StreamMatcher.Ignore)
             {
                 EnsureOverrideCapacity(existing.Identity);
-                ReleaseStreamLocked(existing.Serial);
+                if (!(_preserveBrowserOutputs && BrowserTabRouting.IsChromium(existing.Identity))) ReleaseStreamLocked(existing.Serial);
                 Matcher.SetOverride(existing.Identity, StreamMatcher.Ignore);
                 _streams.Remove(streamId);   // the next sweep lists it as unmanaged
                 return;
@@ -2954,7 +2969,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (ch is null) return;
 
             EnsureOverrideCapacity(existing.Identity);
-            _pw.MoveStreamToSink(existing.Serial, ch.SinkName);
+            if (!(_preserveBrowserOutputs && BrowserTabRouting.IsChromium(existing.Identity))) _pw.MoveStreamToSink(existing.Serial, ch.SinkName);
             Matcher.SetOverride(existing.Identity, channelId);
             _streams.Remove(streamId); // the next sweep confirms the destination
         }
@@ -3015,6 +3030,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 AuxPortEnabled = _auxPortEnabled,
                 Streams = [.. _apps.Values
                     .OrderByDescending(a => a.Active).ThenBy(a => a.Label, StringComparer.OrdinalIgnoreCase)],
+                PreserveBrowserOutputs = _preserveBrowserOutputs,
+                BrowserTabs = BrowserTabsLocked(),
             });
         }
     }

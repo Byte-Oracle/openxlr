@@ -224,6 +224,10 @@ public sealed record MixerState
     /// <summary>Application streams currently placed in channels.</summary>
     public IReadOnlyList<StreamAssignment> Streams { get; init; } = [];
 
+    public bool PreserveBrowserOutputs { get; init; }
+
+    public IReadOnlyList<BrowserTabState> BrowserTabs { get; init; } = [];
+
     /// <summary>
     /// True after a virtual microphone was renamed while running: its PipeWire
     /// device keeps the old description until the daemon restarts, so other

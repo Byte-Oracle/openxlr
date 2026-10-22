@@ -214,6 +214,8 @@ every save. Every field is optional on read; an absent one is empty or off.
 | `enforcedDefaultSink` | the output held as the system default, or `@monitor`; `setEnforcedDefaults` and `setMainOutput` write it |
 | `enforcedDefaultSource` | the source held as the system default |
 | `appOverrides` | application identity to remembered channel |
+| `preserveBrowserOutputs` | leave recognized Chromium playback on its browser/desktop-selected output; false when absent. Machine setting, never recalled by a profile |
+| `browserSiteChannels` | up to 128 canonical HTTP(S) origins to application channel ids for the optional [browser companion](browser-routing.md). Missing channels are discarded. Machine settings only; live tab titles, ids and sessions are not saved |
 | `knownApps` | `{identity, label, channelId}` for every application seen |
 | `lowCutHz` | the software low cut, 0, 80 or 120 |
 | `softClipGuard` | the software ClipGuard |

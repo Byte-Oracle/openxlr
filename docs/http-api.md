@@ -58,6 +58,17 @@ scan plugins or start helpers, so they share the one HTTP command slot: while
 a command or another of these reads is in flight they answer 429.
 Changes still go through `/commands`.
 
+The mixer resource also reports `preserveBrowserOutputs` and `browserTabs`
+as documented in [browser tabs](api.md#browser-tabs). Use
+`{"cmd":"setPreserveBrowserOutputs","value":true}` to preserve browser-selected
+outputs, then `assignBrowserTab` with a connected tab's `session`, `tabId`,
+an application `channel` or `null`, and boolean `remember`. A remembered
+choice is written before success is returned. `channel:null, remember:true`
+forgets the website default; `remember:false` keeps that default and changes
+only the tab. Companion registration and metadata publication,
+`getBrowserSession` and `syncBrowserTabs`, require an authenticated WebSocket
+because its lifetime owns the runtime tabs. They are refused over HTTP.
+
 Both WebSocket paths require the existing first-message authentication:
 `{"cmd":"auth","token":"..."}`. They send no state before authentication.
 HTTP's Bearer header does not replace that WebSocket exchange. Ping, close,

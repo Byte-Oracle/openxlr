@@ -148,6 +148,7 @@ public sealed class WebSocketHub
         finally
         {
             _clients.TryRemove(client.Id, out _);
+            _mixer.RemoveBrowserSession(client.Id);
             client.Dispose();
         }
     }
@@ -199,7 +200,7 @@ public sealed class WebSocketHub
     }
 
     private Task Dispatch(Client client, string text)
-        => DispatchAsync(message => client.SendAsync(Serialize(message)), text);
+        => DispatchAsync(message => client.SendAsync(Serialize(message)), text, client.Id);
 
     internal async Task<ApiCommandResult> ExecuteForApiAsync(string text)
     {
@@ -215,7 +216,7 @@ public sealed class WebSocketHub
         _ => null,
     };
 
-    private async Task DispatchAsync(Func<object, Task> reply, string text)
+    private async Task DispatchAsync(Func<object, Task> reply, string text, Guid? browserOwner = null)
     {
         Command? cmd;
         try { cmd = JsonSerializer.Deserialize<Command>(text, Json); }
@@ -245,6 +246,16 @@ public sealed class WebSocketHub
                 break;   // already authenticated on this socket; a repeat is harmless
             case "getState":
                 await reply(Snapshot());
+                break;
+            case "getBrowserSession":
+                if (browserOwner is not Guid owner) { error = "getBrowserSession: requires an authenticated WebSocket"; break; }
+                try { await reply(new BrowserSessionMessage(_mixer.OpenBrowserSession(owner))); }
+                catch (InvalidOperationException ex) { error = ex.Message; }
+                break;
+            case "syncBrowserTabs":
+                error = browserOwner is Guid syncOwner ? _mixer.SyncBrowserTabs(syncOwner, cmd)
+                    : "syncBrowserTabs: requires an authenticated WebSocket";
+                stateOnError = true;
                 break;
             case "getDiagnostics":
                 await reply(new DiagnosticsMessage(_devices.DumpBlocks()));
@@ -389,6 +400,8 @@ public sealed class WebSocketHub
             case "routeFocusedApp":
             case "assignStream":
             case "assignApp":
+            case "assignBrowserTab":
+            case "setPreserveBrowserOutputs":
             case "forgetApp":
             case "setMonitorOutput":
             case "setMonitorOutputs":
