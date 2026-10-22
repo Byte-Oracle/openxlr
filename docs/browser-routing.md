@@ -86,6 +86,12 @@ checkout of the same version as your native OpenXLR installation.
    daemon connection releases the takeover. Normal browser playback can
    then resume. Reconnection restores the list, not capture permission.
 
+Control requests already waiting when the daemon connection is lost are
+discarded, rather than replayed after reconnection. An old error cannot
+replace the new connection's status. The latest tab metadata is kept and
+registered again so the list remains current; retry a refused channel
+choice after the connection returns.
+
 A same-origin page change keeps the tab's selection. A different origin
 uses its own saved default. A late assignment from the previous website is
 refused instead of changing the new website's routing. After restarting the
@@ -111,9 +117,11 @@ correct the problem and activate or reconnect explicitly.
 ## Privacy and removal
 
 The companion sends the current tab list to the local native host: tab id,
-bounded title, HTTP(S) origin and routing status. Paths, query strings and
-URL credentials are not sent. The daemon keeps live tab ids and titles in
-memory and saves only remembered origin-to-channel defaults in machine
+bounded title, HTTP(S) origin and routing status. The URL field is reduced
+to its origin, excluding its path, query and credentials. Page titles come
+from the website and are not redacted on their way to the daemon; a title
+can itself include a name or link. The daemon keeps live tab ids and titles
+in memory and saves only remembered origin-to-channel defaults in machine
 settings, outside profiles. A manually collected diagnostic archive
 includes the current tab list without its titles. It keeps the origin of
 each tab routed to a channel and masks the origin of tabs left at the

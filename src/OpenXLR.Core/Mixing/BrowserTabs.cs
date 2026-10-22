@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace OpenXLR.Core.Mixing;
 
-/// <summary>Metadata supplied by the browser companion, never audio or a complete browsing URL.</summary>
+/// <summary>Display metadata from the browser companion. Site is an origin; no audio is carried.</summary>
 public sealed record BrowserTabRegistration
 {
     public int Id { get; init; } = -1;

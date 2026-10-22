@@ -23,8 +23,8 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
     private readonly SemaphoreSlim _commands = new(1, 1);
     private readonly Channel<bool> _updates = Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
         { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true });
-    private sealed record Outgoing(JsonObject Message, long? Generation = null);
-    private readonly Channel<Outgoing> _outgoing = Channel.CreateBounded<Outgoing>(new BoundedChannelOptions(8)
+    private sealed record QueuedMessage(JsonObject Message, long Generation);
+    private readonly Channel<QueuedMessage> _outgoing = Channel.CreateBounded<QueuedMessage>(new BoundedChannelOptions(8)
         { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
     private JsonNode? _state;
     private JsonObject? _lastPublished;
@@ -94,7 +94,7 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
         }
         client.StateReceived += State;
         client.ConnectionChanged += Connection;
-        var incoming = Channel.CreateBounded<JsonObject>(new BoundedChannelOptions(8)
+        var incoming = Channel.CreateBounded<QueuedMessage>(new BoundedChannelOptions(8)
             { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = true });
         Task writer = WriteOutputAsync(lifetime);
         Task pump = PumpStateAsync(lifetime.Token);
@@ -103,7 +103,11 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
         {
             client.Start();
             while (await ReadFrameAsync(input, lifetime.Token) is { } message)
-                await incoming.Writer.WriteAsync(message, lifetime.Token);
+            {
+                long generation;
+                lock (_gate) generation = _generation;
+                await incoming.Writer.WriteAsync(new(message, generation), lifetime.Token);
+            }
         }
         finally
         {
@@ -119,12 +123,12 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
         }
     }
 
-    private async Task DispatchInputAsync(ChannelReader<JsonObject> incoming, CancellationTokenSource lifetime)
+    private async Task DispatchInputAsync(ChannelReader<QueuedMessage> incoming, CancellationTokenSource lifetime)
     {
         try
         {
-            await foreach (JsonObject message in incoming.ReadAllAsync(lifetime.Token))
-                await ProcessInputAsync(message, lifetime.Token);
+            await foreach (QueuedMessage message in incoming.ReadAllAsync(lifetime.Token))
+                await ProcessInputAsync(message.Message, message.Generation, lifetime.Token);
         }
         catch
         {
@@ -196,7 +200,7 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
                     }
                     await PublishAsync(new JsonObject { ["type"] = "state", ["preserveBrowserOutputs"] = false,
                         ["channels"] = new JsonArray(), ["tabs"] = new JsonArray() }, generation, cancel);
-                    if (notify) await ErrorAsync("OpenXLR could not establish a browser routing session. Retrying automatically.", cancel);
+                    if (notify) await ErrorAsync("OpenXLR could not establish a browser routing session. Retrying automatically.", generation, cancel);
                     _ = WakeSessionRetryAsync(generation, delay, cancel);
                     continue;
                 }
@@ -247,7 +251,7 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
         }
         await PublishAsync(new JsonObject { ["type"] = "state", ["preserveBrowserOutputs"] = false,
             ["channels"] = new JsonArray(), ["tabs"] = new JsonArray() }, generation, cancel);
-        if (notify) await ErrorAsync(reason, cancel);
+        if (notify) await ErrorAsync(reason, generation, cancel);
     }
 
     private async Task<bool> PublishAsync(JsonObject message, long generation, CancellationToken cancel)
@@ -260,7 +264,7 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
         return true;
     }
 
-    private async Task ProcessInputAsync(JsonObject message, CancellationToken cancel)
+    private async Task ProcessInputAsync(JsonObject message, long generation, CancellationToken cancel)
     {
         string? type = String(message, "type");
         switch (type)
@@ -271,7 +275,7 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
                 await SyncTabsAsync(cancel);
                 break;
             case "enable" when message["value"] is JsonValue flag && flag.TryGetValue<bool>(out bool enabled):
-                await CommandAsync(() => client.SetPreserveBrowserOutputsAsync(enabled), cancel);
+                await CommandAsync(() => client.SetPreserveBrowserOutputsAsync(enabled), generation, cancel);
                 break;
             case "assign":
                 if (message["tabId"] is not JsonValue idNode || !idNode.TryGetValue<int>(out int id) || id < 0
@@ -283,8 +287,8 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
                 if (channel is not null && !ValidChannel(channel)) throw new InvalidDataException("Invalid browser channel.");
                 string? session;
                 lock (_gate) session = _session;
-                if (session is null) await ErrorAsync("The OpenXLR browser connection is not ready.", cancel);
-                else await CommandAsync(() => client.AssignBrowserTabAsync(session, id, site, channel, remember), cancel);
+                if (session is null) await ErrorAsync("The OpenXLR browser connection is not ready.", generation, cancel);
+                else await CommandAsync(() => client.AssignBrowserTabAsync(session, id, site, channel, remember), generation, cancel);
                 break;
             default:
                 throw new InvalidDataException("Invalid browser-host message.");
@@ -306,37 +310,48 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
             }
             string? error = await client.SyncBrowserTabsAsync(session, tabs);
             lock (_gate)
-                if (generation == _generation && _session == session && error is null) _sentVersion = version;
+            {
+                if (generation != _generation || _session != session) return;
+                if (error is null) _sentVersion = version;
+            }
             if (error is not null) await ErrorAsync(error == DaemonClient.BrowserTabsTooLarge
-                ? DaemonClient.BrowserTabsTooLarge : "OpenXLR could not update the browser tabs.", cancel);
+                ? DaemonClient.BrowserTabsTooLarge : "OpenXLR could not update the browser tabs.", generation, cancel);
         }
         finally { _commands.Release(); }
     }
 
-    private async Task CommandAsync(Func<Task<string?>> invoke, CancellationToken cancel)
+    private async Task CommandAsync(Func<Task<string?>> invoke, long generation, CancellationToken cancel)
     {
         await _commands.WaitAsync(cancel);
         try
         {
-            if (await invoke() is { } error)
+            // A valid control accepted on the old connection must not be
+            // replayed. Metadata takes the separate resynchronization path.
+            Task<string?> pending;
+            lock (_gate)
+            {
+                if (generation != _generation) return;
+                pending = invoke();
+            }
+            if (await pending is { } error)
                 await ErrorAsync(error == "assignBrowserTab: the tab changed website; select it again"
                     ? "The tab changed website. Select it again in the browser extension."
-                    : "OpenXLR could not apply the browser routing change. Check the OpenXLR window.", cancel);
+                    : "OpenXLR could not apply the browser routing change. Check the OpenXLR window.", generation, cancel);
         }
         finally { _commands.Release(); }
     }
 
-    private ValueTask ErrorAsync(string error, CancellationToken cancel)
-        => _outgoing.Writer.WriteAsync(new(new JsonObject { ["type"] = "error", ["error"] = error }), cancel);
+    private ValueTask ErrorAsync(string error, long generation, CancellationToken cancel)
+        => _outgoing.Writer.WriteAsync(new(new JsonObject { ["type"] = "error", ["error"] = error }, generation), cancel);
 
     private async Task WriteOutputAsync(CancellationTokenSource lifetime)
     {
         try
         {
-            await foreach (Outgoing message in _outgoing.Reader.ReadAllAsync(lifetime.Token))
+            await foreach (QueuedMessage message in _outgoing.Reader.ReadAllAsync(lifetime.Token))
             {
                 lock (_gate)
-                    if (message.Generation is long generation && generation != _generation) continue;
+                    if (message.Generation != _generation) continue;
                 await WriteFrameAsync(output, message.Message, lifetime.Token);
             }
         }
