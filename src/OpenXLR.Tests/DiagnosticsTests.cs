@@ -454,8 +454,10 @@ public sealed class DiagnosticsTests
         Assert.Contains("alsa_card.usb-Foo_<redacted>-00", redacted);
     }
 
-    [Fact]
-    public async Task TheLoginNameAndHostNamesAppearNowhereInTheArchive()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TheLoginNameAndHostNamesAppearNowhereInTheArchive(bool commandWarning)
     {
         if (!OperatingSystem.IsLinux()) return;
         // Neither is this machine's: the fake helpers below print them, the
@@ -488,7 +490,8 @@ public sealed class DiagnosticsTests
                   '        32. WirePlumber                         [1.6.9, {{login}}@{{machine}}, pid:1585]' \
                   '        43. pipewire                            [1.6.9, {{login}}@{{otherHost}}, pid:1655]'
                 """);
-            ExecutableScript.Write(Path.Combine(bin, "pw-dump"), $$"""
+            string warning = commandWarning ? $"printf '%s\\n' 'warning for {login}@{machine}: optional metadata unavailable' >&2\n" : "";
+            ExecutableScript.Write(Path.Combine(bin, "pw-dump"), warning + $$"""
                 cat <<'JSON'
                 [{"id":0,"type":"PipeWire:Interface:Core","info":{"user-name":"{{login}}","host-name":"{{otherHost}}","name":"pipewire-0",
                   "props":{"core.name":"pipewire-{{login}}-1655","default.clock.max-quantum":2048} } },
@@ -571,6 +574,8 @@ public sealed class DiagnosticsTests
             Assert.Equal("pipewire-<redacted>-1655", graph.RootElement[0].GetProperty("info").GetProperty("props").GetProperty("core.name").GetString());
             Assert.Equal("<redacted>", graph.RootElement[0].GetProperty("info").GetProperty("user-name").GetString());
             Assert.Equal(8192, graph.RootElement[2].GetProperty("info").GetProperty("props").GetProperty("clock.max-quantum").GetInt32());
+            if (commandWarning)
+                Assert.Contains("warning for <redacted>@<redacted>: optional metadata unavailable", entries["pw-dump-errors.txt"]);
             Assert.Contains("login name", entries["PRIVACY.txt"]);
         }
         finally

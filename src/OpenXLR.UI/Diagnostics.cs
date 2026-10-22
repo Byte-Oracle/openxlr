@@ -389,9 +389,21 @@ public static class Diagnostics
     }
 
     private static async Task WriteCmd(Func<string, string> clean, string dir, string file, string exe, params string[] args)
-        => await File.WriteAllTextAsync(Path.Combine(dir, file), await RunAsync(clean, exe, args));
+    {
+        var (output, errors) = await RunCommandAsync(exe, args);
+        bool json = file.EndsWith(".json", StringComparison.Ordinal);
+        await File.WriteAllTextAsync(Path.Combine(dir, file), clean(json ? output : output + errors));
+        if (json && errors.Length > 0)
+            await File.WriteAllTextAsync(Path.Combine(dir, Path.GetFileNameWithoutExtension(file) + "-errors.txt"), clean(errors));
+    }
 
     private static async Task<string> RunAsync(Func<string, string> clean, string exe, params string[] args)
+    {
+        var (output, errors) = await RunCommandAsync(exe, args);
+        return clean(output + errors);
+    }
+
+    private static async Task<(string Output, string Errors)> RunCommandAsync(string exe, params string[] args)
     {
         try
         {
@@ -401,9 +413,9 @@ public static class Diagnostics
                 stdoutCap: 8 * 1024 * 1024, stderrCap: 64 * 1024, cLocale: false);
             string note = r.TimedOut ? $"\n[{exe} killed after 15 s]" : r.Truncated ? $"\n[{exe} output truncated at 8 MiB]"
                 : r.Incomplete ? $"\n[{exe} output ended before the helper closed it]" : "";
-            return clean(r.StdoutText + r.Stderr + note);
+            return (r.StdoutText, r.Stderr + note);
         }
-        catch (Exception ex) { return clean($"failed to run {exe}: {ex.Message}"); }
+        catch (Exception ex) { return ("", $"failed to run {exe}: {ex.Message}"); }
     }
 
     private static string TryReadFile(string path)
