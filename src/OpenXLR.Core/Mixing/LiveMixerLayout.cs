@@ -420,6 +420,7 @@ public sealed partial class Mixer
                 throw;
             }
 
+            _desktopMixMuteResets.Remove(mix.SinkName);
             if (wasPaused != _monitorMuted) _desktopMonitorIntent = null;
             PruneDuckPlanLocked();   // the bus goes before the mix it feeds
             if (wasPaused != _monitorMuted || previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id))
