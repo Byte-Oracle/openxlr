@@ -119,6 +119,10 @@ this check separately with
 `OPENXLR_TEST_FILTER="FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests"`.
 For a focused rerun on the same private server, set `OPENXLR_TEST_FILTER` to
 the desired `dotnet test` filter instead of passing a second `--filter`.
+CI spreads both runs over parallel jobs with `OPENXLR_TEST_SHARD=N/M`, which
+runs every Mth test of the selection by sorted name, starting at the Nth.
+A failing CI shard reruns locally with the same value, for example
+`OPENXLR_TEST_SHARD=2/3 python3 tools/test-monitor-volume.py`.
 
 Application routing tests run the normal mixer sweep while waiting for the
 destination to settle. PipeWire's move acknowledgement can arrive before
