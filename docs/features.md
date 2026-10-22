@@ -318,10 +318,12 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   for a narrow window. Chosen in Options and kept in `ui.json`; hidden
   channels can be picked there. See [Mixer view](manual.md#mixer-view)
 - Any mix feeds any selected output, hardware outputs included: the
-  picker beside each output names Monitor A/B, Stream, Chat, Aux or a
-  monitor mix or virtual microphone you added, and the API names a sum of
-  mixes, each a direct port link at unity so a summed feed costs no
-  node. Outputs that share a hardware bus follow one feed, and mix
+  checked picker beside each output selects one or more of Monitor A/B,
+  Stream, Chat, Aux or mixes you added. A mix can feed several devices,
+  and one device can hear several mixes summed at unity. The API uses
+  the same feeds, each a direct port link so a sum costs no node or
+  additional mixer. At least one mix stays selected; untick the output
+  to disconnect it. Outputs that share a hardware bus follow one feed, and mix
   inserts sit upstream so every output hears the processed mix. Profiles recall the feeds. A
   headset with a game sink and a chat sink hears two selections, and
   one pair of headphones can hear the desktop from A with a separately

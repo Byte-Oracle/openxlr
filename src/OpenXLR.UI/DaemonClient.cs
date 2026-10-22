@@ -478,9 +478,9 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
             ["appearance"] = new { icon, colour, hidden = false } });
 
     /// <summary>
-    /// Send a layout command and wait for its commandResult. The daemon
-    /// answers only after the new layout is saved, and sends the matching
-    /// state first, so a null result means the change is visible and durable.
+    /// Send an acknowledged command and wait for its commandResult. The
+    /// matching state arrives first. Layout edits also finish their save
+    /// before answering; other settings use the daemon's debounced save.
     /// </summary>
     private async Task<string?> EditLayoutAsync(Dictionary<string, object> payload)
     {
@@ -506,12 +506,12 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
         => SendAsync(new Dictionary<string, object?> { ["cmd"] = "setMonitorOutput", ["device"] = device });
 
     /// <summary>Every output the monitor mix should feed (empty = disconnect).</summary>
-    public Task SetMonitorOutputsAsync(IReadOnlyList<string> devices)
-        => SendAsync(new Dictionary<string, object?> { ["cmd"] = "setMonitorOutputs", ["devices"] = devices });
+    public Task<string?> SetMonitorOutputsAsync(IReadOnlyList<string> devices)
+        => EditLayoutAsync(new Dictionary<string, object> { ["cmd"] = "setMonitorOutputs", ["devices"] = devices });
 
     /// <summary>Which monitor mix feeds one selected output.</summary>
-    public Task SetMonitorFeedAsync(string device, string mix)
-        => SendAsync(new Dictionary<string, object?> { ["cmd"] = "setMonitorFeed", ["device"] = device, ["mix"] = mix });
+    public Task<string?> SetMonitorFeedAsync(string device, string mix)
+        => EditLayoutAsync(new Dictionary<string, object> { ["cmd"] = "setMonitorFeed", ["device"] = device, ["mix"] = mix });
 
     /// <summary>Volume of the selected output device (0..1.5).</summary>
     public Task SetOutputVolumeAsync(double value)
