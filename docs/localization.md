@@ -2,7 +2,7 @@
 
 The UI can be translated. Every string it shows lives in one
 English catalogue, and a language is a second catalogue with the same keys.
-OpenXLR ships in English, German (Deutsch), Spanish (Español) and Tagalog. Other
+OpenXLR ships in English, German (Deutsch), Spanish (Español), Tagalog and Cebuano (Bisaya). Other
 languages come from contributors who read and write them, one pull request
 per language.
 
@@ -59,7 +59,7 @@ are not part of the catalogue.
    the catalogue lacks, when an entry is never read, when markup carries
    text of its own, or when a key is built at run time. Its line-break
    and literal-command checks run per language from `InlineData` rows
-   that name `de`, `es` and `tl`; add a row for the new language.
+   that name `de`, `es`, `tl` and `ceb`; add a row for the new language.
 
 A translation that has the old wording of a changed entry still shows it,
 so a change of meaning gets a new key.
@@ -121,7 +121,8 @@ The UI chooses its language once, when it starts:
    and `LANG`, as gettext reads them. `LANGUAGE` is ignored when the
    locale is `C` or `POSIX`, or when none of the three is set.
 3. Filipino desktop locales (`fil`, including `fil_PH.UTF-8`) select
-   the Tagalog catalogue (`tl`).
+   the Tagalog catalogue (`tl`). Cebuano (`ceb`, including `ceb_PH.UTF-8`)
+   is listed as Bisaya (Cebuano), distinguishing it from other Visayan languages.
 4. A regional tag the UI does not ship reads its base language, so
    `de_AT.UTF-8` gets `de`. Chinese is matched by script: `zh_TW`,
    `zh_HK` and `zh_MO` mean Traditional (`zh-Hant`), other regions mean

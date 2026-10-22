@@ -34,6 +34,7 @@ public static class Localizer
         new("de", "Deutsch"),
         new("es", "Español"),
         new("tl", "Tagalog"),
+        new("ceb", "Bisaya (Cebuano)"),
     ]);
 
     internal static readonly ResourceManager Resources =
