@@ -177,7 +177,8 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
 
     private void OnOutputChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(MonitorOutputItem.IsSelected) or nameof(MonitorOutputItem.Feed)) RefreshOutputs();
+        if (e.PropertyName is nameof(MonitorOutputItem.IsSelected) or nameof(MonitorOutputItem.Feed)
+            or nameof(MonitorOutputItem.IsPresent)) RefreshOutputs();
     }
 
     private void RefreshOutputs()
