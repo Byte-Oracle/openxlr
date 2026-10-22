@@ -507,6 +507,7 @@
                     "cmd": "assignBrowserTab",
                     "session": "e3b0c44298fc4c14b9afbf4c8996fb92",
                     "tabId": 42,
+                    "site": "https://teams.microsoft.com",
                     "channel": "voicechat",
                     "remember": true
                   }
@@ -517,6 +518,7 @@
                     "cmd": "assignBrowserTab",
                     "session": "e3b0c44298fc4c14b9afbf4c8996fb92",
                     "tabId": 42,
+                    "site": "https://teams.microsoft.com",
                     "channel": null,
                     "remember": true
                   }

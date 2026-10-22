@@ -112,12 +112,15 @@ public sealed partial class Mixer
         }
     }
 
-    public void AssignBrowserTab(string session, int tabId, string? channel, bool remember, Func<MixerSettings, string?> persist)
+    public void AssignBrowserTab(string session, int tabId, string site, string? channel, bool remember, Func<MixerSettings, string?> persist)
     {
         lock (_gate)
         {
             if (!_browserSessions.TryGetValue(session, out Dictionary<int, BrowserTab>? tabs) || !tabs.TryGetValue(tabId, out BrowserTab? tab))
                 throw new InvalidOperationException("assignBrowserTab: the browser tab is no longer connected");
+            string expectedSite = BrowserTabRouting.CanonicalSite(site)
+                ?? throw new ArgumentException("assignBrowserTab: supply the tab's HTTP or HTTPS origin");
+            if (tab.Metadata.Site != expectedSite) throw new InvalidOperationException("assignBrowserTab: the tab changed website; select it again");
             if (channel is not null && !HasApplicationChannel(channel)) throw new ArgumentException("assignBrowserTab: select an application channel or browser default");
             if (remember && channel is not null && !_browserSiteChannels.ContainsKey(tab.Metadata.Site)
                 && _browserSiteChannels.Count >= BrowserTabRouting.MaxSites) throw new InvalidOperationException("At most 128 browser sites can be remembered.");

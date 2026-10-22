@@ -222,11 +222,12 @@ async function handle(message) {
     case 'assign': {
       const tab = state?.tabs.find(candidate => candidate.id === message.id);
       if (!Number.isSafeInteger(message.id) || !tab) throw new Error('This tab is no longer registered with OpenXLR.');
+      if (message.site !== tab.site) throw new Error('This tab\'s website changed. Reopen the channel picker before assigning it.');
       if (message.channel !== null && !state.channels.some(channel => channel.id === message.channel)) throw new Error('This OpenXLR channel is unavailable.');
       if (!assignments.has(message.id) && assignments.size >= MAX_TABS)
         throw new Error('Too many browser assignments are waiting for OpenXLR. Try again after a pending assignment finishes.');
       clearAssignment(message.id);
-      const pending = { site: tab.site, channel: message.channel, remember: message.channel !== null && message.remember === true };
+      const pending = { site: message.site, channel: message.channel, remember: message.channel !== null && message.remember === true };
       assignments.set(message.id, pending);
       bridgeError = null;
       pending.timer = setTimeout(() => {
@@ -235,7 +236,7 @@ async function handle(message) {
         bridgeError = ASSIGNMENT_TIMEOUT;
       }, 5000);
       if (starts.has(message.id)) void stopTab(message.id).catch(error => { bridgeError = errorText(error); });
-      try { post({ type: 'assign', tabId: message.id, channel: message.channel, remember: message.remember === true }); }
+      try { post({ type: 'assign', tabId: message.id, site: message.site, channel: message.channel, remember: message.remember === true }); }
       catch (error) { if (assignments.get(message.id) === pending) clearAssignment(message.id); throw error; }
       return null;
     }

@@ -62,6 +62,8 @@ public sealed record Command
     /// <summary>Browser companion session, assigned to its authenticated WebSocket.</summary>
     [JsonPropertyName("session")] public string? Session { get; init; }
     [JsonPropertyName("tabId")] public int? TabId { get; init; }
+    /// <summary>assignBrowserTab: the origin the caller saw when it selected the tab.</summary>
+    [JsonPropertyName("site")] public string? Site { get; init; }
     [JsonPropertyName("tabs")] public List<BrowserTabRegistration>? Tabs { get; init; }
     [JsonPropertyName("remember")] public System.Text.Json.JsonElement Remember { get; init; }
 

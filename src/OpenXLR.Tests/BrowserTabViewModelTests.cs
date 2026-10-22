@@ -15,15 +15,15 @@ public sealed class BrowserTabViewModelTests
 
     private sealed class Recorder
     {
-        internal readonly List<(string Session, int Id, string? Channel, bool Remember, TaskCompletionSource<string?> Reply)> Sent = [];
+        internal readonly List<(string Session, int Id, string Site, string? Channel, bool Remember, TaskCompletionSource<string?> Reply)> Sent = [];
         internal readonly List<string> Errors = [];
         internal BrowserTabViewModel Model { get; }
         internal Recorder()
         {
-            Model = new(Session, 7, (session, id, channel, remember) =>
+            Model = new(Session, 7, (session, id, site, channel, remember) =>
             {
                 var reply = new TaskCompletionSource<string?>();
-                Sent.Add((session, id, channel, remember, reply));
+                Sent.Add((session, id, site, channel, remember, reply));
                 return reply.Task;
             }, Errors.Add);
             Apply();
@@ -56,7 +56,7 @@ public sealed class BrowserTabViewModelTests
         var f = new Recorder();
         f.Model.SelectedChannel = f.Model.Channels[1];
         var sent = Assert.Single(f.Sent);
-        Assert.Equal((Session, 7, "music", false), (sent.Session, sent.Id, sent.Channel, sent.Remember));
+        Assert.Equal((Session, 7, "https://example.com", "music", false), (sent.Session, sent.Id, sent.Site, sent.Channel, sent.Remember));
         Assert.True(f.Model.IsPending);
         Assert.False(f.Model.Capturing);
         Assert.Equal(Localizer.Text("BrowserTabApplying"), f.Model.StatusText);
@@ -132,6 +132,7 @@ public sealed class BrowserTabViewModelTests
         f.Apply("music");
         f.Model.Remember = true;
         Assert.Equal(("music", true), (f.Sent[0].Channel, f.Sent[0].Remember));
+        Assert.Equal("https://example.com", f.Sent[0].Site);
         f.Apply("music", true);
         f.Sent[0].Reply.SetResult(null);
         await Until(() => !f.Model.IsPending);
@@ -172,6 +173,7 @@ public sealed class BrowserTabViewModelTests
         var sent = Assert.Single(f.Sent);
         Assert.Null(sent.Channel);
         Assert.True(sent.Remember);
+        Assert.Equal("https://example.com", sent.Site);
         Assert.True(f.Model.IsPending);
         Assert.Null(f.Model.ChannelId);
         Assert.False(f.Model.Remember);
@@ -227,12 +229,47 @@ public sealed class BrowserTabViewModelTests
         f.Apply("music");
         f.Model.Remember = true;
         f.Apply("chat", site: "https://another.example.com");
+        Assert.Equal("https://example.com", Assert.Single(f.Sent).Site);
         Assert.False(f.Model.IsPending);
         Assert.Equal("chat", f.Model.ChannelId);
         Assert.False(f.Model.Remember);
         f.Sent[0].Reply.SetResult("old website request failed");
         await Until(() => !f.Model.IsPending);
         Assert.Equal("chat", f.Model.ChannelId);
+        Assert.Empty(f.Errors);
+    }
+
+    [Theory]
+    [InlineData("select")]
+    [InlineData("remember")]
+    [InlineData("forget")]
+    public async Task EveryEditCapturesItsOriginBeforeNotificationsCanApplyANavigation(string action)
+    {
+        var f = new Recorder();
+        f.Apply("music");
+        bool navigated = false;
+        f.Model.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName != nameof(BrowserTabViewModel.IsPending) || !f.Model.IsPending || navigated) return;
+            navigated = true;
+            f.Apply("chat", site: "https://another.example.com");
+        };
+        switch (action)
+        {
+            case "select": f.Model.SelectedChannel = f.Model.Channels[2]; break;
+            case "remember": f.Model.Remember = true; break;
+            case "forget": f.Model.ForgetWebsite(); break;
+        }
+
+        var sent = Assert.Single(f.Sent);
+        Assert.True(navigated);
+        Assert.Equal("https://example.com", sent.Site);
+        Assert.Equal("https://another.example.com", f.Model.Site);
+        Assert.False(f.Model.IsPending);
+        sent.Reply.SetResult("the tab navigated before this command was applied");
+        await Until(() => !f.Model.IsPending);
+        Assert.Equal("chat", f.Model.ChannelId);
+        Assert.False(f.Model.Remember);
         Assert.Empty(f.Errors);
     }
 

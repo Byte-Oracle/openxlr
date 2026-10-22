@@ -125,7 +125,7 @@ test('refused browser capture permission leaves playback alone and explicit retr
 
 test('activation waits for authoritative acknowledgement of a new assignment', { timeout: 2000 }, async () => {
   const f = await readyFixture();
-  await f.request('assign', { id: 1, channel: 'music', remember: true });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'music', remember: true });
   assert.deepEqual(Array.from((await f.request('snapshot')).value.pendingTabs), [1]);
   assert.equal((await f.request('start', { id: 1 })).error, "Waiting for OpenXLR to confirm this tab's channel assignment.");
   assert.equal(f.tokens.length, 0); assert.equal(f.calls.length, 0);
@@ -135,12 +135,25 @@ test('activation waits for authoritative acknowledgement of a new assignment', {
   assert.equal(f.active.get(1).deviceId, 'music-device');
 });
 
+test('a stale or missing displayed website cannot assign the replacement page', async () => {
+  const f = await readyFixture();
+  await f.publish({ tabs: f.state.tabs.map(tab => tab.id === 1 ? { ...tab, site: 'https://replacement.example' } : tab) });
+  for (const site of ['https://site1.example', undefined]) {
+    const reply = await f.request('assign', { id: 1, site, channel: 'music', remember: true });
+    assert.match(reply.error, /website changed/i);
+  }
+  assert.equal(f.posts.filter(message => message.type === 'assign').length, 0);
+  assert.equal((await f.request('snapshot')).value.pendingTabs.length, 0);
+  assert.equal((await f.request('assign', { id: 1, site: 'https://replacement.example', channel: 'music', remember: true })).error, undefined);
+  assert.equal(f.posts.filter(message => message.type === 'assign')[0].site, 'https://replacement.example');
+});
+
 test('rapid assignment replacement ignores old acknowledgements and old timeout callbacks', { timeout: 2000 }, async () => {
   const f = await readyFixture();
-  await f.request('assign', { id: 1, channel: 'music', remember: true });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'music', remember: true });
   const oldTimer = [...f.timerDelays].find(([, delay]) => delay === 5000)?.[0];
   const oldTimeout = f.timers.get(oldTimer);
-  await f.request('assign', { id: 1, channel: 'chat', remember: false });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'chat', remember: false });
   assert.equal(f.timers.has(oldTimer), false); oldTimeout();
   await f.publish({ tabs: f.state.tabs.map(tab => tab.id === 1 ? { ...tab, channelId: 'music', remember: true } : tab) });
   assert.deepEqual(Array.from((await f.request('snapshot')).value.pendingTabs), [1]);
@@ -154,11 +167,11 @@ test('rapid assignment replacement ignores old acknowledgements and old timeout 
 
 test('remember acknowledgement and forgetting a website use the authoritative remember state', { timeout: 2000 }, async () => {
   const f = await readyFixture();
-  await f.request('assign', { id: 1, channel: 'chat', remember: true });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'chat', remember: true });
   await f.publish(); assert.equal((await f.request('snapshot')).value.pendingTabs.length, 1);
   await f.publish({ tabs: f.state.tabs.map(tab => tab.id === 1 ? { ...tab, remember: true } : tab) });
   assert.equal((await f.request('snapshot')).value.pendingTabs.length, 0);
-  await f.request('assign', { id: 1, channel: null, remember: true });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: null, remember: true });
   await f.publish({ tabs: f.state.tabs.map(tab => tab.id === 1 ? { ...tab, channelId: null, remember: true } : tab) });
   assert.equal((await f.request('snapshot')).value.pendingTabs.length, 1);
   await f.publish({ tabs: f.state.tabs.map(tab => tab.id === 1 ? { ...tab, remember: false } : tab) });
@@ -167,8 +180,8 @@ test('remember acknowledgement and forgetting a website use the authoritative re
 
 test('live captures ignore intermediate state while a newer assignment is pending', { timeout: 2000 }, async () => {
   const f = await readyFixture(); await f.request('start', { id: 1 });
-  await f.request('assign', { id: 1, channel: 'music', remember: true });
-  await f.request('assign', { id: 1, channel: 'chat', remember: true });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'music', remember: true });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'chat', remember: true });
   await f.publish({ tabs: f.state.tabs.map(tab => tab.id === 1 ? { ...tab, channelId: 'music', remember: true } : tab) });
   assert.equal(f.calls.filter(call => call.type === 'route').length, 0);
   assert.equal(f.active.get(1).deviceId, 'chat-device');
@@ -179,12 +192,12 @@ test('live captures ignore intermediate state while a newer assignment is pendin
 
 test('assignment failure and disconnect clear pending expectations and their timers', { timeout: 2000 }, async () => {
   const f = await readyFixture();
-  await f.request('assign', { id: 1, channel: 'music', remember: true });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'music', remember: true });
   f.ports[0].onMessage.emit({ type: 'error', error: 'Assignment refused' }); await tick();
   let snapshot = (await f.request('snapshot')).value;
   assert.equal(snapshot.pendingTabs.length, 0); assert.equal(snapshot.error, 'Assignment refused');
   assert.equal([...f.timerDelays.values()].includes(5000), false);
-  await f.request('assign', { id: 1, channel: 'music', remember: true });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'music', remember: true });
   f.ports[0].onDisconnect.emit(); await tick();
   snapshot = (await f.request('snapshot')).value;
   assert.equal(snapshot.pendingTabs.length, 0); assert.equal(snapshot.state, null);
@@ -194,13 +207,13 @@ test('assignment failure and disconnect clear pending expectations and their tim
 test('a synchronous native write failure also clears its pending assignment', { timeout: 2000 }, async () => {
   const f = await readyFixture();
   f.ports[0].postMessage = () => { throw new Error('Native port closed'); };
-  assert.equal((await f.request('assign', { id: 1, channel: 'music', remember: true })).error, 'Native port closed');
+  assert.equal((await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'music', remember: true })).error, 'Native port closed');
   assert.equal((await f.request('snapshot')).value.pendingTabs.length, 0);
   assert.equal([...f.timerDelays.values()].includes(5000), false);
 });
 
 test('an unacknowledged assignment expires after five seconds with a fixed error', { timeout: 2000 }, async () => {
-  const f = await readyFixture(); await f.request('assign', { id: 1, channel: 'music', remember: true });
+  const f = await readyFixture(); await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'music', remember: true });
   const timers = [...f.timerDelays].filter(([, delay]) => delay === 5000);
   assert.equal(timers.length, 1); f.timers.get(timers[0][0])();
   const snapshot = (await f.request('snapshot')).value;
@@ -210,8 +223,8 @@ test('an unacknowledged assignment expires after five seconds with a fixed error
 
 test('navigation and removal clear only their own pending assignment', { timeout: 2000 }, async () => {
   const f = await readyFixture();
-  await f.request('assign', { id: 1, channel: 'music', remember: true });
-  await f.request('assign', { id: 2, channel: 'chat', remember: true });
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'music', remember: true });
+  await f.request('assign', { id: 2, site: 'https://site2.example', channel: 'chat', remember: true });
   f.update(1, 'https://other.example/');
   assert.deepEqual(Array.from((await f.request('snapshot')).value.pendingTabs), [2]);
   f.chrome.tabs.onRemoved.emit(2);
@@ -222,7 +235,7 @@ test('navigation and removal clear only their own pending assignment', { timeout
 test('assigning during output discovery cancels the older activation before capture', { timeout: 2000 }, async () => {
   const f = await readyFixture(); f.devicesGate = deferred();
   const start = f.request('start', { id: 1 }); await tick();
-  await f.request('assign', { id: 1, channel: 'music', remember: true }); f.devicesGate.resolve();
+  await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'music', remember: true }); f.devicesGate.resolve();
   assert.match((await start).error, /changed|Waiting for OpenXLR/);
   assert.equal(f.tokens.length, 0); assert.equal(f.calls.filter(call => call.type === 'start').length, 0);
 });
@@ -230,10 +243,10 @@ test('assigning during output discovery cancels the older activation before capt
 test('pending assignments are capped at the registered tab limit', { timeout: 2000 }, async () => {
   const f = await readyFixture();
   await f.publish({ tabs: Array.from({ length: 129 }, (_, id) => ({ id, site: `https://site${id}.example`, channelId: 'chat', remember: false })) });
-  for (let id = 0; id < 128; id++) assert.equal((await f.request('assign', { id, channel: 'music', remember: true })).error, undefined);
+  for (let id = 0; id < 128; id++) assert.equal((await f.request('assign', { id, site: `https://site${id}.example`, channel: 'music', remember: true })).error, undefined);
   assert.equal((await f.request('snapshot')).value.pendingTabs.length, 128);
-  assert.match((await f.request('assign', { id: 128, channel: 'music', remember: true })).error, /Too many/);
-  assert.equal((await f.request('assign', { id: 1, channel: 'chat', remember: false })).error, undefined);
+  assert.match((await f.request('assign', { id: 128, site: 'https://site128.example', channel: 'music', remember: true })).error, /Too many/);
+  assert.equal((await f.request('assign', { id: 1, site: 'https://site1.example', channel: 'chat', remember: false })).error, undefined);
   assert.equal((await f.request('snapshot')).value.pendingTabs.length, 128);
 });
 

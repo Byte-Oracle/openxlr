@@ -213,7 +213,7 @@ that final acknowledgement (or an `error` without a request id):
 | `toggleMonitorMuted` | none | atomically toggle the same monitor pause. Use this for keys and repeated presses instead of reading `monitorMuted` and sending its inverse; each accepted command toggles once |
 | `getBrowserSession` | none | WebSocket only; register this connection as a browser companion and return its `browserSession`. Repeated calls on the same connection return the same id |
 | `syncBrowserTabs` | `session`, `tabs` | WebSocket only; replace this companion's complete tab list. Only the connection that obtained the session may publish it; see [browser tabs](#browser-tabs) |
-| `assignBrowserTab` | `session`, `tabId`, `channel`, `remember` | select an application channel or `null` for browser default for a connected tab. `remember` must be boolean; true saves the website origin preference, and `channel:null, remember:true` forgets it. False changes only this tab |
+| `assignBrowserTab` | `session`, `tabId`, `site`, `channel`, `remember` | select an application channel or `null` for browser default for a connected tab. Required `site` is the origin the caller saw; an assignment is refused if that tab has navigated to another origin. `remember` must be boolean; true saves the website origin preference, and `channel:null, remember:true` forgets it. False changes only this tab |
 | `setPreserveBrowserOutputs` | `value` | boolean only; explicitly enable or disable preservation of Chromium-family playback outputs. Saved in `mixer.json`, never recalled by a profile. Registration alone does not enable it |
 | `setMonitorMuteMicrophones` | `value` | boolean only, false by default; include XLR 1, XLR 2 and mono capture channels in the monitoring pause, across every OpenXLR mix. Stereo captures, Aux In and application channels keep playing. Saved only in `mixer.json`; takes effect immediately without restarting the daemon. See [monitoring and microphones](#monitoring-and-microphones) |
 | `listPlugins` | none | the installed LV2, CLAP and VST3 plugins, answered with a `plugins` message |
@@ -944,9 +944,13 @@ on the same origin preserve the tab's choice. Navigation to another origin
 clears its temporary choice and uses the new origin's saved default, if any.
 `capturing` and `error` describe the browser's last report,
 not an audio-server confirmation. Authenticated controllers can select a
-connected tab with `assignBrowserTab`; only its owning socket can replace
-the tab metadata. Closing that socket removes its runtime tabs and frees
-the companion slot. Reconnect, authenticate, get a new session and resync;
+connected tab with `assignBrowserTab`, including the `site` from the tab
+state they selected. The daemon compares canonical origins under the same
+lock as the assignment: a queued choice for an origin the tab has left is
+refused before any runtime or saved preference changes. Equivalent forms
+such as `https://EXAMPLE.com:443/` and `https://example.com` match. Only the
+owning socket can replace the tab metadata. Closing it removes its runtime
+tabs and frees the companion slot. Reconnect, authenticate, get a new session and resync;
 there is no heartbeat or persisted session id.
 
 With `remember:true`, a non-null channel saves a default for the origin and

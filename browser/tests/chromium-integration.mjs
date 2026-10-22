@@ -280,7 +280,8 @@ try {
   const session = tabs[0].session;
   await api('POST', 'commands', { cmd: 'setPreserveBrowserOutputs', value: true });
   for (const [tabId, channel] of [[musicId, 'music'], [chatId, 'voicechat']])
-    await api('POST', 'commands', { cmd: 'assignBrowserTab', session, tabId, channel, remember: true });
+    await api('POST', 'commands', { cmd: 'assignBrowserTab', session, tabId,
+      site: tabId === musicId ? musicTab.site : chatTab.site, channel, remember: true });
 
   const devices = await context.newPage();
   await devices.goto(`chrome-extension://${extensionId}/devices.html`);
@@ -310,7 +311,7 @@ try {
   assert.ok(chat.high > .025 && chat.low < chat.high / 8, 'Only the 880 Hz tab reaches Voice Chat.');
   console.log('PASS native bridge, two user-activated tabs and isolated 440/880 Hz channel audio');
 
-  await api('POST', 'commands', { cmd: 'assignBrowserTab', session, tabId: musicId, channel: 'game', remember: false });
+  await api('POST', 'commands', { cmd: 'assignBrowserTab', session, tabId: musicId, site: musicTab.site, channel: 'game', remember: false });
   await delay(1000);
   const game = await sample('OpenXLR_ch_game');
   const oldMusic = await sample('OpenXLR_ch_music');
@@ -323,6 +324,13 @@ try {
     return navigated?.site === chatTab.site && !navigated.capturing && navigated.channelId === 'voicechat'
       && tabs.find(tab => tab.id === chatId)?.capturing;
   }, 'cross-origin navigation ends only its own capture and takes the new website preference');
+  const stale = await fetch(endpoint + 'commands', {
+    method: 'POST', signal: AbortSignal.timeout(5000),
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cmd: 'assignBrowserTab', session, tabId: musicId, site: musicTab.site, channel: 'game', remember: true }),
+  });
+  assert.equal(stale.ok, false, 'An assignment from the previous page must be refused.');
+  assert.equal((await api('GET', 'state')).mixer.browserTabs.find(tab => tab.id === musicId).channelId, 'voicechat');
   console.log('PASS live channel change, cross-origin navigation and independent capture lifetime');
 
   await stopDaemon();

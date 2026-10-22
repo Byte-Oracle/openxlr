@@ -14,7 +14,7 @@ public sealed class BrowserTabViewModel : ViewModelBase
     public const string BrowserDefault = "";
 
     private sealed record Route(string? Channel, bool Remember);
-    private readonly Func<string, int, string?, bool, Task<string?>> _assign;
+    private readonly Func<string, int, string, string?, bool, Task<string?>> _assign;
     private readonly Action<string> _reportError;
     private Route _reported = new(null, false);
     private Route? _pending;
@@ -24,7 +24,7 @@ public sealed class BrowserTabViewModel : ViewModelBase
     private string? _error;
 
     public BrowserTabViewModel(string session, int id,
-        Func<string, int, string?, bool, Task<string?>> assign, Action<string> reportError)
+        Func<string, int, string, string?, bool, Task<string?>> assign, Action<string> reportError)
     {
         Session = session; Id = id; _assign = assign; _reportError = reportError;
     }
@@ -120,16 +120,18 @@ public sealed class BrowserTabViewModel : ViewModelBase
 
     private void Submit(Route route, bool forgetWebsite = false)
     {
+        string site = Site;
+        long version = ++_editVersion;
         _pending = route;
         _error = null;
         Set(ref _isPending, true, nameof(IsPending));
         RaiseRoute();
-        _ = SubmitAsync(route, ++_editVersion, forgetWebsite);
+        _ = SubmitAsync(site, route, version, forgetWebsite);
     }
 
-    private async Task SubmitAsync(Route route, long version, bool forgetWebsite)
+    private async Task SubmitAsync(string site, Route route, long version, bool forgetWebsite)
     {
-        string? error = await _assign(Session, Id, route.Channel, forgetWebsite || route.Remember);
+        string? error = await _assign(Session, Id, site, route.Channel, forgetWebsite || route.Remember);
         if (version != _editVersion) return;
         Set(ref _isPending, false, nameof(IsPending));
         // The daemon publishes state before its acknowledgement. A newer

@@ -758,8 +758,8 @@ public sealed class MixerService : IHostedService, IDisposable
             {
                 case "assignBrowserTab":
                     if (cmd.Remember.GetBoolean())
-                        _saves.RunSaved(() => _mixer.AssignBrowserTab(cmd.Session!, cmd.TabId!.Value, cmd.Channel, true, s => s.Save()));
-                    else _mixer.AssignBrowserTab(cmd.Session!, cmd.TabId!.Value, cmd.Channel, false, _ => null);
+                        _saves.RunSaved(() => _mixer.AssignBrowserTab(cmd.Session!, cmd.TabId!.Value, cmd.Site!, cmd.Channel, true, s => s.Save()));
+                    else _mixer.AssignBrowserTab(cmd.Session!, cmd.TabId!.Value, cmd.Site!, cmd.Channel, false, _ => null);
                     Changed?.Invoke();
                     return null;
                 case "setPreserveBrowserOutputs":

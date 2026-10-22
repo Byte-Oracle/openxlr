@@ -81,8 +81,10 @@ checkout of the same version as your native OpenXLR installation.
    then resume. Reconnection restores the list, not capture permission.
 
 A same-origin page change keeps the tab's selection. A different origin
-uses its own saved default. After restarting the browser, website defaults
-remain, but each tab needs activation again. OpenXLR supports up to eight
+uses its own saved default. A late assignment from the previous website is
+refused instead of changing the new website's routing. After restarting the
+browser, website defaults remain, but each tab needs activation again.
+OpenXLR supports up to eight
 active tab takeovers and 128 listed tabs per browser connection, with up
 to eight connections and 128 saved website defaults. Private browsing,
 browser settings pages and non-HTTP(S) URLs are excluded.

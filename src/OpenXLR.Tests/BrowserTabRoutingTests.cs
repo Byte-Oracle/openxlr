@@ -26,7 +26,7 @@ public sealed class BrowserTabRoutingTests
         Assert.Equal(2, mixer.BrowserTabs.Count);
         Assert.True(mixer.RemoveBrowserSession(first));
         Assert.Equal(other, Assert.Single(mixer.BrowserTabs).Session);
-        Assert.Throws<InvalidOperationException>(() => mixer.AssignBrowserTab(session, 1, "music", false, _ => null));
+        Assert.Throws<InvalidOperationException>(() => mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "music", false, _ => null));
     }
 
     [Fact]
@@ -36,19 +36,19 @@ public sealed class BrowserTabRoutingTests
         Guid owner = Guid.NewGuid();
         string session = mixer.OpenBrowserSession(owner);
         mixer.SyncBrowserTabs(owner, session, [Tab(1), Tab(2, "https://youtube.com", "Video")]);
-        mixer.AssignBrowserTab(session, 1, "voicechat", false, _ => throw new InvalidOperationException("Tab-only choices must not save."));
+        mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "voicechat", false, _ => throw new InvalidOperationException("Tab-only choices must not save."));
         mixer.SyncBrowserTabs(owner, session, [Tab(1, title: "New call") with { Capturing = true }, Tab(2, "https://youtube.com", "Video")]);
         Assert.Equal("voicechat", mixer.BrowserTabs.Single(t => t.Id == 1).ChannelId);
         Assert.Empty(mixer.ExportSettings().BrowserSiteChannels);
         MixerSettings? saved = null;
-        mixer.AssignBrowserTab(session, 1, "voicechat", true, settings => { saved = settings; return null; });
+        mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "voicechat", true, settings => { saved = settings; return null; });
         Assert.Equal("voicechat", saved!.BrowserSiteChannels["https://teams.microsoft.com"]);
         string json = JsonSerializer.Serialize(saved);
         Assert.DoesNotContain(session, json);
         Assert.DoesNotContain("New call", json);
         mixer.SyncBrowserTabs(owner, session, [Tab(1), Tab(3)]);
         Assert.All(mixer.BrowserTabs, tab => { Assert.Equal("voicechat", tab.ChannelId); Assert.True(tab.Remember); });
-        mixer.AssignBrowserTab(session, 1, null, false, _ => null);
+        mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", null, false, _ => null);
         Assert.Null(mixer.BrowserTabs.Single(t => t.Id == 1).ChannelId);
         Assert.False(mixer.BrowserTabs.Single(t => t.Id == 1).Remember);
         Assert.DoesNotContain("BrowserSiteChannels", JsonSerializer.Serialize(mixer.ExportScene()));
@@ -62,8 +62,8 @@ public sealed class BrowserTabRoutingTests
         Guid owner = Guid.NewGuid();
         string session = mixer.OpenBrowserSession(owner);
         mixer.SyncBrowserTabs(owner, session, [Tab(1), Tab(2, "https://youtube.com")]);
-        mixer.AssignBrowserTab(session, 1, "voicechat", false, _ => null);
-        mixer.AssignBrowserTab(session, 2, "music", true, _ => null);
+        mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "voicechat", false, _ => null);
+        mixer.AssignBrowserTab(session, 2, "https://youtube.com", "music", true, _ => null);
         mixer.SyncBrowserTabs(owner, session, [Tab(1, "https://TEAMS.microsoft.com:443/", "New call"), Tab(2, "https://youtube.com")]);
         Assert.Equal("voicechat", mixer.BrowserTabs.Single(t => t.Id == 1).ChannelId);
         mixer.SyncBrowserTabs(owner, session, [Tab(1, "https://youtube.com", "Video"), Tab(2, "https://youtube.com")]);
@@ -76,6 +76,34 @@ public sealed class BrowserTabRoutingTests
         Assert.Equal("music", mixer.ExportSettings().BrowserSiteChannels["https://youtube.com"]);
     }
 
+    [Theory]
+    [InlineData("game", true)]
+    [InlineData(null, true)]
+    [InlineData("game", false)]
+    public void AnAssignmentQueuedBeforeNavigationCannotChangeTheNewWebsite(string? channel, bool remember)
+    {
+        using var mixer = new Mixer();
+        Guid owner = Guid.NewGuid();
+        string session = mixer.OpenBrowserSession(owner);
+        mixer.SyncBrowserTabs(owner, session, [Tab(1), Tab(2, "https://youtube.com")]);
+        mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "music", true, _ => null);
+        mixer.AssignBrowserTab(session, 2, "https://youtube.com", "voicechat", true, _ => null);
+        mixer.SyncBrowserTabs(owner, session, [Tab(1, "https://youtube.com"), Tab(2, "https://youtube.com")]);
+        BrowserTabState[] previousTabs = [.. mixer.BrowserTabs];
+        var previousSites = mixer.ExportSettings().BrowserSiteChannels;
+        int saves = 0;
+        Assert.Throws<InvalidOperationException>(() => mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", channel, remember,
+            _ => { saves++; return null; }));
+        Assert.Equal(0, saves);
+        Assert.Equal(previousTabs, mixer.BrowserTabs);
+        Assert.Equal(previousSites, mixer.ExportSettings().BrowserSiteChannels);
+        mixer.AssignBrowserTab(session, 1, "https://YOUTUBE.com:443/", "game", false, _ => { saves++; return null; });
+        Assert.Equal("game", mixer.BrowserTabs.Single(tab => tab.Id == 1).ChannelId);
+        Assert.Equal("voicechat", mixer.BrowserTabs.Single(tab => tab.Id == 2).ChannelId);
+        Assert.Equal(0, saves);
+        Assert.Equal(previousSites, mixer.ExportSettings().BrowserSiteChannels);
+    }
+
     [Fact]
     public void RefusedPreferenceSaveKeepsThePreviousChoice()
     {
@@ -83,8 +111,8 @@ public sealed class BrowserTabRoutingTests
         Guid owner = Guid.NewGuid();
         string session = mixer.OpenBrowserSession(owner);
         mixer.SyncBrowserTabs(owner, session, [Tab(1)]);
-        mixer.AssignBrowserTab(session, 1, "music", false, _ => null);
-        Assert.Throws<IOException>(() => mixer.AssignBrowserTab(session, 1, "voicechat", true, _ => "disk full"));
+        mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "music", false, _ => null);
+        Assert.Throws<IOException>(() => mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "voicechat", true, _ => "disk full"));
         Assert.Equal("music", Assert.Single(mixer.BrowserTabs).ChannelId);
         Assert.False(Assert.Single(mixer.BrowserTabs).Remember);
         Assert.Empty(mixer.ExportSettings().BrowserSiteChannels);
@@ -99,10 +127,10 @@ public sealed class BrowserTabRoutingTests
         Guid owner = Guid.NewGuid();
         string session = mixer.OpenBrowserSession(owner);
         mixer.SyncBrowserTabs(owner, session, [Tab(1), Tab(2)]);
-        mixer.AssignBrowserTab(session, 1, "voicechat", true, _ => null);
-        mixer.AssignBrowserTab(session, 2, "music", false, _ => null);
+        mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "voicechat", true, _ => null);
+        mixer.AssignBrowserTab(session, 2, "https://teams.microsoft.com", "music", false, _ => null);
         Assert.Single(mixer.ExportSettings().BrowserSiteChannels);
-        mixer.AssignBrowserTab(session, 1, null, true, _ => null);
+        mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", null, true, _ => null);
         Assert.Empty(mixer.ExportSettings().BrowserSiteChannels);
         Assert.Null(mixer.BrowserTabs.Single(t => t.Id == 1).ChannelId);
         Assert.Equal("music", mixer.BrowserTabs.Single(t => t.Id == 2).ChannelId);
@@ -122,7 +150,7 @@ public sealed class BrowserTabRoutingTests
             string session = original.OpenBrowserSession(owner);
             original.SyncBrowserTabs(owner, session, [Tab(1)]);
             original.SetPreserveBrowserOutputs(true);
-            original.AssignBrowserTab(session, 1, "voicechat", true, settings => settings.Save(path));
+            original.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "voicechat", true, settings => settings.Save(path));
             using var restored = new Mixer();
             restored.ApplySettings(MixerSettings.Load(path)!);
             Assert.True(restored.PreserveBrowserOutputs);
@@ -143,9 +171,11 @@ public sealed class BrowserTabRoutingTests
     [InlineData("""{"cmd":"setPreserveBrowserOutputs","value":"yes"}""")]
     [InlineData("""{"cmd":"assignBrowserTab","session":"bad","tabId":1,"remember":false}""")]
     [InlineData("""{"cmd":"assignBrowserTab","session":"00000000000000000000000000000000","tabId":-1,"remember":false}""")]
-    [InlineData("""{"cmd":"assignBrowserTab","session":"00000000000000000000000000000000","tabId":1,"channel":"ignore","remember":false}""")]
-    [InlineData("""{"cmd":"assignBrowserTab","session":"00000000000000000000000000000000","tabId":1,"channel":"xlr1","remember":false}""")]
-    [InlineData("""{"cmd":"assignBrowserTab","session":"00000000000000000000000000000000","tabId":1,"remember":null}""")]
+    [InlineData("""{"cmd":"assignBrowserTab","session":"00000000000000000000000000000000","tabId":1,"channel":"music","remember":true}""")]
+    [InlineData("""{"cmd":"assignBrowserTab","session":"00000000000000000000000000000000","tabId":1,"site":"https://example.com/private","channel":"music","remember":true}""")]
+    [InlineData("""{"cmd":"assignBrowserTab","session":"00000000000000000000000000000000","tabId":1,"site":"https://teams.microsoft.com","channel":"ignore","remember":false}""")]
+    [InlineData("""{"cmd":"assignBrowserTab","session":"00000000000000000000000000000000","tabId":1,"site":"https://teams.microsoft.com","channel":"xlr1","remember":false}""")]
+    [InlineData("""{"cmd":"assignBrowserTab","session":"00000000000000000000000000000000","tabId":1,"site":"https://teams.microsoft.com","remember":null}""")]
     [InlineData("""{"cmd":"syncBrowserTabs","session":"00000000000000000000000000000000"}""")]
     [InlineData("""{"cmd":"syncBrowserTabs","session":"00000000000000000000000000000000","tabs":[null]}""")]
     public void MalformedBrowserCommandsAreRefused(string json)
@@ -189,10 +219,10 @@ public sealed class BrowserTabRoutingTests
         for (int n = 0; n < 128; n++)
         {
             mixer.SyncBrowserTabs(owner, session, [Tab(1, $"https://site{n}.example")]);
-            mixer.AssignBrowserTab(session, 1, "music", true, _ => null);
+            mixer.AssignBrowserTab(session, 1, $"https://site{n}.example", "music", true, _ => null);
         }
         mixer.SyncBrowserTabs(owner, session, [Tab(1, "https://last.example")]);
-        Assert.Throws<InvalidOperationException>(() => mixer.AssignBrowserTab(session, 1, "music", true, _ => null));
+        Assert.Throws<InvalidOperationException>(() => mixer.AssignBrowserTab(session, 1, "https://last.example", "music", true, _ => null));
         Assert.Equal(128, mixer.ExportSettings().BrowserSiteChannels.Count);
         for (int n = 1; n < 8; n++) mixer.OpenBrowserSession(Guid.NewGuid());
         Assert.Throws<InvalidOperationException>(() => mixer.OpenBrowserSession(Guid.NewGuid()));
@@ -206,8 +236,8 @@ public sealed class BrowserTabRoutingTests
         Guid owner = Guid.NewGuid();
         string session = graph.Mixer.OpenBrowserSession(owner);
         graph.Mixer.SyncBrowserTabs(owner, session, [Tab(1), Tab(2, "https://youtube.com")]);
-        graph.Mixer.AssignBrowserTab(session, 1, "music", true, _ => null);
-        graph.Mixer.AssignBrowserTab(session, 2, "system", false, _ => null);
+        graph.Mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "music", true, _ => null);
+        graph.Mixer.AssignBrowserTab(session, 2, "https://youtube.com", "system", false, _ => null);
         Assert.Throws<IOException>(() => graph.Mixer.DeleteApplicationChannel("music", _ => "disk full"));
         Assert.Equal("music", graph.Mixer.BrowserTabs.Single(t => t.Id == 1).ChannelId);
         MixerSettings? saved = null;

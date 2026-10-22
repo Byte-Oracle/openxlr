@@ -264,6 +264,7 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
                 break;
             case "assign":
                 if (message["tabId"] is not JsonValue idNode || !idNode.TryGetValue<int>(out int id) || id < 0
+                    || String(message, "site") is not { } site || !ValidSite(site)
                     || message["remember"] is not JsonValue rememberNode || !rememberNode.TryGetValue<bool>(out bool remember)
                     || !message.ContainsKey("channel") || message["channel"] is not null && String(message, "channel") is null)
                     throw new InvalidDataException("Invalid browser assignment.");
@@ -272,7 +273,7 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
                 string? session;
                 lock (_gate) session = _session;
                 if (session is null) await ErrorAsync("The OpenXLR browser connection is not ready.", cancel);
-                else await CommandAsync(() => client.AssignBrowserTabAsync(session, id, channel, remember), cancel);
+                else await CommandAsync(() => client.AssignBrowserTabAsync(session, id, site, channel, remember), cancel);
                 break;
             default:
                 throw new InvalidDataException("Invalid browser-host message.");
@@ -306,8 +307,10 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
         await _commands.WaitAsync(cancel);
         try
         {
-            if (await invoke() is not null)
-                await ErrorAsync("OpenXLR could not apply the browser routing change. Check the OpenXLR window.", cancel);
+            if (await invoke() is { } error)
+                await ErrorAsync(error == "assignBrowserTab: the tab changed website; select it again"
+                    ? "The tab changed website. Select it again in the browser extension."
+                    : "OpenXLR could not apply the browser routing change. Check the OpenXLR window.", cancel);
         }
         finally { _commands.Release(); }
     }

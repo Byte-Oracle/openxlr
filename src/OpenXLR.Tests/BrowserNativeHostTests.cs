@@ -563,6 +563,106 @@ public sealed class BrowserNativeHostTests
     public void SessionRetryDelayStaysBounded(int failures, int milliseconds)
         => Assert.Equal(milliseconds, BrowserNativeHost.SessionRetryDelayMilliseconds(failures));
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("https://example.com/path")]
+    [InlineData("https://user:password@example.com")]
+    [InlineData("file:///private/document")]
+    public async Task AssignmentsRequireAValidExpectedSite(string? site)
+    {
+        var input = new Pipe();
+        using var output = new MemoryStream();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var host = new BrowserNativeHost(new DaemonClient("ws://127.0.0.1:1/ws"), input.Reader.AsStream(), output);
+        Task running = host.RunAsync(timeout.Token);
+        var assignment = new JsonObject { ["type"] = "assign", ["tabId"] = 7, ["channel"] = "music", ["remember"] = true };
+        if (site is not null) assignment["site"] = site;
+        await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), assignment, timeout.Token);
+        await Assert.ThrowsAnyAsync<InvalidDataException>(() => running.WaitAsync(timeout.Token));
+        await input.Writer.CompleteAsync();
+    }
+
+    [Fact]
+    public async Task QueuedNativeAssignmentPreservesItsExpectedSiteAfterANewerStateArrives()
+    {
+        const string oldSite = "https://old.example.com", newSite = "https://new.example.com";
+        string session = new('a', 32);
+        var socketReady = new TaskCompletionSource<WebSocket>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var holding = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var assigned = new TaskCompletionSource<JsonNode>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var sends = new SemaphoreSlim(1, 1);
+        async Task Send(WebSocket socket, object payload, CancellationToken stop)
+        {
+            await sends.WaitAsync(stop);
+            try { await SocketTestServer.Send(socket, payload, stop); }
+            finally { sends.Release(); }
+        }
+        JsonObject WithTab(string site)
+        {
+            JsonObject state = State(session);
+            var tab = Tab(site); tab["session"] = session; tab["channelId"] = null; tab["remember"] = false;
+            state["mixer"]!["browserTabs"]!.AsArray().Add(tab);
+            return state;
+        }
+        await using var server = await SocketTestServer.Start(async (socket, stop) =>
+        {
+            await SocketTestServer.Receive(socket, stop);
+            socketReady.TrySetResult(socket);
+            await Send(socket, State(session), stop);
+            while (!stop.IsCancellationRequested)
+            {
+                JsonNode command = await SocketTestServer.Receive(socket, stop);
+                string cmd = command["cmd"]!.GetValue<string>();
+                if (cmd == "getBrowserSession") await Send(socket, new { type = "browserSession", session }, stop);
+                if (cmd == "syncBrowserTabs") await Send(socket, WithTab(oldSite), stop);
+                if (cmd == "setPreserveBrowserOutputs")
+                {
+                    holding.TrySetResult();
+                    await release.Task.WaitAsync(stop);
+                }
+                if (cmd == "assignBrowserTab") assigned.TrySetResult(command);
+                await Send(socket, new { type = "commandResult", requestId = command["requestId"]!.GetValue<string>(),
+                    error = cmd == "assignBrowserTab" ? "assignBrowserTab: the tab changed website; select it again" : null }, stop);
+            }
+        });
+        var input = new Pipe(); var output = new Pipe();
+        var host = new BrowserNativeHost(new DaemonClient(server.Url), input.Reader.AsStream(), output.Writer.AsStream());
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        Task running = host.RunAsync(timeout.Token);
+        try
+        {
+            WebSocket socket = await socketReady.Task.WaitAsync(timeout.Token);
+            Assert.Equal(oldSite, (await ReadStateWithTab(output.Reader.AsStream(), timeout.Token))["tabs"]![0]!["site"]!.GetValue<string>());
+            await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), new JsonObject { ["type"] = "enable", ["value"] = true }, timeout.Token);
+            await holding.Task.WaitAsync(timeout.Token);
+            await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), new JsonObject { ["type"] = "assign", ["tabId"] = 7,
+                ["site"] = oldSite, ["channel"] = "music", ["remember"] = true }, timeout.Token);
+            await Send(socket, WithTab(newSite), timeout.Token);
+            Assert.Equal(newSite, (await ReadStateWithTab(output.Reader.AsStream(), timeout.Token))["tabs"]![0]!["site"]!.GetValue<string>());
+            release.TrySetResult();
+            JsonNode command = await assigned.Task.WaitAsync(timeout.Token);
+            Assert.Equal(session, command["session"]!.GetValue<string>());
+            Assert.Equal(7, command["tabId"]!.GetValue<int>());
+            Assert.Equal(oldSite, command["site"]!.GetValue<string>());
+            Assert.Equal("music", command["channel"]!.GetValue<string>());
+            Assert.True(command["remember"]!.GetValue<bool>());
+            JsonObject failure = (await BrowserNativeHost.ReadFrameAsync(output.Reader.AsStream(), timeout.Token))!;
+            Assert.Equal("error", failure["type"]!.GetValue<string>());
+            Assert.Equal("The tab changed website. Select it again in the browser extension.", failure["error"]!.GetValue<string>());
+            await input.Writer.CompleteAsync();
+            await running.WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        finally
+        {
+            await timeout.CancelAsync();
+            release.TrySetResult();
+            try { await running; } catch (OperationCanceledException) { }
+            await output.Reader.CompleteAsync();
+        }
+    }
+
     private sealed class GateOutput(Stream target) : Stream
     {
         private int _blocked;

@@ -1,3 +1,5 @@
+import { siteOf } from './routing.mjs';
+
 const $ = id => document.getElementById(id);
 let tab;
 let shown = '';
@@ -42,14 +44,14 @@ async function refresh() {
   }
 }
 
-const assign = () => send({ type: 'assign', id: tab.id, channel: $('channel').value || null, remember: $('remember').checked });
+const assign = () => send({ type: 'assign', id: tab.id, site: siteOf(tab.url), channel: $('channel').value || null, remember: $('remember').checked });
 $('channel').addEventListener('change', () => act(assign));
 $('remember').addEventListener('change', () => act(assign));
 $('enable').addEventListener('click', () => act(() => send({ type: 'enable', value: true })));
 $('start').addEventListener('click', () => act(() => send({ type: 'start', id: tab.id })));
 $('stop').addEventListener('click', () => act(() => send({ type: 'stop', id: tab.id })));
 $('retry').addEventListener('click', () => act(() => send({ type: 'retry' })));
-$('forget').addEventListener('click', () => act(() => send({ type: 'assign', id: tab.id, channel: null, remember: true })));
+$('forget').addEventListener('click', () => act(() => send({ type: 'assign', id: tab.id, site: siteOf(tab.url), channel: null, remember: true })));
 $('devices').addEventListener('click', () => { void chrome.tabs.create({ url: chrome.runtime.getURL('devices.html') }); });
 
 window.addEventListener('pagehide', () => { disposed = true; });
