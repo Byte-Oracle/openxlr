@@ -72,8 +72,8 @@ internal static class UserMonitorWindowTests
                 Assert.Equal(selected == 0 ? "virtualMic" : "monitor", commands.Last()["kind"]!.GetValue<string>());
                 Assert.True(model.Mixes.Single(m => m.Id == "newmix").IsEditable);
                 Assert.False(model.Mixes.Single(m => m.Id == "monitor").IsEditable);
-                Assert.Equal(new[] { "monitor", "monitor2", "monitor+monitor2", "newmix" },
-                    model.MonitorOutputs.Single().Feeds.Select(f => f.Id));
+                Assert.Equal(new[] { "monitor", "monitor2", "newmix" },
+                    model.MonitorOutputs.Single().FeedMixes.Select(f => f.Id));
                 Assert.Equal(selected == 1, model.Mixes.Single(m => m.Id == "newmix").IsMonitor);
             }
             MixViewModel monitor = model.Mixes.Single(m => m.Id == "monitor");

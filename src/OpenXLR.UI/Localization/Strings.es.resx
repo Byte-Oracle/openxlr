@@ -2009,8 +2009,8 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="TheSync" xml:space="preserve">
     <value>la sincronización</value>
   </data>
-  <data name="TickTheOutputsYouWantToHearChoose" xml:space="preserve">
-    <value>Marca las salidas que quieras escuchar. Elige una mezcla junto a cada salida. Las salidas propias de Wave XLR Pro (Headphones 1/2, USB Aux, Line Out) cambian el hardware al marcarlas y comparten una señal. En cambio, el puerto USB Aux recibe la mezcla Aux dedicada del submezclador. XLR 1, XLR 2 y Line In alimentan sus canales automáticamente. Los dispositivos predeterminados del sistema para las aplicaciones se establecen en Opciones.</value>
+  <data name="MonitorOutputRoutingTip" xml:space="preserve">
+    <value>Marca cada salida que quieras escuchar y elige una o varias mezclas junto a ella. Las mezclas se suman con sus niveles actuales. Mantén al menos una mezcla seleccionada; desmarca la salida para desconectarla. En Wave XLR Pro, los auriculares 1/2 y Line Out comparten una misma mezcla de alimentación. Su puerto USB Aux sigue la mezcla Aux independiente. Los dispositivos predeterminados del sistema para las aplicaciones se eligen en Opciones.</value>
   </data>
   <data name="TimeNotRecorded" xml:space="preserve">
     <value>hora no registrada</value>
@@ -2087,8 +2087,8 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="WhenSetOpenXLRHoldsTheseAsTheSystem" xml:space="preserve">
     <value>Al establecerlos, OpenXLR mantiene estos dispositivos como predeterminados del sistema y revierte cualquier cambio externo, igual que hace Wave Link. Las aplicaciones que siguen los dispositivos predeterminados del sistema los usarán. Elige Seguir salida MONITOR para controlar el dispositivo de monitorización seleccionado con las teclas de volumen y el control de volumen del escritorio.</value>
   </data>
-  <data name="WhichMixThisOutputHears" xml:space="preserve">
-    <value>La mezcla que se escucha en esta salida.</value>
+  <data name="ChooseOutputMixes" xml:space="preserve">
+    <value>Elige una o varias mezclas para esta salida.</value>
   </data>
   <data name="WINDOW" xml:space="preserve">
     <value>VENTANA</value>

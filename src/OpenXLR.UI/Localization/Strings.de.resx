@@ -2007,8 +2007,8 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="TheSync" xml:space="preserve">
     <value>Synchronisierung</value>
   </data>
-  <data name="TickTheOutputsYouWantToHearChoose" xml:space="preserve">
-    <value>Aktiviere die gewünschten Abhörausgänge und wähle jeweils einen Mix. Die eigenen Ausgänge des Wave XLR Pro (Headphones 1/2, USB Aux, Line Out) schalten die Hardware und teilen sich einen Feed. USB Aux erhält stattdessen den eigenen Aux-Mix des Submixers. XLR 1, XLR 2 und Line In speisen ihre Kanäle automatisch. Standardgeräte für Apps wählst du in den Einstellungen.</value>
+  <data name="MonitorOutputRoutingTip" xml:space="preserve">
+    <value>Wähle alle Ausgänge aus, die du hören möchtest, und daneben jeweils einen oder mehrere Mixe. Die Mixe werden mit ihren bisherigen Pegeln summiert. Mindestens ein Mix muss ausgewählt bleiben; wähle den Ausgang ab, um ihn zu trennen. Beim Wave XLR Pro teilen sich Kopfhörer 1/2 und Line Out einen Feed. Der USB-Aux-Port folgt dem eigenen Aux-Mix. Die Systemstandardgeräte für Apps legst du in den Optionen fest.</value>
   </data>
   <data name="TimeNotRecorded" xml:space="preserve">
     <value>Zeit nicht erfasst</value>
@@ -2085,8 +2085,8 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="WhenSetOpenXLRHoldsTheseAsTheSystem" xml:space="preserve">
     <value>Wenn gesetzt, hält OpenXLR diese Geräte als Systemstandard fest und setzt jede Änderung von außen zurück, wie es Wave Link tut. Apps, die dem Systemstandard folgen, verwenden sie. Wähle MONITOR-Ausgang folgen, um Tastatur-Lautstärketasten und den Desktop-Regler für das gewählte Monitor-Gerät zu verwenden.</value>
   </data>
-  <data name="WhichMixThisOutputHears" xml:space="preserve">
-    <value>Welcher Mix auf diesem Ausgang zu hören ist.</value>
+  <data name="ChooseOutputMixes" xml:space="preserve">
+    <value>Wähle einen oder mehrere Mixe für diesen Ausgang.</value>
   </data>
   <data name="WINDOW" xml:space="preserve">
     <value>FENSTER</value>

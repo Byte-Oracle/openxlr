@@ -2009,8 +2009,8 @@ Select the interface OpenXLR drives</value>
   <data name="TheSync" xml:space="preserve">
     <value>the sync</value>
   </data>
-  <data name="TickTheOutputsYouWantToHearChoose" xml:space="preserve">
-    <value>Tick the outputs you want to hear. Choose a mix beside each output. The Wave XLR Pro's own outputs (Headphones 1/2, USB Aux, Line Out) switch the hardware when ticked and share one feed. The USB Aux port is fed by the dedicated Aux mix in the submixer instead. XLR 1, XLR 2 and Line In feed their channels automatically. System default devices for apps are set in Options.</value>
+  <data name="MonitorOutputRoutingTip" xml:space="preserve">
+    <value>Tick every output you want to hear, then choose one or more mixes beside each output. Mixes are summed at their existing levels. Keep at least one mix selected; untick the output to disconnect it. The Wave XLR Pro's Headphones 1/2 and Line Out share one feed. Its USB Aux port follows the separate Aux mix. System default devices for apps are set in Options.</value>
   </data>
   <data name="TimeNotRecorded" xml:space="preserve">
     <value>time not recorded</value>
@@ -2087,8 +2087,8 @@ Select the interface OpenXLR drives</value>
   <data name="WhenSetOpenXLRHoldsTheseAsTheSystem" xml:space="preserve">
     <value>When set, OpenXLR holds these as the system defaults and reverts any outside change, like Wave Link does. Applications that follow the system default will use them. Choose Follow MONITOR output to use keyboard volume keys and the desktop volume slider for the selected monitor device.</value>
   </data>
-  <data name="WhichMixThisOutputHears" xml:space="preserve">
-    <value>Which mix this output hears.</value>
+  <data name="ChooseOutputMixes" xml:space="preserve">
+    <value>Choose one or more mixes for this output.</value>
   </data>
   <data name="WINDOW" xml:space="preserve">
     <value>WINDOW</value>

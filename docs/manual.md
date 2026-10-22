@@ -134,7 +134,7 @@ renamed, hidden and removed ([section 3.12](#layout)):
 | Aux | what a second computer receives | the interface's USB Aux port (Wave XLR Pro only) |
 
 An output is not tied to the monitor mixes: its feed picker can name any
-mix, and the API can name a sum of mixes ([section 3.2](#monitor)). A
+mix or a sum of mixes ([section 3.2](#monitor)). A
 blend at other levels is a mix of its own, with the sends set there.
 
 The daemon repairs lost internal links into mix inserts and virtual
@@ -434,26 +434,32 @@ that was the default.
    daemon restart. OpenXLR never moves the monitor to another output in
    its place. Only a recalled profile, loaded by hand or on connect,
    changes the selection, to the outputs that profile saved. Ticking
-   another device adds it. Untick the missing one to drop it. A mono device needs only its one
+   another device adds it. A rejected selection returns to the daemon's
+   reported outputs and shows the reason. Untick the missing one to drop it. A mono device needs only its one
    channel. The microphone channels recover the same way when the
    interface returns, and a microphone feed missing one side keeps its
    working side while the other is repaired.
-2. Next to a ticked device, the feed picker says which mix it
-   hears. Leave it on Monitor A, or choose Monitor B for an output that
-   should hear a different selection: a headset whose game side and
-   chat side are two sinks, for instance, gets the voice channels on
-   Monitor B and everything else on Monitor A. Monitor B has its own
-   sends and master in the SUBMIXER card. Monitor A+B plays both mixes
-   summed on one output: put the desktop on A and only the microphone
-   on B, add a denoiser under the Monitor B master, and one pair of
-   headphones hears both, with the plugin touching only your voice.
-   The Pro's own jacks share one feed.
-   Stream, Chat, Aux and custom virtual microphones are also available, so
-   you can listen to the mix a recorder or second computer receives, including
-   its inserts and master. This does not move its recording clients. The
-   API can sum any distinct mixes; such a selection is shown in the picker.
+2. Next to each ticked device, open the feed picker and tick one or more
+   mixes. The same mix can feed several outputs, and each output can hear
+   several mixes at once. For example, give the speakers only a Desktop
+   mix and give the headset Desktop plus Voice. Each selected mix arrives
+   with its own sends, effects, master level and mute. The feeds add at
+   unity; put a different blend in a mix of its own rather than adding
+   another level between a mix and an output. A shared signal in two
+   selected mixes adds twice, so leave headroom when summing them.
+   At least one mix stays selected. Untick the device to disconnect it.
+   Feed choices use stable mix ids, so renaming a mix updates its name in
+   the picker without changing its routes. A missing output keeps its
+   selection and its feeds until it returns. Device descriptions update in
+   place without changing the selected outputs or pending feed edits.
+   The Wave XLR Pro's Headphones 1/2 and Line Out share one hardware
+   return bus. Changing the feed of any of these jacks changes all selected
+   jacks on that interface; they cannot carry independent blends.
+   Stream, Chat, Aux and custom virtual microphones are also available,
+   so you can listen to a recorder's mix without moving its recording
+   clients. The same assignments are available through the API.
    Deleting a mix removes it from selected feeds; if nothing remains, the
-   output returns to Monitor A. A failed layout save leaves the old feed intact.
+   output returns to the default monitor mix. A failed layout save leaves the old feed intact.
    Listening to a recording or Aux mix on the Pro's jacks uses the software
    microphone path so its recording feed is never silenced by direct monitoring.
    On devices without USB Aux, selecting Aux reveals its mix and send faders
@@ -2277,9 +2283,9 @@ MONITOR card, set its feed picker to the new mix, then open the sends you
 want. Its master is a desktop volume like Monitor A and B, so the desktop's
 volume and mute controls move it, and it goes to 150%. It publishes no
 microphone. Both kinds count toward one limit of 18 editable mixes,
-Monitor A, Monitor B, Stream and Chat included. Monitor A+B in the feed
-picker stays the sum of
-those two mixes; a sum with a monitor mix you added goes through the API.
+Monitor A, Monitor B, Stream and Chat included. In each output's feed picker,
+tick any combination of mixes, including the monitor mixes you added,
+to hear their sum.
 
 Reordering updates the open UI as soon as the daemon publishes the saved
 layout, including changes made through the API. Channel tiles, mix controls
