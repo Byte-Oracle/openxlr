@@ -949,6 +949,53 @@ public sealed class MonitorMuteDeferredPulseTests
         }
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ALateMonitorWriteFailureQueuesEveryRestoreAndStopsEachBatchAtTheFirstRefusedHelper(bool refuseReads)
+    {
+        using var fixture = new IndependentSinks();
+        fixture.AddMixes(Enumerable.Range(3, 16).Select(i => new MixDefinition("monitor" + i, "Monitor " + i, MixKind.Monitor)));
+        fixture.Mixer.SetMixMuted("monitor7", true);
+        fixture.Mixer.SetMixMuted("monitor12", true);
+        string[] originalMutes = [.. fixture.Mixer.ExportSettings().MixMuted.Order(StringComparer.Ordinal)];
+        fixture.Mixer.SetMonitorMuted(true);
+        fixture.DeferNextReset("OpenXLR_mix_monitor18");
+        fixture.RefuseMixMuteRestores(true, refuseReads);
+        int before = fixture.Calls.Length;
+
+        Assert.Throws<InvalidOperationException>(() => fixture.Mixer.SetMixMuted("monitor18", false));
+
+        Assert.Single(fixture.Calls[before..], IsMixMuteRead);
+        AssertSelectionAndPending(18);
+        for (int sweep = 0; sweep < 3; sweep++)
+        {
+            before = fixture.Calls.Length;
+            fixture.Sweep();
+            Assert.Single(fixture.Calls[before..], IsMixMuteRead);
+            Assert.Equal(refuseReads ? 0 : 1, fixture.Calls[before..].Count(call => call.StartsWith("set-sink-mute OpenXLR_mix_", StringComparison.Ordinal)));
+            AssertSelectionAndPending(18);
+        }
+
+        fixture.RefuseMixMuteRestores(false, refuseReads);
+        fixture.Now = 30_000;
+        fixture.Sweep();
+        fixture.Sweep(); // Accepted writes are removed only after readback.
+        AssertSelectionAndPending(0);
+        foreach (MixDefinition mix in fixture.Mixer.Config.Mixes)
+            Assert.Equal(originalMutes.Contains(mix.Id), fixture.Native(mix.SinkName));
+
+        static bool IsMixMuteRead(string call) => call.StartsWith("get-sink-mute OpenXLR_mix_", StringComparison.Ordinal);
+        void AssertSelectionAndPending(int pending)
+        {
+            Assert.True(fixture.Mixer.MonitorMuted);
+            Assert.Equal(originalMutes, fixture.Mixer.ExportSettings().MixMuted.Order(StringComparer.Ordinal));
+            var resets = (System.Collections.IDictionary)typeof(Mixer)
+                .GetField("_desktopMixMuteResets", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(fixture.Mixer)!;
+            Assert.Equal(pending, resets.Count);
+        }
+    }
+
     [Fact]
     public void UnknownNativeGenerationsKeepSoftwarePausedWithoutAuthoringBlindHardwareMutes()
     {
@@ -1143,6 +1190,7 @@ public sealed class MonitorMuteDeferredPulseTests
                   get-default-sink) /bin/cat "$dir/default" ;;
                   get-sink-volume) printf 'Volume: front-left: 65536 / 100%% / 0.00 dB\n' ;;
                   get-sink-mute)
+                    case "$2" in OpenXLR_mix_*) if [ -f "$dir/refuse-mix-mute-reads" ]; then exit 1; fi ;; esac
                     if [ -f "$dir/fail-read-$2" ]; then /bin/rm "$dir/fail-read-$2"; exit 1; fi
                     mute=$(/bin/cat "$dir/$2")
                     if [ "$mute" = true ]; then echo 'Mute: yes'; else echo 'Mute: no'; fi ;;
@@ -1156,6 +1204,7 @@ public sealed class MonitorMuteDeferredPulseTests
                         echo 'temporary native restoration failure' >&2
                         exit 1
                     fi
+                    case "$2:$3" in OpenXLR_mix_*:0) if [ -f "$dir/refuse-mix-mute-writes" ]; then exit 1; fi ;; esac
                     if [ "$3" = toggle ] && [ -f "$dir/fail-$2" ]; then
                         /bin/rm "$dir/fail-$2"
                         echo 'temporary native consume failure' >&2
@@ -1199,6 +1248,12 @@ public sealed class MonitorMuteDeferredPulseTests
         public void DeferNextPulse(string name, bool readFailure = false) => File.WriteAllText(Path.Combine(_directory, $"fail-{(readFailure ? "read-" : "")}{name}"), "");
         public void DeferSuccess(string name) => File.WriteAllText(Path.Combine(_directory, "defer-success-" + name), "");
         public void DeferNextReset(string name) => File.WriteAllText(Path.Combine(_directory, "fail-reset-" + name), "");
+        public void RefuseMixMuteRestores(bool refuse, bool reads)
+        {
+            string path = Path.Combine(_directory, "refuse-mix-mute-" + (reads ? "reads" : "writes"));
+            if (refuse) File.WriteAllText(path, "");
+            else File.Delete(path);
+        }
         public void ReplaceExternal() => File.WriteAllText(Path.Combine(_directory, "native-serial"), "2");
         public void SelectExternalOutput(bool beforeRegistry)
         {

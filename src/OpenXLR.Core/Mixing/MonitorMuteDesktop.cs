@@ -144,10 +144,10 @@ public sealed partial class Mixer
         return changed;
     }
 
-    private void RestoreDesktopMixMuteLocked(string name, string mixId)
+    private bool RestoreDesktopMixMuteLocked(string name, string mixId)
     {
         (int failures, long retryAt) = _desktopMixMuteResets[name];
-        if (Clock() < retryAt) return;
+        if (Clock() < retryAt) return true;
         bool wanted = _mixMuted.Contains(mixId);
         try
         {
@@ -159,11 +159,13 @@ public sealed partial class Mixer
                 _pw.SetSinkMuted(name, wanted);
                 _desktopMixMuteResets[name] = (0, 0);
             }
+            return true;
         }
         catch (InvalidOperationException)
         {
             int count = Math.Min(failures + 1, 8);
             _desktopMixMuteResets[name] = (count, Clock() + DesktopMuteRetryDelay(count));
+            return false;
         }
     }
 

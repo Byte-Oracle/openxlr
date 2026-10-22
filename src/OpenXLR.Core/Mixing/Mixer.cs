@@ -2088,7 +2088,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
     private bool SyncMonitorVolumesLocked(IReadOnlyList<OwnSinkLevel> levels)
     {
-        bool changed = false;
+        bool changed = false, canRestore = true;
         foreach (OwnSinkLevel sink in levels)
         {
             MixDefinition? mix = MonitorMixForSinkLocked(sink.Name);
@@ -2101,7 +2101,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 _mixVolume[mix.Id] = volume;
                 changed = true;
             }
-            if (_desktopMixMuteResets.ContainsKey(sink.Name)) RestoreDesktopMixMuteLocked(sink.Name, mix.Id);
+            if (_desktopMixMuteResets.ContainsKey(sink.Name))
+            {
+                if (canRestore) canRestore = RestoreDesktopMixMuteLocked(sink.Name, mix.Id);
+            }
             else changed |= sink.Muted ? _mixMuted.Add(mix.Id) : _mixMuted.Remove(mix.Id);
         }
         if (changed)
@@ -2654,11 +2657,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 {
                     if (before[mix.Id]) _mixMuted.Add(mix.Id); else _mixMuted.Remove(mix.Id);
                 }
+                // Queue every attempted sink before a helper can fail again.
+                foreach (MixDefinition mix in attempted) _desktopMixMuteResets[mix.SinkName] = (0, 0);
                 foreach (MixDefinition mix in attempted)
-                {
-                    _desktopMixMuteResets[mix.SinkName] = (0, 0);
-                    RestoreDesktopMixMuteLocked(mix.SinkName, mix.Id);
-                }
+                    if (!RestoreDesktopMixMuteLocked(mix.SinkName, mix.Id)) break;
                 throw;
             }
             foreach (MixDefinition mix in affected) _desktopMixMuteResets.Remove(mix.SinkName);

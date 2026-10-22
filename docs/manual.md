@@ -3224,7 +3224,9 @@ information does not count as another mute press. OpenXLR waits for the
 native and registry identities to agree before accepting a reconnected
 output's mute flag. If restoring a mix's mute after a blanket desktop mute
 fails, OpenXLR retries on later sweeps and keeps the previous mute choice
-until the restoration is confirmed. Native output writes also remain pending
+until the restoration is confirmed. A refused restoration leaves all remaining
+repairs queued and stops helper calls for that batch, rather than waiting for
+every output to time out. Native output writes also remain pending
 until readback confirms them. OpenXLR does not author a hardware mute before
 it has verified that output's native identity. A failed release after
 removing an output is retried only for that same device instance.
