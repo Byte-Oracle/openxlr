@@ -2949,7 +2949,9 @@ Options, SUPPORT, Collect diagnostics. It writes
 capabilities, a dump of the interface's vendor blocks, the PipeWire
 graph and device listings, the last two hours of the daemon journal (under
 Flatpak, `daemon.log` and its rotated copy), `mixer.json`, `ui.json` and
-version information. Plugin evidence includes the
+version information. Warnings and command failure notes for the graph dump
+are kept in `pw-dump-errors.txt`, when present, instead of being appended
+to `pw-dump.json`. Plugin evidence includes the
 catalogue, effective bridge setup and latest native scan results. The home path, host name
 and the serial numbers of attached USB devices are redacted, in the
 text files and inside the hex dump of the vendor blocks (the XLR Dock
