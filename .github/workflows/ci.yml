@@ -110,7 +110,7 @@ jobs:
         run: python3 tools/check-openapi.py docs/openapi-v1.json
 
       - name: Lint shell scripts
-        run: shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh packaging/ppa/make-source.sh packaging/omarchy/openxlr-omarchy-enable
+        run: shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh tools/ci-install-packages.sh packaging/ppa/make-source.sh packaging/omarchy/openxlr-omarchy-enable
 
       - name: Locked restore enforced on every packaging path
         run: tools/check-locked-restore.sh
@@ -184,9 +184,7 @@ jobs:
 
       - name: Optional native LV2 host compiles
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            pipewire pipewire-pulse wireplumber pulseaudio-utils swh-plugins lsp-plugins-lv2 g++ libpipewire-0.3-dev liblilv-dev lv2-dev libx11-dev libxtst6 xvfb xauth
+          tools/ci-install-packages.sh pipewire pipewire-pulse wireplumber pulseaudio-utils swh-plugins lsp-plugins-lv2 g++ libpipewire-0.3-dev liblilv-dev lv2-dev libx11-dev libxtst6 xvfb xauth
           make -C native
           make -C native test-sound-check
           make -C native test-eq
@@ -227,9 +225,7 @@ jobs:
 
       - name: Build with the native host
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            pipewire pipewire-pulse wireplumber pulseaudio-utils swh-plugins lsp-plugins-lv2 g++ libpipewire-0.3-dev liblilv-dev lv2-dev libx11-dev
+          tools/ci-install-packages.sh pipewire pipewire-pulse wireplumber pulseaudio-utils swh-plugins lsp-plugins-lv2 g++ libpipewire-0.3-dev liblilv-dev lv2-dev libx11-dev
           dotnet restore src/OpenXLR.slnx --locked-mode
           make -C native
           dotnet build src/OpenXLR.slnx -c Release --no-restore -warnaserror -p:EnableNativeLv2Host=true
@@ -269,8 +265,7 @@ jobs:
 
       - name: Build
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libxtst6 xvfb xauth
+          tools/ci-install-packages.sh libxtst6 xvfb xauth
           dotnet restore src/OpenXLR.slnx --locked-mode
           dotnet build src/OpenXLR.slnx -c Release --no-restore -warnaserror
 
