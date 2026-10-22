@@ -20,6 +20,7 @@ public partial class AboutWindow : Window
     private void OnDiscord(object? sender, RoutedEventArgs e) => OpenUrl("https://discord.gg/4bswtnGPW4");
     private void OnReddit(object? sender, RoutedEventArgs e) => OpenUrl("https://www.reddit.com/r/OpenXLR/");
     private void OnCoffee(object? sender, RoutedEventArgs e) => OpenUrl("https://buymeacoffee.com/emaspa");
+    private void OnKoFi(object? sender, RoutedEventArgs e) => OpenUrl("https://ko-fi.com/emaspa");
     private void OnClose(object? sender, RoutedEventArgs e) => Close();
 }
 

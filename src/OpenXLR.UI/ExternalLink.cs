@@ -9,7 +9,7 @@ namespace OpenXLR.UI;
 /// </summary>
 internal static class ExternalLink
 {
-    private static readonly string[] Hosts = ["github.com", "www.reddit.com", "discord.gg", "buymeacoffee.com"];
+    private static readonly string[] Hosts = ["github.com", "www.reddit.com", "discord.gg", "buymeacoffee.com", "ko-fi.com"];
 
     /// <summary>The program handed the link; tests point it at a fake.</summary>
     internal static string Opener = "xdg-open";

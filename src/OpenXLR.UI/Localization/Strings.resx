@@ -197,6 +197,9 @@
   <data name="BuyMeACoffee" xml:space="preserve">
     <value>Buy me a coffee</value>
   </data>
+  <data name="SupportMeOnKoFi" xml:space="preserve">
+    <value>Support me on Ko-fi</value>
+  </data>
   <data name="Bypass" xml:space="preserve">
     <value>Bypass</value>
   </data>
