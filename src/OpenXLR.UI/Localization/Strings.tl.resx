@@ -1,0 +1,2936 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- tl window text. See docs/localization.md. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ABComparison" xml:space="preserve">
+    <value>Paghahambing ng A/B</value>
+  </data>
+  <data name="About" xml:space="preserve">
+    <value>Tungkol</value>
+  </data>
+  <data name="AboutOpenXLR" xml:space="preserve">
+    <value>Tungkol sa OpenXLR</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Magdagdag</value>
+  </data>
+  <data name="AddAPluginFolder" xml:space="preserve">
+    <value>Magdagdag ng plugin folder</value>
+  </data>
+  <data name="AddCaptureInput" xml:space="preserve">
+    <value>Magdagdag ng capture input</value>
+  </data>
+  <data name="AddCaptureInputHint" xml:space="preserve">
+    <value>Pumili ng source at isang mono port o stereo pair. Maaaring gumamit ng Sound Check ang mga mono input. Naka-mute sa lahat ng mix ang bagong input at mananatiling tahimik habang offline ang source nito.</value>
+  </data>
+  <data name="AddChannel" xml:space="preserve">
+    <value>Idagdag</value>
+  </data>
+  <data name="AddFolder" xml:space="preserve">
+    <value>Magdagdag ng folder</value>
+  </data>
+  <data name="AddInputChannel" xml:space="preserve">
+    <value>Magdagdag ng input channel</value>
+  </data>
+  <data name="AddingFolder" xml:space="preserve">
+    <value>Nagdaragdag ng folder…</value>
+  </data>
+  <data name="AddingFolderAndScanning" xml:space="preserve">
+    <value>Nagdaragdag ng folder at naghahanap ng mga plugin…</value>
+  </data>
+  <data name="AddInput" xml:space="preserve">
+    <value>Magdagdag ng input</value>
+  </data>
+  <data name="ADDINSTALLEDAPPLICATION" xml:space="preserve">
+    <value>MAGDAGDAG NG NAKA-INSTALL NA APP</value>
+  </data>
+  <data name="AddMix" xml:space="preserve">
+    <value>Magdagdag ng mix</value>
+  </data>
+  <data name="AddPlugin" xml:space="preserve">
+    <value>Magdagdag ng plugin</value>
+  </data>
+  <data name="AddPluginFolder" xml:space="preserve">
+    <value>Magdagdag ng plugin folder</value>
+  </data>
+  <data name="AddPluginInsert" xml:space="preserve">
+    <value>Magdagdag ng insert plugin</value>
+  </data>
+  <data name="AddRenameReorderAndRemoveApplicationChannelsAnd" xml:space="preserve">
+    <value>Magdagdag, magpalit ng pangalan, mag-ayos at mag-alis ng mga application channel at virtual microphone habang tumutugtog ang audio</value>
+  </data>
+  <data name="AddVolumeAndMuteKeys" xml:space="preserve">
+    <value>Magdagdag ng volume at mute key</value>
+  </data>
+  <data name="AddWindowsPluginFolder" xml:space="preserve">
+    <value>Magdagdag ng Windows plugin folder</value>
+  </data>
+  <data name="AdditionalInterfaces" xml:space="preserve">
+    <value>Karagdagang interface</value>
+  </data>
+  <data name="AdditionalInterfacesHint" xml:space="preserve">
+    <value>Ang pangunahing interface ang source ng XLR 1 at mga hardware strip. Paganahin dito ang hanggang apat pang unit upang kontrolin ang mga ito kasabay nito, saka idagdag ang bawat mikropono bilang capture channel.</value>
+  </data>
+  <data name="AffectsSystemYabridge" xml:space="preserve">
+    <value>Apektado rin nito ang ibang app na gumagamit ng system yabridge.</value>
+  </data>
+  <data name="AllowEditor" xml:space="preserve">
+    <value>Payagan ang editor</value>
+  </data>
+  <data name="AllowNativeEditor" xml:space="preserve">
+    <value>Payagan ang sariling editor</value>
+  </data>
+  <data name="AllowNativeEditorDetail" xml:space="preserve">
+    <value>Payagang buksan muli ng {0} ang sariling editor nito? Kung naroon pa ang problema sa compatibility, maaaring mag-freeze ang window o mag-crash ang plugin process nito. Papalitan ng iyong pagpili ang default ng release.</value>
+  </data>
+  <data name="AllowNativeEditorTitle" xml:space="preserve">
+    <value>Payagan ang sariling editor na ito?</value>
+  </data>
+  <data name="AllowOutputVolumeAbove100UpTo" xml:space="preserve">
+    <value>Payagan ang output volume na lampas sa 100%, hanggang 150%. Kapag pinatay ito, babalik sa 100% ang pinalakas na output. Sa KDE Plasma, ito ang setting na Raise maximum volume ng desktop, na ginagamit ng lahat ng monitor control.</value>
+  </data>
+  <data name="AllowThisMonitorMixAbove100Up" xml:space="preserve">
+    <value>Payagan ang monitor mix na ito na lampas sa 100%, hanggang 150%. Kapag pinatay ito, babalik sa 100% ang pinalakas na mix. Sa KDE Plasma, ito ang setting na Raise maximum volume ng desktop, na ginagamit ng lahat ng monitor control.</value>
+  </data>
+  <data name="ANewChannelStartsMutedInEvery" xml:space="preserve">
+    <value>Naka-mute sa bawat mix ang bagong channel. Hindi ginagalaw ang mga hardware input. Mapupunta sa System ang mga app na binurahan ng channel.</value>
+  </data>
+  <data name="AnotherApplicationChannel" xml:space="preserve">
+    <value>ibang application channel</value>
+  </data>
+  <data name="APPEARANCE" xml:space="preserve">
+    <value>HITSURA</value>
+  </data>
+  <data name="AppearanceDark" xml:space="preserve">
+    <value>Madilim</value>
+  </data>
+  <data name="AppearanceDialogHint" xml:space="preserve">
+    <value>Ipinapakita sa window, terminal mixer at mga Stream Deck key ang icon at kulay. Hindi nagbabago ang routing at level.</value>
+  </data>
+  <data name="AppearanceLight" xml:space="preserve">
+    <value>Maliwanag</value>
+  </data>
+  <data name="AppearanceMode" xml:space="preserve">
+    <value>Mode ng hitsura</value>
+  </data>
+  <data name="AppearanceModeOtherSkin" xml:space="preserve">
+    <value>May sariling kulay ang skin na ito. Sa Material lang ang mode.</value>
+  </data>
+  <data name="AppearanceModeOverridden" xml:space="preserve">
+    <value>Itinakda sa paglunsad ang hitsurang ito; pumili ng skin upang magamit muli ang mode.</value>
+  </data>
+  <data name="AppearanceModeSystemNote" xml:space="preserve">
+    <value>Sinusunod ng Sistema ang maliwanag o madilim na setting ng desktop.</value>
+  </data>
+  <data name="AppearanceOfTitle" xml:space="preserve">
+    <value>Hitsura ng {0}</value>
+  </data>
+  <data name="AppearanceSystem" xml:space="preserve">
+    <value>Sistema</value>
+  </data>
+  <data name="ApplicationChannel" xml:space="preserve">
+    <value>Application channel</value>
+  </data>
+  <data name="ApplicationChannelsAreThePlaybackDevicesYouRoute" xml:space="preserve">
+    <value>Ang mga application channel ang mga playback device na pinagrurutan ng mga programa. Ang mga virtual microphone ang mga recording device na ginagamit ng OBS, Discord at iba pang app. Sine-save ang bawat pagbabago bago kumpirmahin, at tuloy ang audio sa ibang channel.</value>
+  </data>
+  <data name="ApplicationChannelsMixesVirtualMicrophonesAndInserts" xml:space="preserve">
+    <value>Mga application channel, mix, virtual microphone at insert.</value>
+  </data>
+  <data name="APPLICATIONS" xml:space="preserve">
+    <value>MGA APP</value>
+  </data>
+  <data name="ApplyAndConfigureKeys" xml:space="preserve">
+    <value>Ilapat at itakda ang mga key</value>
+  </data>
+  <data name="APresetKeepsTheOrderNamesBypass" xml:space="preserve">
+    <value>Iniingatan ng preset ang ayos, pangalan, bypass, host at halaga ng control ng bawat effect. Hindi kasama ang pribadong estado ng plugin at mga external file gaya ng sample. Pinapalitan ng pag-load ang chain; tinatanggihan ang nawawala o hindi compatible na plugin.</value>
+  </data>
+  <data name="ARenamedVirtualMicrophoneKeepsItsOldName" xml:space="preserve">
+    <value>Mananatili ang lumang pangalan ng pinalitang virtual microphone sa ibang app hanggang mag-restart ang daemon. Mag-restart kapag walang nagre-record mula rito.</value>
+  </data>
+  <data name="ARescanReadsEveryFormatAgainAnd" xml:space="preserve">
+    <value>Binabasa muli ng paghahanap ang bawat format at sinusubukang muli ang mga bundle na pumalya noon. Tuloy ang mga tumatakbong insert; papalya sa susunod na pag-load ang insert na wala na ang plugin.</value>
+  </data>
+  <data name="Arrange" xml:space="preserve">
+    <value>Ayusin</value>
+  </data>
+  <data name="ATLOGIN" xml:space="preserve">
+    <value>SA PAG-LOGIN</value>
+  </data>
+  <data name="AUDIO" xml:space="preserve">
+    <value>AUDIO</value>
+  </data>
+  <data name="AudioFlow" xml:space="preserve">
+    <value>Daloy ng audio</value>
+  </data>
+  <data name="AutostartRemovedOutside" xml:space="preserve">
+    <value>Inalis sa labas ng OpenXLR ang autostart entry ng mixer, kaya hindi ito ibinalik. Patayin at buksan muli ang opsyong ito upang likhain ito.</value>
+  </data>
+  <data name="BridgeAgainEveryFolderYabridgeKnowsForWindows" xml:space="preserve">
+    <value>I-bridge muli ang lahat ng folder na alam ng yabridge para sa mga Windows plugin na bagong na-install</value>
+  </data>
+  <data name="BridgeWinePluginFolders" xml:space="preserve">
+    <value>I-bridge ang {0} plugin folder ng Wine</value>
+  </data>
+  <data name="BridgeWinePlugins" xml:space="preserve">
+    <value>I-bridge ang mga plugin ng Wine</value>
+  </data>
+  <data name="BridgingWindowsPlugins" xml:space="preserve">
+    <value>Bini-bridge ang mga Windows plugin…</value>
+  </data>
+  <data name="BridgingWinePlugins" xml:space="preserve">
+    <value>Bini-bridge ang mga plugin ng Wine…</value>
+  </data>
+  <data name="BuyMeACoffee" xml:space="preserve">
+    <value>Ilibre ako ng kape</value>
+  </data>
+  <data name="Bypass" xml:space="preserve">
+    <value>Bypass</value>
+  </data>
+  <data name="BypassLetter" xml:space="preserve">
+    <value>B</value>
+  </data>
+  <data name="BypassThisPlugin" xml:space="preserve">
+    <value>I-bypass ang plugin na ito</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Kanselahin</value>
+  </data>
+  <data name="CannotChangePlasmaRange" xml:space="preserve">
+    <value>Hindi mabago ang volume range ng Plasma: {0}</value>
+  </data>
+  <data name="CannotChangePlasmaRangeKept" xml:space="preserve">
+    <value>Hindi mabago ang volume range ng Plasma: hindi ito pinanatili ng desktop.</value>
+  </data>
+  <data name="CannotChangePlasmaRangeSave" xml:space="preserve">
+    <value>Hindi mabago ang volume range ng Plasma: hindi ma-save ang setting ng desktop.</value>
+  </data>
+  <data name="CannotFollowPlasmaRange" xml:space="preserve">
+    <value>Hindi masundan ang volume range ng Plasma: {0}</value>
+  </data>
+  <data name="CannotReadPlasmaRange" xml:space="preserve">
+    <value>Hindi mabasa ang volume range ng Plasma: {0}</value>
+  </data>
+  <data name="CaptureChannel" xml:space="preserve">
+    <value>Capture channel</value>
+  </data>
+  <data name="CaptureConnectedPair" xml:space="preserve">
+    <value>Nakakonekta · pares {0}</value>
+  </data>
+  <data name="CaptureConnectedPort" xml:space="preserve">
+    <value>Nakakonekta · port {0}</value>
+  </data>
+  <data name="CaptureOfflinePair" xml:space="preserve">
+    <value>Offline · pares {0}</value>
+  </data>
+  <data name="CaptureOfflinePort" xml:space="preserve">
+    <value>Offline · port {0}</value>
+  </data>
+  <data name="CaptureSourcePlaceholder" xml:space="preserve">
+    <value>Capture source</value>
+  </data>
+  <data name="CatalogueNew" xml:space="preserve">
+    <value>{0} bagong plugin sa catalog.</value>
+  </data>
+  <data name="CatalogueNothingNew" xml:space="preserve">
+    <value>{0} plugin sa catalog, walang bago.</value>
+  </data>
+  <data name="CatalogueOneNew" xml:space="preserve">
+    <value>1 bagong plugin sa catalog.</value>
+  </data>
+  <data name="ChainTooLong" xml:space="preserve">
+    <value>Hanggang 16 effect lang ang isang chain. Mag-alis ng effect o palitan ang chain bago mag-paste.</value>
+  </data>
+  <data name="ChainUnsupported" xml:space="preserve">
+    <value>Hindi suportado ang bersyon, lapad o laki ng effect chain.</value>
+  </data>
+  <data name="ChangesApplyTheNextTimeAnEditorIs" xml:space="preserve">
+    <value>Sa susunod na pagbukas ng editor ilalapat ang mga pagbabago. Hindi isasara ang mga bukas nang editor.</value>
+  </data>
+  <data name="ChangeTheNameThisEffectShowsThe" xml:space="preserve">
+    <value>Palitan ang ipinapakitang pangalan ng effect; tuloy ang plugin</value>
+  </data>
+  <data name="ChangingThisRestartsTheAudioServiceAndBriefly" xml:space="preserve">
+    <value>Magre-restart ang audio service at saglit na mapuputol ang audio kapag binago ito.</value>
+  </data>
+  <data name="Channel" xml:space="preserve">
+    <value>channel</value>
+  </data>
+  <data name="ChannelNamePlaceholder" xml:space="preserve">
+    <value>Pangalan ng channel</value>
+  </data>
+  <data name="CHANNELS" xml:space="preserve">
+    <value>MGA CHANNEL</value>
+  </data>
+  <data name="ChannelShown" xml:space="preserve">
+    <value>Nakikitang channel</value>
+  </data>
+  <data name="ChannelsOfWhichOnlyOneIsHeard" xml:space="preserve">
+    <value>Mga channel na isa lang ang maririnig sa bawat sandali</value>
+  </data>
+  <data name="ChannelToMix" xml:space="preserve">
+    <value>Channel papunta sa mix</value>
+  </data>
+  <data name="ChannelUnavailable" xml:space="preserve">
+    <value>Hindi available ang channel</value>
+  </data>
+  <data name="CheckAgain" xml:space="preserve">
+    <value>Tingnan muli</value>
+  </data>
+  <data name="CheckGitHubForStableReleasesAtStartupAt" xml:space="preserve">
+    <value>Tingnan sa GitHub ang stable release sa pagsisimula
+(hanggang isang beses bawat araw)</value>
+  </data>
+  <data name="CheckNow" xml:space="preserve">
+    <value>Tingnan ngayon</value>
+  </data>
+  <data name="ChooseAFolderThenSelectAnIndividualPlugin" xml:space="preserve">
+    <value>Pumili ng folder, saka pumili ng isang plugin sa ibaba.</value>
+  </data>
+  <data name="ChooseAnApplication" xml:space="preserve">
+    <value>pumili ng app</value>
+  </data>
+  <data name="ChooseAPreset" xml:space="preserve">
+    <value>Pumili ng preset</value>
+  </data>
+  <data name="ChooseInterfaceSourceFirst" xml:space="preserve">
+    <value>Piliin muna ang capture source ng interface.</value>
+  </data>
+  <data name="ChoosePresetForEffect" xml:space="preserve">
+    <value>Pumili ng preset para sa effect na ito sa aktibong channel.</value>
+  </data>
+  <data name="ClearSelection" xml:space="preserve">
+    <value>×  Alisin ang pagpili</value>
+  </data>
+  <data name="ClickAnyElementToTraceItsSignalPath" xml:space="preserve">
+    <value>I-click ang elemento upang sundan ang signal path nito</value>
+  </data>
+  <data name="ClipGuard" xml:space="preserve">
+    <value>ClipGuard</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Isara</value>
+  </data>
+  <data name="CollectDiagnostics" xml:space="preserve">
+    <value>Kolektahin ang diagnostics</value>
+  </data>
+  <data name="CollectDiagnosticsGathersAppAndDeviceStateThe" xml:space="preserve">
+    <value>Pinagsasama ng diagnostics ang estado ng app at device, PipeWire graph, daemon log at config sa isang archive sa home folder mo, na puwedeng ilakip sa bug report. Walang ina-upload.</value>
+  </data>
+  <data name="Collecting" xml:space="preserve">
+    <value>kinokolekta…</value>
+  </data>
+  <data name="Colour" xml:space="preserve">
+    <value>Kulay</value>
+  </data>
+  <data name="ColourFormatHint" xml:space="preserve">
+    <value>Maglagay ng kulay bilang # na may anim na hexadecimal digit, o iwang blangko.</value>
+  </data>
+  <data name="ColourPlaceholder" xml:space="preserve">
+    <value>#RRGGBB, o blangko para sa kulay ng skin</value>
+  </data>
+  <data name="CompactShowsOneChannelStripWithEvery" xml:space="preserve">
+    <value>Ipinapakita ng Compact ang isang channel strip kasama ang lahat ng send. Ipinapakita ng Mini ang send ng channel na iyon sa isang mix at ang master ng mix, at itinatabi ang MGA INPUT, HEADPHONE at MGA APP. Piliin ang channel at mix sa itaas ng submixer. Hindi nagbabago ang level at routing.</value>
+  </data>
+  <data name="CompensatePluginLatencyAcrossMixes" xml:space="preserve">
+    <value>Itugma ang plugin latency sa lahat ng mix</value>
+  </data>
+  <data name="Compressor" xml:space="preserve">
+    <value>Compressor</value>
+  </data>
+  <data name="Connecting" xml:space="preserve">
+    <value>kumokonekta…</value>
+  </data>
+  <data name="ConnectionLostCheckChange" xml:space="preserve">
+    <value>Naputol ang koneksyon. Tingnan kung nailapat ang pagbabago bago subukang muli.</value>
+  </data>
+  <data name="ConnectionLostUnconfirmed" xml:space="preserve">
+    <value>Naputol ang koneksyon; hindi makumpirma ang pagbabago.</value>
+  </data>
+  <data name="ContributorsAndCredits" xml:space="preserve">
+    <value>Mga kontribyutor at pagkilala</value>
+  </data>
+  <data name="Controls" xml:space="preserve">
+    <value>Mga control</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Kopyahin</value>
+  </data>
+  <data name="CopyAndPaste" xml:space="preserve">
+    <value>Kopyahin at i-paste</value>
+  </data>
+  <data name="CopyAndPasteEffectsCompareTwoSettings" xml:space="preserve">
+    <value>Kopyahin at i-paste ang effect, ihambing ang dalawang setting, at mag-save o mag-load ng preset</value>
+  </data>
+  <data name="CopyAnEffectFromItsRowOr" xml:space="preserve">
+    <value>Kopyahin ang effect mula sa hanay nito o ang buong chain. Idinadagdag ng I-paste ang mga effect ang mga kopya sa dulo ng chain; pinapalitan naman ng Palitan ang chain ang buong chain. Nasa OpenXLR ang kopya hanggang isara ito.</value>
+  </data>
+  <data name="CopyChain" xml:space="preserve">
+    <value>Kopyahin ang chain</value>
+  </data>
+  <data name="CopyFirst" xml:space="preserve">
+    <value>Kopyahin muna ang effect o chain sa OpenXLR.</value>
+  </data>
+  <data name="CopyThisEffectToPasteOnAny" xml:space="preserve">
+    <value>Kopyahin ang effect na ito para i-paste sa anumang chain mula sa Mga preset at A/B</value>
+  </data>
+  <data name="CouldNotDisableDaemonAtLogin" xml:space="preserve">
+    <value>Hindi mapigilan ang awtomatikong pagsisimula ng audio service sa pag-login. Tiyaking gumagana ang systemd user service (systemctl --user status).</value>
+  </data>
+  <data name="CouldNotEnableDaemonAtLogin" xml:space="preserve">
+    <value>Hindi mapasimula ang audio service sa pag-login. Tiyaking naka-install ang OpenXLR at gumagana ang systemd user service (systemctl --user status).</value>
+  </data>
+  <data name="CouldNotReadPluginFolder" xml:space="preserve">
+    <value>Hindi mabasa ang plugin folder.</value>
+  </data>
+  <data name="CouldNotRepairAutostart" xml:space="preserve">
+    <value>Hindi maayos ang autostart entry ng mixer. Tiyaking naka-install ang OpenXLR, nasusulatan ang autostart folder, at hindi symbolic link ang entry.</value>
+  </data>
+  <data name="CouldNotUpdateAutostart" xml:space="preserve">
+    <value>Hindi ma-update ang autostart ng mixer. Tiyaking naka-install ang OpenXLR, nasusulatan ang autostart folder, at hindi symbolic link ang entry.</value>
+  </data>
+  <data name="CouldNotVerifyPlugin" xml:space="preserve">
+    <value>Hindi masuri ang plugin bago buksan ang uninstaller.</value>
+  </data>
+  <data name="CrossfadeCentre" xml:space="preserve">
+    <value>gitna</value>
+  </data>
+  <data name="CrossfadeMic" xml:space="preserve">
+    <value>mic +{0}</value>
+  </data>
+  <data name="CrossfadePc" xml:space="preserve">
+    <value>pc +{0}</value>
+  </data>
+  <data name="CurrentChain" xml:space="preserve">
+    <value>Kasalukuyang chain</value>
+  </data>
+  <data name="CurrentEffect" xml:space="preserve">
+    <value>Kasalukuyang effect</value>
+  </data>
+  <data name="CurrentSystemDefaultOutput" xml:space="preserve">
+    <value>Kasalukuyang default output ng system</value>
+  </data>
+  <data name="DaemonDisconnectedNoChange" xml:space="preserve">
+    <value>Nadiskonekta ang daemon; walang ipinadalang pagbabago.</value>
+  </data>
+  <data name="DaemonNotRunning" xml:space="preserve">
+    <value>Hindi tumatakbo ang daemon</value>
+  </data>
+  <data name="DaemonNotRunningSentence" xml:space="preserve">
+    <value>Hindi tumatakbo ang daemon.</value>
+  </data>
+  <data name="DaemonOlderVersionNote" xml:space="preserve">
+    <value>Mas lumang bersyon ang daemon; v{0} ang window na ito. I-restart ang daemon upang gamitin ang naka-install na bersyon.</value>
+  </data>
+  <data name="DaemonRefusedWindow" xml:space="preserve">
+    <value>tinanggihan ng daemon ang window na ito: {0}</value>
+  </data>
+  <data name="DaemonRestartedHardwareOnly" xml:space="preserve">
+    <value>Nag-restart ang daemon sa hardware-control mode; nanatili ang orihinal na layout ng sound card at hindi na-load ang mga insert.</value>
+  </data>
+  <data name="DaemonRestartedSubmixerOn" xml:space="preserve">
+    <value>Nag-restart ang daemon na naka-on ang submixer.</value>
+  </data>
+  <data name="DaemonVersionNote" xml:space="preserve">
+    <value>v{0} ang daemon; v{1} ang window na ito. I-restart ang daemon upang gamitin ang naka-install na bersyon.</value>
+  </data>
+  <data name="DeepWineTraceForPluginScans" xml:space="preserve">
+    <value>Detalyadong Wine trace para sa plugin scan</value>
+  </data>
+  <data name="DefaultInput" xml:space="preserve">
+    <value>Default input</value>
+  </data>
+  <data name="DefaultOutput" xml:space="preserve">
+    <value>Default output</value>
+  </data>
+  <data name="Defaults" xml:space="preserve">
+    <value>Mga default</value>
+  </data>
+  <data name="DelayTheOtherMixesSoEachLines" xml:space="preserve">
+    <value>Antalahin ang ibang mix upang tumugma sa mix na pinakamatagal magproseso ang mga plugin, hanggang dalawang segundo. Muling binubuo ng pagbabagong ito ang lahat ng plugin chain at saglit na pinuputol ang audio.</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Burahin</value>
+  </data>
+  <data name="DeleteAppChannelDetail" xml:space="preserve">
+    <value>Lilipat sa {0} ang mga programang naka-route dito. Mawawala sa desktop ang playback device nito.</value>
+  </data>
+  <data name="DeleteCaptureChannelDetail" xml:space="preserve">
+    <value>Aalisin ang capture input at mga send nito. Available pa rin ang source device sa ibang app.</value>
+  </data>
+  <data name="DeleteChainPresetDetail" xml:space="preserve">
+    <value>Burahin ang naka-save na preset na '{0}'? Mananatili ang aktibong chain.</value>
+  </data>
+  <data name="DeleteChannelTitle" xml:space="preserve">
+    <value>Burahin ang channel na '{0}'?</value>
+  </data>
+  <data name="DeleteEffectPresetDetail" xml:space="preserve">
+    <value>Burahin ang naka-save na preset na '{0}'?</value>
+  </data>
+  <data name="DeleteFile" xml:space="preserve">
+    <value>Burahin ang file</value>
+  </data>
+  <data name="DeleteGroup" xml:space="preserve">
+    <value>Burahin ang grupo</value>
+  </data>
+  <data name="DeleteMixTitle" xml:space="preserve">
+    <value>Burahin ang mix na '{0}'?</value>
+  </data>
+  <data name="DeleteMonitorMixDetail" xml:space="preserve">
+    <value>Aalisin ang mga send at insert nito. Babalik sa default monitor mix ang mga output na ito lang ang sinusundan; mananatili ang ibang mix ng pinagsamang feed. Kung ito ang nakatakdang system default, aalisin ang setting na iyon.</value>
+  </data>
+  <data name="DeletePluginFileDetail" xml:space="preserve">
+    <value>Permanenteng burahin ang {0} at ang mga wrapper nito? Ang file o bundle na ito lang ang aalisin; mananatili ang ibang plugin sa folder. Hindi ito mababawi.</value>
+  </data>
+  <data name="DeletePluginFileTitle" xml:space="preserve">
+    <value>Burahin ang plugin file?</value>
+  </data>
+  <data name="DeletePreset" xml:space="preserve">
+    <value>Burahin ang preset</value>
+  </data>
+  <data name="DeleteThisProfile" xml:space="preserve">
+    <value>Burahin ang profile na ito</value>
+  </data>
+  <data name="DeleteVirtualMicDetail" xml:space="preserve">
+    <value>Mawawala ang virtual microphone nito; mawawalan ng device ang anumang nagre-record mula rito. Kasama ring aalisin ang mga send at insert nito.</value>
+  </data>
+  <data name="DeletingPlugin" xml:space="preserve">
+    <value>Binubura ang plugin…</value>
+  </data>
+  <data name="DESKTOP" xml:space="preserve">
+    <value>DESKTOP</value>
+  </data>
+  <data name="DesktopConnectionLost" xml:space="preserve">
+    <value>Naputol ang koneksyon sa desktop. Buksan ang Mga desktop key at ilapat upang kumonekta muli.</value>
+  </data>
+  <data name="DesktopInvalidVolumeRange" xml:space="preserve">
+    <value>Hindi valid ang volume range na ibinalik ng desktop.</value>
+  </data>
+  <data name="DesktopKeyCompleted" xml:space="preserve">
+    <value>Tapos: {0}.</value>
+  </data>
+  <data name="DesktopKeyQueueFull" xml:space="preserve">
+    <value>Puno ang pila ng desktop key; hindi naipila ang pagpindot na ito. Hintayin ang daemon bago ulitin.</value>
+  </data>
+  <data name="DesktopKeys" xml:space="preserve">
+    <value>Mga desktop key</value>
+  </data>
+  <data name="DesktopKeysActive" xml:space="preserve">
+    <value>Aktibo ang mga desktop key. Panatilihing tumatakbo ang OpenXLR, kahit nasa tray.</value>
+  </data>
+  <data name="DesktopKeysConnecting" xml:space="preserve">
+    <value>Kumokonekta sa desktop...</value>
+  </data>
+  <data name="DesktopKeysDisabled" xml:space="preserve">
+    <value>Naka-off ang mga desktop key.</value>
+  </data>
+  <data name="DesktopKeysError" xml:space="preserve">
+    <value>Mga desktop key: {0}</value>
+  </data>
+  <data name="DesktopKeysFocusOnly" xml:space="preserve">
+    <value>Naka-on ang focus routing ng OpenDeck. Pumili ng mga channel sa ibaba upang magtakda ng PC shortcut.</value>
+  </data>
+  <data name="DesktopKeysIntro" xml:space="preserve">
+    <value>Gumagamit ng KDE Plasma ang routing ng nakapokus na app. Paganahin ito para sa mga OpenDeck key, saka pumili ng mga channel sa ibaba upang magtakda ng PC shortcut sa dialog ng pahintulot ng desktop. Panatilihing tumatakbo ang OpenXLR, kahit nasa tray.</value>
+  </data>
+  <data name="DesktopKeysNote" xml:space="preserve">
+    <value>Mga shortcut para sa application channel, volume at system output, at focus routing ng OpenDeck na nangangailangan ng KDE Plasma.</value>
+  </data>
+  <data name="DesktopKeysTitle" xml:space="preserve">
+    <value>Mga desktop key ng OpenXLR</value>
+  </data>
+  <data name="DesktopKeysVolumeNote" xml:space="preserve">
+    <value>5% ang hakbang ng volume key, hanggang 150%. Binabago ng system-output key ang nakatakdang default ng desktop; pinananatili ng mga mixer feed ang kani-kanilang pagpili.</value>
+  </data>
+  <data name="DesktopKeysWaiting" xml:space="preserve">
+    <value>Hinihintay matapos ang naunang configuration...</value>
+  </data>
+  <data name="DesktopPreferenceUnreadable" xml:space="preserve">
+    <value>Hindi mabasa ang setting ng desktop.</value>
+  </data>
+  <data name="DesktopRouting" xml:space="preserve">
+    <value>Desktop routing</value>
+  </data>
+  <data name="Devices" xml:space="preserve">
+    <value>Mga device</value>
+  </data>
+  <data name="DiagnosticsFailed" xml:space="preserve">
+    <value>pumalya: {0}</value>
+  </data>
+  <data name="DiagnosticsSavedTo" xml:space="preserve">
+    <value>na-save sa {0}</value>
+  </data>
+  <data name="DirectMonitorBlendLeftOnlyYourMicRight" xml:space="preserve">
+    <value>Direct-monitor blend: kaliwa = mikropono lang, kanan = PC audio lang</value>
+  </data>
+  <data name="Disable" xml:space="preserve">
+    <value>I-disable</value>
+  </data>
+  <data name="DisableInOpenXLR" xml:space="preserve">
+    <value>I-disable sa OpenXLR</value>
+  </data>
+  <data name="DisablePluginDetail" xml:space="preserve">
+    <value>I-disable ang {0} sa napiling yabridge configuration? Mananatili ang mga file nito.</value>
+  </data>
+  <data name="DisablePluginTitle" xml:space="preserve">
+    <value>I-disable ang plugin?</value>
+  </data>
+  <data name="DisablingKeepsTheFilesDeleteFilePermanentlyRemoves" xml:space="preserve">
+    <value>Hindi inaalis ng pag-disable ang mga file. Permanenteng inaalis ng Burahin ang file ang standalone plugin. Ginagamit ng mga plugin na naka-install sa Wine ang sarili nilang uninstaller. Nire-refresh ng mga pagbabago ang plugin catalog.</value>
+  </data>
+  <data name="DisablingPlugin" xml:space="preserve">
+    <value>Dini-disable ang plugin…</value>
+  </data>
+  <data name="DiscordCommunity" xml:space="preserve">
+    <value>Komunidad sa Discord</value>
+  </data>
+  <data name="Dismiss" xml:space="preserve">
+    <value>I-dismiss</value>
+  </data>
+  <data name="DockMixer" xml:space="preserve">
+    <value>Ibalik ang mixer sa pangunahing window</value>
+  </data>
+  <data name="DoNotLeaveThisOnTheSwitchIs" xml:space="preserve">
+    <value>Huwag itong iwang naka-on. Hindi sine-save ang switch sa pag-restart ng daemon; may bisa pa rin ang trace sa startup environment ng daemon. Pinananatili ng tahasang WINEDEBUG ang sarili nitong mga channel.</value>
+  </data>
+  <data name="DontEnforce" xml:space="preserve">
+    <value>(huwag ipilit)</value>
+  </data>
+  <data name="DragAHandleOntoAnotherSectionOr" xml:space="preserve">
+    <value>I-drag ang handle papunta sa ibang seksyon o tile, o ipokus ito at gamitin ang mga arrow key. Kinakansela ng Escape ang pag-drag.</value>
+  </data>
+  <data name="DragOntoAnotherChannelYouCanEdit" xml:space="preserve">
+    <value>I-drag sa ibang nae-edit na channel; isang puwesto ang galaw ng arrow key</value>
+  </data>
+  <data name="DragOntoAnotherMixYouAddedArrow" xml:space="preserve">
+    <value>I-drag sa ibang mix na idinagdag mo; isang puwesto ang galaw ng arrow key</value>
+  </data>
+  <data name="DragToAnotherSectionArrowKeysMove" xml:space="preserve">
+    <value>I-drag sa ibang seksyon; isang puwesto ang galaw ng arrow key</value>
+  </data>
+  <data name="DriveAsAdditionalInterface" xml:space="preserve">
+    <value>Gamitin bilang karagdagang interface</value>
+  </data>
+  <data name="EachMixHasItsOwnMasterSends" xml:space="preserve">
+    <value>May sariling master, send at insert ang bawat mix. Dinadala ng monitor mix ang audio sa mga output nang walang virtual microphone. Naka-mute ang mga bagong send. Puwedeng palitan ang pangalan, ilipat at alisin ang monitor mix, pero dapat may matirang isa. Nananatili sa puwesto ang Aux.</value>
+  </data>
+  <data name="EditLayout" xml:space="preserve">
+    <value>I-edit ang layout</value>
+  </data>
+  <data name="EffectChainsTitle" xml:space="preserve">
+    <value>Mga effect chain ng {0}</value>
+  </data>
+  <data name="EffectDefinitionMissing" xml:space="preserve">
+    <value>May nawawalang effect definition.</value>
+  </data>
+  <data name="EffectFieldInvalid" xml:space="preserve">
+    <value>Hindi valid ang effect na {0}.</value>
+  </data>
+  <data name="EffectIdInvalid" xml:space="preserve">
+    <value>Hindi valid ang effect ID o format.</value>
+  </data>
+  <data name="EffectNoLongerInChain" xml:space="preserve">
+    <value>Wala na sa chain ang effect.</value>
+  </data>
+  <data name="EffectParameterInvalid" xml:space="preserve">
+    <value>Hindi valid ang effect parameter.</value>
+  </data>
+  <data name="EffectParametersInvalid" xml:space="preserve">
+    <value>May hindi valid na parameter ang effect.</value>
+  </data>
+  <data name="EffectPresetFileType" xml:space="preserve">
+    <value>Mga effect preset ng OpenXLR</value>
+  </data>
+  <data name="EffectSwitchInvalid" xml:space="preserve">
+    <value>Hindi valid ang effect switch.</value>
+  </data>
+  <data name="EnableDesktopIntegration" xml:space="preserve">
+    <value>Paganahin ang desktop integration</value>
+  </data>
+  <data name="EnableInOpenXLR" xml:space="preserve">
+    <value>Paganahin sa OpenXLR</value>
+  </data>
+  <data name="EnableSoftwareMixer" xml:space="preserve">
+    <value>Paganahin ang software mixer</value>
+  </data>
+  <data name="EnablingPlugin" xml:space="preserve">
+    <value>Pinapagana ang plugin…</value>
+  </data>
+  <data name="EveryAppOpenXLRHasRoutedPlayingOrSilent" xml:space="preserve">
+    <value>Lahat ng app na na-route ng OpenXLR, tumutugtog man o tahimik. Sa susunod na stream ng app ilalapat ang pagpili; ibinabalik ng ignore ang routing sa desktop at iniiwan ito roon; inaalis ng Kalimutan ang app at ang nakaalalang channel nito.</value>
+  </data>
+  <data name="ExclusiveChannelGroups" xml:space="preserve">
+    <value>Eksklusibong mga channel group</value>
+  </data>
+  <data name="ExclusiveGroups" xml:space="preserve">
+    <value>Eksklusibong mga grupo</value>
+  </data>
+  <data name="ExclusiveGroupsIntro" xml:space="preserve">
+    <value>Isang channel lang ng grupo ang maririnig. Kapag in-unmute ang isang miyembro sa anumang mix, imu-mute ang iba sa lahat ng mix; hindi nagbabago ang level nila.</value>
+  </data>
+  <data name="ExclusiveGroupsInvalid" xml:space="preserve">
+    <value>Maglagay ng pangalan at pumili ng hindi bababa sa dalawang channel.</value>
+  </data>
+  <data name="ExclusiveGroupsProNote" xml:space="preserve">
+    <value>Sa Wave XLR Pro, dinadala ang XLR 1 na nasa grupo sa headphone jack sa pamamagitan ng mixer sa halip na zero-latency path ng interface.</value>
+  </data>
+  <data name="ExclusiveGroupsRules" xml:space="preserve">
+    <value>Pumili ng hindi bababa sa dalawang channel. Isang grupo lang puwedeng salihan ng channel. Kung higit sa isang miyembro ang naka-unmute sa pag-save, imu-mute silang lahat at ikaw ang mag-unmute ng gusto mo. Hindi binabago ng pagburang grupo ang mga mute.</value>
+  </data>
+  <data name="Expander" xml:space="preserve">
+    <value>Expander</value>
+  </data>
+  <data name="ExportEffectPreset" xml:space="preserve">
+    <value>I-export ang effect preset</value>
+  </data>
+  <data name="ExportPreset" xml:space="preserve">
+    <value>I-export ang preset</value>
+  </data>
+  <data name="FaderPrecisionHint" xml:space="preserve">
+    <value>Hawakan ang Shift habang nagda-drag para sa mas pinong control. Isang hakbang ang arrow key; sampu ang Page Up at Page Down.</value>
+  </data>
+  <data name="FindAnInstalledPlugin" xml:space="preserve">
+    <value>Maghanap ng naka-install na plugin…</value>
+  </data>
+  <data name="FixWindowsEditorInput" xml:space="preserve">
+    <value>Ayusin ang input ng Windows editor</value>
+  </data>
+  <data name="Flow" xml:space="preserve">
+    <value>Daloy</value>
+  </data>
+  <data name="FlowDaemonDisconnected" xml:space="preserve">
+    <value>Nadiskonekta ang daemon. Hinihintay ang live routing.</value>
+  </data>
+  <data name="FlowHardware" xml:space="preserve">
+    <value>Hardware</value>
+  </data>
+  <data name="FlowInputProcessing" xml:space="preserve">
+    <value>Pagproseso ng input:</value>
+  </data>
+  <data name="FlowInsertBypassed" xml:space="preserve">
+    <value>{0} (naka-bypass)</value>
+  </data>
+  <data name="FlowInsertProblem" xml:space="preserve">
+    <value>{0} (may problema)</value>
+  </data>
+  <data name="FlowLowCut" xml:space="preserve">
+    <value>Low cut {0} Hz</value>
+  </data>
+  <data name="FlowMixProcessing" xml:space="preserve">
+    <value>Pagproseso ng mix:</value>
+  </data>
+  <data name="FlowMuted" xml:space="preserve">
+    <value>Naka-mute</value>
+  </data>
+  <data name="FlowOff" xml:space="preserve">
+    <value>Naka-off</value>
+  </data>
+  <data name="FlowSoftware" xml:space="preserve">
+    <value>Software</value>
+  </data>
+  <data name="FlowSubmixerOff" xml:space="preserve">
+    <value>Paganahin ang submixer sa Mga opsyon upang makita ang daloy ng audio.</value>
+  </data>
+  <data name="FlowVolume" xml:space="preserve">
+    <value>Vol {0}</value>
+  </data>
+  <data name="FoldersBridged" xml:space="preserve">
+    <value>{0} folder ang na-bridge</value>
+  </data>
+  <data name="FollowMonitorOutput" xml:space="preserve">
+    <value>Sundan ang MONITOR output (system volume control)</value>
+  </data>
+  <data name="FollowSelectedMonitorOutput" xml:space="preserve">
+    <value>Sundan ang napiling monitor output</value>
+  </data>
+  <data name="Forget" xml:space="preserve">
+    <value>Kalimutan</value>
+  </data>
+  <data name="ForReproducingABridgedPluginFailureForA" xml:space="preserve">
+    <value>Para maulit ang pagkabigo ng naka-bridge na plugin para sa bug report. Mas mabagal ang scan at malalaki ang log. Paganahin ito, pindutin ang Maghanap muli sa MGA PLUGIN, hintaying matapos, kolektahin ang diagnostics, saka patayin ito. Sinusubukang muli ng paghahanap ang pumalyang bundle; naka-cache pa rin ang matagumpay at hindi nagbagong bundle.</value>
+  </data>
+  <data name="FrontJack" xml:space="preserve">
+    <value>Jack sa harap</value>
+  </data>
+  <data name="GainLockTheDaemonRejectsEveryGainChange" xml:space="preserve">
+    <value>Gain lock: tinatanggihan ng daemon ang anumang pagbabago ng gain habang naka-on</value>
+  </data>
+  <data name="GroupNamePlaceholder" xml:space="preserve">
+    <value>Pangalan ng grupo, hal. Mga mikropono</value>
+  </data>
+  <data name="HandThePluginsAWindowsInstallerLeftIn" xml:space="preserve">
+    <value>Ibigay sa yabridge ang mga plugin na inilagay sa Wine ng Windows installer</value>
+  </data>
+  <data name="HardwareChannel" xml:space="preserve">
+    <value>Hardware channel</value>
+  </data>
+  <data name="HardwareInput" xml:space="preserve">
+    <value>hardware input</value>
+  </data>
+  <data name="HEADPHONES" xml:space="preserve">
+    <value>HEADPHONE</value>
+  </data>
+  <data name="HearA" xml:space="preserve">
+    <value>Pakinggan ang A</value>
+  </data>
+  <data name="HearB" xml:space="preserve">
+    <value>Pakinggan ang B</value>
+  </data>
+  <data name="HearingA" xml:space="preserve">
+    <value>Pinapakinggan ang A</value>
+  </data>
+  <data name="HearingB" xml:space="preserve">
+    <value>Pinapakinggan ang B</value>
+  </data>
+  <data name="HearLiveMic" xml:space="preserve">
+    <value>Pakinggan ang live mic</value>
+  </data>
+  <data name="HiddenInTheMixer" xml:space="preserve">
+    <value>nakatago sa mixer</value>
+  </data>
+  <data name="HideChannelStrip" xml:space="preserve">
+    <value>Itago ang strip ng channel sa mixer. Hindi magbabago ang audio, send at app nito.</value>
+  </data>
+  <data name="HideMix" xml:space="preserve">
+    <value>Itago ang mix na ito sa mixer. Hindi magbabago ang audio, output, send at level nito.</value>
+  </data>
+  <data name="HostSideLowCutForThisDeviceIts" xml:space="preserve">
+    <value>Software low cut para sa device na ito (nasa software ang DSP nito); salitan ang Off, 80 Hz, 120 Hz</value>
+  </data>
+  <data name="Icon" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="IconAndColour" xml:space="preserve">
+    <value>Icon at kulay</value>
+  </data>
+  <data name="IconColourAndWhetherTheStripShows" xml:space="preserve">
+    <value>Icon, kulay at pagpapakita ng strip sa mixer</value>
+  </data>
+  <data name="IconColourAndWhetherTheMixShows" xml:space="preserve">
+    <value>Icon, kulay at pagpapakita ng mix sa mixer</value>
+  </data>
+  <data name="ImportEffectPreset" xml:space="preserve">
+    <value>I-import ang effect preset</value>
+  </data>
+  <data name="ImportPreset" xml:space="preserve">
+    <value>I-import ang preset</value>
+  </data>
+  <data name="InputChainHint" xml:space="preserve">
+    <value>Mga plugin, ayon sa ayos, bago makarating ang input sa mga mix</value>
+  </data>
+  <data name="INPUTS" xml:space="preserve">
+    <value>MGA INPUT</value>
+  </data>
+  <data name="InputToChannel" xml:space="preserve">
+    <value>Input papunta sa channel</value>
+  </data>
+  <data name="Inserts" xml:space="preserve">
+    <value>Mga insert</value>
+  </data>
+  <data name="InsertsCount" xml:space="preserve">
+    <value>Mga insert ({0})</value>
+  </data>
+  <data name="InsertsNone" xml:space="preserve">
+    <value>wala</value>
+  </data>
+  <data name="InsertStateActive" xml:space="preserve">
+    <value>aktibo</value>
+  </data>
+  <data name="InsertStateBypassed" xml:space="preserve">
+    <value>naka-bypass</value>
+  </data>
+  <data name="InsertStateProblem" xml:space="preserve">
+    <value>may problema</value>
+  </data>
+  <data name="InsertsTitle" xml:space="preserve">
+    <value>Mga insert ng {0}</value>
+  </data>
+  <data name="InstallAClapOrVst3FileOrA" xml:space="preserve">
+    <value>Mag-install ng .clap o .vst3 file, o Windows plugin sa pamamagitan ng yabridge</value>
+  </data>
+  <data name="InstallAPluginFolder" xml:space="preserve">
+    <value>I-install ang plugin folder</value>
+  </data>
+  <data name="InstallAVst3OrLv2BundleOrEvery" xml:space="preserve">
+    <value>Mag-install ng .vst3 o .lv2 bundle, o lahat ng plugin sa folder</value>
+  </data>
+  <data name="InstalledAndLatest" xml:space="preserve">
+    <value>Naka-install na bersyon: {0}. Pinakabagong stable release: {1}.</value>
+  </data>
+  <data name="InstallFile" xml:space="preserve">
+    <value>I-install ang file</value>
+  </data>
+  <data name="InstallFolder" xml:space="preserve">
+    <value>I-install ang folder</value>
+  </data>
+  <data name="Installing" xml:space="preserve">
+    <value>Nag-i-install…</value>
+  </data>
+  <data name="InstallPluginFiles" xml:space="preserve">
+    <value>I-install ang mga plugin file</value>
+  </data>
+  <data name="DeviceFirmware" xml:space="preserve">
+    <value>Firmware {0}</value>
+  </data>
+  <data name="INTERFACE" xml:space="preserve">
+    <value>INTERFACE</value>
+  </data>
+  <data name="InterfaceCaptureSource" xml:space="preserve">
+    <value>Capture source</value>
+  </data>
+  <data name="InterfaceChannelName" xml:space="preserve">
+    <value>Pangalan ng channel</value>
+  </data>
+  <data name="InterfaceChannelNamePlaceholder" xml:space="preserve">
+    <value>Pangalan ng interface at bilang ng input</value>
+  </data>
+  <data name="InterfaceConnection" xml:space="preserve">
+    <value>Koneksyon ng interface</value>
+  </data>
+  <data name="InterfaceInputChannelName" xml:space="preserve">
+    <value>{0} input {1}</value>
+  </data>
+  <data name="InterfaceMicrophone" xml:space="preserve">
+    <value>Mikropono</value>
+  </data>
+  <data name="InterfaceNotConnected" xml:space="preserve">
+    <value>Hindi nakakonekta ang interface.</value>
+  </data>
+  <data name="InterfaceSourcePlaceholder" xml:space="preserve">
+    <value>Piliin ang source ng interface</value>
+  </data>
+  <data name="InvalidPresetName" xml:space="preserve">
+    <value>Hindi valid ang pangalan ng effect preset.</value>
+  </data>
+  <data name="InvalidPresetNameOrChain" xml:space="preserve">
+    <value>Hindi valid ang pangalan o chain ng effect preset.</value>
+  </data>
+  <data name="KeepRunningInTray" xml:space="preserve">
+    <value>Patuloy na tumakbo sa tray</value>
+  </data>
+  <data name="KeyOutputVolumeDown" xml:space="preserve">
+    <value>Hinaan ang output nang 5%</value>
+  </data>
+  <data name="KeyOutputVolumeUp" xml:space="preserve">
+    <value>Lakasan ang output nang 5%</value>
+  </data>
+  <data name="KeyRouteFocusedApp" xml:space="preserve">
+    <value>I-route ang nakapokus na app sa {0}</value>
+  </data>
+  <data name="KeySetSystemOutput" xml:space="preserve">
+    <value>Itakda ang system output sa {0}</value>
+  </data>
+  <data name="KeyToggleOutputMute" xml:space="preserve">
+    <value>I-toggle ang output mute</value>
+  </data>
+  <data name="KNOWNAPPLICATIONS" xml:space="preserve">
+    <value>MGA KILALANG APP</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Wika</value>
+  </data>
+  <data name="LanguageHint" xml:space="preserve">
+    <value>Binabasa ng window ang wika sa pagsisimula nito, kaya sa susunod na pagbukas ng OpenXLR ilalapat ang pagbabago. Sinusunod ng Wika ng system ang desktop at bumabalik sa Ingles kung walang tugma. Mula sa mga kontribyutor ang mga wika; nasa gabay kung paano magdagdag.</value>
+  </data>
+  <data name="LatencyMilliseconds" xml:space="preserve">
+    <value>Latency: {0:0.##} ms</value>
+  </data>
+  <data name="LatencyUnknown" xml:space="preserve">
+    <value>Latency: hindi alam. Itinuturing itong zero sa pagtutugma ng latency.</value>
+  </data>
+  <data name="LeftLevel" xml:space="preserve">
+    <value>Kaliwang level</value>
+  </data>
+  <data name="LevelLock" xml:space="preserve">
+    <value>Level Lock</value>
+  </data>
+  <data name="LineInUsbAux" xml:space="preserve">
+    <value>Line In / USB Aux</value>
+  </data>
+  <data name="LoadPreset" xml:space="preserve">
+    <value>I-load ang preset</value>
+  </data>
+  <data name="LoadThisProfile" xml:space="preserve">
+    <value>I-load ang profile na ito</value>
+  </data>
+  <data name="Lock" xml:space="preserve">
+    <value>I-lock</value>
+  </data>
+  <data name="LoopSample" xml:space="preserve">
+    <value>I-loop ang sample</value>
+  </data>
+  <data name="LowCut" xml:space="preserve">
+    <value>Low Cut</value>
+  </data>
+  <data name="LowCutFrequency" xml:space="preserve">
+    <value>Low Cut {0}</value>
+  </data>
+  <data name="LowCutOff" xml:space="preserve">
+    <value>Low Cut Off</value>
+  </data>
+  <data name="LowImp" xml:space="preserve">
+    <value>Low Imp.</value>
+  </data>
+  <data name="LV2CLAPAndVST3PluginsAreFound" xml:space="preserve">
+    <value>Hinahanap ang mga LV2, CLAP at VST3 plugin sa mga karaniwang folder at sa mga nakatakda sa LV2_PATH, CLAP_PATH o VST3_PATH. Magdagdag ng folder upang makita ang mga plugin nito nang hindi kinokopya. Hindi binubura ang mga file kapag inalis ang idinagdag na folder.</value>
+  </data>
+  <data name="Manage" xml:space="preserve">
+    <value>Pamahalaan</value>
+  </data>
+  <data name="ManageThisPluginSNativeEditorCompatibilityRule" xml:space="preserve">
+    <value>Pamahalaan ang compatibility rule ng sariling editor ng plugin na ito</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>Gabay</value>
+  </data>
+  <data name="MaterialDescription" xml:space="preserve">
+    <value>Klasikong hitsura, na may maliwanag at madilim na mode.</value>
+  </data>
+  <data name="MemoryLockSetup" xml:space="preserve">
+    <value>Setting ng memory lock</value>
+  </data>
+  <data name="MicPC" xml:space="preserve">
+    <value>Mic ↔ PC</value>
+  </data>
+  <data name="MixChainHint" xml:space="preserve">
+    <value>Mga stereo plugin, ayon sa ayos, bago makarating ang mix sa mga output nito</value>
+  </data>
+  <data name="MixerAppearance" xml:space="preserve">
+    <value>Hitsura</value>
+  </data>
+  <data name="MixerControlSize" xml:space="preserve">
+    <value>Laki ng mixer control</value>
+  </data>
+  <data name="MixerDetached" xml:space="preserve">
+    <value>Bukas ang submixer sa hiwalay na window.</value>
+  </data>
+  <data name="MixerLayout" xml:space="preserve">
+    <value>Layout ng mixer</value>
+  </data>
+  <data name="MixerView" xml:space="preserve">
+    <value>View ng mixer</value>
+  </data>
+  <data name="MixerViewCompact" xml:space="preserve">
+    <value>Compact: isang channel</value>
+  </data>
+  <data name="MixerViewFull" xml:space="preserve">
+    <value>Buong mixer</value>
+  </data>
+  <data name="MixerViewMini" xml:space="preserve">
+    <value>Mini: isang channel sa isang mix</value>
+  </data>
+  <data name="MixerWindowTitle" xml:space="preserve">
+    <value>OpenXLR mixer</value>
+  </data>
+  <data name="MIXES" xml:space="preserve">
+    <value>MGA MIX</value>
+  </data>
+  <data name="MixInsertsTitle" xml:space="preserve">
+    <value>{0} mix</value>
+  </data>
+  <data name="MixShown" xml:space="preserve">
+    <value>Nakikitang mix</value>
+  </data>
+  <data name="MixToOutput" xml:space="preserve">
+    <value>Mix papunta sa output</value>
+  </data>
+  <data name="MixType" xml:space="preserve">
+    <value>Uri ng mix</value>
+  </data>
+  <data name="Mode" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="MONITOR" xml:space="preserve">
+    <value>MONITOR</value>
+  </data>
+  <data name="MonitorMix" xml:space="preserve">
+    <value>Monitor mix</value>
+  </data>
+  <data name="MonitorMixKind" xml:space="preserve">
+    <value>monitor mix</value>
+  </data>
+  <data name="MonitorNotRouted" xml:space="preserve">
+    <value>hindi naka-route</value>
+  </data>
+  <data name="MonitorOutput" xml:space="preserve">
+    <value>Monitor output</value>
+  </data>
+  <data name="MonitorOutputMissing" xml:space="preserve">
+    <value>{0} (hindi nakakonekta)</value>
+  </data>
+  <data name="MonitorOutputsMore" xml:space="preserve">
+    <value>{0} + {1} pa</value>
+  </data>
+  <data name="MonoPickerHint" xml:space="preserve">
+    <value>Mga plugin na kayang tumakbong mono sa mic path</value>
+  </data>
+  <data name="MonoPluginsAvailable" xml:space="preserve">
+    <value>{0} mono plugin ang available</value>
+  </data>
+  <data name="MoreBundlesOmitted" xml:space="preserve">
+    <value>May {0} pang bundle na hindi ipinapakita sa listahan.</value>
+  </data>
+  <data name="MoveApplications" xml:space="preserve">
+    <value>Ilipat ang mga app</value>
+  </data>
+  <data name="MoveDown" xml:space="preserve">
+    <value>Ibaba</value>
+  </data>
+  <data name="MoveHeadphones" xml:space="preserve">
+    <value>Ilipat ang headphone</value>
+  </data>
+  <data name="MoveInputs" xml:space="preserve">
+    <value>Ilipat ang mga input</value>
+  </data>
+  <data name="MoveItem" xml:space="preserve">
+    <value>Ilipat ang {0}</value>
+  </data>
+  <data name="MoveMonitor" xml:space="preserve">
+    <value>Ilipat ang monitor</value>
+  </data>
+  <data name="MovePluginDown" xml:space="preserve">
+    <value>Ibaba ang plugin</value>
+  </data>
+  <data name="MovePluginUp" xml:space="preserve">
+    <value>Itaas ang plugin</value>
+  </data>
+  <data name="MoveSubmixer" xml:space="preserve">
+    <value>Ilipat ang submixer</value>
+  </data>
+  <data name="MoveUp" xml:space="preserve">
+    <value>Itaas</value>
+  </data>
+  <data name="Mute" xml:space="preserve">
+    <value>I-mute</value>
+  </data>
+  <data name="MuteInput2" xml:space="preserve">
+    <value>I-mute ang input 2</value>
+  </data>
+  <data name="MuteMonitoring" xml:space="preserve">
+    <value>I-mute ang monitoring</value>
+  </data>
+  <data name="MuteMonitoringTip" xml:space="preserve">
+    <value>I-mute ang lahat ng napiling monitor output nang hindi binabago ang naka-save na mix o channel mute. Kung pinagana sa Audio, ipapahinto rin ang mga microphone send. Tuloy ang ibang recording at streaming audio.</value>
+  </data>
+  <data name="MutedInactive" xml:space="preserve">
+    <value>Naka-mute / hindi aktibo</value>
+  </data>
+  <data name="NativeEditorCompatibility" xml:space="preserve">
+    <value>Compatibility ng sariling editor</value>
+  </data>
+  <data name="NativeEditorDisabled" xml:space="preserve">
+    <value>Naka-off ang sariling editor na ito sa Mga opsyon. Gamitin ang mga control ng OpenXLR.</value>
+  </data>
+  <data name="NativeEditors" xml:space="preserve">
+    <value>Mga sariling editor</value>
+  </data>
+  <data name="NativeHost" xml:space="preserve">
+    <value>Native host</value>
+  </data>
+  <data name="NativeHostLetter" xml:space="preserve">
+    <value>N</value>
+  </data>
+  <data name="NativeHostMissing" xml:space="preserve">
+    <value>Hindi naka-install ang native plugin host katabi ng daemon, kaya hindi makatakbo ang mga CLAP at VST3 plugin.</value>
+  </data>
+  <data name="NewChannelEGPodcast" xml:space="preserve">
+    <value>Bagong channel, hal. Podcast</value>
+  </data>
+  <data name="NewGroup" xml:space="preserve">
+    <value>Bagong grupo</value>
+  </data>
+  <data name="NewMixEGRecordingOrHeadphones" xml:space="preserve">
+    <value>Bagong mix, hal. Recording o Headphone</value>
+  </data>
+  <data name="NewPresetName" xml:space="preserve">
+    <value>Pangalan ng bagong preset</value>
+  </data>
+  <data name="NewRelease" xml:space="preserve">
+    <value>Bagong OpenXLR release {0}</value>
+  </data>
+  <data name="NoAnswerCheckChange" xml:space="preserve">
+    <value>Walang sagot ang daemon. Tingnan kung nailapat ang pagbabago bago ulitin.</value>
+  </data>
+  <data name="NoAnswerForPath" xml:space="preserve">
+    <value>Walang sagot ang daemon para sa {0}.</value>
+  </data>
+  <data name="NoAnswerMayStillRun" xml:space="preserve">
+    <value>Walang sagot ang daemon; maaaring tumatakbo pa ang {0}.</value>
+  </data>
+  <data name="NoDevice" xml:space="preserve">
+    <value>Walang device</value>
+  </data>
+  <data name="NoFolderBridged" xml:space="preserve">
+    <value>wala pang na-bridge na folder</value>
+  </data>
+  <data name="NoInsertsYet" xml:space="preserve">
+    <value>Wala pang insert.</value>
+  </data>
+  <data name="NoLongerInWinePrefix" xml:space="preserve">
+    <value>Wala na sa Wine prefix ang plugin na ito.</value>
+  </data>
+  <data name="NoMonoPlugins" xml:space="preserve">
+    <value>Walang nahanap na mono plugin. Mag-install o magdagdag gamit ang mga button sa ibaba</value>
+  </data>
+  <data name="NoNativeEditorsAreBlocked" xml:space="preserve">
+    <value>Walang naka-block na sariling editor.</value>
+  </data>
+  <data name="NoNetworkRequest" xml:space="preserve">
+    <value>Walang network request maliban kung mano-mano kang tumingin o pinili mo sa ibaba.</value>
+  </data>
+  <data name="NoProfilesSavedYet" xml:space="preserve">
+    <value>wala pang naka-save na profile</value>
+  </data>
+  <data name="NoRegisteredFolders" xml:space="preserve">
+    <value>Walang nakarehistrong folder.</value>
+  </data>
+  <data name="NoSessionBus" xml:space="preserve">
+    <value>Walang available na session bus.</value>
+  </data>
+  <data name="NoStereoPlugins" xml:space="preserve">
+    <value>Walang nahanap na stereo plugin. Mag-install o magdagdag gamit ang mga button sa ibaba</value>
+  </data>
+  <data name="NotAffiliatedWithOrEndorsedByElgatoBuilt" xml:space="preserve">
+    <value>Walang kaugnayan sa Elgato at hindi nito ineendorso. Binuo sa pamamagitan ng pagsusuri ng protocol sa sariling hardware ng may-akda, na may pagkilala sa openwave project para sa Wave XLR dialect.</value>
+  </data>
+  <data name="NotInPath" xml:space="preserve">
+    <value>Wala sa path</value>
+  </data>
+  <data name="NotManaged" xml:space="preserve">
+    <value>Hindi pinamamahalaan</value>
+  </data>
+  <data name="NotRunning" xml:space="preserve">
+    <value>hindi tumatakbo</value>
+  </data>
+  <data name="NoWindowsPluginFiles" xml:space="preserve">
+    <value>Walang nahanap na Windows VST3 o CLAP plugin file.</value>
+  </data>
+  <data name="OffByDefaultCheckNowMakesOneExplicit" xml:space="preserve">
+    <value>Naka-off bilang default. Isang tahasang request ang Tingnan ngayon. Walang ida-download o ii-install.</value>
+  </data>
+  <data name="OffOpenXLRControlsTheHardwareOnlyAndLeaves" xml:space="preserve">
+    <value>Naka-off: hardware lang ang kinokontrol ng OpenXLR at iniiwan ang sound card sa orihinal nitong PipeWire layout (UCM profile kung mayroon).</value>
+  </data>
+  <data name="OnConnect" xml:space="preserve">
+    <value>Sa pagkonekta</value>
+  </data>
+  <data name="OneFolderBridged" xml:space="preserve">
+    <value>1 folder ang na-bridge</value>
+  </data>
+  <data name="OnePlugin" xml:space="preserve">
+    <value>1 plugin</value>
+  </data>
+  <data name="OnLaunch" xml:space="preserve">
+    <value>Sa paglunsad</value>
+  </data>
+  <data name="OnLaunchAppliesTheNextTimeTheApp" xml:space="preserve">
+    <value>Sa susunod na pagsisimula ng app ilalapat ang Sa paglunsad. Tuloy ang audio kahit isara ang app.</value>
+  </data>
+  <data name="OpenManualDesktopKeys" xml:space="preserve">
+    <value>Buksan ang gabay tungkol sa mga desktop key</value>
+  </data>
+  <data name="OpenOnGitHub" xml:space="preserve">
+    <value>Buksan sa GitHub</value>
+  </data>
+  <data name="OpenPluginOwnEditor" xml:space="preserve">
+    <value>Buksan ang sariling editor ng plugin</value>
+  </data>
+  <data name="OpenSourceControlSuiteForElgatoXLRInterfaces" xml:space="preserve">
+    <value>Open-source na control suite para sa mga Elgato XLR interface sa Linux (Wave XLR Pro, XLR Dock, XLR Dock MK.2, Wave XLR, Wave XLR MK.2): hardware control sa pamamagitan ng sinuring mga protocol, PipeWire submixer na gaya ng Wave Link na may channel bawat app at mga virtual microphone, monitoring sa maraming output, nakalaang mix para sa pangalawang computer sa USB Aux port, at OpenDeck plugin para sa Stream Deck.</value>
+  </data>
+  <data name="OpenTheManualSectionOnInstallingPlugins" xml:space="preserve">
+    <value>Buksan ang gabay sa pag-install ng plugin</value>
+  </data>
+  <data name="OpenTheManualSectionOnPluginEditors" xml:space="preserve">
+    <value>Buksan ang gabay tungkol sa mga plugin editor</value>
+  </data>
+  <data name="OpenTheManualSectionOnSkins" xml:space="preserve">
+    <value>Buksan ang gabay tungkol sa mga skin</value>
+  </data>
+  <data name="OpenTheManualSectionOnThePipewirePulse" xml:space="preserve">
+    <value>Buksan ang gabay tungkol sa open-file limit ng pipewire-pulse</value>
+  </data>
+  <data name="OpenThisPluginSControls" xml:space="preserve">
+    <value>Buksan ang mga control ng plugin na ito</value>
+  </data>
+  <data name="OpenThisPluginSOwnEditorOnThe" xml:space="preserve">
+    <value>Buksan ang sariling editor ng plugin sa aktibong audio instance</value>
+  </data>
+  <data name="OpenUninstaller" xml:space="preserve">
+    <value>Buksan ang uninstaller</value>
+  </data>
+  <data name="OpenWineUninstallerDetail" xml:space="preserve">
+    <value>Buksan ang listahan ng naka-install na app para sa {0}? Piliin doon ang installer ng plugin. Maaaring mag-alis ang uninstaller ng maraming effect mula sa iisang package. Isara muna ang ibang Wine app at alisin ang mga apektadong insert. Maghahanap muli ang OpenXLR kapag isinara ang uninstaller.</value>
+  </data>
+  <data name="OpenWineUninstallerTitle" xml:space="preserve">
+    <value>Buksan ang Wine uninstaller?</value>
+  </data>
+  <data name="OpenXLRApplications" xml:space="preserve">
+    <value>Mga app ng OpenXLR</value>
+  </data>
+  <data name="OpenXLRAudioFlow" xml:space="preserve">
+    <value>OpenXLR · Daloy ng audio</value>
+  </data>
+  <data name="OpenXlrBridgeVersion" xml:space="preserve">
+    <value>OpenXLR bridge {0} (64-bit)</value>
+  </data>
+  <data name="OpenXLRMixerLayout" xml:space="preserve">
+    <value>Layout ng OpenXLR mixer</value>
+  </data>
+  <data name="OpenXLROptions" xml:space="preserve">
+    <value>Mga opsyon ng OpenXLR</value>
+  </data>
+  <data name="OpenXLRUpdates" xml:space="preserve">
+    <value>Mga update ng OpenXLR</value>
+  </data>
+  <data name="Options" xml:space="preserve">
+    <value>Mga opsyon</value>
+  </data>
+  <data name="OutputMixesHeading" xml:space="preserve">
+    <value>MGA OUTPUT MIX</value>
+  </data>
+  <data name="OUTPUTS" xml:space="preserve">
+    <value>MGA OUTPUT</value>
+  </data>
+  <data name="OutputUnavailable" xml:space="preserve">
+    <value>{0} (hindi available)</value>
+  </data>
+  <data name="Overwrite" xml:space="preserve">
+    <value>Patungan</value>
+  </data>
+  <data name="OverwriteProfileTitle" xml:space="preserve">
+    <value>Patungan ang profile?</value>
+  </data>
+  <data name="OwnDeviceLabel" xml:space="preserve">
+    <value>{0} (OpenXLR)</value>
+  </data>
+  <data name="ParameterGroupDisplay" xml:space="preserve">
+    <value>Display</value>
+  </data>
+  <data name="ParameterGroupDynamics" xml:space="preserve">
+    <value>Dynamics</value>
+  </data>
+  <data name="ParameterGroupFilter" xml:space="preserve">
+    <value>Filter</value>
+  </data>
+  <data name="ParameterGroupGeneral" xml:space="preserve">
+    <value>Pangkalahatan</value>
+  </data>
+  <data name="ParameterGroupLevels" xml:space="preserve">
+    <value>Mga level</value>
+  </data>
+  <data name="ParameterGroupSidechain" xml:space="preserve">
+    <value>Sidechain</value>
+  </data>
+  <data name="ParamOff" xml:space="preserve">
+    <value>off</value>
+  </data>
+  <data name="ParamOn" xml:space="preserve">
+    <value>on</value>
+  </data>
+  <data name="PasteEffects" xml:space="preserve">
+    <value>I-paste ang mga effect</value>
+  </data>
+  <data name="Phantom" xml:space="preserve">
+    <value>Phantom</value>
+  </data>
+  <data name="PhantomPowerSettling" xml:space="preserve">
+    <value>Nagse-settle ang phantom power</value>
+  </data>
+  <data name="Phones1" xml:space="preserve">
+    <value>Phones 1</value>
+  </data>
+  <data name="Phones2" xml:space="preserve">
+    <value>Phones 2</value>
+  </data>
+  <data name="PickAPluginYouDownloadedAndOpenXLRPuts" xml:space="preserve">
+    <value>Pumili ng na-download mong plugin at ilalagay ito ng OpenXLR sa tamang lugar: .clap o .vst3 file, .vst3 o .lv2 folder, o folder na may mga plugin.</value>
+  </data>
+  <data name="PickerNew" xml:space="preserve">
+    <value>{0} bagong plugin sa pagpipilian.</value>
+  </data>
+  <data name="PickerOneNew" xml:space="preserve">
+    <value>1 bagong plugin sa pagpipilian.</value>
+  </data>
+  <data name="Playing" xml:space="preserve">
+    <value>tumutugtog</value>
+  </data>
+  <data name="PluginDirectoriesDefault" xml:space="preserve">
+    <value>Hinahanap ang mga plugin sa mga plugin directory ng home at system.</value>
+  </data>
+  <data name="PluginDirectoriesFound" xml:space="preserve">
+    <value>Hinahanap ang mga plugin sa {0}, {1} at {2} at sa mga system plugin directory.</value>
+  </data>
+  <data name="PluginDisabled" xml:space="preserve">
+    <value>Naka-off</value>
+  </data>
+  <data name="PluginEnabled" xml:space="preserve">
+    <value>Naka-on</value>
+  </data>
+  <data name="PluginFilesNoAnswer" xml:space="preserve">
+    <value>Walang sagot ang daemon sa request para sa plugin file.</value>
+  </data>
+  <data name="PluginFileType" xml:space="preserve">
+    <value>Mga plugin</value>
+  </data>
+  <data name="PluginFolders" xml:space="preserve">
+    <value>Mga plugin folder</value>
+  </data>
+  <data name="PluginInUse" xml:space="preserve">
+    <value>Ginagamit</value>
+  </data>
+  <data name="PluginInUseDetail" xml:space="preserve">
+    <value>Alisin muna ang plugin na ito sa mga insert chain nito bago i-disable o i-uninstall.</value>
+  </data>
+  <data name="PluginListUnavailable" xml:space="preserve">
+    <value>Hindi available ang listahan ng plugin.</value>
+  </data>
+  <data name="PluginListUnavailableShort" xml:space="preserve">
+    <value>Hindi available ang listahan ng plugin</value>
+  </data>
+  <data name="PluginManager" xml:space="preserve">
+    <value>Plugin manager</value>
+  </data>
+  <data name="PLUGINS" xml:space="preserve">
+    <value>MGA PLUGIN</value>
+  </data>
+  <data name="PluginsInChain" xml:space="preserve">
+    <value>{0} plugin sa chain</value>
+  </data>
+  <data name="PluginsProcessingXLR1BeforeItReachesThe" xml:space="preserve">
+    <value>Mga plugin na nagpoproseso ng XLR 1 bago ito makarating sa mga mix</value>
+  </data>
+  <data name="PluginsProcessingXLR2BeforeItReachesThe" xml:space="preserve">
+    <value>Mga plugin na nagpoproseso ng XLR 2 bago ito makarating sa mga mix</value>
+  </data>
+  <data name="PluginState" xml:space="preserve">
+    <value>Estado ng plugin</value>
+  </data>
+  <data name="PluginUI" xml:space="preserve">
+    <value>Plugin UI</value>
+  </data>
+  <data name="PopOutMixer" xml:space="preserve">
+    <value>Ihiwalay</value>
+  </data>
+  <data name="PopOutMixerHint" xml:space="preserve">
+    <value>Ilipat ang submixer sa sariling window para sa ibang display.</value>
+  </data>
+  <data name="ShowHidden" xml:space="preserve">
+    <value>Ipakita ang nakatago</value>
+  </data>
+  <data name="ShowHiddenHint" xml:space="preserve">
+    <value>Ipakita sa puwesto nila ang mga channel at mix na nakatago sa I-edit ang layout, nang mapusyaw. Gumagana sila gaya ng dati; walang binabago sa layout.</value>
+  </data>
+  <data name="PreAssignAChannelToAnAppThat" xml:space="preserve">
+    <value>Magtakda nang maaga ng channel sa app na hindi pa tumutugtog. Hinuhulaan ang identity mula sa launcher nito; kung iba ang iulat ng app sa unang pagtugtog, lilitaw ito bilang bagong entry.</value>
+  </data>
+  <data name="PreferenceFileHoldsNull" xml:space="preserve">
+    <value>null ang laman ng file sa halip na JSON object.</value>
+  </data>
+  <data name="PreferenceFileNotSaved" xml:space="preserve">
+    <value>Hindi ma-save ang {0}. {1}</value>
+  </data>
+  <data name="PreferenceFileUnreadable" xml:space="preserve">
+    <value>Hindi mabasa ang {0} at hindi ito ginalaw. Ayusin o alisin ito upang makapag-save muli ng mga setting. {1}</value>
+  </data>
+  <data name="PresetEmpty" xml:space="preserve">
+    <value>Walang laman ang effect preset.</value>
+  </data>
+  <data name="PresetExportTimedOut" xml:space="preserve">
+    <value>Naubos ang oras sa pag-export ng preset.</value>
+  </data>
+  <data name="PresetFileChanged" xml:space="preserve">
+    <value>Nagbago ang effect preset file habang binabasa.</value>
+  </data>
+  <data name="PresetFileEmpty" xml:space="preserve">
+    <value>Walang laman ang effect preset file.</value>
+  </data>
+  <data name="PresetFileInvalidEntry" xml:space="preserve">
+    <value>May hindi valid na entry sa effect preset file.</value>
+  </data>
+  <data name="PresetFileTimedOut" xml:space="preserve">
+    <value>Naubos ang oras sa operasyon ng preset file.</value>
+  </data>
+  <data name="PresetFileTooLarge" xml:space="preserve">
+    <value>Masyadong malaki ang effect preset file.</value>
+  </data>
+  <data name="PresetFileTooMany" xml:space="preserve">
+    <value>Hanggang 64 effect preset lang ang suportado.</value>
+  </data>
+  <data name="PresetFileWouldExceed" xml:space="preserve">
+    <value>Lalampas sa 8 MiB ang effect preset file.</value>
+  </data>
+  <data name="PresetForDifferentEffect" xml:space="preserve">
+    <value>Para sa ibang effect ang preset na ito.</value>
+  </data>
+  <data name="PresetImportTimedOut" xml:space="preserve">
+    <value>Naubos ang oras sa pag-import ng preset.</value>
+  </data>
+  <data name="PresetLimitReached" xml:space="preserve">
+    <value>Naabot na ang limitasyong 64 preset.</value>
+  </data>
+  <data name="PresetNameExists" xml:space="preserve">
+    <value>May preset nang may ganitong pangalan. Pumili ng bago o burahin ang lumang preset.</value>
+  </data>
+  <data name="PresetNameRule" xml:space="preserve">
+    <value>Gumamit ng pangalang may 1 hanggang 80 character, walang control character.</value>
+  </data>
+  <data name="Presets" xml:space="preserve">
+    <value>Mga preset</value>
+  </data>
+  <data name="PresetsAndAB" xml:space="preserve">
+    <value>Mga preset at A/B</value>
+  </data>
+  <data name="PresetsForThisPluginOnlyFromThe" xml:space="preserve">
+    <value>Mga preset para lang sa plugin na ito, mula sa parehong imbakan ng mga chain preset. Binabago lang ng pag-load ang effect na ito at hindi ang ibang bahagi ng chain.</value>
+  </data>
+  <data name="PresetsLimitedTo8MiB" xml:space="preserve">
+    <value>Hanggang 8 MiB lang ang mga effect preset.</value>
+  </data>
+  <data name="PresetsTitle" xml:space="preserve">
+    <value>Mga preset ng {0}</value>
+  </data>
+  <data name="PrimaryInterface" xml:space="preserve">
+    <value>Pangunahing interface</value>
+  </data>
+  <data name="ProfileName" xml:space="preserve">
+    <value>pangalan ng profile</value>
+  </data>
+  <data name="ProfileOverwriteMessage" xml:space="preserve">
+    <value>May profile nang "{0}" para sa device na ito.
+Papalitan ito ng kasalukuyang eksena kapag nag-save.</value>
+  </data>
+  <data name="Profiles" xml:space="preserve">
+    <value>Mga profile</value>
+  </data>
+  <data name="PutEveryControlBackToThePluginS" xml:space="preserve">
+    <value>Ibalik ang bawat control sa sariling default ng plugin</value>
+  </data>
+  <data name="PutTheFiveSectionsBackInTheir" xml:space="preserve">
+    <value>Ibalik ang limang seksyon sa orihinal nilang ayos</value>
+  </data>
+  <data name="PutTheSectionsBackInTheSkinsOrder" xml:space="preserve">
+    <value>Ibalik ang mga seksyon sa puwestong itinakda ng skin, nakikita o nakatago ayon dito</value>
+  </data>
+  <data name="QuitApp" xml:space="preserve">
+    <value>Lumabas sa app</value>
+  </data>
+  <data name="QuitOpenXLR" xml:space="preserve">
+    <value>Lumabas sa OpenXLR</value>
+  </data>
+  <data name="ReadingPluginFolders" xml:space="preserve">
+    <value>Binabasa ang mga plugin folder…</value>
+  </data>
+  <data name="ReadThePluginDirectoriesAgainForPluginsInstalled" xml:space="preserve">
+    <value>Basahin muli ang mga plugin directory para sa mga plugin na na-install sa ibang paraan</value>
+  </data>
+  <data name="ReadTheSkinFoldersAgainForASkin" xml:space="preserve">
+    <value>Basahin muli ang mga skin folder para sa mga bagong idinagdag o na-edit na skin</value>
+  </data>
+  <data name="RearJack" xml:space="preserve">
+    <value>Jack sa likod</value>
+  </data>
+  <data name="RecalledWhenTheInterfaceConnectsDaemonStartA" xml:space="preserve">
+    <value>Ibinabalik kapag kumonekta ang interface: sa pagsisimula ng daemon, muling pagkabit o pag-on, o paglipat dito</value>
+  </data>
+  <data name="Record" xml:space="preserve">
+    <value>I-record</value>
+  </data>
+  <data name="RecordUpToTenSecondsOfYour" xml:space="preserve">
+    <value>Mag-record ng hanggang sampung segundo ng mikropono, saka i-loop ito sa kasalukuyang mga effect. Ayusin ang mga effect habang pinakikinggan ang parehong take.</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>I-refresh</value>
+  </data>
+  <data name="RefreshPresets" xml:space="preserve">
+    <value>I-refresh ang mga preset</value>
+  </data>
+  <data name="ReleaseDefaultControls" xml:space="preserve">
+    <value>Default ng release: OpenXLR control</value>
+  </data>
+  <data name="ReleaseDefaultEditor" xml:space="preserve">
+    <value>Default ng release: pinapayagan ang sariling editor</value>
+  </data>
+  <data name="ReleaseDefaultsCanChangeAsCompatibilityImprovesYour" xml:space="preserve">
+    <value>Maaaring magbago ang default ng release habang bumubuti ang compatibility. Uunahin ang iyong itinakda hanggang piliin mo ang Gamitin ang default ng release.</value>
+  </data>
+  <data name="ReleaseNotesArePlainTextOpenXLRNeverInstalls" xml:space="preserve">
+    <value>Karaniwang teksto ang release note. Hindi kailanman awtomatikong nag-i-install ng update ang OpenXLR.</value>
+  </data>
+  <data name="ReleaseNotesTruncated" xml:space="preserve">
+    <value>… Buksan ang GitHub para sa buong tala.</value>
+  </data>
+  <data name="Reload" xml:space="preserve">
+    <value>I-load muli</value>
+  </data>
+  <data name="RemoveAddedFolder" xml:space="preserve">
+    <value>Alisin ang idinagdag na folder</value>
+  </data>
+  <data name="RemoveFolderDetail" xml:space="preserve">
+    <value>Alisin ang {0} sa listahan ng scan at burahin ang mga VST3 at CLAP wrapper nito? Mananatili sa lugar ang orihinal na mga plugin file.</value>
+  </data>
+  <data name="RemoveFromAllChains" xml:space="preserve">
+    <value>Alisin sa lahat ng chain</value>
+  </data>
+  <data name="RemoveFromList" xml:space="preserve">
+    <value>Alisin sa listahan</value>
+  </data>
+  <data name="RemovePlugin" xml:space="preserve">
+    <value>Alisin ang plugin</value>
+  </data>
+  <data name="RemovePluginFolderTitle" xml:space="preserve">
+    <value>Alisin ang plugin folder?</value>
+  </data>
+  <data name="RemovePluginUsesDetail" xml:space="preserve">
+    <value>Alisin ang lahat ng {0} sa kasalukuyang input at mix chain, kasama ang mga naka-bypass na insert? Mananatili ang ayos ng ibang plugin. Maaaring saglit na maputol ang audio sa mga apektadong chain. Hindi babaguhin ang plugin file, exclusion at naka-save na profile.</value>
+  </data>
+  <data name="RemovePluginUsesTitle" xml:space="preserve">
+    <value>Alisin ang plugin sa lahat ng chain?</value>
+  </data>
+  <data name="RemoveUsesBeforeUninstalling" xml:space="preserve">
+    <value>Alisin muna ang plugin sa mga insert chain nito bago i-uninstall.</value>
+  </data>
+  <data name="RemovingFolder" xml:space="preserve">
+    <value>Inaalis ang folder…</value>
+  </data>
+  <data name="RemovingFolderAndScanning" xml:space="preserve">
+    <value>Inaalis ang folder at naghahanap ng mga plugin…</value>
+  </data>
+  <data name="RemovingPluginUses" xml:space="preserve">
+    <value>Inaalis ang plugin sa lahat ng chain…</value>
+  </data>
+  <data name="Rename" xml:space="preserve">
+    <value>Palitan ang pangalan</value>
+  </data>
+  <data name="RenameAppChannelHint" xml:space="preserve">
+    <value>Tuloy ang mga programang tumutugtog sa channel na ito; agad na ipinapakita ng playback device ang bagong pangalan.</value>
+  </data>
+  <data name="RenameCaptureChannelHint" xml:space="preserve">
+    <value>Hindi nagbabago ang capture source at routing ng channel.</value>
+  </data>
+  <data name="RenameChannelTitle" xml:space="preserve">
+    <value>Palitan ang pangalan ng channel na '{0}'</value>
+  </data>
+  <data name="RenameEffectHint" xml:space="preserve">
+    <value>Pangalan lang ang nagbabago. Tuloy ang plugin, mga setting nito at audio.</value>
+  </data>
+  <data name="RenameEffectTitle" xml:space="preserve">
+    <value>Palitan ang pangalan ng effect na '{0}'</value>
+  </data>
+  <data name="RenameMixHint" xml:space="preserve">
+    <value>Agad na ipinapakita ng OpenXLR ang bagong pangalan. Lumang pangalan pa rin ng device ang makikita sa ibang app hanggang mag-restart ang daemon, upang hindi maputol ang paggamit nila.</value>
+  </data>
+  <data name="RenameMixTitle" xml:space="preserve">
+    <value>Palitan ang pangalan ng mix na '{0}'</value>
+  </data>
+  <data name="ReplaceChain" xml:space="preserve">
+    <value>Palitan ang chain</value>
+  </data>
+  <data name="Rescan" xml:space="preserve">
+    <value>Maghanap muli</value>
+  </data>
+  <data name="RescanAllPlugins" xml:space="preserve">
+    <value>Hanapin muli ang lahat ng plugin</value>
+  </data>
+  <data name="RescanningAllPlugins" xml:space="preserve">
+    <value>Muling hinahanap ang lahat ng plugin…</value>
+  </data>
+  <data name="RescanRetriesTheseBundlesAChangedBundleOr" xml:space="preserve">
+    <value>Sinusubukang muli ng paghahanap ang mga bundle na ito. Awtomatikong sinusubukan ang nagbagong bundle o scanner.</value>
+  </data>
+  <data name="Reset" xml:space="preserve">
+    <value>I-reset</value>
+  </data>
+  <data name="ResetDeviceTitle" xml:space="preserve">
+    <value>Ibalik ang device sa default?</value>
+  </data>
+  <data name="ResetDeviceToDefaults" xml:space="preserve">
+    <value>Ibalik ang device sa default</value>
+  </data>
+  <data name="ResetSections" xml:space="preserve">
+    <value>I-reset ang mga seksyon</value>
+  </data>
+  <data name="ResetToBaselineDescription" xml:space="preserve">
+    <value>Isulat sa interface ang panimulang setting ng OpenXLR: gain na 30 dB sa dalawang input, naka-off ang lahat ng pagproseso at phantom power, kalahati ang headphone at aux level, at nasa PC ang buong crossfade. Hindi babaguhin ang output routing at naka-save na profile.</value>
+  </data>
+  <data name="ResetToFirmwareDescription" xml:space="preserve">
+    <value>Babalik ang interface sa panimulang setting ng firmware nito, at kakalimutan ang mga setting na ibinabalik ng OpenXLR kapag kumokonekta ito. Mananatili ang naka-save na profile.</value>
+  </data>
+  <data name="RestartDaemon" xml:space="preserve">
+    <value>I-restart ang daemon</value>
+  </data>
+  <data name="RestartFailed" xml:space="preserve">
+    <value>Pumalya ang restart. Tingnan ang log ng user service.</value>
+  </data>
+  <data name="RestartFailedManualDaemon" xml:space="preserve">
+    <value>Pumalya ang restart. Tingnan ang log ng user service; mano-manong i-restart ang daemon kung mano-mano itong sinimulan.</value>
+  </data>
+  <data name="RestartingDaemon" xml:space="preserve">
+    <value>Nire-restart ang daemon...</value>
+  </data>
+  <data name="RestartTheOpenXLRUserServiceAudioWillBe" xml:space="preserve">
+    <value>I-restart ang OpenXLR user service. Saglit na mapuputol ang audio.</value>
+  </data>
+  <data name="RightLevel" xml:space="preserve">
+    <value>Kanang level</value>
+  </data>
+  <data name="ROpenXLROnReddit" xml:space="preserve">
+    <value>r/OpenXLR sa Reddit</value>
+  </data>
+  <data name="RuleControlsReleaseDefault" xml:space="preserve">
+    <value>OpenXLR control · Default ng release</value>
+  </data>
+  <data name="RuleControlsYourOverride" xml:space="preserve">
+    <value>OpenXLR control · Iyong itinakda</value>
+  </data>
+  <data name="RuleEditorReleaseDefault" xml:space="preserve">
+    <value>Pinapayagan ang sariling editor · Default ng release</value>
+  </data>
+  <data name="RuleEditorYourOverride" xml:space="preserve">
+    <value>Pinapayagan ang sariling editor · Iyong itinakda</value>
+  </data>
+  <data name="RulesDisconnected" xml:space="preserve">
+    <value>Nadiskonekta sa daemon. Mare-refresh ang mga rule kapag kumonekta muli.</value>
+  </data>
+  <data name="RulesNoAnswer" xml:space="preserve">
+    <value>Hindi ibinalik ng daemon ang mga editor rule. I-update o i-restart ito kung kailangan.</value>
+  </data>
+  <data name="RulesPluginListUnavailable" xml:space="preserve">
+    <value>Hindi available ang listahan ng plugin. Maaari pa ring i-edit ang mga kasalukuyang rule.</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value>tumatakbo</value>
+  </data>
+  <data name="RunThisInsertInItsOwnProcessWhich" xml:space="preserve">
+    <value>Patakbuhin ang insert na ito sa sariling proseso upang mabuksan ang sarili nitong editor. Muling binubuo ng paglipat ang chain at saglit na pinuputol ang audio.</value>
+  </data>
+  <data name="RunThisPluginInItsOwnProcess" xml:space="preserve">
+    <value>Patakbuhin ang plugin sa sariling proseso</value>
+  </data>
+  <data name="RunThisPluginInItsOwnProcessWhich" xml:space="preserve">
+    <value>Patakbuhin ang plugin na ito sa sariling proseso upang mabuksan ang sarili nitong editor. Muling binubuo ng paglipat ang chain at saglit na pinuputol ang audio.</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>I-save</value>
+  </data>
+  <data name="SaveAndRecallCompleteScenesHardwareDSPPlus" xml:space="preserve">
+    <value>I-save at ibalik ang kumpletong eksena: hardware DSP at buong submix</value>
+  </data>
+  <data name="SaveCurrentChain" xml:space="preserve">
+    <value>I-save ang kasalukuyang chain</value>
+  </data>
+  <data name="SavedPresets" xml:space="preserve">
+    <value>Mga naka-save na preset</value>
+  </data>
+  <data name="SavedRestartDaemonToApply" xml:space="preserve">
+    <value>Na-save. I-restart ang daemon upang ilapat (systemctl --user restart openxlr-daemon).</value>
+  </data>
+  <data name="SaveGroup" xml:space="preserve">
+    <value>I-save ang grupo</value>
+  </data>
+  <data name="SaveLoadImportAndExportPresetsFor" xml:space="preserve">
+    <value>I-save, i-load, i-import at i-export ang mga preset ng plugin na ito</value>
+  </data>
+  <data name="SavePreset" xml:space="preserve">
+    <value>I-save ang preset</value>
+  </data>
+  <data name="Scanning" xml:space="preserve">
+    <value>Naghahanap…</value>
+  </data>
+  <data name="ScanningPlugins" xml:space="preserve">
+    <value>Naghahanap ng mga plugin…</value>
+  </data>
+  <data name="SearchByNameOrCategory" xml:space="preserve">
+    <value>Hanapin ayon sa pangalan o kategorya</value>
+  </data>
+  <data name="SearchDirectoryAdded" xml:space="preserve">
+    <value>{0}, idinagdag</value>
+  </data>
+  <data name="SearchDirectoryAddedMissing" xml:space="preserve">
+    <value>{0}, idinagdag, nawawala o hindi mabasa</value>
+  </data>
+  <data name="SearchDirectoryStandard" xml:space="preserve">
+    <value>{0}, karaniwan o mula sa environment</value>
+  </data>
+  <data name="SearchDirectoryStandardMissing" xml:space="preserve">
+    <value>{0}, karaniwan o mula sa environment, nawawala o hindi mabasa</value>
+  </data>
+  <data name="SecondComputer" xml:space="preserve">
+    <value>Pangalawang computer</value>
+  </data>
+  <data name="SectionFoldsNotSaved" xml:space="preserve">
+    <value>May bisa ang pagtiklop ng seksyon hanggang isara ang window, pero hindi ito ma-save: {0}</value>
+  </data>
+  <data name="SectionOrderNotSaved" xml:space="preserve">
+    <value>May bisa ang ayos ng seksyon hanggang isara ang window, pero hindi ito ma-save: {0}</value>
+  </data>
+  <data name="SelectAFolderToSeeItsPlugins" xml:space="preserve">
+    <value>Pumili ng folder upang makita ang mga plugin nito.</value>
+  </data>
+  <data name="SelectAPluginToManageIt" xml:space="preserve">
+    <value>Pumili ng plugin na pamamahalaan.</value>
+  </data>
+  <data name="SelectARule" xml:space="preserve">
+    <value>Pumili ng rule na babaguhin, o maghanap ng plugin sa ibaba upang magdagdag.</value>
+  </data>
+  <data name="SelectDevice" xml:space="preserve">
+    <value>pumili ng device</value>
+  </data>
+  <data name="SelectInterfaceTip" xml:space="preserve">
+    <value>{0}
+Piliin ang interface na kinokontrol ng OpenXLR</value>
+  </data>
+  <data name="SendThisMixToTheSecondComputerOn" xml:space="preserve">
+    <value>Ipadala ang mix na ito sa pangalawang computer sa USB Aux port. Saglit na mapuputol ang audio ng interface habang nagre-restart ang stream nito kapag pinagana.</value>
+  </data>
+  <data name="ServiceRestartedWaiting" xml:space="preserve">
+    <value>Nag-restart ang service. Hinihintay ang koneksyon sa daemon.</value>
+  </data>
+  <data name="ShortcutSessionClosed" xml:space="preserve">
+    <value>Isinara ang shortcut session. Buksan ang Mga desktop key at ilapat upang kumonekta muli.</value>
+  </data>
+  <data name="ShortcutSessionClosedWhileConfiguring" xml:space="preserve">
+    <value>Isinara ng desktop ang shortcut session habang itinatakda ito.</value>
+  </data>
+  <data name="ShowCLAPPlugins" xml:space="preserve">
+    <value>Ipakita ang mga CLAP plugin</value>
+  </data>
+  <data name="ShowHandlesToMoveSectionsChannelsAnd" xml:space="preserve">
+    <value>Ipakita ang mga handle upang ilipat ang mga seksyon, channel at mix sa pag-drag o arrow key</value>
+  </data>
+  <data name="ShowLV2Plugins" xml:space="preserve">
+    <value>Ipakita ang mga LV2 plugin</value>
+  </data>
+  <data name="ShowMixer" xml:space="preserve">
+    <value>Ipakita ang mixer</value>
+  </data>
+  <data name="ShowTheLiveAudioRoutingGraph" xml:space="preserve">
+    <value>Ipakita ang live audio routing graph</value>
+  </data>
+  <data name="ShowVST3Plugins" xml:space="preserve">
+    <value>Ipakita ang mga VST3 plugin</value>
+  </data>
+  <data name="SinglePluginImportsIn" xml:space="preserve">
+    <value>Naka-imbak sa {0} ang mga import ng iisang plugin.</value>
+  </data>
+  <data name="SizingStandard" xml:space="preserve">
+    <value>Karaniwan</value>
+  </data>
+  <data name="SizingTouch" xml:space="preserve">
+    <value>Touch</value>
+  </data>
+  <data name="Skin" xml:space="preserve">
+    <value>Skin</value>
+  </data>
+  <data name="SkinBuiltIn" xml:space="preserve">
+    <value>kasama sa app</value>
+  </data>
+  <data name="SkinByAuthor" xml:space="preserve">
+    <value>Ni {0}.</value>
+  </data>
+  <data name="SkinChoiceLabel" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="SkinChosenByLaunch" xml:space="preserve">
+    <value>Sinimulan ang run na ito na may {0}, kaya itinakda iyon sa paglunsad.</value>
+  </data>
+  <data name="SkinFolderHint" xml:space="preserve">
+    <value>Ang mga skin ay folder na may skin.json, na binabasa mula sa {0} at mga system data directory. Simulan ang OpenXLR gamit ang OPENXLR_SKIN=default upang ibalik ang kasamang hitsura nang hindi binubuksan ang window na ito.</value>
+  </data>
+  <data name="SkinInstalledForYou" xml:space="preserve">
+    <value>naka-install para sa iyo</value>
+  </data>
+  <data name="SkinInstalledOnSystem" xml:space="preserve">
+    <value>naka-install sa system na ito</value>
+  </data>
+  <data name="SkinNoteByAuthor" xml:space="preserve">
+    <value>{0} Ni {1}.</value>
+  </data>
+  <data name="SkippedBundlesAfterFailedScan" xml:space="preserve">
+    <value>Nilaktawan matapos pumalya ang scan: {0}</value>
+  </data>
+  <data name="SkippedBundlesChecking" xml:space="preserve">
+    <value>Mga nilaktawang bundle: sinusuri…</value>
+  </data>
+  <data name="SkippedBundlesUnavailable" xml:space="preserve">
+    <value>Mga nilaktawang bundle: hindi available</value>
+  </data>
+  <data name="SoftClipGuardTip" xml:space="preserve">
+    <value>Software ClipGuard: hard limiter pagkatapos ng ADC sa -3 dB; hindi nito maaayos ang clipping sa analog preamp o ADC</value>
+  </data>
+  <data name="SoftClipGuardUnavailable" xml:space="preserve">
+    <value>Hindi available ang software ClipGuard</value>
+  </data>
+  <data name="SoundCheck" xml:space="preserve">
+    <value>Sound Check</value>
+  </data>
+  <data name="SoundCheckEmpty" xml:space="preserve">
+    <value>Live na mikropono. Walang na-record na sample</value>
+  </data>
+  <data name="SoundCheckLooping" xml:space="preserve">
+    <value>Naka-loop ang {0:0.0} segundo sa aktibong chain</value>
+  </data>
+  <data name="SoundCheckReady" xml:space="preserve">
+    <value>Live na mikropono. Handa nang i-loop ang {0:0.0} segundo</value>
+  </data>
+  <data name="SoundCheckRecording" xml:space="preserve">
+    <value>Nagre-record: {0:0.0} / 10 segundo</value>
+  </data>
+  <data name="StartAudioInTheBackground" xml:space="preserve">
+    <value>Simulan ang audio sa background</value>
+  </data>
+  <data name="StartTheOpenXLRApp" xml:space="preserve">
+    <value>Simulan ang OpenXLR app</value>
+  </data>
+  <data name="StartupAppOnly" xml:space="preserve">
+    <value>Sisimula ang app sa pag-login. Hiwalay na simulan ang audio service upang magamit ito.</value>
+  </data>
+  <data name="StartupAudioAndApp" xml:space="preserve">
+    <value>Sisimula ang audio at app sa pag-login mo.</value>
+  </data>
+  <data name="StartupAudioOnly" xml:space="preserve">
+    <value>Sisimula ang audio sa pag-login nang walang app o tray icon.</value>
+  </data>
+  <data name="StartupNothing" xml:space="preserve">
+    <value>Hindi sisimulan sa pag-login ang audio at app.</value>
+  </data>
+  <data name="StatusDaemonNotRunning" xml:space="preserve">
+    <value>hindi tumatakbo ang daemon</value>
+  </data>
+  <data name="StatusNoDevice" xml:space="preserve">
+    <value>walang device</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>handa</value>
+  </data>
+  <data name="StereoPickerHint" xml:space="preserve">
+    <value>Mga plugin para sa stereo mix (dalawang input, dalawang output)</value>
+  </data>
+  <data name="StereoPluginsAvailable" xml:space="preserve">
+    <value>{0} stereo plugin ang available</value>
+  </data>
+  <data name="StereoPluginsProcessingThisMixBeforeItReaches" xml:space="preserve">
+    <value>Mga stereo plugin na nagpoproseso ng mix bago makarating sa mga output nito</value>
+  </data>
+  <data name="StopAndDiscard" xml:space="preserve">
+    <value>Ihinto at itapon</value>
+  </data>
+  <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
+    <value>Ihinto o isara ang window na ito upang ibalik ang mikropono at itapon ang sample. Nagtatapos din ang session sa pagpalit ng source, pagkawala ng device, pagburang channel, pag-restart ng daemon o matapos ang sampung minuto. Nananatili ang mga pagbabago mo sa effect.</value>
+  </data>
+  <data name="StoreA" xml:space="preserve">
+    <value>Itabi sa A</value>
+  </data>
+  <data name="StoreAFirst" xml:space="preserve">
+    <value>Itabi muna sa A.</value>
+  </data>
+  <data name="StoreB" xml:space="preserve">
+    <value>Itabi sa B</value>
+  </data>
+  <data name="StoreBFirst" xml:space="preserve">
+    <value>Itabi muna sa B.</value>
+  </data>
+  <data name="StoredA" xml:space="preserve">
+    <value>Naitabi sa A</value>
+  </data>
+  <data name="StoredB" xml:space="preserve">
+    <value>Naitabi sa B</value>
+  </data>
+  <data name="StoreTheCurrentSettingsAsAOr" xml:space="preserve">
+    <value>Itabi ang kasalukuyang setting sa A o B, saka pakinggan ang alinman. Itabi muli upang isama ang mga pagbabago. Mananatili ang dalawang slot hanggang mawalan ng koneksyon sa daemon ang window. Muling binubuo ng paglipat ang chain, na maaaring saglit na pumutol ng audio.</value>
+  </data>
+  <data name="StreamState" xml:space="preserve">
+    <value>Estado ng stream</value>
+  </data>
+  <data name="SUBMIXER" xml:space="preserve">
+    <value>SUBMIXER</value>
+  </data>
+  <data name="MixerWaitingForAudioServer" xml:space="preserve">
+    <value>Hinihintay ng mixer ang audio server, na hindi sumagot noong nagsimula ang daemon. Lilitaw ito rito kapag sumagot ang server, nang hindi kailangang mag-restart.</value>
+  </data>
+  <data name="SubmixerIsOffTurnItOnInOptions" xml:space="preserve">
+    <value>Naka-off ang submixer. Paganahin ito sa Mga opsyon para sa channel bawat app, mix, virtual microphone at insert; hardware lang ang kinokontrol ng OpenXLR.</value>
+  </data>
+  <data name="SUPPORT" xml:space="preserve">
+    <value>TULONG</value>
+  </data>
+  <data name="SwitchSystemOutput" xml:space="preserve">
+    <value>Ilipat ang system output: {0}</value>
+  </data>
+  <data name="SyncingAndRescanning" xml:space="preserve">
+    <value>Sini-sync at muling hinahanap…</value>
+  </data>
+  <data name="SyncWindowsPlugins" xml:space="preserve">
+    <value>I-sync ang mga Windows plugin</value>
+  </data>
+  <data name="SYSTEMDEFAULTDEVICES" xml:space="preserve">
+    <value>MGA DEFAULT DEVICE NG SYSTEM</value>
+  </data>
+  <data name="SystemLanguage" xml:space="preserve">
+    <value>Wika ng system</value>
+  </data>
+  <data name="ThanksToEveryoneWhoContributedCodeTestedOn" xml:space="preserve">
+    <value>Salamat sa lahat ng nag-ambag ng code, sumubok sa sariling interface o gumawa ng naunang pag-aaral ng protocol na pinagbabatayan ng proyektong ito.</value>
+  </data>
+  <data name="TheChannelThisViewShowsHiddenChannels" xml:space="preserve">
+    <value>Ang channel na ipinapakita ng view na ito. Maaari ring piliin dito ang mga nakatagong channel.</value>
+  </data>
+  <data name="TheDeviceMutesThisInputForAbout13" xml:space="preserve">
+    <value>Imu-mute ng device ang input na ito nang mga 13 segundo sa bawat pagbabago ng 48V at kusa itong ia-unmute</value>
+  </data>
+  <data name="TheMixThisViewShowsItsMaster" xml:space="preserve">
+    <value>Ang mix na ipinapakita ng view na ito: master nito at send ng channel papunta rito</value>
+  </data>
+  <data name="ThePluginOperation" xml:space="preserve">
+    <value>ang operasyon ng plugin</value>
+  </data>
+  <data name="TheRecordingStaysInMemoryItIsCapturedBeforeSoftwareEffectsButAfterTheI" xml:space="preserve">
+    <value>Nananatili sa memory ang recording. Kinukuha ito bago ang software effect, pero pagkatapos ng gain at hardware processing ng interface.</value>
+  </data>
+  <data name="TheRescan" xml:space="preserve">
+    <value>ang muling paghahanap</value>
+  </data>
+  <data name="TheScan" xml:space="preserve">
+    <value>ang paghahanap</value>
+  </data>
+  <data name="TheseFoldersAndExclusionsAreSharedWithOther" xml:space="preserve">
+    <value>Ginagamit din ng ibang app na may system yabridge ang mga folder at exclusion na ito.</value>
+  </data>
+  <data name="TheSync" xml:space="preserve">
+    <value>ang pag-sync</value>
+  </data>
+  <data name="MonitorOutputRoutingTip" xml:space="preserve">
+    <value>Lagyan ng tsek ang bawat output na gusto mong marinig, saka pumili ng isa o higit pang mix sa tabi ng bawat output. Pinagsasama ang mga mix sa dati nilang level. Magpanatili ng hindi bababa sa isang mix; alisin ang tsek ng output upang idiskonekta ito. Iisang feed ang Headphones 1/2 at Line Out ng Wave XLR Pro. Sinusunod ng USB Aux port nito ang hiwalay na Aux mix. Nasa Mga opsyon ang system default device para sa mga app.</value>
+  </data>
+  <data name="TimeNotRecorded" xml:space="preserve">
+    <value>hindi naitala ang oras</value>
+  </data>
+  <data name="TipEnforcingOpenXLRChatAsDefaultInputMakes" xml:space="preserve">
+    <value>Tip: kapag ipinilit ang OpenXLR Chat bilang default input, awtomatikong ire-record ng mga voice app ang Chat mix.</value>
+  </data>
+  <data name="TouchGivesTheMixerSButtonsFaders" xml:space="preserve">
+    <value>Pinapalaki ng Touch ang mga button, fader at listahan ng mixer para sa touch screen, kasama ang mas malalapad na channel strip.</value>
+  </data>
+  <data name="ToUSBAuxPort" xml:space="preserve">
+    <value>Papunta sa USB Aux port</value>
+  </data>
+  <data name="TrayOnly" xml:space="preserve">
+    <value>Tray lang</value>
+  </data>
+  <data name="UnknownError" xml:space="preserve">
+    <value>hindi kilalang error</value>
+  </data>
+  <data name="UpdateCheckUnavailable" xml:space="preserve">
+    <value>Hindi available ang pagtingin ng update</value>
+  </data>
+  <data name="UpdateCheckUnavailableDetail" xml:space="preserve">
+    <value>Hindi apektado ang audio. Subukan mamaya o mano-manong buksan ang release page.</value>
+  </data>
+  <data name="UPDATES" xml:space="preserve">
+    <value>MGA UPDATE</value>
+  </data>
+  <data name="UpdatesNotChecked" xml:space="preserve">
+    <value>Hindi pa nasusuri ang mga update</value>
+  </data>
+  <data name="UpToDate" xml:space="preserve">
+    <value>Napapanahon ang OpenXLR</value>
+  </data>
+  <data name="USBAuxIn" xml:space="preserve">
+    <value>USB Aux in</value>
+  </data>
+  <data name="UsbAuxPortKind" xml:space="preserve">
+    <value>USB Aux port</value>
+  </data>
+  <data name="UseOpenXLRControls" xml:space="preserve">
+    <value>Gamitin ang OpenXLR control</value>
+  </data>
+  <data name="UseOpenXLRControlsForPluginsWhoseOwnEditor" xml:space="preserve">
+    <value>Gamitin ang OpenXLR control para sa mga plugin na nag-freeze o hindi gumagana nang tama ang sariling editor. Walang pagbabago sa audio processing.</value>
+  </data>
+  <data name="UseReleaseDefault" xml:space="preserve">
+    <value>Gamitin ang default ng release</value>
+  </data>
+  <data name="ViewChanges" xml:space="preserve">
+    <value>Tingnan ang mga pagbabago</value>
+  </data>
+  <data name="ViewResult" xml:space="preserve">
+    <value>Tingnan ang resulta</value>
+  </data>
+  <data name="VirtualMicrophone" xml:space="preserve">
+    <value>Virtual microphone</value>
+  </data>
+  <data name="VoiceTune" xml:space="preserve">
+    <value>Voice Tune</value>
+  </data>
+  <data name="Volume" xml:space="preserve">
+    <value>Volume</value>
+  </data>
+  <data name="VTStrength" xml:space="preserve">
+    <value>Lakas ng VT</value>
+  </data>
+  <data name="WaitingForWineUninstaller" xml:space="preserve">
+    <value>Hinihintay ang Wine uninstaller…</value>
+  </data>
+  <data name="WhenClosing" xml:space="preserve">
+    <value>Sa pagsasara</value>
+  </data>
+  <data name="WhenSetOpenXLRHoldsTheseAsTheSystem" xml:space="preserve">
+    <value>Kapag itinakda, pinananatili ng OpenXLR ang mga ito bilang system default at ibinabalik ang anumang pagbabago sa labas, gaya ng ginagawa ng Wave Link. Gagamitin ang mga ito ng app na sumusunod sa system default. Piliin ang Sundan ang MONITOR output upang magamit ang volume key at desktop volume slider para sa napiling monitor device.</value>
+  </data>
+  <data name="ChooseOutputMixes" xml:space="preserve">
+    <value>Pumili ng isa o higit pang mix para sa output na ito.</value>
+  </data>
+  <data name="WINDOW" xml:space="preserve">
+    <value>WINDOW</value>
+  </data>
+  <data name="WindowsPluginsChecking" xml:space="preserve">
+    <value>Mga Windows plugin: hinahanap ang yabridge…</value>
+  </data>
+  <data name="WindowsPluginsNoAnswer" xml:space="preserve">
+    <value>Mga Windows plugin: walang sagot ang daemon.</value>
+  </data>
+  <data name="WindowsPluginsNothingInstalled" xml:space="preserve">
+    <value>Mga Windows plugin: hindi naka-install ang yabridge at Wine. I-install ang opsyonal na openxlr-yabridge package at Wine, saka mag-install dito ng Windows VST3 o CLAP plugin.</value>
+  </data>
+  <data name="WindowsPluginsNoWine" xml:space="preserve">
+    <value>Mga Windows plugin: naka-install ang {0}, pero wala ang Wine. I-install ang Wine mula sa iyong distribution.</value>
+  </data>
+  <data name="WindowsPluginsNoYabridge" xml:space="preserve">
+    <value>Mga Windows plugin: naka-install ang Wine, pero wala ang yabridge. I-install ang opsyonal na openxlr-yabridge package, saka mag-install dito ng Windows VST3 o CLAP plugin.</value>
+  </data>
+  <data name="WindowsPluginsReady" xml:space="preserve">
+    <value>Mga Windows plugin: naka-install ang {0} at Wine, {1}. Patakbuhin ang installer ng plugin sa Wine, saka i-install ang folder na nilikha nito.</value>
+  </data>
+  <data name="WindowsPluginWrappersIn" xml:space="preserve">
+    <value>Nasa {0} ang mga Windows plugin wrapper ng OpenXLR.</value>
+  </data>
+  <data name="WindowsVST3AndCLAPPlugins" xml:space="preserve">
+    <value>Mga Windows VST3 at CLAP plugin</value>
+  </data>
+  <data name="WineTraceChecking" xml:space="preserve">
+    <value>Wine trace: sinusuri ang daemon…</value>
+  </data>
+  <data name="WineTraceUnavailable" xml:space="preserve">
+    <value>Hindi available ang Wine trace. Dapat nakakonekta ang daemon at suportado ang switch na ito.</value>
+  </data>
+  <data name="WineTraceUpdating" xml:space="preserve">
+    <value>Ina-update ang Wine trace…</value>
+  </data>
+  <data name="WineUninstaller" xml:space="preserve">
+    <value>Wine uninstaller</value>
+  </data>
+  <data name="WineUninstallerClosed" xml:space="preserve">
+    <value>Isinara ang Wine uninstaller.</value>
+  </data>
+  <data name="WineUninstallerExited" xml:space="preserve">
+    <value>Natapos ang Wine uninstaller na may code na {0}.</value>
+  </data>
+  <data name="XLR1Gain" xml:space="preserve">
+    <value>XLR 1 gain</value>
+  </data>
+  <data name="Xlr1Jack" xml:space="preserve">
+    <value>XLR 1 jack</value>
+  </data>
+  <data name="XLR2Gain" xml:space="preserve">
+    <value>XLR 2 gain</value>
+  </data>
+  <data name="Xlr2Jack" xml:space="preserve">
+    <value>XLR 2 jack</value>
+  </data>
+  <data name="StartupDoctorHint" xml:space="preserve">
+    <value>Patakbuhin ang openxlr doctor para sa apektadong path at utos ng pag-aayos.</value>
+  </data>
+  <data name="ArrangeSwapHint" xml:space="preserve">
+    <value>I-drag ang handle ng seksyon sa ibang seksyon upang magpalit ng puwesto, o handle ng tile sa ibang tile. Ginagalaw ng arrow key ang nakapokus na handle, at ipinapakita ng Enter sa handle ng seksyon ang mga seksyong puwedeng kapalit. Kinakansela ng Escape ang pag-drag.</value>
+  </data>
+  <data name="ArrangementDropped" xml:space="preserve">
+    <value>Hindi na kasya sa layout ng skin ang ayos na ginawa mo, kaya gagamitin ang sariling ayos ng skin.</value>
+  </data>
+  <data name="HiddenSections" xml:space="preserve">
+    <value>Mga nakatagong seksyon</value>
+  </data>
+  <data name="ShowSection" xml:space="preserve">
+    <value>Ipakita ang {0}</value>
+  </data>
+  <data name="SwapWithSection" xml:space="preserve">
+    <value>Magpalit ng puwesto sa {0}</value>
+  </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>Iba pang aksyon</value>
+  </data>
+  <data name="BankPickerName" xml:space="preserve">
+    <value>Mix na ipinapakita sa bank {0}</value>
+  </data>
+  <data name="BankPickerTip" xml:space="preserve">
+    <value>Ang mix na ipinapakita ng bank na ito. Nakalista ang lahat ng mix; kapag pinili ang ipinapakita ng ibang bank, magpapalitan ang dalawa. Naka-save para sa skin na ito ang pagpili at hindi binabago ang ayos ng mixer.</value>
+  </data>
+  <data name="BankSendName" xml:space="preserve">
+    <value>Send ng {0} sa {1}</value>
+  </data>
+  <data name="BankMuteName" xml:space="preserve">
+    <value>I-mute ang {0} sa {1}</value>
+  </data>
+  <data name="ChannelLevelLeft" xml:space="preserve">
+    <value>Level ng channel {0}, kaliwa</value>
+  </data>
+  <data name="ChannelLevelRight" xml:space="preserve">
+    <value>Level ng channel {0}, kanan</value>
+  </data>
+  <data name="ChannelMeterTip" xml:space="preserve">
+    <value>Sariling level ng channel, bago ang send nito sa mix na ito</value>
+  </data>
+  <data name="ChannelVolumeName" xml:space="preserve">
+    <value>Volume ng {0}</value>
+  </data>
+  <data name="ChannelVolumeTip" xml:space="preserve">
+    <value>Sariling volume ng channel. Sabay nitong inaayos ang lahat ng send ng channel; pinananatili ng bawat send ang sariling level at mute.</value>
+  </data>
+  <data name="ChannelVolumeDirectTip" xml:space="preserve">
+    <value>Sariling volume ng channel. Binabago nito ang bawat mix na pinapadalhan ng channel. Sa zero-latency path ng interface mo naririnig ang mikroponong ito sa headphone, at hindi iyon binabago ng volume.</value>
+  </data>
+  <data name="ChannelVolumeMixesOnly" xml:space="preserve">
+    <value>Sa mga mix lang ang volume, hindi sa direct monitor</value>
+  </data>
+  <data name="MixFaderName" xml:space="preserve">
+    <value>Master level ng {0}</value>
+  </data>
+  <data name="MixMuteName" xml:space="preserve">
+    <value>I-mute ang {0}</value>
+  </data>
+  <data name="BankChoiceNotSaved" xml:space="preserve">
+    <value>May bisa ang napiling bank hanggang isara ang window, pero hindi ito ma-save: {0}</value>
+  </data>
+  <data name="ApplicationChannelName" xml:space="preserve">
+    <value>Channel para sa {0}</value>
+  </data>
+  <data name="DockingNotSaved" xml:space="preserve">
+    <value>May bisa ang puwesto ng submixer hanggang isara ang window, pero hindi ito ma-save: {0}</value>
+  </data>
+  <data name="SkinLayoutClassic" xml:space="preserve">
+    <value>Pinananatili ng skin na ito ang karaniwang ayos ng window.</value>
+  </data>
+  <data name="SkinLayoutSummary" xml:space="preserve">
+    <value>Ganito inaayos ng skin ang window: {0}. Hiwalay na sine-save bawat skin ang pag-aayos at pagpili ng bank.</value>
+  </data>
+  <data name="LayoutPartColumn" xml:space="preserve">
+    <value>mga seksyong patayo ang ayos</value>
+  </data>
+  <data name="LayoutPartRow" xml:space="preserve">
+    <value>mga seksyong magkakatabi</value>
+  </data>
+  <data name="LayoutPartGrid" xml:space="preserve">
+    <value>isang grid</value>
+  </data>
+  <data name="LayoutPartDock" xml:space="preserve">
+    <value>isang dock</value>
+  </data>
+  <data name="LayoutPartInputRack" xml:space="preserve">
+    <value>isang input rack</value>
+  </data>
+  <data name="LayoutPartOneBank" xml:space="preserve">
+    <value>isang mix bank</value>
+  </data>
+  <data name="LayoutPartBanks" xml:space="preserve">
+    <value>{0} mix bank</value>
+  </data>
+  <data name="LayoutPartOutputToolbar" xml:space="preserve">
+    <value>isang monitor toolbar</value>
+  </data>
+  <data name="LayoutPartApplicationList" xml:space="preserve">
+    <value>isang listahan ng app</value>
+  </data>
+  <data name="LayoutPartApplicationColumns" xml:space="preserve">
+    <value>mga column ng app</value>
+  </data>
+  <data name="LayoutPartDetached" xml:space="preserve">
+    <value>submixer sa sariling window</value>
+  </data>
+  <data name="MixerDockingDocked" xml:space="preserve">
+    <value>Submixer: nasa pangunahing window, kung saan mo huling inilagay. Hindi ito ililipat ng skin.</value>
+  </data>
+  <data name="MixerDockingDetached" xml:space="preserve">
+    <value>Submixer: nakahiwalay, kung saan mo huling inilagay. Hindi ito ililipat ng skin.</value>
+  </data>
+  <data name="MixerDockingSkinDetached" xml:space="preserve">
+    <value>Submixer: wala ka pang piniling puwesto, kaya ihihiwalay ito ng skin na ito nang isang beses kapag inilapat.</value>
+  </data>
+  <data name="MixerDockingNone" xml:space="preserve">
+    <value>Submixer: nasa pangunahing window. Sine-save ang pagpili mo sa paghiwalay o pagbalik nito sa pangunahing window.</value>
+  </data>
+  <data name="ResetSkinArrangement" xml:space="preserve">
+    <value>I-reset ang ayos ng skin na ito</value>
+  </data>
+  <data name="ResetSkinArrangementHint" xml:space="preserve">
+    <value>Ibalik ang mga seksyon sa puwesto ng skin, simulan ang mga bank sa default mix, at kalimutan ang puwesto ng submixer</value>
+  </data>
+  <data name="LayoutPartMatrix" xml:space="preserve">
+    <value>isang mix matrix</value>
+  </data>
+  <data name="MatrixOneOutput" xml:space="preserve">
+    <value>1 output</value>
+  </data>
+  <data name="MatrixOutputs" xml:space="preserve">
+    <value>{0} output</value>
+  </data>
+  <data name="MatrixNoOutput" xml:space="preserve">
+    <value>Walang output</value>
+  </data>
+  <data name="MatrixEffects" xml:space="preserve">
+    <value>FX</value>
+  </data>
+  <data name="MatrixProcessing" xml:space="preserve">
+    <value>Mic</value>
+  </data>
+  <data name="MatrixProcessingName" xml:space="preserve">
+    <value>Mga switch ng mikropono ng {0}</value>
+  </data>
+  <data name="MatrixProcessingPhantomName" xml:space="preserve">
+    <value>Mga switch ng mikropono ng {0}, naka-on ang phantom power</value>
+  </data>
+  <data name="MatrixProcessingTip" xml:space="preserve">
+    <value>Mga switch ng mikropono: low cut, expander, Voice Tune, phantom power, ClipGuard at compressor, kung mayroon sa interface. Nakailaw kapag may naka-on. Pula ang ilaw habang naka-on ang phantom power.</value>
+  </data>
+  <data name="IconDefaultNamed" xml:space="preserve">
+    <value>Default ({0})</value>
+  </data>
+  <data name="IconNone" xml:space="preserve">
+    <value>Wala</value>
+  </data>
+  <data name="IconTextHeading" xml:space="preserve">
+    <value>Teksto</value>
+  </data>
+  <data name="NewChannelIcon" xml:space="preserve">
+    <value>Icon ng bagong channel</value>
+  </data>
+  <data name="NewMixIcon" xml:space="preserve">
+    <value>Icon ng bagong mix</value>
+  </data>
+  <data name="HeadphoneOutputs" xml:space="preserve">
+    <value>Mga headphone output</value>
+  </data>
+  <data name="Phones1Appearance" xml:space="preserve">
+    <value>Icon at kulay ng Phones 1</value>
+  </data>
+  <data name="Phones2Appearance" xml:space="preserve">
+    <value>Icon at kulay ng Phones 2</value>
+  </data>
+  <data name="InputBindings" xml:space="preserve">
+    <value>Mga input binding</value>
+  </data>
+  <data name="InputBindingsHint" xml:space="preserve">
+    <value>Ang source ng XLR 1 at XLR 2. Kinokontrol pa rin ang interface kahit iba ang source ng mga strip nito, at sinusundan ng mga control nito ang channel na may mikropono nito.</value>
+  </data>
+  <data name="InputBindingChipName" xml:space="preserve">
+    <value>Input ng {0}: {1}</value>
+  </data>
+  <data name="InputBindingTitle" xml:space="preserve">
+    <value>Input para sa {0}</value>
+  </data>
+  <data name="InputBindingHint" xml:space="preserve">
+    <value>Piliin ang source ng {0}: jack ng interface o isang port ng ibang capture source. Kinokontrol pa rin ang interface, at lilipat ang mga control nito sa channel na may mikropono nito. Naka-mute muna ang {0} sa mga monitor mix pagkatapos ng pagbabago. Puwede ring source ang mikropono ng ibang Elgato interface, kasama ang mga control nito sa strip habang kinokontrol ng OpenXLR.</value>
+  </data>
+  <data name="InputBindingInterfaceJack" xml:space="preserve">
+    <value>Jack ng interface (XLR {0})</value>
+  </data>
+  <data name="InputBindingSourceMissing" xml:space="preserve">
+    <value>{0} (hindi nakakonekta)</value>
+  </data>
+  <data name="InputBindingSourceName" xml:space="preserve">
+    <value>Source para sa {0}</value>
+  </data>
+  <data name="InputBindingSourcePort" xml:space="preserve">
+    <value>{0}, port {1}</value>
+  </data>
+  <data name="InputBindingPort" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="InputBindingPortName" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="KeepInterfaceMicrophone" xml:space="preserve">
+    <value>Panatilihing capture channel ang mikropono ng interface</value>
+  </data>
+  <data name="InputBindingBluetoothHint" xml:space="preserve">
+    <value>Lilipat ang Bluetooth headset sa headset profile habang source ito ng strip, kaya bababa ang kalidad ng playback nito hanggang pumili ng ibang source ang strip.</value>
+  </data>
+  <data name="InputBindingKeepFailed" xml:space="preserve">
+    <value>Naka-bind ang {0}, pero hindi maidagdag ang capture channel para sa mikropono ng interface: {1}</value>
+  </data>
+  <data name="AlsoDriveThisInterface" xml:space="preserve">
+    <value>Kontrolin din ang interface na ito</value>
+  </data>
+  <data name="InputBindingDriveFailed" xml:space="preserve">
+    <value>Naka-bind ang {0}, pero hindi makontrol ang {1} bilang karagdagang interface: {2}</value>
+  </data>
+  <data name="UnitGainName" xml:space="preserve">
+    <value>Gain ng {0}</value>
+  </data>
+  <data name="UnitGainInput2Name" xml:space="preserve">
+    <value>Gain ng {0}, input 2</value>
+  </data>
+  <data name="UnitInputGain" xml:space="preserve">
+    <value>Gain</value>
+  </data>
+  <data name="TheInterface" xml:space="preserve">
+    <value>Interface</value>
+  </data>
+  <data name="UnitInputPlaysOn" xml:space="preserve">
+    <value>{0}, input {1}: tumutugtog sa {2}</value>
+  </data>
+  <data name="UnitInputNotInMixer" xml:space="preserve">
+    <value>{0}, input {1}: wala sa mixer</value>
+  </data>
+  <data name="CrossfadeMicPlaysOn" xml:space="preserve">
+    <value>Hinahalo ang sariling mikropono ng interface, na tumutugtog sa {0}.</value>
+  </data>
+  <data name="CrossfadeMicNotInMixer" xml:space="preserve">
+    <value>Hinahalo ang sariling mikropono ng interface, na wala sa mixer.</value>
+  </data>
+  <data name="NoInterface" xml:space="preserve">
+    <value>Walang interface.</value>
+  </data>
+  <data name="StripInputLabel" xml:space="preserve">
+    <value>Input ng {0}</value>
+  </data>
+  <data name="ChooseMicrophoneForStrip" xml:space="preserve">
+    <value>Pumili ng mikropono para sa {0}</value>
+  </data>
+  <data name="UnitCapsule" xml:space="preserve">
+    <value>Built-in na mikropono</value>
+  </data>
+  <data name="InputBindingUnitCapsule" xml:space="preserve">
+    <value>Built-in na mikropono ({0})</value>
+  </data>
+  <data name="Mic1Gain" xml:space="preserve">
+    <value>Mic 1 gain</value>
+  </data>
+  <data name="FlatpakBackgroundReason" xml:space="preserve">
+    <value>Panatilihing tumatakbo ang audio mixer at ibalik ito sa pag-login.</value>
+  </data>
+  <data name="FlatpakBackgroundRefused" xml:space="preserve">
+    <value>Hindi makumpirma sa desktop ang hiniling na startup setting sa pag-login.</value>
+  </data>
+  <data name="FlatpakSetup" xml:space="preserve">
+    <value>Pinananatili ng Flatpak ang audio habang nasa tray ang OpenXLR. Pinapatigil din ng paglabas sa app ang audio daemon nito. Huwag sabay na patakbuhin ang daemon mula sa system package.
+
+Kailangan ng USB control ang udev rule sa host. Patakbuhin sa labas ng sandbox:
+sudo install -m 644 "$(flatpak info --show-location io.github.emaspa.openxlr)/files/share/openxlr/70-openxlr.rules" /etc/udev/rules.d/70-openxlr.rules
+sudo udevadm control --reload-rules
+Pagkatapos, ikonekta muli ang interface. Magkakabisa sa susunod na pag-login ang mga user WirePlumber rule.
+
+Mano-manong host setup pa rin ang Wave XLR Pro UCM profile. I-install ang mga LV2 plugin mula sa LinuxAudio extension ng Flathub; hindi kasama ang host plugin at Windows bridge. Tingnan ang docs/flatpak.md para sa setup at limitasyon.</value>
+  </data>
+  <data name="FlatpakBackgroundUnavailable" xml:space="preserve">
+    <value>Hindi pinayagan ng desktop ang background activity. Maaaring huminto ang OpenXLR kapag nakatago.</value>
+  </data>
+  <data name="Eq" xml:space="preserve">
+    <value>EQ</value>
+  </data>
+  <data name="EqButtonTip" xml:space="preserve">
+    <value>Four-band EQ ng mikropono, sa simula ng input bago ang low cut, ClipGuard at mga plugin. Nakailaw kapag naka-on, pula kapag hindi gumagana. Binubuksan ang editor.</value>
+  </data>
+  <data name="EqButtonTipCapture" xml:space="preserve">
+    <value>Four-band EQ ng mikropono, sa computer na ito sa simula ng input bago ang mga plugin. Nakailaw kapag naka-on, pula kapag hindi gumagana. Binubuksan ang editor.</value>
+  </data>
+  <data name="EqButtonNameOn" xml:space="preserve">
+    <value>EQ ng {0}, on</value>
+  </data>
+  <data name="EqButtonNameOff" xml:space="preserve">
+    <value>EQ ng {0}, off</value>
+  </data>
+  <data name="EqButtonNameUnavailable" xml:space="preserve">
+    <value>EQ ng {0}, hindi available</value>
+  </data>
+  <data name="EqWindowTitle" xml:space="preserve">
+    <value>EQ ng {0}</value>
+  </data>
+  <data name="EqSwitch" xml:space="preserve">
+    <value>EQ on</value>
+  </data>
+  <data name="EqSwitchTip" xml:space="preserve">
+    <value>I-on o i-off ang EQ. Kapag off, mananatili ang mga halaga ng band para sa susunod.</value>
+  </data>
+  <data name="EqCompare" xml:space="preserve">
+    <value>Ihambing</value>
+  </data>
+  <data name="EqCompareTip" xml:space="preserve">
+    <value>Pakinggan ang mikropono nang walang EQ habang naka-on ito, at may EQ muli kapag naka-off ito. Nananatiling naka-on ang EQ.</value>
+  </data>
+  <data name="EqCopy" xml:space="preserve">
+    <value>Kopyahin</value>
+  </data>
+  <data name="EqCopyTip" xml:space="preserve">
+    <value>Kopyahin ang EQ na ito, switch at apat na band nito, upang i-paste sa ibang mikropono.</value>
+  </data>
+  <data name="EqPaste" xml:space="preserve">
+    <value>I-paste</value>
+  </data>
+  <data name="EqPasteTip" xml:space="preserve">
+    <value>Palitan ang EQ na ito ng nakopya.</value>
+  </data>
+  <data name="EqReset" xml:space="preserve">
+    <value>I-reset</value>
+  </data>
+  <data name="EqResetTip" xml:space="preserve">
+    <value>Ibalik ang apat na band sa panimulang halaga. Hindi magbabago ang on/off ng EQ.</value>
+  </data>
+  <data name="EqResetConfirm" xml:space="preserve">
+    <value>Ibalik ang apat na band ng EQ ng {0} sa panimulang halaga? Hindi magbabago ang on/off ng EQ.</value>
+  </data>
+  <data name="EqColumnOn" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="EqColumnType" xml:space="preserve">
+    <value>Uri</value>
+  </data>
+  <data name="EqColumnFrequency" xml:space="preserve">
+    <value>Frequency (Hz)</value>
+  </data>
+  <data name="EqColumnGain" xml:space="preserve">
+    <value>Gain (dB)</value>
+  </data>
+  <data name="EqColumnQ" xml:space="preserve">
+    <value>Q</value>
+  </data>
+  <data name="EqGraphName" xml:space="preserve">
+    <value>EQ response</value>
+  </data>
+  <data name="EqUnavailable" xml:space="preserve">
+    <value>Hindi makatakbo ang EQ.</value>
+  </data>
+  <data name="EqStatusOff" xml:space="preserve">
+    <value>Naka-off. Naka-save ang mga pagbabago at ilalapat kapag pinagana ang EQ.</value>
+  </data>
+  <data name="EqStatusComparing" xml:space="preserve">
+    <value>Naka-bypass para ihambing. Babalik ang EQ kapag pinatay ang Ihambing.</value>
+  </data>
+  <data name="EqStatusSoftware" xml:space="preserve">
+    <value>Naka-on, tumatakbo sa computer na ito sa simula ng input, bago ang low cut, ClipGuard at mga plugin.</value>
+  </data>
+  <data name="EqStatusSoftwareCapture" xml:space="preserve">
+    <value>Naka-on, tumatakbo sa computer na ito sa simula ng input, bago ang mga plugin.</value>
+  </data>
+  <data name="EqStatusDevice" xml:space="preserve">
+    <value>Naka-on, tumatakbo sa interface bago ang USB, mga plugin at lahat ng iba pa sa computer na ito.</value>
+  </data>
+  <data name="EqHardwareBadge" xml:space="preserve">
+    <value>Hardware processing</value>
+  </data>
+  <data name="EqHardwareBadgeTip" xml:space="preserve">
+    <value>Tumatakbo ang EQ na ito sa sariling processor ng {0}, bago ang USB.</value>
+  </data>
+  <data name="EqHardwareBadgeTipUnnamed" xml:space="preserve">
+    <value>Tumatakbo ang EQ na ito sa sariling processor ng interface, bago ang USB.</value>
+  </data>
+  <data name="EqTheInterface" xml:space="preserve">
+    <value>interface</value>
+  </data>
+  <data name="EqStatusDeviceNamed" xml:space="preserve">
+    <value>Naka-on, tumatakbo sa sariling processor ng {0} bago ang USB, mga plugin at lahat ng iba pa sa computer na ito.</value>
+  </data>
+  <data name="EqDeviceFirmwareOld" xml:space="preserve">
+    <value>Tumatakbo sa software: firmware {1} ang {0} na ito, at sa firmware {2} pa lang nito kayang patakbuhin ang EQ. Nasa Wave Link sa Windows o macOS ang updater ng Elgato.</value>
+  </data>
+  <data name="EqDeviceFirmwareUnknown" xml:space="preserve">
+    <value>Tumatakbo sa software: hindi mabasa ang bersyon ng firmware ng {0}, at mula lang sa firmware {1} kayang patakbuhin ng unit ang EQ.</value>
+  </data>
+  <data name="EqDeviceUnsupported" xml:space="preserve">
+    <value>Tumatakbo sa software: may EQ setting ang {0} na hindi kilala ng OpenXLR. Kolektahin ang diagnostics para sa device report.</value>
+  </data>
+  <data name="EqDeviceFailed" xml:space="preserve">
+    <value>Tumatakbo sa software: hindi pinanatili ng {0} ang EQ na isinulat dito. I-off at i-on ang EQ upang subukang muli ang unit.</value>
+  </data>
+  <data name="EqDeviceBySoftware" xml:space="preserve">
+    <value>Tumatakbo sa software ayon sa iyong pinili; kaya ng {0} na patakbuhin ito sa sariling processor.</value>
+  </data>
+  <data name="EqButtonTipDevice" xml:space="preserve">
+    <value>Four-band EQ ng mikropono, tumatakbo sa sariling processor ng {0} bago ang USB. Nakailaw kapag naka-on. Binubuksan ang editor.</value>
+  </data>
+  <data name="EqStatusStarting" xml:space="preserve">
+    <value>Naka-on, nagsisimula.</value>
+  </data>
+  <data name="EqProcessingLabel" xml:space="preserve">
+    <value>Saan tumatakbo ang EQ</value>
+  </data>
+  <data name="EqProcessingDevice" xml:space="preserve">
+    <value>Sa unit</value>
+  </data>
+  <data name="EqProcessingSoftware" xml:space="preserve">
+    <value>Sa software</value>
+  </data>
+  <data name="EqProcessingDeviceTip" xml:space="preserve">
+    <value>Patakbuhin ang EQ sa sariling processor ng {0}, bago ang USB. Naririnig ito ng bawat channel na kumukuha ng audio ng unit, at pinananatili ito ng unit kahit huminto ang OpenXLR.</value>
+  </data>
+  <data name="EqProcessingSoftwareTip" xml:space="preserve">
+    <value>Patakbuhin ang EQ sa computer na ito, sa simula ng input. Naka-off ang sariling EQ ng unit at nananatili ang mga band nito.</value>
+  </data>
+  <data name="EqBandValues" xml:space="preserve">
+    <value>{0}, {1}, {2}, Q {3}</value>
+  </data>
+  <data name="EqBandValuesNoGain" xml:space="preserve">
+    <value>{0}, {1}, Q {2}</value>
+  </data>
+  <data name="EqBandName" xml:space="preserve">
+    <value>Band {0}, {1}</value>
+  </data>
+  <data name="EqBandNameOff" xml:space="preserve">
+    <value>Band {0}, off, {1}</value>
+  </data>
+  <data name="EqHandleTip" xml:space="preserve">
+    <value>I-drag upang baguhin ang frequency at gain. Mag-scroll para sa Q, mag-double-click upang i-toggle ang band, mag-right-click upang piliin ang uri.</value>
+  </data>
+  <data name="EqHandleTipNoGain" xml:space="preserve">
+    <value>I-drag pahalang para sa frequency at pataas o pababa para sa Q. Mag-scroll para sa Q, mag-double-click upang i-toggle ang band, mag-right-click upang piliin ang uri.</value>
+  </data>
+  <data name="EqBandSwitchName" xml:space="preserve">
+    <value>Band {0} on</value>
+  </data>
+  <data name="EqBandTypeName" xml:space="preserve">
+    <value>Uri ng band {0}</value>
+  </data>
+  <data name="EqBandFrequencyName" xml:space="preserve">
+    <value>Frequency ng band {0} sa hertz</value>
+  </data>
+  <data name="EqBandGainName" xml:space="preserve">
+    <value>Gain ng band {0} sa decibel</value>
+  </data>
+  <data name="EqBandQName" xml:space="preserve">
+    <value>Q ng band {0}</value>
+  </data>
+  <data name="EqBandOn" xml:space="preserve">
+    <value>Band on</value>
+  </data>
+  <data name="EqReadout" xml:space="preserve">
+    <value>Band {0}: {1}, {2}, Q {3}</value>
+  </data>
+  <data name="EqReadoutNoGain" xml:space="preserve">
+    <value>Band {0}: {1}, Q {2}</value>
+  </data>
+  <data name="EqHertz" xml:space="preserve">
+    <value>{0} Hz</value>
+  </data>
+  <data name="EqKilohertz" xml:space="preserve">
+    <value>{0} kHz</value>
+  </data>
+  <data name="EqDecibels" xml:space="preserve">
+    <value>{0} dB</value>
+  </data>
+  <data name="EqTypeLowCut" xml:space="preserve">
+    <value>High pass</value>
+  </data>
+  <data name="EqTypeLowShelf" xml:space="preserve">
+    <value>Low shelf</value>
+  </data>
+  <data name="EqTypePeak" xml:space="preserve">
+    <value>Bell</value>
+  </data>
+  <data name="EqTypeNotch" xml:space="preserve">
+    <value>Notch</value>
+  </data>
+  <data name="EqTypeHighShelf" xml:space="preserve">
+    <value>High shelf</value>
+  </data>
+  <data name="EqTypeHighCut" xml:space="preserve">
+    <value>Low pass</value>
+  </data>
+  <data name="EqTypeLowCutTip" xml:space="preserve">
+    <value>Inaalis ang mas mababa sa frequency nito. Hinuhubog ng Q ang kurba. Walang epekto ang gain dito at pinananatili ang halaga nito.</value>
+  </data>
+  <data name="EqTypeLowShelfTip" xml:space="preserve">
+    <value>Pinapalakas o pinahihina ang lahat ng mas mababa sa frequency nito ayon sa gain.</value>
+  </data>
+  <data name="EqTypePeakTip" xml:space="preserve">
+    <value>Pinapalakas o pinahihina ang tunog malapit sa frequency nito ayon sa gain, sa lapad na itinakda ng Q. Tinatawag itong Band Pass ng ilang editor.</value>
+  </data>
+  <data name="EqTypeNotchTip" xml:space="preserve">
+    <value>Inaalis ang makitid na band sa frequency nito. Itinatakda ng Q kung gaano kakitid. Walang epekto ang gain dito at pinananatili ang halaga nito.</value>
+  </data>
+  <data name="EqTypeHighShelfTip" xml:space="preserve">
+    <value>Pinapalakas o pinahihina ang lahat ng mas mataas sa frequency nito ayon sa gain.</value>
+  </data>
+  <data name="EqTypeHighCutTip" xml:space="preserve">
+    <value>Inaalis ang mas mataas sa frequency nito. Hinuhubog ng Q ang kurba. Walang epekto ang gain dito at pinananatili ang halaga nito.</value>
+  </data>
+  <data name="EqRegionRumble" xml:space="preserve">
+    <value>Dagundong</value>
+  </data>
+  <data name="EqRegionBody" xml:space="preserve">
+    <value>Laman</value>
+  </data>
+  <data name="EqRegionRoom" xml:space="preserve">
+    <value>Kuwarto</value>
+  </data>
+  <data name="EqRegionPresence" xml:space="preserve">
+    <value>Presence</value>
+  </data>
+  <data name="EqRegionSibilance" xml:space="preserve">
+    <value>Sibilance</value>
+  </data>
+  <data name="EqRegionAir" xml:space="preserve">
+    <value>Air</value>
+  </data>
+  <data name="EqRegionRumbleTip" xml:space="preserve">
+    <value>20 hanggang 80 Hz: kalabog sa mesa, trapiko at ingay ng stand, mas nararamdaman kaysa naririnig sa boses. Inaalis ito ng high pass dito.</value>
+  </data>
+  <data name="EqRegionBodyTip" xml:space="preserve">
+    <value>80 hanggang 300 Hz: bigat at init ng boses. Kapag sobra, dagundong; kapag kulang, manipis.</value>
+  </data>
+  <data name="EqRegionRoomTip" xml:space="preserve">
+    <value>300 Hz hanggang 1.4 kHz: kulob na tunog at tunog ng kuwarto. Madalas nililinaw ng bahagyang paghina rito ang boses.</value>
+  </data>
+  <data name="EqRegionPresenceTip" xml:space="preserve">
+    <value>1.4 hanggang 5 kHz: linaw at pagiging malapit ng boses. Bahagyang pagpapalakas ang tumutulong luminaw ang mga salita.</value>
+  </data>
+  <data name="EqRegionSibilanceTip" xml:space="preserve">
+    <value>5 hanggang 12 kHz: matatalas na tunog ng s at t. Pinapahina ito ng makitid na cut.</value>
+  </data>
+  <data name="EqRegionAirTip" xml:space="preserve">
+    <value>12 hanggang 20 kHz: hininga at bukas na tunog. Nagdaragdag ng kinang ang banayad na high shelf.</value>
+  </data>
+  <data name="FlowEq" xml:space="preserve">
+    <value>EQ sa software, {0} sa 4 na band ang on</value>
+  </data>
+  <data name="FlowEqDevice" xml:space="preserve">
+    <value>EQ sa {1}, {0} sa 4 na band ang on</value>
+  </data>
+  <data name="CaptureSourcePair" xml:space="preserve">
+    <value>{0}, pares {1}</value>
+  </data>
+  <data name="StereoInputPickerHint" xml:space="preserve">
+    <value>Mga plugin para sa stereo input (dalawang input, dalawang output)</value>
+  </data>
+  <data name="DisableInterface" xml:space="preserve">
+    <value>I-disable ang interface</value>
+  </data>
+  <data name="DisableInterfaceCaptureDetail" xml:space="preserve">
+    <value>Itigil ang pagkontrol sa {0}? Buburahin ang mga capture input at insert chain nito kung hindi mo iingatan. Tutugtog ang iingatang input habang available ang source nito.</value>
+  </data>
+  <data name="KeepInterfaceCaptureChannels" xml:space="preserve">
+    <value>Panatilihin ang mga capture input at chain nito</value>
+  </data>
+  <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
+    <value>Itigil ang pagkontrol sa {0}? Buburahin ang mga capture input at insert chain nito. Hindi iniulat ng daemon na ito ang suportang panatilihin ang mga ito.</value>
+  </data>
+  <data name="Ducking" xml:space="preserve">
+    <value>Ducking</value>
+  </data>
+  <data name="DuckingEnabled" xml:space="preserve">
+    <value>Hinaan ang ibang audio habang malakas ang key microphone</value>
+  </data>
+  <data name="DuckingSensitivity" xml:space="preserve">
+    <value>Sensitibidad</value>
+  </data>
+  <data name="DuckingAmount" xml:space="preserve">
+    <value>Lakas</value>
+  </data>
+  <data name="DuckingSpeed" xml:space="preserve">
+    <value>Bilis</value>
+  </data>
+  <data name="DuckingLow" xml:space="preserve">
+    <value>Mababa</value>
+  </data>
+  <data name="DuckingMedium" xml:space="preserve">
+    <value>Katamtaman</value>
+  </data>
+  <data name="DuckingHigh" xml:space="preserve">
+    <value>Mataas</value>
+  </data>
+  <data name="DuckingAmountLow" xml:space="preserve">
+    <value>Mababa, 6 dB</value>
+  </data>
+  <data name="DuckingAmountMedium" xml:space="preserve">
+    <value>Katamtaman, 12 dB</value>
+  </data>
+  <data name="DuckingAmountHigh" xml:space="preserve">
+    <value>Mataas, 24 dB</value>
+  </data>
+  <data name="DuckingSlow" xml:space="preserve">
+    <value>Mabagal</value>
+  </data>
+  <data name="DuckingFast" xml:space="preserve">
+    <value>Mabilis</value>
+  </data>
+  <data name="DuckingHint" xml:space="preserve">
+    <value>Pinahihina ng ducking ang napiling channel sa napiling mix habang malakas ang key microphone. Sa computer na ito ito tumatakbo para sa lahat ng device, kasama ang Wave XLR Pro: sa sariling mix nito ginagawa ng Pro ang ducking, na hindi pa dinaraanan ng mga jack.</value>
+  </data>
+  <data name="DuckingNotHeld" xml:space="preserve">
+    <value>Hindi pa pinananatili ng unit ang setting na ito; isusulat muli ito ng OpenXLR sa loob ng ilang segundo.</value>
+  </data>
+  <data name="DuckingStatusOff" xml:space="preserve">
+    <value>Naka-off.</value>
+  </data>
+  <data name="DuckingHardwareBadgeTip" xml:space="preserve">
+    <value>Tumatakbo ang ducking sa sariling processor ng {0}.</value>
+  </data>
+  <data name="DuckingNotRunning" xml:space="preserve">
+    <value>Walang nagpapatakbo ng setting na ito.</value>
+  </data>
+  <data name="DuckingButtonTip" xml:space="preserve">
+    <value>Hinaan ang ibang audio habang malakas ang mikropono: key, channel, mix, preset at kung saan ito tumatakbo.</value>
+  </data>
+  <data name="DuckingKey" xml:space="preserve">
+    <value>Key microphone</value>
+  </data>
+  <data name="DuckingKeyTip" xml:space="preserve">
+    <value>Mikroponong ang boses ang nagpapahina sa ibang audio. Hindi nito pinahihina ang sarili nito.</value>
+  </data>
+  <data name="DuckingChannels" xml:space="preserve">
+    <value>Hinaan ang mga channel na ito</value>
+  </data>
+  <data name="DuckingMixes" xml:space="preserve">
+    <value>Sa mga mix na ito</value>
+  </data>
+  <data name="DuckingAllApplications" xml:space="preserve">
+    <value>Lahat ng application channel</value>
+  </data>
+  <data name="DuckingNone" xml:space="preserve">
+    <value>Wala</value>
+  </data>
+  <data name="DuckingNoneTip" xml:space="preserve">
+    <value>Walang hihinang channel. Walang epekto ang ducking hanggang pumili ka ng isa.</value>
+  </data>
+  <data name="DuckingProcessingLabel" xml:space="preserve">
+    <value>Tumatakbo sa</value>
+  </data>
+  <data name="DuckingProcessingDevice" xml:space="preserve">
+    <value>Unit na ito</value>
+  </data>
+  <data name="DuckingProcessingSoftware" xml:space="preserve">
+    <value>Computer na ito</value>
+  </data>
+  <data name="DuckingProcessingDeviceTip" xml:space="preserve">
+    <value>Patakbuhin ang ducking sa sariling processor ng {0}. Naririnig nito ang XLR 1 gaya ng unit, bago ang USB, kaya bago ang software EQ, mga insert at anumang gate sa computer. Hindi mapipigil ng noise gate o suppressor sa XLR 1 ang pag-trigger nito sa ingay. Pinahihina nito ang tapos nang mix habang pinapatugtog ng unit sa mga output, pagkatapos ng lahat ng pagproseso sa computer. Piliin ang computer na ito kung dapat pigilan ng gate sa XLR 1 ang maling pag-trigger.</value>
+  </data>
+  <data name="DuckingProcessingSoftwareTip" xml:space="preserve">
+    <value>Patakbuhin ang ducking sa computer na ito. Ang key ay ang mikropono pagkatapos ng EQ, insert at Sound Check loop, bago ang volume at send nito, kaya pinipigilan ng gate dito ang maling pag-trigger. Humihina ang mga napiling channel sa loob ng bawat mix, bago ang sariling plugin at latency delay ng mix. Naka-off ang sariling ducking ng unit.</value>
+  </data>
+  <data name="DuckingStatusOnUnit" xml:space="preserve">
+    <value>Naka-on, tumatakbo sa sariling processor ng {0}. Naririnig nito ang XLR 1 bago ang USB, lahat ng gate at plugin sa computer na ito, at pinahihina ang tapos nang mix sa mga output ng unit.</value>
+  </data>
+  <data name="DuckingStatusOnComputer" xml:space="preserve">
+    <value>Naka-on, tumatakbo sa computer na ito. Naririnig nito ang {0} pagkatapos ng EQ, insert at Sound Check loop, at pinahihina ang mga napiling channel sa loob ng bawat mix, bago ang sariling plugin ng mix.</value>
+  </data>
+  <data name="DuckingMixerOff" xml:space="preserve">
+    <value>Naka-off ang software mixer, kaya hindi tumatakbo ang ducking. Paganahin ito sa Mga opsyon, AUDIO.</value>
+  </data>
+  <data name="DuckingNothingChosen" xml:space="preserve">
+    <value>Naka-on, pero walang pinahihina. Pumili ng hindi bababa sa isang channel at mix.</value>
+  </data>
+  <data name="DuckingDeviceKeyNotSupported" xml:space="preserve">
+    <value>XLR 1 lang ang key na sinusuportahan ng {0} para sa ducking.</value>
+  </data>
+  <data name="DuckingDeviceFailed" xml:space="preserve">
+    <value>Hindi pinanatili ng {0} ang ducking na isinulat dito. I-off at i-on ang ducking upang subukang muli ang unit.</value>
+  </data>
+  <data name="DuckingDeviceUnsupported" xml:space="preserve">
+    <value>Hindi sumagot ang {0} sa pagbasa ng ducking block nito.</value>
+  </data>
+  <data name="DuckingDeviceNotReady" xml:space="preserve">
+    <value>Hindi kayang patakbuhin ng {0} ang setting na ito.</value>
+  </data>
+  <data name="DuckingReduction" xml:space="preserve">
+    <value>Pagbawas</value>
+  </data>
+  <data name="DuckingReductionValue" xml:space="preserve">
+    <value>{0:0} dB</value>
+  </data>
+  <data name="CaptureBindingHint" xml:space="preserve">
+    <value>Pumili ng source at port para sa {0}. Mananatili ang send, volume, insert at grupo nito. Naka-mute muna ang mga monitor send at magtatapos ang Sound Check pagkatapos ng pagbabago. Alisin ang mga insert bago magpalit sa mono at stereo.</value>
+  </data>
+  <data name="CaptureMonoPort" xml:space="preserve">
+    <value>Mono port {0}</value>
+  </data>
+  <data name="CaptureStereoPorts" xml:space="preserve">
+    <value>Mga stereo port {0} + {1}{2}</value>
+  </data>
+  <data name="PreserveBrowserOutputs" xml:space="preserve">
+    <value>Paganahin ang routing ng bawat browser tab</value>
+  </data>
+  <data name="PreserveBrowserOutputsHint" xml:space="preserve">
+    <value>Kapag naka-on, hindi inililipat ng OpenXLR ang browser audio at pansamantalang hindi ginagamit ang mga pagtatalaga sa buong browser hanggang patayin ito. Ang mga tab na walang sariling channel ay mananatili sa output na pinili ng browser o desktop, na maaaring OpenXLR channel na naibalik ng desktop.</value>
+  </data>
+  <data name="BrowserOutputHeld" xml:space="preserve">
+    <value>Naka-on ang routing ng bawat browser tab, kaya hindi inililipat ng OpenXLR ang browser na ito. Ilalapat ang channel na pinili rito kapag naka-off ang opsyong iyon.</value>
+  </data>
+  <data name="BrowserOutputHeldOnChannel" xml:space="preserve">
+    <value>Naka-on ang routing ng bawat browser tab, kaya hindi inililipat ng OpenXLR ang browser na ito. Tumatakbo ito ngayon sa {0}, kung saan ito inilagay ng browser o desktop. Ilalapat ang channel na pinili rito kapag naka-off ang opsyong iyon.</value>
+  </data>
+  <data name="BrowserOutputHeldElsewhere" xml:space="preserve">
+    <value>Naka-on ang routing ng bawat browser tab, kaya hindi inililipat ng OpenXLR ang browser na ito. Tumatakbo ito sa output na pinili ng browser o desktop, sa labas ng mga application channel ng OpenXLR. Ilalapat ang channel na pinili rito kapag naka-off ang opsyong iyon.</value>
+  </data>
+  <data name="BrowserTabsHeading" xml:space="preserve">
+    <value>MGA BROWSER TAB</value>
+  </data>
+  <data name="BrowserTabCaptureHint" xml:space="preserve">
+    <value>Paganahin ang audio ng bawat tab sa browser extension. Hindi pinapagana ng pagpili ng channel dito ang audio ng tab.</value>
+  </data>
+  <data name="BrowserTabCaptureState" xml:space="preserve">
+    <value>Estado ng audio ng browser tab</value>
+  </data>
+  <data name="BrowserTabChannelName" xml:space="preserve">
+    <value>Channel para sa browser tab na {0}</value>
+  </data>
+  <data name="BrowserTabRemember" xml:space="preserve">
+    <value>Tandaan ang website</value>
+  </data>
+  <data name="BrowserTabDefault" xml:space="preserve">
+    <value>Default ng browser</value>
+  </data>
+  <data name="BrowserTabRoutingDisabled" xml:space="preserve">
+    <value>Paganahin ang routing ng bawat browser tab upang italaga ang tab na ito.</value>
+  </data>
+  <data name="BrowserTabApplying" xml:space="preserve">
+    <value>Inilalapat ang pagtatalaga ng tab...</value>
+  </data>
+  <data name="BrowserTabCapturing" xml:space="preserve">
+    <value>Aktibo ang audio ng tab</value>
+  </data>
+  <data name="BrowserTabActivationRequired" xml:space="preserve">
+    <value>Paganahin ang audio ng tab sa browser extension.</value>
+  </data>
+  <data name="BrowserTabUsesDefault" xml:space="preserve">
+    <value>Gumagamit ng default na destinasyon ng browser</value>
+  </data>
+  <data name="BrowserTabRememberHint" xml:space="preserve">
+    <value>Kapag naka-off, sa tab na ito lang ilalapat ang pagbabago. Mananatili para sa ibang tab ang naunang naka-save na pagpili para sa website.</value>
+  </data>
+  <data name="BrowserTabForgetWebsite" xml:space="preserve">
+    <value>Kalimutan ang website</value>
+  </data>
+  <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
+    <value>Kalimutan ang naka-save na destinasyon ng website at gamitin ang default ng browser para sa tab na ito.</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
+    <value>I-mute ang microphone send kasabay ng monitoring</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoringHint" xml:space="preserve">
+    <value>Ipahinto rin ang mga XLR at mono capture send sa lahat ng OpenXLR mix, kasama ang mga naka-route na recording. Muling magsisimula ang mga send kapag nag-unmute ng monitor. Hindi apektado ang app na direktang nagre-record sa pisikal na source.</value>
+  </data>
+  <data name="MicrophonePausePendingNote" xml:space="preserve">
+    <value>Hindi pa kumpirmado ang estado ng mikropono. Maaaring umaabot pa rin ang audio sa mga OpenXLR mix. Suriin muna bago umasa sa pag-mute ng mikropono.</value>
+  </data>
+  <data name="AddMonitoringPauseKey" xml:space="preserve">
+    <value>Magdagdag ng monitoring pause key</value>
+  </data>
+  <data name="KeyToggleMonitoringPause" xml:space="preserve">
+    <value>Ipahinto o ituloy ang monitoring</value>
+  </data>
+  <data name="MonitoringPauseKeysNote" xml:space="preserve">
+    <value>Itakda rito ang mute key sa halip na desktop mute action. Panatilihing tumatakbo ang OpenXLR sa tray. May bisa rin sa key na ito ang opsyon ng mikropono sa Audio.</value>
+  </data>
+  <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
+    <value>Hindi mabubuksan muli ng desktop na ito ang shortcut editor. Baguhin ang mga key sa shortcut setting ng desktop.</value>
+  </data>
+</root>

@@ -33,6 +33,7 @@ public static class Localizer
         new("en", "English"),
         new("de", "Deutsch"),
         new("es", "Español"),
+        new("tl", "Tagalog"),
     ]);
 
     internal static readonly ResourceManager Resources =
@@ -117,6 +118,8 @@ public static class Localizer
         if (tag.Length == 0 || !tag.All(c => char.IsAsciiLetterOrDigit(c) || c == '-')) return "";
         string[] parts = tag.Split('-');
         if (parts.Any(p => p.Length == 0)) return "";
+        // Filipino is the desktop locale name used for the Tagalog catalogue.
+        if (parts[0].Equals("fil", StringComparison.OrdinalIgnoreCase)) parts[0] = "tl";
         if (!parts[0].Equals("zh", StringComparison.OrdinalIgnoreCase)) return string.Join('-', parts);
         string[] rest = parts.Skip(1).ToArray();
         if (rest.Any(p => p.Equals("Hant", StringComparison.OrdinalIgnoreCase) || p.Equals("Hans", StringComparison.OrdinalIgnoreCase)))
