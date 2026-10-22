@@ -35,6 +35,7 @@ public static class Localizer
         new("es", "Español"),
         new("tl", "Tagalog"),
         new("ceb", "Bisaya (Cebuano)"),
+        new("sr-Cyrl", "Српски (ћирилица)"),
     ]);
 
     internal static readonly ResourceManager Resources =
@@ -108,11 +109,14 @@ public static class Localizer
     /// script: <c>zh_TW.UTF-8</c> becomes <c>zh-Hant-TW</c>, <c>zh-CN</c>
     /// becomes <c>zh-Hans-CN</c>, and the legacy .NET names <c>zh-CHT</c> and
     /// <c>zh-CHS</c> become <c>zh-Hant</c> and <c>zh-Hans</c>. Names that are
-    /// not tags come back empty.
+    /// not tags come back empty. Filipino selects Tagalog; Serbian without a
+    /// script selects Cyrillic, while an explicit script is preserved.
     /// </summary>
     internal static string Canonical(string name)
     {
         string tag = name.Trim();
+        int modifierAt = tag.IndexOf('@');
+        string? modifier = modifierAt < 0 ? null : tag[(modifierAt + 1)..];
         int cut = tag.IndexOfAny(['.', '@']);
         if (cut >= 0) tag = tag[..cut];
         tag = tag.Replace('_', '-');
@@ -121,6 +125,16 @@ public static class Localizer
         if (parts.Any(p => p.Length == 0)) return "";
         // Filipino is the desktop locale name used for the Tagalog catalogue.
         if (parts[0].Equals("fil", StringComparison.OrdinalIgnoreCase)) parts[0] = "tl";
+        // Serbian without a script uses Cyrillic. Respect explicit Latin or
+        // other scripts, including the POSIX @latin modifier, so they do not
+        // silently select the Cyrillic catalogue.
+        if (parts[0].Equals("sr", StringComparison.OrdinalIgnoreCase))
+        {
+            bool hasScript = parts.Length > 1 && parts[1].Length == 4 && parts[1].All(char.IsAsciiLetter);
+            if (!hasScript)
+                parts = [parts[0], string.Equals(modifier, "latin", StringComparison.OrdinalIgnoreCase) ? "Latn" : "Cyrl", .. parts.Skip(1)];
+            return string.Join('-', parts);
+        }
         if (!parts[0].Equals("zh", StringComparison.OrdinalIgnoreCase)) return string.Join('-', parts);
         string[] rest = parts.Skip(1).ToArray();
         if (rest.Any(p => p.Equals("Hant", StringComparison.OrdinalIgnoreCase) || p.Equals("Hans", StringComparison.OrdinalIgnoreCase)))

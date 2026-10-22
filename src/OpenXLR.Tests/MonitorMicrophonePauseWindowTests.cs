@@ -60,7 +60,7 @@ internal static class MonitorMicrophonePauseWindowTests
             foreach (bool large in new[] { false, true })
             {
                 SkinService.ApplyControlSizing(large);
-                foreach (string language in new[] { "en", "de", "es" })
+                foreach (string language in new[] { "en", "de", "es", Localizer.Language }.Distinct(StringComparer.Ordinal))
                 {
                     var culture = CultureInfo.GetCultureInfo(language);
                     caption.Text = Localizer.Get("MuteMicrophoneSendsWithMonitoring", culture);

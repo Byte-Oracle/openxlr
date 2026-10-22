@@ -1,0 +1,2936 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- sr-Cyrl window text. See docs/localization.md. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ABComparison" xml:space="preserve">
+    <value>Поређење A/B</value>
+  </data>
+  <data name="About" xml:space="preserve">
+    <value>О програму</value>
+  </data>
+  <data name="AboutOpenXLR" xml:space="preserve">
+    <value>О OpenXLR-у</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Додај</value>
+  </data>
+  <data name="AddAPluginFolder" xml:space="preserve">
+    <value>Додај фасциклу додатака</value>
+  </data>
+  <data name="AddCaptureInput" xml:space="preserve">
+    <value>Додај улаз за снимање</value>
+  </data>
+  <data name="AddCaptureInputHint" xml:space="preserve">
+    <value>Изабери извор и један моно порт или стерео пар. Моно улази могу да користе Sound Check. Нови улаз је утишан у свим миксевима и остаје нечујан док извор није повезан.</value>
+  </data>
+  <data name="AddChannel" xml:space="preserve">
+    <value>Додај канал</value>
+  </data>
+  <data name="AddFolder" xml:space="preserve">
+    <value>Додај фасциклу</value>
+  </data>
+  <data name="AddInputChannel" xml:space="preserve">
+    <value>Додај улазни канал</value>
+  </data>
+  <data name="AddingFolder" xml:space="preserve">
+    <value>Додавање фасцикле…</value>
+  </data>
+  <data name="AddingFolderAndScanning" xml:space="preserve">
+    <value>Додавање фасцикле и претрага додатака…</value>
+  </data>
+  <data name="AddInput" xml:space="preserve">
+    <value>Додај улаз</value>
+  </data>
+  <data name="ADDINSTALLEDAPPLICATION" xml:space="preserve">
+    <value>ДОДАЈ ИНСТАЛИРАНУ АПЛИКАЦИЈУ</value>
+  </data>
+  <data name="AddMix" xml:space="preserve">
+    <value>Додај микс</value>
+  </data>
+  <data name="AddPlugin" xml:space="preserve">
+    <value>Додај додатак</value>
+  </data>
+  <data name="AddPluginFolder" xml:space="preserve">
+    <value>Додај фасциклу додатака</value>
+  </data>
+  <data name="AddPluginInsert" xml:space="preserve">
+    <value>Додај ефекат у ланац</value>
+  </data>
+  <data name="AddRenameReorderAndRemoveApplicationChannelsAnd" xml:space="preserve">
+    <value>Додавање, преименовање, премештање и уклањање канала апликација и виртуелних микрофона током репродукције</value>
+  </data>
+  <data name="AddVolumeAndMuteKeys" xml:space="preserve">
+    <value>Додај тастере за јачину и утишавање</value>
+  </data>
+  <data name="AddWindowsPluginFolder" xml:space="preserve">
+    <value>Додај фасциклу Windows додатака</value>
+  </data>
+  <data name="AdditionalInterfaces" xml:space="preserve">
+    <value>Додатни интерфејси</value>
+  </data>
+  <data name="AdditionalInterfacesHint" xml:space="preserve">
+    <value>Главни интерфејс напаја XLR 1 и хардверске траке. Овде укључи до четири додатна уређаја да их контролишеш заједно с њим, па додај сваки микрофон као канал за снимање.</value>
+  </data>
+  <data name="AffectsSystemYabridge" xml:space="preserve">
+    <value>Ово утиче и на друге апликације које користе системски yabridge.</value>
+  </data>
+  <data name="AllowEditor" xml:space="preserve">
+    <value>Дозволи уређивач</value>
+  </data>
+  <data name="AllowNativeEditor" xml:space="preserve">
+    <value>Дозволи изворни уређивач</value>
+  </data>
+  <data name="AllowNativeEditorDetail" xml:space="preserve">
+    <value>Дозволити додатку {0} да поново отвори свој уређивач? Ако проблем с компатибилношћу постоји и даље, прозор може да се замрзне или процес додатка да се сруши. Твој избор замењује подразумевано подешавање издања.</value>
+  </data>
+  <data name="AllowNativeEditorTitle" xml:space="preserve">
+    <value>Дозволити овај изворни уређивач?</value>
+  </data>
+  <data name="AllowOutputVolumeAbove100UpTo" xml:space="preserve">
+    <value>Дозволи јачину излаза преко 100%, до 150%. Искључивање враћа појачани излаз на 100%. У KDE Plasma ово је поставка повећања максималне јачине радне површине, заједничка свим контролама монитора.</value>
+  </data>
+  <data name="AllowThisMonitorMixAbove100Up" xml:space="preserve">
+    <value>Дозволи јачину овог мониторског микса преко 100%, до 150%. Искључивање враћа појачани микс на 100%. У KDE Plasma ово је поставка повећања максималне јачине радне површине, заједничка свим контролама монитора.</value>
+  </data>
+  <data name="ANewChannelStartsMutedInEvery" xml:space="preserve">
+    <value>Нови канал је утишан у свим миксевима. Хардверски улази остају на свом месту. Апликације чији је канал обрисан прелазе у System.</value>
+  </data>
+  <data name="AnotherApplicationChannel" xml:space="preserve">
+    <value>други канал апликације</value>
+  </data>
+  <data name="APPEARANCE" xml:space="preserve">
+    <value>ИЗГЛЕД</value>
+  </data>
+  <data name="AppearanceDark" xml:space="preserve">
+    <value>Тамно</value>
+  </data>
+  <data name="AppearanceDialogHint" xml:space="preserve">
+    <value>Прозор, терминалски миксер и Stream Deck тастери приказују икону и боју. Усмеравање и нивои се не мењају.</value>
+  </data>
+  <data name="AppearanceLight" xml:space="preserve">
+    <value>Светло</value>
+  </data>
+  <data name="AppearanceMode" xml:space="preserve">
+    <value>Режим изгледа</value>
+  </data>
+  <data name="AppearanceModeOtherSkin" xml:space="preserve">
+    <value>Ова тема има своје боје. Режим се примењује на Material.</value>
+  </data>
+  <data name="AppearanceModeOverridden" xml:space="preserve">
+    <value>Изглед је задат при покретању; изабери тему да поново користиш режим.</value>
+  </data>
+  <data name="AppearanceModeSystemNote" xml:space="preserve">
+    <value>Системски режим прати светлу или тамну поставку радне површине.</value>
+  </data>
+  <data name="AppearanceOfTitle" xml:space="preserve">
+    <value>Изглед: {0}</value>
+  </data>
+  <data name="AppearanceSystem" xml:space="preserve">
+    <value>Системски</value>
+  </data>
+  <data name="ApplicationChannel" xml:space="preserve">
+    <value>Канал апликације</value>
+  </data>
+  <data name="ApplicationChannelsAreThePlaybackDevicesYouRoute" xml:space="preserve">
+    <value>Канали апликација су уређаји за репродукцију ка којима усмераваш програме. Виртуелни микрофони су уређаји за снимање које користе OBS, Discord и друге апликације. Свака измена се чува пре потврде, а звук на другим каналима наставља да тече.</value>
+  </data>
+  <data name="ApplicationChannelsMixesVirtualMicrophonesAndInserts" xml:space="preserve">
+    <value>Канали апликација, миксеви, виртуелни микрофони и ефекти.</value>
+  </data>
+  <data name="APPLICATIONS" xml:space="preserve">
+    <value>АПЛИКАЦИЈЕ</value>
+  </data>
+  <data name="ApplyAndConfigureKeys" xml:space="preserve">
+    <value>Примени и подеси тастере</value>
+  </data>
+  <data name="APresetKeepsTheOrderNamesBypass" xml:space="preserve">
+    <value>Пресет чува редослед, називе, заобилажење, избор хоста и вредности контрола сваког ефекта. Приватно стање додатка и спољне датотеке, попут узорака, нису укључени. Учитавање замењује ланац; недостајући или некомпатибилан додатак се одбија.</value>
+  </data>
+  <data name="ARenamedVirtualMicrophoneKeepsItsOldName" xml:space="preserve">
+    <value>Преименовани виртуелни микрофон задржава стари назив у другим апликацијама до поновног покретања сервиса. Поново га покрени кад ништа не снима с њега.</value>
+  </data>
+  <data name="ARescanReadsEveryFormatAgainAnd" xml:space="preserve">
+    <value>Поновна претрага чита све формате и поново покушава с пакетима који раније нису успели. Активни ефекти настављају да раде; онај чији додатак недостаје неће успети при следећем учитавању.</value>
+  </data>
+  <data name="Arrange" xml:space="preserve">
+    <value>Распореди</value>
+  </data>
+  <data name="ATLOGIN" xml:space="preserve">
+    <value>ПРИ ПРИЈАВИ</value>
+  </data>
+  <data name="AUDIO" xml:space="preserve">
+    <value>ЗВУК</value>
+  </data>
+  <data name="AudioFlow" xml:space="preserve">
+    <value>Ток звука</value>
+  </data>
+  <data name="AutostartRemovedOutside" xml:space="preserve">
+    <value>Ставка за аутоматско покретање миксера уклоњена је ван OpenXLR-а, па није враћена. Искључи па поново укључи ову опцију да је направиш.</value>
+  </data>
+  <data name="BridgeAgainEveryFolderYabridgeKnowsForWindows" xml:space="preserve">
+    <value>Поново повежи све фасцикле које yabridge познаје, за накнадно инсталиране Windows додатке</value>
+  </data>
+  <data name="BridgeWinePluginFolders" xml:space="preserve">
+    <value>Повежи Wine фасцикле додатака: {0}</value>
+  </data>
+  <data name="BridgeWinePlugins" xml:space="preserve">
+    <value>Повежи Wine додатке</value>
+  </data>
+  <data name="BridgingWindowsPlugins" xml:space="preserve">
+    <value>Повезивање Windows додатака…</value>
+  </data>
+  <data name="BridgingWinePlugins" xml:space="preserve">
+    <value>Повезивање Wine додатака…</value>
+  </data>
+  <data name="BuyMeACoffee" xml:space="preserve">
+    <value>Части ме кафом</value>
+  </data>
+  <data name="Bypass" xml:space="preserve">
+    <value>Заобиђи</value>
+  </data>
+  <data name="BypassLetter" xml:space="preserve">
+    <value>B</value>
+  </data>
+  <data name="BypassThisPlugin" xml:space="preserve">
+    <value>Заобиђи овај додатак</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Откажи</value>
+  </data>
+  <data name="CannotChangePlasmaRange" xml:space="preserve">
+    <value>Није могуће променити опсег јачине у Plasma-и: {0}</value>
+  </data>
+  <data name="CannotChangePlasmaRangeKept" xml:space="preserve">
+    <value>Није могуће променити опсег јачине у Plasma-и: радна површина није сачувала измену.</value>
+  </data>
+  <data name="CannotChangePlasmaRangeSave" xml:space="preserve">
+    <value>Није могуће променити опсег јачине у Plasma-и: поставка радне површине није сачувана.</value>
+  </data>
+  <data name="CannotFollowPlasmaRange" xml:space="preserve">
+    <value>Није могуће пратити опсег јачине у Plasma-и: {0}</value>
+  </data>
+  <data name="CannotReadPlasmaRange" xml:space="preserve">
+    <value>Није могуће прочитати опсег јачине у Plasma-и: {0}</value>
+  </data>
+  <data name="CaptureChannel" xml:space="preserve">
+    <value>Канал за снимање</value>
+  </data>
+  <data name="CaptureConnectedPair" xml:space="preserve">
+    <value>Повезано · пар {0}</value>
+  </data>
+  <data name="CaptureConnectedPort" xml:space="preserve">
+    <value>Повезано · порт {0}</value>
+  </data>
+  <data name="CaptureOfflinePair" xml:space="preserve">
+    <value>Није повезано · пар {0}</value>
+  </data>
+  <data name="CaptureOfflinePort" xml:space="preserve">
+    <value>Није повезано · порт {0}</value>
+  </data>
+  <data name="CaptureSourcePlaceholder" xml:space="preserve">
+    <value>Извор за снимање</value>
+  </data>
+  <data name="CatalogueNew" xml:space="preserve">
+    <value>Нових додатака у каталогу: {0}.</value>
+  </data>
+  <data name="CatalogueNothingNew" xml:space="preserve">
+    <value>Додатака у каталогу: {0}, нема нових.</value>
+  </data>
+  <data name="CatalogueOneNew" xml:space="preserve">
+    <value>1 нови додатак у каталогу.</value>
+  </data>
+  <data name="ChainTooLong" xml:space="preserve">
+    <value>Ланац може да садржи највише 16 ефеката. Уклони ефекте или замени ланац пре лепљења.</value>
+  </data>
+  <data name="ChainUnsupported" xml:space="preserve">
+    <value>Неподржана верзија, ширина или величина ланца ефеката.</value>
+  </data>
+  <data name="ChangesApplyTheNextTimeAnEditorIs" xml:space="preserve">
+    <value>Измене се примењују при следећем отварању уређивача. Постојећи прозори се не затварају.</value>
+  </data>
+  <data name="ChangeTheNameThisEffectShowsThe" xml:space="preserve">
+    <value>Промени приказани назив ефекта; додатак наставља да ради</value>
+  </data>
+  <data name="ChangingThisRestartsTheAudioServiceAndBriefly" xml:space="preserve">
+    <value>Измена поново покреће звучни сервис и накратко прекида звук.</value>
+  </data>
+  <data name="Channel" xml:space="preserve">
+    <value>канал</value>
+  </data>
+  <data name="ChannelNamePlaceholder" xml:space="preserve">
+    <value>Назив канала</value>
+  </data>
+  <data name="CHANNELS" xml:space="preserve">
+    <value>КАНАЛИ</value>
+  </data>
+  <data name="ChannelShown" xml:space="preserve">
+    <value>Приказ канала</value>
+  </data>
+  <data name="ChannelsOfWhichOnlyOneIsHeard" xml:space="preserve">
+    <value>Канали од којих се чује само један у датом тренутку</value>
+  </data>
+  <data name="ChannelToMix" xml:space="preserve">
+    <value>Канал ка миксу</value>
+  </data>
+  <data name="ChannelUnavailable" xml:space="preserve">
+    <value>Канал није доступан</value>
+  </data>
+  <data name="CheckAgain" xml:space="preserve">
+    <value>Провери поново</value>
+  </data>
+  <data name="CheckGitHubForStableReleasesAtStartupAt" xml:space="preserve">
+    <value>Провери стабилна издања на GitHub-у при покретању
+(највише једном дневно)</value>
+  </data>
+  <data name="CheckNow" xml:space="preserve">
+    <value>Провери сада</value>
+  </data>
+  <data name="ChooseAFolderThenSelectAnIndividualPlugin" xml:space="preserve">
+    <value>Изабери фасциклу, па затим појединачни додатак испод.</value>
+  </data>
+  <data name="ChooseAnApplication" xml:space="preserve">
+    <value>изабери апликацију</value>
+  </data>
+  <data name="ChooseAPreset" xml:space="preserve">
+    <value>Изабери пресет</value>
+  </data>
+  <data name="ChooseInterfaceSourceFirst" xml:space="preserve">
+    <value>Прво изабери извор за снимање интерфејса.</value>
+  </data>
+  <data name="ChoosePresetForEffect" xml:space="preserve">
+    <value>Изабери пресет за овај ефекат на активном каналу.</value>
+  </data>
+  <data name="ClearSelection" xml:space="preserve">
+    <value>×  Поништи избор</value>
+  </data>
+  <data name="ClickAnyElementToTraceItsSignalPath" xml:space="preserve">
+    <value>Кликни на елемент да пратиш пут његовог сигнала</value>
+  </data>
+  <data name="ClipGuard" xml:space="preserve">
+    <value>ClipGuard</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Затвори</value>
+  </data>
+  <data name="CollectDiagnostics" xml:space="preserve">
+    <value>Прикупи дијагностику</value>
+  </data>
+  <data name="CollectDiagnosticsGathersAppAndDeviceStateThe" xml:space="preserve">
+    <value>Дијагностика прикупља стање апликације и уређаја, PipeWire граф, дневнике сервиса и подешавања у једну архиву у твојој личној фасцикли, спремну за пријаву грешке. Ништа се не отпрема.</value>
+  </data>
+  <data name="Collecting" xml:space="preserve">
+    <value>прикупљање…</value>
+  </data>
+  <data name="Colour" xml:space="preserve">
+    <value>Боја</value>
+  </data>
+  <data name="ColourFormatHint" xml:space="preserve">
+    <value>Унеси боју као # и шест хексадецималних цифара или остави празно.</value>
+  </data>
+  <data name="ColourPlaceholder" xml:space="preserve">
+    <value>#RRGGBB или празно за боје теме</value>
+  </data>
+  <data name="CompactShowsOneChannelStripWithEvery" xml:space="preserve">
+    <value>Сажети приказ показује једну траку канала са свим слањима. Мини приказ показује слање тог канала у један микс с главним нивоом микса и склања УЛАЗЕ, СЛУШАЛИЦЕ и АПЛИКАЦИЈЕ. Изабери канал и микс изнад подмиксера. Нивои и усмеравање се не мењају.</value>
+  </data>
+  <data name="CompensatePluginLatencyAcrossMixes" xml:space="preserve">
+    <value>Изједначи кашњење додатака између миксева</value>
+  </data>
+  <data name="Compressor" xml:space="preserve">
+    <value>Компресор</value>
+  </data>
+  <data name="Connecting" xml:space="preserve">
+    <value>повезивање…</value>
+  </data>
+  <data name="ConnectionLostCheckChange" xml:space="preserve">
+    <value>Веза је прекинута. Провери да ли је измена примењена пре поновног покушаја.</value>
+  </data>
+  <data name="ConnectionLostUnconfirmed" xml:space="preserve">
+    <value>Веза је прекинута; измена није потврђена.</value>
+  </data>
+  <data name="ContributorsAndCredits" xml:space="preserve">
+    <value>Сарадници и заслуге</value>
+  </data>
+  <data name="Controls" xml:space="preserve">
+    <value>Контроле</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Копирај</value>
+  </data>
+  <data name="CopyAndPaste" xml:space="preserve">
+    <value>Копирање и лепљење</value>
+  </data>
+  <data name="CopyAndPasteEffectsCompareTwoSettings" xml:space="preserve">
+    <value>Копирај и налепи ефекте, упореди два подешавања и сачувај или учитај пресете</value>
+  </data>
+  <data name="CopyAnEffectFromItsRowOr" xml:space="preserve">
+    <value>Копирај ефекат из његовог реда или цео ланац. Налепи ефекте додаје копиране ефекте на крај ланца; Замени ланац их поставља уместо њега. Копија остаје у OpenXLR-у док га не затвориш.</value>
+  </data>
+  <data name="CopyChain" xml:space="preserve">
+    <value>Копирај ланац</value>
+  </data>
+  <data name="CopyFirst" xml:space="preserve">
+    <value>Прво копирај ефекат или ланац у OpenXLR-у.</value>
+  </data>
+  <data name="CopyThisEffectToPasteOnAny" xml:space="preserve">
+    <value>Копирај овај ефекат за лепљење у било који ланац преко Пресети и A/B</value>
+  </data>
+  <data name="CouldNotDisableDaemonAtLogin" xml:space="preserve">
+    <value>Није могуће искључити покретање звучног сервиса при пријави. Провери да ли системски кориснички сервиси раде (systemctl --user status).</value>
+  </data>
+  <data name="CouldNotEnableDaemonAtLogin" xml:space="preserve">
+    <value>Није могуће покренути звучни сервис при пријави. Провери да ли је OpenXLR инсталиран и да ли systemd кориснички сервиси раде (systemctl --user status).</value>
+  </data>
+  <data name="CouldNotReadPluginFolder" xml:space="preserve">
+    <value>Није могуће прочитати фасциклу додатка.</value>
+  </data>
+  <data name="CouldNotRepairAutostart" xml:space="preserve">
+    <value>Није могуће поправити ставку за аутоматско покретање миксера. Провери да ли је OpenXLR инсталиран, да ли је фасцикла за аутоматско покретање уписива и да ставка није симболичка веза.</value>
+  </data>
+  <data name="CouldNotUpdateAutostart" xml:space="preserve">
+    <value>Није могуће ажурирати аутоматско покретање миксера. Провери да ли је OpenXLR инсталиран, да ли је фасцикла уписива и да ставка није симболичка веза.</value>
+  </data>
+  <data name="CouldNotVerifyPlugin" xml:space="preserve">
+    <value>Није могуће проверити додатак пре отварања програма за деинсталацију.</value>
+  </data>
+  <data name="CrossfadeCentre" xml:space="preserve">
+    <value>средина</value>
+  </data>
+  <data name="CrossfadeMic" xml:space="preserve">
+    <value>мик +{0}</value>
+  </data>
+  <data name="CrossfadePc" xml:space="preserve">
+    <value>pc +{0}</value>
+  </data>
+  <data name="CurrentChain" xml:space="preserve">
+    <value>Тренутни ланац</value>
+  </data>
+  <data name="CurrentEffect" xml:space="preserve">
+    <value>Тренутни ефекат</value>
+  </data>
+  <data name="CurrentSystemDefaultOutput" xml:space="preserve">
+    <value>Тренутни подразумевани излаз система</value>
+  </data>
+  <data name="DaemonDisconnectedNoChange" xml:space="preserve">
+    <value>Сервис није повезан; измена није послата.</value>
+  </data>
+  <data name="DaemonNotRunning" xml:space="preserve">
+    <value>Сервис није покренут</value>
+  </data>
+  <data name="DaemonNotRunningSentence" xml:space="preserve">
+    <value>Сервис није покренут.</value>
+  </data>
+  <data name="DaemonOlderVersionNote" xml:space="preserve">
+    <value>Сервис је старије верзије; овај прозор је v{0}. Поново покрени сервис да користиш инсталирану верзију.</value>
+  </data>
+  <data name="DaemonRefusedWindow" xml:space="preserve">
+    <value>сервис је одбио овај прозор: {0}</value>
+  </data>
+  <data name="DaemonRestartedHardwareOnly" xml:space="preserve">
+    <value>Сервис је поново покренут у режиму хардверских контрола; звучна картица задржава фабрички распоред и ефекти се не учитавају.</value>
+  </data>
+  <data name="DaemonRestartedSubmixerOn" xml:space="preserve">
+    <value>Сервис је поново покренут с укљученим подмиксером.</value>
+  </data>
+  <data name="DaemonVersionNote" xml:space="preserve">
+    <value>Сервис је v{0}; овај прозор је v{1}. Поново покрени сервис да користиш инсталирану верзију.</value>
+  </data>
+  <data name="DeepWineTraceForPluginScans" xml:space="preserve">
+    <value>Детаљно Wine праћење претраге додатака</value>
+  </data>
+  <data name="DefaultInput" xml:space="preserve">
+    <value>Подраз. улаз</value>
+  </data>
+  <data name="DefaultOutput" xml:space="preserve">
+    <value>Подраз. излаз</value>
+  </data>
+  <data name="Defaults" xml:space="preserve">
+    <value>Подразумевано</value>
+  </data>
+  <data name="DelayTheOtherMixesSoEachLines" xml:space="preserve">
+    <value>Успори остале миксеве да би се ускладили с оним чији додаци најдуже обрађују звук, до две секунде. Измена поново гради све ланце додатака и накратко прекида звук.</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Обриши</value>
+  </data>
+  <data name="DeleteAppChannelDetail" xml:space="preserve">
+    <value>Програми усмерени ка њему прелазе на {0}. Његов уређај за репродукцију нестаје с радне површине.</value>
+  </data>
+  <data name="DeleteCaptureChannelDetail" xml:space="preserve">
+    <value>Улаз за снимање и његова слања се уклањају. Изворни уређај остаје доступан другим апликацијама.</value>
+  </data>
+  <data name="DeleteChainPresetDetail" xml:space="preserve">
+    <value>Обрисати сачувани пресет '{0}'? Активни ланац остаје.</value>
+  </data>
+  <data name="DeleteChannelTitle" xml:space="preserve">
+    <value>Обрисати канал '{0}'?</value>
+  </data>
+  <data name="DeleteEffectPresetDetail" xml:space="preserve">
+    <value>Обрисати сачувани пресет '{0}'?</value>
+  </data>
+  <data name="DeleteFile" xml:space="preserve">
+    <value>Обриши датотеку</value>
+  </data>
+  <data name="DeleteGroup" xml:space="preserve">
+    <value>Обриши групу</value>
+  </data>
+  <data name="DeleteMixTitle" xml:space="preserve">
+    <value>Обрисати микс '{0}'?</value>
+  </data>
+  <data name="DeleteMonitorMixDetail" xml:space="preserve">
+    <value>Његова слања и ефекти се уклањају. Излази који прате само овај микс враћају се на подразумевани мониторски микс; збирни извори задржавају остале миксеве. Ако је овај микс наметнути системски подразумевани уређај, та поставка се брише.</value>
+  </data>
+  <data name="DeletePluginFileDetail" xml:space="preserve">
+    <value>Трајно обрисати {0} и генерисане омотаче? Уклања се само ова датотека или пакет; остали додаци у фасцикли остају. Ово није могуће опозвати.</value>
+  </data>
+  <data name="DeletePluginFileTitle" xml:space="preserve">
+    <value>Обрисати датотеку додатка?</value>
+  </data>
+  <data name="DeletePreset" xml:space="preserve">
+    <value>Обриши пресет</value>
+  </data>
+  <data name="DeleteThisProfile" xml:space="preserve">
+    <value>Обриши овај профил</value>
+  </data>
+  <data name="DeleteVirtualMicDetail" xml:space="preserve">
+    <value>Његов виртуелни микрофон нестаје; све што с њега снима губи уређај. Уклањају се и његова слања и ефекти.</value>
+  </data>
+  <data name="DeletingPlugin" xml:space="preserve">
+    <value>Брисање додатка…</value>
+  </data>
+  <data name="DESKTOP" xml:space="preserve">
+    <value>РАДНА ПОВРШИНА</value>
+  </data>
+  <data name="DesktopConnectionLost" xml:space="preserve">
+    <value>Веза с радном површином је прекинута. Отвори Тастере радне површине и примени за поновно повезивање.</value>
+  </data>
+  <data name="DesktopInvalidVolumeRange" xml:space="preserve">
+    <value>Радна површина је вратила неважећи опсег јачине.</value>
+  </data>
+  <data name="DesktopKeyCompleted" xml:space="preserve">
+    <value>Завршено: {0}.</value>
+  </data>
+  <data name="DesktopKeyQueueFull" xml:space="preserve">
+    <value>Ред тастера радне површине је пун; овај притисак није додат. Сачекај сервис пре поновног покушаја.</value>
+  </data>
+  <data name="DesktopKeys" xml:space="preserve">
+    <value>Тастери радне површине</value>
+  </data>
+  <data name="DesktopKeysActive" xml:space="preserve">
+    <value>Тастери радне површине су активни. Нека OpenXLR остане покренут, и у системској палети.</value>
+  </data>
+  <data name="DesktopKeysConnecting" xml:space="preserve">
+    <value>Повезивање с радном површином...</value>
+  </data>
+  <data name="DesktopKeysDisabled" xml:space="preserve">
+    <value>Тастери радне површине су искључени.</value>
+  </data>
+  <data name="DesktopKeysError" xml:space="preserve">
+    <value>Тастери радне површине: {0}</value>
+  </data>
+  <data name="DesktopKeysFocusOnly" xml:space="preserve">
+    <value>Усмеравање фокусиране апликације за OpenDeck је укључено. Изабери канале испод да доделиш пречице рачунара.</value>
+  </data>
+  <data name="DesktopKeysIntro" xml:space="preserve">
+    <value>Усмеравање фокусиране апликације користи KDE Plasma. Укључи га за OpenDeck тастере, па изабери канале испод да доделиш пречице кроз дијалог дозвола радне површине. Нека OpenXLR остане покренут, и у системској палети.</value>
+  </data>
+  <data name="DesktopKeysNote" xml:space="preserve">
+    <value>Пречице за канале апликација, јачину и системски излаз, као и усмеравање фокусиране апликације за OpenDeck, које захтева KDE Plasma.</value>
+  </data>
+  <data name="DesktopKeysTitle" xml:space="preserve">
+    <value>Тастери радне површине OpenXLR-а</value>
+  </data>
+  <data name="DesktopKeysVolumeNote" xml:space="preserve">
+    <value>Тастери јачине мењају је у корацима од 5%, до 150%. Тастери системског излаза мењају наметнути подразумевани уређај радне површине; извори миксера задржавају свој избор.</value>
+  </data>
+  <data name="DesktopKeysWaiting" xml:space="preserve">
+    <value>Чекање завршетка претходног подешавања...</value>
+  </data>
+  <data name="DesktopPreferenceUnreadable" xml:space="preserve">
+    <value>Није могуће прочитати поставку радне површине.</value>
+  </data>
+  <data name="DesktopRouting" xml:space="preserve">
+    <value>Усмеравање радне површине</value>
+  </data>
+  <data name="Devices" xml:space="preserve">
+    <value>Уређаји</value>
+  </data>
+  <data name="DiagnosticsFailed" xml:space="preserve">
+    <value>неуспех: {0}</value>
+  </data>
+  <data name="DiagnosticsSavedTo" xml:space="preserve">
+    <value>сачувано у {0}</value>
+  </data>
+  <data name="DirectMonitorBlendLeftOnlyYourMicRight" xml:space="preserve">
+    <value>Однос директног слушања: лево = само микрофон, десно = само звук рачунара</value>
+  </data>
+  <data name="Disable" xml:space="preserve">
+    <value>Искључи</value>
+  </data>
+  <data name="DisableInOpenXLR" xml:space="preserve">
+    <value>Искључи у OpenXLR-у</value>
+  </data>
+  <data name="DisablePluginDetail" xml:space="preserve">
+    <value>Искључити {0} у изабраном yabridge подешавању? Његове датотеке остају на месту.</value>
+  </data>
+  <data name="DisablePluginTitle" xml:space="preserve">
+    <value>Искључити додатак?</value>
+  </data>
+  <data name="DisablingKeepsTheFilesDeleteFilePermanentlyRemoves" xml:space="preserve">
+    <value>Искључивање задржава датотеке. Обриши датотеку трајно уклања самостални додатак. Додаци инсталирани кроз Wine користе свој програм за деинсталацију. Измене освежавају каталог додатака.</value>
+  </data>
+  <data name="DisablingPlugin" xml:space="preserve">
+    <value>Искључивање додатка…</value>
+  </data>
+  <data name="DiscordCommunity" xml:space="preserve">
+    <value>Discord заједница</value>
+  </data>
+  <data name="Dismiss" xml:space="preserve">
+    <value>Одбаци</value>
+  </data>
+  <data name="DockMixer" xml:space="preserve">
+    <value>Врати миксер у главни прозор</value>
+  </data>
+  <data name="DoNotLeaveThisOnTheSwitchIs" xml:space="preserve">
+    <value>Не остављај ово укључено. Прекидач се не чува након поновног покретања сервиса; праћење укључено у почетном окружењу сервиса и даље важи. Изричити WINEDEBUG задржава своје канале.</value>
+  </data>
+  <data name="DontEnforce" xml:space="preserve">
+    <value>(не намећи)</value>
+  </data>
+  <data name="DragAHandleOntoAnotherSectionOr" xml:space="preserve">
+    <value>Превуци ручицу на други одељак или плочицу или је фокусирај и користи стрелице. Escape отказује превлачење.</value>
+  </data>
+  <data name="DragOntoAnotherChannelYouCanEdit" xml:space="preserve">
+    <value>Превуци на други уредиви канал; стрелице померају за једно место</value>
+  </data>
+  <data name="DragOntoAnotherMixYouAddedArrow" xml:space="preserve">
+    <value>Превуци на други додати микс; стрелице померају за једно место</value>
+  </data>
+  <data name="DragToAnotherSectionArrowKeysMove" xml:space="preserve">
+    <value>Превуци на други одељак; стрелице померају за једно место</value>
+  </data>
+  <data name="DriveAsAdditionalInterface" xml:space="preserve">
+    <value>Контролиши као додатни интерфејс</value>
+  </data>
+  <data name="EachMixHasItsOwnMasterSends" xml:space="preserve">
+    <value>Сваки микс има свој главни ниво, слања и ефекте. Мониторски микс напаја излазе без објављивања виртуелног микрофона. Нова слања су утишана. Мониторске миксеве можеш преименовати, преместити и уклонити, али бар један мора остати. Aux остаје на свом месту.</value>
+  </data>
+  <data name="EditLayout" xml:space="preserve">
+    <value>Уреди распоред</value>
+  </data>
+  <data name="EffectChainsTitle" xml:space="preserve">
+    <value>Ланци ефеката: {0}</value>
+  </data>
+  <data name="EffectDefinitionMissing" xml:space="preserve">
+    <value>Недостаје дефиниција ефекта.</value>
+  </data>
+  <data name="EffectFieldInvalid" xml:space="preserve">
+    <value>Неважећи ефекат {0}.</value>
+  </data>
+  <data name="EffectIdInvalid" xml:space="preserve">
+    <value>Неважећи ID или формат ефекта.</value>
+  </data>
+  <data name="EffectNoLongerInChain" xml:space="preserve">
+    <value>Ефекат више није у ланцу.</value>
+  </data>
+  <data name="EffectParameterInvalid" xml:space="preserve">
+    <value>Неважећи параметар ефекта.</value>
+  </data>
+  <data name="EffectParametersInvalid" xml:space="preserve">
+    <value>Ефекат има неважеће параметре.</value>
+  </data>
+  <data name="EffectPresetFileType" xml:space="preserve">
+    <value>Пресети ефеката OpenXLR-а</value>
+  </data>
+  <data name="EffectSwitchInvalid" xml:space="preserve">
+    <value>Неважећи прекидач ефекта.</value>
+  </data>
+  <data name="EnableDesktopIntegration" xml:space="preserve">
+    <value>Укључи интеграцију с радном површином</value>
+  </data>
+  <data name="EnableInOpenXLR" xml:space="preserve">
+    <value>Укључи у OpenXLR-у</value>
+  </data>
+  <data name="EnableSoftwareMixer" xml:space="preserve">
+    <value>Укључи софтверски миксер</value>
+  </data>
+  <data name="EnablingPlugin" xml:space="preserve">
+    <value>Укључивање додатка…</value>
+  </data>
+  <data name="EveryAppOpenXLRHasRoutedPlayingOrSilent" xml:space="preserve">
+    <value>Све апликације које је OpenXLR усмерио, активне или тихе. Доделе важе за следећи ток који апликација отвори; игнорисање трајно препушта усмеравање радној површини; Заборави уклања апликацију и њен запамћени канал.</value>
+  </data>
+  <data name="ExclusiveChannelGroups" xml:space="preserve">
+    <value>Искључиве групе канала</value>
+  </data>
+  <data name="ExclusiveGroups" xml:space="preserve">
+    <value>Искључиве групе</value>
+  </data>
+  <data name="ExclusiveGroupsIntro" xml:space="preserve">
+    <value>Чује се само један канал групе. Укључивање звука једног члана у било ком миксу утишава остале чланове у свим миксевима; њихови нивои остају исти.</value>
+  </data>
+  <data name="ExclusiveGroupsInvalid" xml:space="preserve">
+    <value>Унеси назив и изабери бар два канала.</value>
+  </data>
+  <data name="ExclusiveGroupsProNote" xml:space="preserve">
+    <value>На Wave XLR Pro уређају, XLR 1 у групи стиже до прикључака слушалица кроз миксер уместо путање интерфејса без кашњења.</value>
+  </data>
+  <data name="ExclusiveGroupsRules" xml:space="preserve">
+    <value>Изабери бар два канала. Канал може припадати највише једној групи. Ако више чланова има укључен звук при чувању, сви се утишавају, па укључи оног кога желиш. Брисање групе не мења стања утишавања.</value>
+  </data>
+  <data name="Expander" xml:space="preserve">
+    <value>Експандер</value>
+  </data>
+  <data name="ExportEffectPreset" xml:space="preserve">
+    <value>Извези пресет ефекта</value>
+  </data>
+  <data name="ExportPreset" xml:space="preserve">
+    <value>Извези пресет</value>
+  </data>
+  <data name="FaderPrecisionHint" xml:space="preserve">
+    <value>Држи Shift при превлачењу за прецизнију контролу. Стрелице мењају вредност за један корак; Page Up и Page Down за десет.</value>
+  </data>
+  <data name="FindAnInstalledPlugin" xml:space="preserve">
+    <value>Пронађи инсталирани додатак…</value>
+  </data>
+  <data name="FixWindowsEditorInput" xml:space="preserve">
+    <value>Поправи унос Windows уређивача</value>
+  </data>
+  <data name="Flow" xml:space="preserve">
+    <value>Ток</value>
+  </data>
+  <data name="FlowDaemonDisconnected" xml:space="preserve">
+    <value>Сервис није повезан. Чекање активног усмеравања.</value>
+  </data>
+  <data name="FlowHardware" xml:space="preserve">
+    <value>Хардвер</value>
+  </data>
+  <data name="FlowInputProcessing" xml:space="preserve">
+    <value>Обрада улаза:</value>
+  </data>
+  <data name="FlowInsertBypassed" xml:space="preserve">
+    <value>{0} (заобиђен)</value>
+  </data>
+  <data name="FlowInsertProblem" xml:space="preserve">
+    <value>{0} (проблем)</value>
+  </data>
+  <data name="FlowLowCut" xml:space="preserve">
+    <value>Одсецање ниских {0} Hz</value>
+  </data>
+  <data name="FlowMixProcessing" xml:space="preserve">
+    <value>Обрада микса:</value>
+  </data>
+  <data name="FlowMuted" xml:space="preserve">
+    <value>Утишано</value>
+  </data>
+  <data name="FlowOff" xml:space="preserve">
+    <value>Искључено</value>
+  </data>
+  <data name="FlowSoftware" xml:space="preserve">
+    <value>Софтвер</value>
+  </data>
+  <data name="FlowSubmixerOff" xml:space="preserve">
+    <value>Укључи подмиксер у Опцијама да видиш ток звука.</value>
+  </data>
+  <data name="FlowVolume" xml:space="preserve">
+    <value>Јач. {0}</value>
+  </data>
+  <data name="FoldersBridged" xml:space="preserve">
+    <value>Повезаних фасцикли: {0}</value>
+  </data>
+  <data name="FollowMonitorOutput" xml:space="preserve">
+    <value>Прати излаз МОНИТОРА (системска јачина)</value>
+  </data>
+  <data name="FollowSelectedMonitorOutput" xml:space="preserve">
+    <value>Прати изабрани мониторски излаз</value>
+  </data>
+  <data name="Forget" xml:space="preserve">
+    <value>Заборави</value>
+  </data>
+  <data name="ForReproducingABridgedPluginFailureForA" xml:space="preserve">
+    <value>За понављање грешке повезаног додатка ради пријаве проблема. Претрага постаје много спорија и прави велике дневнике. Укључи ово, притисни Претражи поново у ДОДАЦИМА, сачекај завршетак, прикупи дијагностику, па искључи. Претрага поново покушава с неуспелим пакетима; успешни непромењени пакети остају у кешу.</value>
+  </data>
+  <data name="FrontJack" xml:space="preserve">
+    <value>Предњи прикључак</value>
+  </data>
+  <data name="GainLockTheDaemonRejectsEveryGainChange" xml:space="preserve">
+    <value>Закључавање појачања: сервис одбија сваку измену појачања док је укључено</value>
+  </data>
+  <data name="GroupNamePlaceholder" xml:space="preserve">
+    <value>Назив групе, нпр. Микрофони</value>
+  </data>
+  <data name="HandThePluginsAWindowsInstallerLeftIn" xml:space="preserve">
+    <value>Предај yabridge-у додатке које је Windows инсталатер поставио у Wine</value>
+  </data>
+  <data name="HardwareChannel" xml:space="preserve">
+    <value>Хардверски канал</value>
+  </data>
+  <data name="HardwareInput" xml:space="preserve">
+    <value>хардверски улаз</value>
+  </data>
+  <data name="HEADPHONES" xml:space="preserve">
+    <value>СЛУШАЛИЦЕ</value>
+  </data>
+  <data name="HearA" xml:space="preserve">
+    <value>Слушај A</value>
+  </data>
+  <data name="HearB" xml:space="preserve">
+    <value>Слушај B</value>
+  </data>
+  <data name="HearingA" xml:space="preserve">
+    <value>Слуша се A</value>
+  </data>
+  <data name="HearingB" xml:space="preserve">
+    <value>Слуша се B</value>
+  </data>
+  <data name="HearLiveMic" xml:space="preserve">
+    <value>Слушај микрофон уживо</value>
+  </data>
+  <data name="HiddenInTheMixer" xml:space="preserve">
+    <value>скривено у миксеру</value>
+  </data>
+  <data name="HideChannelStrip" xml:space="preserve">
+    <value>Сакриј траку овог канала у миксеру. Његов звук, слања и апликације остају исти.</value>
+  </data>
+  <data name="HideMix" xml:space="preserve">
+    <value>Сакриј овај микс у миксеру. Његов звук, излази, слања и ниво остају исти.</value>
+  </data>
+  <data name="HostSideLowCutForThisDeviceIts" xml:space="preserve">
+    <value>Софтверско одсецање ниских за овај уређај (DSP је у софтверу); смењује искључено, 80 Hz, 120 Hz</value>
+  </data>
+  <data name="Icon" xml:space="preserve">
+    <value>Икона</value>
+  </data>
+  <data name="IconAndColour" xml:space="preserve">
+    <value>Икона и боја</value>
+  </data>
+  <data name="IconColourAndWhetherTheStripShows" xml:space="preserve">
+    <value>Икона, боја и видљивост траке у миксеру</value>
+  </data>
+  <data name="IconColourAndWhetherTheMixShows" xml:space="preserve">
+    <value>Икона, боја и видљивост микса у миксеру</value>
+  </data>
+  <data name="ImportEffectPreset" xml:space="preserve">
+    <value>Увези пресет ефекта</value>
+  </data>
+  <data name="ImportPreset" xml:space="preserve">
+    <value>Увези пресет</value>
+  </data>
+  <data name="InputChainHint" xml:space="preserve">
+    <value>Додаци по реду, пре него што улаз стигне до миксева</value>
+  </data>
+  <data name="INPUTS" xml:space="preserve">
+    <value>УЛАЗИ</value>
+  </data>
+  <data name="InputToChannel" xml:space="preserve">
+    <value>Улаз ка каналу</value>
+  </data>
+  <data name="Inserts" xml:space="preserve">
+    <value>Ефекти</value>
+  </data>
+  <data name="InsertsCount" xml:space="preserve">
+    <value>Ефекти ({0})</value>
+  </data>
+  <data name="InsertsNone" xml:space="preserve">
+    <value>нема</value>
+  </data>
+  <data name="InsertStateActive" xml:space="preserve">
+    <value>активан</value>
+  </data>
+  <data name="InsertStateBypassed" xml:space="preserve">
+    <value>заобиђен</value>
+  </data>
+  <data name="InsertStateProblem" xml:space="preserve">
+    <value>проблем</value>
+  </data>
+  <data name="InsertsTitle" xml:space="preserve">
+    <value>Ефекти: {0}</value>
+  </data>
+  <data name="InstallAClapOrVst3FileOrA" xml:space="preserve">
+    <value>Инсталирај .clap или .vst3 датотеку или Windows додатак преко yabridge-а</value>
+  </data>
+  <data name="InstallAPluginFolder" xml:space="preserve">
+    <value>Инсталирај фасциклу додатка</value>
+  </data>
+  <data name="InstallAVst3OrLv2BundleOrEvery" xml:space="preserve">
+    <value>Инсталирај .vst3 или .lv2 пакет или све додатке у фасцикли</value>
+  </data>
+  <data name="InstalledAndLatest" xml:space="preserve">
+    <value>Инсталирана верзија: {0}. Најновије стабилно издање: {1}.</value>
+  </data>
+  <data name="InstallFile" xml:space="preserve">
+    <value>Инсталирај датотеку</value>
+  </data>
+  <data name="InstallFolder" xml:space="preserve">
+    <value>Инсталирај фасциклу</value>
+  </data>
+  <data name="Installing" xml:space="preserve">
+    <value>Инсталирање…</value>
+  </data>
+  <data name="InstallPluginFiles" xml:space="preserve">
+    <value>Инсталирај датотеке додатака</value>
+  </data>
+  <data name="DeviceFirmware" xml:space="preserve">
+    <value>Фирмвер {0}</value>
+  </data>
+  <data name="INTERFACE" xml:space="preserve">
+    <value>ИНТЕРФЕЈС</value>
+  </data>
+  <data name="InterfaceCaptureSource" xml:space="preserve">
+    <value>Извор за снимање</value>
+  </data>
+  <data name="InterfaceChannelName" xml:space="preserve">
+    <value>Назив канала</value>
+  </data>
+  <data name="InterfaceChannelNamePlaceholder" xml:space="preserve">
+    <value>Назив интерфејса и број улаза</value>
+  </data>
+  <data name="InterfaceConnection" xml:space="preserve">
+    <value>Веза интерфејса</value>
+  </data>
+  <data name="InterfaceInputChannelName" xml:space="preserve">
+    <value>{0} улаз {1}</value>
+  </data>
+  <data name="InterfaceMicrophone" xml:space="preserve">
+    <value>Микрофон</value>
+  </data>
+  <data name="InterfaceNotConnected" xml:space="preserve">
+    <value>Интерфејс није повезан.</value>
+  </data>
+  <data name="InterfaceSourcePlaceholder" xml:space="preserve">
+    <value>Изабери извор интерфејса</value>
+  </data>
+  <data name="InvalidPresetName" xml:space="preserve">
+    <value>Неважећи назив пресета ефекта.</value>
+  </data>
+  <data name="InvalidPresetNameOrChain" xml:space="preserve">
+    <value>Неважећи назив или ланац пресета ефекта.</value>
+  </data>
+  <data name="KeepRunningInTray" xml:space="preserve">
+    <value>Настави рад у системској палети</value>
+  </data>
+  <data name="KeyOutputVolumeDown" xml:space="preserve">
+    <value>Смањи јачину излаза за 5%</value>
+  </data>
+  <data name="KeyOutputVolumeUp" xml:space="preserve">
+    <value>Повећај јачину излаза за 5%</value>
+  </data>
+  <data name="KeyRouteFocusedApp" xml:space="preserve">
+    <value>Усмери фокусирану апликацију ка {0}</value>
+  </data>
+  <data name="KeySetSystemOutput" xml:space="preserve">
+    <value>Постави системски излаз на {0}</value>
+  </data>
+  <data name="KeyToggleOutputMute" xml:space="preserve">
+    <value>Укључи или искључи звук излаза</value>
+  </data>
+  <data name="KNOWNAPPLICATIONS" xml:space="preserve">
+    <value>ПОЗНАТЕ АПЛИКАЦИЈЕ</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Језик</value>
+  </data>
+  <data name="LanguageHint" xml:space="preserve">
+    <value>Прозор чита језик при покретању, па измена важи од следећег отварања OpenXLR-а. Системски језик прати радну површину и враћа се на енглески ако нема превода. Језике додају сарадници; упутство објашњава како.</value>
+  </data>
+  <data name="LatencyMilliseconds" xml:space="preserve">
+    <value>Кашњење: {0:0.##} ms</value>
+  </data>
+  <data name="LatencyUnknown" xml:space="preserve">
+    <value>Кашњење: непознато. Изједначавање кашњења га рачуна као нулу.</value>
+  </data>
+  <data name="LeftLevel" xml:space="preserve">
+    <value>Леви ниво</value>
+  </data>
+  <data name="LevelLock" xml:space="preserve">
+    <value>Закључај ниво</value>
+  </data>
+  <data name="LineInUsbAux" xml:space="preserve">
+    <value>Line In / USB Aux</value>
+  </data>
+  <data name="LoadPreset" xml:space="preserve">
+    <value>Учитај пресет</value>
+  </data>
+  <data name="LoadThisProfile" xml:space="preserve">
+    <value>Учитај овај профил</value>
+  </data>
+  <data name="Lock" xml:space="preserve">
+    <value>Закљ.</value>
+  </data>
+  <data name="LoopSample" xml:space="preserve">
+    <value>Понављај узорак</value>
+  </data>
+  <data name="LowCut" xml:space="preserve">
+    <value>Одсецање ниских</value>
+  </data>
+  <data name="LowCutFrequency" xml:space="preserve">
+    <value>Одсецање ниских {0}</value>
+  </data>
+  <data name="LowCutOff" xml:space="preserve">
+    <value>Одсецање ниских искључено</value>
+  </data>
+  <data name="LowImp" xml:space="preserve">
+    <value>Ниска имп.</value>
+  </data>
+  <data name="LV2CLAPAndVST3PluginsAreFound" xml:space="preserve">
+    <value>LV2, CLAP и VST3 додаци траже се у стандардним фасциклама и онима које задају LV2_PATH, CLAP_PATH или VST3_PATH. Додај фасциклу да се додаци пронађу на месту, без копирања. Уклањање додате фасцикле задржава њене датотеке.</value>
+  </data>
+  <data name="Manage" xml:space="preserve">
+    <value>Управљај</value>
+  </data>
+  <data name="ManageThisPluginSNativeEditorCompatibilityRule" xml:space="preserve">
+    <value>Управљај правилом компатибилности изворног уређивача овог додатка</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>Упутство</value>
+  </data>
+  <data name="MaterialDescription" xml:space="preserve">
+    <value>Класични изглед, са светлим и тамним режимом.</value>
+  </data>
+  <data name="MemoryLockSetup" xml:space="preserve">
+    <value>Подешавање закључавања меморије</value>
+  </data>
+  <data name="MicPC" xml:space="preserve">
+    <value>Мик ↔ PC</value>
+  </data>
+  <data name="MixChainHint" xml:space="preserve">
+    <value>Стерео додаци по реду, пре него што микс стигне до излаза</value>
+  </data>
+  <data name="MixerAppearance" xml:space="preserve">
+    <value>Изглед</value>
+  </data>
+  <data name="MixerControlSize" xml:space="preserve">
+    <value>Величина контрола миксера</value>
+  </data>
+  <data name="MixerDetached" xml:space="preserve">
+    <value>Подмиксер је отворен у засебном прозору.</value>
+  </data>
+  <data name="MixerLayout" xml:space="preserve">
+    <value>Распоред миксера</value>
+  </data>
+  <data name="MixerView" xml:space="preserve">
+    <value>Приказ миксера</value>
+  </data>
+  <data name="MixerViewCompact" xml:space="preserve">
+    <value>Сажето: један канал</value>
+  </data>
+  <data name="MixerViewFull" xml:space="preserve">
+    <value>Цео миксер</value>
+  </data>
+  <data name="MixerViewMini" xml:space="preserve">
+    <value>Мини: један канал у једном миксу</value>
+  </data>
+  <data name="MixerWindowTitle" xml:space="preserve">
+    <value>OpenXLR миксер</value>
+  </data>
+  <data name="MIXES" xml:space="preserve">
+    <value>МИКСЕВИ</value>
+  </data>
+  <data name="MixInsertsTitle" xml:space="preserve">
+    <value>Микс {0}</value>
+  </data>
+  <data name="MixShown" xml:space="preserve">
+    <value>Приказ микса</value>
+  </data>
+  <data name="MixToOutput" xml:space="preserve">
+    <value>Микс ка излазу</value>
+  </data>
+  <data name="MixType" xml:space="preserve">
+    <value>Врста микса</value>
+  </data>
+  <data name="Mode" xml:space="preserve">
+    <value>Режим</value>
+  </data>
+  <data name="MONITOR" xml:space="preserve">
+    <value>МОНИТОР</value>
+  </data>
+  <data name="MonitorMix" xml:space="preserve">
+    <value>Мониторски микс</value>
+  </data>
+  <data name="MonitorMixKind" xml:space="preserve">
+    <value>мониторски микс</value>
+  </data>
+  <data name="MonitorNotRouted" xml:space="preserve">
+    <value>није усмерено</value>
+  </data>
+  <data name="MonitorOutput" xml:space="preserve">
+    <value>Мониторски излаз</value>
+  </data>
+  <data name="MonitorOutputMissing" xml:space="preserve">
+    <value>{0} (није повезано)</value>
+  </data>
+  <data name="MonitorOutputsMore" xml:space="preserve">
+    <value>{0} + још {1}</value>
+  </data>
+  <data name="MonoPickerHint" xml:space="preserve">
+    <value>Додаци који могу да раде моно на путањи микрофона</value>
+  </data>
+  <data name="MonoPluginsAvailable" xml:space="preserve">
+    <value>Доступних моно додатака: {0}</value>
+  </data>
+  <data name="MoreBundlesOmitted" xml:space="preserve">
+    <value>Још {0} пакета није приказано на овој листи.</value>
+  </data>
+  <data name="MoveApplications" xml:space="preserve">
+    <value>Премести апликације</value>
+  </data>
+  <data name="MoveDown" xml:space="preserve">
+    <value>Помери надоле</value>
+  </data>
+  <data name="MoveHeadphones" xml:space="preserve">
+    <value>Премести слушалице</value>
+  </data>
+  <data name="MoveInputs" xml:space="preserve">
+    <value>Премести улазе</value>
+  </data>
+  <data name="MoveItem" xml:space="preserve">
+    <value>Премести {0}</value>
+  </data>
+  <data name="MoveMonitor" xml:space="preserve">
+    <value>Премести монитор</value>
+  </data>
+  <data name="MovePluginDown" xml:space="preserve">
+    <value>Помери додатак надоле</value>
+  </data>
+  <data name="MovePluginUp" xml:space="preserve">
+    <value>Помери додатак нагоре</value>
+  </data>
+  <data name="MoveSubmixer" xml:space="preserve">
+    <value>Премести подмиксер</value>
+  </data>
+  <data name="MoveUp" xml:space="preserve">
+    <value>Помери нагоре</value>
+  </data>
+  <data name="Mute" xml:space="preserve">
+    <value>Утишај</value>
+  </data>
+  <data name="MuteInput2" xml:space="preserve">
+    <value>Утишај улаз 2</value>
+  </data>
+  <data name="MuteMonitoring" xml:space="preserve">
+    <value>Утишај слушање</value>
+  </data>
+  <data name="MuteMonitoringTip" xml:space="preserve">
+    <value>Утишај све изабране мониторске излазе без промене сачуваних утишавања миксева или канала. Ако је укључено у Звуку, паузирају се и слања микрофона. Други снимци и емитовање настављају се.</value>
+  </data>
+  <data name="MutedInactive" xml:space="preserve">
+    <value>Утишано / неактивно</value>
+  </data>
+  <data name="NativeEditorCompatibility" xml:space="preserve">
+    <value>Компатибилност изворног уређивача</value>
+  </data>
+  <data name="NativeEditorDisabled" xml:space="preserve">
+    <value>Овај изворни уређивач је искључен у Опцијама. Користи OpenXLR контроле.</value>
+  </data>
+  <data name="NativeEditors" xml:space="preserve">
+    <value>Изворни уређивачи</value>
+  </data>
+  <data name="NativeHost" xml:space="preserve">
+    <value>Изворни хост</value>
+  </data>
+  <data name="NativeHostLetter" xml:space="preserve">
+    <value>N</value>
+  </data>
+  <data name="NativeHostMissing" xml:space="preserve">
+    <value>Изворни хост додатака није инсталиран поред сервиса, па CLAP и VST3 додаци не могу да раде.</value>
+  </data>
+  <data name="NewChannelEGPodcast" xml:space="preserve">
+    <value>Нови канал, нпр. Подкаст</value>
+  </data>
+  <data name="NewGroup" xml:space="preserve">
+    <value>Нова група</value>
+  </data>
+  <data name="NewMixEGRecordingOrHeadphones" xml:space="preserve">
+    <value>Нови микс, нпр. Снимање или Слушалице</value>
+  </data>
+  <data name="NewPresetName" xml:space="preserve">
+    <value>Назив новог пресета</value>
+  </data>
+  <data name="NewRelease" xml:space="preserve">
+    <value>Ново издање OpenXLR-а {0}</value>
+  </data>
+  <data name="NoAnswerCheckChange" xml:space="preserve">
+    <value>Сервис не одговара. Провери да ли је измена примењена пре поновног покушаја.</value>
+  </data>
+  <data name="NoAnswerForPath" xml:space="preserve">
+    <value>Сервис не одговара за {0}.</value>
+  </data>
+  <data name="NoAnswerMayStillRun" xml:space="preserve">
+    <value>Сервис не одговара; {0} можда још ради.</value>
+  </data>
+  <data name="NoDevice" xml:space="preserve">
+    <value>Нема уређаја</value>
+  </data>
+  <data name="NoFolderBridged" xml:space="preserve">
+    <value>још нема повезаних фасцикли</value>
+  </data>
+  <data name="NoInsertsYet" xml:space="preserve">
+    <value>Још нема ефеката.</value>
+  </data>
+  <data name="NoLongerInWinePrefix" xml:space="preserve">
+    <value>Овај додатак више не припада Wine префиксу.</value>
+  </data>
+  <data name="NoMonoPlugins" xml:space="preserve">
+    <value>Нема пронађених моно додатака. Инсталирај их или додај дугмадима испод</value>
+  </data>
+  <data name="NoNativeEditorsAreBlocked" xml:space="preserve">
+    <value>Ниједан изворни уређивач није блокиран.</value>
+  </data>
+  <data name="NoNetworkRequest" xml:space="preserve">
+    <value>Мрежни захтев се шаље само ако ручно провериш или укључиш опцију испод.</value>
+  </data>
+  <data name="NoProfilesSavedYet" xml:space="preserve">
+    <value>још нема сачуваних профила</value>
+  </data>
+  <data name="NoRegisteredFolders" xml:space="preserve">
+    <value>Нема регистрованих фасцикли.</value>
+  </data>
+  <data name="NoSessionBus" xml:space="preserve">
+    <value>Није доступна магистрала сесије.</value>
+  </data>
+  <data name="NoStereoPlugins" xml:space="preserve">
+    <value>Нема пронађених стерео додатака. Инсталирај их или додај дугмадима испод</value>
+  </data>
+  <data name="NotAffiliatedWithOrEndorsedByElgatoBuilt" xml:space="preserve">
+    <value>Није повезано с компанијом Elgato нити има њену подршку или препоруку. Направљено анализом протокола на хардверу аутора, уз признање пројекту openwave за Wave XLR дијалекат.</value>
+  </data>
+  <data name="NotInPath" xml:space="preserve">
+    <value>Није у путањи</value>
+  </data>
+  <data name="NotManaged" xml:space="preserve">
+    <value>Није под управљањем</value>
+  </data>
+  <data name="NotRunning" xml:space="preserve">
+    <value>није покренуто</value>
+  </data>
+  <data name="NoWindowsPluginFiles" xml:space="preserve">
+    <value>Нема пронађених Windows VST3 или CLAP датотека додатака.</value>
+  </data>
+  <data name="OffByDefaultCheckNowMakesOneExplicit" xml:space="preserve">
+    <value>Подразумевано искључено. Провери сада шаље један изричит захтев. Ништа се не преузима нити инсталира.</value>
+  </data>
+  <data name="OffOpenXLRControlsTheHardwareOnlyAndLeaves" xml:space="preserve">
+    <value>Искључено: OpenXLR контролише само хардвер и оставља звучну картицу у фабричком PipeWire распореду (UCM профил ако постоји).</value>
+  </data>
+  <data name="OnConnect" xml:space="preserve">
+    <value>При повезивању</value>
+  </data>
+  <data name="OneFolderBridged" xml:space="preserve">
+    <value>1 повезана фасцикла</value>
+  </data>
+  <data name="OnePlugin" xml:space="preserve">
+    <value>1 додатак</value>
+  </data>
+  <data name="OnLaunch" xml:space="preserve">
+    <value>При покретању</value>
+  </data>
+  <data name="OnLaunchAppliesTheNextTimeTheApp" xml:space="preserve">
+    <value>При покретању важи од следећег покретања апликације. Излазак из апликације не зауставља звук.</value>
+  </data>
+  <data name="OpenManualDesktopKeys" xml:space="preserve">
+    <value>Отвори одељак упутства о тастерима радне површине</value>
+  </data>
+  <data name="OpenOnGitHub" xml:space="preserve">
+    <value>Отвори на GitHub-у</value>
+  </data>
+  <data name="OpenPluginOwnEditor" xml:space="preserve">
+    <value>Отвори изворни уређивач додатка</value>
+  </data>
+  <data name="OpenSourceControlSuiteForElgatoXLRInterfaces" xml:space="preserve">
+    <value>Отворени софтвер за контролу Elgato XLR интерфејса на Linux-у (Wave XLR Pro, XLR Dock, XLR Dock MK.2, Wave XLR, Wave XLR MK.2): хардверске контроле преко анализираних протокола, PipeWire подмиксер налик Wave Link-у с каналима по апликацији и виртуелним микрофонима, слушање на више излаза, наменски микс за други рачунар на USB Aux порту и OpenDeck додатак за Stream Deck контролу.</value>
+  </data>
+  <data name="OpenTheManualSectionOnInstallingPlugins" xml:space="preserve">
+    <value>Отвори одељак упутства о инсталирању додатака</value>
+  </data>
+  <data name="OpenTheManualSectionOnPluginEditors" xml:space="preserve">
+    <value>Отвори одељак упутства о уређивачима додатака</value>
+  </data>
+  <data name="OpenTheManualSectionOnSkins" xml:space="preserve">
+    <value>Отвори одељак упутства о темама</value>
+  </data>
+  <data name="OpenTheManualSectionOnThePipewirePulse" xml:space="preserve">
+    <value>Отвори одељак упутства о ограничењу отворених датотека pipewire-pulse-а</value>
+  </data>
+  <data name="OpenThisPluginSControls" xml:space="preserve">
+    <value>Отвори контроле овог додатка</value>
+  </data>
+  <data name="OpenThisPluginSOwnEditorOnThe" xml:space="preserve">
+    <value>Отвори изворни уређивач додатка на активној аудио инстанци</value>
+  </data>
+  <data name="OpenUninstaller" xml:space="preserve">
+    <value>Отвори деинсталатер</value>
+  </data>
+  <data name="OpenWineUninstallerDetail" xml:space="preserve">
+    <value>Отворити листу инсталираних апликација за {0}? Тамо изабери ставку инсталатера додатка. Деинсталатер може уклонити више ефеката из истог пакета. Прво затвори остале Wine апликације и уклони погођене ефекте. OpenXLR поново претражује кад се деинсталатер затвори.</value>
+  </data>
+  <data name="OpenWineUninstallerTitle" xml:space="preserve">
+    <value>Отворити Wine деинсталатер?</value>
+  </data>
+  <data name="OpenXLRApplications" xml:space="preserve">
+    <value>OpenXLR апликације</value>
+  </data>
+  <data name="OpenXLRAudioFlow" xml:space="preserve">
+    <value>OpenXLR · Ток звука</value>
+  </data>
+  <data name="OpenXlrBridgeVersion" xml:space="preserve">
+    <value>OpenXLR мост {0} (64-bit)</value>
+  </data>
+  <data name="OpenXLRMixerLayout" xml:space="preserve">
+    <value>Распоред OpenXLR миксера</value>
+  </data>
+  <data name="OpenXLROptions" xml:space="preserve">
+    <value>OpenXLR опције</value>
+  </data>
+  <data name="OpenXLRUpdates" xml:space="preserve">
+    <value>Ажурирања OpenXLR-а</value>
+  </data>
+  <data name="Options" xml:space="preserve">
+    <value>Опције</value>
+  </data>
+  <data name="OutputMixesHeading" xml:space="preserve">
+    <value>ИЗЛАЗНИ МИКСЕВИ</value>
+  </data>
+  <data name="OUTPUTS" xml:space="preserve">
+    <value>ИЗЛАЗИ</value>
+  </data>
+  <data name="OutputUnavailable" xml:space="preserve">
+    <value>{0} (није доступно)</value>
+  </data>
+  <data name="Overwrite" xml:space="preserve">
+    <value>Препиши</value>
+  </data>
+  <data name="OverwriteProfileTitle" xml:space="preserve">
+    <value>Преписати профил?</value>
+  </data>
+  <data name="OwnDeviceLabel" xml:space="preserve">
+    <value>{0} (OpenXLR)</value>
+  </data>
+  <data name="ParameterGroupDisplay" xml:space="preserve">
+    <value>Приказ</value>
+  </data>
+  <data name="ParameterGroupDynamics" xml:space="preserve">
+    <value>Динамика</value>
+  </data>
+  <data name="ParameterGroupFilter" xml:space="preserve">
+    <value>Филтер</value>
+  </data>
+  <data name="ParameterGroupGeneral" xml:space="preserve">
+    <value>Опште</value>
+  </data>
+  <data name="ParameterGroupLevels" xml:space="preserve">
+    <value>Нивои</value>
+  </data>
+  <data name="ParameterGroupSidechain" xml:space="preserve">
+    <value>Бочни ланац</value>
+  </data>
+  <data name="ParamOff" xml:space="preserve">
+    <value>искљ.</value>
+  </data>
+  <data name="ParamOn" xml:space="preserve">
+    <value>укљ.</value>
+  </data>
+  <data name="PasteEffects" xml:space="preserve">
+    <value>Налепи ефекте</value>
+  </data>
+  <data name="Phantom" xml:space="preserve">
+    <value>Фантомско</value>
+  </data>
+  <data name="PhantomPowerSettling" xml:space="preserve">
+    <value>Фантомско напајање се стабилизује</value>
+  </data>
+  <data name="Phones1" xml:space="preserve">
+    <value>Слуш. 1</value>
+  </data>
+  <data name="Phones2" xml:space="preserve">
+    <value>Слуш. 2</value>
+  </data>
+  <data name="PickAPluginYouDownloadedAndOpenXLRPuts" xml:space="preserve">
+    <value>Изабери преузети додатак и OpenXLR ће га поставити на место: .clap или .vst3 датотека, .vst3 или .lv2 фасцикла или фасцикла с додацима.</value>
+  </data>
+  <data name="PickerNew" xml:space="preserve">
+    <value>Нових додатака у изборнику: {0}.</value>
+  </data>
+  <data name="PickerOneNew" xml:space="preserve">
+    <value>1 нови додатак у изборнику.</value>
+  </data>
+  <data name="Playing" xml:space="preserve">
+    <value>репродукује</value>
+  </data>
+  <data name="PluginDirectoriesDefault" xml:space="preserve">
+    <value>Додаци се траже у личној и системској фасцикли додатака.</value>
+  </data>
+  <data name="PluginDirectoriesFound" xml:space="preserve">
+    <value>Додаци се траже у {0}, {1} и {2} и системским фасциклама додатака.</value>
+  </data>
+  <data name="PluginDisabled" xml:space="preserve">
+    <value>Искључен</value>
+  </data>
+  <data name="PluginEnabled" xml:space="preserve">
+    <value>Укључен</value>
+  </data>
+  <data name="PluginFilesNoAnswer" xml:space="preserve">
+    <value>Сервис није одговорио на захтев за датотеку додатка.</value>
+  </data>
+  <data name="PluginFileType" xml:space="preserve">
+    <value>Додаци</value>
+  </data>
+  <data name="PluginFolders" xml:space="preserve">
+    <value>Фасцикле додатака</value>
+  </data>
+  <data name="PluginInUse" xml:space="preserve">
+    <value>У употреби</value>
+  </data>
+  <data name="PluginInUseDetail" xml:space="preserve">
+    <value>Уклони овај додатак из ланаца ефеката пре искључивања или деинсталације.</value>
+  </data>
+  <data name="PluginListUnavailable" xml:space="preserve">
+    <value>Листа додатака није доступна.</value>
+  </data>
+  <data name="PluginListUnavailableShort" xml:space="preserve">
+    <value>Листа додатака није доступна</value>
+  </data>
+  <data name="PluginManager" xml:space="preserve">
+    <value>Управљање додацима</value>
+  </data>
+  <data name="PLUGINS" xml:space="preserve">
+    <value>ДОДАЦИ</value>
+  </data>
+  <data name="PluginsInChain" xml:space="preserve">
+    <value>Додатака у ланцу: {0}</value>
+  </data>
+  <data name="PluginsProcessingXLR1BeforeItReachesThe" xml:space="preserve">
+    <value>Додаци који обрађују XLR 1 пре него што стигне до миксева</value>
+  </data>
+  <data name="PluginsProcessingXLR2BeforeItReachesThe" xml:space="preserve">
+    <value>Додаци који обрађују XLR 2 пре него што стигне до миксева</value>
+  </data>
+  <data name="PluginState" xml:space="preserve">
+    <value>Стање додатка</value>
+  </data>
+  <data name="PluginUI" xml:space="preserve">
+    <value>Приказ додатка</value>
+  </data>
+  <data name="PopOutMixer" xml:space="preserve">
+    <value>Издвоји</value>
+  </data>
+  <data name="PopOutMixerHint" xml:space="preserve">
+    <value>Премести подмиксер у засебан прозор за други екран.</value>
+  </data>
+  <data name="ShowHidden" xml:space="preserve">
+    <value>Прикажи скривено</value>
+  </data>
+  <data name="ShowHiddenHint" xml:space="preserve">
+    <value>Прикажи избледело канале и миксеве скривене у Уреди распоред, на њиховим местима. Раде као и обично; распоред се не мења.</value>
+  </data>
+  <data name="PreAssignAChannelToAnAppThat" xml:space="preserve">
+    <value>Унапред додели канал апликацији која још није репродуковала звук. Идентитет се претпоставља из покретача; ако апликација при првој репродукцији пријави нешто друго, појављује се као нова ставка.</value>
+  </data>
+  <data name="PreferenceFileHoldsNull" xml:space="preserve">
+    <value>Датотека садржи null уместо JSON објекта.</value>
+  </data>
+  <data name="PreferenceFileNotSaved" xml:space="preserve">
+    <value>Није могуће сачувати {0}. {1}</value>
+  </data>
+  <data name="PreferenceFileUnreadable" xml:space="preserve">
+    <value>Није могуће прочитати {0}; остављено је неизмењено. Поправи или уклони датотеку да поново чуваш поставке. {1}</value>
+  </data>
+  <data name="PresetEmpty" xml:space="preserve">
+    <value>Пресет ефекта је празан.</value>
+  </data>
+  <data name="PresetExportTimedOut" xml:space="preserve">
+    <value>Истекло је време за извоз пресета.</value>
+  </data>
+  <data name="PresetFileChanged" xml:space="preserve">
+    <value>Датотека пресета ефекта промењена је током читања.</value>
+  </data>
+  <data name="PresetFileEmpty" xml:space="preserve">
+    <value>Датотека пресета ефекта је празна.</value>
+  </data>
+  <data name="PresetFileInvalidEntry" xml:space="preserve">
+    <value>Датотека пресета ефекта садржи неважећу ставку.</value>
+  </data>
+  <data name="PresetFileTimedOut" xml:space="preserve">
+    <value>Истекло је време за радњу с датотеком пресета.</value>
+  </data>
+  <data name="PresetFileTooLarge" xml:space="preserve">
+    <value>Датотека пресета ефекта је превелика.</value>
+  </data>
+  <data name="PresetFileTooMany" xml:space="preserve">
+    <value>Подржано је највише 64 пресета ефеката.</value>
+  </data>
+  <data name="PresetFileWouldExceed" xml:space="preserve">
+    <value>Датотека пресета ефекта би премашила 8 MiB.</value>
+  </data>
+  <data name="PresetForDifferentEffect" xml:space="preserve">
+    <value>Овај пресет припада другом ефекту.</value>
+  </data>
+  <data name="PresetImportTimedOut" xml:space="preserve">
+    <value>Истекло је време за увоз пресета.</value>
+  </data>
+  <data name="PresetLimitReached" xml:space="preserve">
+    <value>Достигнуто је ограничење од 64 пресета.</value>
+  </data>
+  <data name="PresetNameExists" xml:space="preserve">
+    <value>Тај назив пресета већ постоји. Изабери нови назив или обриши стари пресет.</value>
+  </data>
+  <data name="PresetNameRule" xml:space="preserve">
+    <value>Користи назив пресета од 1 до 80 знакова, без контролних знакова.</value>
+  </data>
+  <data name="Presets" xml:space="preserve">
+    <value>Пресети</value>
+  </data>
+  <data name="PresetsAndAB" xml:space="preserve">
+    <value>Пресети и A/B</value>
+  </data>
+  <data name="PresetsForThisPluginOnlyFromThe" xml:space="preserve">
+    <value>Пресети само за овај додатак, из истог складишта као пресети ланаца. Учитавање мења само овај ефекат, а остатак ланца оставља нетакнут.</value>
+  </data>
+  <data name="PresetsLimitedTo8MiB" xml:space="preserve">
+    <value>Пресети ефеката су ограничени на 8 MiB.</value>
+  </data>
+  <data name="PresetsTitle" xml:space="preserve">
+    <value>Пресети: {0}</value>
+  </data>
+  <data name="PrimaryInterface" xml:space="preserve">
+    <value>Главни интерфејс</value>
+  </data>
+  <data name="ProfileName" xml:space="preserve">
+    <value>назив профила</value>
+  </data>
+  <data name="ProfileOverwriteMessage" xml:space="preserve">
+    <value>Профил под називом "{0}" већ постоји за овај уређај.
+Чување га замењује тренутном сценом.</value>
+  </data>
+  <data name="Profiles" xml:space="preserve">
+    <value>Профили</value>
+  </data>
+  <data name="PutEveryControlBackToThePluginS" xml:space="preserve">
+    <value>Врати сваку контролу на подразумевану вредност додатка</value>
+  </data>
+  <data name="PutTheFiveSectionsBackInTheir" xml:space="preserve">
+    <value>Врати пет одељака у првобитни редослед</value>
+  </data>
+  <data name="PutTheSectionsBackInTheSkinsOrder" xml:space="preserve">
+    <value>Врати одељке на места која тема задаје, приказане или скривене како она налаже</value>
+  </data>
+  <data name="QuitApp" xml:space="preserve">
+    <value>Изађи из апликације</value>
+  </data>
+  <data name="QuitOpenXLR" xml:space="preserve">
+    <value>Изађи из OpenXLR-а</value>
+  </data>
+  <data name="ReadingPluginFolders" xml:space="preserve">
+    <value>Читање фасцикли додатака…</value>
+  </data>
+  <data name="ReadThePluginDirectoriesAgainForPluginsInstalled" xml:space="preserve">
+    <value>Поново прочитај фасцикле додатака ради додатака инсталираних на други начин</value>
+  </data>
+  <data name="ReadTheSkinFoldersAgainForASkin" xml:space="preserve">
+    <value>Поново прочитај фасцикле тема ради накнадно додатих или измењених тема</value>
+  </data>
+  <data name="RearJack" xml:space="preserve">
+    <value>Задњи прикључак</value>
+  </data>
+  <data name="RecalledWhenTheInterfaceConnectsDaemonStartA" xml:space="preserve">
+    <value>Враћа се када се интерфејс повеже: при покретању сервиса, поновном прикључивању или укључивању, или преласку на њега</value>
+  </data>
+  <data name="Record" xml:space="preserve">
+    <value>Сними</value>
+  </data>
+  <data name="RecordUpToTenSecondsOfYour" xml:space="preserve">
+    <value>Сними до десет секунди микрофона, па понављај снимак кроз тренутне ефекте. Подешавај их док слушаш исти снимак.</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Освежи</value>
+  </data>
+  <data name="RefreshPresets" xml:space="preserve">
+    <value>Освежи пресете</value>
+  </data>
+  <data name="ReleaseDefaultControls" xml:space="preserve">
+    <value>Подразумевано у издању: OpenXLR контроле</value>
+  </data>
+  <data name="ReleaseDefaultEditor" xml:space="preserve">
+    <value>Подразумевано у издању: изворни уређивач дозвољен</value>
+  </data>
+  <data name="ReleaseDefaultsCanChangeAsCompatibilityImprovesYour" xml:space="preserve">
+    <value>Подразумеване вредности издања могу се мењати како се компатибилност побољшава. Твој избор има предност док не изабереш Користи подразумевано издања.</value>
+  </data>
+  <data name="ReleaseNotesArePlainTextOpenXLRNeverInstalls" xml:space="preserve">
+    <value>Белешке издања су обичан текст. OpenXLR никада не инсталира ажурирање аутоматски.</value>
+  </data>
+  <data name="ReleaseNotesTruncated" xml:space="preserve">
+    <value>… Отвори GitHub за потпуне белешке.</value>
+  </data>
+  <data name="Reload" xml:space="preserve">
+    <value>Учитај поново</value>
+  </data>
+  <data name="RemoveAddedFolder" xml:space="preserve">
+    <value>Уклони додату фасциклу</value>
+  </data>
+  <data name="RemoveFolderDetail" xml:space="preserve">
+    <value>Уклонити {0} с листе претраге и његове генерисане VST3 и CLAP омотаче? Изворне датотеке додатка остају на месту.</value>
+  </data>
+  <data name="RemoveFromAllChains" xml:space="preserve">
+    <value>Уклони из свих ланаца</value>
+  </data>
+  <data name="RemoveFromList" xml:space="preserve">
+    <value>Уклони с листе</value>
+  </data>
+  <data name="RemovePlugin" xml:space="preserve">
+    <value>Уклони додатак</value>
+  </data>
+  <data name="RemovePluginFolderTitle" xml:space="preserve">
+    <value>Уклонити фасциклу додатка?</value>
+  </data>
+  <data name="RemovePluginUsesDetail" xml:space="preserve">
+    <value>Уклонити сва појављивања додатка {0} из тренутних улазних ланаца и миксева, укључујући заобиђене ефекте? Остали додаци задржавају редослед. Звук у погођеним ланцима може накратко да застане. Датотеке додатка, изузеци и сачувани профили се не мењају.</value>
+  </data>
+  <data name="RemovePluginUsesTitle" xml:space="preserve">
+    <value>Уклонити додатак из свих ланаца?</value>
+  </data>
+  <data name="RemoveUsesBeforeUninstalling" xml:space="preserve">
+    <value>Уклони овај додатак из ланаца ефеката пре деинсталације.</value>
+  </data>
+  <data name="RemovingFolder" xml:space="preserve">
+    <value>Уклањање фасцикле…</value>
+  </data>
+  <data name="RemovingFolderAndScanning" xml:space="preserve">
+    <value>Уклањање фасцикле и претрага додатака…</value>
+  </data>
+  <data name="RemovingPluginUses" xml:space="preserve">
+    <value>Уклањање додатка из свих ланаца…</value>
+  </data>
+  <data name="Rename" xml:space="preserve">
+    <value>Преименуј</value>
+  </data>
+  <data name="RenameAppChannelHint" xml:space="preserve">
+    <value>Програми који репродукују на овом каналу настављају; уређај за репродукцију одмах приказује нови назив.</value>
+  </data>
+  <data name="RenameCaptureChannelHint" xml:space="preserve">
+    <value>Извор за снимање и усмеравање канала остају исти.</value>
+  </data>
+  <data name="RenameChannelTitle" xml:space="preserve">
+    <value>Преименуј канал '{0}'</value>
+  </data>
+  <data name="RenameEffectHint" xml:space="preserve">
+    <value>Мења се само назив. Додатак, његова подешавања и звук настављају да раде.</value>
+  </data>
+  <data name="RenameEffectTitle" xml:space="preserve">
+    <value>Преименуј ефекат '{0}'</value>
+  </data>
+  <data name="RenameMixHint" xml:space="preserve">
+    <value>OpenXLR одмах приказује нови назив. Друге апликације задржавају стари назив уређаја до поновног покретања сервиса да се њихов рад не прекине.</value>
+  </data>
+  <data name="RenameMixTitle" xml:space="preserve">
+    <value>Преименуј микс '{0}'</value>
+  </data>
+  <data name="ReplaceChain" xml:space="preserve">
+    <value>Замени ланац</value>
+  </data>
+  <data name="Rescan" xml:space="preserve">
+    <value>Претражи поново</value>
+  </data>
+  <data name="RescanAllPlugins" xml:space="preserve">
+    <value>Поново претражи све додатке</value>
+  </data>
+  <data name="RescanningAllPlugins" xml:space="preserve">
+    <value>Поновна претрага свих додатака…</value>
+  </data>
+  <data name="RescanRetriesTheseBundlesAChangedBundleOr" xml:space="preserve">
+    <value>Поновна претрага поново покушава ове пакете. Измењени пакет или претраживач испробава се аутоматски.</value>
+  </data>
+  <data name="Reset" xml:space="preserve">
+    <value>Ресетуј</value>
+  </data>
+  <data name="ResetDeviceTitle" xml:space="preserve">
+    <value>Вратити уређај на подразумевано?</value>
+  </data>
+  <data name="ResetDeviceToDefaults" xml:space="preserve">
+    <value>Врати уређај на подразумевано</value>
+  </data>
+  <data name="ResetSections" xml:space="preserve">
+    <value>Ресетуј одељке</value>
+  </data>
+  <data name="ResetToBaselineDescription" xml:space="preserve">
+    <value>Упиши основне поставке OpenXLR-а у интерфејс: појачање 30 dB на оба улаза, сва обрада и фантомско напајање искључени, слушалице и aux на половини, однос у потпуности на PC. Усмеравање излаза и сачувани профили остају.</value>
+  </data>
+  <data name="ResetToFirmwareDescription" xml:space="preserve">
+    <value>Интерфејс се враћа на почетне поставке фирмвера, а подешавања која OpenXLR враћа при повезивању се заборављају. Сачувани профили остају.</value>
+  </data>
+  <data name="RestartDaemon" xml:space="preserve">
+    <value>Поново покрени сервис</value>
+  </data>
+  <data name="RestartFailed" xml:space="preserve">
+    <value>Поновно покретање није успело. Провери дневнике корисничког сервиса.</value>
+  </data>
+  <data name="RestartFailedManualDaemon" xml:space="preserve">
+    <value>Поновно покретање није успело. Провери дневнике корисничког сервиса; ручно покренути сервис мораш поново покренути ручно.</value>
+  </data>
+  <data name="RestartingDaemon" xml:space="preserve">
+    <value>Поновно покретање сервиса...</value>
+  </data>
+  <data name="RestartTheOpenXLRUserServiceAudioWillBe" xml:space="preserve">
+    <value>Поново покрени кориснички сервис OpenXLR-а. Звук ће накратко бити прекинут.</value>
+  </data>
+  <data name="RightLevel" xml:space="preserve">
+    <value>Десни ниво</value>
+  </data>
+  <data name="ROpenXLROnReddit" xml:space="preserve">
+    <value>r/OpenXLR на Reddit-у</value>
+  </data>
+  <data name="RuleControlsReleaseDefault" xml:space="preserve">
+    <value>OpenXLR контроле · Подразумевано издања</value>
+  </data>
+  <data name="RuleControlsYourOverride" xml:space="preserve">
+    <value>OpenXLR контроле · Твој избор</value>
+  </data>
+  <data name="RuleEditorReleaseDefault" xml:space="preserve">
+    <value>Изворни уређивач дозвољен · Подразумевано издања</value>
+  </data>
+  <data name="RuleEditorYourOverride" xml:space="preserve">
+    <value>Изворни уређивач дозвољен · Твој избор</value>
+  </data>
+  <data name="RulesDisconnected" xml:space="preserve">
+    <value>Веза са сервисом је прекинута. Правила ће се освежити при поновном повезивању.</value>
+  </data>
+  <data name="RulesNoAnswer" xml:space="preserve">
+    <value>Сервис није вратио правила уређивача. Ажурирај га или поново покрени ако је потребно.</value>
+  </data>
+  <data name="RulesPluginListUnavailable" xml:space="preserve">
+    <value>Листа додатака није доступна. Постојећа правила и даље могу да се уређују.</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value>покренуто</value>
+  </data>
+  <data name="RunThisInsertInItsOwnProcessWhich" xml:space="preserve">
+    <value>Покрени овај ефекат у сопственом процесу, што омогућава отварање његовог уређивача. Промена поново гради ланац и накратко прекида звук.</value>
+  </data>
+  <data name="RunThisPluginInItsOwnProcess" xml:space="preserve">
+    <value>Покрени додатак у сопственом процесу</value>
+  </data>
+  <data name="RunThisPluginInItsOwnProcessWhich" xml:space="preserve">
+    <value>Покрени овај додатак у сопственом процесу, што омогућава отварање његовог уређивача. Промена поново гради ланац и накратко прекида звук.</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Сачувај</value>
+  </data>
+  <data name="SaveAndRecallCompleteScenesHardwareDSPPlus" xml:space="preserve">
+    <value>Сачувај и врати целе сцене: хардверски DSP и цео подмикс</value>
+  </data>
+  <data name="SaveCurrentChain" xml:space="preserve">
+    <value>Сачувај тренутни ланац</value>
+  </data>
+  <data name="SavedPresets" xml:space="preserve">
+    <value>Сачувани пресети</value>
+  </data>
+  <data name="SavedRestartDaemonToApply" xml:space="preserve">
+    <value>Сачувано. Поново покрени сервис за примену (systemctl --user restart openxlr-daemon).</value>
+  </data>
+  <data name="SaveGroup" xml:space="preserve">
+    <value>Сачувај групу</value>
+  </data>
+  <data name="SaveLoadImportAndExportPresetsFor" xml:space="preserve">
+    <value>Сачувај, учитај, увези и извези пресете за овај додатак</value>
+  </data>
+  <data name="SavePreset" xml:space="preserve">
+    <value>Сачувај пресет</value>
+  </data>
+  <data name="Scanning" xml:space="preserve">
+    <value>Претрага…</value>
+  </data>
+  <data name="ScanningPlugins" xml:space="preserve">
+    <value>Претрага додатака…</value>
+  </data>
+  <data name="SearchByNameOrCategory" xml:space="preserve">
+    <value>Претражи по називу или категорији</value>
+  </data>
+  <data name="SearchDirectoryAdded" xml:space="preserve">
+    <value>{0}, додато</value>
+  </data>
+  <data name="SearchDirectoryAddedMissing" xml:space="preserve">
+    <value>{0}, додато, недостаје или није читљиво</value>
+  </data>
+  <data name="SearchDirectoryStandard" xml:space="preserve">
+    <value>{0}, стандардно или из окружења</value>
+  </data>
+  <data name="SearchDirectoryStandardMissing" xml:space="preserve">
+    <value>{0}, стандардно или из окружења, недостаје или није читљиво</value>
+  </data>
+  <data name="SecondComputer" xml:space="preserve">
+    <value>Други рачунар</value>
+  </data>
+  <data name="SectionFoldsNotSaved" xml:space="preserve">
+    <value>Склопљени одељци важе до затварања прозора, али нису сачувани: {0}</value>
+  </data>
+  <data name="SectionOrderNotSaved" xml:space="preserve">
+    <value>Редослед одељака важи до затварања прозора, али није сачуван: {0}</value>
+  </data>
+  <data name="SelectAFolderToSeeItsPlugins" xml:space="preserve">
+    <value>Изабери фасциклу да видиш њене додатке.</value>
+  </data>
+  <data name="SelectAPluginToManageIt" xml:space="preserve">
+    <value>Изабери додатак за управљање.</value>
+  </data>
+  <data name="SelectARule" xml:space="preserve">
+    <value>Изабери правило за измену или пронађи додатак испод да додаш ново.</value>
+  </data>
+  <data name="SelectDevice" xml:space="preserve">
+    <value>изабери уређај</value>
+  </data>
+  <data name="SelectInterfaceTip" xml:space="preserve">
+    <value>{0}
+Изабери интерфејс којим OpenXLR управља</value>
+  </data>
+  <data name="SendThisMixToTheSecondComputerOn" xml:space="preserve">
+    <value>Пошаљи овај микс другом рачунару на USB Aux порту. Укључивање накратко прекида звук интерфејса док се његов ток поново покреће.</value>
+  </data>
+  <data name="ServiceRestartedWaiting" xml:space="preserve">
+    <value>Сервис је поново покренут. Чекање везе са сервисом.</value>
+  </data>
+  <data name="ShortcutSessionClosed" xml:space="preserve">
+    <value>Сесија пречица је затворена. Отвори Тастере радне површине и примени за поновно повезивање.</value>
+  </data>
+  <data name="ShortcutSessionClosedWhileConfiguring" xml:space="preserve">
+    <value>Радна површина је затворила сесију пречица током подешавања.</value>
+  </data>
+  <data name="ShowCLAPPlugins" xml:space="preserve">
+    <value>Прикажи CLAP додатке</value>
+  </data>
+  <data name="ShowHandlesToMoveSectionsChannelsAnd" xml:space="preserve">
+    <value>Прикажи ручице за померање одељака, канала и миксева превлачењем или стрелицама</value>
+  </data>
+  <data name="ShowLV2Plugins" xml:space="preserve">
+    <value>Прикажи LV2 додатке</value>
+  </data>
+  <data name="ShowMixer" xml:space="preserve">
+    <value>Прикажи миксер</value>
+  </data>
+  <data name="ShowTheLiveAudioRoutingGraph" xml:space="preserve">
+    <value>Прикажи граф активног усмеравања звука</value>
+  </data>
+  <data name="ShowVST3Plugins" xml:space="preserve">
+    <value>Прикажи VST3 додатке</value>
+  </data>
+  <data name="SinglePluginImportsIn" xml:space="preserve">
+    <value>Увоз појединачних додатака чува се у {0}.</value>
+  </data>
+  <data name="SizingStandard" xml:space="preserve">
+    <value>Стандардно</value>
+  </data>
+  <data name="SizingTouch" xml:space="preserve">
+    <value>Додир</value>
+  </data>
+  <data name="Skin" xml:space="preserve">
+    <value>Тема</value>
+  </data>
+  <data name="SkinBuiltIn" xml:space="preserve">
+    <value>уграђено</value>
+  </data>
+  <data name="SkinByAuthor" xml:space="preserve">
+    <value>Аутор: {0}.</value>
+  </data>
+  <data name="SkinChoiceLabel" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="SkinChosenByLaunch" xml:space="preserve">
+    <value>Ово покретање има постављено {0}, па је избор задат при покретању.</value>
+  </data>
+  <data name="SkinFolderHint" xml:space="preserve">
+    <value>Теме су фасцикле са skin.json датотеком, читане из {0} и системских фасцикли података. Покрени OpenXLR са OPENXLR_SKIN=default да вратиш испоручени изглед без отварања овог прозора.</value>
+  </data>
+  <data name="SkinInstalledForYou" xml:space="preserve">
+    <value>инсталирано за тебе</value>
+  </data>
+  <data name="SkinInstalledOnSystem" xml:space="preserve">
+    <value>инсталирано на овом систему</value>
+  </data>
+  <data name="SkinNoteByAuthor" xml:space="preserve">
+    <value>{0} Аутор: {1}.</value>
+  </data>
+  <data name="SkippedBundlesAfterFailedScan" xml:space="preserve">
+    <value>Прескочено након неуспеле претраге: {0}</value>
+  </data>
+  <data name="SkippedBundlesChecking" xml:space="preserve">
+    <value>Прескочени пакети: провера…</value>
+  </data>
+  <data name="SkippedBundlesUnavailable" xml:space="preserve">
+    <value>Прескочени пакети: недоступно</value>
+  </data>
+  <data name="SoftClipGuardTip" xml:space="preserve">
+    <value>Софтверски ClipGuard: тврди лимитер после ADC-а на -3 dB; не може да поправи изобличење у аналогном претпојачалу или ADC-у</value>
+  </data>
+  <data name="SoftClipGuardUnavailable" xml:space="preserve">
+    <value>Софтверски ClipGuard није доступан</value>
+  </data>
+  <data name="SoundCheck" xml:space="preserve">
+    <value>Sound Check</value>
+  </data>
+  <data name="SoundCheckEmpty" xml:space="preserve">
+    <value>Микрофон уживо. Нема снимљеног узорка</value>
+  </data>
+  <data name="SoundCheckLooping" xml:space="preserve">
+    <value>Понављање {0:0.0} секунди кроз активни ланац</value>
+  </data>
+  <data name="SoundCheckReady" xml:space="preserve">
+    <value>Микрофон уживо. {0:0.0} секунди спремно за понављање</value>
+  </data>
+  <data name="SoundCheckRecording" xml:space="preserve">
+    <value>Снимање: {0:0.0} / 10 секунди</value>
+  </data>
+  <data name="StartAudioInTheBackground" xml:space="preserve">
+    <value>Покрени звук у позадини</value>
+  </data>
+  <data name="StartTheOpenXLRApp" xml:space="preserve">
+    <value>Покрени OpenXLR апликацију</value>
+  </data>
+  <data name="StartupAppOnly" xml:space="preserve">
+    <value>Апликација се покреће при пријави. Одвојено покрени звучни сервис да је користиш.</value>
+  </data>
+  <data name="StartupAudioAndApp" xml:space="preserve">
+    <value>Звук и апликација покрећу се при пријави.</value>
+  </data>
+  <data name="StartupAudioOnly" xml:space="preserve">
+    <value>Звук се покреће при пријави без апликације или иконе у системској палети.</value>
+  </data>
+  <data name="StartupNothing" xml:space="preserve">
+    <value>Ни звук ни апликација се не покрећу при пријави.</value>
+  </data>
+  <data name="StatusDaemonNotRunning" xml:space="preserve">
+    <value>сервис није покренут</value>
+  </data>
+  <data name="StatusNoDevice" xml:space="preserve">
+    <value>нема уређаја</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>спремно</value>
+  </data>
+  <data name="StereoPickerHint" xml:space="preserve">
+    <value>Додаци за стерео микс (два улаза, два излаза)</value>
+  </data>
+  <data name="StereoPluginsAvailable" xml:space="preserve">
+    <value>Доступних стерео додатака: {0}</value>
+  </data>
+  <data name="StereoPluginsProcessingThisMixBeforeItReaches" xml:space="preserve">
+    <value>Стерео додаци који обрађују микс пре него што стигне до излаза</value>
+  </data>
+  <data name="StopAndDiscard" xml:space="preserve">
+    <value>Заустави и одбаци</value>
+  </data>
+  <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
+    <value>Заустави или затвори овај прозор да вратиш микрофон и одбациш узорак. Сесија се завршава и при промени извора, губитку уређаја, брисању канала, поновном покретању сервиса или после десет минута. Измене ефеката остају.</value>
+  </data>
+  <data name="StoreA" xml:space="preserve">
+    <value>Сачувај A</value>
+  </data>
+  <data name="StoreAFirst" xml:space="preserve">
+    <value>Прво сачувај A.</value>
+  </data>
+  <data name="StoreB" xml:space="preserve">
+    <value>Сачувај B</value>
+  </data>
+  <data name="StoreBFirst" xml:space="preserve">
+    <value>Прво сачувај B.</value>
+  </data>
+  <data name="StoredA" xml:space="preserve">
+    <value>A сачувано</value>
+  </data>
+  <data name="StoredB" xml:space="preserve">
+    <value>B сачувано</value>
+  </data>
+  <data name="StoreTheCurrentSettingsAsAOr" xml:space="preserve">
+    <value>Сачувај тренутне поставке као A или B, па слушај било које. Сачувај поново за касније измене. Оба слота важе док прозор не изгуби везу са сервисом. Пребацивање поново гради ланац, што може накратко да прекине звук.</value>
+  </data>
+  <data name="StreamState" xml:space="preserve">
+    <value>Стање тока</value>
+  </data>
+  <data name="SUBMIXER" xml:space="preserve">
+    <value>ПОДМИКСЕР</value>
+  </data>
+  <data name="MixerWaitingForAudioServer" xml:space="preserve">
+    <value>Миксер чека звучни сервер, који није одговорио при покретању сервиса. Појавиће се овде чим сервер одговори, без поновног покретања.</value>
+  </data>
+  <data name="SubmixerIsOffTurnItOnInOptions" xml:space="preserve">
+    <value>Подмиксер је искључен. Укључи га у Опцијама за канале по апликацији, миксеве, виртуелне микрофоне и ефекте; OpenXLR тренутно контролише само хардвер.</value>
+  </data>
+  <data name="SUPPORT" xml:space="preserve">
+    <value>ПОДРШКА</value>
+  </data>
+  <data name="SwitchSystemOutput" xml:space="preserve">
+    <value>Промени системски излаз: {0}</value>
+  </data>
+  <data name="SyncingAndRescanning" xml:space="preserve">
+    <value>Усклађивање и поновна претрага…</value>
+  </data>
+  <data name="SyncWindowsPlugins" xml:space="preserve">
+    <value>Усклади Windows додатке</value>
+  </data>
+  <data name="SYSTEMDEFAULTDEVICES" xml:space="preserve">
+    <value>ПОДРАЗУМЕВАНИ УРЕЂАЈИ СИСТЕМА</value>
+  </data>
+  <data name="SystemLanguage" xml:space="preserve">
+    <value>Системски језик</value>
+  </data>
+  <data name="ThanksToEveryoneWhoContributedCodeTestedOn" xml:space="preserve">
+    <value>Хвала свима који су допринели коду, тестирали на својим интерфејсима или раније проучавали протоколе на којима се овај пројекат заснива.</value>
+  </data>
+  <data name="TheChannelThisViewShowsHiddenChannels" xml:space="preserve">
+    <value>Канал приказан у овом приказу. Овде можеш изабрати и скривене канале.</value>
+  </data>
+  <data name="TheDeviceMutesThisInputForAbout13" xml:space="preserve">
+    <value>Уређај утишава овај улаз на око 13 секунди при свакој промени 48V и сам га поново укључује</value>
+  </data>
+  <data name="TheMixThisViewShowsItsMaster" xml:space="preserve">
+    <value>Микс приказан у овом приказу: његов главни ниво и слање канала у њега</value>
+  </data>
+  <data name="ThePluginOperation" xml:space="preserve">
+    <value>радња додатка</value>
+  </data>
+  <data name="TheRecordingStaysInMemoryItIsCapturedBeforeSoftwareEffectsButAfterTheI" xml:space="preserve">
+    <value>Снимак остаје у меморији. Снима се пре софтверских ефеката, али после појачања и хардверске обраде интерфејса.</value>
+  </data>
+  <data name="TheRescan" xml:space="preserve">
+    <value>поновна претрага</value>
+  </data>
+  <data name="TheScan" xml:space="preserve">
+    <value>претрага</value>
+  </data>
+  <data name="TheseFoldersAndExclusionsAreSharedWithOther" xml:space="preserve">
+    <value>Ове фасцикле и изузеци заједнички су другим апликацијама које користе системски yabridge.</value>
+  </data>
+  <data name="TheSync" xml:space="preserve">
+    <value>усклађивање</value>
+  </data>
+  <data name="MonitorOutputRoutingTip" xml:space="preserve">
+    <value>Означи сваки излаз који желиш да чујеш, па изабери један или више миксева поред сваког излаза. Миксеви се сабирају на постојећим нивоима. Бар један микс мора остати изабран; уклони ознаку излаза да га искључиш. Headphones 1/2 и Line Out на Wave XLR Pro деле један извор. Његов USB Aux порт прати засебни Aux микс. Системски подразумевани уређаји за апликације подешавају се у Опцијама.</value>
+  </data>
+  <data name="TimeNotRecorded" xml:space="preserve">
+    <value>време није забележено</value>
+  </data>
+  <data name="TipEnforcingOpenXLRChatAsDefaultInputMakes" xml:space="preserve">
+    <value>Савет: наметање OpenXLR Chat-а као подразумеваног улаза омогућава гласовним апликацијама да аутоматски снимају Chat микс.</value>
+  </data>
+  <data name="TouchGivesTheMixerSButtonsFaders" xml:space="preserve">
+    <value>Додирни режим повећава дугмад, клизаче и листе миксера за екран осетљив на додир, уз шире траке канала.</value>
+  </data>
+  <data name="ToUSBAuxPort" xml:space="preserve">
+    <value>Ка USB Aux порту</value>
+  </data>
+  <data name="TrayOnly" xml:space="preserve">
+    <value>Само системска палета</value>
+  </data>
+  <data name="UnknownError" xml:space="preserve">
+    <value>непозната грешка</value>
+  </data>
+  <data name="UpdateCheckUnavailable" xml:space="preserve">
+    <value>Провера ажурирања није доступна</value>
+  </data>
+  <data name="UpdateCheckUnavailableDetail" xml:space="preserve">
+    <value>Звук није погођен. Покушај касније или ручно отвори страницу издања.</value>
+  </data>
+  <data name="UPDATES" xml:space="preserve">
+    <value>АЖУРИРАЊА</value>
+  </data>
+  <data name="UpdatesNotChecked" xml:space="preserve">
+    <value>Ажурирања нису проверена</value>
+  </data>
+  <data name="UpToDate" xml:space="preserve">
+    <value>OpenXLR је ажуран</value>
+  </data>
+  <data name="USBAuxIn" xml:space="preserve">
+    <value>USB Aux улаз</value>
+  </data>
+  <data name="UsbAuxPortKind" xml:space="preserve">
+    <value>USB Aux порт</value>
+  </data>
+  <data name="UseOpenXLRControls" xml:space="preserve">
+    <value>Користи OpenXLR контроле</value>
+  </data>
+  <data name="UseOpenXLRControlsForPluginsWhoseOwnEditor" xml:space="preserve">
+    <value>Користи OpenXLR контроле за додатке чији се уређивач замрзава или лоше ради. Обрада звука се не мења.</value>
+  </data>
+  <data name="UseReleaseDefault" xml:space="preserve">
+    <value>Користи подразумевано издања</value>
+  </data>
+  <data name="ViewChanges" xml:space="preserve">
+    <value>Погледај измене</value>
+  </data>
+  <data name="ViewResult" xml:space="preserve">
+    <value>Погледај резултат</value>
+  </data>
+  <data name="VirtualMicrophone" xml:space="preserve">
+    <value>Виртуелни микрофон</value>
+  </data>
+  <data name="VoiceTune" xml:space="preserve">
+    <value>Voice Tune</value>
+  </data>
+  <data name="Volume" xml:space="preserve">
+    <value>Јачина</value>
+  </data>
+  <data name="VTStrength" xml:space="preserve">
+    <value>Јачина VT</value>
+  </data>
+  <data name="WaitingForWineUninstaller" xml:space="preserve">
+    <value>Чекање Wine деинсталатера…</value>
+  </data>
+  <data name="WhenClosing" xml:space="preserve">
+    <value>При затварању</value>
+  </data>
+  <data name="WhenSetOpenXLRHoldsTheseAsTheSystem" xml:space="preserve">
+    <value>Када је постављено, OpenXLR задржава ове уређаје као системски подразумеване и поништава спољне измене, као Wave Link. Апликације које прате системски подразумевани уређај користе их. Изабери Прати излаз МОНИТОРА да користиш тастере јачине и клизач радне површине за изабрани мониторски уређај.</value>
+  </data>
+  <data name="ChooseOutputMixes" xml:space="preserve">
+    <value>Изабери један или више миксева за овај излаз.</value>
+  </data>
+  <data name="WINDOW" xml:space="preserve">
+    <value>ПРОЗОР</value>
+  </data>
+  <data name="WindowsPluginsChecking" xml:space="preserve">
+    <value>Windows додаци: провера yabridge-а…</value>
+  </data>
+  <data name="WindowsPluginsNoAnswer" xml:space="preserve">
+    <value>Windows додаци: сервис није одговорио.</value>
+  </data>
+  <data name="WindowsPluginsNothingInstalled" xml:space="preserve">
+    <value>Windows додаци: yabridge и Wine нису инсталирани. Инсталирај опционални пакет openxlr-yabridge и Wine, па овде инсталирај Windows VST3 или CLAP додатак.</value>
+  </data>
+  <data name="WindowsPluginsNoWine" xml:space="preserve">
+    <value>Windows додаци: {0} је инсталиран, Wine није. Инсталирај Wine из своје дистрибуције.</value>
+  </data>
+  <data name="WindowsPluginsNoYabridge" xml:space="preserve">
+    <value>Windows додаци: Wine је инсталиран, yabridge није. Инсталирај опционални пакет openxlr-yabridge, па овде инсталирај Windows VST3 или CLAP додатак.</value>
+  </data>
+  <data name="WindowsPluginsReady" xml:space="preserve">
+    <value>Windows додаци: {0} и Wine су инсталирани, {1}. Покрени инсталатер додатка кроз Wine, па инсталирај фасциклу коју је направио.</value>
+  </data>
+  <data name="WindowsPluginWrappersIn" xml:space="preserve">
+    <value>Windows омотачи додатака OpenXLR-а су у {0}.</value>
+  </data>
+  <data name="WindowsVST3AndCLAPPlugins" xml:space="preserve">
+    <value>Windows VST3 и CLAP додаци</value>
+  </data>
+  <data name="WineTraceChecking" xml:space="preserve">
+    <value>Wine праћење: провера сервиса…</value>
+  </data>
+  <data name="WineTraceUnavailable" xml:space="preserve">
+    <value>Wine праћење није доступно. Сервис мора бити повезан и подржавати овај прекидач.</value>
+  </data>
+  <data name="WineTraceUpdating" xml:space="preserve">
+    <value>Ажурирање Wine праћења…</value>
+  </data>
+  <data name="WineUninstaller" xml:space="preserve">
+    <value>Wine деинсталатер</value>
+  </data>
+  <data name="WineUninstallerClosed" xml:space="preserve">
+    <value>Wine деинсталатер је затворен.</value>
+  </data>
+  <data name="WineUninstallerExited" xml:space="preserve">
+    <value>Wine деинсталатер је завршен с кодом {0}.</value>
+  </data>
+  <data name="XLR1Gain" xml:space="preserve">
+    <value>XLR 1 појач.</value>
+  </data>
+  <data name="Xlr1Jack" xml:space="preserve">
+    <value>XLR 1 прикључак</value>
+  </data>
+  <data name="XLR2Gain" xml:space="preserve">
+    <value>XLR 2 појач.</value>
+  </data>
+  <data name="Xlr2Jack" xml:space="preserve">
+    <value>XLR 2 прикључак</value>
+  </data>
+  <data name="StartupDoctorHint" xml:space="preserve">
+    <value>Покрени openxlr doctor за погођену путању и наредбу за поправку.</value>
+  </data>
+  <data name="ArrangeSwapHint" xml:space="preserve">
+    <value>Превуци ручицу одељка на други одељак да замене места или ручицу плочице на другу плочицу. Фокусирана ручица се помера стрелицама, а Enter на ручици одељка приказује одељке с којима може заменити место. Escape отказује превлачење.</value>
+  </data>
+  <data name="ArrangementDropped" xml:space="preserve">
+    <value>Распоред који си направио за ову тему више не одговара њеном распореду, па се користи распоред теме.</value>
+  </data>
+  <data name="HiddenSections" xml:space="preserve">
+    <value>Скривени одељци</value>
+  </data>
+  <data name="ShowSection" xml:space="preserve">
+    <value>Прикажи {0}</value>
+  </data>
+  <data name="SwapWithSection" xml:space="preserve">
+    <value>Замени место са {0}</value>
+  </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>Још радњи</value>
+  </data>
+  <data name="BankPickerName" xml:space="preserve">
+    <value>Микс приказан у банци {0}</value>
+  </data>
+  <data name="BankPickerTip" xml:space="preserve">
+    <value>Микс који ова банка приказује. Сви миксеви су на листи; избор оног који приказује друга банка замењује та два. Избор се чува за ову тему и никада не мења редослед миксера.</value>
+  </data>
+  <data name="BankSendName" xml:space="preserve">
+    <value>Слање {0} ка {1}</value>
+  </data>
+  <data name="BankMuteName" xml:space="preserve">
+    <value>Утишај {0} у {1}</value>
+  </data>
+  <data name="ChannelLevelLeft" xml:space="preserve">
+    <value>Ниво канала {0}, лево</value>
+  </data>
+  <data name="ChannelLevelRight" xml:space="preserve">
+    <value>Ниво канала {0}, десно</value>
+  </data>
+  <data name="ChannelMeterTip" xml:space="preserve">
+    <value>Сопствени ниво канала, пре слања у овај микс</value>
+  </data>
+  <data name="ChannelVolumeName" xml:space="preserve">
+    <value>Јачина: {0}</value>
+  </data>
+  <data name="ChannelVolumeTip" xml:space="preserve">
+    <value>Сопствена јачина канала. Истовремено мења сва слања канала; свако слање задржава свој ниво и стање утишавања.</value>
+  </data>
+  <data name="ChannelVolumeDirectTip" xml:space="preserve">
+    <value>Сопствена јачина канала. Мења сваки микс у који се канал шаље. Слушалице чују овај микрофон преко путање интерфејса без кашњења, на коју јачина не утиче.</value>
+  </data>
+  <data name="ChannelVolumeMixesOnly" xml:space="preserve">
+    <value>Јачина утиче само на миксеве, не на директно слушање</value>
+  </data>
+  <data name="MixFaderName" xml:space="preserve">
+    <value>Главни ниво: {0}</value>
+  </data>
+  <data name="MixMuteName" xml:space="preserve">
+    <value>Утишај {0}</value>
+  </data>
+  <data name="BankChoiceNotSaved" xml:space="preserve">
+    <value>Избор банке важи до затварања прозора, али није сачуван: {0}</value>
+  </data>
+  <data name="ApplicationChannelName" xml:space="preserve">
+    <value>Канал за {0}</value>
+  </data>
+  <data name="DockingNotSaved" xml:space="preserve">
+    <value>Положај подмиксера важи до затварања прозора, али није сачуван: {0}</value>
+  </data>
+  <data name="SkinLayoutClassic" xml:space="preserve">
+    <value>Ова тема задржава уобичајени распоред прозора.</value>
+  </data>
+  <data name="SkinLayoutSummary" xml:space="preserve">
+    <value>Ова тема распоређује прозор: {0}. Померања и избори банака чувају се по теми.</value>
+  </data>
+  <data name="LayoutPartColumn" xml:space="preserve">
+    <value>одељци један испод другог</value>
+  </data>
+  <data name="LayoutPartRow" xml:space="preserve">
+    <value>одељци један поред другог</value>
+  </data>
+  <data name="LayoutPartGrid" xml:space="preserve">
+    <value>мрежа</value>
+  </data>
+  <data name="LayoutPartDock" xml:space="preserve">
+    <value>док</value>
+  </data>
+  <data name="LayoutPartInputRack" xml:space="preserve">
+    <value>улазни сталак</value>
+  </data>
+  <data name="LayoutPartOneBank" xml:space="preserve">
+    <value>једна банка микса</value>
+  </data>
+  <data name="LayoutPartBanks" xml:space="preserve">
+    <value>банака микса: {0}</value>
+  </data>
+  <data name="LayoutPartOutputToolbar" xml:space="preserve">
+    <value>трака монитора</value>
+  </data>
+  <data name="LayoutPartApplicationList" xml:space="preserve">
+    <value>листа апликација</value>
+  </data>
+  <data name="LayoutPartApplicationColumns" xml:space="preserve">
+    <value>колоне апликација</value>
+  </data>
+  <data name="LayoutPartDetached" xml:space="preserve">
+    <value>подмиксер у засебном прозору</value>
+  </data>
+  <data name="MixerDockingDocked" xml:space="preserve">
+    <value>Подмиксер: у главном прозору, где си га последњи пут поставио. Ниједна тема га не помера одатле.</value>
+  </data>
+  <data name="MixerDockingDetached" xml:space="preserve">
+    <value>Подмиксер: издвојен, где си га последњи пут поставио. Ниједна тема га не помера одатле.</value>
+  </data>
+  <data name="MixerDockingSkinDetached" xml:space="preserve">
+    <value>Подмиксер: још ниси изабрао место, па га ова тема издваја једном при примени.</value>
+  </data>
+  <data name="MixerDockingNone" xml:space="preserve">
+    <value>Подмиксер: у главном прозору. Издвајање и враћање у главни прозор чувају твој избор.</value>
+  </data>
+  <data name="ResetSkinArrangement" xml:space="preserve">
+    <value>Ресетуј распоред ове теме</value>
+  </data>
+  <data name="ResetSkinArrangementHint" xml:space="preserve">
+    <value>Врати одељке на места теме, постави банке на подразумеване миксеве и заборави положај подмиксера</value>
+  </data>
+  <data name="LayoutPartMatrix" xml:space="preserve">
+    <value>матрица миксева</value>
+  </data>
+  <data name="MatrixOneOutput" xml:space="preserve">
+    <value>1 излаз</value>
+  </data>
+  <data name="MatrixOutputs" xml:space="preserve">
+    <value>излаза: {0}</value>
+  </data>
+  <data name="MatrixNoOutput" xml:space="preserve">
+    <value>Нема излаза</value>
+  </data>
+  <data name="MatrixEffects" xml:space="preserve">
+    <value>FX</value>
+  </data>
+  <data name="MatrixProcessing" xml:space="preserve">
+    <value>Мик</value>
+  </data>
+  <data name="MatrixProcessingName" xml:space="preserve">
+    <value>Прекидачи микрофона {0}</value>
+  </data>
+  <data name="MatrixProcessingPhantomName" xml:space="preserve">
+    <value>Прекидачи микрофона {0}, фантомско напајање укључено</value>
+  </data>
+  <data name="MatrixProcessingTip" xml:space="preserve">
+    <value>Прекидачи микрофона: одсецање ниских, експандер, Voice Tune, фантомско напајање, ClipGuard и компресор, где их интерфејс има. Светли док је неки укључен. Лампица је црвена док је фантомско напајање укључено.</value>
+  </data>
+  <data name="IconDefaultNamed" xml:space="preserve">
+    <value>Подразумевано ({0})</value>
+  </data>
+  <data name="IconNone" xml:space="preserve">
+    <value>Ништа</value>
+  </data>
+  <data name="IconTextHeading" xml:space="preserve">
+    <value>Текст</value>
+  </data>
+  <data name="NewChannelIcon" xml:space="preserve">
+    <value>Икона новог канала</value>
+  </data>
+  <data name="NewMixIcon" xml:space="preserve">
+    <value>Икона новог микса</value>
+  </data>
+  <data name="HeadphoneOutputs" xml:space="preserve">
+    <value>Излази слушалица</value>
+  </data>
+  <data name="Phones1Appearance" xml:space="preserve">
+    <value>Икона и боја слушалица 1</value>
+  </data>
+  <data name="Phones2Appearance" xml:space="preserve">
+    <value>Икона и боја слушалица 2</value>
+  </data>
+  <data name="InputBindings" xml:space="preserve">
+    <value>Везе улаза</value>
+  </data>
+  <data name="InputBindingsHint" xml:space="preserve">
+    <value>Шта напаја XLR 1 и XLR 2. Интерфејс остаје под контролом без обзира на извор трака, а његове контроле прате канал који носи његов микрофон.</value>
+  </data>
+  <data name="InputBindingChipName" xml:space="preserve">
+    <value>Улаз {0}: {1}</value>
+  </data>
+  <data name="InputBindingTitle" xml:space="preserve">
+    <value>Улаз за {0}</value>
+  </data>
+  <data name="InputBindingHint" xml:space="preserve">
+    <value>Изабери шта напаја {0}: прикључак интерфејса или порт другог извора за снимање. Интерфејс остаје под контролом, а његове контроле прелазе на канал који носи његов микрофон. После измене {0} почиње утишан у мониторским миксевима. Извор може бити и микрофон другог Elgato интерфејса, с његовим контролама на траци док га OpenXLR контролише.</value>
+  </data>
+  <data name="InputBindingInterfaceJack" xml:space="preserve">
+    <value>Прикључак интерфејса (XLR {0})</value>
+  </data>
+  <data name="InputBindingSourceMissing" xml:space="preserve">
+    <value>{0} (није повезано)</value>
+  </data>
+  <data name="InputBindingSourceName" xml:space="preserve">
+    <value>Извор за {0}</value>
+  </data>
+  <data name="InputBindingSourcePort" xml:space="preserve">
+    <value>{0}, порт {1}</value>
+  </data>
+  <data name="InputBindingPort" xml:space="preserve">
+    <value>Порт</value>
+  </data>
+  <data name="InputBindingPortName" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="KeepInterfaceMicrophone" xml:space="preserve">
+    <value>Задржи микрофон интерфејса као канал за снимање</value>
+  </data>
+  <data name="InputBindingBluetoothHint" xml:space="preserve">
+    <value>Bluetooth слушалице прелазе на профил слушалица с микрофоном док напајају ову траку, што смањује квалитет репродукције док трака не изабере други извор.</value>
+  </data>
+  <data name="InputBindingKeepFailed" xml:space="preserve">
+    <value>{0} је повезан, али канал за снимање микрофона интерфејса није додат: {1}</value>
+  </data>
+  <data name="AlsoDriveThisInterface" xml:space="preserve">
+    <value>Контролиши и овај интерфејс</value>
+  </data>
+  <data name="InputBindingDriveFailed" xml:space="preserve">
+    <value>{0} је повезан, али {1} није могао бити контролисан као додатни интерфејс: {2}</value>
+  </data>
+  <data name="UnitGainName" xml:space="preserve">
+    <value>Појачање: {0}</value>
+  </data>
+  <data name="UnitGainInput2Name" xml:space="preserve">
+    <value>Појачање {0}, улаз 2</value>
+  </data>
+  <data name="UnitInputGain" xml:space="preserve">
+    <value>Појачање</value>
+  </data>
+  <data name="TheInterface" xml:space="preserve">
+    <value>Интерфејс</value>
+  </data>
+  <data name="UnitInputPlaysOn" xml:space="preserve">
+    <value>{0}, улаз {1}: чује се на {2}</value>
+  </data>
+  <data name="UnitInputNotInMixer" xml:space="preserve">
+    <value>{0}, улаз {1}: није у миксеру</value>
+  </data>
+  <data name="CrossfadeMicPlaysOn" xml:space="preserve">
+    <value>Меша сопствени микрофон интерфејса, који се чује на {0}.</value>
+  </data>
+  <data name="CrossfadeMicNotInMixer" xml:space="preserve">
+    <value>Меша сопствени микрофон интерфејса, који није у миксеру.</value>
+  </data>
+  <data name="NoInterface" xml:space="preserve">
+    <value>Нема интерфејса.</value>
+  </data>
+  <data name="StripInputLabel" xml:space="preserve">
+    <value>Улаз {0}</value>
+  </data>
+  <data name="ChooseMicrophoneForStrip" xml:space="preserve">
+    <value>Изабери микрофон за {0}</value>
+  </data>
+  <data name="UnitCapsule" xml:space="preserve">
+    <value>Уграђени микрофон</value>
+  </data>
+  <data name="InputBindingUnitCapsule" xml:space="preserve">
+    <value>Уграђени микрофон ({0})</value>
+  </data>
+  <data name="Mic1Gain" xml:space="preserve">
+    <value>Мик 1 појач.</value>
+  </data>
+  <data name="FlatpakBackgroundReason" xml:space="preserve">
+    <value>Настави рад звучног миксера и врати га при пријави.</value>
+  </data>
+  <data name="FlatpakBackgroundRefused" xml:space="preserve">
+    <value>Није могуће потврдити тражену поставку покретања при пријави с радном површином.</value>
+  </data>
+  <data name="FlatpakSetup" xml:space="preserve">
+    <value>Flatpak одржава звук док је OpenXLR у системској палети. Излазак зауставља и његов звучни сервис. Немој истовремено покретати OpenXLR сервис из системског пакета.
+
+USB контроле захтевају udev правило на хосту. Покрени ван изолованог окружења:
+sudo install -m 644 "$(flatpak info --show-location io.github.emaspa.openxlr)/files/share/openxlr/70-openxlr.rules" /etc/udev/rules.d/70-openxlr.rules
+sudo udevadm control --reload-rules
+Затим поново прикључи интерфејс. Корисничка WirePlumber правила важе од следеће пријаве.
+
+Wave XLR Pro UCM профил и даље захтева ручно подешавање хоста. Инсталирај LV2 додатке из LinuxAudio проширења на Flathub-у; додаци хоста и Windows мост нису укључени. Погледај docs/flatpak.md за подешавање и ограничења.</value>
+  </data>
+  <data name="FlatpakBackgroundUnavailable" xml:space="preserve">
+    <value>Радна површина није дозволила рад у позадини. OpenXLR може стати када је скривен.</value>
+  </data>
+  <data name="Eq" xml:space="preserve">
+    <value>EQ</value>
+  </data>
+  <data name="EqButtonTip" xml:space="preserve">
+    <value>Четворопојасни EQ микрофона, на почетку улаза пре одсецања ниских, ClipGuard-а и додатака. Светли кад је укључен, црвено када не може да ради. Отвара уређивач.</value>
+  </data>
+  <data name="EqButtonTipCapture" xml:space="preserve">
+    <value>Четворопојасни EQ микрофона, на овом рачунару на почетку улаза пре додатака. Светли кад је укључен, црвено када не може да ради. Отвара уређивач.</value>
+  </data>
+  <data name="EqButtonNameOn" xml:space="preserve">
+    <value>EQ {0}, укључен</value>
+  </data>
+  <data name="EqButtonNameOff" xml:space="preserve">
+    <value>EQ {0}, искључен</value>
+  </data>
+  <data name="EqButtonNameUnavailable" xml:space="preserve">
+    <value>EQ {0}, недоступан</value>
+  </data>
+  <data name="EqWindowTitle" xml:space="preserve">
+    <value>EQ {0}</value>
+  </data>
+  <data name="EqSwitch" xml:space="preserve">
+    <value>EQ укључен</value>
+  </data>
+  <data name="EqSwitchTip" xml:space="preserve">
+    <value>Укључи или искључи EQ. Кад је искључен, појасеви чувају вредности за следећи пут.</value>
+  </data>
+  <data name="EqCompare" xml:space="preserve">
+    <value>Упореди</value>
+  </data>
+  <data name="EqCompareTip" xml:space="preserve">
+    <value>Слушај микрофон без EQ-а док је ово укључено, и поново с њим кад се искључи. EQ остаје укључен.</value>
+  </data>
+  <data name="EqCopy" xml:space="preserve">
+    <value>Копирај</value>
+  </data>
+  <data name="EqCopyTip" xml:space="preserve">
+    <value>Копирај овај EQ, његов прекидач и четири појаса за лепљење на други микрофон.</value>
+  </data>
+  <data name="EqPaste" xml:space="preserve">
+    <value>Налепи</value>
+  </data>
+  <data name="EqPasteTip" xml:space="preserve">
+    <value>Замени овај EQ копираним.</value>
+  </data>
+  <data name="EqReset" xml:space="preserve">
+    <value>Ресетуј</value>
+  </data>
+  <data name="EqResetTip" xml:space="preserve">
+    <value>Врати четири појаса на почетне вредности. Стање укључености EQ-а остаје исто.</value>
+  </data>
+  <data name="EqResetConfirm" xml:space="preserve">
+    <value>Вратити четири појаса EQ-а {0} на почетне вредности? Стање укључености EQ-а остаје исто.</value>
+  </data>
+  <data name="EqColumnOn" xml:space="preserve">
+    <value>Укљ.</value>
+  </data>
+  <data name="EqColumnType" xml:space="preserve">
+    <value>Врста</value>
+  </data>
+  <data name="EqColumnFrequency" xml:space="preserve">
+    <value>Фреквенција (Hz)</value>
+  </data>
+  <data name="EqColumnGain" xml:space="preserve">
+    <value>Појачање (dB)</value>
+  </data>
+  <data name="EqColumnQ" xml:space="preserve">
+    <value>Q</value>
+  </data>
+  <data name="EqGraphName" xml:space="preserve">
+    <value>Одзив EQ-а</value>
+  </data>
+  <data name="EqUnavailable" xml:space="preserve">
+    <value>EQ не може да ради.</value>
+  </data>
+  <data name="EqStatusOff" xml:space="preserve">
+    <value>Искључен. Измене се чувају и примењују када се EQ укључи.</value>
+  </data>
+  <data name="EqStatusComparing" xml:space="preserve">
+    <value>Заобиђен ради поређења. EQ се враћа када искључиш Упореди.</value>
+  </data>
+  <data name="EqStatusSoftware" xml:space="preserve">
+    <value>Укључен, ради на овом рачунару на почетку улаза, пре одсецања ниских, ClipGuard-а и додатака.</value>
+  </data>
+  <data name="EqStatusSoftwareCapture" xml:space="preserve">
+    <value>Укључен, ради на овом рачунару на почетку улаза, пре додатака.</value>
+  </data>
+  <data name="EqStatusDevice" xml:space="preserve">
+    <value>Укључен, ради на интерфејсу пре USB-а, додатака и свега осталог на овом рачунару.</value>
+  </data>
+  <data name="EqHardwareBadge" xml:space="preserve">
+    <value>Хардверска обрада</value>
+  </data>
+  <data name="EqHardwareBadgeTip" xml:space="preserve">
+    <value>Овај EQ ради на процесору уређаја {0}, пре USB-а.</value>
+  </data>
+  <data name="EqHardwareBadgeTipUnnamed" xml:space="preserve">
+    <value>Овај EQ ради на процесору интерфејса, пре USB-а.</value>
+  </data>
+  <data name="EqTheInterface" xml:space="preserve">
+    <value>интерфејс</value>
+  </data>
+  <data name="EqStatusDeviceNamed" xml:space="preserve">
+    <value>Укључен, ради на процесору уређаја {0} пре USB-а, додатака и свега осталог на овом рачунару.</value>
+  </data>
+  <data name="EqDeviceFirmwareOld" xml:space="preserve">
+    <value>Ради у софтверу: овај {0} има фирмвер {1}, а уређај сам покреће EQ од фирмвера {2}. Elgato алат за ажурирање је у Wave Link-у на Windows-у или macOS-у.</value>
+  </data>
+  <data name="EqDeviceFirmwareUnknown" xml:space="preserve">
+    <value>Ради у софтверу: верзија фирмвера овог {0} није прочитана, а уређај сам покреће EQ тек од фирмвера {1}.</value>
+  </data>
+  <data name="EqDeviceUnsupported" xml:space="preserve">
+    <value>Ради у софтверу: овај {0} има EQ поставке које OpenXLR не препознаје. Прикупи дијагностику за извештај о уређају.</value>
+  </data>
+  <data name="EqDeviceFailed" xml:space="preserve">
+    <value>Ради у софтверу: {0} није задржао уписани EQ. Искључи па укључи EQ да поново пробаш уређај.</value>
+  </data>
+  <data name="EqDeviceBySoftware" xml:space="preserve">
+    <value>Ради у софтверу по твом избору; {0} може да га покрене на свом процесору.</value>
+  </data>
+  <data name="EqButtonTipDevice" xml:space="preserve">
+    <value>Четворопојасни EQ микрофона, који ради на процесору уређаја {0} пре USB-а. Светли док је укључен. Отвара уређивач.</value>
+  </data>
+  <data name="EqStatusStarting" xml:space="preserve">
+    <value>Укључен, покретање.</value>
+  </data>
+  <data name="EqProcessingLabel" xml:space="preserve">
+    <value>Где EQ ради</value>
+  </data>
+  <data name="EqProcessingDevice" xml:space="preserve">
+    <value>На уређају</value>
+  </data>
+  <data name="EqProcessingSoftware" xml:space="preserve">
+    <value>У софтверу</value>
+  </data>
+  <data name="EqProcessingDeviceTip" xml:space="preserve">
+    <value>Покрени EQ на процесору уређаја {0}, пре USB-а. Чује га сваки канал који преузима звук тог уређаја, а уређај га задржава и након затварања OpenXLR-а.</value>
+  </data>
+  <data name="EqProcessingSoftwareTip" xml:space="preserve">
+    <value>Покрени EQ на овом рачунару, на почетку улаза. EQ уређаја је искључен и чува своје појасеве.</value>
+  </data>
+  <data name="EqBandValues" xml:space="preserve">
+    <value>{0}, {1}, {2}, Q {3}</value>
+  </data>
+  <data name="EqBandValuesNoGain" xml:space="preserve">
+    <value>{0}, {1}, Q {2}</value>
+  </data>
+  <data name="EqBandName" xml:space="preserve">
+    <value>Појас {0}, {1}</value>
+  </data>
+  <data name="EqBandNameOff" xml:space="preserve">
+    <value>Појас {0}, искључен, {1}</value>
+  </data>
+  <data name="EqHandleTip" xml:space="preserve">
+    <value>Превуци за промену фреквенције и појачања. Точкић мења Q, двоклик укључује или искључује појас, десни клик бира врсту.</value>
+  </data>
+  <data name="EqHandleTipNoGain" xml:space="preserve">
+    <value>Превуци водоравно за фреквенцију и усправно за Q. Точкић мења Q, двоклик укључује или искључује појас, десни клик бира врсту.</value>
+  </data>
+  <data name="EqBandSwitchName" xml:space="preserve">
+    <value>Појас {0} укључен</value>
+  </data>
+  <data name="EqBandTypeName" xml:space="preserve">
+    <value>Врста појаса {0}</value>
+  </data>
+  <data name="EqBandFrequencyName" xml:space="preserve">
+    <value>Фреквенција појаса {0} у херцима</value>
+  </data>
+  <data name="EqBandGainName" xml:space="preserve">
+    <value>Појачање појаса {0} у децибелима</value>
+  </data>
+  <data name="EqBandQName" xml:space="preserve">
+    <value>Q појаса {0}</value>
+  </data>
+  <data name="EqBandOn" xml:space="preserve">
+    <value>Појас укључен</value>
+  </data>
+  <data name="EqReadout" xml:space="preserve">
+    <value>Појас {0}: {1}, {2}, Q {3}</value>
+  </data>
+  <data name="EqReadoutNoGain" xml:space="preserve">
+    <value>Појас {0}: {1}, Q {2}</value>
+  </data>
+  <data name="EqHertz" xml:space="preserve">
+    <value>{0} Hz</value>
+  </data>
+  <data name="EqKilohertz" xml:space="preserve">
+    <value>{0} kHz</value>
+  </data>
+  <data name="EqDecibels" xml:space="preserve">
+    <value>{0} dB</value>
+  </data>
+  <data name="EqTypeLowCut" xml:space="preserve">
+    <value>Високопропусни</value>
+  </data>
+  <data name="EqTypeLowShelf" xml:space="preserve">
+    <value>Ниска полица</value>
+  </data>
+  <data name="EqTypePeak" xml:space="preserve">
+    <value>Звоно</value>
+  </data>
+  <data name="EqTypeNotch" xml:space="preserve">
+    <value>Зарез</value>
+  </data>
+  <data name="EqTypeHighShelf" xml:space="preserve">
+    <value>Висока полица</value>
+  </data>
+  <data name="EqTypeHighCut" xml:space="preserve">
+    <value>Нископропусни</value>
+  </data>
+  <data name="EqTypeLowCutTip" xml:space="preserve">
+    <value>Уклања све испод своје фреквенције. Q обликује прелаз. Појачање овде нема утицаја и чува се.</value>
+  </data>
+  <data name="EqTypeLowShelfTip" xml:space="preserve">
+    <value>Појачава или слаби све испод своје фреквенције за вредност појачања.</value>
+  </data>
+  <data name="EqTypePeakTip" xml:space="preserve">
+    <value>Појачава или слаби звук око своје фреквенције за вредност појачања, у ширини коју одређује Q. Неки уређивачи овај филтер зову Band Pass.</value>
+  </data>
+  <data name="EqTypeNotchTip" xml:space="preserve">
+    <value>Уклања узак појас на својој фреквенцији. Q одређује ширину. Појачање овде нема утицаја и чува се.</value>
+  </data>
+  <data name="EqTypeHighShelfTip" xml:space="preserve">
+    <value>Појачава или слаби све изнад своје фреквенције за вредност појачања.</value>
+  </data>
+  <data name="EqTypeHighCutTip" xml:space="preserve">
+    <value>Уклања све изнад своје фреквенције. Q обликује прелаз. Појачање овде нема утицаја и чува се.</value>
+  </data>
+  <data name="EqRegionRumble" xml:space="preserve">
+    <value>Тутњава</value>
+  </data>
+  <data name="EqRegionBody" xml:space="preserve">
+    <value>Пуноћа</value>
+  </data>
+  <data name="EqRegionRoom" xml:space="preserve">
+    <value>Просторија</value>
+  </data>
+  <data name="EqRegionPresence" xml:space="preserve">
+    <value>Присутност</value>
+  </data>
+  <data name="EqRegionSibilance" xml:space="preserve">
+    <value>Сибиланти</value>
+  </data>
+  <data name="EqRegionAir" xml:space="preserve">
+    <value>Ваздух</value>
+  </data>
+  <data name="EqRegionRumbleTip" xml:space="preserve">
+    <value>20 до 80 Hz: ударци по столу, саобраћај и бука сталка, који се у гласу више осећају него чују. Пропусник високих их овде уклања.</value>
+  </data>
+  <data name="EqRegionBodyTip" xml:space="preserve">
+    <value>80 до 300 Hz: тежина и топлина гласа. Превише звучи бубњаво, премало танко.</value>
+  </data>
+  <data name="EqRegionRoomTip" xml:space="preserve">
+    <value>300 Hz до 1.4 kHz: кутијаст призвук и звук просторије. Мало смањење овде често отвара глас.</value>
+  </data>
+  <data name="EqRegionPresenceTip" xml:space="preserve">
+    <value>1.4 до 5 kHz: јасноћа и истакнутост гласа. Мало појачање помаже речима да се истакну.</value>
+  </data>
+  <data name="EqRegionSibilanceTip" xml:space="preserve">
+    <value>5 до 12 kHz: оштри гласови с и т. Узак рез их ублажава.</value>
+  </data>
+  <data name="EqRegionAirTip" xml:space="preserve">
+    <value>12 до 20 kHz: дах и отвореност. Блага висока полица додаје сјај.</value>
+  </data>
+  <data name="FlowEq" xml:space="preserve">
+    <value>Софтверски EQ, укључено {0} од 4 појаса</value>
+  </data>
+  <data name="FlowEqDevice" xml:space="preserve">
+    <value>EQ на {1}, укључено {0} од 4 појаса</value>
+  </data>
+  <data name="CaptureSourcePair" xml:space="preserve">
+    <value>{0}, пар {1}</value>
+  </data>
+  <data name="StereoInputPickerHint" xml:space="preserve">
+    <value>Додаци за стерео улаз (два улаза, два излаза)</value>
+  </data>
+  <data name="DisableInterface" xml:space="preserve">
+    <value>Искључи интерфејс</value>
+  </data>
+  <data name="DisableInterfaceCaptureDetail" xml:space="preserve">
+    <value>Престати с контролом уређаја {0}? Његови улази за снимање и ланци ефеката биће обрисани ако их не задржиш. Задржани улази раде док је извор доступан.</value>
+  </data>
+  <data name="KeepInterfaceCaptureChannels" xml:space="preserve">
+    <value>Задржи улазе за снимање и њихове ланце</value>
+  </data>
+  <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
+    <value>Престати с контролом уређаја {0}? Његови улази за снимање и ланци ефеката биће обрисани. Овај сервис не пријављује подршку за њихово задржавање.</value>
+  </data>
+  <data name="Ducking" xml:space="preserve">
+    <value>Пригушивање</value>
+  </data>
+  <data name="DuckingEnabled" xml:space="preserve">
+    <value>Смањи други звук док је окидачки микрофон гласан</value>
+  </data>
+  <data name="DuckingSensitivity" xml:space="preserve">
+    <value>Осетљивост</value>
+  </data>
+  <data name="DuckingAmount" xml:space="preserve">
+    <value>Степен</value>
+  </data>
+  <data name="DuckingSpeed" xml:space="preserve">
+    <value>Брзина</value>
+  </data>
+  <data name="DuckingLow" xml:space="preserve">
+    <value>Ниско</value>
+  </data>
+  <data name="DuckingMedium" xml:space="preserve">
+    <value>Средње</value>
+  </data>
+  <data name="DuckingHigh" xml:space="preserve">
+    <value>Високо</value>
+  </data>
+  <data name="DuckingAmountLow" xml:space="preserve">
+    <value>Ниско, 6 dB</value>
+  </data>
+  <data name="DuckingAmountMedium" xml:space="preserve">
+    <value>Средње, 12 dB</value>
+  </data>
+  <data name="DuckingAmountHigh" xml:space="preserve">
+    <value>Високо, 24 dB</value>
+  </data>
+  <data name="DuckingSlow" xml:space="preserve">
+    <value>Споро</value>
+  </data>
+  <data name="DuckingFast" xml:space="preserve">
+    <value>Брзо</value>
+  </data>
+  <data name="DuckingHint" xml:space="preserve">
+    <value>Пригушивање смањује изабране канале у изабраним миксевима док је окидачки микрофон гласан. Овај рачунар га извршава за сваки уређај, укључујући Wave XLR Pro: Pro пригушује у свом миксу, кроз који прикључци још не пролазе.</value>
+  </data>
+  <data name="DuckingNotHeld" xml:space="preserve">
+    <value>Уређај још не задржава ову поставку; OpenXLR је поново уписује за неколико секунди.</value>
+  </data>
+  <data name="DuckingStatusOff" xml:space="preserve">
+    <value>Искључено.</value>
+  </data>
+  <data name="DuckingHardwareBadgeTip" xml:space="preserve">
+    <value>Пригушивање ради на процесору уређаја {0}.</value>
+  </data>
+  <data name="DuckingNotRunning" xml:space="preserve">
+    <value>Ништа не извршава ово подешавање.</value>
+  </data>
+  <data name="DuckingButtonTip" xml:space="preserve">
+    <value>Смањи други звук док је микрофон гласан: окидач, канали, миксеви, пресети и место обраде.</value>
+  </data>
+  <data name="DuckingKey" xml:space="preserve">
+    <value>Окидачки микрофон</value>
+  </data>
+  <data name="DuckingKeyTip" xml:space="preserve">
+    <value>Микрофон чији глас смањује други звук. Његов ниво се никада не смањује.</value>
+  </data>
+  <data name="DuckingChannels" xml:space="preserve">
+    <value>Смањи ове канале</value>
+  </data>
+  <data name="DuckingMixes" xml:space="preserve">
+    <value>У овим миксевима</value>
+  </data>
+  <data name="DuckingAllApplications" xml:space="preserve">
+    <value>Сви канали апликација</value>
+  </data>
+  <data name="DuckingNone" xml:space="preserve">
+    <value>Ништа</value>
+  </data>
+  <data name="DuckingNoneTip" xml:space="preserve">
+    <value>Не смањуј ниједан канал. Пригушивање не смањује ништа док не означиш неки канал.</value>
+  </data>
+  <data name="DuckingProcessingLabel" xml:space="preserve">
+    <value>Извршава се на</value>
+  </data>
+  <data name="DuckingProcessingDevice" xml:space="preserve">
+    <value>Овом уређају</value>
+  </data>
+  <data name="DuckingProcessingSoftware" xml:space="preserve">
+    <value>Овом рачунару</value>
+  </data>
+  <data name="DuckingProcessingDeviceTip" xml:space="preserve">
+    <value>Пригушуј на процесору уређаја {0}. Слуша XLR 1 како га уређај чује, пре USB-а, дакле пре софтверског EQ-а, ефеката и било ког гејта на овом рачунару. Гејт шума или потискивач на XLR 1 не спречава пригушивање због шума. Смањује готов микс на излазима уређаја, после свега на овом рачунару. Ако гејт на XLR 1 треба да спречи лажна окидања, изабери овај рачунар.</value>
+  </data>
+  <data name="DuckingProcessingSoftwareTip" xml:space="preserve">
+    <value>Пригушуј на овом рачунару. Окидач је микрофон после EQ-а, ефеката и Sound Check петље, пре његове јачине и слања, па гејт на њему спречава лажна окидања. Изабрани канали се смањују у сваком миксу, пре додатака и кашњења тог микса. Пригушивање уређаја је искључено.</value>
+  </data>
+  <data name="DuckingStatusOnUnit" xml:space="preserve">
+    <value>Укључено, ради на процесору уређаја {0}. Слуша XLR 1 пре USB-а, свих гејтова и додатака на овом рачунару, и смањује готов микс на излазима уређаја.</value>
+  </data>
+  <data name="DuckingStatusOnComputer" xml:space="preserve">
+    <value>Укључено, ради на овом рачунару. Слуша {0} после EQ-а, ефеката и Sound Check петље, и смањује изабране канале у сваком миксу, пре додатака тог микса.</value>
+  </data>
+  <data name="DuckingMixerOff" xml:space="preserve">
+    <value>Софтверски миксер је искључен, па пригушивање не ради. Укључи га у Опцијама, ЗВУК.</value>
+  </data>
+  <data name="DuckingNothingChosen" xml:space="preserve">
+    <value>Укључено, али ништа се не смањује. Изабери бар један канал и један микс.</value>
+  </data>
+  <data name="DuckingDeviceKeyNotSupported" xml:space="preserve">
+    <value>{0} пригушује само са XLR 1 као окидачем.</value>
+  </data>
+  <data name="DuckingDeviceFailed" xml:space="preserve">
+    <value>{0} није задржао уписано пригушивање. Искључи га па укључи да поново пробаш уређај.</value>
+  </data>
+  <data name="DuckingDeviceUnsupported" xml:space="preserve">
+    <value>{0} није одговорио на читање блока пригушивања.</value>
+  </data>
+  <data name="DuckingDeviceNotReady" xml:space="preserve">
+    <value>{0} не може да изврши ово подешавање.</value>
+  </data>
+  <data name="DuckingReduction" xml:space="preserve">
+    <value>Смањење</value>
+  </data>
+  <data name="DuckingReductionValue" xml:space="preserve">
+    <value>{0:0} dB</value>
+  </data>
+  <data name="CaptureBindingHint" xml:space="preserve">
+    <value>Изабери извор и порт за {0}. Његова слања, јачина, ефекти и група остају. После измене мониторска слања почињу утишана и Sound Check се завршава. Уклони ефекте пре преласка између моно и стерео режима.</value>
+  </data>
+  <data name="CaptureMonoPort" xml:space="preserve">
+    <value>Моно порт {0}</value>
+  </data>
+  <data name="CaptureStereoPorts" xml:space="preserve">
+    <value>Стерео портови {0} + {1}{2}</value>
+  </data>
+  <data name="PreserveBrowserOutputs" xml:space="preserve">
+    <value>Укључи усмеравање појединачних картица прегледача</value>
+  </data>
+  <data name="PreserveBrowserOutputsHint" xml:space="preserve">
+    <value>Док је укључено, OpenXLR не премешта звук прегледача, а доделе за цео прегледач су паузиране до искључивања опције. Картице без свог канала задржавају излаз који су изабрали прегледач или радна површина, што може бити OpenXLR канал на који их је радна површина вратила.</value>
+  </data>
+  <data name="BrowserOutputHeld" xml:space="preserve">
+    <value>Усмеравање појединачних картица је укључено, па OpenXLR не премешта овај прегледач. Канал изабран овде важи када је та опција искључена.</value>
+  </data>
+  <data name="BrowserOutputHeldOnChannel" xml:space="preserve">
+    <value>Усмеравање појединачних картица је укључено, па OpenXLR не премешта овај прегледач. Сада репродукује на {0}, где су га поставили прегледач или радна површина. Канал изабран овде важи када је та опција искључена.</value>
+  </data>
+  <data name="BrowserOutputHeldElsewhere" xml:space="preserve">
+    <value>Усмеравање појединачних картица је укључено, па OpenXLR не премешта овај прегледач. Репродукује на излазу који су изабрали прегледач или радна површина, ван канала апликација OpenXLR-а. Канал изабран овде важи када је та опција искључена.</value>
+  </data>
+  <data name="BrowserTabsHeading" xml:space="preserve">
+    <value>КАРТИЦЕ ПРЕГЛЕДАЧА</value>
+  </data>
+  <data name="BrowserTabCaptureHint" xml:space="preserve">
+    <value>Активирај звук сваке картице у проширењу прегледача. Избор канала овде не активира звук картице.</value>
+  </data>
+  <data name="BrowserTabCaptureState" xml:space="preserve">
+    <value>Стање звука картице прегледача</value>
+  </data>
+  <data name="BrowserTabChannelName" xml:space="preserve">
+    <value>Канал за картицу прегледача {0}</value>
+  </data>
+  <data name="BrowserTabRemember" xml:space="preserve">
+    <value>Запамти веб-сајт</value>
+  </data>
+  <data name="BrowserTabDefault" xml:space="preserve">
+    <value>Подразумевано прегледача</value>
+  </data>
+  <data name="BrowserTabRoutingDisabled" xml:space="preserve">
+    <value>Укључи усмеравање појединачних картица да доделиш ову картицу.</value>
+  </data>
+  <data name="BrowserTabApplying" xml:space="preserve">
+    <value>Примена доделе картице...</value>
+  </data>
+  <data name="BrowserTabCapturing" xml:space="preserve">
+    <value>Звук картице је активан</value>
+  </data>
+  <data name="BrowserTabActivationRequired" xml:space="preserve">
+    <value>Активирај звук картице у проширењу прегледача.</value>
+  </data>
+  <data name="BrowserTabUsesDefault" xml:space="preserve">
+    <value>Користи подразумевано одредиште прегледача</value>
+  </data>
+  <data name="BrowserTabRememberHint" xml:space="preserve">
+    <value>Када је искључено, измене важе само за ову картицу. Раније сачувани избор веб-сајта остаје за друге картице.</value>
+  </data>
+  <data name="BrowserTabForgetWebsite" xml:space="preserve">
+    <value>Заборави веб-сајт</value>
+  </data>
+  <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
+    <value>Заборави сачувано одредиште овог веб-сајта и користи подразумевано прегледача за ову картицу.</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
+    <value>Утишај слања микрофона са слушањем</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoringHint" xml:space="preserve">
+    <value>Паузирај и XLR и моно слања за снимање у све OpenXLR миксеве, укључујући усмерене снимке. Укључивање звука монитора наставља ова слања. Апликације које директно снимају физички извор нису погођене.</value>
+  </data>
+  <data name="MicrophonePausePendingNote" xml:space="preserve">
+    <value>Стање звука микрофона још није потврђено. Звук можда и даље стиже до OpenXLR миксева. Провери пре него што се ослониш на утишавање микрофона.</value>
+  </data>
+  <data name="AddMonitoringPauseKey" xml:space="preserve">
+    <value>Додај тастер за паузу слушања</value>
+  </data>
+  <data name="KeyToggleMonitoringPause" xml:space="preserve">
+    <value>Паузирај или настави слушање</value>
+  </data>
+  <data name="MonitoringPauseKeysNote" xml:space="preserve">
+    <value>Додели овде тастер за утишавање уместо радње радне површине. Нека OpenXLR ради у системској палети. Опција микрофона у Звуку важи и за овај тастер.</value>
+  </data>
+  <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
+    <value>Ова радна површина не може поново да отвори уређивач пречица. Промени доделе у подешавањима пречица радне површине.</value>
+  </data>
+</root>

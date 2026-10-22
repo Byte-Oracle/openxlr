@@ -21,7 +21,7 @@ internal static class BrowserTabsWindowTests
         object? previous = culture.GetValue(null);
         try
         {
-            foreach (string language in new[] { "en", "de" })
+            foreach (string language in new[] { "en", "de", Localizer.Language }.Distinct(StringComparer.Ordinal))
             foreach (bool touch in new[] { false, true })
             {
                 culture.SetValue(null, CultureInfo.GetCultureInfo(language));
