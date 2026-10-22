@@ -130,6 +130,7 @@ public sealed class LocalizationTests
     [InlineData("Strings.de.resx")]
     [InlineData("Strings.es.resx")]
     [InlineData("Strings.tl.resx")]
+    [InlineData("Strings.ceb.resx")]
     public void EveryTranslationCoversBrowserTabRouting(string file)
     {
         string[] keys = [.. English.Keys.Where(key => key.StartsWith("PreserveBrowserOutputs", StringComparison.Ordinal)
@@ -154,6 +155,7 @@ public sealed class LocalizationTests
     [InlineData("de", "Deutsch", "de-AT", "Schließen")]
     [InlineData("es", "Español", "es-MX", "Cerrar")]
     [InlineData("tl", "Tagalog", "tl-PH", "Isara")]
+    [InlineData("ceb", "Bisaya (Cebuano)", "ceb-PH", "Sirad-i")]
     public void TranslationsUseTheirCatalogueAndRetainFormatsLineBreaksAndCommands(
         string language, string label, string regional, string close)
     {
@@ -175,6 +177,24 @@ public sealed class LocalizationTests
             foreach (Match name in Regex.Matches(english, @"\b(?:OpenXLR|Elgato|PipeWire|WirePlumber|LV2|CLAP|VST3|ClipGuard|OpenDeck|yabridge|Wine|Flatpak)\b"))
                 Assert.Contains(name.Value, text);
         }
+    }
+
+    [Theory]
+    [InlineData(null, "LANG=ceb_PH.UTF-8", "ceb")]
+    [InlineData(null, "LANG=en_US.UTF-8 LANGUAGE=fr:ceb_PH:tl", "ceb")]
+    [InlineData(null, "LANG=en_US.UTF-8 LANGUAGE=ceb--PH:ceb", "ceb")]
+    [InlineData(null, "LANG=C.UTF-8 LANGUAGE=ceb", "en")]
+    [InlineData(null, "LANG=ceb_PH.UTF-8 LC_MESSAGES=es_ES.UTF-8", "es")]
+    [InlineData("ceb-PH", "LANG=de_DE.UTF-8", "ceb")]
+    [InlineData("CEB", "LANG=es_ES.UTF-8", "ceb")]
+    [InlineData("system", "LANG=ceb_PH.UTF-8", "ceb")]
+    [InlineData("en", "LANG=ceb_PH.UTF-8", "en")]
+    public void CebuanoIsChosenFromTheSavedChoiceOrDesktop(string? saved, string environment, string expected)
+    {
+        Dictionary<string, string> variables = environment.Split(' ')
+            .Select(v => v.Split('=', 2)).ToDictionary(v => v[0], v => v[1]);
+        Assert.Equal(expected, Localizer.Resolve(saved, n => variables.GetValueOrDefault(n),
+            [.. Localizer.Languages.Select(c => c.Id!)]));
     }
 
     [Theory]
@@ -325,7 +345,7 @@ public sealed class LanguageSettingsTests : IDisposable
         File.WriteAllText(UiJson, """{ "skin": "nord", "futureChoice": 3 }""");
         OptionsViewModel options = Options();
         Assert.Null(options.SelectedLanguage!.Id);
-        Assert.Equal([Localizer.Text("SystemLanguage"), "English", "Deutsch", "Español", "Tagalog"],
+        Assert.Equal([Localizer.Text("SystemLanguage"), "English", "Deutsch", "Español", "Tagalog", "Bisaya (Cebuano)"],
             options.LanguageChoices.Select(c => c.Label));
 
         options.SelectedLanguage = options.LanguageChoices.Single(c => c.Id == "en");
@@ -346,6 +366,7 @@ public sealed class LanguageSettingsTests : IDisposable
     [Theory]
     [InlineData("es")]
     [InlineData("tl")]
+    [InlineData("ceb")]
     public void ALanguageChoiceIsSavedForNextStartupWithoutChangingTheCurrentRun(string language)
     {
         CultureInfo culture = CultureInfo.CurrentCulture;
@@ -380,6 +401,7 @@ public sealed class LanguageSettingsTests : IDisposable
     [InlineData("de-AT", "de")]
     [InlineData("tl-PH", "tl")]
     [InlineData("fil-PH", "tl")]
+    [InlineData("ceb-PH", "ceb")]
     [InlineData("en-GB", "en")]
     [InlineData("fr", "en")]
     [InlineData("../es", "en")]
