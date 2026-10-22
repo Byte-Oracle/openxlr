@@ -104,6 +104,30 @@ internal sealed class DesktopKeys(DaemonClient client) : IDisposable
             if (Interlocked.CompareExchange(ref active, 1, 0) != 0)
                 throw new InvalidOperationException(Localizer.Text("ShortcutSessionClosedWhileConfiguring"));
             SetStatus(Localizer.Text("DesktopKeysActive"));
+            if (save)
+            {
+                try
+                {
+                    await bus.Empty(DesktopBus.Portal, DesktopBus.PortalPath, DesktopBus.Shortcuts,
+                        "ConfigureShortcuts", "osa{sv}", (ref MessageWriter w) =>
+                        {
+                            w.WriteObjectPath(session);
+                            w.WriteString("");
+                            w.WriteDictionary(new Dictionary<string, VariantValue>());
+                        }, _lifetime.Token);
+                }
+                catch (DBusErrorReplyException ex) when (ex.ErrorName is
+                    "org.freedesktop.DBus.Error.UnknownMethod" or "org.freedesktop.DBus.Error.UnknownInterface")
+                {
+                    if (isActive()) SetStatus(Localizer.Text("DesktopKeysActive") + " " + Localizer.Text("DesktopKeysConfigureUnsupported"));
+                }
+                catch (Exception ex)
+                {
+                    // The keys are already bound. An editor failure must not
+                    // tear down a working session or hide the opening error.
+                    if (IsCurrent()) SetStatus(Localizer.Format("DesktopKeysError", ex.Message));
+                }
+            }
         }
         catch (Exception ex)
         {

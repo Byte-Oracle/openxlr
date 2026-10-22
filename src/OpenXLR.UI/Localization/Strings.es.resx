@@ -2850,4 +2850,7 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="MonitoringPauseKeysNote" xml:space="preserve">
     <value>Asigna aquí la tecla de silencio en lugar de la acción de silencio del escritorio. Mantén OpenXLR en ejecución en la bandeja. La opción de micrófono de Audio también se aplica a esta tecla.</value>
   </data>
+  <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
+    <value>Este escritorio no puede volver a abrir el editor de atajos. Cambia las asignaciones en la configuración de atajos del escritorio.</value>
+  </data>
 </root>

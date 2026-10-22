@@ -2850,4 +2850,7 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="MonitoringPauseKeysNote" xml:space="preserve">
     <value>Weise die Stumm-Taste hier statt der Stumm-Aktion des Desktops zu. Lass OpenXLR im Infobereich laufen. Die Mikrofon-Option unter Audio gilt auch für diese Taste.</value>
   </data>
+  <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
+    <value>Dieser Desktop kann den Tastenkürzel-Editor nicht erneut öffnen. Ändere die Belegung in den Tastenkürzel-Einstellungen des Desktops.</value>
+  </data>
 </root>

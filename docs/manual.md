@@ -3176,6 +3176,14 @@ in the Toggle inspector. No PC shortcut needs to be selected for OpenDeck.
 Keep the OpenXLR UI process running; hiding it in the tray keeps the keys
 active. The daemon alone does not own a desktop shortcut session.
 
+On desktops supporting version 2 of the GlobalShortcuts portal, **Apply and
+configure keys** also reopens the desktop's shortcut editor, including when
+the desktop has restored an existing binding. Starting OpenXLR restores the
+keys without reopening that editor. Older portals keep the keys active and
+show a hint to edit them in the desktop's shortcut settings. If the desktop
+refuses the editor request after binding succeeded, the error is shown and
+the working bindings stay active.
+
 The GlobalShortcuts portal registers keys on Wayland. It does not expose the
 focused application's identity. Focused routing therefore currently requires
 KDE Plasma, where a short-lived KWin script reads the active process id. It

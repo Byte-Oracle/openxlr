@@ -2861,4 +2861,7 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="MonitoringPauseKeysNote" xml:space="preserve">
     <value>Bind the mute key here instead of the desktop mute action. Keep OpenXLR running in the tray. The microphone option in Audio also applies to this key.</value>
   </data>
+  <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
+    <value>This desktop cannot reopen the shortcut editor. Change bindings in the desktop's shortcut settings.</value>
+  </data>
 </root>
