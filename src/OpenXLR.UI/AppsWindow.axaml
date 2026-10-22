@@ -60,7 +60,8 @@
                                ToolTip.Tip="{Binding Identity}"/>
                     <ComboBox Grid.Column="3" HorizontalAlignment="Stretch"
                               ItemsSource="{Binding Channels}"
-                              SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"/>
+                              SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                              ToolTip.Tip="{Binding BrowserHeldNote}"/>
                     <Button Grid.Column="5" Content="{loc:Text Key=Forget}" Padding="10,3" FontSize="12"
                             Click="OnForget"/>
                   </Grid>

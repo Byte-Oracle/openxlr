@@ -316,4 +316,19 @@ public sealed record StreamAssignment(int Id, int Serial, string Label, string I
     /// <see cref="ApplicationIconResolver"/> found it; null when nothing did.
     /// </summary>
     public string? Icon { get; init; }
+
+    /// <summary>
+    /// True for a recognized Chromium browser while browser output selection
+    /// is on: OpenXLR then leaves its streams where the browser and desktop
+    /// put them. <see cref="ChannelId"/> stays the saved assignment, which
+    /// applies again when the option is turned off.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool BrowserHeld { get; init; }
+
+    /// <summary>
+    /// While <see cref="BrowserHeld"/>, the application channel a live stream
+    /// of the app actually plays into; null when it plays on another output.
+    /// </summary>
+    public string? OutputChannelId { get; init; }
 }

@@ -590,8 +590,9 @@ restores the split profile when it stops.
 - The optional [Chromium companion](browser-routing.md) lists individual
   tabs in APPLICATIONS and Manage. User-activated tab audio can follow
   separate application channels, with saved website defaults. Browser
-  output selection suspends generic Chromium routing while enabled;
-  restarting the browser requires activating tabs again
+  output selection suspends generic Chromium routing while enabled,
+  keeping each browser's saved assignment and showing where it plays
+  meanwhile; restarting the browser requires activating tabs again
 
 - Audio clients are detected from their PipeWire client registration
   and playback metadata, falling back to the owning client when fields

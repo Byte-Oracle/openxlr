@@ -2850,7 +2850,16 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>Enable individual browser tab routing</value>
   </data>
   <data name="PreserveBrowserOutputsHint" xml:space="preserve">
-    <value>Browser-wide assignments are suspended while enabled. Unassigned tabs keep the output selected by the browser or desktop.</value>
+    <value>While enabled, OpenXLR does not move browser audio, and browser-wide assignments are suspended until you turn this off. Tabs without a tab channel keep the output the browser or desktop chose, which can be an OpenXLR channel the desktop restored them to.</value>
+  </data>
+  <data name="BrowserOutputHeld" xml:space="preserve">
+    <value>Individual browser tab routing is on, so OpenXLR does not move this browser. The channel chosen here applies when that option is off.</value>
+  </data>
+  <data name="BrowserOutputHeldOnChannel" xml:space="preserve">
+    <value>Individual browser tab routing is on, so OpenXLR does not move this browser. It plays on {0} now, where the browser or desktop put it. The channel chosen here applies when that option is off.</value>
+  </data>
+  <data name="BrowserOutputHeldElsewhere" xml:space="preserve">
+    <value>Individual browser tab routing is on, so OpenXLR does not move this browser. It plays on the output the browser or desktop chose, outside OpenXLR's application channels. The channel chosen here applies when that option is off.</value>
   </data>
   <data name="BrowserTabsHeading" xml:space="preserve">
     <value>BROWSER TABS</value>

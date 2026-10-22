@@ -2856,4 +2856,13 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
     <value>Este escritorio no puede volver a abrir el editor de atajos. Cambia las asignaciones en la configuración de atajos del escritorio.</value>
   </data>
+  <data name="BrowserOutputHeld" xml:space="preserve">
+    <value>El enrutamiento individual de pestañas del navegador está activado, así que OpenXLR no mueve este navegador. El canal elegido aquí se aplica cuando desactives esa opción.</value>
+  </data>
+  <data name="BrowserOutputHeldOnChannel" xml:space="preserve">
+    <value>El enrutamiento individual de pestañas del navegador está activado, así que OpenXLR no mueve este navegador. Ahora suena en {0}, donde lo dejó el navegador o el escritorio. El canal elegido aquí se aplica cuando desactives esa opción.</value>
+  </data>
+  <data name="BrowserOutputHeldElsewhere" xml:space="preserve">
+    <value>El enrutamiento individual de pestañas del navegador está activado, así que OpenXLR no mueve este navegador. Suena en la salida que eligió el navegador o el escritorio, fuera de los canales de aplicación de OpenXLR. El canal elegido aquí se aplica cuando desactives esa opción.</value>
+  </data>
 </root>

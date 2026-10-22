@@ -61,7 +61,9 @@ Changes still go through `/commands`.
 The mixer resource also reports `preserveBrowserOutputs` and `browserTabs`
 as documented in [browser tabs](api.md#browser-tabs). Use
 `{"cmd":"setPreserveBrowserOutputs","value":true}` to preserve browser-selected
-outputs, then `assignBrowserTab` with a connected tab's `session`, `tabId`,
+outputs. While it is on, `assignApp` and `assignStream` for a recognized
+browser return success and save the assignment without moving its audio.
+Then use `assignBrowserTab` with a connected tab's `session`, `tabId`,
 and expected `site`, an application `channel` or `null`, and boolean `remember`.
 The required `site` must still match the tab's current canonical origin;
 a stale choice returns HTTP 400 before changing the tab or saving anything.

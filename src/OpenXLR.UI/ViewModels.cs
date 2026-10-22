@@ -1253,6 +1253,9 @@ public sealed partial class MainViewModel : ViewModelBase
             bool active = stream["active"]?.GetValue<bool>() ?? true;
             bool running = stream["running"]?.GetValue<bool>() ?? true;
             string? icon = stream["icon"] is JsonValue iconValue && iconValue.TryGetValue(out string? named) ? named : null;
+            bool browserHeld = stream["browserHeld"] is JsonValue heldValue && heldValue.TryGetValue(out bool held) && held;
+            string? output = stream["outputChannelId"] is JsonValue outputValue && outputValue.TryGetValue(out string? outputId)
+                ? choices.FirstOrDefault(c => c.Id == outputId && c.Id != AppStreamViewModel.Ignore)?.Name : null;
             seen.Add(identity);
             if (!byIdentity.TryGetValue(identity, out AppStreamViewModel? existing))
             {
@@ -1269,6 +1272,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 existing.ApplyFromDaemon(channel, active, running, label);
                 existing.Icon = icon;
             }
+            existing.ApplyBrowserHold(browserHeld, output);
         }
         for (int i = Apps.Count - 1; i >= 0; i--)
             if (!seen.Contains(Apps[i].Identity)) Apps.RemoveAt(i);
@@ -1526,6 +1530,21 @@ public sealed class AppStreamViewModel : ViewModelBase
         }
         finally { _applying = false; }
     }
+
+    private string? _browserHeldNote;
+    /// <summary>
+    /// Null unless browser output selection holds this browser. Then it says
+    /// where the browser plays meanwhile, and that the chosen channel is the
+    /// one that applies when the option is off.
+    /// </summary>
+    public string? BrowserHeldNote { get => _browserHeldNote; private set => Set(ref _browserHeldNote, value); }
+
+    /// <summary>The daemon's report for a browser held by browser output selection.</summary>
+    public void ApplyBrowserHold(bool held, string? outputChannel)
+        => BrowserHeldNote = !held ? null
+            : !Active ? Localizer.Text("BrowserOutputHeld")
+            : outputChannel is not null ? Localizer.Format("BrowserOutputHeldOnChannel", outputChannel)
+            : Localizer.Text("BrowserOutputHeldElsewhere");
 
     /// <summary>"playing" / "running" / "not running", for the manage dialog.</summary>
     public string StatusText => Active ? Localizer.Text("Playing") : Running ? Localizer.Text("Running") : Localizer.Text("NotRunning");

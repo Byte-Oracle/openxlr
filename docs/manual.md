@@ -789,7 +789,13 @@ For separate Teams, YouTube or other browser tabs, the optional
 and in Manage. Enable browser output selection, choose a channel and
 activate each tab from the browser. Remember website saves its origin's
 default across restarts. Browser permission must be granted again for
-each tab after restarting the browser.
+each tab after restarting the browser. While browser output selection is
+on, OpenXLR does not move the browser itself. Its row keeps the channel
+it is assigned to, which applies again when you turn the option off, and
+the picker's tooltip names the channel the browser plays into meanwhile,
+or says it plays outside OpenXLR's application channels. Choosing another
+channel for the whole browser then only saves it, and so does a routing
+key on an OpenDeck or the keyboard.
 
 OpenXLR remembers up to 512 explicit app assignments. Once that limit is
 reached, existing assignments can still be changed, including "Not managed".

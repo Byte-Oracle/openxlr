@@ -2801,9 +2801,26 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 string channelId = _config.ResolveApplicationChannel(Matcher.Match(s));
                 if (_preserveBrowserOutputs && browser)
                 {
-                    var preserved = new StreamAssignment(s.Id, s.Serial, s.Label, identity, StreamMatcher.Ignore);
-                    _streams[s.Id] = preserved;
-                    _apps[identity] = preserved;
+                    // Browser output selection: the stream stays where the
+                    // browser or desktop put it, which can be an OpenXLR
+                    // channel the session manager restored it to. The app
+                    // keeps its assignment, so mixer.json does not change and
+                    // the assignment applies again when the option is off;
+                    // the entry says where the stream plays meanwhile.
+                    string? sink;
+                    try { sink = _pw.StreamSinkName(s.Serial); }
+                    catch (InvalidOperationException) { continue; }
+                    string assigned = channelId == StreamMatcher.Ignore ? channelId
+                        : (_config.Channels.FirstOrDefault(c => c.Id == channelId && c.IsApplication)
+                           ?? _config.FallbackApplicationChannel)?.Id ?? channelId;
+                    var held = new StreamAssignment(s.Id, s.Serial, s.Label, identity, assigned)
+                    {
+                        BrowserHeld = true,
+                        OutputChannelId = sink is null ? null
+                            : _config.Channels.FirstOrDefault(c => c.IsApplication && c.SinkName == sink)?.Id,
+                    };
+                    _streams[s.Id] = held;
+                    if (!PipeWireAdapter.IsPlumbingIdentity(identity)) _apps[identity] = held;
                     changed = true;
                     continue;
                 }
@@ -2863,10 +2880,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 string identity = client.Identity;
                 if (PipeWireAdapter.IsPlumbingIdentity(identity)) continue;
                 runningIdentities.Add(identity);
+                if (BrowserTabRouting.IsChromium(client.Binary)) _browserIdentities.Add(identity);
                 if (!_apps.ContainsKey(identity))
                 {
                     _apps[identity] = new StreamAssignment(0, 0, client.Label, identity,
-                        _config.ResolveApplicationChannel(Matcher.Match(client))) { Active = false, Running = true };
+                        _config.ResolveApplicationChannel(Matcher.Match(client)))
+                        { Active = false, Running = true, BrowserHeld = BrowserHeldLocked(identity) };
                     changed = true;
                 }
                 else if (!_apps[identity].Active && _apps[identity].Label != client.Label &&
@@ -2889,13 +2908,15 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 bool runningNow = activeNow || runningIdentities.Contains(identity);
                 string? icon = icons.GetValueOrDefault(identity) ?? app.Icon
                     ?? _icons.Resolve(ApplicationIconHints.Remembered(identity, app.Label))?.Icon;
-                if (app.Active != activeNow || app.Running != runningNow || app.Icon != icon)
+                // Only a live stream plays anywhere.
+                string? output = activeNow ? app.OutputChannelId : null;
+                if (app.Active != activeNow || app.Running != runningNow || app.Icon != icon || app.OutputChannelId != output)
                 {
                     _apps[identity] = app with
                     {
                         Active = activeNow, Running = runningNow,
                         Id = activeNow ? app.Id : 0, Serial = activeNow ? app.Serial : 0,
-                        Icon = icon,
+                        Icon = icon, OutputChannelId = output,
                     };
                     changed = true;
                 }
@@ -2980,7 +3001,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 if (_apps.TryGetValue(identity, out StreamAssignment? ignored))
                     _apps[identity] = ignored with { ChannelId = StreamMatcher.Ignore };
                 else
-                    _apps[identity] = new StreamAssignment(0, 0, label ?? identity, identity, StreamMatcher.Ignore) { Active = false, Running = false };
+                    _apps[identity] = new StreamAssignment(0, 0, label ?? identity, identity, StreamMatcher.Ignore)
+                        { Active = false, Running = false, BrowserHeld = BrowserHeldLocked(identity) };
                 return;
             }
             ChannelDefinition? ch = _config.Channels.FirstOrDefault(c => c.Id == channelId && c.IsApplication);
@@ -3002,7 +3024,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             else
                 // Pre-registered by hand (e.g. from the installed-apps picker):
                 // listed silent until its first stream shows up and confirms.
-                _apps[identity] = new StreamAssignment(0, 0, label ?? identity, identity, channelId) { Active = false, Running = false };
+                _apps[identity] = new StreamAssignment(0, 0, label ?? identity, identity, channelId)
+                    { Active = false, Running = false, BrowserHeld = BrowserHeldLocked(identity) };
         }
     }
 

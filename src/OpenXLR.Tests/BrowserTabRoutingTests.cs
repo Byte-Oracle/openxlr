@@ -323,6 +323,69 @@ public sealed class BrowserTabRoutingTests
     }
 
     [Fact]
+    public void AHeldBrowserKeepsItsSavedAssignmentAndReportsWhereItPlays()
+    {
+        using var graph = new BrowserGraph();
+        graph.Build();
+        graph.Mixer.SyncStreams();
+        graph.Mixer.AssignApp("chromium", "music");
+        graph.Mixer.SyncStreams();
+        SavedApp[] known = [.. graph.Mixer.ExportSettings().KnownApps];
+        Assert.Equal("music", Assert.Single(known).ChannelId);
+
+        graph.Mixer.SetPreserveBrowserOutputs(true);
+        // The browser picked another output meanwhile; OpenXLR leaves it there.
+        graph.SetStreamSink(1);
+        graph.ClearCalls();
+        graph.Mixer.SyncStreams();
+        Assert.DoesNotContain(graph.Calls, c => c.StartsWith("move-sink-input", StringComparison.Ordinal)
+            || c.StartsWith("set-sink-input-mute", StringComparison.Ordinal));
+        Assert.Equal(known, graph.Mixer.ExportSettings().KnownApps);
+        StreamAssignment held = Assert.Single(graph.Mixer.Snapshot().Streams);
+        Assert.True(held.BrowserHeld);
+        Assert.Equal("music", held.ChannelId);
+        Assert.Equal("system", held.OutputChannelId);
+
+        graph.Mixer.SetPreserveBrowserOutputs(false);
+        graph.ClearCalls();
+        graph.Mixer.SyncStreams();
+        Assert.Contains("move-sink-input 100 OpenXLR_ch_music", graph.Calls);
+        Assert.Equal(known, graph.Mixer.ExportSettings().KnownApps);
+        StreamAssignment placed = Assert.Single(graph.Mixer.Snapshot().Streams);
+        Assert.False(placed.BrowserHeld);
+        Assert.Null(placed.OutputChannelId);
+        Assert.Equal("music", placed.ChannelId);
+    }
+
+    [Fact]
+    public void BrowserOutputSelectionSurvivesARestartAndReleasesTheSavedAssignmentWhenOff()
+    {
+        using var graph = new BrowserGraph();
+        string path = Path.Combine(graph.Folder, "mixer.json");
+        graph.Build();
+        graph.Mixer.SyncStreams();
+        graph.Mixer.AssignApp("chromium", "music");
+        graph.Mixer.SetPreserveBrowserOutputs(true, settings => settings.Save(path));
+
+        using var restored = new Mixer();
+        graph.Build(restored);
+        restored.ApplySettings(MixerSettings.Load(path)!);
+        Assert.True(restored.PreserveBrowserOutputs);
+        graph.SetStreamSink(1);
+        graph.ClearCalls();
+        restored.SyncStreams();
+        Assert.DoesNotContain(graph.Calls, c => c.StartsWith("move-sink-input", StringComparison.Ordinal));
+        Assert.True(Assert.Single(restored.Snapshot().Streams).BrowserHeld);
+
+        restored.SetPreserveBrowserOutputs(false, settings => settings.Save(path));
+        Assert.False(MixerSettings.Load(path)!.PreserveBrowserOutputs);
+        graph.ClearCalls();
+        restored.SyncStreams();
+        Assert.Contains("move-sink-input 100 OpenXLR_ch_music", graph.Calls);
+        Assert.Equal("music", Assert.Single(restored.Snapshot().Streams).ChannelId);
+    }
+
+    [Fact]
     public void AnElectronAppNamedChromiumIsNotTakenForABrowser()
     {
         // Discord and other Electron apps report "Chromium" as their name.
@@ -373,14 +436,19 @@ public sealed class BrowserTabRoutingTests
             Environment.SetEnvironmentVariable("PATH", _directory);
         }
 
-        public void Build()
+        public string Folder => _directory;
+
+        public void Build(Mixer? mixer = null)
         {
-            typeof(Mixer).GetField("_config", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(Mixer,
+            typeof(Mixer).GetField("_config", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mixer ?? Mixer,
                 new MixerConfig { Channels = [new("system", "System"), new("music", "Music")], Mixes = [] });
-            typeof(Mixer).GetField("_built", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(Mixer, true);
+            typeof(Mixer).GetField("_built", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mixer ?? Mixer, true);
         }
 
         public void ClearCalls() => File.WriteAllText(Path.Combine(_directory, "calls"), "");
+
+        /// <summary>Put the stream on sink 1 (system) or 2 (music), as the desktop would.</summary>
+        public void SetStreamSink(int sink) => File.WriteAllText(Path.Combine(_directory, "inputs"), $"100\t{sink}\n");
 
         public void Dispose()
         {

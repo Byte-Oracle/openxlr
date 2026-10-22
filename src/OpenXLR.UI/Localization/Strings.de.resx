@@ -2839,7 +2839,16 @@ Von OpenXLR gesteuertes Interface wählen</value>
     <value>Einzelne Browser-Tabs zuordnen</value>
   </data>
   <data name="PreserveBrowserOutputsHint" xml:space="preserve">
-    <value>Solange dies aktiv ist, sind Zuordnungen des gesamten Browsers ausgesetzt. Nicht zugeordnete Tabs behalten das vom Browser oder Desktop gewählte Ausgabeziel.</value>
+    <value>Solange dies aktiv ist, verschiebt OpenXLR kein Browser-Audio, und Zuordnungen des gesamten Browsers sind bis zum Ausschalten ausgesetzt. Tabs ohne eigenen Kanal behalten das vom Browser oder Desktop gewählte Ausgabeziel. Das kann ein OpenXLR-Kanal sein, auf den der Desktop sie zurückgesetzt hat.</value>
+  </data>
+  <data name="BrowserOutputHeld" xml:space="preserve">
+    <value>Die Zuordnung einzelner Browser-Tabs ist aktiv, daher verschiebt OpenXLR diesen Browser nicht. Der hier gewählte Kanal gilt, sobald diese Option aus ist.</value>
+  </data>
+  <data name="BrowserOutputHeldOnChannel" xml:space="preserve">
+    <value>Die Zuordnung einzelner Browser-Tabs ist aktiv, daher verschiebt OpenXLR diesen Browser nicht. Er spielt gerade auf {0}, wohin Browser oder Desktop ihn gelegt haben. Der hier gewählte Kanal gilt, sobald diese Option aus ist.</value>
+  </data>
+  <data name="BrowserOutputHeldElsewhere" xml:space="preserve">
+    <value>Die Zuordnung einzelner Browser-Tabs ist aktiv, daher verschiebt OpenXLR diesen Browser nicht. Er spielt auf dem vom Browser oder Desktop gewählten Ausgabeziel außerhalb der Anwendungskanäle von OpenXLR. Der hier gewählte Kanal gilt, sobald diese Option aus ist.</value>
   </data>
   <data name="BrowserTabsHeading" xml:space="preserve">
     <value>BROWSER-TABS</value>

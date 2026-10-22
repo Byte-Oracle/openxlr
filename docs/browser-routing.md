@@ -54,12 +54,18 @@ checkout of the same version as your native OpenXLR installation.
 ## Choose and activate a tab
 
 1. In OpenXLR's APPLICATIONS card, enable browser output selection. This
-   suspends generic application routing for recognized Chromium browsers
-   and keeps their selected outputs. Existing browser-wide assignments
+   suspends generic application routing for recognized Chromium browsers:
+   OpenXLR stops moving their audio. Existing browser-wide assignments
    stay saved and resume when you turn the option off. Browser audio that
-   has not been taken over keeps the browser or desktop's selected output,
-   usually the Linux default. Enabling this option does not move existing
-   streams to another output.
+   has not been taken over plays where the browser or desktop puts it.
+   That is often the Linux default, but not always: a browser already
+   playing into an OpenXLR channel stays there, and the desktop can send
+   a new browser stream back to the channel the browser last used. The
+   browser keeps its assigned channel in the application list. The
+   picker's tooltip says the assignment is on hold and names the channel
+   the browser plays into now. Choosing a channel for the whole browser,
+   from that list, an OpenDeck key or a desktop key, saves it for later
+   and moves nothing while the option is on.
 2. Open the companion's popup on the tab that should play into OpenXLR.
    Output access opens a visible setup page. Chromium requires microphone
    permission to reveal non-default output devices. Press the setup

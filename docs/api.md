@@ -146,7 +146,9 @@ to a source, or the driven unit lacks the control, so `lowCutHz` and
 [exclusive groups](mixer-layout.md#exclusive-groups)), `enforcedDefaultSink`, `enforcedDefaultSource`, `streams` (`id`, `serial`,
 `label`, `identity`, `channelId`, `active`, `running`, and `icon`; see
 [application names](#application-names) and
-[application icons](#application-icons)), `renamedSinceStart`
+[application icons](#application-icons); a browser held by browser output
+selection also carries `browserHeld` and `outputChannelId`, see
+[browser tabs](#browser-tabs)), `renamedSinceStart`
 and `layoutWarning`. A `devices` entry carries `name`, `description` (a
 hardware source's description leaves out the ALSA profile PipeWire appends,
 such as "Analog Stereo", unless that would give two sources one name), `kind`
@@ -247,9 +249,9 @@ that final acknowledgement (or an `error` without a request id):
 | `setOutputDeviceVolume` | optional `device`, `value` | set a PipeWire output's desktop volume; `value` finite, 0 to 1.5 on the desktop scale (1.0 is 100%), rejected outside that range. A monitor mix sink is set through its mix master; a selected monitor output follows the linked monitor-volume behaviour. Omit `device` for the current desktop default; device names are accepted and rejected as for `adjustOutputVolume` |
 | `toggleOutputMute` | optional `device` | toggle an output's mute; omit `device` for the current desktop default. On a selected physical monitor output it toggles `monitorMuted` for the whole monitor selection, as pressing a Deck monitor dial does; on a monitor mix sink it toggles only that mix; on any other output it toggles the sink's mute at the audio server |
 | `setMainOutput` | `device` | select and enforce an available PipeWire output as the system default, or `@monitor` for the first selected monitor output. Retains capture-default policy and mixer feeds |
-| `routeFocusedApp` | `channel` | route the focused KDE application to an application channel and remember the assignment; requires the running UI with Desktop keys enabled and `gdbus`. Missing or ambiguous process identity is an error, with no guessed routing. One request runs at a time; another sent while it runs is refused |
-| `assignApp` | `identity`, `channel`, `label?` | route an app (creates a registry entry if unseen); `channel: "ignore"` stops managing it, its streams go back to the system default output and stay wherever the desktop routes them |
-| `assignStream` | `streamId`, `channel` | route one live stream by its PipeWire id; also remembered for the app; `ignore` works here too |
+| `routeFocusedApp` | `channel` | route the focused KDE application to an application channel and remember the assignment; requires the running UI with Desktop keys enabled and `gdbus`. Missing or ambiguous process identity is an error, with no guessed routing. One request runs at a time; another sent while it runs is refused. For a browser held by `preserveBrowserOutputs` it only saves the assignment, as `assignApp` does |
+| `assignApp` | `identity`, `channel`, `label?` | route an app (creates a registry entry if unseen); `channel: "ignore"` stops managing it, its streams go back to the system default output and stay wherever the desktop routes them. For a browser held by `preserveBrowserOutputs` the command succeeds and saves the assignment without moving any stream; it applies when the option is turned off |
+| `assignStream` | `streamId`, `channel` | route one live stream by its PipeWire id; also remembered for the app; `ignore` works here too. A held browser stream is not moved, as with `assignApp` |
 | `forgetApp` | `identity` | drop an app and its remembered channel |
 | `setInputBinding` | `channel`, `source?`, `captureMonoChannel?` | bind a hardware strip to one port of a PipeWire capture source by exact node name. `channel` is `xlr1` or `xlr2`; Aux In stays on the interface. With `source` null or absent the strip returns to the interface's capture pair and takes no port. With a source, `capturePair` must be 0 and `captureMonoChannel` is the zero-based port, 0 to 63, default 0. OpenXLR nodes, monitor taps, control characters and names over 256 characters are refused. A node of an attached supported interface (a `devices` entry with `drivenUnit`) is accepted, and the binding records that unit, see [a strip on another interface](#a-strip-on-another-interface). The source may be offline. Saved before the acknowledgement, rolled back on a failed save. The strip's monitor sends start muted after a change; no other strip changes. Channel ids, software processing and inserts stay as they are. See [input bindings](#input-bindings) |
 | `setEnforcedDefaults` | `sink`, `source` | system defaults to hold; `sink: "@monitor"` follows the first selected monitor output |
@@ -935,16 +937,27 @@ through this protocol. Browser process ids and application identities
 cannot distinguish tabs that share a browser audio process.
 
 The user enables `preserveBrowserOutputs` before using tab routing. While
-enabled, recognized Chrome, Chromium, Brave, Edge, Vivaldi and Opera playback
-streams keep their chosen outputs. A browser is recognized by the process
-binary PipeWire reports, never by `application.name`: Electron apps such as
-Discord call themselves `Chromium` there and keep their usual routing. OpenXLR does not move or unmute them,
-including streams already playing when the mode changes. Browser-wide
+enabled, OpenXLR does not move or unmute recognized Chrome, Chromium, Brave,
+Edge, Vivaldi and Opera playback streams, including streams already playing
+when the mode changes. A browser is recognized by the process binary
+PipeWire reports, never by `application.name`: Electron apps such as Discord
+call themselves `Chromium` there and keep their usual routing. Browser-wide
 `assignApp` and `assignStream` choices remain saved but are suspended until
-the mode is disabled. Browser audio without a tab choice keeps the output
-the browser or desktop selects, normally the Linux default; enabling the
-mode leaves already playing streams at their current outputs. Other
+the mode is disabled. Those commands, and `routeFocusedApp` on a browser
+window, still succeed: they save the assignment and move nothing, and the
+command result carries no note saying so. Browser audio without a tab choice
+plays where the browser or desktop puts it. That is often the Linux
+default, but it can be an OpenXLR channel: a stream already on one when the
+mode is enabled stays there, and the session manager can restore a new
+browser stream to the channel the browser was last routed to. Other
 applications and the existing `ignore` behavior keep their usual routing.
+
+While the mode holds a browser, its `streams` entry keeps the saved
+assignment in `channelId`, so `knownApps` in `mixer.json` does not change,
+and adds `browserHeld:true`. A playing entry also carries `outputChannelId`,
+the application channel its stream plays into now, which is absent when it
+plays on another output. Turning the mode off drops both fields and moves
+the browser's streams to `channelId`.
 
 A companion authenticates a WebSocket, calls `getBrowserSession`, then
 publishes `syncBrowserTabs` with that session and its full `tabs` array.

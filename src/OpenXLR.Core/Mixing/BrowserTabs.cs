@@ -145,7 +145,13 @@ public sealed partial class Mixer
             try { if (persist is not null) PersistLocked(persist); }
             catch { _preserveBrowserOutputs = previous; throw; }
             if (previous == enabled) return;
+            // The next sweep places these streams again: held where they play
+            // while the option is on, moved to their assignment once it is off.
+            // The assignment itself is never rewritten here.
             foreach (int id in _streams.Where(p => _browserIdentities.Contains(p.Value.Identity)).Select(p => p.Key).ToArray()) _streams.Remove(id);
+            foreach ((string identity, StreamAssignment app) in _apps.ToArray())
+                if (_browserIdentities.Contains(identity))
+                    _apps[identity] = app with { BrowserHeld = enabled, OutputChannelId = null };
         }
     }
 
