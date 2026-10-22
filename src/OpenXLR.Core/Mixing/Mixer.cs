@@ -670,14 +670,16 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 }
             }
             var broken = new List<string>();
+            HashSet<string>? waitingForPause = MicrophonesPausedLocked && _microphonePausePending
+                ? _config.Channels.Where(UnconfirmedMicrophonePauseLocked).Select(c => c.Id).ToHashSet(StringComparer.Ordinal) : null;
             foreach ((string key, FilterHandle chain) in _chains)
-                if (!key.StartsWith("mix:", StringComparison.Ordinal) && !chain.IsAlive)
+                if (!key.StartsWith("mix:", StringComparison.Ordinal) && waitingForPause?.Contains(key) != true && !chain.IsAlive)
                 {
                     ChainDiedLocked(key, chain);
                     broken.Add(key);
                 }
             foreach ((string key, PortLink link) in _chainOuts)
-                if (!broken.Contains(key) && _pw.EnsureLinks(link) == LinkHealth.Broken) broken.Add(key);
+                if (waitingForPause?.Contains(key) != true && !broken.Contains(key) && _pw.EnsureLinks(link) == LinkHealth.Broken) broken.Add(key);
             if (broken.Count > 0) { WireInputFeedsLocked(broken); changed = true; }
             changed |= UpdateMixLatencyLocked();
             changed |= EnsureMixRoutesLocked();
@@ -1462,7 +1464,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             // A dead EQ stage is replaced first, by relinking the head, so
             // the feed it took down does not build the whole strip again.
             captureChanged |= HealEqStagesLocked();
-            List<ChannelDefinition> strips = [.. _config.Channels.Where(c => c.InputPair is not null)];
+            List<ChannelDefinition> strips = [.. _config.Channels.Where(c => c.InputPair is not null && !UnconfirmedMicrophonePauseLocked(c))];
             var due = new HashSet<string>();
             // A feed whose source node has since vanished (a card profile
             // change renames every node under it) is wired again. With an

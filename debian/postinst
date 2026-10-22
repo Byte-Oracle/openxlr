@@ -15,4 +15,13 @@ Stream Deck via OpenDeck:
 MSG
 fi
 
+if [ "$1" = "configure" ] && [ -f /usr/share/wireplumber/main.lua.d/54-openxlr-owned-state.lua ]; then
+    cat <<'MSG'
+OpenXLR: the WirePlumber 0.4 owned-node state rule applies at your next login.
+To load it now, run these from your desktop session when you can interrupt audio:
+  systemctl --user restart wireplumber
+  systemctl --user restart openxlr-daemon
+MSG
+fi
+
 #DEBHELPER#

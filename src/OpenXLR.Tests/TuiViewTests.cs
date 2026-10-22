@@ -131,6 +131,8 @@ public sealed class TuiViewTests
         Assert.Equal(52, state.Number("gainDb"));
         Assert.True(state.Flag("lowCut"));
         Assert.False(state.Mixer.MonitorMuted); // Older daemons omit the monitoring pause.
+        Assert.False(state.Mixer.MonitorMuteMicrophones);
+        Assert.False(state.Mixer.MicrophonePausePending);
 
         MixEntry monitor = state.Mixer.Mixes[0];
         Assert.Equal("Monitor A", monitor.Name);
@@ -1036,6 +1038,35 @@ public sealed class TuiViewTests
         Assert.Empty(sent);
         app.Handle(new KeyPress(Key.Enter));
         Assert.Equal("toggleMonitorMuted", Text(Command(sent), "cmd"));
+    }
+
+    [Theory]
+    [InlineData(false, false, false, "recording and streaming continue")]
+    [InlineData(false, true, false, "recording and streaming continue")]
+    [InlineData(true, false, false, "mic sends also pause")]
+    [InlineData(true, true, false, "microphone sends paused")]
+    [InlineData(false, false, true, "mic audio unconfirmed")]
+    [InlineData(false, true, true, "mic audio unconfirmed")]
+    [InlineData(true, false, true, "mic audio unconfirmed")]
+    [InlineData(true, true, true, "mic audio unconfirmed")]
+    public void MonitoringPauseExplainsMicrophoneAudioAndPendingTransitions(bool microphones, bool muted, bool pending, string note)
+    {
+        (App app, List<string> sent) = Ready(tab: 3);
+        var state = System.Text.Json.Nodes.JsonNode.Parse(StateJson)!;
+        state["mixer"]!["monitorMuteMicrophones"] = microphones;
+        state["mixer"]!["monitorMuted"] = muted;
+        state["mixer"]!["microphonePausePending"] = pending;
+        app.Link.Receive(state.ToJsonString());
+        SelectOutputRow(app, "Mute monitoring");
+        foreach (int width in new[] { 80, 140 })
+        {
+            var screen = new Screen(width, 36);
+            app.Draw(screen);
+            string row = Assert.Single(Frame(screen).Split('\n'), line => line.Contains("Mute monitoring", StringComparison.Ordinal));
+            if (width == 140 || microphones || pending) Assert.Contains(note, row, StringComparison.Ordinal);
+            if (microphones || pending) Assert.DoesNotContain("recording and streaming continue", row, StringComparison.Ordinal);
+        }
+        Assert.Empty(sent);
     }
 
     [Theory]

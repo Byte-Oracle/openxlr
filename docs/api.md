@@ -393,7 +393,11 @@ or profile recalls made while paused. Explicitly unmuting a monitor clears
 the monitoring pause and resumes those microphones too. Turning the option
 off during a pause resumes microphone audio while monitoring stays paused.
 After a rebuild, channels follow OpenXLR's current pause state rather than
-desktop mute or gain remembered for another channel.
+desktop mute or gain remembered for another channel. On WirePlumber 0.4,
+this requires the owned-node compatibility rule shipped by packages built
+for that version. Load it by restarting WirePlumber after installation or
+logging in again; [source installations](install-from-source.md#4-wireplumber-rules)
+copy the rule explicitly. WirePlumber 0.5 honors the node declaration directly.
 
 The channel mute covers all sends, including Stream, Chat, Aux and custom
 virtual microphones, without rewriting each send. Application audio, stereo
@@ -409,7 +413,8 @@ has not been confirmed by the audio server. Helpers that refuse a write or
 report a different state leave the operation pending for the regular sweep;
 clients must not present that state as confirmed silence. New microphone
 feeds wait for their channel mute to be confirmed on a paused start or
-reconnect. This is an OpenXLR routing control, not a hardware privacy switch:
+reconnect. EQ edits are kept while a software EQ start waits for that
+confirmation. This is an OpenXLR routing control, not a hardware privacy switch:
 applications recording the physical microphone directly bypass it, and audio
 already buffered or held by an effect can finish playing.
 

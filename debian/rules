@@ -64,6 +64,13 @@ override_dh_auto_install:
 		$(PKG)/usr/share/wireplumber/wireplumber.conf.d/52-openxlr-mk1-capture-hold.conf
 	install -Dm644 packaging/53-openxlr-wave3-capture-hold.conf \
 		$(PKG)/usr/share/wireplumber/wireplumber.conf.d/53-openxlr-wave3-capture-hold.conf
+	# WirePlumber 0.4 needs a Boolean rule for the declared state opt-out.
+	# Install it only for that build target; 0.5 warns about old Lua rules.
+	wp_version=$$(LC_ALL=C wireplumber --version) && \
+	if printf '%s\n' "$$wp_version" | grep -q '^Linked with libwireplumber 0\.4\.'; then \
+		install -Dm644 packaging/54-openxlr-owned-state.lua \
+			$(PKG)/usr/share/wireplumber/main.lua.d/54-openxlr-owned-state.lua; \
+	fi
 
 	# The reference unit points into a source checkout; the package runs
 	# the wrapper.

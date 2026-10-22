@@ -131,7 +131,12 @@ internal sealed class OutputsView : View
         });
         rows.Add(new ToggleRow("Mute monitoring", state.Mixer.MonitorMuted,
             _ => link.Send("toggleMonitorMuted"))
-        { Note = "recording and streaming continue" });
+        {
+            Note = state.Mixer.MicrophonePausePending ? "mic audio unconfirmed"
+                : state.Mixer.MonitorMuteMicrophones ? state.Mixer.MonitorMuted
+                    ? "microphone sends paused" : "mic sends also pause"
+                : "recording and streaming continue",
+        });
 
         rows.Add(new HeadingRow("Outputs"));
         if (sinks.Count == 0) rows.Add(new TextRow("None found", "is PipeWire running"));

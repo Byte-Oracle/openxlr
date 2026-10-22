@@ -72,6 +72,7 @@ public sealed partial class MonitorVolumeIntegrationTests
                 #!/bin/sh
                 folder=$(dirname "$0")
                 if [ "$#" -eq 2 ] && [ "$1" = 'OpenXLR_mix_chat:monitor_FR' ] && [ "$2" = 'OpenXLR_post_chat:playback_FR' ] && [ -f "$folder/reject" ]; then
+                    touch "$folder/refused"
                     echo 'transient test refusal' >&2
                     exit 1
                 fi
@@ -84,7 +85,11 @@ public sealed partial class MonitorVolumeIntegrationTests
             mixer.Build(new MixerConfig { Channels = [], Mixes = [new("chat", "Chat", MixKind.VirtualMic)] });
             const string left = "OpenXLR_mix_chat:monitor_FL", leftTo = "OpenXLR_post_chat:playback_FL";
             const string right = "OpenXLR_mix_chat:monitor_FR", rightTo = "OpenXLR_post_chat:playback_FR";
-            Assert.True(SpinWait.SpinUntil(() => MixLinks().Contains((left, leftTo)), TimeSpan.FromSeconds(3)));
+            Assert.True(SpinWait.SpinUntil(() =>
+            {
+                mixer.EnsureFilterRoutes();
+                return MixLinks().Contains((left, leftTo)) && File.Exists(Path.Combine(folder, "refused"));
+            }, TimeSpan.FromSeconds(3)));
             Assert.DoesNotContain((right, rightTo), MixLinks());
             mixer.EnsureFilterRoutes();
             Assert.Contains((left, leftTo), MixLinks());

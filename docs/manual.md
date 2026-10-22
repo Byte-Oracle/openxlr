@@ -523,10 +523,14 @@ that was the default.
    nothing, and each **150%** button keeps its own range.
 5. **Mute** in the MONITOR header pauses every selected monitor output,
    including the direct microphone path on the Pro. Recording and streaming
-   continue. Press it again to resume: mix mutes, channel sends, levels and
+   continue by default. With **Mute microphone sends with monitoring** enabled
+   in Options, AUDIO, the XLR/Mic strips and mono capture microphones pause in
+   every OpenXLR mix too. The terminal mixer's Outputs tab has **Mute monitoring**
+   too and shows when the microphone audio state is not yet confirmed. Press it
+   again to resume: mix mutes, channel sends, levels and
    output feeds keep their settings, so a mix or send that was already muted
    stays muted. The pause survives a daemon restart and profile recall leaves
-   it unchanged. The terminal mixer's Outputs tab has **Mute monitoring** too.
+   it unchanged.
    Adding a monitor during the pause leaves it individually muted. Renaming
    keeps the remembered selection; deleting removes only that monitor. If the
    last previously open monitor is deleted, the pause clears and the remaining

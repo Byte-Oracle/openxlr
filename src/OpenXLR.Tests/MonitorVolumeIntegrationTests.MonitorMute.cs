@@ -387,6 +387,7 @@ public sealed partial class MonitorVolumeIntegrationTests
         mixer.SetLevel("test", "monitor", 1);
         mixer.SetLevel("test", "chat", 1);
         SettleSends(mixer);
+        WaitForChatPost(mixer);
         pw.SetSinkMuted("mute_immediate", false);
         mixer.SetMonitorOutputs(["mute_immediate"]);
 
