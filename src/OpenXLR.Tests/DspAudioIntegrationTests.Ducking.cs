@@ -54,6 +54,40 @@ public sealed partial class DspAudioIntegrationTests
     }
 
     [DspPipeWireFact]
+    public void AMicrophoneKeyStopsDuckingWhileMicrophonesArePausedWithMonitoring()
+    {
+        // The pause mutes the microphone's channel sink. That sink's monitor
+        // feeds the key and still carries the speech, so only key_open stops it.
+        using var f = new DuckAudio();
+        ProcessResult capture = ProcessRunner.Run("pactl", ["load-module", "module-remap-source", "source_name=test_duck_mic",
+            "master=test_duck_source.monitor", "channels=1", "channel_map=mono", "master_channel_map=aux0"]);
+        Assert.True(capture.Ok, capture.Stderr);
+        try
+        {
+            DuckWait(() => f.Pw.ListDevices().Any(d => d.Name == "test_duck_mic"), "The microphone fixture did not appear.");
+            f.Mixer.CreateCaptureChannel("Talk", "test_duck_mic", 0, _ => null, monoChannel: 0);
+            Assert.True(f.Mixer.Config.Channels.Single(c => c.Id == "talk").Microphone);
+            // A new channel starts muted in every mix; its monitor send makes it
+            // an audible key. The stream then carries only the ducked music.
+            f.Mixer.SetChannelMuted("talk", "monitor", false);
+            f.Mixer.SetChannelMuted("key", "stream", true);
+            f.Signal(.5, .1, 0);
+            f.Mixer.SetDuckingPlan(DuckPlan with { Key = "talk" });
+            f.Level("stream", DuckedMusic);
+            f.Mixer.SetMonitorMuteMicrophones(true);
+            f.Level("stream", DuckedMusic);   // monitoring still runs
+            f.Mixer.SetMonitorMuted(true);
+            Assert.True(f.Pw.GetSinkMuted("OpenXLR_ch_talk"));
+            f.Level("stream", .1);
+            f.Mixer.SetMonitorMuted(false);
+            Assert.False(f.Pw.GetSinkMuted("OpenXLR_ch_talk"));
+            f.Level("stream", DuckedMusic);
+            f.Mixer.DeleteApplicationChannel("talk", _ => null);
+        }
+        finally { ProcessRunner.Run("pactl", ["unload-module", capture.StdoutText.Trim()]); }
+    }
+
+    [DspPipeWireFact]
     public void RemovingDuckingRestoresDirectLevelsAndRemovesEveryBusAndStage()
     {
         using var f = new DuckAudio();

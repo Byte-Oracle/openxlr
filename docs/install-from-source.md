@@ -205,6 +205,23 @@ The restart takes OpenXLR's nodes with it; the daemon notices and
 restarts itself to rebuild them. The manual's
 [open-files section](manual.md#open-files) has the background and the check.
 
+<a name="desktop-entry"></a>
+The packages also install a desktop entry. [Desktop keys](manual.md#desktop-keys)
+need it on current desktop portals, which accept OpenXLR's identity only
+when `openxlr.desktop` is installed and refuse a shortcut session from a
+process they cannot identify. Install the reference entry with the UI's
+full path, from the repository root:
+
+```sh
+mkdir -p ~/.local/share/applications
+sed "s|^Exec=openxlr\$|Exec=$PWD/src/OpenXLR.UI/bin/Release/net10.0/OpenXLR.UI|" packaging/openxlr.desktop > ~/.local/share/applications/openxlr.desktop
+```
+
+The portal ignores an entry whose program it cannot find, so keep the full
+path. If the checkout's path contains spaces, quote the `Exec` value in the
+copy. The entry also adds OpenXLR to the desktop's application menu.
+Restart the UI afterwards.
+
 
 ## 7. OpenDeck plugin (optional)
 
@@ -267,6 +284,7 @@ cmp -s packaging/52-openxlr-mk1-capture-hold.conf ~/.config/wireplumber/wireplum
 cmp -s packaging/53-openxlr-wave3-capture-hold.conf ~/.config/wireplumber/wireplumber.conf.d/53-openxlr-wave3-capture-hold.conf && rm -- ~/.config/wireplumber/wireplumber.conf.d/53-openxlr-wave3-capture-hold.conf
 cmp -s packaging/54-openxlr-owned-state.lua ~/.config/wireplumber/main.lua.d/54-openxlr-owned-state.lua && rm -- ~/.config/wireplumber/main.lua.d/54-openxlr-owned-state.lua
 cmp -s packaging/pipewire-pulse-openxlr.conf ~/.config/systemd/user/pipewire-pulse.service.d/openxlr.conf && rm -- ~/.config/systemd/user/pipewire-pulse.service.d/openxlr.conf
+sed "s|^Exec=openxlr\$|Exec=$PWD/src/OpenXLR.UI/bin/Release/net10.0/OpenXLR.UI|" packaging/openxlr.desktop | cmp -s - ~/.local/share/applications/openxlr.desktop && rm -- ~/.local/share/applications/openxlr.desktop
 sudo udevadm control --reload-rules
 systemctl --user daemon-reload
 ```

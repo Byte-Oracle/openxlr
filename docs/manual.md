@@ -534,7 +534,9 @@ that was the default.
    Adding a monitor during the pause leaves it individually muted. Renaming
    keeps the remembered selection; deleting removes only that monitor. If the
    last previously open monitor is deleted, the pause clears and the remaining
-   individually muted monitors stay muted. These choices survive a restart.
+   individually muted monitors stay muted. With **Mute microphone sends with
+   monitoring** on, the microphones then resume in every mix, Stream and Chat
+   included. These choices survive a restart.
    Selected Linux output devices are muted too; resuming restores their previous
    native mute flags. Muting every mix that feeds an output, one by one, also
    mutes that Linux device, and opening any of them unmutes it again. A native
@@ -683,7 +685,8 @@ result on Linux yet
 ([hardware support](hardware-support.md#wave-xlr-pro-0fd900b4)).
 
 A muted key does not duck: XLR 1 muted in every mix it is sent to lowers
-nothing. On this computer, [Sound Check](#sound-check)'s loop plays through
+nothing. On this computer, a key paused by **Mute microphone sends with
+monitoring** lowers nothing either until monitoring resumes. On this computer, [Sound Check](#sound-check)'s loop plays through
 the key channel, so a looped take ducks the music, which is a quick way to
 try a sensitivity. On the Pro the unit hears the live microphone, so the
 loop does not duck.
@@ -3212,6 +3215,15 @@ show a hint to edit them in the desktop's shortcut settings. If the desktop
 refuses the editor request after binding succeeded, the error is shown and
 the working bindings stay active.
 
+Outside the Flatpak, OpenXLR introduces itself to the portal as `openxlr`
+before it asks for keys. Current portals accept that name only when an
+`openxlr.desktop` entry is installed, which the packages provide. A portal
+that lacks this step or refuses the name does not stop Desktop keys: OpenXLR
+continues and the portal identifies the process itself. Some portals then
+refuse the shortcut session, and Desktop keys shows that error. A source
+installation can add the entry as shown in
+[installing from source](install-from-source.md#desktop-entry).
+
 The GlobalShortcuts portal registers keys on Wayland. It does not expose the
 focused application's identity. Focused routing therefore currently requires
 KDE Plasma, where a short-lived KWin script reads the active process id. It
@@ -3359,13 +3371,19 @@ The option starts off and is saved in `mixer.json`, outside profiles. The pause
 and the option survive a daemon restart. They leave individual sends, mix
 mutes and hardware microphone mute choices intact. Resuming reveals those
 choices, including changes made while paused; explicitly opening a monitor
-also resumes the linked microphones.
+also resumes the linked microphones. Deleting the last monitor mix that was
+open when you paused ends the pause as well, so the microphones resume in
+every mix, Stream and Chat included, even though the remaining monitor mixes
+stay muted.
 
 The microphone pause affects audio routed through OpenXLR, including its
 virtual microphones used by Discord or a recording program. It does not mute
 applications capturing a physical microphone directly, stereo capture channels
 or Aux/Line In. It stops Sound Check and discards its take; a new recording is
-refused until microphones resume. If the audio server refuses a microphone
+refused until microphones resume. A paused microphone that is the
+[ducking](#ducking) key stops lowering the other channels on this computer.
+Its strip meter keeps moving while you speak, because the meter reads the
+microphone before the pause mutes it. If the audio server refuses a microphone
 mute, Options shows that silence is not yet confirmed and the daemon retries.
 Do not treat that pending state as a confirmed microphone mute.
 

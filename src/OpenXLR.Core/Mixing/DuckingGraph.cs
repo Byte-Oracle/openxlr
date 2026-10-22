@@ -129,10 +129,13 @@ public sealed partial class Mixer
         return UsesDuckBusLocked(Cell(channel, mix), mix) ? ((0, true), target) : (target, (0, true));
     }
 
-    /// <summary>The key is heard in at least one send, after channel, group and mix controls.</summary>
+    /// <summary>The key is heard in at least one send, after channel, group and mix controls and the microphone pause.</summary>
     private bool DuckKeyOpenLocked()
     {
         if (_duckPlan is not { } plan) return false;
+        // The pause mutes a microphone's channel sink, but the sink's monitor,
+        // which feeds the key, still carries the speech.
+        if (MicrophonesPausedLocked && _config.Channels.Any(c => c.Id == plan.Key && c.Microphone)) return false;
         foreach (MixDefinition mix in _config.Mixes)
         {
             (double level, bool muted) = CellTargetLocked(plan.Key, mix.Id, out _);

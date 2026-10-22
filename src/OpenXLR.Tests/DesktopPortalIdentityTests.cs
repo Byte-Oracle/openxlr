@@ -37,8 +37,9 @@ public sealed class DesktopPortalIdentityTests
     [InlineData("org.freedesktop.portal.Error.NotAllowed")]
     [InlineData("org.freedesktop.portal.Error.Failed")]
     [InlineData("org.freedesktop.DBus.Error.UnknownObject")]
-    public async Task ARefusedIdentityIsNotTreatedAsAnOlderPortal(string failure)
+    public async Task ARefusedIdentityLeavesShortcutsOnTheSameConnection(string failure)
     {
+        // xdg-desktop-portal 1.21 answers Failed when no openxlr.desktop is installed.
         using var host = new HostIdentity();
         await using var environment = await DesktopKeysTests.PrivateBus.Start();
         using var portal = new DBusConnection(environment.Address);
@@ -48,10 +49,27 @@ public sealed class DesktopPortalIdentityTests
         portal.AddMethodHandler(backend);
         using var connection = new DBusConnection(environment.Address);
         await connection.ConnectAsync();
+        var bus = new DesktopBus(connection);
 
-        var error = await Assert.ThrowsAsync<DBusErrorReplyException>(() => new DesktopBus(connection).RegisterHostAsync());
-        Assert.Equal(failure, error.ErrorName);
-        Assert.Equal(["Register"], backend.Calls);
+        await bus.RegisterHostAsync();
+        await bus.Empty(DesktopBus.Portal, DesktopBus.PortalPath, DesktopBus.Shortcuts, "CreateSession", "a{sv}",
+            (ref MessageWriter writer) => writer.WriteDictionary(new Dictionary<string, VariantValue>()));
+
+        Assert.Equal(["Register", "CreateSession"], backend.Calls);
+        Assert.Equal(connection.UniqueName, backend.RegisteredSender);
+    }
+
+    [Fact]
+    public void TheSourceGuideInstallsTheEntryNamedByTheRegisteredIdentity()
+    {
+        // The portal finds "openxlr" as openxlr.desktop and ignores an entry whose program is not found.
+        string entry = File.ReadAllText(Path.Combine(MicEqTests.RepoRoot, "packaging", "openxlr.desktop"));
+        string guide = File.ReadAllText(Path.Combine(MicEqTests.RepoRoot, "docs", "install-from-source.md"));
+        Assert.Contains("\nExec=openxlr\n", entry);
+        const string install = "sed \"s|^Exec=openxlr\\$|Exec=$PWD/src/OpenXLR.UI/bin/Release/net10.0/OpenXLR.UI|\" packaging/openxlr.desktop";
+        Assert.Contains(install + " > ~/.local/share/applications/openxlr.desktop", guide);
+        Assert.Contains(install + " | cmp -s - ~/.local/share/applications/openxlr.desktop && rm --", guide);
+        Assert.Equal("OpenXLR.UI", typeof(DesktopBus).Assembly.GetName().Name);
     }
 
     [Fact]

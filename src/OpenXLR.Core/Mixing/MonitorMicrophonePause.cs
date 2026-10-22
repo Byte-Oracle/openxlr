@@ -35,6 +35,7 @@ public sealed partial class Mixer
         {
             if (available) available = ApplyMicrophonePauseLocked(channel.SinkName);
         }
+        PushDuckKeyOpenLocked();
         if (MicrophonesPausedLocked && _soundCheck is not null)
             StopSoundCheckLocked(restore: true, error: "Sound Check stopped because microphones are included in the monitoring pause.");
     }
