@@ -480,6 +480,8 @@ public sealed class MonitorMuteDeferredPulseTests
         Assert.False(fixture.Native("OpenXLR_ch_system"));
         Assert.Equal(fixture.Mixer.MonitorMuted, fixture.Native("external"));
         fixture.GraphUnavailable(true);
+        Assert.True(fixture.Mixer.SyncDeviceVolumes()); // Save the newly owned native baseline even without a graph.
+        Assert.False(fixture.Mixer.ExportSettings().MonitorOutputMutes["external"]);
         Assert.False(fixture.Mixer.SyncDeviceVolumes());
         Assert.True(fixture.Mixer.MonitorMuted);
         fixture.GraphUnavailable(false);
@@ -749,7 +751,7 @@ public sealed class MonitorMuteDeferredPulseTests
         {
             original.Mixer.SetMonitorOutputs(["external"]);
             original.Mixer.SetMonitorMuted(true);
-            saved = original.Mixer.ExportSettings();
+            saved = DiskSettings(original.Mixer);
             Assert.False(saved.MonitorOutputMutes["external"]);
         }
         using var restored = new IndependentSinks();
@@ -913,7 +915,7 @@ public sealed class MonitorMuteDeferredPulseTests
             original.DeferNextPulse("external");
             original.Mixer.SetMonitorMuted(false);
             Assert.True(original.Native("external"));
-            saved = original.Mixer.ExportSettings();
+            saved = DiskSettings(original.Mixer);
             Assert.False(saved.MonitorMuted);
             Assert.False(saved.MonitorOutputMutes["external"]);
         }
@@ -980,7 +982,7 @@ public sealed class MonitorMuteDeferredPulseTests
             original.DeferSuccess("external");
             original.Mixer.SetMonitorMuted(false);
             Assert.True(original.Native("external"));
-            saved = original.Mixer.ExportSettings();
+            saved = DiskSettings(original.Mixer);
             Assert.False(saved.MonitorMuted);
             Assert.False(saved.MonitorOutputMutes["external"]);
         }
@@ -1071,6 +1073,37 @@ public sealed class MonitorMuteDeferredPulseTests
         Assert.DoesNotContain("--format=json list sinks", fixture.Calls[before..]);
     }
 
+    [Fact]
+    public void NativeRestorationReadbackRequestsASaveWithoutAVolumeOrPauseChange()
+    {
+        using var fixture = new IndependentSinks();
+        fixture.Mixer.SetMonitorOutputs(["external"]);
+        fixture.Mixer.SetMonitorMuted(true);
+        fixture.Sweep();
+        fixture.Mixer.SetMonitorMuted(false);
+        Assert.False(fixture.Mixer.MonitorMuted);
+        Assert.False(DiskSettings(fixture.Mixer).MonitorOutputMutes["external"]);
+        fixture.Sweep(); // Confirm the native write without changing software intent.
+        Assert.True(fixture.LastDeviceChange);
+        Assert.Empty(DiskSettings(fixture.Mixer).MonitorOutputMutes);
+        fixture.Sweep();
+        Assert.False(fixture.LastDeviceChange);
+    }
+
+    private static MixerSettings DiskSettings(Mixer mixer)
+    {
+        string directory = Directory.CreateTempSubdirectory("openxlr-native-mute-settings-").FullName;
+        try
+        {
+            string path = Path.Combine(directory, "mixer.json");
+            Assert.Null(mixer.ExportSettings().Save(path));
+            MixerSettings saved = Assert.IsType<MixerSettings>(MixerSettings.Load(path, out string? warning));
+            Assert.Null(warning);
+            return saved;
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
     private sealed class IndependentSinks : IDisposable
     {
         private readonly string _directory = Directory.CreateTempSubdirectory("openxlr-deferred-pulse-").FullName;
@@ -1079,6 +1112,7 @@ public sealed class MonitorMuteDeferredPulseTests
         public Mixer Mixer { get; }
         public string[] Calls => File.ReadAllLines(Path.Combine(_directory, "calls"));
         public long Now { get; set; }
+        public bool LastDeviceChange { get; private set; }
 
         public IndependentSinks()
         {
@@ -1183,7 +1217,7 @@ public sealed class MonitorMuteDeferredPulseTests
         {
             Publish(externalRegistrySerial, externalRegistryMuted, browserRegistryMuted);
             Mixer.SyncOwnSinkLevels(out _);
-            Mixer.SyncDeviceVolumes();
+            LastDeviceChange = Mixer.SyncDeviceVolumes();
         }
         public void DeferBlanketPhysicalPulse()
         {

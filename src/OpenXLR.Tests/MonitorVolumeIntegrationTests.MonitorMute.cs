@@ -7,6 +7,62 @@ namespace OpenXLR.Tests;
 public sealed partial class MonitorVolumeIntegrationTests
 {
     [MonitorPipeWireFact]
+    public void DiskRestartRestoresThePausedSelectionAndItsNativeOutputBaseline()
+    {
+        foreach (bool originallyMuted in new[] { false, true })
+            foreach (bool explicitUnmute in new[] { false, true })
+                CheckDiskRestart(originallyMuted, explicitUnmute);
+    }
+
+    private static void CheckDiskRestart(bool originallyMuted, bool explicitUnmute)
+    {
+        string directory = Directory.CreateTempSubdirectory("openxlr-native-mute-restart-").FullName;
+        string path = Path.Combine(directory, "mixer.json");
+        string output = $"restart_mute_{originallyMuted}_{explicitUnmute}".ToLowerInvariant();
+        var outputs = new PipeWireAdapter();
+        try
+        {
+            outputs.CreateNullSink(output, "Native restart output");
+            outputs.SetSinkMuted(output, originallyMuted);
+            using (var original = new Mixer())
+            {
+                original.Build(MonitorConfig());
+                original.SetMonitorOutputs([output]);
+                original.SetMixMuted("monitor2", true);
+                original.SetMonitorMuted(true);
+                Assert.Null(original.ExportSettings().Save(path));
+                Assert.True(outputs.GetSinkMuted(output));
+            }
+            MixerSettings saved = Assert.IsType<MixerSettings>(MixerSettings.Load(path, out string? warning));
+            Assert.Null(warning);
+            using var restored = new Mixer();
+            restored.SetMonitorMuted(saved.MonitorMuted);
+            restored.Build(MixerConfig.FromSettings(saved), output);
+            restored.ApplySettings(saved.WithMonitorOverride(output));
+            Assert.True(restored.MonitorMuted);
+            Assert.Equal(["monitor2"], restored.ExportSettings().MixMuted);
+            Assert.True(outputs.GetSinkMuted(output));
+            Assert.Equal(originallyMuted, restored.ExportSettings().MonitorOutputMutes[output]);
+
+            if (explicitUnmute) restored.SetMixMuted("monitor", false);
+            else restored.SetMonitorMuted(false);
+            Assert.False(restored.MonitorMuted);
+            Assert.Equal(["monitor2"], restored.ExportSettings().MixMuted);
+            Assert.Equal(originallyMuted && !explicitUnmute, outputs.GetSinkMuted(output));
+            for (int sweep = 0; sweep < 3; sweep++)
+            {
+                restored.SyncOwnSinkLevels(out _);
+                restored.SyncDeviceVolumes();
+            }
+            Assert.False(restored.MonitorMuted);
+            Assert.Null(restored.ExportSettings().Save(path));
+            Assert.False(MixerSettings.Load(path)!.MonitorMuted);
+            Assert.Empty(MixerSettings.Load(path)!.MonitorOutputMutes);
+        }
+        finally { outputs.TearDown(); Directory.Delete(directory, true); }
+    }
+
+    [MonitorPipeWireFact]
     public void DesktopMuteOnAnApplicationSinkPausesOnlyMonitoringAndTheSecondPressRestoresIt()
     {
         var pw = new PipeWireAdapter();
@@ -126,7 +182,10 @@ public sealed partial class MonitorVolumeIntegrationTests
             Assert.True(pw.GetSinkMuted(closed));
             Assert.True(mixer.Snapshot().Mixes.Single(m => m.Id == "monitor2").Muted);
             Assert.False(mixer.SyncOwnSinkLevels(out _));
-            Assert.False(mixer.SyncDeviceVolumes());
+            mixer.SyncDeviceVolumes(); // Native readback may still complete a saved baseline change.
+            Assert.Equal(paused, mixer.MonitorMuted);
+            Assert.Equal(paused, pw.GetSinkMuted(first));
+            Assert.True(pw.GetSinkMuted(closed));
             mixer.EnsureMonitorRoutes();
         }
         mixer.SetMonitorMuted(true);
@@ -308,7 +367,10 @@ public sealed partial class MonitorVolumeIntegrationTests
             Assert.Equal(paused, pw.GetSinkMuted(first));
             Assert.True(pw.GetSinkMuted(closed));
             Assert.False(mixer.SyncOwnSinkLevels(out _));
-            Assert.False(mixer.SyncDeviceVolumes());
+            mixer.SyncDeviceVolumes(); // Native readback may still complete a saved baseline change.
+            Assert.Equal(paused, mixer.MonitorMuted);
+            Assert.Equal(paused, pw.GetSinkMuted(first));
+            Assert.True(pw.GetSinkMuted(closed));
         }
     }
 

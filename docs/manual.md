@@ -522,7 +522,9 @@ that was the default.
    stays muted. The pause survives a daemon restart and profile recall leaves
    it unchanged. The terminal mixer's Outputs tab has **Mute monitoring** too.
    Selected Linux output devices are muted too; resuming restores their previous
-   native mute flags. To start a new listening selection instead, unmute one
+   native mute flags. The original flags are saved with the monitor selection
+   so they can be restored after a daemon restart too. To start a new listening
+   selection instead, unmute one
    monitor mix while paused. Only that monitor opens, the other monitor mixes
    stay individually muted, and its assigned Linux devices are unmuted. The next
    master mute and resume keeps this new choice. A device fed by several mixes

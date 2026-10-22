@@ -6,6 +6,19 @@ public sealed partial class Mixer
     // wiring, saved with selected outputs rather than with profile scenes.
     private readonly Dictionary<string, bool> _monitorOutputMutes = new(StringComparer.Ordinal);
     private bool _readingDesktopMutes;
+    private bool _monitorOutputMutesChanged;
+
+    private void RememberMonitorOutputMuteLocked(string name, bool muted)
+    {
+        if (_monitorOutputMutes.TryGetValue(name, out bool previous) && previous == muted) return;
+        _monitorOutputMutes[name] = muted;
+        _monitorOutputMutesChanged = true;
+    }
+
+    private void ForgetMonitorOutputMuteLocked(string name)
+    {
+        if (_monitorOutputMutes.Remove(name)) _monitorOutputMutesChanged = true;
+    }
 
     /// <summary>Whether one selected output has an open mix in its assigned feed.</summary>
     public bool IsMonitorOutputAudible(string output)
@@ -42,12 +55,12 @@ public sealed partial class Mixer
             if (released) wanted = false;
             else if (closed)
             {
-                _monitorOutputMutes.TryAdd(name, baseline.Muted);
+                if (!_monitorOutputMutes.ContainsKey(name)) RememberMonitorOutputMuteLocked(name, baseline.Muted);
                 wanted = true;
             }
             else if (explicitOpen)
             {
-                _monitorOutputMutes[name] = false;
+                RememberMonitorOutputMuteLocked(name, false);
                 wanted = false;
                 release = true;
             }
@@ -55,7 +68,7 @@ public sealed partial class Mixer
             else continue;
             if (baseline.Muted == wanted)
             {
-                if (release && !baseline.WritePending && !_desktopMuteResets.ContainsKey(name)) _monitorOutputMutes.Remove(name);
+                if (release && !baseline.WritePending && !_desktopMuteResets.ContainsKey(name)) ForgetMonitorOutputMuteLocked(name);
                 continue;
             }
             _outputMutes[name] = baseline with { Muted = wanted, UnmuteObserved = false, Released = released, WritePending = true };
@@ -105,7 +118,7 @@ public sealed partial class Mixer
             // A release only owns the instance that was actually selected.
             if (!native.TryGetValue(name, out var state) || state.Identity != baseline.Identity || state.Muted == previous)
             {
-                _monitorOutputMutes.Remove(name);
+                ForgetMonitorOutputMuteLocked(name);
                 pending.Remove(name);
                 continue;
             }
@@ -143,7 +156,7 @@ public sealed partial class Mixer
                 _desktopMuteResets[name] = (_outputMutes[name].Muted, 0, 0);
                 continue;
             }
-            if (state.Identity != _outputMutes[name].Identity) _monitorOutputMutes.Remove(name);
+            if (state.Identity != _outputMutes[name].Identity) ForgetMonitorOutputMuteLocked(name);
             _outputMutes[name] = new(state.Identity, null, state.Muted);
             _desktopMuteResets.Remove(name);
             _desktopMuteRetries.Remove(name);

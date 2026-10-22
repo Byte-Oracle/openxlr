@@ -401,6 +401,7 @@ public sealed class MonitorVolumeSyncTests
         sinks.Dump(1, externalMuted: true);
         sinks.Mixer.SetMonitorOutputs(["external"]);
         sinks.Mixer.SetMonitorMuted(paused);
+        sinks.Mixer.SyncDeviceVolumes(); // Account for the initial saved native baseline.
 
         sinks.Dump(1, externalMuted: false, externalSerial: 2);
         sinks.NativeSerial(1);

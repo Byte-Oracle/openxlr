@@ -436,7 +436,7 @@ public sealed partial class Mixer
         {
             // An unmute of a mute we authored is a resume key. Unlike an
             // untouched preselection mute, it is not a new baseline alone.
-            _monitorOutputMutes[name] = false;
+            RememberMonitorOutputMuteLocked(name, false);
             return false;
         }
         _outputMutes[name] = _outputMutes[name] with { Muted = false, UnmuteObserved = false, Released = _monitorOutputMutes.ContainsKey(name), WritePending = false };
@@ -454,6 +454,7 @@ public sealed partial class Mixer
         _desktopMutePending.Clear();
         _outputMutes.Clear();
         _monitorOutputMutes.Clear();
+        _monitorOutputMutesChanged = false;
         _desktopMuteResets.Clear();
         _desktopMixMuteResets.Clear();
         _desktopMuteRetries.Clear();

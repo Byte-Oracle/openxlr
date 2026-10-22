@@ -1654,10 +1654,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             // Legacy settings for the same output keep the current baseline.
             ForgetUnselectedDesktopOutputsLocked(selectedHardware);
             foreach (string removed in _monitorOutputMutes.Keys.Where(n => !selectedHardware.Contains(n) && !_outputMutes.ContainsKey(n)).ToArray())
-                _monitorOutputMutes.Remove(removed);
+                ForgetMonitorOutputMuteLocked(removed);
             foreach ((string output, bool muted) in s.MonitorOutputMutes ?? [])
                 if (selectedHardware.Contains(output) && IsExactOutputName(output) && !output.StartsWith("OpenXLR_", StringComparison.Ordinal))
-                    _monitorOutputMutes[output] = muted;
+                    RememberMonitorOutputMuteLocked(output, muted);
             SetMonitorOutputsLocked(savedOutputs);
             // Resume at the saved selection, not the output it replaced.
             SetMonitorMuted(s.MonitorMuted);
@@ -1962,11 +1962,12 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             _readingDesktopMutes = true;
+            bool changed;
             try
             {
                 string? first = _monitorOutputs.FirstOrDefault();
                 double? outV = first is null ? null : _pw.GetSinkVolume(first);
-                bool changed = Differs(outV, _outputVolume);
+                changed = Differs(outV, _outputVolume);
                 // In follow mode the desktop changes the first output directly.
                 // Carry that change to the other selected outputs just as the
                 // MONITOR slider does. A new output selection establishes a fresh
@@ -1979,7 +1980,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     foreach ((string sink, double owed) in _outputVolumeDue.Due())
                         WriteFollowerVolumeLocked(sink, owed);
                 _outputVolume = outV;
-                return ReadOutputMonitorMuteLocked() || changed;
+                changed |= ReadOutputMonitorMuteLocked();
             }
             finally
             {
@@ -1987,6 +1988,11 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 _desktopMuteConsumed = false;
                 SyncMonitorHardwareMutesLocked();
             }
+            // Hotplug and native readback can change the restart baseline
+            // without moving a volume or the software pause.
+            changed |= _monitorOutputMutesChanged;
+            _monitorOutputMutesChanged = false;
+            return changed;
         }
 
         static bool Differs(double? a, double? b)
