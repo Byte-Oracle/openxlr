@@ -124,6 +124,20 @@ public sealed class LocalizationTests
             }
     }
 
+    // Browser tab routing shipped in every language; a key added there later
+    // must not fall back to English in one of them.
+    [Theory]
+    [InlineData("Strings.de.resx")]
+    [InlineData("Strings.es.resx")]
+    public void EveryTranslationCoversBrowserTabRouting(string file)
+    {
+        string[] keys = [.. English.Keys.Where(key => key.StartsWith("PreserveBrowserOutputs", StringComparison.Ordinal)
+            || key.StartsWith("BrowserTab", StringComparison.Ordinal) || key.StartsWith("BrowserOutputHeld", StringComparison.Ordinal))];
+        Assert.Equal(19, keys.Length);
+        Dictionary<string, string> translated = Read(file);
+        Assert.Equal(keys, keys.Where(translated.ContainsKey));
+    }
+
     [Fact]
     public void AMissingEntryReadsEnglishAndAnUnknownKeyReadsItself()
     {
