@@ -98,6 +98,63 @@ public sealed partial class MonitorVolumeIntegrationTests
     }
 
     [MonitorPipeWireFact]
+    public void CreatingAMonitorCannotReviveAStaleSavedFeedWhileItsDefaultStaysTheSame()
+        => CheckReusedMonitorFeed("phones", paused: false);
+
+    [MonitorPipeWireFact]
+    public void CreatingAMonitorCannotReviveAStalePartOfAPausedProfileFeed()
+        => CheckReusedMonitorFeed("removed+phones+monitor2", paused: true);
+
+    private static void CheckReusedMonitorFeed(string staleFeed, bool paused)
+    {
+        string directory = Directory.CreateTempSubdirectory("openxlr-reused-monitor-").FullName;
+        string path = Path.Combine(directory, "mixer.json");
+        var pw = new PipeWireAdapter();
+        using var registry = pw.WatchGraph();
+        var outputs = new PipeWireAdapter();
+        using var mixer = new Mixer(pw);
+        string expected = paused ? "monitor2" : "monitor";
+        try
+        {
+            outputs.CreateNullSink("edit_reused_monitor", "Reused monitor output");
+            mixer.Build(MonitorConfig());
+            mixer.SetMonitorOutputs(["edit_reused_monitor"]);
+            var feeds = new Dictionary<string, string> { ["edit_reused_monitor"] = staleFeed };
+            if (paused)
+                mixer.ApplyScene(new() { MonitorFeeds = feeds });
+            else mixer.ApplySettings(mixer.ExportSettings() with { MonitorFeeds = feeds });
+            AssertEditableMonitorFeeds(mixer, "edit_reused_monitor", expected);
+            if (paused) mixer.SetMonitorMuted(true);
+            Assert.Throws<IOException>(() => mixer.CreateMix("Phones", _ => "disk full", MixKind.Monitor));
+            Assert.Equal(staleFeed, mixer.ExportSettings().MonitorFeeds["edit_reused_monitor"]);
+            Assert.Equal(paused, mixer.MonitorMuted);
+            Assert.False(mixer.HasMix("phones"));
+
+            mixer.CreateMix("Phones", settings => settings.Save(path), MixKind.Monitor);
+
+            Assert.Equal("monitor", mixer.Snapshot().DefaultMonitorMix);
+            Assert.Equal(expected, mixer.MonitorFeedOf("edit_reused_monitor"));
+            Assert.Equal(expected, mixer.ExportSettings().MonitorFeeds["edit_reused_monitor"]);
+            MixerSettings saved = Assert.IsType<MixerSettings>(MixerSettings.Load(path, out string? warning));
+            Assert.Null(warning);
+            mixer.TearDown();
+            mixer.SetMonitorMuted(saved.MonitorMuted);
+            mixer.Build(MixerConfig.FromSettings(saved));
+            mixer.ApplySettings(saved);
+            Assert.Equal(paused, mixer.MonitorMuted);
+            Assert.Equal(expected, mixer.MonitorFeedOf("edit_reused_monitor"));
+            if (paused)
+            {
+                Assert.Contains("phones", mixer.ExportSettings().MixMuted);
+                mixer.SetMonitorMuted(false);
+            }
+            AssertEditableMonitorFeeds(mixer, "edit_reused_monitor", expected);
+            CaptureLevel(0.1, "OpenXLR_mix_" + expected, "edit_reused_monitor");
+        }
+        finally { outputs.TearDown(); Directory.Delete(directory, true); }
+    }
+
+    [MonitorPipeWireFact]
     public void ARepairedMonitorIgnoresOrphanedStartupStateButAcceptsLaterExplicitSettingsAndProfiles()
     {
         var pw = new PipeWireAdapter();

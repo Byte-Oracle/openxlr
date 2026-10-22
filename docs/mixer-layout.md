@@ -271,7 +271,9 @@ debounced, retried behaviour.
   channel's send has not appeared within three seconds the mix is removed
   again and the command fails, for the same reason. Creating a monitor
   never changes an existing output's feed: an implicit feed is saved explicitly
-  if the new monitor would become the default. Removed built-in monitor ids
+  if the new monitor would become the default. A saved feed naming a removed
+  mix keeps its surviving mixes or fallback when that id is created again.
+  Removed built-in monitor ids
   remain reserved when generating a new mix id. A monitor created while
   monitoring is paused also starts with its master muted, so resuming keeps
   the listening selection from before the pause.

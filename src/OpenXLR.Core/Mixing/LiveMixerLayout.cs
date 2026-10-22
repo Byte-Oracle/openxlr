@@ -277,17 +277,18 @@ public sealed partial class Mixer
             var previousAppearance = _appearance;
             string? previousDefault = PrimaryMonitorLocked()?.Id;
             var previousFeeds = new Dictionary<string, string>(_monitorFeeds);
-            string[] fallbackOutputs = [.. _monitorOutputs.Where(output =>
-                !_monitorFeeds.TryGetValue(output, out string? feed)
-                || !MonitorFeed.Parts(feed).Any(part => _config.Mixes.Any(m => m.Id == part)))];
+            var preservedFeeds = _monitorOutputs.Where(output =>
+                _monitorFeeds.TryGetValue(output, out string? feed) && MonitorFeed.Includes(feed, id)
+                || next.DefaultMonitor?.Id != previousDefault && (!_monitorFeeds.TryGetValue(output, out feed)
+                    || !MonitorFeed.Parts(feed).Any(part => _config.Mixes.Any(m => m.Id == part))))
+                .Select(output => (Output: output, Feed: FeedOfLocked(output))).ToArray();
             try
             {
                 _mixModules[id] = _pw.CreateNullSink(mix.SinkName, $"OpenXLR {name}");
                 _config = next;   // leg discovery and the cell faders go by the mix list
-                // A new lower id must not silently change existing outputs.
-                if (previousDefault is not null && PrimaryMonitorLocked()?.Id != previousDefault)
-                    foreach (string output in fallbackOutputs)
-                        _monitorFeeds[output] = previousDefault;
+                // A new default or a revived stale id must not change existing outputs.
+                foreach (var (output, feed) in preservedFeeds)
+                    if (feed is not null) _monitorFeeds[output] = feed;
                 _mixVolume[id] = 1.0;
                 // A monitor added during a pause is not part of its saved listening selection.
                 if (kind == MixKind.Monitor && _monitorMuted) _mixMuted.Add(id);
