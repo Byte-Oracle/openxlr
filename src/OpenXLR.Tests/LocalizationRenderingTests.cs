@@ -39,6 +39,34 @@ internal static class LocalizationRenderingTests
         finally { chain.Close(); }
     }
 
+    // Exercise long captions in English CI too, without changing the labels
+    // kept by the surrounding language captures.
+    internal static void CheckPluginActions(OptionsWindow options)
+    {
+        static void Fits(Panel row)
+        {
+            foreach (Control action in row.Children) WindowLayoutTests.AssertInside(action, (Control)row.Parent!);
+            WindowLayoutTests.AssertNoOverlap(row.Children.ToArray());
+        }
+
+        foreach (string name in new[] { "InstallFile", "ManageFolders" })
+            Fits((Panel)options.FindControl<Button>(name)!.Parent!);
+        Button[] buttons = [options.FindControl<Button>("InstallFile")!, options.FindControl<Button>("InstallFolder")!, options.FindControl<Button>("Rescan")!];
+        object?[] captions = [.. buttons.Select(button => button.Content)];
+        string[] longCaptions = ["Install a file containing a plugin", "Install a folder containing plugins", "Search again for installed plugins"];
+        try
+        {
+            for (int i = 0; i < buttons.Length; i++) buttons[i].Content = longCaptions[i];
+            options.UpdateLayout();
+            Fits((Panel)buttons[0].Parent!);
+        }
+        finally
+        {
+            for (int i = 0; i < buttons.Length; i++) buttons[i].Content = captions[i];
+            WindowLayoutTests.Layout(options, options.ClientSize.Width, options.ClientSize.Height);
+        }
+    }
+
     private static FlowDirection Direction(TextBlock text, string value, Window host)
     {
         text.Text = value;

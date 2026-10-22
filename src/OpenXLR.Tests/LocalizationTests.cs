@@ -131,6 +131,7 @@ public sealed class LocalizationTests
     [InlineData("Strings.es.resx")]
     [InlineData("Strings.tl.resx")]
     [InlineData("Strings.ceb.resx")]
+    [InlineData("Strings.sr-Cyrl.resx")]
     public void EveryTranslationCoversBrowserTabRouting(string file)
     {
         string[] keys = [.. English.Keys.Where(key => key.StartsWith("PreserveBrowserOutputs", StringComparison.Ordinal)
@@ -156,6 +157,7 @@ public sealed class LocalizationTests
     [InlineData("es", "Español", "es-MX", "Cerrar")]
     [InlineData("tl", "Tagalog", "tl-PH", "Isara")]
     [InlineData("ceb", "Bisaya (Cebuano)", "ceb-PH", "Sirad-i")]
+    [InlineData("sr-Cyrl", "Српски (ћирилица)", "sr-Cyrl-RS", "Затвори")]
     public void TranslationsUseTheirCatalogueAndRetainFormatsLineBreaksAndCommands(
         string language, string label, string regional, string close)
     {
@@ -178,6 +180,39 @@ public sealed class LocalizationTests
                 Assert.Contains(name.Value, text);
         }
     }
+
+    [Theory]
+    [InlineData(null, "LANG=sr_RS.UTF-8", "sr-Cyrl")]
+    [InlineData(null, "LANG=sr_ME.UTF-8@cyrillic", "sr-Cyrl")]
+    [InlineData(null, "LANG=sr_RS.UTF-8@latin", "en")]
+    [InlineData(null, "LANG=sr_Latn_RS.UTF-8", "en")]
+    [InlineData(null, "LANG=en_US.UTF-8 LANGUAGE=sr_Latn:sr_Cyrl_RS", "sr-Cyrl")]
+    [InlineData(null, "LANG=C.UTF-8 LANGUAGE=sr", "en")]
+    [InlineData(null, "LANG=sr_RS.UTF-8 LC_ALL=es_MX.UTF-8", "es")]
+    [InlineData("sr", "LANG=de_DE.UTF-8", "sr-Cyrl")]
+    [InlineData("SR-cYrL-RS", "LANG=en_US.UTF-8", "sr-Cyrl")]
+    [InlineData("sr-Latn", "LANG=sr_RS.UTF-8", "en")]
+    [InlineData("sr-Arab", "LANG=sr_RS.UTF-8", "en")]
+    [InlineData("system", "LANG=sr_RS.UTF-8", "sr-Cyrl")]
+    [InlineData("en", "LANG=sr_RS.UTF-8", "en")]
+    public void SerbianCyrillicIsChosenWithoutOverridingAnExplicitScript(string? saved, string environment, string expected)
+    {
+        Dictionary<string, string> variables = environment.Split(' ')
+            .Select(v => v.Split('=', 2)).ToDictionary(v => v[0], v => v[1]);
+        Assert.Equal(expected, Localizer.Resolve(saved, n => variables.GetValueOrDefault(n),
+            [.. Localizer.Languages.Select(c => c.Id!)]));
+    }
+
+    [Theory]
+    [InlineData("sr", "sr-Cyrl")]
+    [InlineData("sr_RS.UTF-8", "sr-Cyrl-RS")]
+    [InlineData("sr_RS.UTF-8@latin", "sr-Latn-RS")]
+    [InlineData("sr_RS.UTF-8@LATIN", "sr-Latn-RS")]
+    [InlineData("sr_Cyrl_RS.UTF-8@latin", "sr-Cyrl-RS")]
+    [InlineData("sr-Latn-RS", "sr-Latn-RS")]
+    [InlineData("sr-Arab", "sr-Arab")]
+    public void SerbianLocaleNamesKeepTheirRequestedScript(string name, string expected)
+        => Assert.Equal(expected, Localizer.Canonical(name));
 
     [Theory]
     [InlineData(null, "LANG=ceb_PH.UTF-8", "ceb")]
@@ -345,7 +380,7 @@ public sealed class LanguageSettingsTests : IDisposable
         File.WriteAllText(UiJson, """{ "skin": "nord", "futureChoice": 3 }""");
         OptionsViewModel options = Options();
         Assert.Null(options.SelectedLanguage!.Id);
-        Assert.Equal([Localizer.Text("SystemLanguage"), "English", "Deutsch", "Español", "Tagalog", "Bisaya (Cebuano)"],
+        Assert.Equal([Localizer.Text("SystemLanguage"), "English", "Deutsch", "Español", "Tagalog", "Bisaya (Cebuano)", "Српски (ћирилица)"],
             options.LanguageChoices.Select(c => c.Label));
 
         options.SelectedLanguage = options.LanguageChoices.Single(c => c.Id == "en");
@@ -367,6 +402,7 @@ public sealed class LanguageSettingsTests : IDisposable
     [InlineData("es")]
     [InlineData("tl")]
     [InlineData("ceb")]
+    [InlineData("sr-Cyrl")]
     public void ALanguageChoiceIsSavedForNextStartupWithoutChangingTheCurrentRun(string language)
     {
         CultureInfo culture = CultureInfo.CurrentCulture;
@@ -402,6 +438,9 @@ public sealed class LanguageSettingsTests : IDisposable
     [InlineData("tl-PH", "tl")]
     [InlineData("fil-PH", "tl")]
     [InlineData("ceb-PH", "ceb")]
+    [InlineData("sr-RS", "sr-Cyrl")]
+    [InlineData("sr-Cyrl-RS", "sr-Cyrl")]
+    [InlineData("sr-Latn-RS", "en")]
     [InlineData("en-GB", "en")]
     [InlineData("fr", "en")]
     [InlineData("../es", "en")]

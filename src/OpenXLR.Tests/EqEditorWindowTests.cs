@@ -900,7 +900,7 @@ public sealed class EqEditorWindowTests
         Assert.True(menu.IsOpen);
         MenuItem[] items = [.. menu.Items.OfType<MenuItem>()];
         Assert.Equal(EqTypeChoice.All.Select(c => c.Name).Append(Localizer.Text("EqBandOn")), items.Select(i => i.Header));
-        Assert.Equal(["High pass", "Low shelf", "Bell", "Notch", "High shelf", "Low pass", "Band on"], items.Select(i => (string)i.Header!));
+        Assert.Equal(new[] { "EqTypeLowCut", "EqTypeLowShelf", "EqTypePeak", "EqTypeNotch", "EqTypeHighShelf", "EqTypeHighCut", "EqBandOn" }.Select(Localizer.Text), items.Select(i => (string)i.Header!));
         Assert.All(items.Take(6), i => Assert.IsType<Avalonia.Controls.Shapes.Path>(i.Icon));
         Assert.True(items[2].IsChecked);
         Capture(editor, "eq-editor-type-menu", menu);

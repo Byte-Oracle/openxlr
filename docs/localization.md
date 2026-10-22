@@ -2,7 +2,7 @@
 
 The UI can be translated. Every string it shows lives in one
 English catalogue, and a language is a second catalogue with the same keys.
-OpenXLR ships in English, German (Deutsch), Spanish (Español), Tagalog and Cebuano (Bisaya). Other
+OpenXLR ships in English, German (Deutsch), Spanish (Español), Tagalog, Cebuano (Bisaya) and Serbian (Cyrillic). Other
 languages come from contributors who read and write them, one pull request
 per language.
 
@@ -59,7 +59,7 @@ are not part of the catalogue.
    the catalogue lacks, when an entry is never read, when markup carries
    text of its own, or when a key is built at run time. Its line-break
    and literal-command checks run per language from `InlineData` rows
-   that name `de`, `es`, `tl` and `ceb`; add a row for the new language.
+   that name `de`, `es`, `tl`, `ceb` and `sr-Cyrl`; add a row for the new language.
 
 A translation that has the old wording of a changed entry still shows it,
 so a change of meaning gets a new key.
@@ -128,7 +128,11 @@ The UI chooses its language once, when it starts:
    `zh_HK` and `zh_MO` mean Traditional (`zh-Hant`), other regions mean
    Simplified (`zh-Hans`), and the old .NET names `zh-CHT` and `zh-CHS`
    map to the same two.
-5. Anything else is English. Malformed tags, including empty subtags, are
+5. Serbian without a script (`sr`, including `sr_RS.UTF-8`) selects
+   Cyrillic (`sr-Cyrl`). An explicit script is respected: `sr-Latn` and
+   POSIX `sr_RS.UTF-8@latin` do not select Cyrillic. Latin Serbian is not
+   shipped; unsupported choices follow the fallback rules below.
+6. Anything else is English. Malformed tags, including empty subtags, are
    ignored; an invalid entry in `LANGUAGE` does not stop later entries
    from being tried.
 

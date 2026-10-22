@@ -429,6 +429,7 @@ public sealed class WindowLayoutTests
                 Layout(options, 980, 800);
                 MainWindowLabelTests.CheckFixedColumnLabels(options, Localizer.Text("DefaultInput"),
                     Localizer.Text("DefaultOutput"), Localizer.Text("MixerView"));
+                LocalizationRenderingTests.CheckPluginActions(options);
                 Assert.Equal(Localizer.Text("DesktopKeys"), options.FindControl<Button>("DesktopKeysButton")!.Content);
                 var launch = options.FindControl<ComboBox>("LaunchBehavior")!;
                 var close = options.FindControl<ComboBox>("CloseBehavior")!;
