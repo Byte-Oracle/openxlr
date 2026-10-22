@@ -1542,6 +1542,11 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     .Select(c => new UserChannelDefinition(c.Id, c.Name, c.CaptureSource, c.CapturePair, c.CaptureMonoChannel, c.CaptureUnit))],
                 Mixes = [.. _config.Mixes.Where(m => m.IsEditable)
                     .Select(m => new UserMixDefinition(m.Id, m.Name) { Kind = KindName(m.Kind) })],
+                // 0.2.0 reads only this list, with Monitor A and B fixed ahead of
+                // it, and drops the canonical one on its next save. Without it a
+                // downgrade would lose every added mix for good.
+                UserMixes = [.. _config.Mixes.Where(m => m.IsEditable && m.Id is not ("monitor" or "monitor2"))
+                    .Select(m => new UserMixDefinition(m.Id, m.Name) { Kind = KindName(m.Kind) })],
                 MixVolumes = new Dictionary<string, double>(_mixVolume),
                 MixMuted = [.. _mixMuted],
                 Levels = new Dictionary<string, double>(_levels),
@@ -1755,7 +1760,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 ChannelVolumes = ExportChannelVolumesLocked(),
                 ChannelMuted = [.. _muted],
                 MonitorOutputs = [.. _monitorOutputs],
-                MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
+                MonitorFeeds = SceneMonitorFeedsLocked(),
                 AuxPortEnabled = _auxPortEnabled,
                 OutputVolume = _outputVolume,
                 LowCutHz = _lowCutHz,
@@ -1765,6 +1770,21 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 Ducking = DuckingSetupLocked().ToScene(),
             };
         }
+    }
+
+    /// <summary>
+    /// The feed of every selected output, written out even where it is only
+    /// the default monitor. Which monitor is the default can change between
+    /// saving a profile and recalling it (a monitor whose id sorts first is
+    /// added after Monitor A was deleted), and recall replaces the whole feed
+    /// table, so an output left implicit would follow a mix it never played.
+    /// </summary>
+    private Dictionary<string, string> SceneMonitorFeedsLocked()
+    {
+        var feeds = new Dictionary<string, string>(_monitorFeeds);
+        foreach (string output in _monitorOutputs)
+            if (FeedOfLocked(output) is string feed) feeds[output] = feed;
+        return feeds;
     }
 
     /// <summary>

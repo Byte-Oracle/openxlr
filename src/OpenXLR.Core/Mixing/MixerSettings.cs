@@ -31,7 +31,10 @@ public sealed record MixerSettings
     /// <summary>Ordered editable mixes, including monitors. Null reads the legacy user list.</summary>
     public List<UserMixDefinition>? Mixes { get; init; }
 
-    /// <summary>Legacy user mixes, excluding Monitor A and B. New saves write Mixes instead.</summary>
+    /// <summary>
+    /// Legacy user mixes, excluding Monitor A and B. Read only when Mixes is
+    /// null; saves still write it next to Mixes so 0.2.0 keeps the added mixes.
+    /// </summary>
     public List<UserMixDefinition>? UserMixes { get; init; }
 
     /// <summary>Exclusive channel groups, each a named list of channel ids.</summary>

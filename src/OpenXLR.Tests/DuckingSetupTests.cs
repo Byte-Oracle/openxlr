@@ -198,6 +198,39 @@ public sealed class DuckingSetupTests
     }
 
     [Fact]
+    public void SavedDuckingWithoutMixesLowersTheDefaultMonitorOfTheLayout()
+    {
+        using var mixer = new Mixer();
+        mixer.ApplyScene(JsonSerializer.Deserialize<MixerScene>("""{"ducking":{"channels":["music"]}}""", Json)!);
+        Assert.Equal(["monitor"], mixer.DuckingSnapshot().Setup.Mixes);
+
+        MixerConfig layout = MixerConfig.Default().WithoutMix("monitor");
+        Set(mixer, "_config", layout);
+        mixer.ApplyScene(JsonSerializer.Deserialize<MixerScene>("""{"ducking":{"enabled":true,"channels":["music"]}}""", Json)!);
+        Assert.Equal(["monitor2"], mixer.DuckingSnapshot().Setup.Mixes);
+        Assert.Equal(DuckingSetup.Default(layout).Mixes, mixer.DuckingSnapshot().Setup.Mixes);
+        // A list the file names is kept as written, an empty one included.
+        mixer.ApplyScene(JsonSerializer.Deserialize<MixerScene>("""{"ducking":{"mixes":[]}}""", Json)!);
+        Assert.Empty(mixer.DuckingSnapshot().Setup.Mixes);
+        mixer.ApplyScene(JsonSerializer.Deserialize<MixerScene>("""{"ducking":{"mixes":["monitor","stream"]}}""", Json)!);
+        Assert.Equal(["stream"], mixer.DuckingSnapshot().Setup.Mixes);
+
+        string dir = Directory.CreateTempSubdirectory("openxlr-duck-default-").FullName;
+        try
+        {
+            string path = Path.Combine(dir, "mixer.json");
+            OpenXlrPaths.WriteAtomic(path, """
+                {"mixes":[{"id":"phones","name":"Phones","kind":"monitor"},{"id":"monitor2","name":"Monitor B","kind":"monitor"}],
+                "ducking":{"enabled":true}}
+                """);
+            MixerSettings saved = MixerSettings.Load(path, out string? warning)!;
+            Assert.Null(warning);
+            Assert.Equal(["monitor2"], saved.Ducking!.Mixes);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void MalformedProfilesAreRefusedBeforeChangingTheSetup()
     {
         using var mixer = new Mixer();

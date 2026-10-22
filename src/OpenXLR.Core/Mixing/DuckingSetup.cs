@@ -37,7 +37,11 @@ public sealed record DuckingSetup : DuckingScene
             : !ProDucking.Amounts.Contains(setup.Amount) ? "amount must be low, medium or high"
             : !ProDucking.Speeds.Contains(setup.Speed) ? "speed must be slow, medium or fast" : null;
 
-    /// <summary>Keep surviving targets without adding new ones. A missing microphone disables ducking and resets the key.</summary>
+    /// <summary>
+    /// Keep surviving targets without adding new ones. A missing microphone
+    /// disables ducking and resets the key; mixes a file never named become
+    /// the default monitor.
+    /// </summary>
     public static DuckingSetup Prune(DuckingSetup setup, MixerConfig config) => Prune(setup, config, null);
 
     internal static DuckingSetup Prune(DuckingSetup setup, MixerConfig config, List<string>? notes)
@@ -50,7 +54,10 @@ public sealed record DuckingSetup : DuckingScene
             Enabled = keyPresent && setup.Enabled,
             Key = key,
             Channels = Keep(setup.Channels, "channels", c => c != key && config.Channels.Any(ch => ch.Id == c)),
-            Mixes = Keep(setup.Mixes, "mixes", m => config.Mixes.Any(mix => mix.Id == m)),
+            // A file without mixes means the default monitor, which is not
+            // Monitor A once that was deleted.
+            Mixes = ReferenceEquals(setup.Mixes, UnsavedMixes) ? Default(config).Mixes
+                : Keep(setup.Mixes, "mixes", m => config.Mixes.Any(mix => mix.Id == m)),
         };
 
         IReadOnlyList<string> Keep(IReadOnlyList<string>? ids, string field, Func<string, bool> valid)

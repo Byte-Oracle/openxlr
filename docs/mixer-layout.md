@@ -21,8 +21,13 @@ no capture device). A mix without `kind` is a virtual microphone. For example:
 These are fields in the existing settings object; retain its other fields when
 editing. Missing or null `mixes` reads the older `userMixes` list, with Monitor A
 and B kept ahead of it; a missing or null legacy list also keeps Stream and Chat.
-New daemon saves write only `mixes`, so removing or renaming a built-in monitor
-survives a restart. When both fields exist, `mixes` wins.
+Daemon saves write `mixes`, so removing or renaming a built-in monitor
+survives a restart. They also write `userMixes` with every mix except Monitor A
+and B, in the same order and with the same kinds, because 0.2.0 reads only that
+list and drops `mixes` when it saves. Going back to 0.2.0 therefore keeps every
+added monitor mix and virtual microphone; it restores Monitor A and B with
+their default names and keeps at most 16 of the others. When both fields exist,
+`mixes` wins.
 
 While monitoring is paused, adding a monitor keeps its master muted. Deleting
 one removes only its id from the paused listening selection. The pause clears
@@ -223,7 +228,7 @@ every save. Every field is optional on read; an absent one is empty or off.
 | `eqProcessing` | channel id to `device` or `software`, where that microphone's EQ runs; machine wiring, never in a profile |
 | `compensateMixLatency` | the latency compensation switch across mixes, see [api.md](api.md) |
 | `exclusiveGroups` | exclusive channel groups, see [Exclusive groups](#exclusive-groups) |
-| `ducking` | the [ducking](api.md#ducking) setup, `{enabled, key, channels, mixes, sensitivity, amount, speed, processing}`; absent takes the defaults, off, and the next save writes them. Unknown ids are dropped and an unknown preset or processing word is reset to its default, each with a note |
+| `ducking` | the [ducking](api.md#ducking) setup, `{enabled, key, channels, mixes, sensitivity, amount, speed, processing}`; absent takes the defaults, off, and the next save writes them; one without `mixes` lowers in the default monitor mix. Unknown ids are dropped and an unknown preset or processing word is reset to its default, each with a note |
 
 A null field or a null entry inside one is dropped and logged; so is a
 non-finite number in `mixVolumes`, `levels`, `channelVolumes` or an insert's `params`. A
@@ -499,6 +504,8 @@ exists, otherwise the monitor whose id sorts first. Display order never changes
 this default, which the state reports as `defaultMonitorMix`. Creating a monitor
 whose id sorts earlier keeps existing fallback outputs on their previous monitor
 by saving that feed explicitly, including outputs with stale unknown feed ids.
+A profile saves the feed of every selected output, the default ones included,
+so recalling it after the default changed keeps each output on its saved mixes.
 Deleting a mix drops it from every feed. The jacks of one interface share a return bus, so they
 are written with one feed.
 
