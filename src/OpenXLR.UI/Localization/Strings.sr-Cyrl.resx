@@ -2048,7 +2048,7 @@
     <value>OpenXLR је ажуран</value>
   </data>
   <data name="USBAuxIn" xml:space="preserve">
-    <value>USB Aux улаз</value>
+    <value>USB Aux</value>
   </data>
   <data name="UsbAuxPortKind" xml:space="preserve">
     <value>USB Aux порт</value>

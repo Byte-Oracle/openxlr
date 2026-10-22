@@ -59,7 +59,9 @@ are not part of the catalogue.
    the catalogue lacks, when an entry is never read, when markup carries
    text of its own, or when a key is built at run time. Its line-break
    and literal-command checks run per language from `InlineData` rows
-   that name `de`, `es`, `tl`, `ceb` and `sr-Cyrl`; add a row for the new language.
+   that name `de`, `es`, `tl`, `ceb` and `sr-Cyrl`; add a row for the new language. The
+   layout tests measure the fixed-width captions of the main window and
+   Options in every shipped language, whichever language the run uses.
 
 A translation that has the old wording of a changed entry still shows it,
 so a change of meaning gets a new key.
