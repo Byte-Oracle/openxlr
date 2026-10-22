@@ -12,11 +12,12 @@ permissions:
 
 jobs:
   # A change that touches README.md alone builds and tests nothing. The other
-  # jobs still run and report as skipped, which satisfies the required
-  # build-and-test check; a workflow-level paths-ignore would never report it
+  # jobs still run and report as skipped, which the required ci-ok check
+  # counts as passing; a workflow-level paths-ignore would never report it
   # and leave the pull request waiting.
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
     steps:
@@ -48,6 +49,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     container: archlinux:base
     steps:
       - name: Install QML check tools
@@ -64,6 +66,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -155,3 +158,23 @@ jobs:
           test -f packaging/openxlr-daemon.service
           test -f packaging/70-openxlr.rules
           grep -q '0fd9' packaging/70-openxlr.rules
+
+  # The ruleset requires this check and no other, so a job can be added,
+  # split or gated on the changed paths without touching the ruleset. It
+  # passes when every job it waits on passed or was skipped.
+  ci-ok:
+    needs: [changes, omarchy-qml, build-and-test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done
