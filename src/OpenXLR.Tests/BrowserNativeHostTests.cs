@@ -663,6 +663,204 @@ public sealed class BrowserNativeHostTests
         }
     }
 
+    [Fact]
+    public async Task ControlsAcceptedBeforeDisconnectCannotRunOnTheReplacementConnection()
+    {
+        var drop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reconnected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var resynced = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var marker = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var controls = new ConcurrentQueue<JsonNode>();
+        int connections = 0;
+        await using var server = await SocketTestServer.Start(async (socket, stop) =>
+        {
+            int connection = Interlocked.Increment(ref connections);
+            string session = new(connection == 1 ? 'a' : 'b', 32);
+            await SocketTestServer.Receive(socket, stop);
+            await SocketTestServer.Send(socket, State(session), stop);
+            while (!stop.IsCancellationRequested)
+            {
+                JsonNode command = await SocketTestServer.Receive(socket, stop);
+                string cmd = command["cmd"]!.GetValue<string>();
+                if (cmd == "getBrowserSession")
+                {
+                    await SocketTestServer.Send(socket, new { type = "browserSession", session }, stop);
+                    if (connection > 1) reconnected.TrySetResult();
+                }
+                else if (cmd == "syncBrowserTabs")
+                {
+                    JsonObject state = State(session);
+                    if (command["tabs"]!.AsArray().Count > 0)
+                    {
+                        var tab = command["tabs"]![0]!.DeepClone().AsObject(); tab["session"] = session; tab["channelId"] = null;
+                        state["mixer"]!["browserTabs"]!.AsArray().Add(tab);
+                    }
+                    await SocketTestServer.Send(socket, state, stop);
+                    if (connection > 1 && command["tabs"]!.AsArray().Count == 1
+                        && command["tabs"]![0]?["title"]?.GetValue<string>() == "Updated while queued") resynced.TrySetResult();
+                }
+                else if (connection > 1)
+                {
+                    controls.Enqueue(command.DeepClone());
+                    if (cmd == "assignBrowserTab" && command["channel"] is null) marker.TrySetResult();
+                }
+                await SocketTestServer.Send(socket, new { type = "commandResult", requestId = command["requestId"]!.GetValue<string>() }, stop);
+                if (connection == 1 && cmd == "syncBrowserTabs" && command["tabs"]!.AsArray().Count > 0)
+                {
+                    await drop.Task.WaitAsync(stop);
+                    await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "restart", stop);
+                    return;
+                }
+            }
+        });
+        var input = new Pipe(); var output = new Pipe();
+        var observed = new ObservedInput(input.Reader.AsStream());
+        var host = new BrowserNativeHost(new DaemonClient(server.Url), observed, output.Writer.AsStream());
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        Task running = host.RunAsync(timeout.Token);
+        var gate = (SemaphoreSlim)typeof(BrowserNativeHost).GetField("_commands", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(host)!;
+        bool held = false;
+        try
+        {
+            await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), new JsonObject { ["type"] = "tabs", ["tabs"] = new JsonArray(Tab()) }, timeout.Token);
+            await ReadStateWithTab(output.Reader.AsStream(), timeout.Token);
+            await gate.WaitAsync(timeout.Token); held = true;
+            JsonObject[] queued = [new() { ["type"] = "enable", ["value"] = false },
+                new() { ["type"] = "assign", ["tabId"] = 7, ["site"] = "https://example.com", ["channel"] = "music", ["remember"] = true },
+                new() { ["type"] = "tabs", ["tabs"] = new JsonArray(Tab(title: "Updated while queued")) }];
+            Task accepted = observed.After(queued.Sum(message => 4L + JsonSerializer.SerializeToUtf8Bytes(message).Length));
+            foreach (JsonObject message in queued) await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), message, timeout.Token);
+            await accepted.WaitAsync(timeout.Token);
+            drop.TrySetResult();
+            await reconnected.Task.WaitAsync(timeout.Token);
+            object stateGate = typeof(BrowserNativeHost).GetField("_gate", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(host)!;
+            FieldInfo sessionField = typeof(BrowserNativeHost).GetField("_session", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            while (true)
+            {
+                lock (stateGate) if ((string?)sessionField.GetValue(host) == new string('b', 32)) break;
+                await Task.Delay(5, timeout.Token);
+            }
+            gate.Release(); held = false;
+            await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), new JsonObject { ["type"] = "assign", ["tabId"] = 7,
+                ["site"] = "https://example.com", ["channel"] = null, ["remember"] = false }, timeout.Token);
+            await marker.Task.WaitAsync(timeout.Token);
+            await resynced.Task.WaitAsync(timeout.Token);
+            JsonNode fresh = Assert.Single(controls);
+            Assert.Equal("assignBrowserTab", fresh["cmd"]!.GetValue<string>());
+            Assert.Equal(new string('b', 32), fresh["session"]!.GetValue<string>());
+            Assert.Null(fresh["channel"]);
+            await input.Writer.CompleteAsync();
+            await running.WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        finally
+        {
+            if (held) gate.Release();
+            await timeout.CancelAsync();
+            drop.TrySetResult();
+            try { await running; } catch (OperationCanceledException) { }
+            await output.Reader.CompleteAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ErrorsQueuedBeforeDisconnectCannotReplaceTheNewConnectionStatus(bool syncing)
+    {
+        var drop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var disconnected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int connections = 0;
+        await using var server = await SocketTestServer.Start(async (socket, stop) =>
+        {
+            if (Interlocked.Increment(ref connections) > 1) { await Task.Delay(Timeout.Infinite, stop); return; }
+            string session = new('a', 32);
+            await SocketTestServer.Receive(socket, stop);
+            await SocketTestServer.Send(socket, State(session), stop);
+            while (!stop.IsCancellationRequested)
+            {
+                JsonNode command = await SocketTestServer.Receive(socket, stop);
+                string cmd = command["cmd"]!.GetValue<string>();
+                if (cmd == "getBrowserSession") await SocketTestServer.Send(socket, new { type = "browserSession", session }, stop);
+                bool failed = cmd == "setPreserveBrowserOutputs" || cmd == "syncBrowserTabs" && command["tabs"]!.AsArray().Count > 0;
+                await SocketTestServer.Send(socket, new { type = "commandResult", requestId = command["requestId"]!.GetValue<string>(),
+                    error = failed ? "rejected on the previous connection" : null }, stop);
+                if (failed)
+                {
+                    await drop.Task.WaitAsync(stop);
+                    await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "restart", stop);
+                    return;
+                }
+            }
+        });
+        var input = new Pipe(); var output = new Pipe();
+        var client = new DaemonClient(server.Url);
+        var blocked = new GateOutput(output.Writer.AsStream());
+        var host = new BrowserNativeHost(client, input.Reader.AsStream(), blocked);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Task running = host.RunAsync(timeout.Token);
+        client.ConnectionChanged += up => { if (!up) disconnected.TrySetResult(); };
+        try
+        {
+            await blocked.Entered.Task.WaitAsync(timeout.Token);
+            await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), syncing
+                ? new JsonObject { ["type"] = "tabs", ["tabs"] = new JsonArray(Tab()) }
+                : new JsonObject { ["type"] = "enable", ["value"] = true }, timeout.Token);
+            await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), new JsonObject { ["type"] = "tabs", ["tabs"] = new JsonArray(Tab()) }, timeout.Token);
+            object stateGate = typeof(BrowserNativeHost).GetField("_gate", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(host)!;
+            FieldInfo versionField = typeof(BrowserNativeHost).GetField("_tabsVersion", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            while (true)
+            {
+                lock (stateGate) if ((long)versionField.GetValue(host)! >= (syncing ? 2 : 1)) break;
+                await Task.Delay(5, timeout.Token);
+            }
+            drop.TrySetResult();
+            await disconnected.Task.WaitAsync(timeout.Token);
+            blocked.Release.TrySetResult();
+            Assert.Equal("state", (await BrowserNativeHost.ReadFrameAsync(output.Reader.AsStream(), timeout.Token))!["type"]!.GetValue<string>());
+            JsonObject reset = (await BrowserNativeHost.ReadFrameAsync(output.Reader.AsStream(), timeout.Token))!;
+            Assert.Equal("state", reset["type"]!.GetValue<string>());
+            Assert.Empty(reset["channels"]!.AsArray());
+            Assert.False(reset["preserveBrowserOutputs"]!.GetValue<bool>());
+            await input.Writer.CompleteAsync();
+            await running.WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        finally
+        {
+            await timeout.CancelAsync();
+            drop.TrySetResult(); blocked.Release.TrySetResult();
+            try { await running; } catch (OperationCanceledException) { }
+            await output.Reader.CompleteAsync();
+        }
+    }
+
+    private sealed class ObservedInput(Stream source) : Stream
+    {
+        private long _read, _target = long.MaxValue;
+        private readonly TaskCompletionSource _accepted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal Task After(long bytes)
+        {
+            Volatile.Write(ref _target, Volatile.Read(ref _read) + bytes);
+            return _accepted.Task;
+        }
+        public override bool CanRead => true;
+        public override bool CanWrite => false;
+        public override bool CanSeek => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (Volatile.Read(ref _read) >= Volatile.Read(ref _target)) _accepted.TrySetResult();
+            int count = await source.ReadAsync(buffer, cancellationToken);
+            Interlocked.Add(ref _read, count);
+            return count;
+        }
+        public override void Flush() => throw new NotSupportedException();
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
     private sealed class GateOutput(Stream target) : Stream
     {
         private int _blocked;

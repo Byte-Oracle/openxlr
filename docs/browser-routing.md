@@ -80,6 +80,12 @@ checkout of the same version as your native OpenXLR installation.
    daemon connection releases the takeover. Normal browser playback can
    then resume. Reconnection restores the list, not capture permission.
 
+Control requests already waiting when the daemon connection is lost are
+discarded, rather than replayed after reconnection. An old error cannot
+replace the new connection's status. The latest tab metadata is kept and
+registered again so the list remains current; retry a refused channel
+choice after the connection returns.
+
 A same-origin page change keeps the tab's selection. A different origin
 uses its own saved default. A late assignment from the previous website is
 refused instead of changing the new website's routing. After restarting the
