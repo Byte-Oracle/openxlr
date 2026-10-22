@@ -44,7 +44,11 @@ every mixer resource answers 503; with the mixer running an unknown id
 answers 404, and so does a channel without a chain. A chain the state holds
 with no inserts in it reads as `[]`. A profile directory that cannot be read
 leaves `profiles` empty and is reported in the state's `warning`.
-These reads never build, rebuild or save anything.
+The mixer reports `defaultMonitorMix` for outputs without an explicit feed.
+Every mix reports `editable` and `deletable`; the final monitor remains
+renameable and reorderable but cannot be deleted. The existing `createMix`,
+`renameMix`, `deleteMix` and `setLayoutOrder` commands manage monitor mixes,
+Monitor A/B included. These reads never build, rebuild or save anything.
 
 `plugins`, `plugin-setup`, `plugin-diagnostics`, `diagnostics` and
 `editor-rules` run the existing `listPlugins`, `getPluginSetup`,

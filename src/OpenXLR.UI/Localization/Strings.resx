@@ -490,7 +490,7 @@
     <value>Delete mix '{0}'?</value>
   </data>
   <data name="DeleteMonitorMixDetail" xml:space="preserve">
-    <value>Its sends and inserts are removed. Outputs following only this mix return to Monitor A; summed feeds keep their other mixes. If this mix is the enforced system default, that setting is cleared.</value>
+    <value>Its sends and inserts are removed. Outputs following only this mix return to the default monitor mix; summed feeds keep their other mixes. If this mix is the enforced system default, that setting is cleared.</value>
   </data>
   <data name="DeletePluginFileDetail" xml:space="preserve">
     <value>Permanently delete {0} and its generated wrappers? Only this standalone file or bundle is removed; other plugins in the folder stay. This cannot be undone.</value>
@@ -625,7 +625,7 @@
     <value>Drive as an additional interface</value>
   </data>
   <data name="EachMixHasItsOwnMasterSends" xml:space="preserve">
-    <value>Each mix has its own master, sends and inserts. A monitor mix feeds your outputs without publishing a virtual microphone. New sends start muted. Monitor A, Monitor B and Aux stay where they are.</value>
+    <value>Each mix has its own master, sends and inserts. A monitor mix feeds your outputs without publishing a virtual microphone. New sends start muted. Monitor mixes can be renamed, moved and removed, but at least one must remain. Aux stays where it is.</value>
   </data>
   <data name="EditLayout" xml:space="preserve">
     <value>Edit layout</value>

@@ -28,7 +28,10 @@ public sealed record MixerSettings
     /// <summary>Ordered application channels; null preserves the legacy defaults.</summary>
     public List<UserChannelDefinition>? UserChannels { get; init; }
 
-    /// <summary>Ordered user mixes; null preserves Stream and Chat.</summary>
+    /// <summary>Ordered editable mixes, including monitors. Null reads the legacy user list.</summary>
+    public List<UserMixDefinition>? Mixes { get; init; }
+
+    /// <summary>Legacy user mixes, excluding Monitor A and B. New saves write Mixes instead.</summary>
     public List<UserMixDefinition>? UserMixes { get; init; }
 
     /// <summary>Exclusive channel groups, each a named list of channel ids.</summary>
@@ -68,7 +71,7 @@ public sealed record MixerSettings
     /// <summary>Listening is paused without changing mix mutes. Never profile state.</summary>
     public bool MonitorMuted { get; init; }
 
-    /// <summary>Output name to the monitor mix feeding it; absent = the first monitor mix.</summary>
+    /// <summary>Output name to the monitor mix feeding it; absent = the stable default monitor mix.</summary>
     public Dictionary<string, string> MonitorFeeds { get; init; } = [];
 
     /// <summary>Application identity to channel id, from manual assignments.</summary>

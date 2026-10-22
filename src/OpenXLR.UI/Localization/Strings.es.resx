@@ -490,7 +490,7 @@
     <value>¿Eliminar la mezcla '{0}'?</value>
   </data>
   <data name="DeleteMonitorMixDetail" xml:space="preserve">
-    <value>Se eliminan sus envíos e inserciones. Las salidas que solo siguen esta mezcla vuelven a Monitor A; las salidas que suman varias mezclas conservan las demás. Si esta mezcla es la predeterminada forzada del sistema, se borra ese ajuste.</value>
+    <value>Se eliminan sus envíos e inserciones. Las salidas que solo siguen esta mezcla vuelven a la mezcla de monitorización predeterminada; las salidas que suman varias mezclas conservan las demás. Si esta mezcla es la predeterminada forzada del sistema, se borra ese ajuste.</value>
   </data>
   <data name="DeletePluginFileDetail" xml:space="preserve">
     <value>¿Eliminar permanentemente {0} y sus adaptadores generados? Solo se elimina este archivo o paquete independiente; los demás plugins de la carpeta se conservan. Esta acción no se puede deshacer.</value>
@@ -625,7 +625,7 @@
     <value>Controlar como interfaz adicional</value>
   </data>
   <data name="EachMixHasItsOwnMasterSends" xml:space="preserve">
-    <value>Cada mezcla tiene su propio control maestro, envíos e inserciones. Una mezcla de monitorización alimenta tus salidas sin publicar un micrófono virtual. Los nuevos envíos comienzan silenciados. Monitor A, Monitor B y Aux permanecen en su lugar.</value>
+    <value>Cada mezcla tiene su propio control maestro, envíos e inserciones. Una mezcla de monitorización alimenta tus salidas sin publicar un micrófono virtual. Los nuevos envíos comienzan silenciados. Puedes renombrar, mover y eliminar las mezclas de monitorización, pero debe quedar al menos una. Aux permanece en su lugar.</value>
   </data>
   <data name="EditLayout" xml:space="preserve">
     <value>Editar distribución</value>

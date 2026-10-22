@@ -5,39 +5,56 @@ Stop the daemon before editing this file manually: while running, its normal
 settings saves overwrite the file with the live configuration.
 
 `userChannels` is an ordered list of application and capture channels and
-`userMixes` an ordered list of user mixes. Each entry has a stable `id` and
-a display `name`; a mix also has a `kind`, `virtualMic` (published as a
-capture device) or `monitor` (an output mix with no capture device). A mix
-without `kind` is a virtual microphone, which is what older files hold. For
-example:
+`mixes` an ordered list of every editable mix, including Monitor A and B.
+Each entry has a stable `id` and a display `name`; a mix also has a `kind`,
+`virtualMic` (published as a capture device) or `monitor` (an output mix with
+no capture device). A mix without `kind` is a virtual microphone. For example:
 
 ```json
 {
   "userChannels": [{"id": "podcast", "name": "Interview"}],
-  "userMixes": [{"id": "recording", "name": "Recording"},
-                {"id": "headphones", "name": "Headphones", "kind": "monitor"}]
+  "mixes": [{"id": "headphones", "name": "Headphones", "kind": "monitor"},
+            {"id": "recording", "name": "Recording"}]
 }
 ```
 
 These are fields in the existing settings object; retain its other fields when
-editing. Missing or null lists keep the legacy defaults. A single invalid entry
-is dropped and logged with its path, and the rest of the file still applies; a
-file that cannot be parsed at all is copied to `mixer.json.corrupt` before the
-next save replaces it. An empty mix list removes every user mix. An empty
-application list falls back to System so incoming applications have a
-destination.
+editing. Missing or null `mixes` reads the older `userMixes` list, with Monitor A
+and B kept ahead of it; a missing or null legacy list also keeps Stream and Chat.
+New daemon saves write only `mixes`, so removing or renaming a built-in monitor
+survives a restart. When both fields exist, `mixes` wins.
+
+While monitoring is paused, adding a monitor keeps its master muted. Deleting
+one removes only its id from the paused listening selection. The pause clears
+if its last previously open monitor is deleted; remaining individual mutes stay
+closed. If a paused output route refuses removal, deletion is refused before
+saving, with the layout and pause retained. Renaming changes no id or mute. The pause, mutes and layout edits are
+saved together and restored after a daemon restart. Clients resolve saved output
+feeds by surviving mix ids, ignoring whitespace and removed ids. An empty or
+entirely stale feed follows the default monitor, just as the daemon does.
+
+A single invalid entry is dropped and logged with its path, and the rest of the
+file still applies; a file that cannot be parsed at all is copied to
+`mixer.json.corrupt` before the next save replaces it. An empty or malformed
+explicit mix list with no monitor is repaired to one Monitor A with every send
+muted, ignoring stale saved levels for that synthesized monitor. At the size
+limit the last accepted virtual microphone is dropped to make room. An empty
+application list falls back to System so incoming applications have a destination.
 
 The settings must be a regular file. Pipes, devices and sockets are refused
 without reading them or replacing an earlier `mixer.json.corrupt` backup.
 
-Hardware inputs, Monitor A (`monitor`), Monitor B (`monitor2`) and Aux
-(`auxout`) remain structural. The `ignore` application target is reserved.
+Only hardware inputs and Aux (`auxout`) remain structural. Monitor A
+(`monitor`) and Monitor B (`monitor2`) can be renamed, moved or removed;
+at least one monitor mix must remain. The `ignore` application target is reserved.
 Invalid or duplicate entries are ignored; ids compare without regard to case,
 an entry that repeats a structural id is dropped, and so is a mix of any
 other kind. IDs contain at most 36 lowercase ASCII letters, digits,
 underscores or hyphens, beginning with a letter. Names contain 1 to 60
-printable characters and are trimmed. At most 32 editable channels and 16
-user mixes, both kinds counted together, are restored. A user mix with no
+printable characters and are trimmed. At most 32 editable channels and 18
+editable mixes, including Monitor A/B and both mix kinds, are restored.
+This keeps the same maximum graph size as the older 16 user mixes plus two
+fixed monitors. A virtual microphone cannot reuse the ids `monitor` or `monitor2`. A mix with no
 saved send levels starts with every send muted, as a mix created while the
 daemon runs does.
 
@@ -252,7 +269,14 @@ debounced, retried behaviour.
   pattern, so every channel grows a send into the new mix by itself, muted
   before a virtual microphone's capture device is published. If a
   channel's send has not appeared within three seconds the mix is removed
-  again and the command fails, for the same reason.
+  again and the command fails, for the same reason. Creating a monitor
+  never changes an existing output's feed: an implicit feed is saved explicitly
+  if the new monitor would become the default. A saved feed naming a removed
+  mix keeps its surviving mixes or fallback when that id is created again.
+  Removed built-in monitor ids
+  remain reserved when generating a new mix id. A monitor created while
+  monitoring is paused also starts with its master muted, so resuming keeps
+  the listening selection from before the pause.
 - `renameMix {mix, name}` changes the name of a user mix in OpenXLR only.
   Reloading its sink or capture device would drop every app using it onto
   another device, so the PipeWire description keeps the old name until the
@@ -261,7 +285,8 @@ debounced, retried behaviour.
 - `deleteMix {mix}` removes a user mix with its sends and inserts, and a
   virtual microphone's capture device with it; anything recording from that
   device loses it. Outputs listening to the mix keep the other mixes in
-  their feed, or return to the first monitor mix if none remain. An
+  their feed, or return to the default monitor mix if none remain. The last monitor mix
+  cannot be deleted. An
   enforced default source that was this microphone, or an enforced default
   sink that was this mix, is cleared, and the desktop chooses the default.
   All of that is part of the saved deletion and rolls back with it when
@@ -271,8 +296,8 @@ debounced, retried behaviour.
   `deleteExclusiveGroup {group}` removes one and leaves every send's mute
   as it is. See [Exclusive groups](#exclusive-groups).
 - `setLayoutOrder {channels, mixes}` reorders the editable ids. Supply every
-  application and capture channel id and every user mix id exactly
-  once; hardware inputs, Monitor A/B and Aux keep their positions. No node
+  application and capture channel id and every monitor or virtual microphone
+  mix id exactly once; only hardware inputs and Aux keep their positions. No node
   changes. Open windows apply the published order to channel tiles, mix
   controls and send rows while retaining the existing controls and their
   values. The layout editor's arrows, a tile dragged in the UI's
@@ -466,8 +491,12 @@ Monitor send instead, with the latency of the PipeWire graph.
 id or several joined with `+`. Every mix in a feed reaches the output at
 unity, as a direct port link from the mix; a blend at other levels is a mix
 of its own, with the sends set there. An output without an entry, or with
-an empty or unknown one, hears the first monitor mix. Deleting a mix drops
-it from every feed. The jacks of one interface share a return bus, so they
+an empty or unknown one, hears the default monitor mix: `monitor` when it
+exists, otherwise the monitor whose id sorts first. Display order never changes
+this default, which the state reports as `defaultMonitorMix`. Creating a monitor
+whose id sorts earlier keeps existing fallback outputs on their previous monitor
+by saving that feed explicitly, including outputs with stale unknown feed ids.
+Deleting a mix drops it from every feed. The jacks of one interface share a return bus, so they
 are written with one feed.
 
 `outputRoutes`, the per-route level list that 0.1.40 and 0.1.41 wrote, is

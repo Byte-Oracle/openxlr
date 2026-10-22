@@ -1092,6 +1092,7 @@ public sealed partial class MainViewModel : ViewModelBase
         if (!monitors.Contains(primaryMonitor ?? ""))
             primaryMonitor = monitors.FirstOrDefault(); // Older daemons use layout order for the implicit feed.
         var feeds = mixer?["monitorFeeds"] as JsonObject;
+        DefaultMonitorMix = primaryMonitor ?? "monitor";
         foreach (MonitorOutputItem item in MonitorOutputs)
         {
             var included = (feeds?[item.Name]?.GetValue<string>()?.Split('+',
@@ -1112,8 +1113,12 @@ public sealed partial class MainViewModel : ViewModelBase
         return string.Join("+", list);
     }
 
+    /// <summary>The daemon's implicit monitor feed; old daemons use their first monitor.</summary>
+    public string DefaultMonitorMix { get; private set; } = "monitor";
+
     private Task<string?> OnMonitorFeedChanged(string output, string mixId)
         => _applying ? Task.FromResult<string?>(null) : _client.SetMonitorFeedAsync(output, mixId);
+
 
     /// <summary>AudioNodeKind arrives as the enum's number (0 = Sink) or name.</summary>
     private static bool IsSink(JsonNode? kind) => kind switch
@@ -1529,6 +1534,9 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     /// <summary>The daemon owns editability; older daemons only allow virtual microphones.</summary>
     public bool IsEditable => _editable ?? Kind == "virtualMic";
 
+    private bool? _deletable;
+    public bool IsDeletable => _deletable ?? IsEditable;
+
     /// <summary>What a structural mix is, for the layout editor.</summary>
     public string KindLabel => Kind switch { "monitor" => Localizer.Text("MonitorMixKind"), "auxPort" => Localizer.Text("UsbAuxPortKind"), _ => "" };
 
@@ -1540,7 +1548,7 @@ public sealed class MixViewModel : ViewModelBase, IHasId
 
     private string _kind = "monitor";
     /// <summary>"monitor", "virtualMic" or "auxPort", as the daemon reports it.</summary>
-    public string Kind { get => _kind; set { if (Set(ref _kind, value)) { Raise(nameof(IsEditable)); Raise(nameof(KindLabel)); Raise(nameof(IsMonitor)); } } }
+    public string Kind { get => _kind; set { if (Set(ref _kind, value)) { Raise(nameof(IsEditable)); Raise(nameof(IsDeletable)); Raise(nameof(KindLabel)); Raise(nameof(IsMonitor)); } } }
     public bool IsMonitor => Kind == "monitor";
     public VolumeRangeViewModel VolumeRange { get; }
 
@@ -1593,7 +1601,9 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     {
         Appearance.Apply(n["appearance"]);
         bool? editable = n["editable"]?.GetValue<bool>();
-        if (_editable != editable) { _editable = editable; Raise(nameof(IsEditable)); }
+        if (_editable != editable) { _editable = editable; Raise(nameof(IsEditable)); Raise(nameof(IsDeletable)); }
+        bool? deletable = n["deletable"]?.GetValue<bool>();
+        if (_deletable != deletable) { _deletable = deletable; Raise(nameof(IsDeletable)); }
         _applying = true;
         try
         {

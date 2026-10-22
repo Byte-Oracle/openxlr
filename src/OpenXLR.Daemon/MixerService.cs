@@ -788,8 +788,9 @@ public sealed class MixerService : IHostedService, IDisposable
                     });
                     // Grouping the channel that carries the Pro's input 1 takes
                     // it off the hardware mic path; a capture channel made,
-                    // removed or moved can change which channel carries it.
-                    if (cmd.Cmd is "setExclusiveGroup" or "deleteExclusiveGroup" or "createCaptureChannel" or "setCaptureSource" or "deleteChannel" or "setLayoutOrder")
+                    // removed or moved can change which channel carries it. A deleted
+                    // mix can change the jacks' feed and direct microphone path.
+                    if (cmd.Cmd is "setExclusiveGroup" or "deleteExclusiveGroup" or "createCaptureChannel" or "setCaptureSource" or "deleteChannel" or "deleteMix" or "setLayoutOrder")
                         SyncOutputSelectors();
                     Changed?.Invoke();
                     return null;

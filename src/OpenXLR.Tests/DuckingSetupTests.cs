@@ -224,7 +224,7 @@ public sealed class DuckingSetupTests
             Assert.Equal(["game"], settings.Ducking!.Channels);
             Assert.Equal(["monitor"], settings.Ducking.Mixes);
             Assert.DoesNotContain(settings.UserChannels!, c => c.Id == "music");
-            Assert.DoesNotContain(settings.UserMixes!, m => m.Id == "stream");
+            Assert.DoesNotContain(settings.Mixes!, m => m.Id == "stream");
             return "read only";
         };
         Assert.IsType<IOException>(Assert.Throws<TargetInvocationException>(() => persist.Invoke(mixer, [fail])).InnerException);

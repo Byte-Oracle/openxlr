@@ -269,17 +269,29 @@ public sealed partial class Mixer
             if (kind is not (MixKind.Monitor or MixKind.VirtualMic))
                 throw new InvalidOperationException("only monitor mixes and virtual microphones can be added");
             EnsurePulseHeadroomLocked(newStreams: _config.Channels.Count, newNodes: kind == MixKind.Monitor ? 1 : 4);
-            string id = MixerConfig.NewId(name, "mix", _config.Mixes.Select(m => m.Id));
+            string id = MixerConfig.NewId(name, "mix", _config.Mixes.Select(m => m.Id).Concat(["monitor", "monitor2"]));
             var mix = new MixDefinition(id, name, kind);
             MixerConfig previous = _config;
             MixerConfig next = _config.WithMix(mix);   // validates the limit before any node is loaded
             string key = MixKey(mix);
             var previousAppearance = _appearance;
+            string? previousDefault = PrimaryMonitorLocked()?.Id;
+            var previousFeeds = new Dictionary<string, string>(_monitorFeeds);
+            var preservedFeeds = _monitorOutputs.Where(output =>
+                _monitorFeeds.TryGetValue(output, out string? feed) && MonitorFeed.Includes(feed, id)
+                || next.DefaultMonitor?.Id != previousDefault && (!_monitorFeeds.TryGetValue(output, out feed)
+                    || !MonitorFeed.Parts(feed).Any(part => _config.Mixes.Any(m => m.Id == part))))
+                .Select(output => (Output: output, Feed: FeedOfLocked(output))).ToArray();
             try
             {
                 _mixModules[id] = _pw.CreateNullSink(mix.SinkName, $"OpenXLR {name}");
                 _config = next;   // leg discovery and the cell faders go by the mix list
+                // A new default or a revived stale id must not change existing outputs.
+                foreach (var (output, feed) in preservedFeeds)
+                    if (feed is not null) _monitorFeeds[output] = feed;
                 _mixVolume[id] = 1.0;
+                // A monitor added during a pause is not part of its saved listening selection.
+                if (kind == MixKind.Monitor && _monitorMuted) _mixMuted.Add(id);
                 foreach (ChannelDefinition ch in _config.Channels)
                 {
                     string cell = Cell(ch.Id, id);
@@ -303,6 +315,8 @@ public sealed partial class Mixer
             {
                 _config = previous;
                 _appearance = previousAppearance;
+                _monitorFeeds.Clear();
+                foreach (var (output, feed) in previousFeeds) _monitorFeeds[output] = feed;
                 RemoveMixChainLocked(key);
                 RemoveMixCellsLocked(id);
                 var cleanupErrors = new List<Exception>();
@@ -362,6 +376,7 @@ public sealed partial class Mixer
                 ?? throw new InvalidOperationException($"'{id}' is not an editable mix");
             string key = MixKey(mix);
             MixerConfig previous = _config;
+            bool wasDefault = PrimaryMonitorLocked()?.Id == id;
             _config = _config.WithoutMix(id);
             _inserts.Remove(key, out List<InsertDefinition>? savedInserts);
             string? previousSource = _enforcedSource;
@@ -377,10 +392,25 @@ public sealed partial class Mixer
                 else _monitorFeeds[output] = remaining;
             }
             CellSnapshot cells = TakeMixCellsLocked(id);
-            try { PersistLocked(persist); }
+            bool wasPaused = _monitorMuted;
+            // The unmuted monitor ids are the selection a pause will resume.
+            // Deleting its last member clears the pause, never the other mutes.
+            bool clearsPause = mix.Kind == MixKind.Monitor && _monitorMuted && !cells.MixMuted
+                && !_config.Mixes.Any(m => m.Kind == MixKind.Monitor && !_mixMuted.Contains(m.Id));
+            try
+            {
+                if (clearsPause)
+                {
+                    if (!RemovePausedMonitorRoutesLocked())
+                        throw new InvalidOperationException("The monitor cannot be deleted until its paused output routes can be disconnected.");
+                    _monitorMuted = false;
+                }
+                PersistLocked(persist);
+            }
             catch
             {
                 _config = previous;
+                _monitorMuted = wasPaused;
                 cells.Restore(this);
                 if (savedInserts is not null) _inserts[key] = savedInserts;
                 _enforcedSource = previousSource;
@@ -390,8 +420,11 @@ public sealed partial class Mixer
                 throw;
             }
 
+            _desktopMixMuteResets.Remove(mix.SinkName);
+            if (wasPaused != _monitorMuted) _desktopMonitorIntent = null;
             PruneDuckPlanLocked();   // the bus goes before the mix it feeds
-            if (previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id)))
+            if (wasPaused != _monitorMuted || previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id))
+                || wasDefault && _monitorOutputs.Any(output => !previousFeeds.ContainsKey(output)))
                 SetMonitorOutputsLocked([.. _monitorOutputs]);
             SyncDuckingLocked();
             RemoveMixChainLocked(key);

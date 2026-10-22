@@ -55,13 +55,13 @@ public sealed partial class MonitorVolumeIntegrationTests
         Assert.True(SpinWait.SpinUntil(() => !pw.OwnSinkLevels().Any(n => n.Name.Contains("rejected", StringComparison.Ordinal)), TimeSpan.FromSeconds(3)));
         MixerSettings? saved = null;
         mixer.CreateMix("Headphones", s => { saved = s; return null; }, MixKind.Monitor, "record");
-        Assert.Equal("monitor", saved!.UserMixes!.Single(m => m.Id == "headphones").Kind);
+        Assert.Equal("monitor", saved!.Mixes!.Single(m => m.Id == "headphones").Kind);
         // The icon is saved in the same write that creates the mix.
         Assert.Equal(new LayoutAppearance("record"), saved.Appearance["mix:headphones"]);
         Assert.Equal(new LayoutAppearanceState("record", null, false, "headset"), mixer.Snapshot().Mixes.Single(m => m.Id == "headphones").Appearance);
         var added = mixer.Snapshot().Mixes.Single(m => m.Id == "headphones");
         Assert.True(added.Editable);
-        Assert.False(mixer.Snapshot().Mixes.Single(m => m.Id == "monitor").Editable);
+        Assert.True(mixer.Snapshot().Mixes.Single(m => m.Id == "monitor").Editable);
         Assert.All(mixer.Snapshot().Channels, c => Assert.Contains("headphones", c.MutedIn));
         Assert.True(SpinWait.SpinUntil(() => pw.OwnSinkLevels().Any(n => n.Name == "OpenXLR_mix_headphones"), TimeSpan.FromSeconds(3)));
         Assert.Single(pw.OwnSinkLevels(), n => n.Name.Contains("headphones", StringComparison.Ordinal));
@@ -91,7 +91,7 @@ public sealed partial class MonitorVolumeIntegrationTests
         Assert.Null(mixer.EnforcedDefaults.Sink);
         Assert.Null(mixer.ExportSettings().EnforcedDefaultSink);
         Assert.Equal("monitor", mixer.MonitorFeedOf("test_user_monitor_output"));
-        Assert.DoesNotContain(mixer.ExportSettings().UserMixes!, m => m.Id == "headphones");
+        Assert.DoesNotContain(mixer.ExportSettings().Mixes!, m => m.Id == "headphones");
     }
 
     [MonitorPipeWireFact]

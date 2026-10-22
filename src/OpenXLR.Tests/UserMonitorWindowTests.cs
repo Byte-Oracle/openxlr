@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using OpenXLR.UI;
 using System.Collections.Concurrent;
 using System.Text.Json.Nodes;
@@ -75,6 +76,15 @@ internal static class UserMonitorWindowTests
                     model.MonitorOutputs.Single().FeedMixes.Select(f => f.Id));
                 Assert.Equal(selected == 1, model.Mixes.Single(m => m.Id == "newmix").IsMonitor);
             }
+            MixViewModel monitor = model.Mixes.Single(m => m.Id == "monitor");
+            Button delete = editor.GetVisualDescendants().OfType<Button>()
+                .Single(button => ReferenceEquals(button.DataContext, monitor)
+                    && button.Content?.ToString() == OpenXLR.UI.Localization.Localizer.Text("Delete"));
+            monitor.ApplyFromDaemon(JsonNode.Parse("""{"kind":"monitor","editable":true,"deletable":false}""")!);
+            Assert.True(delete.IsVisible);
+            Assert.False(delete.IsEnabled);
+            monitor.ApplyFromDaemon(JsonNode.Parse("""{"kind":"monitor","editable":true,"deletable":true}""")!);
+            Assert.True(delete.IsEnabled);
         }
         finally { editor.Close(); }
     }
