@@ -174,8 +174,10 @@ locked restore and tests. Do not disable locked mode to make an update pass.
 
 ## Pull requests
 
-CI and CodeQL run for pull requests and for every pushed branch, so a
-branch gets the same checks before its pull request exists. A change to
+CI and CodeQL run for pull requests and for pushes to `main`. A newer
+push to a pull request cancels the run it replaces. To check a branch
+before its pull request exists, open the pull request as a draft or start
+CI by hand with `gh workflow run CI --ref <branch>`. A change to
 `README.md` alone skips both: CI reports its jobs as skipped, which
 counts as passing.
 
