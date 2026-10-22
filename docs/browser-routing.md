@@ -108,11 +108,13 @@ correct the problem and activate or reconnect explicitly.
 ## Privacy and removal
 
 The companion sends the current tab list to the local native host: tab id,
-bounded title, HTTP(S) origin and routing status. Paths, query strings and
-URL credentials are not sent. The daemon keeps live tab ids and titles in
-memory and saves only remembered origin-to-channel defaults in machine
-settings, outside profiles. A manually collected diagnostic archive can
-include the current tab list and saved origins. Review it before sharing.
+bounded title, HTTP(S) origin and routing status. The URL field is reduced
+to its origin, excluding its path, query and credentials. Page titles come
+from the website and are not redacted; a title can itself include a name
+or link. The daemon keeps live tab ids and titles in memory and saves only
+remembered origin-to-channel defaults in machine settings, outside
+profiles. A manually collected diagnostic archive can include the current
+tab list and saved origins. Review it before sharing.
 No tab audio is sent through the control API or stored by the companion.
 
 The host accepts only tab registration, channel assignment and the browser
