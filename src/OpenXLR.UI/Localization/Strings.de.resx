@@ -452,10 +452,10 @@
     <value>Detaillierte Wine-Protokollierung für die Plugin-Suche</value>
   </data>
   <data name="DefaultInput" xml:space="preserve">
-    <value>Standardeingang</value>
+    <value>Std.-Eingang</value>
   </data>
   <data name="DefaultOutput" xml:space="preserve">
-    <value>Standardausgang</value>
+    <value>Std.-Ausgang</value>
   </data>
   <data name="Defaults" xml:space="preserve">
     <value>Standardwerte</value>
@@ -1352,10 +1352,10 @@
     <value>Phantomspeisung stabilisiert sich</value>
   </data>
   <data name="Phones1" xml:space="preserve">
-    <value>Kopfhörer 1</value>
+    <value>Kopfh. 1</value>
   </data>
   <data name="Phones2" xml:space="preserve">
-    <value>Kopfhörer 2</value>
+    <value>Kopfh. 2</value>
   </data>
   <data name="PickAPluginYouDownloadedAndOpenXLRPuts" xml:space="preserve">
     <value>Wähle ein heruntergeladenes Plugin und OpenXLR installiert es: eine .clap- oder .vst3-Datei, einen .vst3- oder .lv2-Ordner oder einen Ordner mit Plugins.</value>

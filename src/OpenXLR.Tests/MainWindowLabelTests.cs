@@ -58,6 +58,8 @@ internal static class MainWindowLabelTests
         CheckFixedColumnLabels(main, Localizer.Text("XLR1Gain"), Localizer.Text("XLR2Gain"),
             Localizer.Text("USBAuxIn"), Localizer.Text("Phones1"), Localizer.Text("Phones2"),
             Localizer.Text("MicPC"), Localizer.Text("Devices"), Localizer.Text("Volume"));
+        CheckFixedColumnTranslations(main, "XLR1Gain", "XLR2Gain", "USBAuxIn", "Phones1", "Phones2",
+            "MicPC", "Devices", "Volume");
         Assert.Empty(failures);
 
         void CheckText(TextBlock text, double maximumWidth = double.PositiveInfinity)
@@ -98,8 +100,37 @@ internal static class MainWindowLabelTests
         }
     }
 
-    private static double TextWidth(TextBlock text)
-        => new FormattedText(text.Text ?? "", CultureInfo.InvariantCulture, text.FlowDirection,
+    /// <summary>
+    /// The same fixed-width labels in every shipped language, measured in the
+    /// font and column of the label the running language shows, so a
+    /// translation that would clip fails whichever language the test runs in.
+    /// </summary>
+    internal static void CheckFixedColumnTranslations(Window window, params string[] keys)
+    {
+        var failures = new List<string>();
+        foreach (string key in keys)
+            foreach (TextBlock text in window.GetVisualDescendants().OfType<TextBlock>()
+                .Where(t => t.IsEffectivelyVisible && t.Text == Localizer.Text(key)))
+            {
+                var grid = Assert.IsType<Grid>(text.Parent);
+                ColumnDefinition column = grid.ColumnDefinitions[Grid.GetColumn(text)];
+                if (column.Width.IsAuto) continue;
+                double available = column.ActualWidth - text.Margin.Left - text.Margin.Right;
+                foreach (LanguageChoice language in Localizer.Languages)
+                {
+                    string translated = Localizer.Get(key, CultureInfo.GetCultureInfo(language.Id!));
+                    double measured = TextWidth(text, translated);
+                    if (measured > available + 1)
+                        failures.Add($"{language.Id} '{translated}' needs {measured:F1}px but has {available:F1}px at window width {window.ClientSize.Width}.");
+                }
+            }
+        Assert.True(failures.Count == 0, string.Join("\n", failures.Distinct()));
+    }
+
+    private static double TextWidth(TextBlock text) => TextWidth(text, text.Text ?? "");
+
+    private static double TextWidth(TextBlock text, string value)
+        => new FormattedText(value, CultureInfo.InvariantCulture, text.FlowDirection,
             new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, text.Foreground).Width;
 
     internal static void CheckLongDeviceLabels(MainWindow main)
