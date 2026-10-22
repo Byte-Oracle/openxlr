@@ -83,6 +83,7 @@ public static class CommandValidation
                 return CheckPluginWineTrace(cmd);
             case "setMixLatencyCompensation":
             case "setMonitorMuted":
+            case "setMonitorMuteMicrophones":
                 return cmd.Value.ValueKind is JsonValueKind.True or JsonValueKind.False
                     ? null : $"{cmd.Cmd}: value must be a boolean";
             case "addWindowsPluginFolder":

@@ -101,6 +101,14 @@
           </ItemsControl>
           <TextBlock Text="{loc:Text Key=InputBindingsHint}" FontSize="11" Foreground="{DynamicResource Ox.Text.Secondary}" TextWrapping="Wrap"/>
         </StackPanel>
+        <CheckBox Name="MonitorMuteMicrophones" IsChecked="{Binding Main.MonitorMuteMicrophones, Mode=TwoWay}"
+                  IsEnabled="{Binding Main.CanEditLayout}" AutomationProperties.Name="{loc:Text Key=MuteMicrophoneSendsWithMonitoring}">
+          <TextBlock Text="{loc:Text Key=MuteMicrophoneSendsWithMonitoring}" TextWrapping="Wrap"/>
+        </CheckBox>
+        <TextBlock Name="MonitorMuteMicrophonesHint" Text="{loc:Text Key=MuteMicrophoneSendsWithMonitoringHint}" Classes="hint" TextWrapping="Wrap"/>
+        <TextBlock Name="MicrophonePausePendingNote" Text="{Binding Main.MonitorMicrophoneNote}"
+                   Classes="warn" TextWrapping="Wrap"
+                   IsVisible="{Binding Main.MonitorMicrophoneNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         <CheckBox Name="CompensateMixLatency" Content="{loc:Text Key=CompensatePluginLatencyAcrossMixes}"
                   IsChecked="{Binding Main.CompensateMixLatency, Mode=TwoWay}" IsEnabled="{Binding Main.HasMixer}"
                   ToolTip.Tip="{loc:Text Key=DelayTheOtherMixesSoEachLines}"/>

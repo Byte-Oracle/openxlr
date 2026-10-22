@@ -206,6 +206,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
             _built = true;
 
+            // Close microphone channels before connecting their sources on a paused start.
+            SyncMicrophonePauseLocked();
+
             _ = previousDefaultSource;   // defaults are governed by enforcement only
             _ = defaultSource;           // the system default never overrides an explicit input binding
             // Capture before playback: the interface's capture is linked
@@ -234,11 +237,13 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// </summary>
     private void WireInputFeedsLocked(IReadOnlyCollection<string>? only = null)
     {
-        string[] strips = [.. _config.Channels.Where(c => c.InputPair is not null && (only is null || only.Contains(c.Id))).Select(c => c.Id)];
+        string[] strips = [.. _config.Channels.Where(c => c.InputPair is not null && !UnconfirmedMicrophonePauseLocked(c)
+            && (only is null || only.Contains(c.Id))).Select(c => c.Id)];
         if (strips.Length > 0) WireInputFeedLocked(strips);
         foreach (ChannelDefinition ch in _config.Channels.Where(c => c.CaptureSource is not null).ToList())
         {
             if (only is not null && !only.Contains(ch.Id)) continue;
+            if (UnconfirmedMicrophonePauseLocked(ch)) continue;
             // Each capture commits alone. A link timeout on this source must
             // not roll back another microphone or fail the mixer's build.
             try
@@ -1542,6 +1547,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 ChannelMuted = [.. _muted],
                 MonitorOutputs = [.. _monitorOutputs],
                 MonitorMuted = _monitorMuted,
+                MonitorMuteMicrophones = _monitorMuteMicrophones,
                 MonitorOutputMutes = _monitorOutputMutes.Where(pair => _monitorOutputs.Any(o => StripMarker(o) == pair.Key)).ToDictionary(),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
@@ -1604,6 +1610,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     {
         lock (_gate)
         {
+            SetMonitorMuteMicrophones(s.MonitorMuteMicrophones);
             _duckingSetup = DuckingSetup.Prune(s.Ducking ?? DuckingSetup.Default(_config), _config);
             if (!_built) { SyncDuckingLocked(); return; }
             if (_config.RepairedMonitorMix is { } repaired)
@@ -2046,8 +2053,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             {
                 IReadOnlyList<OwnSinkLevel> levels = _pw.OwnSinkLevels();
                 bool changed = ReadDesktopMonitorMuteLocked(ref levels);
+                bool pending = _microphonePausePending;
                 restored = EnsureOwnSinkLevelsLocked(levels);
-                return SyncMonitorVolumesLocked(levels) || changed;
+                return SyncMonitorVolumesLocked(levels) || changed || pending != _microphonePausePending;
             }
             finally
             {
@@ -2071,18 +2079,30 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private IReadOnlyList<string> EnsureOwnSinkLevelsLocked(IReadOnlyList<OwnSinkLevel> levels)
     {
         var restored = new List<string>();
+        var microphones = _config.Channels.Where(c => c.Microphone).Select(c => c.SinkName).ToHashSet(StringComparer.Ordinal);
+        foreach (string stale in _microphonePauseRepairs.Keys.Where(n => !microphones.Contains(n)).ToArray())
+            _microphonePauseRepairs.Remove(stale);
+        bool microphoneHelpersAvailable = true;
         foreach (OwnSinkLevel sink in levels)
         {
             if (MonitorMixForSinkLocked(sink.Name) is not null) continue;
+            bool microphone = microphones.Remove(sink.Name);
+            bool managed = microphone && (_monitorMuteMicrophones || _microphonePausePending);
+            bool muted = microphone && MicrophonesPausedLocked;
             bool off = Math.Abs(sink.Volume - 1.0) > 0.01;
-            if (!off && !sink.Muted) continue;
+            if (managed && (sink.Muted != muted || _microphonePauseRepairs.ContainsKey(sink.Name)))
+            {
+                _microphonePauseRepairs.TryAdd(sink.Name, default);
+                if (!microphoneHelpersAvailable || Clock() < _microphonePauseRepairs[sink.Name].RetryAt) continue;
+                microphoneHelpersAvailable = ApplyMicrophonePauseLocked(sink.Name);
+                if (!microphoneHelpersAvailable) continue;
+                restored.Add(sink.Name);
+            }
+            if (!off && (managed || sink.Muted == muted)) continue;
             try
             {
                 if (off) _pw.SetSinkVolume(sink.Name, 1.0);
-                if (sink.Muted)
-                {
-                    _pw.SetSinkMuted(sink.Name, false);
-                }
+                if (!managed && sink.Muted != muted) _pw.SetSinkMuted(sink.Name, muted);
                 restored.Add(sink.Name);
             }
             catch (InvalidOperationException) { /* the sink went away; the next sweep sees the rest */ }
@@ -2132,7 +2152,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// <summary>All selected monitor outputs, in selection order.</summary>
     public IReadOnlyList<string> MonitorOutputs { get { lock (_gate) return [.. _monitorOutputs]; } }
 
-    /// <summary>Pause listening without changing any mix, send, capture or Aux state.</summary>
+    /// <summary>Pause listening and, when opted in, microphone sends without replacing individual mutes.</summary>
     public bool MonitorMuted { get { lock (_gate) return _monitorMuted; } }
 
     public void SetMonitorMuted(bool muted)
@@ -2145,8 +2165,17 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 throw new InvalidOperationException("Monitor routes could not be disconnected; listening stays paused until they can be removed.");
             _monitorMuted = muted;
             if (!_built) return;
-            if (muted) RemovePausedMonitorRoutesLocked();
-            else
+            if (muted)
+            {
+                try
+                {
+                    RemovePausedMonitorRoutesLocked();
+                    SyncMonitorHardwareMutesLocked(explicitChange: true);
+                }
+                finally { SyncMicrophonePauseLocked(); }
+                return;
+            }
+            try
             {
                 try { SetMonitorOutputsLocked([.. _monitorOutputs]); }
                 catch
@@ -2156,8 +2185,9 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     SyncMonitorHardwareMutesLocked(explicitChange: true);
                     throw;
                 }
+                SyncMonitorHardwareMutesLocked(explicitChange: true);
             }
-            SyncMonitorHardwareMutesLocked(explicitChange: true);
+            finally { SyncMicrophonePauseLocked(); }
         }
     }
 
@@ -2999,6 +3029,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MonitorOutput = _monitorOutputs.FirstOrDefault(),
                 MonitorOutputs = [.. _monitorOutputs],
                 MonitorMuted = _monitorMuted,
+                MonitorMuteMicrophones = _monitorMuteMicrophones,
+                MicrophonePausePending = _microphonePausePending,
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 OutputVolume = _outputVolume,
                 LowCutHz = _lowCutHz,
@@ -3236,6 +3268,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         foreach (PortLink route in _monitorRoutes.Values) _pw.Unlink(route);
         _monitorRoutes.Clear();
         _monitorMuted = false;
+        _microphonePauseRepairs.Clear();
         _monitorOutputs.Clear();
         _monitorFeeds.Clear();
         _incompleteMonitorRoutes.Clear();

@@ -102,6 +102,7 @@ public sealed partial class Mixer
                 if (!WaitForLegsLocked([module], CombineSinkNamesLocked()))
                     throw new InvalidOperationException("the channel's sends did not come up within 3 s; nothing was changed");
                 foreach (MixDefinition mix in _config.Mixes) ApplyCellLocked(id, mix.Id);
+                SyncMicrophonePauseLocked();
                 EnsureCaptureFeedsLocked();
                 SetCreatedIconLocked("channel:" + id, icon);
                 PersistLocked(persist);
@@ -206,6 +207,7 @@ public sealed partial class Mixer
             // the registry's view and PipeWire's own (the session manager
             // may have moved a stream since the last sweep).
             ChannelDefinition gone = previous.Channels.First(c => c.Id == id);
+            _microphonePauseRepairs.Remove(gone.SinkName);
             var serials = new HashSet<int>(_pw.StreamSerialsOnSink(gone.SinkName));
             foreach ((int streamId, StreamAssignment placed) in _streams.Where(kv => kv.Value.ChannelId == id).ToList())
             {
@@ -421,6 +423,7 @@ public sealed partial class Mixer
             }
 
             _desktopMixMuteResets.Remove(mix.SinkName);
+            if (wasPaused != _monitorMuted) SyncMicrophonePauseLocked();
             if (wasPaused != _monitorMuted) _desktopMonitorIntent = null;
             PruneDuckPlanLocked();   // the bus goes before the mix it feeds
             if (wasPaused != _monitorMuted || previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id))

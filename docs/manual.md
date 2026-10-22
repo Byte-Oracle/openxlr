@@ -3220,7 +3220,8 @@ their gains must stay at unity.
 What the mute key toggles depends on the output. On one of the selected
 physical monitor outputs it pauses and resumes the whole monitor selection,
 the same as MONITOR's **Mute** button or pressing a Deck monitor dial.
-Mix and channel mutes keep their values, and recording and streaming continue.
+Mix and channel mutes keep their values. Recording and streaming continue
+unless the microphone pause option below is enabled.
 On a monitor mix sink it toggles that mix. On any other output it toggles the
 sink's mute at the audio server.
 
@@ -3228,7 +3229,8 @@ If Linux's native mute key targets a selected physical output, or an internal
 application sink such as **OpenXLR System** while it is the default output,
 OpenXLR treats the press as a monitoring toggle. Selected physical devices
 mirror the pause and regain their previous native mute flags on resume.
-Application routing sinks stay open so recording and streaming continue. A mute on an internal application sink that is not the
+Application routing sinks stay open so application audio can still reach
+recording and streaming mixes. A mute on an internal application sink that is not the
 default output is undone without pausing monitoring. The mute
 icon on an application sink can return to its previous state while monitoring
 remains paused; physical output devices show the native pause. The **Mute** button in OpenXLR's MONITOR header shows the
@@ -3289,6 +3291,43 @@ need the daemon. PC shortcuts also need the running UI and a desktop supporting
 the GlobalShortcuts portal, but do not need KDE's focused-window integration.
 Desktop shortcuts are explicitly selected in the portal; existing media-key
 bindings are not replaced automatically.
+
+### A dedicated monitoring pause key
+
+In **Desktop keys**, select **Add a monitoring pause key**, then **Apply and
+configure keys**. Bind the keyboard's mute key to **Pause or resume monitoring**
+in the desktop's permission dialog. This action addresses OpenXLR's monitoring
+pause directly, independent of the system default output. Volume keys can
+keep their desktop bindings. The portal suggests the media mute key for a new
+binding; an existing user choice is kept.
+
+Give the mute key one owner. In Plasma, replace the existing Audio Volume
+**Mute** binding rather than assigning the same key to both actions. Plasma
+6.8's built-in mute action mutes every sink, including OpenXLR's internal
+routing sinks, and cancels its global mute when one of those sinks is restored.
+That can show a muted OSD followed immediately by an unmuted OSD. The dedicated
+OpenXLR action avoids that blanket mute. It stays active while OpenXLR runs in
+the tray; closing the UI process releases its shortcut session.
+In Plasma's conflict dialog, enter the mute key again and confirm **Reassign**,
+then accept the shortcut configuration. If you later disable this integration,
+restore **Audio Volume**, **Mute** in Plasma's keyboard shortcut settings to
+give the key back to the desktop.
+
+In Options, AUDIO, **Mute microphone sends with monitoring** also pauses the
+XLR/Mic strips and mono capture microphones whenever monitoring is paused.
+The option starts off and is saved in `mixer.json`, outside profiles. The pause
+and the option survive a daemon restart. They leave individual sends, mix
+mutes and hardware microphone mute choices intact. Resuming reveals those
+choices, including changes made while paused; explicitly opening a monitor
+also resumes the linked microphones.
+
+The microphone pause affects audio routed through OpenXLR, including its
+virtual microphones used by Discord or a recording program. It does not mute
+applications capturing a physical microphone directly, stereo capture channels
+or Aux/Line In. It stops Sound Check and discards its take; a new recording is
+refused until microphones resume. If the audio server refuses a microphone
+mute, Options shows that silence is not yet confirmed and the daemon retries.
+Do not treat that pending state as a confirmed microphone mute.
 
 OpenDeck output volume and mute keys keep rapid presses and apply them in the
 order they were pressed, across keys, so a burst at 0 or 150% ends where the
@@ -3366,7 +3405,7 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 | 1 Mixer | channel sends, mix masters, stereo meters and level history; channel and user mix creation, renaming, removal and ordering |
 | 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. A microphone input, including a mono capture input, carries one bar rather than a pair of the same reading. A strip bound to another microphone shows its source, or why it is silent, on the row under its name, and a silent one's name is in the warning colour |
 | 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing, [ducking](#terminal-ducking) on any device and USB Aux return |
-| 4 Outputs | selected monitor sinks and their feeds, shared output volume, the monitoring pause (**Mute monitoring**, recording and streaming continue), each sink's volume and mute, and the system default sink and source |
+| 4 Outputs | selected monitor sinks and their feeds, shared output volume, the monitoring pause (**Mute monitoring**, microphone sends also pause when enabled in Options), each sink's volume and mute, and the system default sink and source |
 | 5 Apps | every known application and its channel assignment, including the desktop's own routing |
 | 6 Inserts | the chain on each input and mix, its order, bypass and status; add a plugin from the catalogue, narrowed by typing, of those that fit the chain's width; open a plugin's native editor or edit its generated controls when the editor is blocked or refused |
 | 7 Profiles | load, save over, save as, delete and recall on connect; interface selection and recorded device defaults |

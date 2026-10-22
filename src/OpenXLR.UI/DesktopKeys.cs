@@ -56,6 +56,7 @@ internal sealed class DesktopKeys(DaemonClient client) : IDisposable
                 SetStatus(Localizer.Text("DesktopKeysFocusOnly"));
                 return;
             }
+            await bus.RegisterHostAsync(_lifetime.Token);
             var created = await bus.Request("CreateSession", "a{sv}", token => (ref MessageWriter w) =>
                 w.WriteDictionary(new Dictionary<string, VariantValue> { ["handle_token"] = token, ["session_handle_token"] = token }), _lifetime.Token);
             string session = created["session_handle"].GetString();
@@ -92,7 +93,9 @@ internal sealed class DesktopKeys(DaemonClient client) : IDisposable
                 foreach (var (id, action) in actions)
                 {
                     w.WriteStructureStart(); w.WriteString(id);
-                    w.WriteDictionary(new Dictionary<string, VariantValue> { ["description"] = action.Description });
+                    var properties = new Dictionary<string, VariantValue> { ["description"] = action.Description };
+                    if (action.PreferredTrigger is { } trigger) properties["preferred_trigger"] = trigger;
+                    w.WriteDictionary(properties);
                 }
                 w.WriteArrayEnd(array);
                 w.WriteString(""); // the portal supplies its own permission/configuration window
@@ -110,12 +113,14 @@ internal sealed class DesktopKeys(DaemonClient client) : IDisposable
         finally { _configure.Release(); }
     }
 
-    internal sealed record KeyAction(string Description, Func<Task<string?>> Invoke);
+    internal sealed record KeyAction(string Description, Func<Task<string?>> Invoke, string? PreferredTrigger = null);
     internal Dictionary<string, KeyAction> Actions(DesktopKeySettings settings)
     {
         var actions = new Dictionary<string, KeyAction>(StringComparer.Ordinal);
         foreach (string channel in settings.FocusChannels)
             actions["focus_" + channel] = new(Localizer.Format("KeyRouteFocusedApp", channel), () => client.RouteFocusedAppAsync(channel));
+        if (settings.MonitorControls)
+            actions["monitor_mute"] = new(Localizer.Text("KeyToggleMonitoringPause"), client.ToggleMonitorMutedAsync, "XF86AudioMute");
         if (settings.OutputControls)
         {
             actions["output_up"] = new(Localizer.Text("KeyOutputVolumeUp"), () => client.AdjustOutputVolumeAsync(settings.OutputDevice, .05));

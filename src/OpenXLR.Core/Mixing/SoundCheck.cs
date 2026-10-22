@@ -44,6 +44,9 @@ public sealed partial class Mixer
     /// </summary>
     public void SoundCheck(string channel, string action)
     {
+        lock (_gate)
+            if (action != "stop" && MicrophonesPausedLocked)
+                throw new InvalidOperationException("Resume monitoring before using Sound Check while microphones are included in the pause.");
         if (action == "record") ReleaseDeviceEqForSoundCheck(channel);
         lock (_gate)
         {
@@ -77,6 +80,8 @@ public sealed partial class Mixer
             if (owner is null || owner == channel) StopSoundCheckLocked(restore: true);
             return;
         }
+        if (MicrophonesPausedLocked)
+            throw new InvalidOperationException("Resume monitoring before using Sound Check while microphones are included in the pause.");
         if (_soundCheckChannel is not null && _soundCheckChannel != channel)
             throw new InvalidOperationException($"Stop Sound Check on {ChannelNameLocked(_config.Channels.Single(c => c.Id == _soundCheckChannel))} first.");
         // Each input records from its own source, before the loop helper or

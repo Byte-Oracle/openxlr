@@ -25,6 +25,7 @@ internal sealed class DesktopKeysWindow : Window
         var choices = vm.Channels.Where(c => c.IsApplication).Select(c => (c.Id,
             Box: new CheckBox { Content = c.Name, IsChecked = saved.FocusChannels.Contains(c.Id) })).ToArray();
         var outputControls = new CheckBox { Content = Localizer.Text("AddVolumeAndMuteKeys"), IsChecked = saved.OutputControls };
+        var monitorControls = new CheckBox { Content = Localizer.Text("AddMonitoringPauseKey"), IsChecked = saved.MonitorControls };
         var outputs = vm.Outputs.Where(d => DesktopKeySettings.ValidOutput(d.Name)
             && (!d.IsOwn || vm.Mixes.Any(m => m.IsMonitor && "OpenXLR_mix_" + m.Id == d.Name))).ToList();
         foreach (string missing in saved.MainOutputs.Append(saved.OutputDevice ?? "").Where(n => n != "@monitor" && DesktopKeySettings.ValidOutput(n)).Distinct())
@@ -51,6 +52,8 @@ internal sealed class DesktopKeysWindow : Window
             TextWrapping = TextWrapping.Wrap,
         });
         foreach (var choice in choices) content.Children.Add(choice.Box);
+        content.Children.Add(monitorControls);
+        content.Children.Add(new TextBlock { Text = Localizer.Text("MonitoringPauseKeysNote"), TextWrapping = TextWrapping.Wrap });
         content.Children.Add(outputControls);
         content.Children.Add(outputDevice);
         content.Children.Add(new TextBlock { Text = Localizer.Text("DesktopKeysVolumeNote"), TextWrapping = TextWrapping.Wrap });
@@ -70,6 +73,7 @@ internal sealed class DesktopKeysWindow : Window
             {
                 await keys.ConfigureAsync(new DesktopKeySettings { Enabled = enabled.IsChecked == true,
                     FocusChannels = choices.Where(c => c.Box.IsChecked == true).Select(c => c.Id).ToList(),
+                    MonitorControls = monitorControls.IsChecked == true,
                     OutputControls = outputControls.IsChecked == true,
                     OutputDevice = outputDevice.SelectedItem is AudioDeviceItem { Name.Length: > 0 } selected ? selected.Name : null,
                     MainOutputs = mainChoices.Where(c => c.Box.IsChecked == true).Select(c => c.Name).ToList() });

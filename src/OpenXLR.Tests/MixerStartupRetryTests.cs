@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
@@ -145,6 +146,53 @@ public sealed class MixerStartupRetryTests
         finally { await fixture.Service.StopAsync(CancellationToken.None); }
     }
 
+    [Theory]
+    [InlineData("setMonitorMuted")]
+    [InlineData("toggleMonitorMuted")]
+    [InlineData("setMonitorMuteMicrophones")]
+    [InlineData("toggleOutputMute")]
+    public async Task AFailedSoundCheckHandBackStillSavesTheRequestedCombinedPause(string command)
+    {
+        using var fixture = new Fixture();
+        fixture.Answer();
+        await fixture.Service.StartAsync(CancellationToken.None);
+        try
+        {
+            await fixture.PauseSweeps();
+            string first = command == "setMonitorMuteMicrophones" ? "setMonitorMuted" : "setMonitorMuteMicrophones";
+            Assert.Null(fixture.Service.Apply(new Command { Cmd = first, Value = JsonSerializer.SerializeToElement(true) }));
+            if (command == "toggleOutputMute") fixture.SelectOutsideOutput();
+            fixture.Saver.Flush();
+            Assert.False(fixture.Saver.Pending);
+            fixture.SoundCheckAwaitingRestore();
+            int changed = 0;
+            fixture.Service.Changed += () => changed++;
+
+            string? error = fixture.Service.Apply(new Command
+            {
+                Cmd = command, Value = JsonSerializer.SerializeToElement(true),
+                Device = command == "toggleOutputMute" ? "outside" : null,
+            });
+            Assert.Contains("EQ restore failed", Assert.IsType<string>(error));
+            Assert.True(fixture.Mixer.MonitorMuted);
+            Assert.True(fixture.Mixer.MonitorMuteMicrophones);
+            Assert.Null(fixture.Mixer.SoundCheckChannel);
+            Assert.True(fixture.Saver.Pending);
+            Assert.True(changed > 0);
+
+            fixture.AllowRestore();
+            fixture.Saver.Flush();
+            MixerSettings saved = MixerSettings.Load()!;
+            Assert.True(saved.MonitorMuted);
+            Assert.True(saved.MonitorMuteMicrophones);
+        }
+        finally
+        {
+            fixture.AllowRestore();
+            await fixture.Service.StopAsync(CancellationToken.None);
+        }
+    }
+
     [Fact]
     public async Task TheWindowSaysTheMixerIsWaitingRatherThanOff()
     {
@@ -170,9 +218,13 @@ public sealed class MixerStartupRetryTests
         private readonly string? _oldPath = Environment.GetEnvironmentVariable("PATH");
         private readonly string? _oldConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
         private readonly DeviceManager _devices;
+        private readonly FailedRestorePort _restorePort = new();
         internal MixerService Service { get; }
         internal SettingsSaver Saver => (SettingsSaver)typeof(MixerService)
             .GetField("_saves", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(Service)!;
+
+        internal Mixer Mixer => (Mixer)typeof(MixerService)
+            .GetField("_mixer", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(Service)!;
 
         internal Command UnchangedRename(bool mix)
         {
@@ -192,6 +244,38 @@ public sealed class MixerStartupRetryTests
             if (timer is not null) await timer.DisposeAsync();
         }
 
+        internal void SoundCheckAwaitingRestore()
+        {
+            void Set(string name, object value) => typeof(Mixer).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(Mixer, value);
+            Set("_soundCheck", new FilterHandle("pending", "pending", "pending", new Process()));
+            Set("_soundCheckChannel", "xlr1");
+            Set("_eqPort", _restorePort);
+            Set("_drivenUnit", "test-unit");
+            Set("_unitEq", new Dictionary<string, UnitEqSupport> { ["test-unit"] = new("Test unit", null, true) });
+        }
+
+        internal void AllowRestore() => _restorePort.Refuse = false;
+
+        internal void SelectOutsideOutput()
+        {
+            File.WriteAllText(Path.Combine(_directory, "outside-output"), "");
+            var outputs = (List<string>)typeof(Mixer).GetField("_monitorOutputs", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(Mixer)!;
+            outputs.Add("outside");
+            var pipeWire = (PipeWireAdapter)typeof(Mixer).GetField("_pw", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(Mixer)!;
+            pipeWire.SetSinkVolume("outside", 1); // Drop the fake graph's earlier empty snapshot.
+        }
+
+        private sealed class FailedRestorePort : IDeviceEqPort
+        {
+            public bool Refuse = true;
+            public void Post(string unit, int input, OpenXLR.Core.Devices.DeviceEq eq, string owner)
+            {
+                if (Refuse) throw new InvalidOperationException("EQ restore failed");
+            }
+            public DeviceEqStatus Status(string unit, int input)
+                => Refuse ? throw new InvalidOperationException("EQ restore failed") : DeviceEqStatus.None;
+        }
+
         internal Fixture()
         {
             Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(_directory, "config"));
@@ -200,6 +284,10 @@ public sealed class MixerStartupRetryTests
             // reads one-shot dumps of an empty graph and waits for no echo.
             ExecutableScript.Write(Path.Combine(_directory, "pw-dump"), """
                 if [ "$1" = "--monitor" ]; then echo '[]'; exec /bin/sleep 60; fi
+                if [ -f "${0%/*}/outside-output" ]; then
+                  echo '[{"id":42,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"outside","media.class":"Audio/Sink","device.api":"alsa"}}}]'
+                  exit
+                fi
                 echo '[]'
                 """);
             ExecutableScript.Write(Path.Combine(_directory, "pw-link"), "exit 0");
