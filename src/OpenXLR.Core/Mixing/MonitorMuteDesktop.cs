@@ -178,6 +178,10 @@ public sealed partial class Mixer
 
     private void ForgetUnselectedDesktopOutputsLocked(IReadOnlySet<string> selected)
     {
+        // An owner loaded from saved settings has no verified instance in this
+        // session. Its release reads whichever device holds the name.
+        foreach (string owned in _monitorOutputMutes.Keys.Where(n => !selected.Contains(n) && !_outputMutes.ContainsKey(n)).ToArray())
+            _outputMutes[owned] = new(null, null, true);
         string[] removedNames = [.. _outputMutes.Keys.Where(n => !selected.Contains(n))];
         HashSet<string> pending = RestoreUnselectedMonitorHardwareMutesLocked(removedNames);
         foreach (string removed in removedNames)
@@ -329,8 +333,10 @@ public sealed partial class Mixer
                     _desktopMutePending.Remove(name);
                 }
                 // An unmute seen during a failed identity read belongs to
-                // the original baseline only after that instance is verified.
-                if (known && !replaced && previous!.UnmuteObserved && _monitorOutputMutes.ContainsKey(name))
+                // the original baseline only after that instance is verified,
+                // and only while it is still unmuted: a later native mute
+                // during the same failed reads takes that unmute back.
+                if (known && !replaced && previous!.UnmuteObserved && !state.Muted && _monitorOutputMutes.ContainsKey(name))
                     RememberMonitorOutputMuteLocked(name, false);
                 _outputMutes[name] = new(state.Identity, registryIdentity,
                     known ? previous!.Muted && (replaced || !previous.UnmuteObserved) : state.Muted,

@@ -88,6 +88,7 @@ public sealed class MixerService : IHostedService, IDisposable
         _config = config;
         bool launchDefault = config.GetValue("mixer", false) ||
                              Environment.GetEnvironmentVariable("OPENXLR_BUILD_MIXER") == "1";
+        _launchDefault = launchDefault;
         SubmixerEnabled = DaemonSettings.SubmixerEnabled(launchDefault);
         _devices = devices;
         _startupDefaults = startupDefaults;
@@ -275,6 +276,15 @@ public sealed class MixerService : IHostedService, IDisposable
 
     /// <summary>Whether this run builds the submixer at all.</summary>
     public bool SubmixerEnabled { get; }
+
+    private readonly bool _launchDefault;
+
+    /// <summary>
+    /// Whether the next start with the same command line builds the submixer,
+    /// read again from daemon.json: the window turns the submixer off by
+    /// saving that file and restarting the daemon.
+    /// </summary>
+    private bool SubmixerEnabledAtNextStart => DaemonSettings.SubmixerEnabled(_launchDefault);
 
     // A built graph is not ready for profile recall until ApplySettings and
     // output routing have finished. Device arrival can precede StartAsync.
@@ -709,6 +719,11 @@ public sealed class MixerService : IHostedService, IDisposable
         catch (Exception ex) when (ex is TimeoutException or OperationCanceledException) { _log.LogWarning("default defense did not stop in time"); }
         if (_mixer.Built)
         {
+            // Output mutes taken over by the next start stay in place, so a
+            // restart while monitoring is paused lets no desktop sound out.
+            // With the submixer turned off no start restores them; put them
+            // back now, before the final save records what is still owned.
+            if (!SubmixerEnabledAtNextStart) _mixer.ReleaseMonitorHardwareMutes();
             // The final save and the end of saving are one step. Tearing the
             // graph down empties the levels, mutes and monitor routing, so a
             // debounced save still pending here, or the flush in Dispose,

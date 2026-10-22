@@ -536,8 +536,20 @@ that was the default.
    last previously open monitor is deleted, the pause clears and the remaining
    individually muted monitors stay muted. These choices survive a restart.
    Selected Linux output devices are muted too; resuming restores their previous
-   native mute flags. The original flags are saved with the monitor selection
-   so they can be restored after a daemon restart too. To start a new listening
+   native mute flags. Muting every mix that feeds an output, one by one, also
+   mutes that Linux device, and opening any of them unmutes it again. A native
+   mute silences the whole device, so applications that play straight to it
+   go quiet as well. With **Follow MONITOR output** as Default output,
+   applications left to desktop routing play to the first selected monitor
+   device, so pausing, or muting Monitor A when it is that device's only feed,
+   silences all desktop sound there.
+   The original flags are saved with mixer settings. While the daemon is
+   stopped, a device it muted stays muted, so a restart during a pause lets no
+   sound out; the next start takes the device over again and resuming unmutes
+   it. Turning off **Enable software mixer** puts every original flag back as
+   the daemon stops, because no later start would. If you stop OpenXLR for
+   good while monitoring is paused, resume first or unmute the device in your
+   desktop's sound settings. To start a new listening
    selection instead, unmute one
    monitor mix while paused. Only that monitor opens, the other monitor mixes
    stay individually muted, and its assigned Linux devices are unmuted. The next
@@ -1821,8 +1833,10 @@ application channels, mixes, virtual microphones and plugin inserts. The
 daemon restarts when you change it, briefly interrupting audio. With it
 off, the sound card keeps its stock PipeWire layout, including the Pro's
 UCM profile where one is installed, and the `OpenXLR …` devices, mixes,
-virtual microphones and inserts go away. The INPUTS and HEADPHONES
-cards keep working. Turn it on again the same way.
+virtual microphones and inserts go away. Output devices muted for a
+monitoring pause or a closed monitor feed get their previous mute flags back
+as the daemon stops. The INPUTS and HEADPHONES cards keep working. Turn it on
+again the same way.
 
 <a name="autostart"></a>
 ### 3.9 Start at login, tray
@@ -3262,7 +3276,11 @@ until readback confirms them. OpenXLR does not author a hardware mute before
 it has verified that output's native identity. Removing an output keeps its
 native mute while an old monitor connection still refuses to disconnect.
 Once that connection is gone, a failed release is retried only for that same
-device instance.
+device instance. A release still pending when the daemon stops is saved and
+finished by the next start, as is the release of an output that `monitorOutput`
+or `OPENXLR_MONITOR_OUTPUT` took out of the saved selection. Such a saved
+release puts back the original flag on whichever device holds that name,
+waiting for the device if it is not connected.
 Unmuting an output muted before selection leaves it unmuted without starting
 a monitoring pause. Unmuting a native mute authored by the global pause resumes
 monitoring. If every assigned mix was individually muted, desktop unmute only

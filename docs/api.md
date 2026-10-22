@@ -347,6 +347,10 @@ Pro's shared native sink stays open while its independent Aux return is active;
 its selected headphone and line-output selectors instead follow the audibility
 of the monitor feed. Recording stays live unless microphone pausing is
 explicitly enabled as described below; raw channel and mix mutes stay unchanged.
+The previous flags are saved in `mixer.json`. A daemon stop leaves the native
+mutes in place and the next start takes them over, including releases still
+pending for outputs no longer selected. A stop with the software mixer turned
+off in `daemon.json` restores them first, since no later start would.
 
 An explicit `setMixMuted` with `value:false` on a monitor-kind mix during a
 pause replaces the listening selection: the other monitor mixes become
