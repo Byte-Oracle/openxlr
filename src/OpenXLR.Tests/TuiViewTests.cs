@@ -976,7 +976,6 @@ public sealed class TuiViewTests
     [InlineData("", "Monitor A", "stream")]
     [InlineData("removed", "Monitor A", "stream")]
     [InlineData(" removed + stream ", "Stream", "monitor")]
-    [InlineData(" stream + monitor + stream ", "Monitor A + Stream", "stream")]
     public void OutputFeedsResolveSavedWhitespaceAndDeletedMixesLikeTheDaemon(string feed, string label, string next)
     {
         (App app, List<string> sent) = Ready(tab: 3);
@@ -990,6 +989,51 @@ public sealed class TuiViewTests
         Assert.DoesNotContain("removed", Frame(screen), StringComparison.Ordinal);
         app.Handle(new KeyPress(Key.Right));
         Assert.Equal(next, Text(Command(sent), "mix"));
+    }
+
+    [Fact]
+    public void AnArrowOnASummedFeedWarnsAndOnlyTheSamePressAgainReplacesTheSum()
+    {
+        (App app, List<string> sent) = Ready(tab: 3);
+        var state = ThreeFeedState();
+        state["mixer"]!["monitorFeeds"]!["alsa_output.arctis"] = " stream + monitor + stream ";
+        app.Link.Receive(state.ToJsonString());
+        SelectOutputRow(app, "Arctis Nova Elite");
+        Screen screen = new(150, 42);
+        app.Draw(screen);
+        Assert.Contains("Monitor A + Stream", Frame(screen), StringComparison.Ordinal);
+
+        // The first press only says what a second one would do.
+        app.Handle(new KeyPress(Key.Right));
+        Assert.Empty(sent);
+        screen = new(150, 42);
+        app.Draw(screen);
+        Assert.Contains("hears 2 mixes summed. Press Right again to feed it Stream alone.", Frame(screen), StringComparison.Ordinal);
+
+        // The other arrow asks again, and so does an arrow after any other key.
+        app.Handle(new KeyPress(Key.Left));
+        Assert.Empty(sent);
+        Assert.Contains("Press Left again to feed it Chat alone.", Drawn(app), StringComparison.Ordinal);
+        app.Handle(new KeyPress(Key.Char, 'x'));
+        app.Handle(new KeyPress(Key.Left));
+        Assert.Empty(sent);
+
+        app.Handle(new KeyPress(Key.Left));
+        JsonElement command = Command(sent);
+        Assert.Equal("setMonitorFeed", Text(command, "cmd"));
+        Assert.Equal("chat", Text(command, "mix"));
+
+        // A single mix walks on at once, as before.
+        app.Handle(new KeyPress(Key.Right));
+        Assert.Equal(2, sent.Count);
+        Assert.Equal("monitor", CommandMix(sent[^1]));
+
+        static string Drawn(App app)
+        {
+            Screen frame = new(150, 42);
+            app.Draw(frame);
+            return Frame(frame);
+        }
     }
 
     [Fact]

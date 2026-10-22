@@ -33,10 +33,13 @@ internal sealed class DesktopBus(DBusConnection connection)
                     writer.WriteDictionary(new Dictionary<string, VariantValue>());
                 }, cancel);
         }
-        catch (DBusErrorReplyException ex) when (ex.ErrorName is
-            "org.freedesktop.DBus.Error.UnknownMethod" or "org.freedesktop.DBus.Error.UnknownInterface")
+        catch (DBusErrorReplyException)
         {
-            // Older portals infer the application identity without this method.
+            // Older portals lack this method, and current ones refuse it when
+            // no openxlr.desktop entry is installed, as on a source install.
+            // An error reply leaves the connection usable and unregistered,
+            // so the portal infers the identity itself, as it did before.
+            // A timeout or cancellation still closes the connection and fails.
         }
     }
 

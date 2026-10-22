@@ -354,8 +354,8 @@
   <data name="Connecting" xml:space="preserve">
     <value>conectando…</value>
   </data>
-  <data name="ConnectionLostCheckLayout" xml:space="preserve">
-    <value>Conexión perdida. Comprueba la distribución antes de volver a intentarlo.</value>
+  <data name="ConnectionLostCheckChange" xml:space="preserve">
+    <value>Conexión perdida. Comprueba si el cambio se ha aplicado antes de volver a intentarlo.</value>
   </data>
   <data name="ConnectionLostUnconfirmed" xml:space="preserve">
     <value>Conexión perdida; no se ha podido confirmar el cambio.</value>
@@ -1161,8 +1161,8 @@
   <data name="NewRelease" xml:space="preserve">
     <value>Nueva versión de OpenXLR {0}</value>
   </data>
-  <data name="NoAnswerCheckLayout" xml:space="preserve">
-    <value>El demonio no responde. Comprueba la distribución antes de volver a intentarlo.</value>
+  <data name="NoAnswerCheckChange" xml:space="preserve">
+    <value>El demonio no responde. Comprueba si el cambio se ha aplicado antes de volver a intentarlo.</value>
   </data>
   <data name="NoAnswerForPath" xml:space="preserve">
     <value>El demonio no responde a {0}.</value>
@@ -1770,6 +1770,9 @@ Al guardar, se sustituirá por la escena actual.</value>
   </data>
   <data name="SecondComputer" xml:space="preserve">
     <value>Segundo ordenador</value>
+  </data>
+  <data name="SectionFoldsNotSaved" xml:space="preserve">
+    <value>Las secciones plegadas se aplican hasta que se cierre la ventana, pero no se han podido guardar: {0}</value>
   </data>
   <data name="SectionOrderNotSaved" xml:space="preserve">
     <value>El orden de las secciones se aplica hasta que se cierre la ventana, pero no se ha podido guardar: {0}</value>

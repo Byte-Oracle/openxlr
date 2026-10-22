@@ -130,6 +130,31 @@ public sealed class DaemonClientTests
     }
 
     [Fact]
+    public async Task AnEditCutOffByTheConnectionAsksToCheckTheChangeItself()
+    {
+        int connections = 0;
+        await using var server = await SocketTestServer.Start(async (socket, stop) =>
+        {
+            if (Interlocked.Increment(ref connections) == 1)
+            {
+                await SocketTestServer.Receive(socket, stop); // authentication frame
+                Assert.Equal("setMonitorFeed", (await SocketTestServer.Receive(socket, stop))["cmd"]!.GetValue<string>());
+                socket.Abort();
+            }
+            else await Task.Delay(Timeout.Infinite, stop);
+        });
+        await using var client = new DaemonClient(server.Url);
+        var connected = Completion();
+        client.ConnectionChanged += up => { if (up) connected.TrySetResult(); };
+        client.Start();
+        await connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        // Output and feed edits share the layout's acknowledged path, so the
+        // message cannot name the layout.
+        Assert.Equal(OpenXLR.UI.Localization.Localizer.Text("ConnectionLostCheckChange"),
+            await client.SetMonitorFeedAsync("speakers", "monitor+monitor2").WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    [Fact]
     public async Task DisconnectedCommandsReportFailureAndDisposalIsIdempotent()
     {
         var client = new DaemonClient();

@@ -1113,10 +1113,12 @@ public sealed partial class MainViewModel : ViewModelBase
             wanted.Add((name, Localizer.Format("MonitorOutputMissing", _outputLabels.GetValueOrDefault(name) ?? name), false));
 
         // Rebuild the multi-select list only when membership changed, so open
-        // dropdowns and checkbox states survive routine pushes.
-        if (!wanted.Select(w => (w.Name, w.Present)).SequenceEqual(MonitorOutputs.Select(m => (m.Name, m.IsPresent))))
+        // dropdowns and checkbox states survive routine pushes. A row is the
+        // output's by name alone: unplugged or back, it is the same row, so a
+        // feed edit still waiting keeps its answer, error included.
+        if (!wanted.Select(w => w.Name).SequenceEqual(MonitorOutputs.Select(m => m.Name)))
         {
-            var items = wanted.Select(w => MonitorOutputs.FirstOrDefault(output => output.Name == w.Name && output.IsPresent == w.Present)
+            var items = wanted.Select(w => MonitorOutputs.FirstOrDefault(output => output.Name == w.Name)
                 ?? new MonitorOutputItem(w.Name, w.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged,
                     w.Present, error => Status = error)).ToList();
             // Adding or losing another device must not cancel this output's
@@ -1130,7 +1132,11 @@ public sealed partial class MainViewModel : ViewModelBase
             }
             while (MonitorOutputs.Count > items.Count) MonitorOutputs.RemoveAt(MonitorOutputs.Count - 1);
         }
-        for (int i = 0; i < wanted.Count; i++) MonitorOutputs[i].SyncLabel(wanted[i].Label);
+        for (int i = 0; i < wanted.Count; i++)
+        {
+            MonitorOutputs[i].SyncLabel(wanted[i].Label);
+            MonitorOutputs[i].SyncPresent(wanted[i].Present);
+        }
 
         EnforcedDefaultSink = mixer?["enforcedDefaultSink"]?.GetValue<string>();
         EnforcedDefaultSource = mixer?["enforcedDefaultSource"]?.GetValue<string>();

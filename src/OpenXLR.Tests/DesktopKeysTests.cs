@@ -395,6 +395,52 @@ public sealed class DesktopKeysTests
         await Wait(() => keys.Status.Contains("disconnected", StringComparison.Ordinal));
     }
 
+    [DesktopBusTheory]
+    [InlineData("org.freedesktop.portal.Error.Failed")]
+    [InlineData("org.freedesktop.portal.Error.NotAllowed")]
+    [InlineData("org.freedesktop.DBus.Error.AccessDenied")]
+    public async Task ARefusedPortalIdentityKeepsEveryKeyAndFocusRoutingWorking(string error)
+    {
+        // A source install has no openxlr.desktop, so a current portal refuses Register.
+        await using var environment = await PrivateBus.Start();
+        using var desktop = new DBusConnection(environment.Address);
+        await desktop.ConnectAsync();
+        await desktop.RequestNameAsync(DesktopBus.Portal);
+        await desktop.RequestNameAsync("org.kde.KWin");
+        var fake = new DesktopBackend(new DesktopBus(desktop)) { RequireHostIdentity = true, RegisterError = error };
+        desktop.AddMethodHandler(fake);
+        var commands = new ConcurrentQueue<string>();
+        await using var server = await SocketTestServer.Start(async (socket, stop) =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                var command = await SocketTestServer.Receive(socket, stop);
+                string cmd = command["cmd"]!.GetValue<string>();
+                if (cmd is not ("routeFocusedApp" or "toggleMonitorMuted" or "toggleOutputMute")) continue;
+                commands.Enqueue(cmd);
+                await SocketTestServer.Send(socket, new { type = "commandResult", requestId = command["requestId"]!.GetValue<string>() }, stop);
+            }
+        });
+        await using var client = new DaemonClient(server.Url);
+        var connected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        client.ConnectionChanged += up => { if (up) connected.TrySetResult(); };
+        client.Start();
+        await connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        using var keys = new DesktopKeys(client);
+        await keys.ConfigureAsync(new DesktopKeySettings { Enabled = true, FocusChannels = ["music"], MonitorControls = true, OutputControls = true }, save: false);
+
+        Assert.StartsWith("Desktop keys are active", keys.Status);
+        Assert.Equal(["CreateSession", "BindShortcuts"], fake.ShortcutMethods);
+        fake.Activate("monitor_mute");
+        await Wait(() => commands.Count == 1);
+        fake.Activate("output_mute");
+        await Wait(() => commands.Count == 2);
+        fake.Activate("focus_music");
+        await Wait(() => commands.Count == 3);
+        Assert.Equal(["toggleMonitorMuted", "toggleOutputMute", "routeFocusedApp"], commands.ToArray());
+        Assert.Equal(4242, await Task.Run(DesktopFocusQuery.Read));
+    }
+
     [DesktopBusFact]
     public async Task SettingsFailureDoesNotReportAnEnabledIntegration()
     {
@@ -419,6 +465,7 @@ public sealed class DesktopKeysTests
         public List<string> ShortcutIds { get; } = [];
         public Dictionary<string, string> PreferredTriggers { get; } = [];
         public bool RequireHostIdentity { get; init; }
+        public string? RegisterError { get; init; }
         private string? _hostSender;
         public bool CancelBinding { get; set; }
         public bool HoldBindingResponse { get; set; }
@@ -441,7 +488,8 @@ public sealed class DesktopKeysTests
                 Assert.Equal("openxlr", reader.ReadString());
                 Assert.Empty(reader.ReadDictionaryOfStringToVariantValue());
                 _hostSender = request.SenderAsString;
-                using var reply = context.CreateReplyWriter(null); context.Reply(reply.CreateMessage());
+                if (RegisterError is { } refusal) context.ReplyError(refusal, "Could not register app ID: App info not found for 'openxlr'");
+                else { using var reply = context.CreateReplyWriter(null); context.Reply(reply.CreateMessage()); }
             }
             else if (request.InterfaceAsString == DesktopBus.Shortcuts)
             {

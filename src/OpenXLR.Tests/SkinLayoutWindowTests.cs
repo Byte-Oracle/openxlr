@@ -315,7 +315,7 @@ internal static partial class SkinLayoutWindowTests
             Assert.False(monitor.IsExpanded); // The view still changes for this run.
             Assert.Equal(malformed, File.ReadAllText(path));
             Assert.True(note.IsVisible);
-            Assert.Equal(error, note.Text);
+            Assert.Equal(Localizer.Format("SectionFoldsNotSaved", error), note.Text);
             Layout(main, 640, 900);
             Capture(main, "skin-layout-fold-save-error-640");
 
@@ -333,7 +333,7 @@ internal static partial class SkinLayoutWindowTests
             Assert.False(monitor.IsExpanded);
             Assert.Equal(malformed, File.ReadAllText(path));
             Assert.True(note.IsVisible);
-            Assert.Equal(error, note.Text);
+            Assert.Equal(Localizer.Format("SectionFoldsNotSaved", error), note.Text);
             monitor.IsExpanded = true;
             Wear(SkinPackage.DefaultId);
             Wear("unsaved-fold");

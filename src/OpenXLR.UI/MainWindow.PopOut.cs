@@ -94,9 +94,8 @@ public partial class MainWindow
     private void SaveDocking(bool docked)
     {
         UiSettings settings = UiSettings.Load();
-        if (settings.MixerDocked == docked) return;
-        string? error = (settings with { MixerDocked = docked }).Save();
-        if (error is not null) ReportArrangement(Localizer.Format("DockingNotSaved", error));
+        string? error = settings.MixerDocked == docked ? null : (settings with { MixerDocked = docked }).Save();
+        ReportSaveIfChanged(WindowChoice.Docking, error is null ? null : Localizer.Format("DockingNotSaved", error));
     }
 
     /// <summary>
@@ -119,6 +118,6 @@ public partial class MainWindow
         if (_mixerWindow is not null || settings.MixerDocked is not null || settings.HasAppliedSkinPopOut(skin, version)) return;
         PopOutMixer();
         string? error = settings.WithSkinPopOutApplied(skin, version).Save();
-        if (error is not null) ReportArrangement(Localizer.Format("DockingNotSaved", error));
+        if (error is not null) ReportSave(WindowChoice.Docking, Localizer.Format("DockingNotSaved", error));
     }
 }

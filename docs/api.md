@@ -196,7 +196,7 @@ that final acknowledgement (or an `error` without a request id):
 | `deleteChannel` | `channel` | remove an application or capture channel; apps and remembered assignments on it move to the fallback application channel, which is `system`, or when `system` is gone the application channel whose id sorts first. The last application channel cannot be removed |
 | `createMix` | `name`, `kind?`, `icon?` | add a user mix, with `icon` as `createChannel` takes it: a virtual microphone (`kind` absent or `"virtualMic"`) or a monitor mix (`"monitor"`), which has no capture device and a desktop-controlled master up to 1.5 like Monitor A and B. Every channel gets a muted send into it, before a virtual microphone's capture device is published. A monitor created during a monitoring pause also starts with its master muted. Both kinds share a limit of 18 editable mixes, Monitor A and B included. Undone with an error when a channel's send has not appeared within 3 s |
 | `renameMix` | `mix`, `name` | rename any monitor mix or virtual microphone in OpenXLR; its PipeWire devices keep their old description until the daemon restarts (reloading them would throw the apps using them off), and the mixer state's `renamedSinceStart` says so |
-| `deleteMix` | `mix` | remove a monitor mix or virtual microphone with its sends and inserts, and a virtual microphone's capture device; the last monitor cannot be removed. During a monitoring pause only the removed id leaves the listening selection; deleting its last previously open monitor clears `monitorMuted` without opening other muted mixes. Outputs fall back to `defaultMonitorMix` if their feed becomes empty; an enforced default sink or source that was the mix is cleared. The Pro's jack selectors and microphone path follow the remaining feed before acknowledgement |
+| `deleteMix` | `mix` | remove a monitor mix or virtual microphone with its sends and inserts, and a virtual microphone's capture device; the last monitor cannot be removed. During a monitoring pause only the removed id leaves the listening selection; deleting its last previously open monitor clears `monitorMuted` without opening other muted mixes. With `monitorMuteMicrophones` on, that also resumes XLR 1, XLR 2 and mono capture microphones in every mix once the layout is saved; a failed save keeps the pause and the microphones paused. Outputs fall back to `defaultMonitorMix` if their feed becomes empty; an enforced default sink or source that was the mix is cleared. The Pro's jack selectors and microphone path follow the remaining feed before acknowledgement |
 | `setExclusiveGroup` | optional `group`, `name`, `channels[]` | create an exclusive group when `group` is absent (its generated id is in the next state), otherwise replace that group's name and members. 2 to 36 distinct existing channels, none of them in another group. If more than one member is unmuted, every member is muted. See [exclusive groups](mixer-layout.md#exclusive-groups) |
 | `deleteExclusiveGroup` | `group` | remove an exclusive group; every send keeps its mute |
 | `setLayoutOrder` | `channels[]`, `mixes[]` | complete ordered lists of editable-channel ids and every monitor or virtual microphone mix id; hardware inputs and Aux stay fixed. This one order is what every client draws; it does not decide where applications go |
@@ -409,7 +409,10 @@ are true, the channel sinks of XLR 1, XLR 2 and mono capture inputs are
 muted, including strips bound to other hardware sources. No send or mix mute
 is overwritten. Resuming reveals their current raw choices, including edits
 or profile recalls made while paused. Explicitly unmuting a monitor clears
-the monitoring pause and resumes those microphones too. Turning the option
+the monitoring pause and resumes those microphones too. So does deleting the
+last monitor mix that was open when monitoring was paused (`deleteMix`): the
+microphones resume in every mix, Stream and Chat included, while the
+remaining monitor mixes keep their individual mutes. Turning the option
 off during a pause resumes microphone audio while monitoring stays paused.
 After a rebuild, channels follow OpenXLR's current pause state rather than
 desktop mute or gain remembered for another channel. On WirePlumber 0.4,
@@ -423,6 +426,10 @@ virtual microphones, without rewriting each send. Application audio, stereo
 capture inputs and Aux In are outside this microphone option. Sound Check
 is stopped and its sample discarded on a combined pause; recording, looping
 and live actions are refused until it ends. Stop remains available.
+A paused microphone that is the [ducking](#ducking) key stops ducking in
+software until it resumes. Its channel's `meters` entry keeps showing the
+microphone input during the pause, because the meter reads the channel
+before the mute.
 If restoring the live input after stopping Sound Check fails, the requested
 pause and microphone option are still saved. The command reports the cleanup
 error; clients read the resulting state rather than assuming the pause reverted.
@@ -1552,7 +1559,8 @@ whose `ducking` holds a preset word the daemon does not know is refused
 whole, as any other invalid mixer field is.
 
 A key ducks only while it is heard: a key muted in every send it has does
-not duck. Sound Check's loop passes through the key channel, so a looped
+not duck, and in software neither does a microphone key while
+`monitorMuteMicrophones` and `monitorMuted` pause it. Sound Check's loop passes through the key channel, so a looped
 take ducks the targets in software. On the unit the loop does not key the
 ducking, since the unit hears the live microphone.
 
