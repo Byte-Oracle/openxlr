@@ -16,7 +16,7 @@ internal sealed record BrowserNativeTab(int Id, string Site, string Title, bool 
 /// <summary>A bounded native-messaging bridge. Only browser routing crosses its standard output.</summary>
 internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Stream output, Func<long>? clock = null)
 {
-    internal const string ExtensionId = "ojdjoifendmgooonjlbdbaiondkpeihh";
+    internal const string ExtensionId = "beeohanoffjpcofbjiiamkdammhcihaf";
     internal const int MaxMessageBytes = 1024 * 1024;
     private readonly object _gate = new();
     private readonly Func<long> _clock = clock ?? (() => Environment.TickCount64);

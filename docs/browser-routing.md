@@ -22,7 +22,7 @@ checkout of the same version as your native OpenXLR installation.
 1. Open `chrome://extensions`, `brave://extensions` or `edge://extensions`.
    Enable Developer mode, choose Load unpacked and select
    `browser/chromium` from the checkout. Pin its action if useful.
-2. Check that its id is `ojdjoifendmgooonjlbdbaiondkpeihh`. The public key in
+2. Check that its id is `beeohanoffjpcofbjiiamkdammhcihaf`. The public key in
    the manifest keeps this id stable across checkouts. No private signing
    key is shipped.
 3. Copy `browser/native-host.json` into your browser's native messaging
