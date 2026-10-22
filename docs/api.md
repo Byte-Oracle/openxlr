@@ -936,7 +936,9 @@ cannot distinguish tabs that share a browser audio process.
 
 The user enables `preserveBrowserOutputs` before using tab routing. While
 enabled, recognized Chrome, Chromium, Brave, Edge, Vivaldi and Opera playback
-streams keep their chosen outputs. OpenXLR does not move or unmute them,
+streams keep their chosen outputs. A browser is recognized by the process
+binary PipeWire reports, never by `application.name`: Electron apps such as
+Discord call themselves `Chromium` there and keep their usual routing. OpenXLR does not move or unmute them,
 including streams already playing when the mode changes. Browser-wide
 `assignApp` and `assignStream` choices remain saved but are suspended until
 the mode is disabled. Browser audio without a tab choice keeps the output

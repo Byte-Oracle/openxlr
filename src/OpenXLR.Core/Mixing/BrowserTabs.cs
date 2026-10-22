@@ -70,6 +70,14 @@ public sealed partial class Mixer
     private Dictionary<string, string> _browserSiteChannels = new(StringComparer.Ordinal);
     private bool _preserveBrowserOutputs;
 
+    // Identities whose streams came from a recognized browser binary. The
+    // application name is no evidence: Electron apps such as Discord report
+    // "Chromium" there, and so does an identity taken from that name.
+    private readonly HashSet<string> _browserIdentities = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>True when browser output selection leaves this application's streams alone.</summary>
+    private bool BrowserHeldLocked(string identity) => _preserveBrowserOutputs && _browserIdentities.Contains(identity);
+
     public bool PreserveBrowserOutputs { get { lock (_gate) return _preserveBrowserOutputs; } }
 
     public IReadOnlyList<BrowserTabState> BrowserTabs { get { lock (_gate) return BrowserTabsLocked(); } }
@@ -137,7 +145,7 @@ public sealed partial class Mixer
             try { if (persist is not null) PersistLocked(persist); }
             catch { _preserveBrowserOutputs = previous; throw; }
             if (previous == enabled) return;
-            foreach (int id in _streams.Where(p => BrowserTabRouting.IsChromium(p.Value.Identity)).Select(p => p.Key).ToArray()) _streams.Remove(id);
+            foreach (int id in _streams.Where(p => _browserIdentities.Contains(p.Value.Identity)).Select(p => p.Key).ToArray()) _streams.Remove(id);
         }
     }
 

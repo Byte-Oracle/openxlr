@@ -322,6 +322,26 @@ public sealed class BrowserTabRoutingTests
         Assert.Contains("set-sink-input-mute 100 0", graph.Calls);
     }
 
+    [Fact]
+    public void AnElectronAppNamedChromiumIsNotTakenForABrowser()
+    {
+        // Discord and other Electron apps report "Chromium" as their name.
+        // Without a browser binary the stream is routed as usual.
+        using var graph = new BrowserGraph("""
+            "application.name":"Chromium","media.name":"Discord"
+            """);
+        graph.Build();
+        graph.Mixer.SetPreserveBrowserOutputs(true);
+        graph.Mixer.SyncStreams();
+        StreamAssignment stream = Assert.Single(graph.Mixer.Streams);
+        Assert.Equal("Chromium", stream.Identity);
+        graph.ClearCalls();
+        graph.Mixer.AssignApp(stream.Identity, "system");
+        Assert.Contains("move-sink-input 100 OpenXLR_ch_system", graph.Calls);
+        graph.Mixer.SyncStreams();
+        Assert.Equal("system", Assert.Single(graph.Mixer.Streams).ChannelId);
+    }
+
     private sealed class BrowserGraph : IDisposable
     {
         private readonly string _directory = Directory.CreateTempSubdirectory("openxlr-browser-routing-").FullName;
@@ -329,13 +349,16 @@ public sealed class BrowserTabRoutingTests
         public Mixer Mixer { get; } = new();
         public string[] Calls => File.ReadAllLines(Path.Combine(_directory, "calls"));
 
-        public BrowserGraph()
+        public const string ChromiumProps = """
+            "application.process.binary":"chromium","application.name":"Chromium"
+            """;
+
+        public BrowserGraph(string props = ChromiumProps)
         {
             File.WriteAllText(Path.Combine(_directory, "calls"), "");
             File.WriteAllText(Path.Combine(_directory, "inputs"), "100\t2\n");
-            ExecutableScript.Write(Path.Combine(_directory, "pw-dump"), """
-                printf '[{"id":10,"type":"PipeWire:Interface:Node","info":{"props":{"object.serial":100,"media.class":"Stream/Output/Audio","application.process.binary":"chromium","application.name":"Chromium"}}}]'
-                """);
+            ExecutableScript.Write(Path.Combine(_directory, "pw-dump"),
+                """printf '[{"id":10,"type":"PipeWire:Interface:Node","info":{"props":{"object.serial":100,"media.class":"Stream/Output/Audio",""" + props + "}}}]'");
             ExecutableScript.Write(Path.Combine(_directory, "pactl"), """
                 dir=${0%/*}
                 echo "$*" >> "$dir/calls"

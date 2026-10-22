@@ -2785,6 +2785,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 string identity = s.Identity;
                 seen.Add(s.Id);
                 liveIdentities.Add(identity);
+                bool browser = BrowserTabRouting.IsChromium(s.Binary);
+                if (browser) _browserIdentities.Add(identity);
                 if (_streams.TryGetValue(s.Id, out StreamAssignment? previous))
                 {
                     // Registry ids are reused, and an app can publish its
@@ -2797,7 +2799,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 }
 
                 string channelId = _config.ResolveApplicationChannel(Matcher.Match(s));
-                if (_preserveBrowserOutputs && BrowserTabRouting.IsChromium(s.Binary ?? s.AppName))
+                if (_preserveBrowserOutputs && browser)
                 {
                     var preserved = new StreamAssignment(s.Id, s.Serial, s.Label, identity, StreamMatcher.Ignore);
                     _streams[s.Id] = preserved;
@@ -2969,7 +2971,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 Matcher.SetOverride(identity, StreamMatcher.Ignore);
                 foreach ((int id, StreamAssignment placed) in _streams.ToList())
                     if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase)
-                        && !(_preserveBrowserOutputs && BrowserTabRouting.IsChromium(identity)))
+                        && !BrowserHeldLocked(identity))
                     {
                         try { ReleaseStreamLocked(placed.Serial); }
                         catch (InvalidOperationException) { /* the sweep retries */ }
@@ -2988,7 +2990,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
             foreach ((int id, StreamAssignment placed) in _streams.ToList())
                 if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase)
-                    && !(_preserveBrowserOutputs && BrowserTabRouting.IsChromium(identity)))
+                    && !BrowserHeldLocked(identity))
                 {
                     try { _pw.MoveStreamToSink(placed.Serial, ch.SinkName); }
                     catch (InvalidOperationException) { /* the sweep retries */ }
@@ -3019,7 +3021,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (channelId == StreamMatcher.Ignore)
             {
                 EnsureOverrideCapacity(existing.Identity);
-                if (!(_preserveBrowserOutputs && BrowserTabRouting.IsChromium(existing.Identity))) ReleaseStreamLocked(existing.Serial);
+                if (!BrowserHeldLocked(existing.Identity)) ReleaseStreamLocked(existing.Serial);
                 Matcher.SetOverride(existing.Identity, StreamMatcher.Ignore);
                 _streams.Remove(streamId);   // the next sweep lists it as unmanaged
                 return;
@@ -3028,7 +3030,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (ch is null) return;
 
             EnsureOverrideCapacity(existing.Identity);
-            if (!(_preserveBrowserOutputs && BrowserTabRouting.IsChromium(existing.Identity))) _pw.MoveStreamToSink(existing.Serial, ch.SinkName);
+            if (!BrowserHeldLocked(existing.Identity)) _pw.MoveStreamToSink(existing.Serial, ch.SinkName);
             Matcher.SetOverride(existing.Identity, channelId);
             _streams.Remove(streamId); // the next sweep confirms the destination
         }
