@@ -1550,7 +1550,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MonitorOutputs = [.. _monitorOutputs],
                 MonitorMuted = _monitorMuted,
                 MonitorMuteMicrophones = _monitorMuteMicrophones,
-                MonitorOutputMutes = _monitorOutputMutes.Where(pair => _monitorOutputs.Any(o => StripMarker(o) == pair.Key)).ToDictionary(),
+                // A release still pending for a deselected output is saved too.
+                MonitorOutputMutes = new Dictionary<string, bool>(_monitorOutputMutes),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
                 KnownApps = [.. _apps.Values.Select(a => new SavedApp(a.Identity, a.Label, a.ChannelId))],
@@ -1670,14 +1671,20 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             _monitorFeeds.Clear();
             foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
             HashSet<string> selectedHardware = savedOutputs.Select(StripMarker).ToHashSet(StringComparer.Ordinal);
+            var savedOwners = (s.MonitorOutputMutes ?? []).Where(pair => IsExactOutputName(pair.Key)
+                && !pair.Key.StartsWith("OpenXLR_", StringComparison.Ordinal)).ToArray();
+            // A saved owner outside this selection, left by a release still
+            // pending at the last stop or by an override replacing the saved
+            // selection, is released with the old selection below. An owner
+            // this mixer already holds keeps its live flag.
+            foreach ((string output, bool muted) in savedOwners)
+                if (!selectedHardware.Contains(output) && !_monitorOutputMutes.ContainsKey(output))
+                    RememberMonitorOutputMuteLocked(output, muted);
             // Release the old selection while its ownership is still known.
             // Legacy settings for the same output keep the current baseline.
             ForgetUnselectedDesktopOutputsLocked(selectedHardware);
-            foreach (string removed in _monitorOutputMutes.Keys.Where(n => !selectedHardware.Contains(n) && !_outputMutes.ContainsKey(n)).ToArray())
-                ForgetMonitorOutputMuteLocked(removed);
-            foreach ((string output, bool muted) in s.MonitorOutputMutes ?? [])
-                if (selectedHardware.Contains(output) && IsExactOutputName(output) && !output.StartsWith("OpenXLR_", StringComparison.Ordinal))
-                    RememberMonitorOutputMuteLocked(output, muted);
+            foreach ((string output, bool muted) in savedOwners)
+                if (selectedHardware.Contains(output)) RememberMonitorOutputMuteLocked(output, muted);
             SetMonitorOutputsLocked(savedOutputs);
             // Resume at the saved selection, not the output it replaced.
             SetMonitorMuted(s.MonitorMuted);

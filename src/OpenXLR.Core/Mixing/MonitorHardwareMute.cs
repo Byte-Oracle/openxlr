@@ -135,8 +135,11 @@ public sealed partial class Mixer
         {
             bool previous = _monitorOutputMutes[name];
             var baseline = _outputMutes[name];
+            // An owner with no verified instance waits for its device to appear.
+            if (baseline.Identity is null && !native.ContainsKey(name)) { Failed(name); continue; }
             // A release only owns the instance that was actually selected.
-            if (!native.TryGetValue(name, out var state) || state.Identity != baseline.Identity || state.Muted == previous)
+            if (!native.TryGetValue(name, out var state) || baseline.Identity is not null && state.Identity != baseline.Identity
+                || state.Muted == previous)
             {
                 ForgetMonitorOutputMuteLocked(name);
                 pending.Remove(name);
@@ -146,7 +149,8 @@ public sealed partial class Mixer
             try
             {
                 _pw.SetSinkMuted(name, previous);
-                _outputMutes[name] = baseline with { Muted = previous, WritePending = true };
+                // The readback that completes the release checks this instance.
+                _outputMutes[name] = baseline with { Identity = state.Identity, Muted = previous, WritePending = true };
                 // Native readback, rather than a successful exit, completes release.
                 _desktopMuteResets[name] = (previous, 0, 0);
             }
@@ -158,6 +162,42 @@ public sealed partial class Mixer
         {
             int failures = Math.Min(_desktopMuteResets.GetValueOrDefault(name).Failures + 1, 8);
             _desktopMuteResets[name] = (_monitorOutputMutes[name], failures, Clock() + DesktopMuteRetryDelay(failures));
+        }
+    }
+
+    /// <summary>
+    /// Put every native flag OpenXLR owns back to its original, for a stop
+    /// after which no graph is built to restore it. An ordinary stop leaves
+    /// the mutes in place and the next start takes them over from the saved
+    /// settings. An output that is absent or refuses the write stays owned,
+    /// so the final save still carries it.
+    /// </summary>
+    public void ReleaseMonitorHardwareMutes()
+    {
+        lock (_gate)
+        {
+            if (_monitorOutputMutes.Count == 0) return;
+            var native = ReadNativeMuteStatesLocked(_monitorOutputMutes.Keys.ToHashSet(StringComparer.Ordinal), immediate: true);
+            foreach ((string name, bool previous) in _monitorOutputMutes.ToArray())
+            {
+                string? identity = _outputMutes.GetValueOrDefault(name)?.Identity;
+                try
+                {
+                    bool muted;
+                    if (native is null) muted = _pw.GetSinkMuted(name);
+                    else if (!native.TryGetValue(name, out var state)) continue;
+                    else if (identity is not null && state.Identity != identity)
+                    {
+                        // Another instance under the same name was never muted here.
+                        ForgetMonitorOutputMuteLocked(name);
+                        continue;
+                    }
+                    else muted = state.Muted;
+                    if (muted != previous) _pw.SetSinkMuted(name, previous);
+                    ForgetMonitorOutputMuteLocked(name);
+                }
+                catch (InvalidOperationException) { /* Saved for the next start that builds the graph. */ }
+            }
         }
     }
 
@@ -176,7 +216,8 @@ public sealed partial class Mixer
                 _desktopMuteResets[name] = (_outputMutes[name].Muted, 0, 0);
                 continue;
             }
-            if (state.Identity != _outputMutes[name].Identity) ForgetMonitorOutputMuteLocked(name);
+            // A saved owner was never tied to an instance and is kept.
+            if (_outputMutes[name].Identity is { } identity && state.Identity != identity) ForgetMonitorOutputMuteLocked(name);
             _outputMutes[name] = new(state.Identity, null, state.Muted);
             _desktopMuteResets.Remove(name);
             _desktopMuteRetries.Remove(name);

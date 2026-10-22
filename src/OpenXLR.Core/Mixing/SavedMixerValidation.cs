@@ -188,12 +188,11 @@ internal static class SavedMixerValidation
     private static Dictionary<string, bool> MonitorOutputMutes(MixerSettings settings, List<string> notes)
     {
         if (settings.MonitorOutputMutes is null) { notes.Add("monitorOutputMutes: null entry"); return []; }
-        HashSet<string> selected = (settings.MonitorOutputs ?? []).Where(n => n is not null)
-            .Select(Mixer.StripMarker).ToHashSet(StringComparer.Ordinal);
-        if (settings.MonitorOutput is { } legacy) selected.Add(Mixer.StripMarker(legacy));
-        var kept = settings.MonitorOutputMutes.Where(pair => selected.Contains(pair.Key) && Mixer.IsExactOutputName(pair.Key)
+        // An output outside the selection keeps its entry: the mixer still
+        // owes that device its original flag when it loads these settings.
+        var kept = settings.MonitorOutputMutes.Where(pair => Mixer.IsExactOutputName(pair.Key)
             && !pair.Key.StartsWith("OpenXLR_", StringComparison.Ordinal)).ToDictionary();
-        if (kept.Count != settings.MonitorOutputMutes.Count) notes.Add("monitorOutputMutes: unselected output");
+        if (kept.Count != settings.MonitorOutputMutes.Count) notes.Add("monitorOutputMutes: not a physical output name");
         return kept;
     }
 

@@ -214,6 +214,30 @@ public sealed class MixerShutdownTests
         Assert.DoesNotContain(log.Lines, line => line.StartsWith("stop:", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task OnlyAStopThatTurnsTheSubmixerOffPutsBackOwnedOutputMutes(bool? submixer)
+    {
+        using var fixture = new Fixture();
+        if (submixer is bool enabled) new OpenXLR.Core.DaemonSettings { Submixer = enabled }.Save();
+        fixture.SetBuilt(true);
+        fixture.Write("muted-speakers");
+        var owners = (Dictionary<string, bool>)typeof(Mixer).GetField("_monitorOutputMutes", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(fixture.Mixer)!;
+        owners["speakers"] = false;
+
+        await fixture.Service.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+
+        // The fixture's command line leaves the submixer off unless daemon.json turns it on.
+        bool released = submixer != true;
+        Assert.Equal(released, fixture.Exists("writes") && fixture.Read("writes").Contains("set-sink-mute speakers 0"));
+        MixerSettings saved = Assert.IsType<MixerSettings>(MixerSettings.Load(MixerSettings.DefaultPath, out _));
+        string[] owned = released ? [] : ["speakers"];
+        Assert.Equal(owned, saved.MonitorOutputMutes.Keys);
+        Assert.False(fixture.Service.Built);
+    }
+
     private sealed class StoppingLifetime : IHostApplicationLifetime, IDisposable
     {
         private readonly CancellationTokenSource _stopping = new();
@@ -273,6 +297,9 @@ public sealed class MixerShutdownTests
                       while [ ! -e "$dir/release" ]; do /bin/sleep .01; done
                     fi
                     echo "$*" >> "$dir/writes" ;;
+                  get-sink-mute)
+                    if [ -e "$dir/muted-$2" ]; then echo 'Mute: yes'; else echo 'Mute: no'; fi ;;
+                  set-sink-mute) echo "$*" >> "$dir/writes" ;;
                   unload-module)
                     if [ -e "$dir/hang-unload" ]; then
                       echo $$ > "$dir/pid"
