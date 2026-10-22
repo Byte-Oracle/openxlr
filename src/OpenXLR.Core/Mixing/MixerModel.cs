@@ -174,6 +174,12 @@ public sealed record MixerState
     /// <summary>Selected monitor routes are paused; mix and channel mutes stay independent.</summary>
     public bool MonitorMuted { get; init; }
 
+    /// <summary>Microphone channels follow the monitoring pause. False unless explicitly enabled.</summary>
+    public bool MonitorMuteMicrophones { get; init; }
+
+    /// <summary>A microphone channel's requested pause or resume could not yet be confirmed.</summary>
+    public bool MicrophonePausePending { get; init; }
+
     /// <summary>
     /// Which monitor mix feeds an output, by output name; an output absent
     /// here is fed by DefaultMonitorMix.

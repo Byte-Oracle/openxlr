@@ -301,8 +301,10 @@ public sealed class PipeWireAdapter
             // suspend-on-idle=false keeps the combine's monitor source running;
             // a suspended monitor makes the channel's level meter read silence
             // even while audio flows through the sink.
+            // Combines share a media name. Keep the desktop from storing one
+            // channel's pause or gain and restoring it onto another channel.
             "sink_properties=" + PropList($"node.description={PropValue(description)}" +
-            $" priority.session=100 node.suspend-on-idle=false node.virtual={(visible ? "false" : "true")}"));
+            $" priority.session=100 node.suspend-on-idle=false state.restore-props=false node.virtual={(visible ? "false" : "true")}"));
         uint id = uint.Parse(outp.Trim());
         _modules.Add(id);
         return id;

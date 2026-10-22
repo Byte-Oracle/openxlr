@@ -393,6 +393,7 @@ public sealed class WebSocketHub
             case "setMonitorOutput":
             case "setMonitorOutputs":
             case "setMonitorMuted":
+            case "setMonitorMuteMicrophones":
             case "toggleMonitorMuted":
             case "setMonitorFeed":
             case "setOutputVolume":

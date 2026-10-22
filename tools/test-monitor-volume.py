@@ -77,26 +77,39 @@ def main():
                         if process.poll() is not None or time.monotonic() > deadline:
                             raise RuntimeError(command + " did not create its socket")
                         time.sleep(0.05)
-                # Internal filters must ignore stale desktop volume and mute.
-                # Seed the private session manager with values from an older build.
-                state = Path(env["XDG_STATE_HOME"], "wireplumber", "stream-properties")
+                help_text = subprocess.check_output(["wireplumber", "--help"], text=True)
+                modern = "--profile" in help_text
+                # Seed the format this policy version actually reads. Both
+                # internal filters and combines must ignore old desktop state.
+                state = Path(env["XDG_STATE_HOME"], "wireplumber",
+                             "stream-properties" if modern else "restore-stream")
                 state.parent.mkdir(parents=True, exist_ok=True)
-                values = json.dumps({"volume": 0.125, "mute": True, "channelVolumes": [0.125]})
-                lines = ["[stream-properties]"]
+                keys = ["Audio/Sink:media.name:Combine stream"]
                 for description in ("OpenXLR Mic Filter", "OpenXLR mix latency delay"):
                     for kind, suffix in (("Sink", "input"), ("Source", "output")):
-                        name = (description + " " + suffix).replace(" ", r"\s")
-                        lines.append(f"Audio/{kind}:media.name:{name}={values}")
+                        keys.append(f"Audio/{kind}:media.name:{description} {suffix}")
+                values = {"volume": 0.125, "mute": True, "channelVolumes": [0.125]}
+                lines = ["[stream-properties]" if modern else "[restore-stream]"]
+                for key in keys:
+                    key = key.replace(" ", r"\s")
+                    if modern:
+                        lines.append(f"{key}={json.dumps(values)}")
+                    else:
+                        lines.extend((f"{key}:volume=0.125", f"{key}:mute=true",
+                                      f"{key}:channelVolumes=0.125;"))
                 state.write_text("\n".join(lines) + "\n")
-                help_text = subprocess.check_output(["wireplumber", "--help"], text=True)
-                if "--profile" in help_text:
+                if modern:
                     policies = [["--profile", "policy"]]
                 else:
-                    # WirePlumber 0.4 keeps default-node management in main,
-                    # separate from routing policy. Disable its hardware
-                    # monitors before loading that configuration as well.
+                    # Use the same compatibility rule as a legacy package.
+                    # Merely declaring state.restore-props=false on a node
+                    # does not disable WirePlumber 0.4's Boolean-only check.
                     fragments = Path(env["XDG_CONFIG_HOME"], "wireplumber", "main.lua.d")
                     fragments.mkdir(parents=True)
+                    rule = ROOT / "packaging" / "54-openxlr-owned-state.lua"
+                    (fragments / rule.name).write_bytes(rule.read_bytes())
+                    # Default-node management and routing are separate in 0.4.
+                    # The private servers must never discover host hardware.
                     (fragments / "51-no-hardware.lua").write_text(
                         "alsa_monitor.enabled = false\nv4l2_monitor.enabled = false\n"
                         "libcamera_monitor.enabled = false\n")

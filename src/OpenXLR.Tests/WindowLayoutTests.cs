@@ -50,6 +50,7 @@ public sealed class WindowLayoutTests
                 EditorRulesReconnectWindowTests.Check();
                 UserMonitorWindowTests.Check();
                 MonitorOutputPickerWindowTests.Check();
+                MonitorMicrophonePauseWindowTests.Check();
                 InputBindingWindowTests.Check();
                 InputBindingWindowTests.CheckDrivenUnit();
                 DuckingWindowTests.Check();

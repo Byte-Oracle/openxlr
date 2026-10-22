@@ -735,6 +735,8 @@
           </WrapPanel>
         </Expander.Header>
       <StackPanel Classes="dev" Spacing="4">
+        <TextBlock Name="MonitorMicrophonePausePendingNote" Text="{loc:Text Key=MicrophonePausePendingNote}"
+                   Classes="warn" TextWrapping="Wrap" IsVisible="{Binding MicrophonePausePending}"/>
         <Grid Name="MonitorControls" ColumnDefinitions="90,*,20,90,*,64" SizeChanged="OnMonitorSizeChanged">
           <TextBlock Name="MonitorDevicesLabel" Text="{loc:Text Key=Devices}" Classes="h" VerticalAlignment="Center"/>
           <DropDownButton Name="MonitorDestination" Grid.Column="1" HorizontalAlignment="Stretch"

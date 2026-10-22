@@ -96,7 +96,8 @@ length" warnings from the dock's malformed feedback endpoint). The
 original Wave XLR (MK.1) has the same ordering bug over its full-speed
 USB link, and so does a Wave:3 on some USB ports and controllers.
 WirePlumber rules keep these capture sources always active, so playback
-can never come first:
+can never come first. The following four `.conf` files use WirePlumber 0.5
+syntax. Check the library version with `wireplumber --version`:
 
 ```sh
 mkdir -p ~/.config/wireplumber/wireplumber.conf.d
@@ -111,7 +112,30 @@ The raw-name rule gives the Pro's multichannel nodes readable descriptions
 in desktop audio settings. It does not change their routing identities.
 Each of the four files matches only its target hardware, so they can be
 installed together on any supported setup, which is what the packages do.
-These `.conf` rules use WirePlumber 0.5 syntax.
+
+WirePlumber 0.4, including the version supplied by Ubuntu 24.04, needs a
+separate compatibility rule for OpenXLR's software nodes on every interface.
+It honors their declared opt-out from desktop volume and mute restoration,
+so an old pause or gain cannot replace the mixer's saved settings. Install
+this Lua rule only when `wireplumber --version` reports
+`Linked with libwireplumber 0.4.x`:
+
+```sh
+mkdir -p ~/.config/wireplumber/main.lua.d
+cp packaging/54-openxlr-owned-state.lua ~/.config/wireplumber/main.lua.d/
+systemctl --user restart wireplumber
+systemctl --user restart openxlr-daemon
+```
+
+These restarts briefly interrupt audio; logging out and back in also loads
+the rule. Debian packages built for 0.4 install it automatically. Other
+older distributions and source installations need the copy above.
+WirePlumber 0.5 honors the declaration directly: do not install this Lua
+file there. After upgrading from 0.4 to 0.5, remove an unchanged copy with:
+
+```sh
+cmp -s packaging/54-openxlr-owned-state.lua ~/.config/wireplumber/main.lua.d/54-openxlr-owned-state.lua && rm -- ~/.config/wireplumber/main.lua.d/54-openxlr-owned-state.lua
+```
 
 ## 5. First run
 
@@ -241,6 +265,7 @@ cmp -s packaging/50-xlr-dock-capture-hold.conf ~/.config/wireplumber/wireplumber
 cmp -s packaging/51-openxlr-pro-raw-names.conf ~/.config/wireplumber/wireplumber.conf.d/51-openxlr-pro-raw-names.conf && rm -- ~/.config/wireplumber/wireplumber.conf.d/51-openxlr-pro-raw-names.conf
 cmp -s packaging/52-openxlr-mk1-capture-hold.conf ~/.config/wireplumber/wireplumber.conf.d/52-openxlr-mk1-capture-hold.conf && rm -- ~/.config/wireplumber/wireplumber.conf.d/52-openxlr-mk1-capture-hold.conf
 cmp -s packaging/53-openxlr-wave3-capture-hold.conf ~/.config/wireplumber/wireplumber.conf.d/53-openxlr-wave3-capture-hold.conf && rm -- ~/.config/wireplumber/wireplumber.conf.d/53-openxlr-wave3-capture-hold.conf
+cmp -s packaging/54-openxlr-owned-state.lua ~/.config/wireplumber/main.lua.d/54-openxlr-owned-state.lua && rm -- ~/.config/wireplumber/main.lua.d/54-openxlr-owned-state.lua
 cmp -s packaging/pipewire-pulse-openxlr.conf ~/.config/systemd/user/pipewire-pulse.service.d/openxlr.conf && rm -- ~/.config/systemd/user/pipewire-pulse.service.d/openxlr.conf
 sudo udevadm control --reload-rules
 systemctl --user daemon-reload
