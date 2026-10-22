@@ -1771,6 +1771,9 @@ Al guardar, se sustituirá por la escena actual.</value>
   <data name="SecondComputer" xml:space="preserve">
     <value>Segundo ordenador</value>
   </data>
+  <data name="SectionFoldsNotSaved" xml:space="preserve">
+    <value>Las secciones plegadas se aplican hasta que se cierre la ventana, pero no se han podido guardar: {0}</value>
+  </data>
   <data name="SectionOrderNotSaved" xml:space="preserve">
     <value>El orden de las secciones se aplica hasta que se cierre la ventana, pero no se ha podido guardar: {0}</value>
   </data>

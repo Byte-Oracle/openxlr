@@ -1771,6 +1771,9 @@ Saving will replace it with the current scene.</value>
   <data name="SecondComputer" xml:space="preserve">
     <value>Second computer</value>
   </data>
+  <data name="SectionFoldsNotSaved" xml:space="preserve">
+    <value>The folded sections apply until the window closes but could not be saved: {0}</value>
+  </data>
   <data name="SectionOrderNotSaved" xml:space="preserve">
     <value>The section order applies until the window closes but could not be saved: {0}</value>
   </data>
