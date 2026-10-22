@@ -119,6 +119,10 @@ this check separately with
 `OPENXLR_TEST_FILTER="FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests"`.
 For a focused rerun on the same private server, set `OPENXLR_TEST_FILTER` to
 the desired `dotnet test` filter instead of passing a second `--filter`.
+CI spreads both runs over parallel jobs with `OPENXLR_TEST_SHARD=N/M`, which
+runs every Mth test of the selection by sorted name, starting at the Nth.
+A failing CI shard reruns locally with the same value, for example
+`OPENXLR_TEST_SHARD=2/3 python3 tools/test-monitor-volume.py`.
 
 Application routing tests run the normal mixer sweep while waiting for the
 destination to settle. PipeWire's move acknowledgement can arrive before
@@ -174,8 +178,10 @@ locked restore and tests. Do not disable locked mode to make an update pass.
 
 ## Pull requests
 
-CI and CodeQL run for pull requests and for every pushed branch, so a
-branch gets the same checks before its pull request exists. A change to
+CI and CodeQL run for pull requests and for pushes to `main`. A newer
+push to a pull request cancels the run it replaces. To check a branch
+before its pull request exists, open the pull request as a draft or start
+CI by hand with `gh workflow run CI --ref <branch>`. A change to
 `README.md` alone skips both: CI reports its jobs as skipped, which
 counts as passing.
 
