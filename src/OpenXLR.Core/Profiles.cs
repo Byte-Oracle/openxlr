@@ -59,7 +59,16 @@ public record DuckingScene
     public bool Enabled { get; init; }
     public string Key { get; init; } = ProDucking.KeyXlr1;
     public IReadOnlyList<string> Channels { get; init; } = [];
-    public IReadOnlyList<string> Mixes { get; init; } = ["monitor"];
+    /// <summary>
+    /// The mixes to lower in. A file without this field keeps the
+    /// <see cref="UnsavedMixes"/> instance, which pruning against a layout
+    /// replaces with that layout's default monitor.
+    /// </summary>
+    public IReadOnlyList<string> Mixes { get; init; } = UnsavedMixes;
+
+    /// <summary>The mixes of a scene that never named any; Monitor A until a layout resolves it.</summary>
+    internal static readonly IReadOnlyList<string> UnsavedMixes = ["monitor"];
+
     public string Sensitivity { get; init; } = ProDucking.Medium;
     public string Amount { get; init; } = ProDucking.Medium;
     public string Speed { get; init; } = ProDucking.Medium;

@@ -1763,6 +1763,12 @@ volume, and a channel it knows but saved before that channel had a volume
 goes back to 100%. A profile saved before XLR 1, XLR 2 and Aux In had a
 volume recalls them at 100%.
 
+A profile records which mix feeds each selected output, even an output on the
+default monitor mix, so it plays the same mixes after you delete or add a
+monitor. An output whose saved mixes no longer exist, or one an older profile
+left to the default, hears the default monitor mix at the time of the recall.
+A ducking setup saved without mixes ducks the default monitor mix as well.
+
 Loading a profile rebuilds only the plugin chains it changes. A chain with
 the same plugins, order, bypass and host as the profile's keeps running and
 takes the profile's control values as it plays, and an open plugin editor
@@ -2380,7 +2386,11 @@ Appearance is part of the layout, saved with it, and not part of a profile.
   Outputs that followed only the deleted mix
   return to the default monitor mix, while summed feeds keep their other mixes.
   The default is Monitor A while it exists, otherwise the monitor whose stable
-  id sorts first. Reordering or renaming mixes never changes that choice. If the
+  id sorts first. Reordering or renaming mixes never changes that choice, but
+  deleting the default does, and so can adding a monitor once Monitor A is gone,
+  when the new id sorts first. Outputs already following the default keep the
+  mix they were playing, and a profile records the mix of every selected output,
+  so recalling it after the default changed plays what it played when saved. If the
   mix was the enforced system default output or input, that choice is
   cleared and the desktop picks the default.
 

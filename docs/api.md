@@ -278,6 +278,13 @@ that chain had been edited. At startup the saved settings rebuild only the
 chains that differ too, and leave every chain they do not name, input or
 mix, as it is.
 
+`saveProfile` writes a `mixer.monitorFeeds` entry for every selected output,
+including one that follows `defaultMonitorMix`, because the default can change
+before the recall: deleting it, or adding a monitor whose id sorts first once
+`monitor` is gone. A recall replaces the feed table with the profile's. An
+output whose saved mixes are all gone, or that an older profile left without
+an entry, follows the default at the time of the recall.
+
 Profile files have an 8 MiB save and load limit. The recall marker is at
 most 1 KiB and contains a profile name, not a path. Special files are refused
 before either is read. A failed explicit load returns an error and applies
@@ -909,7 +916,7 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
 - `installation-history/<sha256>.json`: retained package inventories across upgrades
 - `installation.lock`: serializes installation inventory writes
 - `mixer.json`: every mixer decision: the layout (`userChannels`,
-  `mixes` (legacy `userMixes`), `appearance`, see [mixer-layout.md](mixer-layout.md)), levels, mutes,
+  `mixes`, with `userMixes` kept for 0.2.0, `appearance`, see [mixer-layout.md](mixer-layout.md)), levels, mutes,
   device choices, the app registry, enforced defaults, `monitorMuted` (the
   monitoring pause, never part of a profile), `monitorMuteMicrophones` (the
   opt-in microphone pause, also never part of a profile), the software low
@@ -1454,10 +1461,13 @@ nothing running.
 `mixer.json` holds the setup as `ducking`, `{enabled, key, channels, mixes,
 sensitivity, amount, speed, processing}`. A file without it takes the
 defaults, and the next save writes them: off, key `xlr1`, every
-application channel, the mix `monitor`, medium presets and processing
-`device`. On load, ids the layout lacks are dropped, a key that is not a
-microphone turns ducking off and resets the key to `xlr1`, and a word the
-daemon does not know takes its default; each drop is noted in the journal.
+application channel, the default monitor mix (`defaultMonitorMix`, which is
+`monitor` while Monitor A exists), medium presets and processing `device`. A
+`ducking` object without `mixes`, here or in a profile, takes the default
+monitor mix of the layout it is applied to. On load, ids the layout lacks are
+dropped, a key that is not a microphone turns ducking off and resets the key
+to `xlr1`, and a word the daemon does not know takes its default; each drop is
+noted in the journal.
 Layout edits prune the setup in the same save: a deleted channel leaves
 `channels`, a deleted mix leaves `mixes`, and a deleted key turns ducking
 off and resets the key to `xlr1`. A new channel is not added. A profile
