@@ -2,7 +2,7 @@
 
 The UI can be translated. Every string it shows lives in one
 English catalogue, and a language is a second catalogue with the same keys.
-OpenXLR ships in English, German (Deutsch), Spanish (Español), Tagalog, Cebuano (Bisaya) and Serbian (Cyrillic). Other
+OpenXLR ships in English, German (Deutsch), Spanish (Español), Italian (Italiano), Tagalog, Cebuano (Bisaya) and Serbian (Cyrillic). Other
 languages come from contributors who read and write them, one pull request
 per language.
 
@@ -59,7 +59,7 @@ are not part of the catalogue.
    the catalogue lacks, when an entry is never read, when markup carries
    text of its own, or when a key is built at run time. Its line-break
    and literal-command checks run per language from `InlineData` rows
-   that name `de`, `es`, `tl`, `ceb` and `sr-Cyrl`; add a row for the new language. The
+   that name `de`, `es`, `it`, `tl`, `ceb` and `sr-Cyrl`; add a row for the new language. The
    layout tests measure the fixed-width captions of the main window and
    Options in every shipped language, whichever language the run uses.
 
@@ -83,6 +83,7 @@ so a change of meaning gets a new key.
    new("en", "English"),
    new("de", "Deutsch"),
    new("es", "Español"),
+   new("it", "Italiano"),
    ```
 
 4. Build and test:
