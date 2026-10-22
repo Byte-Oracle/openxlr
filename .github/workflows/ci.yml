@@ -2,8 +2,15 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+# A newer push to the same pull request, or a newer merge to main, cancels
+# the run it replaces; only the tip can be merged or released.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 # Actions are pinned to commit SHAs (the tag is in the comment) so a moved
 # tag upstream cannot change what runs here.
@@ -29,8 +36,8 @@ jobs:
           BEFORE: ${{ github.event.before }}
         run: |
           # A pull request checks out its merge commit, whose first parent is
-          # the base. A push compares with the previous tip; a new branch has
-          # none, so it runs everything.
+          # the base. A push to main compares with the previous tip; a run
+          # started by hand has none, so it runs everything.
           files=""
           if [ "$EVENT" = pull_request ]; then
             files=$(git diff --name-only HEAD^1 HEAD)
