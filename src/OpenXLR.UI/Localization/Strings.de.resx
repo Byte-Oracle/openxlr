@@ -1121,7 +1121,7 @@
     <value>Abhören stummschalten</value>
   </data>
   <data name="MuteMonitoringTip" xml:space="preserve">
-    <value>Alle ausgewählten Monitorausgänge stummschalten, ohne die Stummschaltung von Mischungen oder Kanälen zu ändern. Aufnahme und Streaming laufen weiter.</value>
+    <value>Alle ausgewählten Monitorausgänge stummschalten, ohne gespeicherte Mix- oder Kanal-Stummschaltungen zu ändern. Ist die Option unter Audio aktiviert, pausieren auch die Mikrofon-Sends. Andere Aufnahme- und Streaming-Signale laufen weiter.</value>
   </data>
   <data name="MutedInactive" xml:space="preserve">
     <value>Stumm / inaktiv</value>
@@ -2879,5 +2879,26 @@ Von OpenXLR gesteuertes Interface wählen</value>
   </data>
   <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
     <value>Das gespeicherte Ziel dieser Website vergessen und für diesen Tab das Standardziel des Browsers verwenden.</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
+    <value>Mikrofon-Sends mit dem Abhören stummschalten</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoringHint" xml:space="preserve">
+    <value>Pausiert zusätzlich die Sends von XLR- und Mono-Aufnahmeeingängen zu allen OpenXLR-Mixen, einschließlich darüber laufender Aufnahmen. Hebst du die Stummschaltung eines Monitors auf, werden diese Sends fortgesetzt. Apps, die die Hardwarequelle direkt aufnehmen, bleiben unbeeinflusst.</value>
+  </data>
+  <data name="MicrophonePausePendingNote" xml:space="preserve">
+    <value>Der Audiozustand der Mikrofone ist noch nicht bestätigt. Audio kann weiterhin OpenXLR-Mixe erreichen. Prüfe dies, bevor du dich auf die Mikrofon-Stummschaltung verlässt.</value>
+  </data>
+  <data name="AddMonitoringPauseKey" xml:space="preserve">
+    <value>Taste zum Pausieren des Abhörens hinzufügen</value>
+  </data>
+  <data name="KeyToggleMonitoringPause" xml:space="preserve">
+    <value>Abhören pausieren oder fortsetzen</value>
+  </data>
+  <data name="MonitoringPauseKeysNote" xml:space="preserve">
+    <value>Weise die Stumm-Taste hier statt der Stumm-Aktion des Desktops zu. Lass OpenXLR im Infobereich laufen. Die Mikrofon-Option unter Audio gilt auch für diese Taste.</value>
+  </data>
+  <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
+    <value>Dieser Desktop kann den Tastenkürzel-Editor nicht erneut öffnen. Ändere die Belegung in den Tastenkürzel-Einstellungen des Desktops.</value>
   </data>
 </root>

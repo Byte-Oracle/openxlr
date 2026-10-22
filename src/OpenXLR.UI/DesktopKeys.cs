@@ -56,6 +56,7 @@ internal sealed class DesktopKeys(DaemonClient client) : IDisposable
                 SetStatus(Localizer.Text("DesktopKeysFocusOnly"));
                 return;
             }
+            await bus.RegisterHostAsync(_lifetime.Token);
             var created = await bus.Request("CreateSession", "a{sv}", token => (ref MessageWriter w) =>
                 w.WriteDictionary(new Dictionary<string, VariantValue> { ["handle_token"] = token, ["session_handle_token"] = token }), _lifetime.Token);
             string session = created["session_handle"].GetString();
@@ -92,7 +93,9 @@ internal sealed class DesktopKeys(DaemonClient client) : IDisposable
                 foreach (var (id, action) in actions)
                 {
                     w.WriteStructureStart(); w.WriteString(id);
-                    w.WriteDictionary(new Dictionary<string, VariantValue> { ["description"] = action.Description });
+                    var properties = new Dictionary<string, VariantValue> { ["description"] = action.Description };
+                    if (action.PreferredTrigger is { } trigger) properties["preferred_trigger"] = trigger;
+                    w.WriteDictionary(properties);
                 }
                 w.WriteArrayEnd(array);
                 w.WriteString(""); // the portal supplies its own permission/configuration window
@@ -101,6 +104,30 @@ internal sealed class DesktopKeys(DaemonClient client) : IDisposable
             if (Interlocked.CompareExchange(ref active, 1, 0) != 0)
                 throw new InvalidOperationException(Localizer.Text("ShortcutSessionClosedWhileConfiguring"));
             SetStatus(Localizer.Text("DesktopKeysActive"));
+            if (save)
+            {
+                try
+                {
+                    await bus.Empty(DesktopBus.Portal, DesktopBus.PortalPath, DesktopBus.Shortcuts,
+                        "ConfigureShortcuts", "osa{sv}", (ref MessageWriter w) =>
+                        {
+                            w.WriteObjectPath(session);
+                            w.WriteString("");
+                            w.WriteDictionary(new Dictionary<string, VariantValue>());
+                        }, _lifetime.Token);
+                }
+                catch (DBusErrorReplyException ex) when (ex.ErrorName is
+                    "org.freedesktop.DBus.Error.UnknownMethod" or "org.freedesktop.DBus.Error.UnknownInterface")
+                {
+                    if (isActive()) SetStatus(Localizer.Text("DesktopKeysActive") + " " + Localizer.Text("DesktopKeysConfigureUnsupported"));
+                }
+                catch (Exception ex)
+                {
+                    // The keys are already bound. An editor failure must not
+                    // tear down a working session or hide the opening error.
+                    if (IsCurrent()) SetStatus(Localizer.Format("DesktopKeysError", ex.Message));
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -110,12 +137,14 @@ internal sealed class DesktopKeys(DaemonClient client) : IDisposable
         finally { _configure.Release(); }
     }
 
-    internal sealed record KeyAction(string Description, Func<Task<string?>> Invoke);
+    internal sealed record KeyAction(string Description, Func<Task<string?>> Invoke, string? PreferredTrigger = null);
     internal Dictionary<string, KeyAction> Actions(DesktopKeySettings settings)
     {
         var actions = new Dictionary<string, KeyAction>(StringComparer.Ordinal);
         foreach (string channel in settings.FocusChannels)
             actions["focus_" + channel] = new(Localizer.Format("KeyRouteFocusedApp", channel), () => client.RouteFocusedAppAsync(channel));
+        if (settings.MonitorControls)
+            actions["monitor_mute"] = new(Localizer.Text("KeyToggleMonitoringPause"), client.ToggleMonitorMutedAsync, "XF86AudioMute");
         if (settings.OutputControls)
         {
             actions["output_up"] = new(Localizer.Text("KeyOutputVolumeUp"), () => client.AdjustOutputVolumeAsync(settings.OutputDevice, .05));

@@ -84,6 +84,7 @@ public static class CommandValidation
             case "setMixLatencyCompensation":
             case "setMonitorMuted":
             case "setPreserveBrowserOutputs":
+            case "setMonitorMuteMicrophones":
                 return cmd.Value.ValueKind is JsonValueKind.True or JsonValueKind.False
                     ? null : $"{cmd.Cmd}: value must be a boolean";
             case "addWindowsPluginFolder":

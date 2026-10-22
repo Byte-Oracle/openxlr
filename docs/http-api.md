@@ -266,7 +266,8 @@ by five percentage points; an optional `device` binds an exact output name.
 physical monitor output it toggles the whole monitor selection's pause, on a
 monitor mix sink that mix.
 `{"cmd":"setMonitorMuted","value":true}` pauses all selected monitor outputs
-without changing mix or channel mutes or stopping recording and streaming.
+without changing mix or channel mutes. Recording and streaming continue by
+default.
 Selected physical sinks mirror the mute; resume restores their previous native
 flags. An explicit `{"cmd":"setMixMuted","mix":"monitor","value":false}`
 during a pause opens only that monitor, commits the other monitor mixes as
@@ -278,6 +279,16 @@ it is saved with mixer settings and left unchanged by profile recall.
 `{"cmd":"toggleMonitorMuted"}` toggles that pause atomically, without a
 `value`. Use it for keys and repeated presses so each command toggles the
 current state without depending on an earlier state response.
+`{"cmd":"setMonitorMuteMicrophones","value":true}` opts microphone sends into
+the same pause. The XLR/Mic strips and mono capture microphones then stop
+feeding OpenXLR's mixes while `monitorMuted` is true. Other application audio,
+stereo capture and Aux remain unchanged. This does not mute applications
+recording the physical microphone directly. The `/mixer` resource reports the
+saved `monitorMuteMicrophones` option and `microphonePausePending`; a pending
+transition is not confirmed silence. The option is machine state, outside
+profiles. Disabling it while paused resumes microphone sends only. Sound Check
+stops and discards its take when microphones pause, and cannot start a new
+recording until they resume.
 `{"cmd":"setMainOutput","device":"alsa_output.usb-headset"}` selects and enforces
 that output. `@monitor` follows the selected monitor output. Limits, rejected
 targets and linked-monitor behavior match the [WebSocket contract](api.md).

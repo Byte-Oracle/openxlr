@@ -129,6 +129,8 @@ channel mutes; saved in `mixer.json`, never recalled by a profile),
 `preserveBrowserOutputs` (leave Chromium-family playback at the output its
 browser selects; false by default), `browserTabs` (connected companion tabs,
 see [browser tabs](#browser-tabs)),
+`monitorMuteMicrophones` (the opt-in microphone pause) and
+`microphonePausePending` (a requested microphone pause or resume is not yet confirmed),
 `softLowCutApplicable` and `softClipGuardApplicable` (true when XLR 1's
 signal has no hardware low cut or ClipGuard in front of it: XLR 1 is bound
 to a source, or the driven unit lacks the control, so `lowCutHz` and
@@ -207,12 +209,13 @@ that final acknowledgement (or an `error` without a request id):
 | `setMonitorFeed` | `device`, `mix` | what feeds one selected output, independently of other outputs: any existing mix id, including `stream`, `chat`, `auxout` and user mixes of either kind, or distinct ids joined with `+` to sum them at unity. One mix can appear in several outputs' feeds. An empty feed is rejected; remove an output from `setMonitorOutputs` to disconnect it. The Pro's own jacks follow one feed together. The state's `monitorFeeds` lists exceptions from `defaultMonitorMix` (`monitor` when present, otherwise the lowest monitor id), independent of layout order. Unknown or repeated mix ids and unselected outputs are rejected. Deleting the last included mix returns that output to `defaultMonitorMix` |
 | `setAuxPortEnabled` | `value` | send the Aux mix to the USB Aux port |
 | `setOutputVolume` | `value` | volume of the selected monitor devices, 0 to 1.5; the range the devices themselves take, so a desktop level above unity can be held and written back unchanged. Values outside it are clamped, and the state reports what reached the devices. With no output selected the command succeeds and changes nothing |
-| `setMonitorMuted` | `value` | boolean only; pause or resume OpenXLR's feeds to all selected monitor outputs, including the Pro's direct microphone monitoring. Selected physical sinks mirror the pause, preserving their previous native mutes for resume. Mix and channel mutes, levels, feeds and recording outputs stay unchanged. The state reports `monitorMuted`; saved in `mixer.json`, not in profiles, and profile recall keeps the current pause |
+| `setMonitorMuted` | `value` | boolean only; pause or resume OpenXLR's feeds to all selected monitor outputs, including the Pro's direct microphone monitoring. Selected physical sinks mirror the pause, preserving their previous native mutes for resume. Raw mix and channel mutes, levels and feeds stay unchanged. Recording stays live unless `monitorMuteMicrophones` is enabled. The state reports `monitorMuted`; saved in `mixer.json`, not in profiles, and profile recall keeps the current pause |
 | `toggleMonitorMuted` | none | atomically toggle the same monitor pause. Use this for keys and repeated presses instead of reading `monitorMuted` and sending its inverse; each accepted command toggles once |
 | `getBrowserSession` | none | WebSocket only; register this connection as a browser companion and return its `browserSession`. Repeated calls on the same connection return the same id |
 | `syncBrowserTabs` | `session`, `tabs` | WebSocket only; replace this companion's complete tab list. Only the connection that obtained the session may publish it; see [browser tabs](#browser-tabs) |
 | `assignBrowserTab` | `session`, `tabId`, `channel`, `remember` | select an application channel or `null` for browser default for a connected tab. `remember` must be boolean; true saves the website origin preference, and `channel:null, remember:true` forgets it. False changes only this tab |
 | `setPreserveBrowserOutputs` | `value` | boolean only; explicitly enable or disable preservation of Chromium-family playback outputs. Saved in `mixer.json`, never recalled by a profile. Registration alone does not enable it |
+| `setMonitorMuteMicrophones` | `value` | boolean only, false by default; include XLR 1, XLR 2 and mono capture channels in the monitoring pause, across every OpenXLR mix. Stereo captures, Aux In and application channels keep playing. Saved only in `mixer.json`; takes effect immediately without restarting the daemon. See [monitoring and microphones](#monitoring-and-microphones) |
 | `listPlugins` | none | the installed LV2, CLAP and VST3 plugins, answered with a `plugins` message |
 | `getPluginDiagnostics` | none | read bridge status and existing native scan evidence without syncing, rescanning or changing inserts; answered with `pluginDiagnostics` |
 | `getPluginSetup` | none | where plugins are installed and what bridges Windows ones, answered with a `pluginSetup` message |
@@ -350,7 +353,8 @@ entire assigned feed is individually muted is natively muted too; any open
 assigned mix, including Stream, Chat or Aux, keeps a summed output open. The
 Pro's shared native sink stays open while its independent Aux return is active;
 its selected headphone and line-output selectors instead follow the audibility
-of the monitor feed. No recording mix or channel send is muted by a pause.
+of the monitor feed. Recording stays live unless microphone pausing is
+explicitly enabled as described below; raw channel and mix mutes stay unchanged.
 
 An explicit `setMixMuted` with `value:false` on a monitor-kind mix during a
 pause replaces the listening selection: the other monitor mixes become
@@ -386,6 +390,41 @@ fallback mute reads back off together when the helper fails. Native changes
 observed in one sweep are grouped as one action; the audio server does not
 identify whether that change came from a keyboard or an applet, and multiple
 toggles completed between observations cannot be reconstructed.
+
+### Monitoring and microphones
+
+`monitorMuteMicrophones` is an explicit opt-in. While it and `monitorMuted`
+are true, the channel sinks of XLR 1, XLR 2 and mono capture inputs are
+muted, including strips bound to other hardware sources. No send or mix mute
+is overwritten. Resuming reveals their current raw choices, including edits
+or profile recalls made while paused. Explicitly unmuting a monitor clears
+the monitoring pause and resumes those microphones too. Turning the option
+off during a pause resumes microphone audio while monitoring stays paused.
+After a rebuild, channels follow OpenXLR's current pause state rather than
+desktop mute or gain remembered for another channel. On WirePlumber 0.4,
+this requires the owned-node compatibility rule shipped by packages built
+for that version. Load it by restarting WirePlumber after installation or
+logging in again; [source installations](install-from-source.md#4-wireplumber-rules)
+copy the rule explicitly. WirePlumber 0.5 honors the node declaration directly.
+
+The channel mute covers all sends, including Stream, Chat, Aux and custom
+virtual microphones, without rewriting each send. Application audio, stereo
+capture inputs and Aux In are outside this microphone option. Sound Check
+is stopped and its sample discarded on a combined pause; recording, looping
+and live actions are refused until it ends. Stop remains available.
+If restoring the live input after stopping Sound Check fails, the requested
+pause and microphone option are still saved. The command reports the cleanup
+error; clients read the resulting state rather than assuming the pause reverted.
+
+`microphonePausePending` is true while a requested microphone pause or resume
+has not been confirmed by the audio server. Helpers that refuse a write or
+report a different state leave the operation pending for the regular sweep;
+clients must not present that state as confirmed silence. New microphone
+feeds wait for their channel mute to be confirmed on a paused start or
+reconnect. EQ edits are kept while a software EQ start waits for that
+confirmation. This is an OpenXLR routing control, not a hardware privacy switch:
+applications recording the physical microphone directly bypass it, and audio
+already buffered or held by an effect can finish playing.
 
 ### Waiting for the audio server
 
@@ -936,7 +975,8 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
 - `mixer.json`: every mixer decision: the layout (`userChannels`,
   `mixes` (legacy `userMixes`), `appearance`, see [mixer-layout.md](mixer-layout.md)), levels, mutes,
   device choices, the app registry, enforced defaults, `monitorMuted` (the
-  monitoring pause, never part of a profile), `preserveBrowserOutputs` and
+  monitoring pause, never part of a profile), `monitorMuteMicrophones` (the
+  opt-in microphone pause, also never part of a profile), `preserveBrowserOutputs` and
   `browserSiteChannels` (origin-to-channel defaults, both machine settings
   absent from profiles), the software low
   cut, the insert chains, the microphone EQs (`eq`) and where they run

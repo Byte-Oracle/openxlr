@@ -1123,7 +1123,7 @@
     <value>Silenciar monitorización</value>
   </data>
   <data name="MuteMonitoringTip" xml:space="preserve">
-    <value>Silenciar todas las salidas de monitorización seleccionadas sin cambiar el estado de silencio de las mezclas ni de los canales. La grabación y la transmisión continúan.</value>
+    <value>Silenciar todas las salidas de monitorización seleccionadas sin cambiar los estados de silencio guardados de mezclas o canales. Si se activa en Audio, también se pausan los envíos de micrófono. El resto del audio de grabación y transmisión continúa.</value>
   </data>
   <data name="MutedInactive" xml:space="preserve">
     <value>Silenciado / inactivo</value>
@@ -2831,5 +2831,26 @@ Selecciona la interfaz que controla OpenXLR</value>
   </data>
   <data name="CaptureStereoPorts" xml:space="preserve">
     <value>Puertos estéreo {0} + {1}{2}</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
+    <value>Silenciar los envíos de micrófono con la monitorización</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoringHint" xml:space="preserve">
+    <value>Pausa también los envíos de las entradas XLR y de captura mono a todas las mezclas de OpenXLR, incluidas las grabaciones que pasan por ellas. Al reactivar un monitor se reanudan estos envíos. Las aplicaciones que graban directamente de la fuente física no se ven afectadas.</value>
+  </data>
+  <data name="MicrophonePausePendingNote" xml:space="preserve">
+    <value>El estado del audio de los micrófonos aún no está confirmado. El audio puede seguir llegando a las mezclas de OpenXLR. Compruébalo antes de confiar en el silencio de los micrófonos.</value>
+  </data>
+  <data name="AddMonitoringPauseKey" xml:space="preserve">
+    <value>Añadir una tecla para pausar la monitorización</value>
+  </data>
+  <data name="KeyToggleMonitoringPause" xml:space="preserve">
+    <value>Pausar o reanudar la monitorización</value>
+  </data>
+  <data name="MonitoringPauseKeysNote" xml:space="preserve">
+    <value>Asigna aquí la tecla de silencio en lugar de la acción de silencio del escritorio. Mantén OpenXLR en ejecución en la bandeja. La opción de micrófono de Audio también se aplica a esta tecla.</value>
+  </data>
+  <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
+    <value>Este escritorio no puede volver a abrir el editor de atajos. Cambia las asignaciones en la configuración de atajos del escritorio.</value>
   </data>
 </root>

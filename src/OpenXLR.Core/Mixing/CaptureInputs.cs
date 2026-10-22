@@ -81,6 +81,7 @@ public sealed partial class Mixer
             }
             if (_soundCheckChannel == channel)
                 StopSoundCheckLocked(restore: false, error: "Sound Check stopped because the capture input's source changed.");
+            SyncMicrophonePauseLocked();
             if (_hardwareMicChannel is not null && _hardwareMicChannel != DirectPathChannelLocked())
                 SetHardwareMicChannelLocked(null);
             if (_built) RebindCaptureFeedLocked(next);
@@ -134,6 +135,7 @@ public sealed partial class Mixer
                 changed |= !ReferenceEquals(ch, next);
                 return next;
             })] };
+            if (changed) SyncMicrophonePauseLocked();
             return changed;
         }
     }
@@ -236,6 +238,7 @@ public sealed partial class Mixer
         var sources = _pw.ListDevices();
         foreach (ChannelDefinition channel in channels)
         {
+            if (UnconfirmedMicrophonePauseLocked(channel)) continue;
             if (CaptureRouteLocked(channel))
             {
                 string? before = _captureWarnings.GetValueOrDefault(channel.Id);

@@ -20,6 +20,26 @@ internal sealed class DesktopBus(DBusConnection connection)
         => Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") ?? DBusAddress.Session
            ?? throw new InvalidOperationException("No session bus is available.");
 
+    /// <summary>Identify native launches before their first portal call, including launches outside a desktop app unit.</summary>
+    internal async Task RegisterHostAsync(CancellationToken cancel = default)
+    {
+        if (FlatpakEnvironment.IsFlatpak) return;
+        try
+        {
+            await Empty(Portal, PortalPath, "org.freedesktop.host.portal.Registry", "Register", "sa{sv}",
+                (ref MessageWriter writer) =>
+                {
+                    writer.WriteString("openxlr");
+                    writer.WriteDictionary(new Dictionary<string, VariantValue>());
+                }, cancel);
+        }
+        catch (DBusErrorReplyException ex) when (ex.ErrorName is
+            "org.freedesktop.DBus.Error.UnknownMethod" or "org.freedesktop.DBus.Error.UnknownInterface")
+        {
+            // Older portals infer the application identity without this method.
+        }
+    }
+
     internal Task<T> Call<T>(string destination, string path, string iface, string method,
         string? signature, Body? body, MessageValueReader<T> reader, CancellationToken cancel = default)
     {

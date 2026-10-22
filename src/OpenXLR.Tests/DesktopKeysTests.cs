@@ -147,7 +147,7 @@ public sealed class DesktopKeysTests
         using var desktop = new DBusConnection(environment.Address);
         await desktop.ConnectAsync();
         await desktop.RequestNameAsync(DesktopBus.Portal);
-        var fake = new DesktopBackend(new DesktopBus(desktop));
+        var fake = new DesktopBackend(new DesktopBus(desktop)) { RequireHostIdentity = true };
         desktop.AddMethodHandler(fake);
         var received = new ConcurrentQueue<string>();
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -169,10 +169,12 @@ public sealed class DesktopKeysTests
         client.Start();
         await connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
         using var keys = new DesktopKeys(client);
-        await keys.ConfigureAsync(new DesktopKeySettings { Enabled = true, OutputControls = true, MainOutputs = ["headset"] }, save: false);
+        await keys.ConfigureAsync(new DesktopKeySettings { Enabled = true, MonitorControls = true, OutputControls = true, MainOutputs = ["headset"] }, save: false);
+        Assert.Equal("XF86AudioMute", Assert.Single(fake.PreferredTriggers).Value);
+        Assert.True(fake.PreferredTriggers.ContainsKey("monitor_mute"));
         fake.Activate("output_up");
         await Wait(() => received.Count == 1);
-        string[] ids = [DesktopKeySettings.MainKey("headset"), "output_down", "output_mute", "output_up"];
+        string[] ids = [DesktopKeySettings.MainKey("headset"), "output_down", "monitor_mute", "output_mute", "output_up"];
         for (int i = 0; i < 20; i++) fake.Activate(ids[i % ids.Length]);
         // A round trip on the sending connection lets all preceding portal
         // signals arrive before we release the blocked daemon reply.
@@ -192,7 +194,7 @@ public sealed class DesktopKeysTests
         }
         else
         {
-            string[] group = ["setMainOutput", "adjustOutputVolume", "toggleOutputMute", "adjustOutputVolume"];
+            string[] group = ["setMainOutput", "adjustOutputVolume", "toggleMonitorMuted", "toggleOutputMute", "adjustOutputVolume"];
             Assert.Equal(new[] { "adjustOutputVolume" }.Concat(Enumerable.Range(0, 16).Select(i => group[i % group.Length])), received);
             Assert.StartsWith("Completed:", keys.Status);
         }
@@ -320,6 +322,80 @@ public sealed class DesktopKeysTests
     }
 
     [DesktopBusFact]
+    public async Task ExplicitApplyReopensTheShortcutEditorAfterBindingWhileAutostartStaysSilent()
+    {
+        await using var environment = await PrivateBus.Start();
+        using var desktop = new DBusConnection(environment.Address);
+        await desktop.ConnectAsync();
+        await desktop.RequestNameAsync(DesktopBus.Portal);
+        var fake = new DesktopBackend(new DesktopBus(desktop)) { RequireHostIdentity = true, HoldBindingResponse = true };
+        desktop.AddMethodHandler(fake);
+        await using var client = new DaemonClient();
+        using var keys = new DesktopKeys(client);
+        var settings = new DesktopKeySettings { Enabled = true, MonitorControls = true };
+        Task applying = keys.ConfigureAsync(settings);
+        await Wait(() => fake.HasPendingBinding);
+        Assert.Equal(["CreateSession", "BindShortcuts"], fake.ShortcutMethods);
+        Assert.Equal(0, fake.ConfigureRequests);
+        fake.CompleteBinding();
+        await applying.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(["CreateSession", "BindShortcuts", "ConfigureShortcuts"], fake.ShortcutMethods);
+        Assert.Equal(1, fake.ConfigureRequests);
+        Assert.StartsWith("Desktop keys are active", keys.Status);
+
+        fake.HoldBindingResponse = false;
+        await keys.ConfigureAsync(settings, save: false);
+        Assert.Equal(1, fake.ConfigureRequests);
+        Assert.StartsWith("Desktop keys are active", keys.Status);
+        await keys.ConfigureAsync(settings);
+        Assert.Equal(2, fake.ConfigureRequests);
+    }
+
+    [DesktopBusTheory]
+    [InlineData("org.freedesktop.DBus.Error.UnknownMethod")]
+    [InlineData("org.freedesktop.DBus.Error.UnknownInterface")]
+    public async Task OlderPortalsKeepTheirBindingsAndExplainWhereToEditThem(string error)
+    {
+        await using var environment = await PrivateBus.Start();
+        using var desktop = new DBusConnection(environment.Address);
+        await desktop.ConnectAsync();
+        await desktop.RequestNameAsync(DesktopBus.Portal);
+        var fake = new DesktopBackend(new DesktopBus(desktop)) { ConfigureError = error };
+        desktop.AddMethodHandler(fake);
+        await using var client = new DaemonClient();
+        using var keys = new DesktopKeys(client);
+        await keys.ConfigureAsync(new DesktopKeySettings { Enabled = true, MonitorControls = true });
+        Assert.Equal(1, fake.ConfigureRequests);
+        Assert.StartsWith("Desktop keys are active", keys.Status);
+        Assert.Contains("desktop's shortcut settings", keys.Status);
+        fake.Activate("monitor_mute");
+        await Wait(() => keys.Status.Contains("disconnected", StringComparison.Ordinal));
+    }
+
+    [DesktopBusTheory]
+    [InlineData("org.freedesktop.DBus.Error.AccessDenied")]
+    [InlineData("org.freedesktop.portal.Error.NotAllowed")]
+    [InlineData("org.freedesktop.portal.Error.Failed")]
+    [InlineData("org.freedesktop.DBus.Error.UnknownObject")]
+    public async Task ARefusedShortcutEditorReportsItsErrorWithoutDroppingWorkingBindings(string error)
+    {
+        await using var environment = await PrivateBus.Start();
+        using var desktop = new DBusConnection(environment.Address);
+        await desktop.ConnectAsync();
+        await desktop.RequestNameAsync(DesktopBus.Portal);
+        var fake = new DesktopBackend(new DesktopBus(desktop)) { ConfigureError = error };
+        desktop.AddMethodHandler(fake);
+        await using var client = new DaemonClient();
+        using var keys = new DesktopKeys(client);
+        await keys.ConfigureAsync(new DesktopKeySettings { Enabled = true, MonitorControls = true });
+        Assert.Equal(1, fake.ConfigureRequests);
+        Assert.StartsWith("Desktop keys:", keys.Status);
+        Assert.Contains("The portal rejected configuration", keys.Status);
+        fake.Activate("monitor_mute");
+        await Wait(() => keys.Status.Contains("disconnected", StringComparison.Ordinal));
+    }
+
+    [DesktopBusFact]
     public async Task SettingsFailureDoesNotReportAnEnabledIntegration()
     {
         await using var environment = await PrivateBus.Start();
@@ -341,7 +417,17 @@ public sealed class DesktopKeysTests
         public string Path => "/";
         public bool HandlesChildPaths => true;
         public List<string> ShortcutIds { get; } = [];
+        public Dictionary<string, string> PreferredTriggers { get; } = [];
+        public bool RequireHostIdentity { get; init; }
+        private string? _hostSender;
         public bool CancelBinding { get; set; }
+        public bool HoldBindingResponse { get; set; }
+        public string? ConfigureError { get; init; }
+        public int ConfigureRequests { get; private set; }
+        public List<string> ShortcutMethods { get; } = [];
+        private Action? _pendingBinding;
+        internal bool HasPendingBinding => Volatile.Read(ref _pendingBinding) is not null;
+        internal void CompleteBinding() => Interlocked.Exchange(ref _pendingBinding, null)?.Invoke();
         public int Unloads { get; private set; }
         private string _session = "", _destination = "", _cookie = "";
 
@@ -350,8 +436,28 @@ public sealed class DesktopKeysTests
             var request = context.Request;
             var reader = request.GetBodyReader();
             string member = request.MemberAsString!;
-            if (request.InterfaceAsString == DesktopBus.Shortcuts)
+            if (RequireHostIdentity && request.InterfaceAsString == "org.freedesktop.host.portal.Registry" && member == "Register")
             {
+                Assert.Equal("openxlr", reader.ReadString());
+                Assert.Empty(reader.ReadDictionaryOfStringToVariantValue());
+                _hostSender = request.SenderAsString;
+                using var reply = context.CreateReplyWriter(null); context.Reply(reply.CreateMessage());
+            }
+            else if (request.InterfaceAsString == DesktopBus.Shortcuts)
+            {
+                if (RequireHostIdentity) Assert.Equal(_hostSender, request.SenderAsString);
+                ShortcutMethods.Add(member);
+                if (member == "ConfigureShortcuts")
+                {
+                    Assert.Equal(_session, reader.ReadObjectPath().ToString());
+                    Assert.Equal("", reader.ReadString());
+                    Assert.Empty(reader.ReadDictionaryOfStringToVariantValue());
+                    Assert.False(HasPendingBinding);
+                    ConfigureRequests++;
+                    if (ConfigureError is { } error) context.ReplyError(error, "The portal rejected configuration.");
+                    else { using var empty = context.CreateReplyWriter(null); context.Reply(empty.CreateMessage()); }
+                    return ValueTask.CompletedTask;
+                }
                 Dictionary<string, VariantValue> options;
                 if (member == "CreateSession") options = reader.ReadDictionaryOfStringToVariantValue();
                 else
@@ -359,8 +465,17 @@ public sealed class DesktopKeysTests
                     Assert.Equal("BindShortcuts", member);
                     Assert.Equal(_session, reader.ReadObjectPath().ToString());
                     ShortcutIds.Clear();
+                    PreferredTriggers.Clear();
                     var end = reader.ReadArrayStart(DBusType.Struct);
-                    while (reader.HasNext(end)) { reader.AlignStruct(); ShortcutIds.Add(reader.ReadString()); reader.ReadDictionaryOfStringToVariantValue(); }
+                    while (reader.HasNext(end))
+                    {
+                        reader.AlignStruct();
+                        string id = reader.ReadString();
+                        ShortcutIds.Add(id);
+                        var properties = reader.ReadDictionaryOfStringToVariantValue();
+                        if (properties.TryGetValue("preferred_trigger", out VariantValue trigger))
+                            PreferredTriggers[id] = trigger.GetString();
+                    }
                     reader.ReadString(); options = reader.ReadDictionaryOfStringToVariantValue();
                 }
                 string token = options["handle_token"].GetString();
@@ -368,11 +483,17 @@ public sealed class DesktopKeysTests
                 string path = "/org/freedesktop/portal/desktop/request/" + owner + "/" + token;
                 if (member == "CreateSession") _session = "/org/freedesktop/portal/desktop/session/" + owner + "/" + token;
                 using var reply = context.CreateReplyWriter("o"); reply.WriteObjectPath(path); context.Reply(reply.CreateMessage());
-                using var signal = bus.Connection.GetMessageWriter();
-                signal.WriteSignalHeader(destination: request.SenderAsString, path: path, @interface: "org.freedesktop.portal.Request", member: "Response", signature: "ua{sv}");
-                signal.WriteUInt32(member == "BindShortcuts" && CancelBinding ? 1u : 0u);
-                signal.WriteDictionary(member == "CreateSession" ? new Dictionary<string, VariantValue> { ["session_handle"] = _session } : []);
-                bus.Connection.TrySendMessage(signal.CreateMessage());
+                string destination = request.SenderAsString!;
+                void Respond()
+                {
+                    using var signal = bus.Connection.GetMessageWriter();
+                    signal.WriteSignalHeader(destination: destination, path: path, @interface: "org.freedesktop.portal.Request", member: "Response", signature: "ua{sv}");
+                    signal.WriteUInt32(member == "BindShortcuts" && CancelBinding ? 1u : 0u);
+                    signal.WriteDictionary(member == "CreateSession" ? new Dictionary<string, VariantValue> { ["session_handle"] = _session } : []);
+                    bus.Connection.TrySendMessage(signal.CreateMessage());
+                }
+                if (member == "BindShortcuts" && HoldBindingResponse) Volatile.Write(ref _pendingBinding, Respond);
+                else Respond();
             }
             else if (member == "unloadScript")
             {

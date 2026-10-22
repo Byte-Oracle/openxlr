@@ -494,6 +494,7 @@ public sealed partial class Mixer
 
     private PortLink RouteInputLocked(string source, string target, ChannelDefinition channel, bool processed = false)
     {
+        if (UnconfirmedMicrophonePauseLocked(channel)) return new PortLink([]);
         SourceBinding? binding = _bindings.GetValueOrDefault(channel.Id);
         PortLink route = channel.CaptureSource is not null
             ? _pw.LinkNodes(source, "", target, "playback",

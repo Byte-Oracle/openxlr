@@ -46,6 +46,33 @@ public sealed class OutputKeyTests
     }
 
     [Fact]
+    public async Task MonitoringPauseKeyIsIndependentOfTheOutputTargetAndSurvivesReload()
+    {
+        await using var client = new DaemonClient();
+        using var keys = new DesktopKeys(client);
+        Assert.DoesNotContain("monitor_mute", keys.Actions(new DesktopKeySettings()).Keys);
+        var settings = new DesktopKeySettings { Enabled = true, MonitorControls = true,
+            OutputControls = true, OutputDevice = "unavailable#hp1" };
+        string? previous = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        string directory = Path.Combine(Path.GetTempPath(), "openxlr-monitor-key-" + Guid.NewGuid());
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", directory);
+            settings.Save();
+            DesktopKeySettings restored = DesktopKeySettings.Load();
+            Assert.True(restored.Enabled);
+            Assert.True(restored.MonitorControls);
+            Assert.False(restored.OutputControls);
+            Assert.Equal(["monitor_mute"], keys.Actions(restored).Keys);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previous);
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
     public async Task PortalActionsSendTheSameBoundedCommandsAsDeckKeys()
     {
         var received = new List<System.Text.Json.Nodes.JsonNode>();
@@ -65,13 +92,15 @@ public sealed class OutputKeyTests
         client.Start();
         await connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
         using var keys = new DesktopKeys(client);
-        var actions = keys.Actions(new DesktopKeySettings { OutputControls = true, OutputDevice = "headset", MainOutputs = ["speakers", "@monitor"] });
-        foreach (string id in new[] { "output_up", "output_down", "output_mute", DesktopKeySettings.MainKey("speakers"), DesktopKeySettings.MainKey("@monitor") })
+        var actions = keys.Actions(new DesktopKeySettings { MonitorControls = true, OutputControls = true, OutputDevice = "headset", MainOutputs = ["speakers", "@monitor"] });
+        foreach (string id in new[] { "output_up", "output_down", "output_mute", DesktopKeySettings.MainKey("speakers"), DesktopKeySettings.MainKey("@monitor"), "monitor_mute" })
             Assert.Null(await actions[id].Invoke());
-        Assert.Equal(["adjustOutputVolume", "adjustOutputVolume", "toggleOutputMute", "setMainOutput", "setMainOutput"], received.Select(n => n["cmd"]!.GetValue<string>()));
+        Assert.Equal(["adjustOutputVolume", "adjustOutputVolume", "toggleOutputMute", "setMainOutput", "setMainOutput", "toggleMonitorMuted"], received.Select(n => n["cmd"]!.GetValue<string>()));
         Assert.Equal(.05, received[0]["value"]!.GetValue<double>());
         Assert.Equal(-.05, received[1]["value"]!.GetValue<double>());
         Assert.Equal("headset", received[2]["device"]!.GetValue<string>());
         Assert.Equal("@monitor", received[4]["device"]!.GetValue<string>());
+        Assert.Null(received[5]["device"]);
+        Assert.Null(received[5]["value"]);
     }
 }

@@ -482,7 +482,7 @@
               },
               "examples": {
                 "muteMonitoring": {
-                  "summary": "Pause selected monitor outputs while recording and streaming continue",
+                  "summary": "Pause selected monitor outputs, with microphone sends included when opted in",
                   "value": {
                     "cmd": "setMonitorMuted",
                     "value": true
@@ -519,6 +519,13 @@
                     "tabId": 42,
                     "channel": null,
                     "remember": true
+                  }
+                },
+                "includeMicrophonesInMonitoringPause": {
+                  "summary": "Include OpenXLR microphone sends in the monitoring pause",
+                  "value": {
+                    "cmd": "setMonitorMuteMicrophones",
+                    "value": true
                   }
                 }
               }

@@ -237,7 +237,9 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
 - Bidirectional Linux volume and mute controls for every monitor mix,
   with an explicit 150% boost button for monitor masters and output volume
 - A MONITOR mute that pauses every selected output while recording and
-  streaming continue. Resuming keeps mix and channel mutes, levels and feeds
+  streaming continue by default. An option also pauses microphone sends to
+  OpenXLR's recording mixes, leaving raw physical capture to other programs
+  alone. Resuming keeps mix and channel mutes, levels and feeds
   as they were. The UI, terminal mixer and Deck share the same pause,
   saved with mixer settings and left unchanged by profile recall. Physical
   output mutes mirror it; explicitly opening one monitor during a pause starts
@@ -886,7 +888,9 @@ enforced system output. A volume or mute key follows the current default
 output or stays bound to a named output or monitor mix. On a selected
 physical monitor output the mute key pauses the whole monitor selection,
 the same as MONITOR's Mute button or a Deck monitor dial press. Mix and
-channel mutes keep their values, and recording and streaming continue.
+channel mutes keep their values. Microphone sends pause too when that option
+is enabled in AUDIO. A separate monitoring pause key addresses this state
+directly, without a desktop-wide mute of internal routing sinks.
 On a monitor mix sink the key toggles only that mix; on any other output
 it toggles the sink's native mute. Focus
 identity comes from KDE Plasma's KWin; on other desktops the routing key

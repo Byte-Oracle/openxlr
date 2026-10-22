@@ -14,6 +14,7 @@ internal sealed record DesktopKeySettings
     public bool Enabled { get; init; }
     public List<string> FocusChannels { get; init; } = [];
     public bool OutputControls { get; init; }
+    public bool MonitorControls { get; init; }
     public string? OutputDevice { get; init; }
     public List<string> MainOutputs { get; init; } = [];
     internal static string MainKey(string device) => "main_" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(device)))[..24].ToLowerInvariant();

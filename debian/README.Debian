@@ -7,6 +7,19 @@ After installing:
  2. Start the daemon:  systemctl --user enable --now openxlr-daemon
  3. Start the mixer:   openxlr   (or from your application menu)
 
+Packages built for WirePlumber 0.4, including Ubuntu 24.04, include an owned
+node state rule under /usr/share/wireplumber/main.lua.d. It keeps old desktop
+volume and mute values from replacing OpenXLR's saved software mixer state.
+After installing or upgrading such a package, load the rule at your next
+login, or restart these services from your desktop session when you can
+interrupt audio:
+
+    systemctl --user restart wireplumber
+    systemctl --user restart openxlr-daemon
+
+The package does not restart these services automatically. WirePlumber 0.5
+honors the node declaration directly; packages built for 0.5 omit the Lua rule.
+
 Stream Deck control via OpenDeck:
 
     mkdir -p ~/.config/opendeck/plugins

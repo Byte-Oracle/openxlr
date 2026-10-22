@@ -548,6 +548,12 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
     public Task SetMonitorMutedAsync(bool value)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "setMonitorMuted", ["value"] = value });
 
+    public Task<string?> ToggleMonitorMutedAsync()
+        => EditLayoutAsync(new Dictionary<string, object> { ["cmd"] = "toggleMonitorMuted" });
+
+    public Task<string?> SetMonitorMuteMicrophonesAsync(bool value)
+        => EditLayoutAsync(new Dictionary<string, object> { ["cmd"] = "setMonitorMuteMicrophones", ["value"] = value });
+
     /// <summary>Devices the daemon should hold as system defaults (null = don't enforce).</summary>
     public Task SetEnforcedDefaultsAsync(string? sink, string? source)
         => SendAsync(new Dictionary<string, object?>

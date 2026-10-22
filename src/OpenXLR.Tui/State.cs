@@ -462,6 +462,8 @@ internal sealed record MixerSnapshot
     public string? DefaultMonitorMix { get; init; }
     public double? OutputVolume { get; init; }
     public bool MonitorMuted { get; init; }
+    public bool MonitorMuteMicrophones { get; init; }
+    public bool MicrophonePausePending { get; init; }
     public bool AuxPortEnabled { get; init; }
     public int LowCutHz { get; init; }
     public bool SoftClipGuard { get; init; }

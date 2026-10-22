@@ -67,6 +67,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 foreach (ChannelViewModel channel in Channels) channel.Inserts?.ResetForNewConnection();
                 foreach (MonitorOutputItem output in MonitorOutputs) output.CancelFeedEdit();
                 CancelMonitorSelectionEdit();
+                CancelMonitorMicrophoneEdit();
             }
             else { Inserts.EnsurePluginsLoaded(); Inserts2.EnsurePluginsLoaded(); }
         });
@@ -675,12 +676,67 @@ public sealed partial class MainViewModel : ViewModelBase
     public string OutputVolumeText => $"{_outputVolume * 100:0}%";
 
     private bool _monitorMuted;
-    /// <summary>Monitoring is paused; recording mixes and their saved mutes are unchanged.</summary>
+    /// <summary>Monitoring is paused; the optional microphone pause leaves saved sends and mutes unchanged.</summary>
     public bool MonitorMuted
     {
         get => _monitorMuted;
         set { if (Set(ref _monitorMuted, value) && !_applying) _ = _client.SetMonitorMutedAsync(value); }
     }
+
+    private bool _monitorMuteMicrophones;
+    private bool _reportedMonitorMuteMicrophones;
+    private bool? _pendingMonitorMuteMicrophones;
+    private long _monitorMicrophoneEditVersion;
+    /// <summary>Also pause microphone sends while monitoring is paused; the daemon saves this opt-in.</summary>
+    public bool MonitorMuteMicrophones
+    {
+        get => _monitorMuteMicrophones;
+        set
+        {
+            if (!Set(ref _monitorMuteMicrophones, value) || _applying) return;
+            MonitorMicrophoneError = null;
+            _pendingMonitorMuteMicrophones = value;
+            _ = SubmitMonitorMicrophoneEditAsync(value, ++_monitorMicrophoneEditVersion);
+        }
+    }
+
+    private async Task SubmitMonitorMicrophoneEditAsync(bool value, long version)
+    {
+        string? error = await _client.SetMonitorMuteMicrophonesAsync(value);
+        if (version != _monitorMicrophoneEditVersion) return;
+        MonitorMicrophoneError = error;
+        if (error is not null)
+        {
+            Set(ref _monitorMuteMicrophones, _reportedMonitorMuteMicrophones, nameof(MonitorMuteMicrophones));
+            Status = error;
+        }
+        _pendingMonitorMuteMicrophones = null;
+    }
+
+    private void CancelMonitorMicrophoneEdit()
+    {
+        _monitorMicrophoneEditVersion++;
+        _pendingMonitorMuteMicrophones = null;
+        MonitorMicrophoneError = null;
+        Set(ref _monitorMuteMicrophones, _reportedMonitorMuteMicrophones, nameof(MonitorMuteMicrophones));
+    }
+
+    private string? _monitorMicrophoneError;
+    public string? MonitorMicrophoneError
+    {
+        get => _monitorMicrophoneError;
+        private set { if (Set(ref _monitorMicrophoneError, value)) Raise(nameof(MonitorMicrophoneNote)); }
+    }
+
+    private bool _microphonePausePending;
+    /// <summary>The daemon has not confirmed the microphone sends' requested audio state.</summary>
+    public bool MicrophonePausePending
+    {
+        get => _microphonePausePending;
+        private set { if (Set(ref _microphonePausePending, value)) Raise(nameof(MonitorMicrophoneNote)); }
+    }
+    public string? MonitorMicrophoneNote => MonitorMicrophoneError
+        ?? (MicrophonePausePending ? Localizer.Text("MicrophonePausePendingNote") : null);
 
     private bool _hasMixer;
     public bool HasMixer { get => _hasMixer; private set { if (Set(ref _hasMixer, value)) { Raise(nameof(MixerPlaceholder)); Raise(nameof(CanEditLayout)); Raise(nameof(ShowApplications)); } } }
@@ -1232,6 +1288,10 @@ public sealed partial class MainViewModel : ViewModelBase
     private void ApplyMixer(JsonNode? mixer)
     {
         MonitorMuted = mixer?["monitorMuted"]?.GetValue<bool>() ?? false;
+        _reportedMonitorMuteMicrophones = mixer?["monitorMuteMicrophones"]?.GetValue<bool>() ?? false;
+        if (mixer is null) CancelMonitorMicrophoneEdit();
+        Set(ref _monitorMuteMicrophones, _pendingMonitorMuteMicrophones ?? _reportedMonitorMuteMicrophones, nameof(MonitorMuteMicrophones));
+        MicrophonePausePending = mixer?["microphonePausePending"]?.GetValue<bool>() ?? false;
         if (mixer is null)
         {
             Inserts.SoundCheck.Apply(null); Inserts2.SoundCheck.Apply(null);

@@ -492,6 +492,11 @@ public sealed partial class Mixer
     private SoftwareEqBackend? StartEqStageLocked(ChannelDefinition ch, string upstream, bool upstreamProcessed, out PortLink? into)
     {
         into = null;
+        if (UnconfirmedMicrophonePauseLocked(ch))
+        {
+            _eqErrors[ch.Id] = "The microphone EQ is waiting for mute confirmation.";
+            return null;
+        }
         string key = EqKey(ch.Id);
         if (_restarts.Blocked(key)) return null;
         MicEq eq = SoftwareEqLocked(ch.Id);
@@ -582,9 +587,11 @@ public sealed partial class Mixer
     {
         if (!_built) return false;
         bool changed = false;
+        HashSet<string>? waitingForPause = MicrophonesPausedLocked && _microphonePausePending
+            ? _config.Channels.Where(UnconfirmedMicrophonePauseLocked).Select(c => c.Id).ToHashSet(StringComparer.Ordinal) : null;
         foreach ((string channel, SoftwareEqBackend stage) in _eqStages.ToList())
         {
-            if (stage.IsAlive) continue;
+            if (waitingForPause?.Contains(channel) == true || stage.IsAlive) continue;
             string? words = stage.Stage.LastWords;
             _restarts.Failed(EqKey(channel), words);
             _pw.Note($"The EQ on {channel} stopped{(words is null ? "." : $". The plugin host's last message: {words}")}");
@@ -599,7 +606,7 @@ public sealed partial class Mixer
         }
         if (!_pw.EqHostInstalled) return changed;
         foreach (ChannelDefinition ch in _config.Channels.Where(CarriesEq).ToList())
-            if (!_eqStages.ContainsKey(ch.Id) && SoftwareEqLocked(ch.Id).Enabled && !_restarts.Blocked(EqKey(ch.Id))
+            if (waitingForPause?.Contains(ch.Id) != true && !_eqStages.ContainsKey(ch.Id) && SoftwareEqLocked(ch.Id).Enabled && !_restarts.Blocked(EqKey(ch.Id))
                 && _eqErrors.ContainsKey(ch.Id) && _inputFeeds.ContainsKey(ch.Id))
                 changed |= SpliceEqLocked(ch.Id, replace: false);
         return changed;

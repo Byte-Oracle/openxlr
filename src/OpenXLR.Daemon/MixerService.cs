@@ -405,6 +405,7 @@ public sealed class MixerService : IHostedService, IDisposable
         if (settingsWarning is not null)
             _log.LogWarning("mixer settings: {warning}{fallback}", settingsWarning, saved is null ? "; starting with defaults" : "");
         _mixer.SetInputBindings(saved?.InputBindings);
+        _mixer.SetMonitorMuteMicrophones(saved?.MonitorMuteMicrophones ?? false);
         _mixer.SetMonitorMuted(saved?.MonitorMuted ?? false);
         UpdateInputDeviceHint();
         _mixer.Build(MixerConfig.FromSettings(saved), output);
@@ -587,7 +588,7 @@ public sealed class MixerService : IHostedService, IDisposable
             stop.ThrowIfCancellationRequested();
             bool monitorChanged = _mixer.SyncOwnSinkLevels(out IReadOnlyList<string> restoredSinks);
             if (restoredSinks.Count > 0)
-                _log.LogWarning("put {n} OpenXLR sink(s) back to full volume, unmuted ({names}); something outside OpenXLR had changed them",
+                _log.LogWarning("restored the expected level and mute of {n} OpenXLR sink(s) ({names}); something outside OpenXLR had changed them",
                     restoredSinks.Count, string.Join(", ", restoredSinks));
             // Collect what the plugins' own editors changed before the
             // healing pass below, so a chain that is about to be rebuilt
@@ -889,6 +890,10 @@ public sealed class MixerService : IHostedService, IDisposable
                     _mixer.SetMonitorMuted(cmd.Value.GetBoolean());
                     SyncOutputSelectors();
                     break;
+                case "setMonitorMuteMicrophones":
+                    _mixer.SetMonitorMuteMicrophones(cmd.Value.GetBoolean());
+                    SyncOutputSelectors();
+                    break;
                 case "toggleMonitorMuted":
                     _mixer.ToggleMonitorMuted();
                     SyncOutputSelectors();
@@ -975,6 +980,13 @@ public sealed class MixerService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
+            // Sound Check hand-back can fail after the pause has changed.
+            // Keep that intent durable and visible even when cleanup reports an error.
+            if (cmd.Cmd is "setMonitorMuted" or "toggleMonitorMuted" or "setMonitorMuteMicrophones" or "toggleOutputMute")
+            {
+                ScheduleSave();
+                Changed?.Invoke();
+            }
             return ex.Message;
         }
         Changed?.Invoke();
