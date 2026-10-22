@@ -576,6 +576,8 @@ public sealed class DiagnosticsTests
             Assert.Equal(8192, graph.RootElement[2].GetProperty("info").GetProperty("props").GetProperty("clock.max-quantum").GetInt32());
             if (commandWarning)
                 Assert.Contains("warning for <redacted>@<redacted>: optional metadata unavailable", entries["pw-dump-errors.txt"]);
+            else
+                Assert.DoesNotContain("pw-dump-errors.txt", entries.Keys);
             Assert.Contains("login name", entries["PRIVACY.txt"]);
         }
         finally
