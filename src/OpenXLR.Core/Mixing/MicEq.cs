@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 
@@ -115,17 +116,21 @@ public sealed record MicEq
 
     public static MicEq Snap(MicEq eq) => eq with { Bands = [.. eq.Bands.Select(Snap)] };
 
-    /// <summary>Why a band cannot be taken, or null. Values outside a range are refused, never clamped.</summary>
+    /// <summary>
+    /// Why a band cannot be taken, or null. Values outside a range are refused,
+    /// never clamped. The reason is protocol text, so its numbers are written
+    /// the same way whatever the daemon's locale ("0.1", never "0,1").
+    /// </summary>
     public static string? Check(EqBand? band)
     {
         if (band is null) return "a band is missing";
         if (TypeIndex(band.Type) < 0) return $"type must be one of {string.Join(", ", Types)}";
         if (!double.IsFinite(band.Frequency) || band.Frequency is < MinFrequency or > MaxFrequency)
-            return $"frequency must be {MinFrequency} to {MaxFrequency} Hz";
+            return string.Create(CultureInfo.InvariantCulture, $"frequency must be {MinFrequency} to {MaxFrequency} Hz");
         if (!double.IsFinite(band.Gain) || band.Gain is < MinGain or > MaxGain)
-            return $"gain must be {MinGain} to +{MaxGain} dB";
+            return string.Create(CultureInfo.InvariantCulture, $"gain must be {MinGain} to +{MaxGain} dB");
         if (!double.IsFinite(band.Q) || band.Q is < MinQ or > MaxQ)
-            return $"q must be {MinQ} to {MaxQ}";
+            return string.Create(CultureInfo.InvariantCulture, $"q must be {MinQ} to {MaxQ}");
         return null;
     }
 
