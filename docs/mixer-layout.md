@@ -209,6 +209,7 @@ every save. Every field is optional on read; an absent one is empty or off.
 | `monitorOutput` | the older single selection, read only when `monitorOutputs` is empty |
 | `monitorFeeds` | output to feed, see [Output feeds](#output-feeds) |
 | `monitorMuted` | pause every selected monitor output without changing mix or channel mutes, levels or feeds; false when absent. Saved here only, and unchanged by profile recall |
+| `monitorOutputMutes` | exact physical output name to its previous native mute flag while OpenXLR owns a monitor mute. Empty when absent; null and unselected entries are dropped. Saved here only, never in profiles, so pause/resume can restore native flags across daemon restarts |
 | `auxPortEnabled` | whether the Aux mix reaches the USB Aux port; when absent, a saved `#usbaux` monitor selection turns it on once and is dropped from the selection |
 | `enforcedDefaultSink` | the output held as the system default, or `@monitor`; `setEnforcedDefaults` and `setMainOutput` write it |
 | `enforcedDefaultSource` | the source held as the system default |

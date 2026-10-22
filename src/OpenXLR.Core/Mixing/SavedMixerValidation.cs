@@ -42,6 +42,7 @@ internal static class SavedMixerValidation
             ChannelVolumes = Levels(settings.ChannelVolumes, "channelVolumes", notes),
             ChannelMuted = Entries(settings.ChannelMuted, "channelMuted", notes),
             MonitorOutputs = Entries(settings.MonitorOutputs, "monitorOutputs", notes),
+            MonitorOutputMutes = MonitorOutputMutes(settings, notes),
             MonitorFeeds = Mapping(settings.MonitorFeeds, "monitorFeeds", notes),
             AppOverrides = Mapping(settings.AppOverrides, "appOverrides", notes),
             KnownApps = Apps(settings.KnownApps, notes),
@@ -181,6 +182,18 @@ internal static class SavedMixerValidation
         if (levels is null) { notes.Add($"{field}: {NullEntry}"); return []; }
         var kept = levels.Where(pair => double.IsFinite(pair.Value)).ToDictionary();
         if (kept.Count != levels.Count) notes.Add($"{field}: {NonFinite}");
+        return kept;
+    }
+
+    private static Dictionary<string, bool> MonitorOutputMutes(MixerSettings settings, List<string> notes)
+    {
+        if (settings.MonitorOutputMutes is null) { notes.Add("monitorOutputMutes: null entry"); return []; }
+        HashSet<string> selected = (settings.MonitorOutputs ?? []).Where(n => n is not null)
+            .Select(Mixer.StripMarker).ToHashSet(StringComparer.Ordinal);
+        if (settings.MonitorOutput is { } legacy) selected.Add(Mixer.StripMarker(legacy));
+        var kept = settings.MonitorOutputMutes.Where(pair => selected.Contains(pair.Key) && Mixer.IsExactOutputName(pair.Key)
+            && !pair.Key.StartsWith("OpenXLR_", StringComparison.Ordinal)).ToDictionary();
+        if (kept.Count != settings.MonitorOutputMutes.Count) notes.Add("monitorOutputMutes: unselected output");
         return kept;
     }
 

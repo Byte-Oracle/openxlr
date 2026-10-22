@@ -15,7 +15,7 @@ Rectangle {
     property bool master: false
     property var meterPalette: null
     readonly property bool mono: !master && Mixer.mono(entry)
-    readonly property bool muted: master ? !!entry.muted : Mixer.sendMuted(entry, mix)
+    readonly property bool muted: master ? Mixer.masterMuted(entry, link.snapshot) : Mixer.sendMuted(entry, mix)
     readonly property real volume: master ? Mixer.clamp(entry.volume, maximum) : Mixer.level(entry, mix)
     readonly property real maximum: master ? Mixer.ceiling(entry) : 1
     readonly property var meter: Mixer.pair(link.levels, (master ? "mix:" : "ch:") + entry.id, mono)
@@ -164,7 +164,7 @@ Rectangle {
         marked: root.muted
         enabled: root.available && (root.master || root.mix !== "")
         Accessible.name: root.entry.name + (root.master ? " master mute" : " send mute")
-        onClicked: root.link.send(Mixer.muteCommand(root.entry, root.mix, root.master))
+        onClicked: root.link.send(Mixer.muteCommand(root.entry, root.mix, root.master, root.link.snapshot))
     }
     MixerButton {
         objectName: "hardwareMute"

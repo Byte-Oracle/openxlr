@@ -127,6 +127,55 @@ public sealed class MonitorMuteTests
         finally { Directory.Delete(directory, true); }
     }
 
+    [Theory]
+    [InlineData("monitor", true)]
+    [InlineData("virtualMic", false)]
+    [InlineData("auxPort", false)]
+    public void TheWindowShowsEffectiveMonitorMuteWithoutChangingTheRawMixIntent(string kind, bool muted)
+    {
+        var raw = System.Text.Json.Nodes.JsonNode.Parse("{\"kind\":\"" + kind + "\",\"muted\":false}")!;
+        var model = new OpenXLR.UI.MixViewModel(new OpenXLR.UI.DaemonClient(), "monitor", "Monitor");
+
+        model.ApplyFromDaemon(raw, monitorMuted: true);
+
+        Assert.Equal(muted, model.Muted);
+        Assert.False(raw["muted"]!.GetValue<bool>());
+        model.ApplyFromDaemon(raw, monitorMuted: false);
+        Assert.False(model.Muted);
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{\"removed\":true,\"OpenXLR_mix_monitor\":false}")]
+    public void InvalidNativeRestoreOwnersAreDroppedWithoutDiscardingOtherSettings(string owners)
+    {
+        string directory = Directory.CreateTempSubdirectory("openxlr-native-mute-settings-").FullName;
+        try
+        {
+            string path = Path.Combine(directory, "mixer.json");
+            File.WriteAllText(path, "{\"monitorMuted\":true,\"monitorOutputs\":[\"external\"],\"monitorOutputMutes\":" + owners + "}");
+            var settings = Assert.IsType<MixerSettings>(MixerSettings.Load(path, out string? warning));
+            Assert.True(settings.MonitorMuted);
+            Assert.Equal(["external"], settings.MonitorOutputs);
+            Assert.Empty(settings.MonitorOutputMutes);
+            Assert.NotNull(warning);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData("@DEFAULT_SINK@")]
+    [InlineData("123")]
+    [InlineData("-anything")]
+    [InlineData("")]
+    public void NativeRestoreOwnershipNeverResolvesAnAliasAsADifferentPhysicalDevice(string name)
+    {
+        var settings = new MixerSettings { MonitorOutputs = [name], MonitorOutputMutes = new() { [name] = false } };
+        var sanitized = SavedMixerValidation.Sanitize(settings, out var warnings);
+        Assert.Empty(sanitized.MonitorOutputMutes);
+        Assert.NotEmpty(warnings);
+    }
+
     private sealed class Lifetime : IHostApplicationLifetime, IDisposable
     {
         private readonly CancellationTokenSource _stop = new();

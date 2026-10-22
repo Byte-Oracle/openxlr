@@ -395,6 +395,18 @@ test('implicit monitor follows the daemon and does not follow layout order', () 
   assert.equal(mixer.monitorFeeds({...source, mixes:[...source.mixes].reverse()})[0].name, 'Speakers');
 });
 
+test('monitor master controls show the pause and explicitly open just that monitor', () => {
+  const paused = {mixer:{monitorMuted:true}};
+  const monitor = {id:'monitor',kind:'monitor',muted:false};
+  const stream = {id:'stream',kind:'virtualMic',muted:false};
+  assert.equal(mixer.masterMuted(monitor, paused), true);
+  assert.deepEqual(plain(mixer.muteCommand(monitor, '', true, paused)), {cmd:'setMixMuted',mix:'monitor',value:false});
+  assert.equal(mixer.masterMuted(stream, paused), false);
+  assert.deepEqual(plain(mixer.muteCommand(stream, '', true, paused)), {cmd:'setMixMuted',mix:'stream',value:true});
+  assert.equal(monitor.muted, false);
+  assert.equal(mixer.masterMuted(monitor, {}), false);
+});
+
 
 test('saved monitor feeds discard deleted ids and whitespace like the daemon', () => {
   const source = { mixes:[{id:'monitor2',name:'Studio',kind:'monitor'},{id:'chat',name:'Chat',kind:'virtualMic'}],

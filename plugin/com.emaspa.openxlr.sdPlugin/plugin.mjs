@@ -371,6 +371,7 @@ function outputDevices() {
 const dev = () => daemonState?.state ?? null;
 const mixer = () => daemonState?.mixer ?? null;
 const monitorMuted = () => mixer()?.monitorMuted === true;
+const effectiveMixMuted = mix => mix?.kind === "monitor" && monitorMuted() ? true : mix?.muted ?? null;
 const mixOf = (id) => mixer()?.mixes?.find((x) => x.id === id);
 const chOf = (id) => mixer()?.channels?.find((x) => x.id === id);
 // The device's highest gain (40 dB on the Wave:3); 80 from a daemon that does not say.
@@ -442,7 +443,7 @@ function toggleValue(target, inst) {
     if (!outs || !outs.includes(out)) return null;
     return feedOf(out) !== defaultMonitorMix(mixer());
   }
-  if (target.startsWith("mixmute:")) return mixOf(target.slice(8))?.muted ?? null;
+  if (target.startsWith("mixmute:")) return effectiveMixMuted(mixOf(target.slice(8)));
   if (target.startsWith("sendmute:")) {
     const [, ch, mix] = target.split(":");
     return chOf(ch)?.mutedIn?.includes(mix) ?? null;
@@ -500,7 +501,7 @@ const selectedMonitorOutputs = (name) => (mixer()?.monitorOutputs ?? [])
 // sink uses the server's own flag. null when unknown.
 function outputMuted(name) {
   const mix = name?.startsWith("OpenXLR_mix_") ? mixOf(name.slice(12)) : null;
-  if (mix) return mix.muted ?? null;
+  if (mix) return effectiveMixMuted(mix);
   const own = deviceOf(name)?.muted ?? null;
   const selected = selectedMonitorOutputs(name);
   if (selected.length)
@@ -657,7 +658,7 @@ function dialValue(target, inst) {
     if (!mix) return null;
     const v = dialNow(`mixvol:${id}`, mix.volume);
     return { label: `${mix.name} mix`, pct: pct(v), maxPct: mix.kind === "monitor" ? 150 : 100,
-             text: mix.muted ? "MUTED" : `${pct(v)}%`, muted: mix.muted };
+             text: effectiveMixMuted(mix) ? "MUTED" : `${pct(v)}%`, muted: effectiveMixMuted(mix) };
   }
   if (target.startsWith("output:")) {
     const name = outputDeviceName(target.slice(7));
@@ -878,7 +879,7 @@ function onDialPress(context, inst) {
       if (muted != null) cmd({ cmd: "setChannelMuted", channel: ch, mix, value: !muted });
     }
   } else if (t.startsWith("mixvol:")) {
-    const mix = t.slice(7), muted = mixOf(mix)?.muted;
+    const mix = t.slice(7), muted = effectiveMixMuted(mixOf(mix));
     if (muted != null) cmd({ cmd: "setMixMuted", mix, value: !muted });
   } else if (t === "gain" || t === "gain2") {
     const control = t === "gain" ? "mute" : "mute2";

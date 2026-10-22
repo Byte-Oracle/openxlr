@@ -239,7 +239,11 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
 - A MONITOR mute that pauses every selected output while recording and
   streaming continue. Resuming keeps mix and channel mutes, levels and feeds
   as they were. The UI, terminal mixer and Deck share the same pause,
-  saved with mixer settings and left unchanged by profile recall
+  saved with mixer settings and left unchanged by profile recall. Physical
+  output mutes mirror it; explicitly opening one monitor during a pause starts
+  a new listening selection and opens its assigned Linux outputs, without
+  reviving the old selection on the next key. A shared output stays open while
+  any assigned mix is open
 - An editable layout: Edit layout in the SUBMIXER card adds, renames,
   reorders and removes application channels, virtual microphones and
   monitor mixes, including Monitor A/B, while audio plays, as does the API.

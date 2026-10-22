@@ -202,7 +202,7 @@ that final acknowledgement (or an `error` without a request id):
 | `setMonitorFeed` | `device`, `mix` | what feeds one selected output, independently of other outputs: any existing mix id, including `stream`, `chat`, `auxout` and user mixes of either kind, or distinct ids joined with `+` to sum them at unity. One mix can appear in several outputs' feeds. An empty feed is rejected; remove an output from `setMonitorOutputs` to disconnect it. The Pro's own jacks follow one feed together. The state's `monitorFeeds` lists exceptions from `defaultMonitorMix` (`monitor` when present, otherwise the lowest monitor id), independent of layout order. Unknown or repeated mix ids and unselected outputs are rejected. Deleting the last included mix returns that output to `defaultMonitorMix` |
 | `setAuxPortEnabled` | `value` | send the Aux mix to the USB Aux port |
 | `setOutputVolume` | `value` | volume of the selected monitor devices, 0 to 1.5; the range the devices themselves take, so a desktop level above unity can be held and written back unchanged. Values outside it are clamped, and the state reports what reached the devices. With no output selected the command succeeds and changes nothing |
-| `setMonitorMuted` | `value` | boolean only; pause or resume OpenXLR's feeds to all selected monitor outputs, including the Pro's direct microphone monitoring. Mix and channel mutes, levels, feeds and recording outputs stay unchanged. The state reports `monitorMuted`; saved in `mixer.json`, not in profiles, and profile recall keeps the current pause |
+| `setMonitorMuted` | `value` | boolean only; pause or resume OpenXLR's feeds to all selected monitor outputs, including the Pro's direct microphone monitoring. Selected physical sinks mirror the pause, preserving their previous native mutes for resume. Mix and channel mutes, levels, feeds and recording outputs stay unchanged. The state reports `monitorMuted`; saved in `mixer.json`, not in profiles, and profile recall keeps the current pause |
 | `toggleMonitorMuted` | none | atomically toggle the same monitor pause. Use this for keys and repeated presses instead of reading `monitorMuted` and sending its inverse; each accepted command toggles once |
 | `listPlugins` | none | the installed LV2, CLAP and VST3 plugins, answered with a `plugins` message |
 | `getPluginDiagnostics` | none | read bridge status and existing native scan evidence without syncing, rescanning or changing inserts; answered with `pluginDiagnostics` |
@@ -328,24 +328,52 @@ divided by 100 (1.0 = 100%, 1.5 = 150%), the scale `pactl` shows, not
 PipeWire's raw linear amplitude; the daemon takes the cube root when reading
 and writes percentages back with `pactl`.
 `setMixVolume` and `setMixMuted` update those sinks directly, leaving channel
-sends and other mixes unchanged. Monitor gain is applied once, at the mix
+sends and other mixes unchanged, except for the explicit open during a global pause described below. Monitor gain is applied once, at the mix
 sink before its inserts. Non-monitor masters still apply to the channel
 sends and retain their 0 to 1 range.
 
-A native mute on a selected physical output, or on an internal application
-sink while it is the system default, toggles `mixer.monitorMuted`. Unmuting
-an output that was already muted before selection leaves it unmuted without
-changing the monitoring pause. A mute on any other application sink is repaired
-without pausing monitoring. Application sinks stay open so their audio can
-still reach recording and streaming mixes. The desktop's mute icon
-can therefore return to its previous state while monitoring stays paused;
-`monitorMuted` is the persistent monitoring status. Monitor mix sinks retain
-the per-mix behaviour above. After a blanket desktop mute, restoring their
-previous mute choices stays pending until a native read confirms it. Failed
-restorations retry on later sweeps without changing those choices. A
-reconnected physical output keeps its previous mute choice while native and
-registry identities disagree. Identity reads and their fallback mute reads
-back off together when the helper fails.
+The selected physical sinks mirror monitoring: the global pause mutes them,
+and resuming restores their previous native mute flags. A selected sink whose
+entire assigned feed is individually muted is natively muted too; any open
+assigned mix, including Stream, Chat or Aux, keeps a summed output open. The
+Pro's shared native sink stays open while its independent Aux return is active;
+its selected headphone and line-output selectors instead follow the audibility
+of the monitor feed. No recording mix or channel send is muted by a pause.
+
+An explicit `setMixMuted` with `value:false` on a monitor-kind mix during a
+pause replaces the listening selection: the other monitor mixes become
+individually muted, the pause clears, and that mix and its assigned physical
+sinks are unmuted. The next master toggle preserves this new selection instead
+of reopening the previous one. An explicit monitor unmute also clears an older
+native mute on its assigned sinks. Virtual-microphone and Aux mix setters do
+not replace the monitor selection. Rejected monitor writes restore the previous
+mix intent; failed native restorations retry on later sweeps with bounded backoff.
+
+The state retains each mix's individual `muted` choice. Clients show a monitor
+master as effectively muted when `mix.muted || mixer.monitorMuted`; sending
+`setMixMuted(false)` from that state performs the explicit selection above.
+`toggleOutputMute` on a monitor mix uses that same effective state.
+
+A native mute change on a selected physical output, or a native mute on an
+internal application sink while it is the system default, toggles
+`mixer.monitorMuted`. Application sinks stay open so their audio can still
+reach recording and streaming mixes. A mute on another application sink is
+repaired without pausing monitoring. Unmuting an output that was already muted
+before selection leaves it unmuted without starting a pause. Unmuting a native
+mute OpenXLR authored for the global pause resumes monitoring. If the native
+mute instead came from individually closing every assigned mix, desktop unmute
+releases the hardware flag without guessing which mix to open or starting a
+pause; those deliberately muted mixes remain silent. A later explicit OpenXLR
+mute re-arms native control. The native flag of an application sink can clear
+while monitoring remains paused; `monitorMuted` is the persistent master state.
+
+After a blanket desktop mute, restoring previous mix choices stays pending
+until a native read confirms it. A reconnected output keeps its previous native
+choice while native and registry identities disagree. Identity reads and their
+fallback mute reads back off together when the helper fails. Native changes
+observed in one sweep are grouped as one action; the audio server does not
+identify whether that change came from a keyboard or an applet, and multiple
+toggles completed between observations cannot be reconstructed.
 
 ### Waiting for the audio server
 

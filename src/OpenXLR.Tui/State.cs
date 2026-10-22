@@ -35,6 +35,8 @@ internal sealed record MixEntry
     public string Name { get; init; } = string.Empty;
     public double Volume { get; init; } = 1;
     public bool Muted { get; init; }
+
+    public bool EffectiveMute(bool monitorPaused) => Muted || Kind == "monitor" && monitorPaused;
     public string Kind { get; init; } = "virtualMic";
     public bool? Editable { get; init; }
     public bool IsEditable => Editable ?? Kind == "virtualMic";

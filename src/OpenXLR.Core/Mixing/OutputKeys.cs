@@ -68,7 +68,7 @@ public sealed partial class Mixer
             // Use the regular monitor setter so state and graph acknowledgement
             // follow the same path as a click in the mixer, even when registry
             // events have not caught up with pipewire-pulse yet.
-            SetMixMuted(mix.Id, !_pw.GetSinkMuted(sink));
+            SetMixMuted(mix.Id, !_monitorMuted && !_pw.GetSinkMuted(sink));
         }
     }
 
@@ -85,6 +85,10 @@ public sealed partial class Mixer
         }
     }
 
+    internal static bool IsExactOutputName(string name)
+        => name.Length is > 0 and <= 256 && !name.Any(char.IsControl) && !name.Contains('#')
+            && name[0] is not ('@' or '-') && !name.All(char.IsAsciiDigit);
+
     private string ResolveOutputKeyLocked(string? requested)
     {
         if (!_built) throw new InvalidOperationException("mixer is not built");
@@ -92,8 +96,7 @@ public sealed partial class Mixer
         // pactl accepts numeric ids and @...@ aliases as well as names. These
         // controls bind exact node names; never let an ambiguous name resolve
         // to a different device or a shared-jack pseudo-output.
-        if (sink.Length is 0 or > 256 || sink.Any(char.IsControl) || sink.Contains('#')
-            || sink[0] is '@' or '-' || sink.All(char.IsAsciiDigit))
+        if (!IsExactOutputName(sink))
             throw new InvalidOperationException("select an unambiguous PipeWire output name");
         AudioNode? node = _pw.ListDevices().FirstOrDefault(d => d.Name == sink && d.Kind == AudioNodeKind.Sink);
         if (node is null) throw new InvalidOperationException("the selected output is unavailable");

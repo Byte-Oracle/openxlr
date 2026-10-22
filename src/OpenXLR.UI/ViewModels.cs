@@ -1119,7 +1119,6 @@ public sealed partial class MainViewModel : ViewModelBase
     private Task<string?> OnMonitorFeedChanged(string output, string mixId)
         => _applying ? Task.FromResult<string?>(null) : _client.SetMonitorFeedAsync(output, mixId);
 
-
     /// <summary>AudioNodeKind arrives as the enum's number (0 = Sink) or name.</summary>
     private static bool IsSink(JsonNode? kind) => kind switch
     {
@@ -1261,7 +1260,7 @@ public sealed partial class MainViewModel : ViewModelBase
         if (mixer["mixes"] is JsonArray mixes)
         {
             SyncList(Mixes, mixes, m => m["id"]!.GetValue<string>(),
-                (m, vm) => vm.ApplyFromDaemon(m),
+                (m, vm) => vm.ApplyFromDaemon(m, MonitorMuted),
                 CreateMix, removed =>
                 {
                     removed.Detach();
@@ -1597,7 +1596,7 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     private double _meterR;
     public double MeterR { get => _meterR; set => Set(ref _meterR, Math.Min(value, 1.0)); }
 
-    public void ApplyFromDaemon(JsonNode n)
+    public void ApplyFromDaemon(JsonNode n, bool monitorMuted = false)
     {
         Appearance.Apply(n["appearance"]);
         bool? editable = n["editable"]?.GetValue<bool>();
@@ -1609,8 +1608,8 @@ public sealed class MixViewModel : ViewModelBase, IHasId
         {
             if (!SliderSync.RecentlyTouched($"mixvol:{Id}"))
                 Volume = n["volume"]?.GetValue<double>() ?? 1.0;
-            Muted = n["muted"]?.GetValue<bool>() ?? false;
             Kind = n["kind"]?.GetValue<string>() ?? Kind;
+            Muted = (n["muted"]?.GetValue<bool>() ?? false) || IsMonitor && monitorMuted;
             if (n["name"]?.GetValue<string>() is { Length: > 0 } name) Name = name;
         }
         finally { _applying = false; }

@@ -256,6 +256,12 @@ physical monitor output it toggles the whole monitor selection's pause, on a
 monitor mix sink that mix.
 `{"cmd":"setMonitorMuted","value":true}` pauses all selected monitor outputs
 without changing mix or channel mutes or stopping recording and streaming.
+Selected physical sinks mirror the mute; resume restores their previous native
+flags. An explicit `{"cmd":"setMixMuted","mix":"monitor","value":false}`
+during a pause opens only that monitor, commits the other monitor mixes as
+muted, and unmutes its assigned Linux sinks. Any open member of a shared output
+feed keeps that device open; the Pro's independent Aux return keeps its shared
+sink open while the selected jack controls follow monitoring.
 Use `false` to resume. The `/mixer` resource reports the current `monitorMuted`;
 it is saved with mixer settings and left unchanged by profile recall.
 `{"cmd":"toggleMonitorMuted"}` toggles that pause atomically, without a
