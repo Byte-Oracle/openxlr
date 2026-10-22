@@ -145,9 +145,9 @@ public sealed class MonitorMuteTests
     }
 
     [Theory]
-    [InlineData("null")]
-    [InlineData("{\"removed\":true,\"OpenXLR_mix_monitor\":false}")]
-    public void InvalidNativeRestoreOwnersAreDroppedWithoutDiscardingOtherSettings(string owners)
+    [InlineData("null", "")]
+    [InlineData("{\"removed\":true,\"OpenXLR_mix_monitor\":false}", "removed")]
+    public void InvalidNativeRestoreOwnersAreDroppedWithoutDiscardingOtherSettings(string owners, string kept)
     {
         string directory = Directory.CreateTempSubdirectory("openxlr-native-mute-settings-").FullName;
         try
@@ -157,7 +157,9 @@ public sealed class MonitorMuteTests
             var settings = Assert.IsType<MixerSettings>(MixerSettings.Load(path, out string? warning));
             Assert.True(settings.MonitorMuted);
             Assert.Equal(["external"], settings.MonitorOutputs);
-            Assert.Empty(settings.MonitorOutputMutes);
+            // An unselected output still owed its original flag is kept.
+            string[] expected = kept.Length == 0 ? [] : [kept];
+            Assert.Equal(expected, settings.MonitorOutputMutes.Keys);
             Assert.NotNull(warning);
         }
         finally { Directory.Delete(directory, true); }

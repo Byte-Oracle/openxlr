@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 
 namespace OpenXLR.Tests;
 
+[Collection("xdg-config")]
 public sealed class EditableMonitorMixTests
 {
     [Theory]
@@ -47,20 +48,30 @@ public sealed class EditableMonitorMixTests
         SetConfig(mixer, config);
         mixer.SetDuckingSetup(DuckingSetup.Default(config), _ => null);
         MixerSettings saved = mixer.ExportSettings();
-        Assert.Null(saved.UserMixes);
+        // 0.2.0 reads only userMixes, behind its fixed Monitor A and B.
+        Assert.Equal(["phones", "chat", "stream"], saved.UserMixes!.Select(m => m.Id));
+        Assert.Equal(["monitor", "virtualMic", "virtualMic"], saved.UserMixes!.Select(m => m.Kind));
         string directory = Directory.CreateTempSubdirectory("openxlr-editable-monitors-").FullName;
-        MixerConfig restored;
+        MixerConfig restored, downgraded;
         try
         {
             string path = Path.Combine(directory, "mixer.json");
             Assert.Null(saved.Save(path));
-            Assert.DoesNotContain("userMixes", File.ReadAllText(path));
+            JsonObject file = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+            Assert.Equal(["phones", "chat", "stream"], file["userMixes"]!.AsArray().Select(m => (string?)m!["id"]));
             MixerSettings loaded = Assert.IsType<MixerSettings>(MixerSettings.Load(path, out string? warning));
             Assert.Null(warning);
             restored = MixerConfig.FromSettings(loaded);
+            // A 0.2.0 save drops mixes; reading that file back keeps every added mix.
+            file.Remove("mixes");
+            OpenXLR.Core.OpenXlrPaths.WriteAtomic(path, file.ToJsonString());
+            downgraded = MixerConfig.FromSettings(MixerSettings.Load(path, out warning));
+            Assert.Null(warning);
         }
         finally { Directory.Delete(directory, true); }
         Assert.Equal(config.Mixes, restored.Mixes);
+        Assert.Equal(["monitor", "monitor2", "phones", "chat", "stream", "auxout"], downgraded.Mixes.Select(m => m.Id));
+        Assert.Equal(MixKind.Monitor, downgraded.Mixes.Single(m => m.Id == "phones").Kind);
         Assert.Equal("Speakers", restored.Mixes.Single(m => m.Id == remaining).Name);
         Assert.DoesNotContain(restored.Mixes, m => m.Id == (removeFirst ? "monitor" : "monitor2"));
     }
@@ -125,6 +136,49 @@ public sealed class EditableMonitorMixTests
         SetConfig(mixer, config.WithoutMix("monitor2"));
         Assert.False(mixer.Snapshot().Mixes.Single(m => m.Id == "a-speakers").Deletable);
         Assert.True(mixer.Snapshot().Mixes.Single(m => m.Id == "stream").Deletable);
+    }
+
+    [Fact]
+    public void ProfileRecallKeepsOutputsOnTheMonitorTheyPlayedAfterTheDefaultChanged()
+    {
+        string directory = Directory.CreateTempSubdirectory("openxlr-recall-default-").FullName;
+        string? previousPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            ExecutableScript.Write(Path.Combine(directory, "pactl"), "exit 0");
+            ExecutableScript.Write(Path.Combine(directory, "pw-dump"), "echo '[]'");
+            ExecutableScript.Write(Path.Combine(directory, "pw-link"), "exit 0");
+            Environment.SetEnvironmentVariable("PATH", directory);
+            using var mixer = new Mixer(new PipeWireAdapter());
+            typeof(Mixer).GetField("_built", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mixer, true);
+            MixerConfig config = MixerConfig.Default().WithoutMix("monitor");
+            SetConfig(mixer, config);
+            mixer.SetMonitorOutputs(["headphones", "speakers"]);
+            Assert.Null(mixer.SetMonitorFeed("speakers", "monitor2+stream"));
+            Assert.Equal("monitor2", mixer.MonitorFeedOf("headphones"));
+
+            OpenXLR.Core.MixerScene gaming = mixer.ExportScene();
+            Assert.Equal("monitor2", gaming.MonitorFeeds!["headphones"]);
+
+            // Monitor C's id sorts before monitor2, so it is the default now.
+            SetConfig(mixer, config.WithMix(new("monitor-c", "Monitor C", MixKind.Monitor)));
+            Assert.Equal("monitor-c", mixer.Config.DefaultMonitor!.Id);
+            Assert.Null(mixer.SetMonitorFeed("headphones", "monitor-c"));
+            mixer.ApplyScene(gaming);
+            Assert.Equal("monitor2", mixer.MonitorFeedOf("headphones"));
+            Assert.Equal("monitor2+stream", mixer.MonitorFeedOf("speakers"));
+
+            // A profile that names only removed mixes, or an older one with no
+            // entry for the output, follows the default at recall time.
+            mixer.ApplyScene(gaming with { MonitorFeeds = new() { ["speakers"] = "removed" } });
+            Assert.Equal("monitor-c", mixer.MonitorFeedOf("headphones"));
+            Assert.Equal("monitor-c", mixer.MonitorFeedOf("speakers"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", previousPath);
+            Directory.Delete(directory, true);
+        }
     }
 
     [Fact]

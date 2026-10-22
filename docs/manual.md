@@ -536,8 +536,20 @@ that was the default.
    last previously open monitor is deleted, the pause clears and the remaining
    individually muted monitors stay muted. These choices survive a restart.
    Selected Linux output devices are muted too; resuming restores their previous
-   native mute flags. The original flags are saved with the monitor selection
-   so they can be restored after a daemon restart too. To start a new listening
+   native mute flags. Muting every mix that feeds an output, one by one, also
+   mutes that Linux device, and opening any of them unmutes it again. A native
+   mute silences the whole device, so applications that play straight to it
+   go quiet as well. With **Follow MONITOR output** as Default output,
+   applications left to desktop routing play to the first selected monitor
+   device, so pausing, or muting Monitor A when it is that device's only feed,
+   silences all desktop sound there.
+   The original flags are saved with mixer settings. While the daemon is
+   stopped, a device it muted stays muted, so a restart during a pause lets no
+   sound out; the next start takes the device over again and resuming unmutes
+   it. Turning off **Enable software mixer** puts every original flag back as
+   the daemon stops, because no later start would. If you stop OpenXLR for
+   good while monitoring is paused, resume first or unmute the device in your
+   desktop's sound settings. To start a new listening
    selection instead, unmute one
    monitor mix while paused. Only that monitor opens, the other monitor mixes
    stay individually muted, and its assigned Linux devices are unmuted. The next
@@ -1770,6 +1782,12 @@ volume, and a channel it knows but saved before that channel had a volume
 goes back to 100%. A profile saved before XLR 1, XLR 2 and Aux In had a
 volume recalls them at 100%.
 
+A profile records which mix feeds each selected output, even an output on the
+default monitor mix, so it plays the same mixes after you delete or add a
+monitor. An output whose saved mixes no longer exist, or one an older profile
+left to the default, hears the default monitor mix at the time of the recall.
+A ducking setup saved without mixes ducks the default monitor mix as well.
+
 Loading a profile rebuilds only the plugin chains it changes. A chain with
 the same plugins, order, bypass and host as the profile's keeps running and
 takes the profile's control values as it plays, and an open plugin editor
@@ -1828,8 +1846,10 @@ application channels, mixes, virtual microphones and plugin inserts. The
 daemon restarts when you change it, briefly interrupting audio. With it
 off, the sound card keeps its stock PipeWire layout, including the Pro's
 UCM profile where one is installed, and the `OpenXLR …` devices, mixes,
-virtual microphones and inserts go away. The INPUTS and HEADPHONES
-cards keep working. Turn it on again the same way.
+virtual microphones and inserts go away. Output devices muted for a
+monitoring pause or a closed monitor feed get their previous mute flags back
+as the daemon stops. The INPUTS and HEADPHONES cards keep working. Turn it on
+again the same way.
 
 <a name="autostart"></a>
 ### 3.9 Start at login, tray
@@ -2387,7 +2407,11 @@ Appearance is part of the layout, saved with it, and not part of a profile.
   Outputs that followed only the deleted mix
   return to the default monitor mix, while summed feeds keep their other mixes.
   The default is Monitor A while it exists, otherwise the monitor whose stable
-  id sorts first. Reordering or renaming mixes never changes that choice. If the
+  id sorts first. Reordering or renaming mixes never changes that choice, but
+  deleting the default does, and so can adding a monitor once Monitor A is gone,
+  when the new id sorts first. Outputs already following the default keep the
+  mix they were playing, and a profile records the mix of every selected output,
+  so recalling it after the default changed plays what it played when saved. If the
   mix was the enforced system default output or input, that choice is
   cleared and the desktop picks the default.
 
@@ -3269,7 +3293,11 @@ until readback confirms them. OpenXLR does not author a hardware mute before
 it has verified that output's native identity. Removing an output keeps its
 native mute while an old monitor connection still refuses to disconnect.
 Once that connection is gone, a failed release is retried only for that same
-device instance.
+device instance. A release still pending when the daemon stops is saved and
+finished by the next start, as is the release of an output that `monitorOutput`
+or `OPENXLR_MONITOR_OUTPUT` took out of the saved selection. Such a saved
+release puts back the original flag on whichever device holds that name,
+waiting for the device if it is not connected.
 Unmuting an output muted before selection leaves it unmuted without starting
 a monitoring pause. Unmuting a native mute authored by the global pause resumes
 monitoring. If every assigned mix was individually muted, desktop unmute only

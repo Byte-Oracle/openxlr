@@ -133,7 +133,9 @@ input chains load them as inserts and hear silence without their binaries.
 The runner isolates plugin scans from user-installed CLAP and VST3 bundles.
 CI installs the DSP test plugins, rebuilds with the native helper and runs
 this check separately with
-`OPENXLR_TEST_FILTER="FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests"`.
+`OPENXLR_TEST_FILTER="FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests|FullyQualifiedName=OpenXLR.Tests.MonitorVolumeIntegrationTests.MixInsertAndPostLinksRecoverWithoutRestartingThePlugin"`.
+The mix insert route-recovery check also needs DSP enabled, so it joins this
+selection even though it lives in the monitor test class.
 For a focused rerun on the same private server, set `OPENXLR_TEST_FILTER` to
 the desired `dotnet test` filter instead of passing a second `--filter`.
 CI spreads both runs over parallel jobs with `OPENXLR_TEST_SHARD=N/M`, which

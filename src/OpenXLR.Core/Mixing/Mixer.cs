@@ -1543,6 +1543,11 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     .Select(c => new UserChannelDefinition(c.Id, c.Name, c.CaptureSource, c.CapturePair, c.CaptureMonoChannel, c.CaptureUnit))],
                 Mixes = [.. _config.Mixes.Where(m => m.IsEditable)
                     .Select(m => new UserMixDefinition(m.Id, m.Name) { Kind = KindName(m.Kind) })],
+                // 0.2.0 reads only this list, with Monitor A and B fixed ahead of
+                // it, and drops the canonical one on its next save. Without it a
+                // downgrade would lose every added mix for good.
+                UserMixes = [.. _config.Mixes.Where(m => m.IsEditable && m.Id is not ("monitor" or "monitor2"))
+                    .Select(m => new UserMixDefinition(m.Id, m.Name) { Kind = KindName(m.Kind) })],
                 MixVolumes = new Dictionary<string, double>(_mixVolume),
                 MixMuted = [.. _mixMuted],
                 Levels = new Dictionary<string, double>(_levels),
@@ -1551,7 +1556,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MonitorOutputs = [.. _monitorOutputs],
                 MonitorMuted = _monitorMuted,
                 MonitorMuteMicrophones = _monitorMuteMicrophones,
-                MonitorOutputMutes = _monitorOutputMutes.Where(pair => _monitorOutputs.Any(o => StripMarker(o) == pair.Key)).ToDictionary(),
+                // A release still pending for a deselected output is saved too.
+                MonitorOutputMutes = new Dictionary<string, bool>(_monitorOutputMutes),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
                 PreserveBrowserOutputs = _preserveBrowserOutputs,
@@ -1675,14 +1681,20 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             _monitorFeeds.Clear();
             foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
             HashSet<string> selectedHardware = savedOutputs.Select(StripMarker).ToHashSet(StringComparer.Ordinal);
+            var savedOwners = (s.MonitorOutputMutes ?? []).Where(pair => IsExactOutputName(pair.Key)
+                && !pair.Key.StartsWith("OpenXLR_", StringComparison.Ordinal)).ToArray();
+            // A saved owner outside this selection, left by a release still
+            // pending at the last stop or by an override replacing the saved
+            // selection, is released with the old selection below. An owner
+            // this mixer already holds keeps its live flag.
+            foreach ((string output, bool muted) in savedOwners)
+                if (!selectedHardware.Contains(output) && !_monitorOutputMutes.ContainsKey(output))
+                    RememberMonitorOutputMuteLocked(output, muted);
             // Release the old selection while its ownership is still known.
             // Legacy settings for the same output keep the current baseline.
             ForgetUnselectedDesktopOutputsLocked(selectedHardware);
-            foreach (string removed in _monitorOutputMutes.Keys.Where(n => !selectedHardware.Contains(n) && !_outputMutes.ContainsKey(n)).ToArray())
-                ForgetMonitorOutputMuteLocked(removed);
-            foreach ((string output, bool muted) in s.MonitorOutputMutes ?? [])
-                if (selectedHardware.Contains(output) && IsExactOutputName(output) && !output.StartsWith("OpenXLR_", StringComparison.Ordinal))
-                    RememberMonitorOutputMuteLocked(output, muted);
+            foreach ((string output, bool muted) in savedOwners)
+                if (selectedHardware.Contains(output)) RememberMonitorOutputMuteLocked(output, muted);
             SetMonitorOutputsLocked(savedOutputs);
             // Resume at the saved selection, not the output it replaced.
             SetMonitorMuted(s.MonitorMuted);
@@ -1753,7 +1765,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 ChannelVolumes = ExportChannelVolumesLocked(),
                 ChannelMuted = [.. _muted],
                 MonitorOutputs = [.. _monitorOutputs],
-                MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
+                MonitorFeeds = SceneMonitorFeedsLocked(),
                 AuxPortEnabled = _auxPortEnabled,
                 OutputVolume = _outputVolume,
                 LowCutHz = _lowCutHz,
@@ -1763,6 +1775,21 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 Ducking = DuckingSetupLocked().ToScene(),
             };
         }
+    }
+
+    /// <summary>
+    /// The feed of every selected output, written out even where it is only
+    /// the default monitor. Which monitor is the default can change between
+    /// saving a profile and recalling it (a monitor whose id sorts first is
+    /// added after Monitor A was deleted), and recall replaces the whole feed
+    /// table, so an output left implicit would follow a mix it never played.
+    /// </summary>
+    private Dictionary<string, string> SceneMonitorFeedsLocked()
+    {
+        var feeds = new Dictionary<string, string>(_monitorFeeds);
+        foreach (string output in _monitorOutputs)
+            if (FeedOfLocked(output) is string feed) feeds[output] = feed;
+        return feeds;
     }
 
     /// <summary>

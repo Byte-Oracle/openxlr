@@ -245,7 +245,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   output mutes mirror it; explicitly opening one monitor during a pause starts
   a new listening selection and opens its assigned Linux outputs, without
   reviving the old selection on the next key. A shared output stays open while
-  any assigned mix is open
+  any assigned mix is open. The original native flags survive a daemon restart
+  and come back when the software mixer is turned off
 - An editable layout: Edit layout in the SUBMIXER card adds, renames,
   reorders and removes application channels, virtual microphones and
   monitor mixes, including Monitor A/B, while audio plays, as does the API.
