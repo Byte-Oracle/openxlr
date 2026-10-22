@@ -1020,7 +1020,7 @@
     <value>Распоред миксера</value>
   </data>
   <data name="MixerView" xml:space="preserve">
-    <value>Приказ миксера</value>
+    <value>Приказ</value>
   </data>
   <data name="MixerViewCompact" xml:space="preserve">
     <value>Сажето: један канал</value>
