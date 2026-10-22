@@ -198,9 +198,15 @@ locked restore and tests. Do not disable locked mode to make an update pass.
 CI and CodeQL run for pull requests and for pushes to `main`. A newer
 push to a pull request cancels the run it replaces. To check a branch
 before its pull request exists, open the pull request as a draft or start
-CI by hand with `gh workflow run CI --ref <branch>`. A change to
-`README.md` alone skips both: CI reports its jobs as skipped, which
-counts as passing.
+CI by hand with `gh workflow run CI --ref <branch>`. The checks that need
+no .NET build run for every change. A change that touches only Markdown
+files other than `docs/skins.md`, pictures under `docs/`, or the deck
+plugin's script, pages and tests skips the build and tests, and the
+Omarchy QML check runs only when its own files or the workflow change.
+Skipped jobs count as passing for the required `ci-ok` check. Every night
+the whole CI runs on `main` with nothing skipped, and a failure opens an
+issue labelled `ci-nightly`, or comments on the open one. CodeQL
+skips a change to `README.md` alone.
 
 - **Branch from `main`** and keep one topic per pull request. Split an
   independent part out into its own request when you can; small ones

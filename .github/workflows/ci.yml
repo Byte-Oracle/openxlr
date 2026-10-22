@@ -5,11 +5,16 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Every night the whole suite runs on main with nothing skipped, which
+  # catches what path gating defers and changes in the runner images.
+  schedule:
+    - cron: "23 3 * * *"
 
 # A newer push to the same pull request, or a newer merge to main, cancels
-# the run it replaces; only the tip can be merged or released.
+# the run it replaces; only the tip can be merged or released. The nightly
+# run has its own group, so a merge does not cancel it.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event_name == 'schedule' && 'nightly' || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 # Actions are pinned to commit SHAs (the tag is in the comment) so a moved
@@ -18,15 +23,17 @@ permissions:
   contents: read
 
 jobs:
-  # A change that touches README.md alone builds and tests nothing. The other
-  # jobs still run and report as skipped, which the required ci-ok check
-  # counts as passing; a workflow-level paths-ignore would never report it
-  # and leave the pull request waiting.
+  # A change that touches only prose, pictures or the deck plugin's script
+  # builds nothing, and the Omarchy QML check runs only for its own files.
+  # Skipped jobs still report, which the required ci-ok check counts as
+  # passing; a workflow-level paths-ignore would never report it and leave
+  # the pull request waiting. The checks job runs for every change.
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      omarchy: ${{ steps.diff.outputs.omarchy }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,23 +45,99 @@ jobs:
         run: |
           # A pull request checks out its merge commit, whose first parent is
           # the base. A push to main compares with the previous tip; a run
-          # started by hand has none, so it runs everything.
+          # started by hand or by the schedule has none, so it runs
+          # everything.
           files=""
           if [ "$EVENT" = pull_request ]; then
             files=$(git diff --name-only HEAD^1 HEAD)
           elif [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             files=$(git diff --name-only "$BEFORE" HEAD)
           fi
-          if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvx 'README.md'; then
-            echo "Only README.md changed; skipping the build and tests."
-            echo "code=false" >> "$GITHUB_OUTPUT"
-          else
+          if [ -z "$files" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "omarchy=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          # No build or test reads these. SkinDocumentTests holds
+          # docs/skins.md to the skin tokens, and the deck plugin's JSON
+          # files are read by tests, so neither is listed.
+          inert='\.md$|^docs/.*\.(png|svg)$|^plugin/com\.emaspa\.openxlr\.sdPlugin/.*\.(mjs|html|css|js)$|^plugin/tests/'
+          if printf '%s\n' "$files" | grep -Ev "$inert" | grep -q . ||
+             printf '%s\n' "$files" | grep -qx 'docs/skins.md'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Only prose, pictures or the deck plugin's script changed; skipping the build and tests."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+          if printf '%s\n' "$files" | grep -Eq '^packaging/omarchy/|^tools/check-omarchy\.py$|^tools/omarchy-qml-imports/|^\.github/workflows/ci\.yml$'; then
+            echo "omarchy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "omarchy=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Checks that need no .NET build: generated files, the deck and Omarchy
+  # plugins' own tests, the HTTP API description, packaging recipes and
+  # shell scripts.
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Versions agree everywhere
+        run: tools/check-version.sh
+
+      - name: Generated files match their sources
+        run: |
+          python3 tools/deck-skins.py --check
+          python3 tools/deck-icons.py --check
+          python3 tools/eq-reference.py --check
+          python3 tools/omarchy-skins.py --check
+          python3 packaging/flatpak/nuget-sources.py --check
+
+      - name: Validate Stream Deck/OpenDeck plugin
+        run: |
+          node --check plugin/com.emaspa.openxlr.sdPlugin/plugin.mjs
+          python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
+          node --test plugin/tests/*.test.mjs
+
+      - name: Validate Chromium browser routing
+        run: |
+          python3 -m json.tool browser/chromium/manifest.json >/dev/null
+          python3 -m json.tool browser/native-host.json >/dev/null
+          for file in browser/chromium/*.mjs; do node --check "$file"; done
+          node --test browser/tests/*.test.mjs
+          node --check browser/tests/chromium-integration.mjs
+
+      - name: Validate the Omarchy bar plugin
+        run: |
+          node --test packaging/omarchy/tests/*.test.mjs
+          python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
+
+      - name: HTTP API description
+        run: python3 tools/check-openapi.py docs/openapi-v1.json
+
+      - name: Lint shell scripts
+        run: shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh packaging/ppa/make-source.sh packaging/omarchy/openxlr-omarchy-enable
+
+      - name: Locked restore enforced on every packaging path
+        run: tools/check-locked-restore.sh
+
+      - name: RPM recipe claims every file it installs
+        run: tools/check-spec.py packaging/rpm/openxlr.spec
+
+      - name: Flatpak manifest and its files
+        run: python3 packaging/flatpak/test-package.py
+
+      - name: Validate packaged service inputs
+        run: |
+          test -f packaging/openxlr-daemon.service
+          test -f packaging/70-openxlr.rules
+          grep -q '0fd9' packaging/70-openxlr.rules
 
   omarchy-qml:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.omarchy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container: archlinux:base
@@ -64,8 +147,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check Omarchy QML with external type declarations
         run: python3 tools/check-omarchy.py
-      - name: Check the generated Omarchy meter palettes
-        run: python3 tools/omarchy-skins.py --check
       - name: Exercise Omarchy strip controls with a fake daemon
         run: QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input packaging/omarchy/tests
 
@@ -81,9 +162,6 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Versions agree everywhere
-        run: tools/check-version.sh
-
       - name: Restore (locked to packages.lock.json)
         run: dotnet restore src/OpenXLR.slnx --locked-mode
 
@@ -97,36 +175,6 @@ jobs:
         run: |
           python3 tools/test-installation-receipt.py
           python3 packaging/yabridge/test-receipt.py
-
-      - name: Validate browser routing and desktop plugins
-        run: |
-          python3 tools/deck-skins.py --check
-          python3 tools/deck-icons.py --check
-          node --check plugin/com.emaspa.openxlr.sdPlugin/plugin.mjs
-          python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
-          python3 tools/check-openapi.py docs/openapi-v1.json
-          python3 tools/eq-reference.py --check
-          node --test plugin/tests/*.test.mjs
-          for file in browser/chromium/*.mjs; do node --check "$file"; done
-          node --test browser/tests/*.test.mjs
-          node --check browser/tests/chromium-integration.mjs
-          node --test packaging/omarchy/tests/*.test.mjs
-          python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
-
-      - name: Lint shell scripts
-        run: shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh packaging/ppa/make-source.sh packaging/omarchy/openxlr-omarchy-enable
-
-      - name: Locked restore enforced on every packaging path
-        run: tools/check-locked-restore.sh
-
-      - name: RPM recipe claims every file it installs
-        run: tools/check-spec.py packaging/rpm/openxlr.spec
-
-      - name: Validate packaged service inputs
-        run: |
-          test -f packaging/openxlr-daemon.service
-          test -f packaging/70-openxlr.rules
-          grep -q '0fd9' packaging/70-openxlr.rules
 
   # The native plugin host, its C and C++ tests, and the catalogue tests
   # that need lilv installed.
@@ -262,7 +310,7 @@ jobs:
   # split or gated on the changed paths without touching the ruleset. It
   # passes when every job it waits on passed or was skipped.
   ci-ok:
-    needs: [changes, omarchy-qml, unit, native, audio, windows]
+    needs: [changes, checks, omarchy-qml, unit, native, audio, windows]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -277,3 +325,27 @@ jobs:
               *) exit 1 ;;
             esac
           done
+
+  # A failed nightly run opens an issue, or comments on the open one, so a
+  # failure nobody was watching for is not lost.
+  nightly-report:
+    needs: ci-ok
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body="The nightly CI run on $(date -u +%F) failed: $RUN_URL"
+          number=$(gh issue list --label ci-nightly --state open --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh label create ci-nightly --color B60205 --description "Nightly CI failures" 2>/dev/null || true
+            gh issue create --title "Nightly CI failed" --label ci-nightly --body "$body"
+          fi
