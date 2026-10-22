@@ -353,10 +353,10 @@ public sealed class MixMatrixTests
         Assert.Equal(Localizer.Text("VirtualMicrophone"), Column("stream").OutputsText);
         Assert.Equal(Localizer.Text("UsbAuxPortKind"), Column("auxout").OutputsText);
 
-        MixOption[] feeds = [new("monitor", "Monitor A"), new("monitor2", "Monitor B"), new("monitor+monitor2", "Monitor A+B")];
+        MixOption[] feeds = [new("monitor", "Monitor A"), new("monitor2", "Monitor B")];
         MonitorOutputItem Output(string name, string feed, bool selected)
         {
-            var item = new MonitorOutputItem(name, name, () => { }, (_, _) => { });
+            var item = new MonitorOutputItem(name, name, () => { }, (_, _) => Task.FromResult<string?>(null));
             item.SyncFeed(feeds, feed);
             item.Sync(selected);
             return item;
@@ -383,7 +383,7 @@ public sealed class MixMatrixTests
         Assert.Equal(1, Column("monitor").Outputs);
         Assert.Equal(1, Column("monitor2").Outputs);
         // A selected output whose device is missing hears nothing.
-        var missing = new MonitorOutputItem("gone", "gone", () => { }, (_, _) => { }, isPresent: false);
+        var missing = new MonitorOutputItem("gone", "gone", () => { }, (_, _) => Task.FromResult<string?>(null), isPresent: false);
         missing.SyncFeed(feeds, "monitor");
         missing.Sync(true);
         model.MonitorOutputs.Add(missing);

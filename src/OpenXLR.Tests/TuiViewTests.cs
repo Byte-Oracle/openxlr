@@ -112,6 +112,8 @@ public sealed class TuiViewTests
         Assert.True(JsonSerializer.Deserialize<MixEntry>("""{"Kind":"monitor","Editable":true}""")!.IsEditable);
         Assert.False(JsonSerializer.Deserialize<MixEntry>("""{"Kind":"monitor","Editable":false}""")!.IsEditable);
         Assert.True(new MixEntry { Kind = "virtualMic" }.IsEditable);
+        Assert.False(new MixEntry { Kind = "monitor", Editable = true, Deletable = false }.IsDeletable);
+        Assert.True(new MixEntry { Kind = "monitor", Editable = true, Deletable = true }.IsDeletable);
     }
 
     // --- the state ---
@@ -661,6 +663,26 @@ public sealed class TuiViewTests
         Assert.Equal("setMonitorFeed", Text(command, "cmd"));
         Assert.Equal("alsa_output.arctis", Text(command, "device"));
         Assert.Equal("stream", Text(command, "mix"));
+    }
+
+    [Theory]
+    [InlineData("", "Monitor A", "stream")]
+    [InlineData("removed", "Monitor A", "stream")]
+    [InlineData(" removed + stream ", "Stream", "monitor")]
+    [InlineData(" stream + monitor + stream ", "Monitor A + Stream", "stream")]
+    public void OutputFeedsResolveSavedWhitespaceAndDeletedMixesLikeTheDaemon(string feed, string label, string next)
+    {
+        (App app, List<string> sent) = Ready(tab: 3);
+        var state = System.Text.Json.Nodes.JsonNode.Parse(StateJson)!;
+        state["mixer"]!["monitorFeeds"]!["alsa_output.arctis"] = feed;
+        app.Link.Receive(state.ToJsonString());
+        SelectOutputRow(app, "Arctis Nova Elite");
+        Screen screen = new(150, 42);
+        app.Draw(screen);
+        Assert.Contains(label, Frame(screen), StringComparison.Ordinal);
+        Assert.DoesNotContain("removed", Frame(screen), StringComparison.Ordinal);
+        app.Handle(new KeyPress(Key.Right));
+        Assert.Equal(next, Text(Command(sent), "mix"));
     }
 
     [Fact]

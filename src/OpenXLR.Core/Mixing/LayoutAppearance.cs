@@ -13,8 +13,8 @@ public sealed record LayoutAppearance(string Icon = "", string? Colour = null, b
     /// <summary>The legacy text glyphs a layout may still store; see <see cref="LayoutIcons"/> for the rest.</summary>
     public static IReadOnlyList<string> Icons => LayoutIcons.Glyphs;
 
-    /// <summary>Every channel and mix the layout can hold, the editable ones and the six structural ones, and the two headphone outputs.</summary>
-    public const int MaxEntries = MixerConfig.MaxApplicationChannels + MixerConfig.MaxUserMixes + 6 + 2;
+    /// <summary>Every channel and mix the layout can hold, the editable ones and the four structural ones, and the two headphone outputs.</summary>
+    public const int MaxEntries = MixerConfig.MaxApplicationChannels + MixerConfig.MaxEditableMixes + 4 + 2;
 
     /// <summary>The hardware outputs that take an icon and a colour: the two headphone jacks.</summary>
     public static IReadOnlyList<string> Outputs { get; } = ["phones1", "phones2"];

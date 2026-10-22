@@ -33,6 +33,7 @@ internal static class SavedMixerValidation
             InputBindings = InputBindings(settings, notes),
             PrimaryInput = null,
             UserChannels = settings.UserChannels is null ? null : Entries(settings.UserChannels, "userChannels", notes),
+            Mixes = settings.Mixes is null ? null : UserMixes(settings.Mixes, notes, "mixes"),
             UserMixes = settings.UserMixes is null ? null : UserMixes(settings.UserMixes, notes),
             ExclusiveGroups = Groups(settings.ExclusiveGroups, notes),
             MixVolumes = Levels(settings.MixVolumes, "mixVolumes", notes),
@@ -155,12 +156,12 @@ internal static class SavedMixerValidation
         return kept;
     }
 
-    private static List<UserMixDefinition> UserMixes(List<UserMixDefinition> entries, List<string> notes)
+    private static List<UserMixDefinition> UserMixes(List<UserMixDefinition> entries, List<string> notes, string field = "userMixes")
     {
-        var kept = Entries(entries, "userMixes", notes);
+        var kept = Entries(entries, field, notes);
         int count = kept.Count;
         kept.RemoveAll(mix => !mix.HasUserKind);
-        if (kept.Count != count) notes.Add("userMixes: unknown kind");
+        if (kept.Count != count) notes.Add($"{field}: unknown kind");
         return kept;
     }
 

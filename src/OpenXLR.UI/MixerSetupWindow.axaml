@@ -184,7 +184,7 @@
                       <Button Grid.Column="5" Content="{loc:Text Key=Rename}" Classes="small"
                               IsVisible="{Binding IsEditable}" Click="OnRenameMix"/>
                       <Button Grid.Column="7" Content="{loc:Text Key=Delete}" Classes="small danger"
-                              IsVisible="{Binding IsEditable}" Click="OnDeleteMix"/>
+                              IsVisible="{Binding IsEditable}" IsEnabled="{Binding IsDeletable}" Click="OnDeleteMix"/>
                     </Grid>
                   </Border>
                 </DataTemplate>

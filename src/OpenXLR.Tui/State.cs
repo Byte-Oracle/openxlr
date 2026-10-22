@@ -40,6 +40,8 @@ internal sealed record MixEntry
     public string Kind { get; init; } = "virtualMic";
     public bool? Editable { get; init; }
     public bool IsEditable => Editable ?? Kind == "virtualMic";
+    public bool? Deletable { get; init; }
+    public bool IsDeletable => Deletable ?? IsEditable;
 
     /// <summary>A monitor mix goes to 150%, everything else to 100%.</summary>
     public double Ceiling => Kind == "monitor" ? 1.5 : 1.0;
@@ -457,6 +459,7 @@ internal sealed record MixerSnapshot
     public List<MixEntry> Masters => _masters ??= [.. Mixes.Where(mix => !mix.Appearance.Hidden)];
     public List<string> MonitorOutputs { get; init; } = [];
     public Dictionary<string, string> MonitorFeeds { get; init; } = [];
+    public string? DefaultMonitorMix { get; init; }
     public double? OutputVolume { get; init; }
     public bool MonitorMuted { get; init; }
     public bool AuxPortEnabled { get; init; }

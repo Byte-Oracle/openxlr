@@ -26,7 +26,7 @@ public sealed class FlowGraphTests
         vm.Mixes.Add(new(client, "monitor", "Monitor A"));
         vm.Mixes.Add(new(client, "monitor2", "Monitor B"));
         vm.Mixes.Add(new(client, "podcast", "Podcast") { Kind = "virtualMic" });
-        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => { });
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => Task.FromResult<string?>(null));
         output.Sync(true);
         output.SyncFeed([new("monitor2", "Monitor B")], "monitor2");
         vm.MonitorOutputs.Add(output);
@@ -36,7 +36,7 @@ public sealed class FlowGraphTests
         Assert.Contains(graph.Nodes, n => n.Key == "vm:podcast" && n.Label == "OpenXLR Podcast");
         Assert.DoesNotContain(graph.Nodes, n => n.Key is "vm:stream" or "vm:chat");
 
-        output.SyncFeed([new("monitor+monitor2", "Monitor A+B")], "monitor+monitor2");
+        output.SyncFeed([new("monitor", "Monitor A"), new("monitor2", "Monitor B")], "monitor+monitor2");
         graph = FlowGraph.From(vm);
         Assert.Equal(2, graph.Routes.Count(r => r.To == "out:headset"));
         output.Sync(false);
@@ -45,7 +45,7 @@ public sealed class FlowGraphTests
         // A selected output whose device is missing is drawn, but nothing reaches it.
         vm.Mixes[0].ApplyFromDaemon(System.Text.Json.Nodes.JsonNode.Parse("""{"volume":1,"muted":false,"kind":"monitor"}""")!);
         Assert.True(FlowGraph.From(vm).Nodes.Single(n => n.Key == "mix:monitor").Active);
-        var missing = new MonitorOutputItem("gone", "Gone (not connected)", () => { }, (_, _) => { }, isPresent: false);
+        var missing = new MonitorOutputItem("gone", "Gone (not connected)", () => { }, (_, _) => Task.FromResult<string?>(null), isPresent: false);
         missing.Sync(true);
         missing.SyncFeed([new("monitor", "Monitor A")], "monitor");
         vm.MonitorOutputs.Add(missing);
@@ -90,7 +90,7 @@ public sealed class FlowGraphTests
         var aux = new MixViewModel(client, "auxout", "Aux");
         aux.ApplyAuxPort(false);
         vm.Mixes.Add(aux);
-        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => { });
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, _) => Task.FromResult<string?>(null));
         output.Sync(true);
         vm.MonitorOutputs.Add(output);
         FlowGraph graph = FlowGraph.From(vm);

@@ -5,6 +5,14 @@ public sealed partial record MixerConfig
     // Bound graph growth even for hand-edited settings files.
     public const int MaxApplicationChannels = 32;
     public const int MaxUserMixes = 16;
+    public const int MaxEditableMixes = MaxUserMixes + 2;
+
+    /// <summary>The implicit output feed, independent of display order.</summary>
+    public MixDefinition? DefaultMonitor => Mixes.FirstOrDefault(m => m.Kind == MixKind.Monitor && m.Id == "monitor")
+        ?? Mixes.Where(m => m.Kind == MixKind.Monitor).MinBy(m => m.Id, StringComparer.Ordinal);
+
+    // A synthesized monitor must not inherit orphaned startup levels.
+    internal string? RepairedMonitorMix { get; init; }
 
     /// <summary>Reorder editable nodes only; every existing ID must occur exactly once.</summary>
     public MixerConfig WithOrder(IReadOnlyList<string> channels, IReadOnlyList<string> mixes)
@@ -12,11 +20,11 @@ public sealed partial record MixerConfig
         var apps = Channels.Where(c => c.InputPair is null).ToDictionary(c => c.Id);
         var editable = Mixes.Where(m => m.IsEditable).ToDictionary(m => m.Id);
         Check(channels, apps.Keys, MaxApplicationChannels, "channels");
-        Check(mixes, editable.Keys, MaxUserMixes, "mixes");
+        Check(mixes, editable.Keys, MaxEditableMixes, "mixes");
         return this with
         {
             Channels = [.. Channels.Where(c => c.InputPair is not null), .. channels.Select(id => apps[id])],
-            Mixes = [.. Mixes.Where(m => m.Kind == MixKind.Monitor && !m.IsEditable), .. mixes.Select(id => editable[id]),
+            Mixes = [.. mixes.Select(id => editable[id]),
                 .. Mixes.Where(m => m.Kind == MixKind.AuxPort)],
         };
 
@@ -61,6 +69,8 @@ public sealed partial record MixerConfig
     {
         if (!Mixes.Any(m => m.Id == id && m.IsEditable))
             throw new InvalidOperationException($"'{id}' is not an editable mix");
+        if (Mixes.Any(m => m.Id == id && m.Kind == MixKind.Monitor) && Mixes.Count(m => m.Kind == MixKind.Monitor) == 1)
+            throw new InvalidOperationException("the last monitor mix cannot be deleted");
         return this with
         {
             Mixes = [.. Mixes.Where(m => m.Id != id)],
@@ -80,7 +90,7 @@ public sealed partial record MixerConfig
     public MixerConfig WithMix(MixDefinition mix)
     {
         if (!mix.IsEditable) throw new InvalidOperationException("only user monitor mixes and virtual microphones can be added");
-        if (Mixes.Count(m => m.IsEditable) >= MaxUserMixes)
+        if (Mixes.Count(m => m.IsEditable) >= MaxEditableMixes)
             throw new InvalidOperationException("user mix limit reached");
         if (Mixes.Any(m => m.Id.Equals(mix.Id, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException($"mix '{mix.Id}' already exists");
@@ -130,18 +140,20 @@ public sealed partial record MixerConfig
                 ?? FallbackApplicationChannel)?.Id ?? StreamMatcher.Ignore;
 
     /// <summary>
-    /// Restore ordered user nodes without replacing hardware or monitor buses.
+    /// Restore ordered editable nodes without replacing hardware or Aux.
     /// Old files retain the default layout. Invalid entries are ignored, and
     /// an empty application list heals to System as a safe routing destination.
     /// </summary>
     public static MixerConfig FromSettings(MixerSettings? settings)
     {
         MixerConfig defaults = Default();
-        var structuralMixes = defaults.Mixes.Where(m => !m.IsEditable).ToList();
+        bool legacy = settings?.Mixes is null;
+        var structuralMixes = defaults.Mixes.Where(m => m.Kind == MixKind.AuxPort).ToList();
+        var defaultMonitors = defaults.Mixes.Where(m => m.Kind == MixKind.Monitor).ToList();
         var hardware = defaults.Channels.Where(c => c.InputPair is not null).ToList();
-        var userMixes = (settings?.UserMixes ?? defaults.Mixes.Where(m => m.IsEditable)
+        var userMixes = (settings?.Mixes ?? settings?.UserMixes ?? defaults.Mixes.Where(m => m.Kind == MixKind.VirtualMic)
             .Select(m => new UserMixDefinition(m.Id, m.Name)).ToList())
-            .Where(m => m is not null && m.HasUserKind).ToList();
+            .Where(m => m is not null && m.HasUserKind && (m.Kind == "monitor" || m.Id is not ("monitor" or "monitor2"))).ToList();
         var mixEntries = userMixes.Select(m => ((string?)m.Id, (string?)m.Name));
         var userChannels = (settings?.UserChannels ?? defaults.Channels.Where(c => c.IsApplication)
             .Select(c => new UserChannelDefinition(c.Id, c.Name)).ToList())
@@ -149,12 +161,20 @@ public sealed partial record MixerConfig
                 : CaptureBinding.IsValid(c.CaptureSource, c.CapturePair, c.CaptureMonoChannel) && SourceBinding.IsUnitId(c.CaptureUnit))).ToList();
         var channelEntries = userChannels.Select(c => ((string?)c.Id, (string?)c.Name));
 
-        var mixes = structuralMixes.Where(m => m.Kind == MixKind.Monitor).ToList();
-        mixes.AddRange(ValidEntries(mixEntries, structuralMixes.Select(m => m.Id), MaxUserMixes)
+        var mixes = legacy ? defaultMonitors.ToList() : [];
+        var reservedMixes = structuralMixes.Select(m => m.Id).Concat(legacy ? defaultMonitors.Select(m => m.Id) : []);
+        mixes.AddRange(ValidEntries(mixEntries, reservedMixes, legacy ? MaxUserMixes : MaxEditableMixes)
             .Select(m => new MixDefinition(m.Id, m.Name,
                 userMixes.First(saved => saved.Id == m.Id && saved.Name?.Trim() == m.Name).Kind == "monitor"
                     ? MixKind.Monitor : MixKind.VirtualMic)));
-        mixes.AddRange(structuralMixes.Where(m => m.Kind == MixKind.AuxPort));
+        string? repairedMonitor = null;
+        if (!mixes.Any(m => m.Kind == MixKind.Monitor))
+        {
+            if (mixes.Count == MaxEditableMixes) mixes.RemoveAt(mixes.Count - 1);
+            repairedMonitor = "monitor";
+            mixes.Insert(0, new(repairedMonitor, "Monitor A", MixKind.Monitor));
+        }
+        mixes.AddRange(structuralMixes);
 
         var apps = ValidEntries(channelEntries, hardware.Select(c => c.Id).Append(StreamMatcher.Ignore), MaxApplicationChannels).ToList();
         string? fallbackId = null;
@@ -179,7 +199,7 @@ public sealed partial record MixerConfig
                 : (defaults.Channels.FirstOrDefault(d => d.Id == c.Id) ?? new ChannelDefinition(c.Id, c.Name))
                     with { Name = c.Name });
         }));
-        return new MixerConfig { Mixes = mixes, Channels = channels,
+        return new MixerConfig { Mixes = mixes, Channels = channels, RepairedMonitorMix = repairedMonitor,
             ExclusiveGroups = ExclusiveGroupsModel.Restore(settings?.ExclusiveGroups, channels) };
 
         ChannelDefinition Normalize(ChannelDefinition channel)
@@ -190,7 +210,7 @@ public sealed partial record MixerConfig
             {
                 bool feedback = channel.Id == "aux" && mix.Kind == MixKind.AuxPort;
                 levels[mix.Id] = feedback ? 0 : channel.Levels.GetValueOrDefault(mix.Id, 1);
-                if (feedback || channel.MutedIn.Contains(mix.Id) ||
+                if (feedback || mix.Id == repairedMonitor || channel.MutedIn.Contains(mix.Id) ||
                     !defaults.Mixes.Any(m => m.Id == mix.Id) && !channel.Levels.ContainsKey(mix.Id)) muted.Add(mix.Id);
             }
             return channel with { Levels = levels, MutedIn = muted };

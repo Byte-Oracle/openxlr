@@ -33,7 +33,7 @@ public sealed class LiveLayoutEditingTests
     public void MixLimitHoldsForCreation(MixKind kind)
     {
         var config = MixerConfig.Default();
-        for (int i = config.Mixes.Count(m => m.Kind == MixKind.VirtualMic); i < MixerConfig.MaxUserMixes; i++)
+        for (int i = config.Mixes.Count(m => m.IsEditable); i < MixerConfig.MaxEditableMixes; i++)
             config = config.WithMix(new MixDefinition($"m{i}", $"Mix {i}", kind));
         Assert.Throws<InvalidOperationException>(() => config.WithMix(new MixDefinition("one-more", "One more", MixKind.VirtualMic)));
     }
@@ -49,13 +49,13 @@ public sealed class LiveLayoutEditingTests
         => Assert.Equal(valid, Check(new Command { Cmd = "createMix", Name = "Headphones", Kind = kind }) is null);
 
     [Fact]
-    public void UserMonitorsCanBeRenamedReorderedAndRemovedWithoutMovingStructuralMixes()
+    public void AllMonitorsCanBeRenamedReorderedAndRemovedWithoutMovingAux()
     {
         var config = MixerConfig.Default().WithMix(new("headset", "Headset", MixKind.Monitor));
-        config = config.WithMixName("headset", "Headphones").WithOrder(AppIds(config), ["headset", "chat", "stream"]);
-        Assert.Equal(["monitor", "monitor2", "headset", "chat", "stream", "auxout"], config.Mixes.Select(m => m.Id));
-        Assert.Equal("Headphones", config.Mixes[2].Name);
-        Assert.Equal(MixKind.Monitor, config.Mixes[2].Kind);
+        config = config.WithMixName("headset", "Headphones").WithOrder(AppIds(config), ["headset", "chat", "monitor2", "stream", "monitor"]);
+        Assert.Equal(["headset", "chat", "monitor2", "stream", "monitor", "auxout"], config.Mixes.Select(m => m.Id));
+        Assert.Equal("Headphones", config.Mixes[0].Name);
+        Assert.Equal(MixKind.Monitor, config.Mixes[0].Kind);
         Assert.Throws<InvalidOperationException>(() => config.WithOrder(AppIds(config), ["monitor", "headset", "chat", "stream"]));
         Assert.DoesNotContain(config.WithoutMix("headset").Channels, c => c.Levels.ContainsKey("headset"));
     }
@@ -66,7 +66,7 @@ public sealed class LiveLayoutEditingTests
         var config = MixerConfig.Default().WithoutMix("chat");
         Assert.Equal(["monitor", "monitor2", "stream", "auxout"], config.Mixes.Select(m => m.Id));
         Assert.All(config.Channels, ch => { Assert.False(ch.Levels.ContainsKey("chat")); Assert.DoesNotContain("chat", ch.MutedIn); });
-        foreach (string structural in new[] { "monitor", "monitor2", "auxout", "nope" })
+        foreach (string structural in new[] { "auxout", "nope" })
             Assert.Throws<InvalidOperationException>(() => MixerConfig.Default().WithoutMix(structural));
     }
 
@@ -93,7 +93,7 @@ public sealed class LiveLayoutEditingTests
         Assert.Equal(AppIds(original), AppIds(renamed));
         Assert.Equal(original.Channels.Single(c => c.Id == "music").Levels, renamed.Channels.Single(c => c.Id == "music").Levels);
         Assert.Throws<InvalidOperationException>(() => original.WithChannelName("xlr1", "Mic"));
-        Assert.Throws<InvalidOperationException>(() => original.WithMixName("monitor", "Ears"));
+        Assert.Throws<InvalidOperationException>(() => original.WithMixName("auxout", "Ears"));
     }
 
     [Theory]

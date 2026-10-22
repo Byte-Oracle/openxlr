@@ -223,12 +223,12 @@ test('block glyphs use the TUI fractions and its dBFS scale', () => {
   assert.equal(mixer.rms(0.9), '-6');
 });
 
-test('monitor labels describe default feeds, sums, silent routes and custom names', () => {
+test('monitor labels describe default feeds, sums and custom names', () => {
   assert.deepEqual(plain(mixer.monitorFeeds(state.mixer)), [
     { output: 'headset', ids: ['monitor'], name: 'Monitor A' },
     { output: 'speakers', ids: ['monitor', 'stream'], name: 'Monitor A + Stream' }
   ]);
-  assert.equal(mixer.monitorFeeds({ ...state.mixer, monitorFeeds: { headset: '' } })[0].name, 'Silent');
+  assert.equal(mixer.monitorFeeds({ ...state.mixer, monitorFeeds: { headset: '' } })[0].name, 'Monitor A');
   assert.deepEqual(plain(mixer.monitorFeeds({ mixes: [] })), []);
 });
 
@@ -385,6 +385,15 @@ test('a strip on a driven additional unit carries that unit\'s mute', () => {
   assert.equal(mixer.muteCommandFor(snapshot, 'xlr2', true), null);
 });
 
+test('implicit monitor follows the daemon and does not follow layout order', () => {
+  const source = {monitorOutputs:['headset'], mixes:[
+    {id:'stream', name:'Stream', kind:'virtualMic'},
+    {id:'monitor2', name:'Studio', kind:'monitor'},
+    {id:'aaa', name:'Speakers', kind:'monitor'}]};
+  assert.equal(mixer.monitorFeeds({...source, defaultMonitorMix:'monitor2'})[0].name, 'Studio');
+  assert.equal(mixer.monitorFeeds(source)[0].name, 'Speakers');
+  assert.equal(mixer.monitorFeeds({...source, mixes:[...source.mixes].reverse()})[0].name, 'Speakers');
+});
 
 test('monitor master controls show the pause and explicitly open just that monitor', () => {
   const paused = {mixer:{monitorMuted:true}};
@@ -396,4 +405,14 @@ test('monitor master controls show the pause and explicitly open just that monit
   assert.deepEqual(plain(mixer.muteCommand(stream, '', true, paused)), {cmd:'setMixMuted',mix:'stream',value:true});
   assert.equal(monitor.muted, false);
   assert.equal(mixer.masterMuted(monitor, {}), false);
+});
+
+
+test('saved monitor feeds discard deleted ids and whitespace like the daemon', () => {
+  const source = { mixes:[{id:'monitor2',name:'Studio',kind:'monitor'},{id:'chat',name:'Chat',kind:'virtualMic'}],
+    monitorOutputs:['headset'],defaultMonitorMix:'monitor2' };
+  for (const [saved, ids] of [['', ['monitor2']], ['gone', ['monitor2']], [' gone + chat ', ['chat']],
+    [' chat + monitor2 + chat ', ['monitor2','chat']]]) {
+    assert.deepEqual(plain(mixer.monitorFeeds({...source,monitorFeeds:{headset:saved}}))[0].ids, ids);
+  }
 });

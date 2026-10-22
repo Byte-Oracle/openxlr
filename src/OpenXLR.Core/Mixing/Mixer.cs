@@ -1533,7 +1533,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 ExclusiveGroups = ExclusiveGroupsModel.Copy(_config.ExclusiveGroups),
                 UserChannels = [.. _config.Channels.Where(c => c.InputPair is null)
                     .Select(c => new UserChannelDefinition(c.Id, c.Name, c.CaptureSource, c.CapturePair, c.CaptureMonoChannel, c.CaptureUnit))],
-                UserMixes = [.. _config.Mixes.Where(m => m.IsEditable)
+                Mixes = [.. _config.Mixes.Where(m => m.IsEditable)
                     .Select(m => new UserMixDefinition(m.Id, m.Name) { Kind = KindName(m.Kind) })],
                 MixVolumes = new Dictionary<string, double>(_mixVolume),
                 MixMuted = [.. _mixMuted],
@@ -1606,6 +1606,17 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             _duckingSetup = DuckingSetup.Prune(s.Ducking ?? DuckingSetup.Default(_config), _config);
             if (!_built) { SyncDuckingLocked(); return; }
+            if (_config.RepairedMonitorMix is { } repaired)
+            {
+                s = s with
+                {
+                    MixVolumes = s.MixVolumes.Where(p => p.Key != repaired).ToDictionary(),
+                    MixMuted = [.. s.MixMuted.Where(id => id != repaired)],
+                    Levels = s.Levels.Where(p => !p.Key.EndsWith("|" + repaired, StringComparison.Ordinal)).ToDictionary(),
+                    ChannelMuted = [.. s.ChannelMuted.Where(cell => !cell.EndsWith("|" + repaired, StringComparison.Ordinal))],
+                };
+                _config = _config with { RepairedMonitorMix = null };
+            }
             if (s.MonitorMuted) SetMonitorMuted(true);
             SetInputBindings(s.InputBindings);
             RestoreAppearanceLocked(s.Appearance);
@@ -2452,10 +2463,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         return new PortLink(pairs);
     }
 
-    /// <summary>The first monitor mix, the one outputs are fed by unless told otherwise.</summary>
-    private MixDefinition? PrimaryMonitorLocked() => _config.Mixes.FirstOrDefault(m => m.Kind == MixKind.Monitor);
+    /// <summary>The stable default monitor, unaffected by display ordering.</summary>
+    private MixDefinition? PrimaryMonitorLocked() => _config.DefaultMonitor;
 
-    /// <summary>The mixes feeding an output, falling back to the first monitor mix.</summary>
+    /// <summary>The mixes feeding an output, falling back to the stable default monitor.</summary>
     private List<MixDefinition> MixesForOutputLocked(string output)
     {
         if (_monitorFeeds.TryGetValue(output, out string? feed))
@@ -2477,7 +2488,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     /// <summary>
     /// Mix ids that reach the Wave XLR Pro's own jacks (its
     /// pseudo-outputs share one return bus, so they follow one feed), or the
-    /// first monitor mix when no jack is selected.
+    /// default monitor mix when no jack is selected.
     /// </summary>
     private string? JackFeedLocked()
     {
@@ -2955,6 +2966,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         {
             DspFeatureAvailability clipGuard = _pw.GetSoftwareClipGuardAvailability();
             Dictionary<string, UnitInputStatus> unitInputs = UnitInputsLocked();
+            int monitorCount = _config.Mixes.Count(m => m.Kind == MixKind.Monitor);
             return WithAppearanceLocked(new MixerState
             {
                 SoftLowCutApplicable = SoftLowCutApplicableLocked,
@@ -2963,7 +2975,8 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 Mixes = [.. _config.Mixes.Select(m => new MixStatus(
                     m.Id, m.Name,
                     _mixVolume.GetValueOrDefault(m.Id, 1.0),
-                    _mixMuted.Contains(m.Id), KindName(m.Kind), m.IsEditable))],
+                    _mixMuted.Contains(m.Id), KindName(m.Kind), m.IsEditable)
+                    { Deletable = m.IsEditable && (m.Kind != MixKind.Monitor || monitorCount > 1) })],
                 Channels = [.. _config.Channels.Select(c => new ChannelStatus(
                     c.Id, ChannelNameLocked(c),
                     _config.Mixes.ToDictionary(m => m.Id, m => _levels.GetValueOrDefault(Cell(c.Id, m.Id), 0.0)),
@@ -2982,6 +2995,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     Eq = CarriesEq(c) ? EqStateLocked(c.Id, unitInputs) : null,
                 })],
                 RenamedSinceStart = _renamedSinceBuild,
+                DefaultMonitorMix = PrimaryMonitorLocked()?.Id,
                 MonitorOutput = _monitorOutputs.FirstOrDefault(),
                 MonitorOutputs = [.. _monitorOutputs],
                 MonitorMuted = _monitorMuted,

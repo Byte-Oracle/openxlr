@@ -134,6 +134,15 @@ public sealed partial class MonitorVolumeIntegrationTests
             Assert.True(pro.MicDirect);
             PrimaryWait(() => { service.SweepOnce(); return LegMuted(pw, "xlr1", "monitor") == true; });
             Assert.False(LegMuted(pw, kept, "monitor"));
+
+            Run(new() { Cmd = "createMix", Name = "Temporary phones", Kind = "monitor" });
+            Run(new() { Cmd = "setMonitorFeed", Device = jack, Mix = "temporary-phones" });
+            Assert.False(pro.MicDirect);
+            Run(new() { Cmd = "deleteMix", Mix = "temporary-phones" });
+            // The fallback's direct path must be applied before the command
+            // returns, without waiting for a later service sweep.
+            Assert.True(pro.MicDirect);
+            Assert.True(pro.ReadState().OutHp1);
         }
         finally
         {

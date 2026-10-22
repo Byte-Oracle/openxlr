@@ -64,6 +64,8 @@ public sealed partial class MainViewModel : ViewModelBase
                 Inserts.ResetForNewConnection(); Inserts2.ResetForNewConnection();
                 foreach (MixViewModel mv in Mixes) mv.Inserts.ResetForNewConnection();
                 foreach (ChannelViewModel channel in Channels) channel.Inserts?.ResetForNewConnection();
+                foreach (MonitorOutputItem output in MonitorOutputs) output.CancelFeedEdit();
+                CancelMonitorSelectionEdit();
             }
             else { Inserts.EnsurePluginsLoaded(); Inserts2.EnsurePluginsLoaded(); }
         });
@@ -566,14 +568,45 @@ public sealed partial class MainViewModel : ViewModelBase
         // The daemon's order first, so the output the desktop volume drives
         // stays first, then what was just ticked.
         var ticked = MonitorOutputs.Where(o => o.IsSelected).Select(o => o.Name).ToHashSet();
-        var names = _monitorSelection.Where(ticked.Contains)
-            .Concat(MonitorOutputs.Where(o => o.IsSelected && !_monitorSelection.Contains(o.Name)).Select(o => o.Name))
+        List<string> previous = _pendingMonitorSelection ?? _monitorSelection;
+        var names = previous.Where(ticked.Contains)
+            .Concat(MonitorOutputs.Where(o => o.IsSelected && !previous.Contains(o.Name)).Select(o => o.Name))
             .ToList();
-        _ = _client.SetMonitorOutputsAsync(names);
+        _pendingMonitorSelection = names;
+        _ = SubmitMonitorSelectionAsync(names, ++_monitorSelectionVersion);
+    }
+
+    private async Task SubmitMonitorSelectionAsync(List<string> names, long version)
+    {
+        string? error = await _client.SetMonitorOutputsAsync(names);
+        if (version != _monitorSelectionVersion) return;
+        _pendingMonitorSelection = null;
+        if (error is null) return;
+        RestoreReportedMonitorSelection();
+        Status = error;
+    }
+
+    private void RestoreReportedMonitorSelection()
+    {
+        bool applying = _applying;
+        _applying = true;
+        try { ApplyDevices(_reportedMonitorDevices, _reportedMonitorMixer); }
+        finally { _applying = applying; }
+    }
+
+    internal void CancelMonitorSelectionEdit()
+    {
+        _monitorSelectionVersion++;
+        bool pending = _pendingMonitorSelection is not null;
+        _pendingMonitorSelection = null;
+        if (pending) RestoreReportedMonitorSelection();
     }
 
     // The monitor outputs as the daemon last reported them, in its order.
     private List<string> _monitorSelection = [];
+    private List<string>? _pendingMonitorSelection;
+    private long _monitorSelectionVersion;
+    private JsonNode? _reportedMonitorDevices, _reportedMonitorMixer;
     // Device descriptions seen this session, to name a selected output while it is missing.
     private readonly Dictionary<string, string> _outputLabels = [];
 
@@ -978,6 +1011,10 @@ public sealed partial class MainViewModel : ViewModelBase
     /// </summary>
     private void ApplyDevices(JsonNode? devices, JsonNode? mixer)
     {
+        // Retain the latest report for a rejected selection, without copying
+        // the state or guessing the feed of an output that was missing.
+        _reportedMonitorDevices = devices;
+        _reportedMonitorMixer = mixer;
         if (devices is not JsonArray arr) { Outputs.Clear(); Inputs.Clear(); return; }
 
         var sinks = new List<AudioDeviceItem>();
@@ -997,12 +1034,16 @@ public sealed partial class MainViewModel : ViewModelBase
             var item = new AudioDeviceItem(name, desc, own, physical, channels, positions, driven);
             (IsSink(d["kind"]) ? sinks : sources).Add(item);
         }
+        // Output commands identify sinks by exact name. A transient duplicate
+        // must not place the same output row in the collection twice.
+        sinks = sinks.DistinctBy(sink => sink.Name, StringComparer.Ordinal).ToList();
         Replace(Outputs, sinks);
         Replace(Inputs, sources);
 
         _monitorSelection = (mixer?["monitorOutputs"] as JsonArray)?.Select(n => n?.GetValue<string>())
             .Where(n => n is not null).Select(n => n!).Distinct().ToList() ?? [];
-        var current = new HashSet<string>(_monitorSelection);
+        List<string> selection = _pendingMonitorSelection ?? _monitorSelection;
+        var current = new HashSet<string>(selection);
         foreach (AudioDeviceItem s in sinks) _outputLabels[s.Name] = s.Label;
 
         // A selected output whose device is unplugged, asleep or not yet
@@ -1010,17 +1051,28 @@ public sealed partial class MainViewModel : ViewModelBase
         // keeps it selected and routes to it again when it returns; a list
         // without it would send a selection that drops it at the next tick.
         var wanted = sinks.Where(s => !s.IsOwn).Select(s => (s.Name, s.Label, Present: true)).ToList();
-        foreach (string name in _monitorSelection.Where(n => !sinks.Any(s => s.Name == n)))
+        foreach (string name in selection.Where(n => !sinks.Any(s => s.Name == n)))
             wanted.Add((name, Localizer.Format("MonitorOutputMissing", _outputLabels.GetValueOrDefault(name) ?? name), false));
 
         // Rebuild the multi-select list only when membership changed, so open
         // dropdowns and checkbox states survive routine pushes.
         if (!wanted.Select(w => (w.Name, w.Present)).SequenceEqual(MonitorOutputs.Select(m => (m.Name, m.IsPresent))))
         {
-            MonitorOutputs.Clear();
-            foreach (var w in wanted)
-                MonitorOutputs.Add(new MonitorOutputItem(w.Name, w.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged, w.Present));
+            var items = wanted.Select(w => MonitorOutputs.FirstOrDefault(output => output.Name == w.Name && output.IsPresent == w.Present)
+                ?? new MonitorOutputItem(w.Name, w.Label, OnMonitorSelectionChanged, OnMonitorFeedChanged,
+                    w.Present, error => Status = error)).ToList();
+            // Adding or losing another device must not cancel this output's
+            // pending feed edit or replace its open picker rows.
+            foreach (MonitorOutputItem output in MonitorOutputs.Where(output => !items.Contains(output))) output.CancelFeedEdit();
+            for (int i = 0; i < items.Count; i++)
+            {
+                int existing = MonitorOutputs.IndexOf(items[i]);
+                if (existing < 0) MonitorOutputs.Insert(i, items[i]);
+                else if (existing != i) MonitorOutputs.Move(existing, i);
+            }
+            while (MonitorOutputs.Count > items.Count) MonitorOutputs.RemoveAt(MonitorOutputs.Count - 1);
         }
+        for (int i = 0; i < wanted.Count; i++) MonitorOutputs[i].SyncLabel(wanted[i].Label);
 
         EnforcedDefaultSink = mixer?["enforcedDefaultSink"]?.GetValue<string>();
         EnforcedDefaultSource = mixer?["enforcedDefaultSource"]?.GetValue<string>();
@@ -1031,19 +1083,23 @@ public sealed partial class MainViewModel : ViewModelBase
         foreach (MonitorOutputItem item in MonitorOutputs) item.Sync(current.Contains(item.Name));
 
         var allMixes = (mixer?["mixes"] as JsonArray)?.Where(m => m is not null).ToList() ?? [];
-        var monitorMixes = allMixes.Where(m => m!["id"]?.GetValue<string>() is "monitor" or "monitor2")
-            .Select(m => new MixOption(m!["id"]!.GetValue<string>(), m["name"]?.GetValue<string>() ?? m["id"]!.GetValue<string>())).ToList();
-        // An output can also hear the two built-in monitor mixes,
-        // summed: "Monitor A+B" for headphones that want the desktop from A
-        // and a separately processed mic from B.
-        if (monitorMixes.Count > 1)
-            monitorMixes.Add(new MixOption(string.Join("+", monitorMixes.Select(m => m.Id)), SummedName(monitorMixes.Select(m => m.Name))));
-        monitorMixes.AddRange(allMixes.Where(m => m!["id"]?.GetValue<string>() is not ("monitor" or "monitor2"))
-            .Select(m => new MixOption(m!["id"]!.GetValue<string>(), m["name"]?.GetValue<string>() ?? m["id"]!.GetValue<string>())));
+        var mixOptions = allMixes.Select(m => new MixOption(m!["id"]!.GetValue<string>(),
+            m["name"]?.GetValue<string>() ?? m["id"]!.GetValue<string>())).ToList();
+        var monitors = allMixes.Where(m => m!["kind"]?.GetValue<string>() == "monitor"
+            || m["kind"] is null && m["id"]?.GetValue<string>() is "monitor" or "monitor2")
+            .Select(m => m!["id"]!.GetValue<string>()).ToList();
+        string? primaryMonitor = mixer?["defaultMonitorMix"]?.GetValue<string>();
+        if (!monitors.Contains(primaryMonitor ?? ""))
+            primaryMonitor = monitors.FirstOrDefault(); // Older daemons use layout order for the implicit feed.
         var feeds = mixer?["monitorFeeds"] as JsonObject;
-        string primaryMonitor = monitorMixes.FirstOrDefault()?.Id ?? "monitor";
+        DefaultMonitorMix = primaryMonitor ?? "monitor";
         foreach (MonitorOutputItem item in MonitorOutputs)
-            item.SyncFeed(monitorMixes, feeds?[item.Name]?.GetValue<string>() ?? primaryMonitor);
+        {
+            var included = (feeds?[item.Name]?.GetValue<string>()?.Split('+',
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? []).ToHashSet(StringComparer.Ordinal);
+            string feed = string.Join('+', mixOptions.Where(m => included.Contains(m.Id)).Select(m => m.Id));
+            item.SyncFeed(mixOptions, feed.Length > 0 ? feed : primaryMonitor);
+        }
         Raise(nameof(MonitorSummary));
     }
 
@@ -1057,10 +1113,11 @@ public sealed partial class MainViewModel : ViewModelBase
         return string.Join("+", list);
     }
 
-    private void OnMonitorFeedChanged(string output, string mixId)
-    {
-        if (!_applying) _ = _client.SetMonitorFeedAsync(output, mixId);
-    }
+    /// <summary>The daemon's implicit monitor feed; old daemons use their first monitor.</summary>
+    public string DefaultMonitorMix { get; private set; } = "monitor";
+
+    private Task<string?> OnMonitorFeedChanged(string output, string mixId)
+        => _applying ? Task.FromResult<string?>(null) : _client.SetMonitorFeedAsync(output, mixId);
 
     /// <summary>AudioNodeKind arrives as the enum's number (0 = Sink) or name.</summary>
     private static bool IsSink(JsonNode? kind) => kind switch
@@ -1430,89 +1487,6 @@ public sealed record AudioDeviceItem(string Name, string Description, bool IsOwn
         => Positions?.Split(',') is { } names && port >= 0 && port < names.Length ? names[port] : null;
 }
 
-/// <summary>
-/// One entry in the multi-select Monitor dropdown: a sink plus a checkbox
-/// state. Toggling notifies the owning view model, which sends the full
-/// selection to the daemon.
-/// </summary>
-/// <summary>A monitor mix as a feed choice for an output; shows its name in pickers.</summary>
-public sealed record MixOption(string Id, string Name)
-{
-    public override string ToString() => Name;
-}
-
-public sealed class MonitorOutputItem : ViewModelBase
-{
-    private readonly Action _changed;
-    private readonly Action<string, string> _feedChanged;
-    private bool _syncing;
-
-    public MonitorOutputItem(string name, string label, Action changed, Action<string, string> feedChanged, bool isPresent = true)
-    {
-        Name = name;
-        Label = label;
-        IsPresent = isPresent;
-        _changed = changed;
-        _feedChanged = feedChanged;
-    }
-
-    public string Name { get; }
-    public string Label { get; }
-
-    /// <summary>False for a selected output whose device is missing; it stays selected until unticked.</summary>
-    public bool IsPresent { get; }
-
-    /// <summary>The mixes this output can be fed by.</summary>
-    public ObservableCollection<MixOption> Feeds { get; } = [];
-
-    private MixOption? _feed;
-    /// <summary>The mix feeding this output; picking one tells the daemon.</summary>
-    public MixOption? Feed
-    {
-        get => _feed;
-        set
-        {
-            if (value is null || !Set(ref _feed, value) || _syncing) return;
-            _feedChanged(Name, value.Id);
-        }
-    }
-
-    /// <summary>Set the choices and the current feed without notifying the daemon.</summary>
-    public void SyncFeed(IReadOnlyList<MixOption> options, string mixId)
-    {
-        _syncing = true;
-        try
-        {
-            // Preserve an API-selected sum in the picker without offering
-            // every possible combination of the layout's mixes.
-            if (!options.Any(o => o.Id == mixId))
-            {
-                string[] ids = mixId.Split('+');
-                if (ids.Length > 1 && ids.All(id => options.Any(o => o.Id == id)))
-                    options = [.. options, new MixOption(mixId, string.Join(" + ", ids.Select(id => options.First(o => o.Id == id).Name)))];
-            }
-            if (!options.Select(o => (o.Id, o.Name)).SequenceEqual(Feeds.Select(f => (f.Id, f.Name))))
-            {
-                Feeds.Clear();
-                foreach (MixOption o in options) Feeds.Add(o);
-                _feed = null;   // the combo lost its selection with the items
-            }
-            Feed = Feeds.FirstOrDefault(f => f.Id == mixId) ?? Feeds.FirstOrDefault();
-        }
-        finally { _syncing = false; }
-    }
-
-    /// <summary>Set without notifying the daemon (state pushes).</summary>
-    public void Sync(bool selected) { if (Set(ref _isSelected, selected, nameof(IsSelected))) { } }
-
-    private bool _isSelected;
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set { if (Set(ref _isSelected, value)) _changed(); }
-    }
-}
-
 /// <summary>A mix (monitor/stream/chat): master level and mute.</summary>
 public sealed class MixViewModel : ViewModelBase, IHasId
 {
@@ -1559,6 +1533,9 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     /// <summary>The daemon owns editability; older daemons only allow virtual microphones.</summary>
     public bool IsEditable => _editable ?? Kind == "virtualMic";
 
+    private bool? _deletable;
+    public bool IsDeletable => _deletable ?? IsEditable;
+
     /// <summary>What a structural mix is, for the layout editor.</summary>
     public string KindLabel => Kind switch { "monitor" => Localizer.Text("MonitorMixKind"), "auxPort" => Localizer.Text("UsbAuxPortKind"), _ => "" };
 
@@ -1570,7 +1547,7 @@ public sealed class MixViewModel : ViewModelBase, IHasId
 
     private string _kind = "monitor";
     /// <summary>"monitor", "virtualMic" or "auxPort", as the daemon reports it.</summary>
-    public string Kind { get => _kind; set { if (Set(ref _kind, value)) { Raise(nameof(IsEditable)); Raise(nameof(KindLabel)); Raise(nameof(IsMonitor)); } } }
+    public string Kind { get => _kind; set { if (Set(ref _kind, value)) { Raise(nameof(IsEditable)); Raise(nameof(IsDeletable)); Raise(nameof(KindLabel)); Raise(nameof(IsMonitor)); } } }
     public bool IsMonitor => Kind == "monitor";
     public VolumeRangeViewModel VolumeRange { get; }
 
@@ -1623,7 +1600,9 @@ public sealed class MixViewModel : ViewModelBase, IHasId
     {
         Appearance.Apply(n["appearance"]);
         bool? editable = n["editable"]?.GetValue<bool>();
-        if (_editable != editable) { _editable = editable; Raise(nameof(IsEditable)); }
+        if (_editable != editable) { _editable = editable; Raise(nameof(IsEditable)); Raise(nameof(IsDeletable)); }
+        bool? deletable = n["deletable"]?.GetValue<bool>();
+        if (_deletable != deletable) { _deletable = deletable; Raise(nameof(IsDeletable)); }
         _applying = true;
         try
         {

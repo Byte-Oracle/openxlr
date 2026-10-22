@@ -127,7 +127,7 @@ internal sealed record FlowGraph(IReadOnlyList<FlowNode> Nodes, IReadOnlyList<Fl
         }
         foreach (MonitorOutputItem output in vm.MonitorOutputs.Where(o => o.IsSelected))
             Output($"out:{output.Name}", output.Label, output.Feed?.Name ?? Localizer.Text("MonitorOutput"),
-                (output.Feed?.Id ?? vm.Mixes.FirstOrDefault(m => m.Kind == "monitor")?.Id ?? "monitor")
+                (output.Feed?.Id ?? vm.DefaultMonitorMix)
                     .Split('+', StringSplitOptions.RemoveEmptyEntries), output.IsPresent, FlowIcon.Speaker);
         foreach (MixViewModel mix in vm.Mixes)
         {

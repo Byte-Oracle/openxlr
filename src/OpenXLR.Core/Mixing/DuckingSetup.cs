@@ -12,10 +12,11 @@ public sealed record DuckingSetup : DuckingScene
     /// <summary>The preferred backend, device or software. An unfit unit falls back to software.</summary>
     public string Processing { get; init; } = ProDucking.Device;
 
-    /// <summary>Off, with every application channel in Monitor A selected and the Pro's medium presets.</summary>
+    /// <summary>Off, with every application channel in the default monitor and the Pro's medium presets.</summary>
     public static DuckingSetup Default(MixerConfig config) => new()
     {
         Channels = [.. config.Channels.Where(c => c.IsApplication).Select(c => c.Id)],
+        Mixes = config.DefaultMonitor is { } monitor ? [monitor.Id] : [],
     };
 
     /// <summary>The first invalid field, or null. Microphones include capture inputs on one mono port.</summary>

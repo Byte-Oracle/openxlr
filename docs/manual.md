@@ -134,7 +134,7 @@ renamed, hidden and removed ([section 3.12](#layout)):
 | Aux | what a second computer receives | the interface's USB Aux port (Wave XLR Pro only) |
 
 An output is not tied to the monitor mixes: its feed picker can name any
-mix, and the API can name a sum of mixes ([section 3.2](#monitor)). A
+mix or a sum of mixes ([section 3.2](#monitor)). A
 blend at other levels is a mix of its own, with the sends set there.
 
 The daemon repairs lost internal links into mix inserts and virtual
@@ -434,26 +434,32 @@ that was the default.
    daemon restart. OpenXLR never moves the monitor to another output in
    its place. Only a recalled profile, loaded by hand or on connect,
    changes the selection, to the outputs that profile saved. Ticking
-   another device adds it. Untick the missing one to drop it. A mono device needs only its one
+   another device adds it. A rejected selection returns to the daemon's
+   reported outputs and shows the reason. Untick the missing one to drop it. A mono device needs only its one
    channel. The microphone channels recover the same way when the
    interface returns, and a microphone feed missing one side keeps its
    working side while the other is repaired.
-2. Next to a ticked device, the feed picker says which mix it
-   hears. Leave it on Monitor A, or choose Monitor B for an output that
-   should hear a different selection: a headset whose game side and
-   chat side are two sinks, for instance, gets the voice channels on
-   Monitor B and everything else on Monitor A. Monitor B has its own
-   sends and master in the SUBMIXER card. Monitor A+B plays both mixes
-   summed on one output: put the desktop on A and only the microphone
-   on B, add a denoiser under the Monitor B master, and one pair of
-   headphones hears both, with the plugin touching only your voice.
-   The Pro's own jacks share one feed.
-   Stream, Chat, Aux and custom virtual microphones are also available, so
-   you can listen to the mix a recorder or second computer receives, including
-   its inserts and master. This does not move its recording clients. The
-   API can sum any distinct mixes; such a selection is shown in the picker.
+2. Next to each ticked device, open the feed picker and tick one or more
+   mixes. The same mix can feed several outputs, and each output can hear
+   several mixes at once. For example, give the speakers only a Desktop
+   mix and give the headset Desktop plus Voice. Each selected mix arrives
+   with its own sends, effects, master level and mute. The feeds add at
+   unity; put a different blend in a mix of its own rather than adding
+   another level between a mix and an output. A shared signal in two
+   selected mixes adds twice, so leave headroom when summing them.
+   At least one mix stays selected. Untick the device to disconnect it.
+   Feed choices use stable mix ids, so renaming a mix updates its name in
+   the picker without changing its routes. A missing output keeps its
+   selection and its feeds until it returns. Device descriptions update in
+   place without changing the selected outputs or pending feed edits.
+   The Wave XLR Pro's Headphones 1/2 and Line Out share one hardware
+   return bus. Changing the feed of any of these jacks changes all selected
+   jacks on that interface; they cannot carry independent blends.
+   Stream, Chat, Aux and custom virtual microphones are also available,
+   so you can listen to a recorder's mix without moving its recording
+   clients. The same assignments are available through the API.
    Deleting a mix removes it from selected feeds; if nothing remains, the
-   output returns to Monitor A. A failed layout save leaves the old feed intact.
+   output returns to the default monitor mix. A failed layout save leaves the old feed intact.
    Listening to a recording or Aux mix on the Pro's jacks uses the software
    microphone path so its recording feed is never silenced by direct monitoring.
    On devices without USB Aux, selecting Aux reveals its mix and send faders
@@ -521,6 +527,10 @@ that was the default.
    output feeds keep their settings, so a mix or send that was already muted
    stays muted. The pause survives a daemon restart and profile recall leaves
    it unchanged. The terminal mixer's Outputs tab has **Mute monitoring** too.
+   Adding a monitor during the pause leaves it individually muted. Renaming
+   keeps the remembered selection; deleting removes only that monitor. If the
+   last previously open monitor is deleted, the pause clears and the remaining
+   individually muted monitors stay muted. These choices survive a restart.
    Selected Linux output devices are muted too; resuming restores their previous
    native mute flags. The original flags are saved with the monitor selection
    so they can be restored after a daemon restart too. To start a new listening
@@ -560,7 +570,8 @@ The setup has four parts:
   or a capture input on one mono port can be the key too.
 - The **channels** to lower. By default every application channel: Game,
   Music, Browser, System, Voice Chat and SFX. The key is never lowered.
-- The **mixes** to lower them in. By default Monitor A, what you hear.
+- The **mixes** to lower them in. By default the default monitor mix,
+  Monitor A until it is removed.
   Add Stream to dip the music your viewers hear while you talk.
 - Three presets, with the Wave XLR Pro's own numbers. **Sensitivity** is
   how quiet a voice already counts: Low reacts only to a loud voice
@@ -1969,8 +1980,9 @@ Channel and mix tiles follow the mixer layout's one order, the same one
 the layout editor's arrows and the terminal mixer change. A drop sends
 the new order to the daemon, and the tiles move when it has saved it; a
 failed save leaves them where they were and the note shows the error.
-Hardware inputs, Monitor A, Monitor B and Aux keep their place and have no
-handle. A hidden channel keeps its place in the order. Moving tiles
+Hardware inputs and Aux keep their place and have no handle. Every monitor
+mix, Monitor A/B included, can move. A hidden channel keeps its place in the
+order. Moving tiles
 changes no routing; [Edit the mixer layout](#layout) says where an app
 goes when its channel is deleted, which never depends on the order.
 
@@ -2266,9 +2278,9 @@ SUBMIXER card opens the layout editor: application channels on the left,
 mixes on the right, each with move up and down, Rename and Delete, and a
 box at the bottom to add one. Add capture input, under that box, turns
 another PipeWire capture source into a channel
-([Additional capture inputs](#capture-inputs)). The hardware inputs,
-Monitor A, Monitor B and Aux are listed in fixed places; only their
-appearance can change.
+([Additional capture inputs](#capture-inputs)). The hardware inputs and Aux
+are listed in fixed places; only their appearance can change. Every monitor mix, Monitor A/B included, can be
+renamed, reordered and removed. The last remaining monitor cannot be deleted.
 
 Under MIXES, enter a name, pick **Virtual microphone** or **Monitor mix**
 and press Add mix. A virtual microphone is a source a recorder or a call
@@ -2277,9 +2289,10 @@ speakers that should not get Monitor A or B: tick the output in the
 MONITOR card, set its feed picker to the new mix, then open the sends you
 want. Its master is a desktop volume like Monitor A and B, so the desktop's
 volume and mute controls move it, and it goes to 150%. It publishes no
-microphone. Both kinds count toward one limit of 16 mixes you can edit,
-Stream and Chat included. Monitor A+B in the feed picker stays the sum of
-those two mixes; a sum with a monitor mix you added goes through the API.
+microphone. Both kinds count toward one limit of 18 editable mixes,
+Monitor A, Monitor B, Stream and Chat included. In each output's feed picker,
+tick any combination of mixes, including the monitor mixes you added,
+to hear their sum.
 
 Reordering updates the open UI as soon as the daemon publishes the saved
 layout, including changes made through the API. Channel tiles, mix controls
@@ -2359,7 +2372,9 @@ Appearance is part of the layout, saved with it, and not part of a profile.
   channel whose id comes first when System is gone. Deleting a virtual
   microphone removes the device, and anything recording from it loses it.
   Outputs that followed only the deleted mix
-  return to Monitor A, while summed feeds keep their other mixes. If the
+  return to the default monitor mix, while summed feeds keep their other mixes.
+  The default is Monitor A while it exists, otherwise the monitor whose stable
+  id sorts first. Reordering or renaming mixes never changes that choice. If the
   mix was the enforced system default output or input, that choice is
   cleared and the desktop picks the default.
 
@@ -2947,7 +2962,7 @@ settings. See
 | `~/.config/openxlr/installation-backups/<sha256>` | private originals for startup restoration |
 | `~/.config/openxlr/installation-history/<sha256>.json` | retained package inventories for doctor |
 | `~/.config/openxlr/installation.lock` | serializes installation inventory writes |
-| `~/.config/openxlr/mixer.json` | every mixer decision, the layout included (`userChannels`, `userMixes`, see [mixer-layout.md](mixer-layout.md)), written by the daemon |
+| `~/.config/openxlr/mixer.json` | every mixer decision, the layout included (`userChannels`, `mixes`, see [mixer-layout.md](mixer-layout.md)), written by the daemon |
 | `~/.config/openxlr/profiles/<vid-pid>/<name>.json` | saved profiles, one file each |
 | `~/.config/openxlr/profiles/<vid-pid>/recall-on-connect` | the profile recalled when that interface connects, when one is chosen |
 | `$XDG_RUNTIME_DIR/openxlr/token` (or `~/.config/openxlr/token` without a runtime directory) | the control API token for this daemon run, readable by your user only; the UI and the OpenDeck plugin read it, a daemon older than the UI will not have it ([section 3.11](#upgrade)) |

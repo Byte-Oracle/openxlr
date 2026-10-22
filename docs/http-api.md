@@ -44,7 +44,11 @@ every mixer resource answers 503; with the mixer running an unknown id
 answers 404, and so does a channel without a chain. A chain the state holds
 with no inserts in it reads as `[]`. A profile directory that cannot be read
 leaves `profiles` empty and is reported in the state's `warning`.
-These reads never build, rebuild or save anything.
+The mixer reports `defaultMonitorMix` for outputs without an explicit feed.
+Every mix reports `editable` and `deletable`; the final monitor remains
+renameable and reorderable but cannot be deleted. The existing `createMix`,
+`renameMix`, `deleteMix` and `setLayoutOrder` commands manage monitor mixes,
+Monitor A/B included. These reads never build, rebuild or save anything.
 
 `plugins`, `plugin-setup`, `plugin-diagnostics`, `diagnostics` and
 `editor-rules` run the existing `listPlugins`, `getPluginSetup`,
@@ -63,7 +67,16 @@ Commands use the names and fields in [the WebSocket API](api.md), including
 mix-to-output feed commands, which accept any existing mix or a sum of distinct
 mix ids. For example,
 `{"cmd":"setMonitorFeed","device":"alsa_output.headset","mix":"monitor+chat"}`
-makes an already selected headset hear Monitor A and Chat summed.
+makes an already selected headset hear Monitor A and Chat summed at unity.
+An output is selected with `setMonitorOutputs` before setting its feed.
+For example, `{"cmd":"setMonitorOutputs","devices":["alsa_output.headset","alsa_output.speakers"]}`
+selects both devices. Give the speakers `monitor` and leave the headset on
+`monitor+chat`: Monitor A now feeds both outputs, while Chat also feeds the
+headset. An empty sum is invalid; remove the device from `devices` to
+stop its monitor feed. Feeds are saved in mixer settings and profiles;
+`monitorFeeds` in the mixer state holds per-output exceptions from the
+default monitor mix. The Pro's own jacks share one feed even when listed
+as separate selected outputs.
 `{"cmd":"setChannelVolume","channel":"game","value":0.5}` sets the Game
 channel's own volume, which scales every send of the channel at once, and
 `GET /api/v1/channels/game` reads it back as `volume`. Every channel takes

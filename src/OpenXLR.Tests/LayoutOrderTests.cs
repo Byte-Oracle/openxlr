@@ -11,9 +11,9 @@ public sealed class LayoutOrderTests
     {
         var original = MixerConfig.Default();
         var apps = original.Channels.Where(c => c.InputPair is null).Reverse().ToArray();
-        var ordered = original.WithOrder(apps.Select(c => c.Id).ToArray(), ["chat", "stream"]);
+        var ordered = original.WithOrder(apps.Select(c => c.Id).ToArray(), ["chat", "monitor2", "stream", "monitor"]);
         Assert.Equal(["xlr1", "xlr2", "aux", .. apps.Select(c => c.Id)], ordered.Channels.Select(c => c.Id));
-        Assert.Equal(["monitor", "monitor2", "chat", "stream", "auxout"], ordered.Mixes.Select(m => m.Id));
+        Assert.Equal(["chat", "monitor2", "stream", "monitor", "auxout"], ordered.Mixes.Select(m => m.Id));
         foreach (var channel in original.Channels) Assert.Same(channel, ordered.Channels.Single(c => c.Id == channel.Id));
         foreach (var mix in original.Mixes) Assert.Same(mix, ordered.Mixes.Single(m => m.Id == mix.Id));
         Assert.Equal("game", original.Channels[3].Id); // The original snapshot was not mutated.
@@ -31,7 +31,7 @@ public sealed class LayoutOrderTests
         var ids = config.Channels.Where(c => c.InputPair is null).Select(c => c.Id).ToList();
         if (kind == "missing") ids.RemoveAt(0);
         else ids[0] = kind switch { "duplicate" => ids[1], "hardware" => "xlr1", "null" => null!, _ => "unknown" };
-        Assert.Throws<InvalidOperationException>(() => config.WithOrder(ids, ["stream", "chat"]));
+        Assert.Throws<InvalidOperationException>(() => config.WithOrder(ids, ["monitor", "monitor2", "stream", "chat"]));
     }
 
     [Theory]
@@ -50,7 +50,7 @@ public sealed class LayoutOrderTests
     public void EmptyVirtualMixLayoutCanBeReordered()
     {
         var config = MixerConfig.FromSettings(new MixerSettings { UserMixes = [], UserChannels = [new("only", "Only")] });
-        Assert.Equal(config.Mixes, config.WithOrder(["only"], []).Mixes);
+        Assert.Equal(config.Mixes, config.WithOrder(["only"], ["monitor", "monitor2"]).Mixes);
     }
 
     [Fact]

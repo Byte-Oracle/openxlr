@@ -129,7 +129,7 @@ public static class CommandValidation
                 return cmd.Cmd == "renameMix" && BadName(cmd.Name) ? "renameMix: name must contain 1 to 60 printable characters" : null;
             case "setLayoutOrder":
                 if (cmd.Channels is null || cmd.Mixes is null) return "setLayoutOrder: need 'channels' and 'mixes'";
-                if (cmd.Channels.Count > MixerConfig.MaxApplicationChannels || cmd.Mixes.Count > MixerConfig.MaxUserMixes)
+                if (cmd.Channels.Count > MixerConfig.MaxApplicationChannels || cmd.Mixes.Count > MixerConfig.MaxEditableMixes)
                     return "setLayoutOrder: too many IDs";
                 if (cmd.Channels.Concat(cmd.Mixes).Any(id => id is null || id.Length is 0 or > 36))
                     return "setLayoutOrder: invalid ID";

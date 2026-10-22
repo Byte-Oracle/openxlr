@@ -57,8 +57,10 @@ public sealed class MonitorPauseUnlinkTests
         }
     }
 
-    [Fact]
-    public void ARefusedDisconnectKeepsItsOwnerThroughSelectionChangesUntilItCanBeRemoved()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ARefusedDisconnectKeepsItsOwnerThroughSelectionChangesUntilItCanBeRemoved(bool deletingMonitor)
     {
         string directory = Directory.CreateTempSubdirectory("openxlr-pause-unlink-").FullName;
         string? previousPath = Environment.GetEnvironmentVariable("PATH");
@@ -78,7 +80,21 @@ public sealed class MonitorPauseUnlinkTests
                 """);
             Environment.SetEnvironmentVariable("PATH", directory);
             using var mixer = new Mixer(new PipeWireAdapter());
+            var mixRepairs = Field<Dictionary<string, (int Failures, long RetryAt)>>("_desktopMixMuteResets");
+            if (deletingMonitor)
+            {
+                typeof(Mixer).GetField("_config", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mixer,
+                    new MixerConfig { Channels = [], Mixes = [new("monitor", "Speakers", MixKind.Monitor), new("monitor2", "Closed", MixKind.Monitor)] });
+                Field<HashSet<string>>("_mixMuted").Add("monitor2");
+                mixRepairs["OpenXLR_mix_monitor"] = (3, 123);
+                mixRepairs["OpenXLR_mix_monitor2"] = (5, 456);
+            }
             typeof(Mixer).GetField("_built", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mixer, true);
+            if (deletingMonitor)
+            {
+                mixer.RenameMix("monitor", "Renamed speakers", _ => null);
+                Assert.Equal((3, 123L), mixRepairs["OpenXLR_mix_monitor"]);
+            }
             var routes = Field<Dictionary<string, PortLink>>("_monitorRoutes");
             routes["speakers"] = new PortLink([("monitor:monitor_FL", "speakers:playback_FL")]);
             Field<List<string>>("_monitorOutputs").Add("speakers");
@@ -87,7 +103,16 @@ public sealed class MonitorPauseUnlinkTests
             Assert.Single(routes);
             mixer.SetMonitorOutputs([]);
             Assert.Single(routes);
-            Assert.Throws<InvalidOperationException>(() => mixer.SetMonitorMuted(false));
+            bool persisted = false;
+            if (deletingMonitor)
+            {
+                Assert.Throws<InvalidOperationException>(() => mixer.DeleteMix("monitor", _ => { persisted = true; return null; }));
+                Assert.False(persisted);
+                Assert.True(mixer.HasMix("monitor"));
+                Assert.Equal(["monitor2"], mixer.ExportSettings().MixMuted);
+                Assert.Equal((3, 123L), mixRepairs["OpenXLR_mix_monitor"]);
+            }
+            else Assert.Throws<InvalidOperationException>(() => mixer.SetMonitorMuted(false));
             Assert.True(mixer.MonitorMuted);
             Assert.Single(routes);
             File.Delete(Path.Combine(directory, "refuse"));
@@ -99,7 +124,21 @@ public sealed class MonitorPauseUnlinkTests
             Assert.False(mixer.EnsureMonitorRoutes());
             mixer.SetMonitorMuted(true);
             Assert.Equal(calls, File.ReadAllLines(Path.Combine(directory, "calls")));
-            mixer.SetMonitorMuted(false);
+            if (deletingMonitor)
+            {
+                Assert.Throws<IOException>(() => mixer.DeleteMix("monitor", _ => "disk full"));
+                Assert.True(mixer.HasMix("monitor"));
+                Assert.True(mixer.MonitorMuted);
+                Assert.Equal((3, 123L), mixRepairs["OpenXLR_mix_monitor"]);
+                Assert.Equal((5, 456L), mixRepairs["OpenXLR_mix_monitor2"]);
+                mixer.DeleteMix("monitor", _ => { persisted = true; return null; });
+                Assert.True(persisted);
+                Assert.False(mixer.HasMix("monitor"));
+                Assert.Equal(["monitor2"], mixer.ExportSettings().MixMuted);
+                Assert.Equal("OpenXLR_mix_monitor2", Assert.Single(mixRepairs).Key);
+                Assert.Equal((5, 456L), mixRepairs["OpenXLR_mix_monitor2"]);
+            }
+            else mixer.SetMonitorMuted(false);
             Assert.False(mixer.MonitorMuted);
 
             T Field<T>(string name) => (T)typeof(Mixer).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(mixer)!;

@@ -96,7 +96,8 @@ few releases, and they get to settle in users' hands first.
 - [x] Editable application channels and virtual-microphone mixes: add,
   rename, delete, reorder, with stable ids separate from display names so
   PipeWire node names, profiles and Stream Deck keys survive a rename.
-  Hardware inputs, Monitor A, Monitor B and Aux stay structural. Every
+  Hardware inputs and Aux stay structural; every monitor mix, including
+  Monitor A/B, can be renamed, reordered or removed, with at least one kept. Every
   layout command is acknowledged only after its save succeeded, a failed
   write is an error, and no untouched node is rebuilt: the channel sinks
   feed the mix sinks by name pattern, so a new mix grows its sends on its

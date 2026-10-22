@@ -346,7 +346,7 @@ internal sealed class MixerView : View
     {
         if (channel is null)
         {
-            if (!mix.IsEditable) { app.Say("Only a user mix can be removed"); return; }
+            if (!mix.IsDeletable) { app.Say(mix.IsEditable ? "The last monitor mix cannot be removed" : "Only a user mix can be removed"); return; }
             app.Ask($"Type yes to delete {mix.Name}", string.Empty, answer =>
             {
                 if (answer.Equals("yes", StringComparison.OrdinalIgnoreCase))
