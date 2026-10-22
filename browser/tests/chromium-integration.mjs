@@ -279,9 +279,6 @@ try {
   const chatId = tabs.find(tab => tab.site === chatTab.site).id;
   const session = tabs[0].session;
   await api('POST', 'commands', { cmd: 'setPreserveBrowserOutputs', value: true });
-  for (const [tabId, channel] of [[musicId, 'music'], [chatId, 'voicechat']])
-    await api('POST', 'commands', { cmd: 'assignBrowserTab', session, tabId,
-      site: tabId === musicId ? musicTab.site : chatTab.site, channel, remember: true });
 
   const devices = await context.newPage();
   await devices.goto(`chrome-extension://${extensionId}/devices.html`);
@@ -295,6 +292,16 @@ try {
     await cdp.send('Extensions.triggerAction', { id: extensionId, targetId: target.targetId });
     const popup = await until(async () => (await cdp.send('Target.getTargets')).targetInfos
       .find(target => target.url === `chrome-extension://${extensionId}/popup.html`), 'extension action popup');
+    await until(() => evaluate(popup.targetId, "document.getElementById('channel').disabled === false"), 'tab channel picker is available');
+    const channel = site === musicTab.site ? 'music' : 'voicechat';
+    await evaluate(popup.targetId, `
+      document.getElementById('remember').checked = true;
+      const picker = document.getElementById('channel');
+      picker.value = ${JSON.stringify(channel)};
+      picker.dispatchEvent(new Event('change', { bubbles: true }));
+    `);
+    await until(async () => (await api('GET', 'state')).mixer.browserTabs.some(tab => tab.site === site
+      && tab.channelId === channel && tab.remember), 'popup assignment is remembered by the daemon');
     await until(async () => await evaluate(popup.targetId, "document.getElementById('start').disabled === false"), 'tab activation is available');
     await evaluate(popup.targetId, "document.getElementById('start').click()");
     await until(async () => (await api('GET', 'state')).mixer.browserTabs.find(tab => tab.site === site)?.capturing, 'user-activated tab capture');
