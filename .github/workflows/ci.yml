@@ -98,7 +98,7 @@ jobs:
           python3 tools/test-installation-receipt.py
           python3 packaging/yabridge/test-receipt.py
 
-      - name: Validate Stream Deck/OpenDeck plugin
+      - name: Validate browser routing and desktop plugins
         run: |
           python3 tools/deck-skins.py --check
           python3 tools/deck-icons.py --check
@@ -107,6 +107,9 @@ jobs:
           python3 tools/check-openapi.py docs/openapi-v1.json
           python3 tools/eq-reference.py --check
           node --test plugin/tests/*.test.mjs
+          for file in browser/chromium/*.mjs; do node --check "$file"; done
+          node --test browser/tests/*.test.mjs
+          node --check browser/tests/chromium-integration.mjs
           node --test packaging/omarchy/tests/*.test.mjs
           python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
 

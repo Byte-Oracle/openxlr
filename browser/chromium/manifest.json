@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "OpenXLR browser routing",
+  "version": "0.1.0",
+  "description": "Choose an OpenXLR channel for each browser tab. Requires the OpenXLR native application.",
+  "minimum_chrome_version": "116",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsx4v9GZjeBjd6Cji6tUB4RaUo3OL3XTkPGdcSrcwWctSj/FnsVhPi2CDx8HS0uVk4hgbNem9pfxnAkNa3zACWZ9hZmvjM3TI9rYoyTfrNLo8olaEtmlxKzS9iDKRWf7T6wu0fWBK9kH/2pJmP9MGXcTW4H/us+i6aVsq6Z4YWTDDnMjc2ADe6e0cfGJNOyAAKZVUVhk5iOgcAd4HZMFVPA/8aHZmV1IhLvV35809/6FlWcbRqYysvPMIHZwp7WbXzvirONU0RcJxhvTLdCW2mqBEuSBPa22KoLp+gEcfDlm+c897m0WFp7LsSWtJrEsZMwYjHC8yKXme2r/+OaAlpwIDAQAB",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "tabCapture",
+    "offscreen",
+    "storage",
+    "nativeMessaging"
+  ],
+  "incognito": "not_allowed",
+  "background": {
+    "service_worker": "worker.mjs",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Route this tab with OpenXLR"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+9"
+      },
+      "description": "Open the channel picker for this tab"
+    }
+  }
+}

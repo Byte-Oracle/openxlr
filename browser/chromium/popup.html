@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>OpenXLR tab routing</title><link rel="stylesheet" href="style.css"></head>
+<body><main>
+<h1>OpenXLR tab routing</h1>
+<p id="title"></p>
+<p class="status" id="status" role="status">Connecting to OpenXLR…</p>
+<p id="error" role="alert"></p>
+<label>Channel<select id="channel" disabled></select></label>
+<label><input id="remember" type="checkbox" checked> Remember for this website</label>
+<button id="enable" hidden>Let the browser choose its outputs</button>
+<button id="start" disabled>Activate this tab</button><button id="stop" disabled>Stop routing</button>
+<button id="devices">Output access</button><button id="retry">Reconnect</button>
+<button id="forget">Forget website default</button>
+<p>Choose channels here or in OpenXLR. Activate each tab in the browser first. Stopping restores normal browser playback.</p>
+</main><script type="module" src="popup.mjs"></script></body></html>

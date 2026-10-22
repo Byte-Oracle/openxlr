@@ -765,6 +765,13 @@ An app that is missing from the card is not registered with PipeWire
 as a client. That happens with some applications until they start
 playing.
 
+For separate Teams, YouTube or other browser tabs, the optional
+[Chromium companion](browser-routing.md) adds individual tab entries here
+and in Manage. Enable browser output selection, choose a channel and
+activate each tab from the browser. Remember website saves its origin's
+default across restarts. Browser permission must be granted again for
+each tab after restarting the browser.
+
 OpenXLR remembers up to 512 explicit app assignments. Once that limit is
 reached, existing assignments can still be changed, including "Not managed".
 Forget an unused assignment before adding a new one. A refused assignment

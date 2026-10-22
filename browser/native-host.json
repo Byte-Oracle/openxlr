@@ -1,0 +1,9 @@
+{
+  "name": "com.emaspa.openxlr.browser",
+  "description": "OpenXLR browser tab routing",
+  "path": "/usr/bin/openxlr",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://ojdjoifendmgooonjlbdbaiondkpeihh/"
+  ]
+}
