@@ -63,6 +63,33 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
     public Task<JsonNode?> RequestPluginsAsync(TimeSpan timeout)
         => QueryAsync("plugins", "listPlugins", timeout);
 
+    internal async Task<string?> RequestBrowserSessionAsync(TimeSpan timeout)
+    {
+        JsonNode? reply = await QueryAsync("browserSession", "getBrowserSession", timeout);
+        string? session = reply?["session"] is JsonValue value && value.TryGetValue<string>(out string? text) ? text : null;
+        return session is { Length: 32 } && session.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f')
+            ? session : null;
+    }
+
+    internal const string BrowserTabsTooLarge = "Browser tab metadata exceeds OpenXLR's message size limit. Close some tabs or shorten their titles.";
+
+    internal Task<string?> SyncBrowserTabsAsync(string session, IReadOnlyList<BrowserNativeTab> tabs)
+    {
+        // Include the acknowledgement id in the preflight: the daemon caps
+        // a whole incoming message at 64 KiB, even when every tab is valid.
+        var payload = new Dictionary<string, object> { ["cmd"] = "syncBrowserTabs", ["session"] = session,
+            ["tabs"] = tabs, ["requestId"] = new string('0', 32) };
+        return JsonSerializer.SerializeToUtf8Bytes(payload, Json).Length > 64 * 1024
+            ? Task.FromResult<string?>(BrowserTabsTooLarge) : EditLayoutAsync(payload);
+    }
+
+    public Task<string?> AssignBrowserTabAsync(string session, int tabId, string? channel, bool remember)
+        => EditLayoutAsync(new() { ["cmd"] = "assignBrowserTab", ["session"] = session,
+            ["tabId"] = tabId, ["channel"] = channel!, ["remember"] = remember });
+
+    public Task<string?> SetPreserveBrowserOutputsAsync(bool value)
+        => EditLayoutAsync(new() { ["cmd"] = "setPreserveBrowserOutputs", ["value"] = value });
+
     /// <summary>Latest scan evidence and effective bridge status; null on timeout or an older daemon.</summary>
     public Task<JsonNode?> RequestPluginDiagnosticsAsync(TimeSpan timeout)
         => QueryAsync("pluginDiagnostics", "getPluginDiagnostics", timeout);
@@ -300,7 +327,7 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
             else if (type == "diagnostics") StoreReply(type, node);
             else if (type == "plugins") StoreReply(type, node["plugins"]);
             else if (type == "nativeEditorRulesChanged") NativeEditorRulesChanged?.Invoke();
-            else if (type is "pluginSetup" or "pluginInstall" or "pluginDiagnostics" or "windowsPluginFiles" or "nativeEditorRules") StoreReply(type, node);
+            else if (type is "pluginSetup" or "pluginInstall" or "pluginDiagnostics" or "windowsPluginFiles" or "nativeEditorRules" or "browserSession") StoreReply(type, node);
             else if (type == "commandResult" && node["requestId"]?.GetValue<string>() is string requestId)
             {
                 CompleteQuery(requestId);

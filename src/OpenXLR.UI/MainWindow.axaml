@@ -827,8 +827,11 @@
         </Expander.Header>
         <!-- the chips, the list or the columns, as the skin's template picks
              (ApplicationChip, ApplicationLine and their panels above) -->
-        <ItemsControl Name="ApplicationRows" ItemsSource="{Binding ActiveApps}"
-                      ItemsPanel="{StaticResource ApplicationChipsPanel}" ItemTemplate="{StaticResource ApplicationChip}"/>
+        <StackPanel Spacing="8">
+          <ItemsControl Name="ApplicationRows" ItemsSource="{Binding ActiveApps}"
+                        ItemsPanel="{StaticResource ApplicationChipsPanel}" ItemTemplate="{StaticResource ApplicationChip}"/>
+          <views:BrowserTabsView/>
+        </StackPanel>
       </Expander>
     </Border>
 

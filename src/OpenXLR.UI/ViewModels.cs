@@ -61,6 +61,7 @@ public sealed partial class MainViewModel : ViewModelBase
             {
                 DeviceConnected = false; RefreshBindings(); Status = Localizer.Text("StatusDaemonNotRunning");
                 ResetWaveInterfaces();
+                ResetBrowserTabs();
                 Inserts.ResetForNewConnection(); Inserts2.ResetForNewConnection();
                 foreach (MixViewModel mv in Mixes) mv.Inserts.ResetForNewConnection();
                 foreach (ChannelViewModel channel in Channels) channel.Inserts?.ResetForNewConnection();
@@ -529,7 +530,7 @@ public sealed partial class MainViewModel : ViewModelBase
     public ObservableCollection<AppStreamViewModel> ActiveApps { get; } = [];
 
     /// <summary>True when the registry holds anything (enables Manage).</summary>
-    public bool HasApps => Apps.Count > 0;
+    public bool HasApps => Apps.Count > 0 || HasBrowserTabs;
 
     /// <summary>Pre-register an installed app with a channel (Manage dialog).</summary>
     public void AddApp(string identity, string label, string channel)
@@ -876,6 +877,7 @@ public sealed partial class MainViewModel : ViewModelBase
             ApplyWaveInterfaces(node["waveInterfaces"]);
             ApplyMixer(node["mixer"]);
             ApplyStreams(node["mixer"]);
+            ApplyBrowserTabs(node["mixer"]);
             Ducking.Apply(node["ducking"], node["mixer"]);
             // The daemon says whether XLR 1's signal has a hardware low cut and
             // ClipGuard in front of it; an older daemon leaves the window to

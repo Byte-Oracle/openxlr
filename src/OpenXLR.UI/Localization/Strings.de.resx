@@ -2832,4 +2832,52 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="CaptureStereoPorts" xml:space="preserve">
     <value>Stereo-Ports {0} + {1}{2}</value>
   </data>
+  <data name="PreserveBrowserOutputs" xml:space="preserve">
+    <value>Einzelne Browser-Tabs zuordnen</value>
+  </data>
+  <data name="PreserveBrowserOutputsHint" xml:space="preserve">
+    <value>Solange dies aktiv ist, sind Zuordnungen des gesamten Browsers ausgesetzt. Nicht zugeordnete Tabs behalten das vom Browser oder Desktop gewählte Ausgabeziel.</value>
+  </data>
+  <data name="BrowserTabsHeading" xml:space="preserve">
+    <value>BROWSER-TABS</value>
+  </data>
+  <data name="BrowserTabCaptureHint" xml:space="preserve">
+    <value>Audio für jeden Tab in der Browser-Erweiterung aktivieren. Die Kanalauswahl hier startet keine Tab-Audioübernahme.</value>
+  </data>
+  <data name="BrowserTabCaptureState" xml:space="preserve">
+    <value>Status der Tab-Audioübernahme</value>
+  </data>
+  <data name="BrowserTabChannelName" xml:space="preserve">
+    <value>Kanal für Browser-Tab {0}</value>
+  </data>
+  <data name="BrowserTabRemember" xml:space="preserve">
+    <value>Website merken</value>
+  </data>
+  <data name="BrowserTabDefault" xml:space="preserve">
+    <value>Browser-Standard</value>
+  </data>
+  <data name="BrowserTabRoutingDisabled" xml:space="preserve">
+    <value>Die Zuordnung einzelner Browser-Tabs aktivieren, um diesen Tab zuzuordnen.</value>
+  </data>
+  <data name="BrowserTabApplying" xml:space="preserve">
+    <value>Tab-Zuordnung wird angewendet...</value>
+  </data>
+  <data name="BrowserTabCapturing" xml:space="preserve">
+    <value>Audioübernahme aktiv</value>
+  </data>
+  <data name="BrowserTabActivationRequired" xml:space="preserve">
+    <value>Audio in der Browser-Erweiterung aktivieren.</value>
+  </data>
+  <data name="BrowserTabUsesDefault" xml:space="preserve">
+    <value>Verwendet das Standardziel des Browsers</value>
+  </data>
+  <data name="BrowserTabRememberHint" xml:space="preserve">
+    <value>Ausgeschaltet gelten Änderungen nur für diesen Tab. Eine zuvor gespeicherte Website-Zuordnung bleibt für andere Tabs erhalten.</value>
+  </data>
+  <data name="BrowserTabForgetWebsite" xml:space="preserve">
+    <value>Website vergessen</value>
+  </data>
+  <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
+    <value>Das gespeicherte Ziel dieser Website vergessen und für diesen Tab das Standardziel des Browsers verwenden.</value>
+  </data>
 </root>
