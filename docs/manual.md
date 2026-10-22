@@ -126,7 +126,7 @@ renamed, hidden and removed ([section 3.12](#layout)):
 | Mix | What it is | Where it goes |
 |---|---|---|
 | Monitor A | what you hear | the ticked outputs in the MONITOR card, unless their feed is set to another mix |
-| Monitor B | a second selection to hear | the ticked outputs whose feed is set to Monitor B, or summed with A on outputs set to Monitor A+B |
+| Monitor B | a second selection to hear | the ticked outputs whose feed picker ticks Monitor B, summed with A on outputs where both Monitor A and Monitor B are ticked |
 | Stream | what your audience hears | the `OpenXLR Stream` virtual microphone, for OBS or any recorder |
 | Chat | what your call partners hear | the `OpenXLR Chat` virtual microphone, for Discord, Zoom and the like |
 | a virtual microphone you add | whatever you route into it | its own `OpenXLR <name>` virtual microphone |
@@ -698,9 +698,9 @@ Cards also work with Tab and Enter or Space. Selection does not change routing.
 
 Input and mix processing appears in an FX row inside its card. Hover over the
 card for the full chain in signal order, including bypass and error states.
-Outputs follow the selected monitor feeds, including Monitor A+B, and the
-current virtual microphones. Apps left to desktop routing appear without an
-OpenXLR connection. The Flow window sizes itself to the graph when it opens, or when
+Outputs follow the selected monitor feeds, including outputs where both
+Monitor A and Monitor B are ticked, and the current virtual microphones.
+Apps left to desktop routing appear without an OpenXLR connection. The Flow window sizes itself to the graph when it opens, or when
 the first routing state arrives, up to the screen's usable area. Larger layouts
 scroll horizontally and vertically. Resizing the window manually turns off automatic sizing.
 
