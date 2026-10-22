@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using OpenXLR.UI;
 using Tmds.DBus.Protocol;
 using PrivateBus = OpenXLR.Tests.DesktopKeysTests.PrivateBus;
@@ -16,7 +17,8 @@ public sealed class FlatpakTrayTests
         await desktop.RequestNameAsync(FlatpakTray.Watcher);
         var host = new Host(); desktop.AddMethodHandler(host);
         int shown = 0, quit = 0;
-        await using var tray = new FlatpakTray(() => shown++, () => quit++, action => action());
+        var posted = Channel.CreateUnbounded<Action>();
+        await using var tray = new FlatpakTray(() => shown++, () => quit++, action => posted.Writer.TryWrite(action));
         Assert.Equal(FlatpakTray.Service, await host.First.Task.WaitAsync(TimeSpan.FromSeconds(5)));
         var bus = new DesktopBus(desktop);
         var properties = await bus.Call(FlatpakTray.Service, "/StatusNotifierItem", "org.freedesktop.DBus.Properties", "GetAll", "s",
@@ -66,6 +68,7 @@ public sealed class FlatpakTrayTests
         foreach (int id in new[] { 2, 1, 3, 99 })
             await bus.Empty(FlatpakTray.Service, "/MenuBar", "com.canonical.dbusmenu", "Event", "isvu",
                 (ref MessageWriter writer) => { writer.WriteInt32(id); writer.WriteString("clicked"); writer.WriteVariantInt32(0); writer.WriteUInt32(0); });
+        await Dispatch(2);
         Assert.Equal(1, shown); Assert.Equal(1, quit);
         var errors = await bus.Call(FlatpakTray.Service, "/MenuBar", "com.canonical.dbusmenu", "EventGroup", "a(isvu)",
             (ref MessageWriter writer) =>
@@ -75,6 +78,7 @@ public sealed class FlatpakTrayTests
                 { writer.WriteStructureStart(); writer.WriteInt32(id); writer.WriteString("clicked"); writer.WriteVariantInt32(0); writer.WriteUInt32(0); }
                 writer.WriteArrayEnd(array);
             }, static (message, _) => message.GetBodyReader().ReadArrayOfInt32());
+        await Dispatch(1);
         Assert.Equal([99], errors); Assert.Equal(2, shown); Assert.Equal(2, quit);
         await Assert.ThrowsAsync<DBusErrorReplyException>(() => bus.Empty(FlatpakTray.Service, "/MenuBar", "com.canonical.dbusmenu", "EventGroup", "a(isvu)",
             (ref MessageWriter writer) =>
@@ -85,9 +89,17 @@ public sealed class FlatpakTrayTests
                 writer.WriteArrayEnd(array);
             }));
         Assert.Equal(2, shown); Assert.Equal(2, quit);
+        Assert.False(posted.Reader.TryRead(out _));
         await desktop.ReleaseNameAsync(FlatpakTray.Watcher);
         await desktop.RequestNameAsync(FlatpakTray.Watcher);
         await host.Again.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        async Task Dispatch(int count)
+        {
+            // A D-Bus reply does not wait for the window's dispatcher.
+            for (int i = 0; i < count; i++)
+                (await posted.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5)))();
+        }
     }
 
     private sealed class Host : IPathMethodHandler
