@@ -2950,7 +2950,11 @@ text files and inside the hex dump of the vendor blocks (the XLR Dock
 stores its serial in one). Your login name is redacted where it names
 your account: in `pactl info`, in the `user@host` part of each client in
 `wpctl status`, in PipeWire's user and core names in the graph dump, and
-in paths under `/home`, `/media`, `/run/media` and `/mnt`. Files inside
+in paths under `/home`, `/media`, `/run/media` and `/mnt`. The titles of
+browser tabs listed by the [Chromium companion](browser-routing.md) are
+redacted, and so is the website of each tab left at the browser default.
+A tab routed to a channel keeps its website, and `mixer.json` keeps the
+remembered website defaults. Files inside
 the archive carry no owner name or id. Review the archive anyway before
 attaching it to a public issue. Nothing is uploaded automatically. An archive is
 created as a new private file; an existing file or symbolic link at its

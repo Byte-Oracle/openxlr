@@ -380,6 +380,33 @@ public sealed class DiagnosticsTests
     }
 
     [Fact]
+    public void ArchivedStateMasksBrowserTabTitlesAndUnroutedOrigins()
+    {
+        string state = """
+            {"type":"state","mixer":{"channels":[{"id":"music","name":"Música"}],"browserTabs":[
+              {"session":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","id":1,"site":"https://music.example","title":"PRIVATE_SONG","channelId":"music","remember":true,"capturing":true},
+              {"session":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","id":2,"site":"https://private-clinic.example","title":"PRIVATE_APPOINTMENT","channelId":null,"remember":false,"capturing":false,"error":"Activate tab audio."}]}}
+            """;
+
+        string archived = Diagnostics.StateForArchive(state);
+
+        Assert.DoesNotContain("PRIVATE", archived, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-clinic", archived, StringComparison.Ordinal);
+        var tabs = System.Text.Json.Nodes.JsonNode.Parse(archived)!["mixer"]!["browserTabs"]!.AsArray();
+        Assert.Equal("https://music.example", tabs[0]!["site"]!.GetValue<string>());
+        Assert.Equal("music", tabs[0]!["channelId"]!.GetValue<string>());
+        Assert.All(tabs, tab => Assert.Equal("<redacted>", tab!["title"]!.GetValue<string>()));
+        Assert.Equal("<redacted>", tabs[1]!["site"]!.GetValue<string>());
+        Assert.Equal("Activate tab audio.", tabs[1]!["error"]!.GetValue<string>());
+        Assert.Contains("Música", archived, StringComparison.Ordinal);
+        // A state without tabs, or one that does not parse, is kept as received.
+        const string plain = """{"type":"state","mixer":{"browserTabs":[]}}""";
+        Assert.Equal(plain, Diagnostics.StateForArchive(plain));
+        Assert.Equal("not json", Diagnostics.StateForArchive("not json"));
+        Assert.StartsWith("no state received", Diagnostics.StateForArchive(null), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RedactHex_MasksSerialsEncodedInsideVendorBlocks()
     {
         const string serial = "A8A9A40410KH90";

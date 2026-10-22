@@ -60,14 +60,16 @@ public static class Diagnostics
                 files or API token are collected. The home
                 path, the login name, the host name, the serial numbers of
                 attached USB devices (including inside PipeWire node names) and
-                process-id fields are redacted. Files in the archive carry no
+                process-id fields are redacted, and so are browser tab titles
+                and the addresses of browser tabs not routed to a channel.
+                Files in the archive carry no
                 owner name or id. Review the archive before attaching it to a
                 public issue.
                 """);
 
             // Daemon views: the newest state push plus a fresh vendor-block dump.
             await File.WriteAllTextAsync(Path.Combine(work, "daemon-state.json"),
-                Clean(client.LastStateJson ?? "no state received (daemon not running?)"));
+                Clean(StateForArchive(client.LastStateJson)));
             var blocks = await client.RequestDiagnosticsAsync(TimeSpan.FromSeconds(5));
             await File.WriteAllTextAsync(Path.Combine(work, "device-blocks.json"),
                 RedactHex(blocks?.ToJsonString() ?? "unavailable (daemon not running or no device)", secrets));
@@ -181,6 +183,29 @@ public static class Diagnostics
                 new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
         }
         await WriteScanLogsAsync(scanLogs, discovery, directory, secrets, login);
+    }
+
+    /// <summary>
+    /// The daemon's newest state as the archive holds it. A browser tab's
+    /// title says what someone is reading or watching, so every title is
+    /// masked. A tab routed to a channel keeps its origin, which is what a
+    /// routing report needs; the origin of a tab left at the browser default
+    /// is masked as well.
+    /// </summary>
+    internal static string StateForArchive(string? state)
+    {
+        if (state is null) return "no state received (daemon not running?)";
+        JsonNode? node;
+        try { node = JsonNode.Parse(state); }
+        catch (JsonException) { return state; }
+        if (node is not JsonObject root || root["mixer"] is not JsonObject mixer
+            || mixer["browserTabs"] is not JsonArray tabs || tabs.Count == 0) return state;
+        foreach (JsonObject tab in tabs.OfType<JsonObject>())
+        {
+            if (tab.ContainsKey("title")) tab["title"] = "<redacted>";
+            if (tab.ContainsKey("site") && tab["channelId"] is null) tab["site"] = "<redacted>";
+        }
+        return root.ToJsonString(new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
     }
 
     /// <summary>One string from a path of object keys, or null if it is not there or is not a string.</summary>
