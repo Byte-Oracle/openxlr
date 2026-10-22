@@ -354,8 +354,8 @@
   <data name="Connecting" xml:space="preserve">
     <value>connecting…</value>
   </data>
-  <data name="ConnectionLostCheckLayout" xml:space="preserve">
-    <value>Connection lost. Check the layout before retrying.</value>
+  <data name="ConnectionLostCheckChange" xml:space="preserve">
+    <value>Connection lost. Check whether the change took effect before retrying.</value>
   </data>
   <data name="ConnectionLostUnconfirmed" xml:space="preserve">
     <value>Connection lost; the change could not be confirmed.</value>
@@ -1161,8 +1161,8 @@
   <data name="NewRelease" xml:space="preserve">
     <value>New OpenXLR release {0}</value>
   </data>
-  <data name="NoAnswerCheckLayout" xml:space="preserve">
-    <value>No answer from the daemon. Check the layout before retrying.</value>
+  <data name="NoAnswerCheckChange" xml:space="preserve">
+    <value>No answer from the daemon. Check whether the change took effect before retrying.</value>
   </data>
   <data name="NoAnswerForPath" xml:space="preserve">
     <value>No answer from the daemon for {0}.</value>
@@ -1770,6 +1770,9 @@ Saving will replace it with the current scene.</value>
   </data>
   <data name="SecondComputer" xml:space="preserve">
     <value>Second computer</value>
+  </data>
+  <data name="SectionFoldsNotSaved" xml:space="preserve">
+    <value>The folded sections apply until the window closes but could not be saved: {0}</value>
   </data>
   <data name="SectionOrderNotSaved" xml:space="preserve">
     <value>The section order applies until the window closes but could not be saved: {0}</value>

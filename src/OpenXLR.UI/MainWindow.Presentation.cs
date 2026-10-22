@@ -130,7 +130,7 @@ public partial class MainWindow
     {
         if (_arrangement is not { Skin: { } skin, Version: { } version }) return;
         string? error = UiSettings.Load().WithSkinBanks(skin, version, banks).Save();
-        if (error is not null) ReportArrangement(Localizer.Format("BankChoiceNotSaved", error));
+        ReportSaveIfChanged(WindowChoice.Banks, error is null ? null : Localizer.Format("BankChoiceNotSaved", error));
     }
 
     private void OnBanksShapeChanged()

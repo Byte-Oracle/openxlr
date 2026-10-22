@@ -126,7 +126,7 @@ renamed, hidden and removed ([section 3.12](#layout)):
 | Mix | What it is | Where it goes |
 |---|---|---|
 | Monitor A | what you hear | the ticked outputs in the MONITOR card, unless their feed is set to another mix |
-| Monitor B | a second selection to hear | the ticked outputs whose feed is set to Monitor B, or summed with A on outputs set to Monitor A+B |
+| Monitor B | a second selection to hear | the ticked outputs whose feed picker ticks Monitor B, summed with A on outputs where both Monitor A and Monitor B are ticked |
 | Stream | what your audience hears | the `OpenXLR Stream` virtual microphone, for OBS or any recorder |
 | Chat | what your call partners hear | the `OpenXLR Chat` virtual microphone, for Discord, Zoom and the like |
 | a virtual microphone you add | whatever you route into it | its own `OpenXLR <name>` virtual microphone |
@@ -534,7 +534,9 @@ that was the default.
    Adding a monitor during the pause leaves it individually muted. Renaming
    keeps the remembered selection; deleting removes only that monitor. If the
    last previously open monitor is deleted, the pause clears and the remaining
-   individually muted monitors stay muted. These choices survive a restart.
+   individually muted monitors stay muted. With **Mute microphone sends with
+   monitoring** on, the microphones then resume in every mix, Stream and Chat
+   included. These choices survive a restart.
    Selected Linux output devices are muted too; resuming restores their previous
    native mute flags. Muting every mix that feeds an output, one by one, also
    mutes that Linux device, and opening any of them unmutes it again. A native
@@ -683,7 +685,8 @@ result on Linux yet
 ([hardware support](hardware-support.md#wave-xlr-pro-0fd900b4)).
 
 A muted key does not duck: XLR 1 muted in every mix it is sent to lowers
-nothing. On this computer, [Sound Check](#sound-check)'s loop plays through
+nothing. On this computer, a key paused by **Mute microphone sends with
+monitoring** lowers nothing either until monitoring resumes. On this computer, [Sound Check](#sound-check)'s loop plays through
 the key channel, so a looped take ducks the music, which is a quick way to
 try a sensitivity. On the Pro the unit hears the live microphone, so the
 loop does not duck.
@@ -710,9 +713,9 @@ Cards also work with Tab and Enter or Space. Selection does not change routing.
 
 Input and mix processing appears in an FX row inside its card. Hover over the
 card for the full chain in signal order, including bypass and error states.
-Outputs follow the selected monitor feeds, including Monitor A+B, and the
-current virtual microphones. Apps left to desktop routing appear without an
-OpenXLR connection. The Flow window sizes itself to the graph when it opens, or when
+Outputs follow the selected monitor feeds, including outputs where both
+Monitor A and Monitor B are ticked, and the current virtual microphones.
+Apps left to desktop routing appear without an OpenXLR connection. The Flow window sizes itself to the graph when it opens, or when
 the first routing state arrives, up to the screen's usable area. Larger layouts
 scroll horizontally and vertically. Resizing the window manually turns off automatic sizing.
 
@@ -1945,7 +1948,12 @@ collapsed sections, and **Reset sections** puts the five back in their
 usual order. If `ui.json` cannot be written, the new order and collapsed
 sections stay for that run, and the note above the sections says why.
 The same note explains if a skin's initial collapsed sections cannot be
-remembered. A later successful section save clears it.
+remembered. Each of these saves writes only its own choice, so the note
+stays until the choice it names has been saved: a later move that saves
+clears a note about the order, a later fold that saves clears one about
+the folded sections, and a save of one never clears a note about the
+other. The same holds for the bank choice and for where the submixer
+goes.
 
 A skin can place the header and the sections itself, in rows, columns,
 grids and docked sides ([Layout](skins.md#layout)). Under such a skin a
@@ -3219,6 +3227,15 @@ show a hint to edit them in the desktop's shortcut settings. If the desktop
 refuses the editor request after binding succeeded, the error is shown and
 the working bindings stay active.
 
+Outside the Flatpak, OpenXLR introduces itself to the portal as `openxlr`
+before it asks for keys. Current portals accept that name only when an
+`openxlr.desktop` entry is installed, which the packages provide. A portal
+that lacks this step or refuses the name does not stop Desktop keys: OpenXLR
+continues and the portal identifies the process itself. Some portals then
+refuse the shortcut session, and Desktop keys shows that error. A source
+installation can add the entry as shown in
+[installing from source](install-from-source.md#desktop-entry).
+
 The GlobalShortcuts portal registers keys on Wayland. It does not expose the
 focused application's identity. Focused routing therefore currently requires
 KDE Plasma, where a short-lived KWin script reads the active process id. It
@@ -3366,13 +3383,19 @@ The option starts off and is saved in `mixer.json`, outside profiles. The pause
 and the option survive a daemon restart. They leave individual sends, mix
 mutes and hardware microphone mute choices intact. Resuming reveals those
 choices, including changes made while paused; explicitly opening a monitor
-also resumes the linked microphones.
+also resumes the linked microphones. Deleting the last monitor mix that was
+open when you paused ends the pause as well, so the microphones resume in
+every mix, Stream and Chat included, even though the remaining monitor mixes
+stay muted.
 
 The microphone pause affects audio routed through OpenXLR, including its
 virtual microphones used by Discord or a recording program. It does not mute
 applications capturing a physical microphone directly, stereo capture channels
 or Aux/Line In. It stops Sound Check and discards its take; a new recording is
-refused until microphones resume. If the audio server refuses a microphone
+refused until microphones resume. A paused microphone that is the
+[ducking](#ducking) key stops lowering the other channels on this computer.
+Its strip meter keeps moving while you speak, because the meter reads the
+microphone before the pause mutes it. If the audio server refuses a microphone
 mute, Options shows that silence is not yet confirmed and the daemon retries.
 Do not treat that pending state as a confirmed microphone mute.
 
@@ -3460,6 +3483,11 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 
 In Outputs, quick Space presses keep the complete selection while the daemon
 acknowledges it. Feed arrows likewise keep each step separately for each output.
+The arrows choose one mix at a time. On an output that sums two or more mixes,
+ticked in the desktop UI's feed picker, the first Left or Right sends nothing:
+the bottom line says how many mixes the output hears and which one the same
+arrow, pressed again, feeds alone. Only that second press, made while the line
+shows and before any other key, replaces the sum.
 A refused edit returns to the reported setting and shows the error; reconnecting
 discards any unconfirmed choice. The terminal, Stream
 Deck and Omarchy clients use the daemon's reported default monitor mix, or the
@@ -3491,7 +3519,7 @@ Controls below the visible hardware cards appear as the selection moves.
 | Inputs and numeric controls | Left/Right, `-`, `+` | change a value; Ctrl+Left/Right or `[` and `]` takes the finer step |
 | Inputs and numeric controls | Home, End | set the minimum or maximum |
 | Toggles and choices | Space, Enter, Left/Right | toggle or choose a value |
-| Outputs, on a sink | Space, Left/Right, Enter | select the sink, choose its feed, or make it the main output |
+| Outputs, on a sink | Space, Left/Right, Enter | select the sink, choose its feed (a summed feed asks for a second press), or make it the main output |
 | Outputs, on a sink | `-`, `+`, `m` | change its volume or toggle its mute |
 | Apps | Left/Right, `i`, `f` | assign a channel, leave routing to the desktop, or forget the assignment |
 | Inserts | Space, Ctrl+Up/Down, `d`, `e` | bypass, reorder, remove, or open the plugin's native editor, with generated controls when blocked or refused |

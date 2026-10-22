@@ -50,7 +50,7 @@ python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
 python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
 python3 packaging/flatpak/test-package.py  # the Flatpak manifest and its files
 python3 packaging/flatpak/nuget-sources.py --check  # regenerate with no flag after a package change
-shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh packaging/ppa/make-source.sh
+shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh tools/ci-install-packages.sh packaging/ppa/make-source.sh
 tools/check-version.sh
 tools/check-locked-restore.sh
 tools/check-openapi.py docs/openapi-v1.json

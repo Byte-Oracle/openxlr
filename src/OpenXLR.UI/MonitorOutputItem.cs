@@ -41,6 +41,7 @@ public sealed class MonitorOutputItem : ViewModelBase
     private readonly Action<string>? _reportError;
     private MixOption? _feed;
     private string _label;
+    private bool _isPresent;
     private bool _isSelected;
     private string? _pendingFeed;
     private string? _reportedFeed;
@@ -51,7 +52,7 @@ public sealed class MonitorOutputItem : ViewModelBase
     {
         Name = name;
         _label = label;
-        IsPresent = isPresent;
+        _isPresent = isPresent;
         _changed = changed;
         _feedChanged = feedChanged;
         _reportError = reportError;
@@ -61,7 +62,14 @@ public sealed class MonitorOutputItem : ViewModelBase
     public string Label => _label;
     internal void SyncLabel(string label) => Set(ref _label, label, nameof(Label));
     /// <summary>A missing selected output remains configured until the user removes it.</summary>
-    public bool IsPresent { get; }
+    public bool IsPresent => _isPresent;
+
+    /// <summary>
+    /// The device left or came back. The row stays the same object, so a
+    /// feed edit still waiting for the daemon keeps its answer, and an error
+    /// in it still reaches the status line.
+    /// </summary>
+    internal void SyncPresent(bool present) => Set(ref _isPresent, present, nameof(IsPresent));
     public ObservableCollection<MonitorMixChoice> FeedMixes { get; } = [];
     public MixOption? Feed => _feed;
 

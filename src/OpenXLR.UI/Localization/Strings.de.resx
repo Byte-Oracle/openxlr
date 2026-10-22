@@ -352,8 +352,8 @@
   <data name="Connecting" xml:space="preserve">
     <value>Verbinden…</value>
   </data>
-  <data name="ConnectionLostCheckLayout" xml:space="preserve">
-    <value>Verbindung verloren. Prüfe das Layout vor einem erneuten Versuch.</value>
+  <data name="ConnectionLostCheckChange" xml:space="preserve">
+    <value>Verbindung verloren. Prüfe vor einem erneuten Versuch, ob die Änderung übernommen wurde.</value>
   </data>
   <data name="ConnectionLostUnconfirmed" xml:space="preserve">
     <value>Verbindung verloren. Die Änderung konnte nicht bestätigt werden.</value>
@@ -1159,8 +1159,8 @@
   <data name="NewRelease" xml:space="preserve">
     <value>Neue OpenXLR-Version {0}</value>
   </data>
-  <data name="NoAnswerCheckLayout" xml:space="preserve">
-    <value>Keine Antwort vom Daemon. Prüfe das Layout vor einem erneuten Versuch.</value>
+  <data name="NoAnswerCheckChange" xml:space="preserve">
+    <value>Keine Antwort vom Daemon. Prüfe vor einem erneuten Versuch, ob die Änderung übernommen wurde.</value>
   </data>
   <data name="NoAnswerForPath" xml:space="preserve">
     <value>Keine Antwort vom Daemon für {0}.</value>
@@ -1768,6 +1768,9 @@ Speichern ersetzt es durch die aktuelle Szene.</value>
   </data>
   <data name="SecondComputer" xml:space="preserve">
     <value>Zweiter Computer</value>
+  </data>
+  <data name="SectionFoldsNotSaved" xml:space="preserve">
+    <value>Die eingeklappten Abschnitte gelten bis zum Schließen des Fensters, konnten aber nicht gespeichert werden: {0}</value>
   </data>
   <data name="SectionOrderNotSaved" xml:space="preserve">
     <value>Die Reihenfolge der Abschnitte gilt bis zum Schließen des Fensters, konnte aber nicht gespeichert werden: {0}</value>

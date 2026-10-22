@@ -53,7 +53,7 @@ python3 tools/deck-icons.py --check  # regenerate with no flag after changing La
 python3 tools/eq-reference.py --check  # regenerate with no flag after changing the EQ reference settings
 python3 packaging/flatpak/test-package.py  # the Flatpak manifest and its files
 python3 packaging/flatpak/nuget-sources.py --check  # regenerate with no flag after a package change
-shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh packaging/ppa/make-source.sh
+shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh tools/ci-install-packages.sh packaging/ppa/make-source.sh
 tools/check-version.sh                          # the five version locations agree
 tools/check-locked-restore.sh                   # every packaging path restores locked
 tools/check-openapi.py docs/openapi-v1.json     # the HTTP API document keeps its shape

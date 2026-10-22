@@ -166,6 +166,34 @@ public sealed class MonitorOutputSelectionTests
         Assert.False(f.Commands.TryRead(out _));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AFeedEditKeepsItsRowAndItsAnswerWhenTheOutputLeavesOrReturns(bool leaves)
+    {
+        await using var f = await Fixture.Start();
+        f.Report(["a", "b"], leaves ? ["a", "b"] : ["a"]);
+        MonitorOutputItem b = f.Model.MonitorOutputs.Single(o => o.Name == "b");
+        Assert.Equal(leaves, b.IsPresent);
+        b.FeedMixes.Single(m => m.Id == "monitor2").IsSelected = true;
+        JsonNode edit = await f.Next();
+        Assert.Equal("setMonitorFeed", edit["cmd"]!.GetValue<string>());
+        Assert.Equal("monitor+monitor2", edit["mix"]!.GetValue<string>());
+
+        // The device goes or comes back while the daemon has not answered:
+        // the same row, now marked as it is, still shows the sum it asked for.
+        f.Report(["a", "b"], leaves ? ["a"] : ["a", "b"]);
+        Assert.Same(b, f.Model.MonitorOutputs.Single(o => o.Name == "b"));
+        Assert.Equal(!leaves, b.IsPresent);
+        Assert.Equal("monitor+monitor2", b.Feed!.Id);
+
+        await f.Reply(edit, "feed refused");
+        await Until(() => f.Model.Status == "feed refused");
+        Assert.Equal("monitor", b.Feed!.Id);
+        Assert.True(b.IsSelected);
+        Assert.False(f.Commands.TryRead(out _));
+    }
+
     private static string[] Devices(JsonNode command) => [.. command["devices"]!.AsArray().Select(n => n!.GetValue<string>())];
 
     private static async Task Until(Func<bool> ready)
@@ -194,7 +222,7 @@ public sealed class MonitorOutputSelectionTests
                 while (!stop.IsCancellationRequested)
                 {
                     JsonNode command = await SocketTestServer.Receive(socket, stop);
-                    if (command["cmd"]?.GetValue<string>() == "setMonitorOutputs") commands.Writer.TryWrite(command);
+                    if (command["cmd"]?.GetValue<string>() is "setMonitorOutputs" or "setMonitorFeed") commands.Writer.TryWrite(command);
                 }
             });
             var client = new DaemonClient(server.Url);

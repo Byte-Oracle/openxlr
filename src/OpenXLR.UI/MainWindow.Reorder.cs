@@ -149,7 +149,7 @@ public partial class MainWindow
         SectionArrangement arrangement = Arrangement;
         ApplyArrangement(arrangement.Restored());
         string? error = arrangement.Reset(UiSettings.Load()).Save();
-        ReportArrangement(error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
+        ReportSave(WindowChoice.Order, error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
     }
 
     /// <summary>
@@ -172,15 +172,60 @@ public partial class MainWindow
         // The banks start again from the skin's defaults, as a skin put on afresh.
         _banks?.Configure(_banks.Options, null);
         ApplyArrangement(arrangement.Restored());
-        ReportArrangement(error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
+        // The reset wrote the docking choice, and the bank picks when the skin has them.
+        if (error is null)
+        {
+            if (arrangement.Skin is not null) NoteSave(WindowChoice.Banks, null);
+            NoteSave(WindowChoice.Docking, null);
+        }
+        ReportSave(WindowChoice.Order, error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
         return error;
     }
 
-    /// <summary>The note under the Arrange button: the hint, or why the last move failed.</summary>
-    private void ReportArrangement(string? error)
+    /// <summary>A choice of the window's own that goes to ui.json, each with its own save.</summary>
+    private enum WindowChoice { Order, Folds, Banks, Docking }
+
+    /// <summary>
+    /// The choices whose last save failed, with what the note says about
+    /// each, the latest last. Each save writes only its own choice, so only
+    /// that choice's next successful save takes it off this list.
+    /// </summary>
+    private readonly List<(WindowChoice Choice, string Note)> _unsavedChoices = [];
+
+    /// <summary>Record how a choice's save went without showing it yet; true when the note has to change.</summary>
+    private bool NoteSave(WindowChoice choice, string? note)
     {
-        ArrangementNote.Text = error ?? (_arrangement?.Layout is null ? ArrangeHint : SwapHint);
-        ArrangementNote.IsVisible = error is not null || ArrangeButton.IsChecked == true;
+        bool cleared = _unsavedChoices.RemoveAll(u => u.Choice == choice) > 0;
+        if (note is not null) _unsavedChoices.Add((choice, note));
+        return cleared || note is not null;
+    }
+
+    /// <summary>
+    /// The same, for a save that leaves the note alone when it changes
+    /// nothing, so a docking or bank save that works keeps whatever the
+    /// note says now.
+    /// </summary>
+    private void ReportSaveIfChanged(WindowChoice choice, string? note)
+    {
+        if (NoteSave(choice, note)) ReportArrangement(null);
+    }
+
+    /// <summary>Record how a choice's save went and show the note that follows.</summary>
+    private void ReportSave(WindowChoice choice, string? note)
+    {
+        NoteSave(choice, note);
+        ReportArrangement(null);
+    }
+
+    /// <summary>
+    /// The note under the Arrange button: <paramref name="note"/> when there
+    /// is one, otherwise the latest choice still unsaved, otherwise the hint.
+    /// </summary>
+    private void ReportArrangement(string? note)
+    {
+        note ??= _unsavedChoices.Count > 0 ? _unsavedChoices[^1].Note : null;
+        ArrangementNote.Text = note ?? (_arrangement?.Layout is null ? ArrangeHint : SwapHint);
+        ArrangementNote.IsVisible = note is not null || ArrangeButton.IsChecked == true;
     }
 
     /// <summary>
@@ -264,6 +309,7 @@ public partial class MainWindow
             string? error = next.Reset(UiSettings.Load()).Save();
             note = Localizer.Text("ArrangementDropped");
             if (error is not null) note += " " + Localizer.Format("SectionOrderNotSaved", error);
+            NoteSave(WindowChoice.Order, error is null ? null : note);
         }
         return next;
     }
@@ -399,7 +445,7 @@ public partial class MainWindow
     {
         ApplyArrangement(next);
         string? error = next.Save(UiSettings.Load()).Save();
-        ReportArrangement(error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
+        ReportSave(WindowChoice.Order, error is null ? null : Localizer.Format("SectionOrderNotSaved", error));
     }
 
     private static Button? Handle(object? source) => source is Visual visual

@@ -284,7 +284,7 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
                     _queries.Clear();
                     _queriesById.Clear();
                     _lastReply.Clear();
-                    foreach (var edit in _edits.Values) edit.TrySetResult(Localizer.Text("ConnectionLostCheckLayout"));
+                    foreach (var edit in _edits.Values) edit.TrySetResult(Localizer.Text("ConnectionLostCheckChange"));
                     _edits.Clear();
                 }
                 ConnectionChanged?.Invoke(false);
@@ -524,7 +524,7 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
             if (!await SendAsync(payload, reportErrors: false)) return Localizer.Text("DaemonDisconnectedNoChange");
             return await waiter.Task.WaitAsync(TimeSpan.FromSeconds(30));
         }
-        catch (TimeoutException) { return Localizer.Text("NoAnswerCheckLayout"); }
+        catch (TimeoutException) { return Localizer.Text("NoAnswerCheckChange"); }
         finally { lock (_lifecycle) _edits.Remove(requestId); }
     }
 

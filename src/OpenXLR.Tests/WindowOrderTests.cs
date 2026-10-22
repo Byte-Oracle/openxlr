@@ -219,17 +219,53 @@ internal static class WindowOrderTests
             string path = Path.Combine(config, "openxlr", "ui.json");
             File.Move(path, path + ".saved");
             Directory.CreateDirectory(path);
+            string errorPrefix = Localizer.Text("SectionOrderNotSaved").Split("{0}")[0];
             try
             {
                 Drag("HeadphonesTile", before[0], false);
-                string errorPrefix = Localizer.Text("SectionOrderNotSaved").Split("{0}")[0];
                 Wait(() => Ui(() => main!.FindControl<TextBlock>("ArrangementNote")!.Text!.StartsWith(errorPrefix, StringComparison.Ordinal)));
                 Assert.Equal("HeadphonesTile", Ui(() => Order()[0]));
+            }
+            finally { Directory.Delete(path); File.Move(path + ".saved", path); }
+
+            // A fold saved once writes recover holds only the folds, so the
+            // order's note stays until the order itself is saved.
+            string Note() => Ui(() => main!.FindControl<TextBlock>("ArrangementNote")!.Text!);
+            void ToggleFold() => Ui(() =>
+            {
+                var tile = main!.FindControl<Expander>("MonitorTile")!;
+                tile.IsExpanded = !tile.IsExpanded;
+                return true;
+            });
+            bool DiskFolded() => UiSettings.Load().CollapsedSections.Contains("MonitorTile");
+            bool folded = DiskFolded();
+            ToggleFold();
+            Assert.NotEqual(folded, DiskFolded());
+            Assert.False(UiSettings.Load().SectionOrder.SequenceEqual(Ui(Order)));
+            Assert.StartsWith(errorPrefix, Note(), StringComparison.Ordinal);
+
+            // A fold that cannot be saved says what failed, and saving the
+            // order does not clear that.
+            string foldPrefix = Localizer.Text("SectionFoldsNotSaved").Split("{0}")[0];
+            File.Move(path, path + ".saved");
+            Directory.CreateDirectory(path);
+            try
+            {
+                ToggleFold();
+                Assert.StartsWith(foldPrefix, Note(), StringComparison.Ordinal);
             }
             finally { Directory.Delete(path); File.Move(path + ".saved", path); }
             Drag("HeadphonesTile", "SubmixerTile", true);
             Wait(() => Ui(() => UiSettings.Load().SectionOrder.SequenceEqual(Order())));
             Assert.Equal("HeadphonesTile", Ui(() => Order()[1]));
+            Assert.StartsWith(foldPrefix, Note(), StringComparison.Ordinal);
+            Assert.NotEqual(folded, DiskFolded());
+
+            // Folds saved again clear the last note.
+            ToggleFold();
+            ToggleFold();
+            Assert.Equal(folded, DiskFolded());
+            Assert.Equal(Localizer.Text("DragAHandleOntoAnotherSectionOr"), Note());
 
             // A skin change repaints the same cards in place and keeps the order.
             before = Ui(Order);

@@ -420,6 +420,6 @@ public partial class MainWindow : Window
             if (!settings.HasSeenSkinLayout(skin, version)) settings = settings.WithSkinLayoutSeen(skin, version);
         string? error = (settings with { CollapsedSections = collapsed }).Save();
         if (error is null) _unsavedLayoutsSeen.Clear();
-        ReportArrangement(error);
+        ReportSave(WindowChoice.Folds, error is null ? null : Localizer.Format("SectionFoldsNotSaved", error));
     }
 }

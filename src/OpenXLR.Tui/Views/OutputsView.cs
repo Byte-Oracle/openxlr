@@ -12,6 +12,7 @@ internal sealed class OutputsView : View
     private Task<string?>? _selectionRequest;
     private long _selectionSession;
     private readonly Dictionary<string, (string Mix, Task<string?> Request, long Session)> _pendingFeeds = [];
+    private (string Output, string Feed, int By, long Session, DateTime Until)? _sumWarning;
 
     private List<string> SelectedOutputs(App app, Snapshot state)
     {
@@ -71,7 +72,7 @@ internal sealed class OutputsView : View
             ?? monitors.FirstOrDefault()?.Id ?? "monitor";
     }
 
-    private void CycleFeed(App app, string output, int by)
+    private void CycleFeed(App app, string output, string label, int by)
     {
         if (!app.Link.Connected || app.Link.State is not { } state) return;
         List<string> selected = SelectedOutputs(app, state);
@@ -85,6 +86,22 @@ internal sealed class OutputsView : View
         int at = ids.IndexOf(feed.Split('+')[0]);
         string next = ids[((at < 0 ? 0 : at) + (by > 0 ? 1 : ids.Count - 1)) % ids.Count];
         long session = app.Link.SessionRevision;
+        // The arrows choose one mix, so a sum ticked elsewhere is only
+        // replaced by the same arrow pressed again while the warning shows.
+        string[] summed = feed.Split('+');
+        if (summed.Length > 1)
+        {
+            DateTime now = DateTime.UtcNow;
+            if (_sumWarning is not { } warned || warned.Output != output || warned.Feed != feed || warned.By != by
+                || warned.Session != session || now > warned.Until)
+            {
+                _sumWarning = (output, feed, by, session, now.AddSeconds(4));
+                string name = state.Mixer.Mixes.FirstOrDefault(mix => mix.Id == next)?.Name ?? next;
+                app.Say($"{label} hears {summed.Length} mixes summed. Press {(by > 0 ? "Right" : "Left")} again to feed it {name} alone.");
+                return;
+            }
+        }
+        _sumWarning = null;
         Task<string?> request = app.Link.Request("setMonitorFeed", body =>
         {
             body["device"] = output;
@@ -110,6 +127,8 @@ internal sealed class OutputsView : View
 
     public override bool Handle(KeyPress key, App app)
     {
+        // Any other key withdraws the offer to replace a summed feed.
+        if (key.Key is not (Key.Left or Key.Right)) _sumWarning = null;
         Snapshot? state = State(app);
         return state is not null && _list.Handle(key, Build(app, state));
     }
@@ -145,7 +164,7 @@ internal sealed class OutputsView : View
             bool on = selected.Contains(sink.Name);
             string feed = Feed(app, state, sink.Name);
             rows.Add(new OutputRow(sink, on, feed, state, link, app,
-                () => ToggleOutput(app, state, sink.Name), by => CycleFeed(app, sink.Name, by)));
+                () => ToggleOutput(app, state, sink.Name), by => CycleFeed(app, sink.Name, Describe(sink), by)));
         }
 
         rows.Add(new HeadingRow("System defaults"));
@@ -179,8 +198,8 @@ internal sealed class OutputsView : View
 
     /// <summary>
     /// One sink: selected or not, what feeds it, and its own volume. Space
-    /// selects it, the arrows walk the mixes that can feed it, and enter makes
-    /// it the system default.
+    /// selects it, the arrows walk the mixes that can feed it (a summed feed
+    /// only after a second press), and enter makes it the system default.
     /// </summary>
     private sealed class OutputRow(
         DeviceEntry sink, bool selected, string feed, Snapshot state, DaemonLink link, App app, Action toggle, Action<int> cycleFeed)
