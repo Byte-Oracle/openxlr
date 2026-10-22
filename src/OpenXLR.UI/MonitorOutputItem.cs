@@ -40,6 +40,7 @@ public sealed class MonitorOutputItem : ViewModelBase
     private readonly Func<string, string, Task<string?>> _feedChanged;
     private readonly Action<string>? _reportError;
     private MixOption? _feed;
+    private string _label;
     private bool _isSelected;
     private string? _pendingFeed;
     private string? _reportedFeed;
@@ -49,7 +50,7 @@ public sealed class MonitorOutputItem : ViewModelBase
         bool isPresent = true, Action<string>? reportError = null)
     {
         Name = name;
-        Label = label;
+        _label = label;
         IsPresent = isPresent;
         _changed = changed;
         _feedChanged = feedChanged;
@@ -57,7 +58,8 @@ public sealed class MonitorOutputItem : ViewModelBase
     }
 
     public string Name { get; }
-    public string Label { get; }
+    public string Label => _label;
+    internal void SyncLabel(string label) => Set(ref _label, label, nameof(Label));
     /// <summary>A missing selected output remains configured until the user removes it.</summary>
     public bool IsPresent { get; }
     public ObservableCollection<MonitorMixChoice> FeedMixes { get; } = [];

@@ -1034,6 +1034,9 @@ public sealed partial class MainViewModel : ViewModelBase
             var item = new AudioDeviceItem(name, desc, own, physical, channels, positions, driven);
             (IsSink(d["kind"]) ? sinks : sources).Add(item);
         }
+        // Output commands identify sinks by exact name. A transient duplicate
+        // must not place the same output row in the collection twice.
+        sinks = sinks.DistinctBy(sink => sink.Name, StringComparer.Ordinal).ToList();
         Replace(Outputs, sinks);
         Replace(Inputs, sources);
 
@@ -1069,6 +1072,7 @@ public sealed partial class MainViewModel : ViewModelBase
             }
             while (MonitorOutputs.Count > items.Count) MonitorOutputs.RemoveAt(MonitorOutputs.Count - 1);
         }
+        for (int i = 0; i < wanted.Count; i++) MonitorOutputs[i].SyncLabel(wanted[i].Label);
 
         EnforcedDefaultSink = mixer?["enforcedDefaultSink"]?.GetValue<string>();
         EnforcedDefaultSource = mixer?["enforcedDefaultSource"]?.GetValue<string>();

@@ -125,6 +125,47 @@ public sealed class MonitorOutputSelectionTests
         Assert.False(f.Commands.TryRead(out _));
     }
 
+    [Fact]
+    public async Task DeviceDescriptionChangesUpdateLabelsWithoutReplacingPendingSelections()
+    {
+        await using var f = await Fixture.Start();
+        f.Report(["a"], ["a", "b"], "Speakers");
+        MonitorOutputItem original = f.Model.MonitorOutputs.Single(o => o.Name == "a");
+        f.Pick("b", true);
+        JsonNode pending = await f.Next();
+        f.Report(["a"], ["a", "b"], "Renamed speakers");
+        Assert.Same(original, f.Model.MonitorOutputs.Single(o => o.Name == "a"));
+        Assert.Equal("Renamed speakers", original.Label);
+        Assert.Equal(["a", "b"], f.Selected);
+        Assert.True(f.Pending);
+        f.Report(["a", "b"], ["a", "b"], "Renamed speakers");
+        await f.Reply(pending);
+        await Until(() => !f.Pending);
+        Assert.False(f.Commands.TryRead(out _));
+    }
+
+    [Fact]
+    public async Task DuplicateDeviceNamesCannotReuseOneOutputRowTwice()
+    {
+        await using var f = await Fixture.Start();
+        f.Report(["a"], ["a"]);
+        MonitorOutputItem original = Assert.Single(f.Model.MonitorOutputs);
+        f.Report(["a"], ["a", "a"]);
+        Assert.Same(original, Assert.Single(f.Model.MonitorOutputs));
+        Assert.Single(f.Model.Outputs);
+        f.Report(["a"], ["a", "b", "a"]);
+        f.Pick("b", true);
+        JsonNode pending = await f.Next();
+        f.Report(["a"], ["b", "b", "a", "a"]);
+        Assert.Equal(2, f.Model.MonitorOutputs.Count);
+        Assert.Same(original, f.Model.MonitorOutputs.Single(o => o.Name == "a"));
+        Assert.Equal(["a", "b"], f.Selected.Order(StringComparer.Ordinal));
+        f.Report(["a", "b"], ["b", "a", "a"]);
+        await f.Reply(pending);
+        await Until(() => !f.Pending);
+        Assert.False(f.Commands.TryRead(out _));
+    }
+
     private static string[] Devices(JsonNode command) => [.. command["devices"]!.AsArray().Select(n => n!.GetValue<string>())];
 
     private static async Task Until(Func<bool> ready)
@@ -176,9 +217,9 @@ public sealed class MonitorOutputSelectionTests
         internal Task Reply(JsonNode command, string? error = null) => SocketTestServer.Send(socket,
             new { type = "commandResult", requestId = command["requestId"]!.GetValue<string>(), error }, CancellationToken.None);
 
-        internal void Report(string[] selected, string[] available)
+        internal void Report(string[] selected, string[] available, string? label = null)
         {
-            var devices = new JsonArray([.. available.Select(name => (JsonNode)new JsonObject { ["kind"] = 0, ["name"] = name })]);
+            var devices = new JsonArray([.. available.Select(name => (JsonNode)new JsonObject { ["kind"] = 0, ["name"] = name, ["description"] = name == "a" ? label : null })]);
             var mixer = new JsonObject
             {
                 ["mixes"] = new JsonArray(new JsonObject { ["id"] = "monitor", ["name"] = "Monitor A", ["kind"] = "monitor" },

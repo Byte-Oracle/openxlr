@@ -478,9 +478,9 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
             ["appearance"] = new { icon, colour, hidden = false } });
 
     /// <summary>
-    /// Send a layout command and wait for its commandResult. The daemon
-    /// answers only after the new layout is saved, and sends the matching
-    /// state first, so a null result means the change is visible and durable.
+    /// Send an acknowledged command and wait for its commandResult. The
+    /// matching state arrives first. Layout edits also finish their save
+    /// before answering; other settings use the daemon's debounced save.
     /// </summary>
     private async Task<string?> EditLayoutAsync(Dictionary<string, object> payload)
     {

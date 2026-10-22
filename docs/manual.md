@@ -450,7 +450,8 @@ that was the default.
    At least one mix stays selected. Untick the device to disconnect it.
    Feed choices use stable mix ids, so renaming a mix updates its name in
    the picker without changing its routes. A missing output keeps its
-   selection and its feeds until it returns.
+   selection and its feeds until it returns. Device descriptions update in
+   place without changing the selected outputs or pending feed edits.
    The Wave XLR Pro's Headphones 1/2 and Line Out share one hardware
    return bus. Changing the feed of any of these jacks changes all selected
    jacks on that interface; they cannot carry independent blends.

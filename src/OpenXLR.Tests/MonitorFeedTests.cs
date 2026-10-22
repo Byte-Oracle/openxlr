@@ -138,6 +138,36 @@ public sealed class MonitorFeedTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RenamingAndAddingMixesKeepsTheStableIdsOfAPendingFeed(bool refused)
+    {
+        var reply = new TaskCompletionSource<string?>();
+        var sent = new List<string>();
+        var output = new MonitorOutputItem("headset", "Headset", () => { }, (_, feed) =>
+        {
+            sent.Add(feed);
+            return reply.Task;
+        });
+        output.Sync(true);
+        output.SyncFeed([new("desk", "Desk"), new("booth", "Booth")], "desk");
+        output.FeedMixes[1].IsSelected = true;
+        output.SyncFeed([new("booth", "Renamed booth"), new("desk", "Renamed desk"), new("new", "New mix")], "desk");
+        Assert.Equal(["booth", "desk"], output.FeedMixes.Where(m => m.IsSelected).Select(m => m.Id));
+        Assert.Contains("Renamed booth", output.Feed!.Name);
+        reply.SetResult(refused ? "refused" : null);
+        await Task.Yield();
+        if (refused) Assert.Equal("desk", output.Feed!.Id);
+        else
+        {
+            output.SyncFeed([new("booth", "Renamed booth"), new("desk", "Renamed desk"), new("new", "New mix")], "desk+booth");
+            Assert.Equal("booth+desk", output.Feed!.Id);
+        }
+        Assert.False(output.FeedMixes.Single(m => m.Id == "new").IsSelected);
+        Assert.Equal(["desk+booth"], sent);
+    }
+
+    [Theory]
     [InlineData("delete")]
     [InlineData("deselect")]
     [InlineData("disconnect")]
