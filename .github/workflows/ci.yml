@@ -245,7 +245,7 @@ jobs:
         env:
           OPENXLR_TEST_SHARD: ${{ matrix.shard }}
           OPENXLR_TEST_DSP: "1"
-          OPENXLR_TEST_FILTER: FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests
+          OPENXLR_TEST_FILTER: FullyQualifiedName~DspAudioIntegrationTests|FullyQualifiedName~PluginLatencyIntegrationTests|FullyQualifiedName=OpenXLR.Tests.MonitorVolumeIntegrationTests.MixInsertAndPostLinksRecoverWithoutRestartingThePlugin
         run: LV2_PATH="/usr/lib/lv2:$PWD/native/tests" python3 tools/test-monitor-volume.py
 
   # The Xvfb window checks start the UI against a fake daemon, one virtual
