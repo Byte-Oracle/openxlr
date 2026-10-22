@@ -10,6 +10,7 @@
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20server-5865F2?logo=discord&logoColor=white)](https://discord.gg/4bswtnGPW4)
 [![Reddit](https://img.shields.io/badge/Reddit-r%2FOpenXLR-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/OpenXLR/)
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-emaspa-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/emaspa)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-emaspa-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/emaspa)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/emaspa)
 
 OpenXLR is a Wave Link replacement for Linux, and it works with any
@@ -470,4 +471,5 @@ code and are marked by what an owner has confirmed so far.
 ## License
 
 [GPL-3.0](LICENSE). If you find OpenXLR useful, consider
-[buying me a coffee](https://buymeacoffee.com/emaspa).
+[buying me a coffee](https://buymeacoffee.com/emaspa) or supporting it on
+[Ko-fi](https://ko-fi.com/emaspa).
