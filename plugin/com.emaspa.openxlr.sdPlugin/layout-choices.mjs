@@ -32,6 +32,17 @@ export function defaultMonitorMix(mixer) {
     ?? monitors.map(mix => mix.id).sort()[0] ?? "monitor";
 }
 
+// Match the daemon's live feed: discard removed ids and use its implicit
+// monitor only when no surviving member remains. Labels never identify a mix.
+export function monitorFeed(mixer, output) {
+  const feeds = mixer?.monitorFeeds ?? {};
+  const saved = Object.hasOwn(feeds, output) ? feeds[output] : "";
+  const parts = new Set((typeof saved === "string" ? saved : "").split("+").map(id => id.trim()).filter(Boolean));
+  const ids = (mixer?.mixes ?? Object.keys(LEGACY_MIXES).map(id => ({ id })))
+    .filter(mix => parts.has(mix.id)).map(mix => mix.id);
+  return ids.length ? ids.join("+") : defaultMonitorMix(mixer);
+}
+
 export function mixShortName(mixer, id) {
   if (id === "all") return "All";
   const name = mixName(mixer, id);

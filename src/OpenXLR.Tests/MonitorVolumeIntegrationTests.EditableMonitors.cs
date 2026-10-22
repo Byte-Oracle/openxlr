@@ -121,6 +121,113 @@ public sealed partial class MonitorVolumeIntegrationTests
         Assert.DoesNotContain("monitor", mixer.Snapshot().Channels.Single(c => c.Id == "test").MutedIn);
     }
 
+    [MonitorPipeWireFact]
+    public void PausedMonitorSelectionSurvivesLayoutEditsAndDiskRestart()
+    {
+        CheckPausedLayoutEdits(restart: false);
+        CheckPausedLayoutEdits(restart: true);
+    }
+
+    private static void CheckPausedLayoutEdits(bool restart)
+    {
+        string directory = Directory.CreateTempSubdirectory("openxlr-monitor-selection-").FullName;
+        string path = Path.Combine(directory, "mixer.json");
+        var pw = new PipeWireAdapter();
+        using var registry = pw.WatchGraph();
+        using var original = new Mixer(pw);
+        var outputs = new PipeWireAdapter();
+        Mixer? restored = null;
+        try
+        {
+            original.Build(MonitorConfig());
+            original.CreateMix("Headset", settings => settings.Save(path), MixKind.Monitor);
+            outputs.CreateNullSink("edit_pause_a", "Pause A");
+            outputs.CreateNullSink("edit_pause_b", "Pause B");
+            original.SetMonitorOutputs(["edit_pause_a", "edit_pause_b"]);
+            Assert.Null(original.SetMonitorFeed("edit_pause_a", "monitor+headset"));
+            Assert.Null(original.SetMonitorFeed("edit_pause_b", "monitor2+headset"));
+            original.SetMixVolume("headset", .83);
+            original.SetLevel("test", "headset", .37);
+            original.SetChannelVolume("test", .72);
+            original.SetChannelMuted("test", "headset", false);
+            original.SetMixMuted("monitor2", true);
+            original.SetMonitorMuted(true);
+            original.RenameMix("monitor", "Speakers renamed", settings => settings.Save(path));
+            Assert.True(original.MonitorMuted);
+            Assert.DoesNotContain("monitor", original.ExportSettings().MixMuted);
+            original.CreateMix("New monitor", settings => settings.Save(path), MixKind.Monitor);
+            Assert.Contains("new-monitor", original.ExportSettings().MixMuted);
+            Assert.Throws<IOException>(() => original.DeleteMix("monitor", _ => "disk full"));
+            Assert.True(original.MonitorMuted);
+            Assert.True(original.HasMix("monitor"));
+            original.DeleteMix("monitor", settings => settings.Save(path));
+            Assert.True(original.MonitorMuted); // Headset is still in the listening selection.
+            original.DeleteMix("monitor2", settings => settings.Save(path));
+            original.RenameMix("headset", "Headset renamed", settings => settings.Save(path));
+            Assert.True(original.MonitorMuted);
+
+            Mixer current = original;
+            if (restart)
+            {
+                MixerSettings saved = Assert.IsType<MixerSettings>(MixerSettings.Load(path, out string? warning));
+                Assert.Null(warning);
+                original.TearDown();
+                restored = new Mixer(new PipeWireAdapter());
+                // The daemon establishes the pause before it builds any output route.
+                restored.SetMonitorMuted(saved.MonitorMuted);
+                restored.Build(MixerConfig.FromSettings(saved));
+                restored.ApplySettings(saved);
+                current = restored;
+                Assert.True(current.MonitorMuted);
+                Assert.Equal(["edit_pause_a", "edit_pause_b"], current.MonitorOutputs);
+                Assert.Equal("headset", current.MonitorFeedOf("edit_pause_a"));
+                Assert.Equal("headset", current.MonitorFeedOf("edit_pause_b"));
+                Assert.Equal("Headset renamed", current.Config.Mixes.Single(m => m.Id == "headset").Name);
+                MixerSettings recalled = current.ExportSettings();
+                Assert.Equal(.83, recalled.MixVolumes["headset"]);
+                Assert.Equal(.37, recalled.Levels["test|headset"]);
+                Assert.Equal(.72, recalled.ChannelVolumes["test"]);
+                Assert.DoesNotContain("test|headset", recalled.ChannelMuted);
+                Assert.Contains("new-monitor", current.ExportSettings().MixMuted);
+                Assert.DoesNotContain(current.Config.Mixes, m => m.Id is "monitor" or "monitor2");
+            }
+
+            Assert.Throws<IOException>(() => current.DeleteMix("headset", _ => "disk full"));
+            Assert.True(current.MonitorMuted);
+            Assert.DoesNotContain("headset", current.ExportSettings().MixMuted);
+            current.DeleteMix("headset", settings => settings.Save(path));
+            Assert.False(current.MonitorMuted); // The last remembered open monitor was removed.
+            Assert.Equal(["new-monitor"], current.ExportSettings().MixMuted);
+            Assert.False(MixerSettings.Load(path)!.MonitorMuted);
+            current.ToggleMonitorMuted();
+            current.ToggleMonitorMuted();
+            Assert.Equal(["new-monitor"], current.ExportSettings().MixMuted);
+            Assert.Throws<InvalidOperationException>(() => current.DeleteMix("new-monitor", _ => null));
+        }
+        finally { restored?.Dispose(); outputs.TearDown(); Directory.Delete(directory, true); }
+    }
+
+    [MonitorPipeWireFact]
+    public void RecreatingADeletedMonitorDuringAPauseDoesNotReviveItsOldListeningSelection()
+    {
+        using var mixer = new Mixer();
+        mixer.Build(MonitorConfig());
+        mixer.SetMixMuted("monitor2", true);
+        mixer.CreateMix("Phones", _ => null, MixKind.Monitor);
+        mixer.SetMonitorMuted(true);
+        mixer.DeleteMix("phones", _ => null);
+        Assert.True(mixer.MonitorMuted); // The original Monitor A still belongs to the pause.
+        Assert.Throws<IOException>(() => mixer.CreateMix("Phones", _ => "disk full", MixKind.Monitor));
+        Assert.True(mixer.MonitorMuted);
+        Assert.False(mixer.HasMix("phones"));
+        Assert.DoesNotContain("phones", mixer.ExportSettings().MixMuted);
+        mixer.CreateMix("Phones", _ => null, MixKind.Monitor);
+        Assert.Contains("phones", mixer.ExportSettings().MixMuted);
+        mixer.DeleteMix("monitor", _ => null);
+        Assert.False(mixer.MonitorMuted);
+        Assert.Equal(["monitor2", "phones"], mixer.ExportSettings().MixMuted.Order(StringComparer.Ordinal));
+    }
+
     private static void AssertEditableMonitorFeeds(Mixer mixer, string output, params string[] ids)
     {
         Assert.True(SpinWait.SpinUntil(() =>

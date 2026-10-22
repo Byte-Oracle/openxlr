@@ -77,7 +77,7 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     host.receive({event:"keyDown",context:"feed-key"});
     assert.deepEqual(daemon.messages.at(-1), {cmd:"setMonitorFeed",device:"qa-output",mix:"monitor+monitor2"});
     state.mixer.mixes.push({id:"stream",name:"Stream",kind:"virtualMic"}, {id:"auxout",name:"Aux",kind:"auxPort"});
-    for (const [current, next] of [["monitor+monitor2", "stream"], ["stream", "auxout"], ["auxout", "monitor"], ["deleted", "monitor"], ["", "monitor"]]) {
+    for (const [current, next] of [["monitor+monitor2", "stream"], ["stream", "auxout"], ["auxout", "monitor"], ["deleted", "monitor2"], ["", "monitor2"]]) {
       state.mixer.monitorFeeds["qa-output"] = current;
       daemon.receive(state);
       host.receive({event:"keyDown",context:"feed-key"});
@@ -560,6 +560,14 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     assert.equal(keyFace("feed-key"), "off");
     dialTarget("all-sends-dial", "send:system:all");
     assert.equal(feedbackOf("all-sends-dial").value, "42%");
+    for (const feed of ["gone", "  monitor2 + removed  ", ""]) {
+      state.mixer.monitorFeeds["qa-output"] = feed;
+      daemon.receive(state);
+      assert.equal(feedbackOf("monitor-dial").muteOverlay.enabled, true);
+      host.receive({event:"titleParametersDidChange",context:"feed-key",payload:{title:""}});
+      assert.ok(keyImage("feed-key").includes("Studio"));
+      assert.equal(keyFace("feed-key"), "off");
+    }
   }
   finally {
     if (oldSkin === undefined) delete process.env.OPENXLR_SKIN;

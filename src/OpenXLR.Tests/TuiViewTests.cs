@@ -648,6 +648,26 @@ public sealed class TuiViewTests
         Assert.Equal("stream", Text(command, "mix"));
     }
 
+    [Theory]
+    [InlineData("", "Monitor A", "stream")]
+    [InlineData("removed", "Monitor A", "stream")]
+    [InlineData(" removed + stream ", "Stream", "monitor")]
+    [InlineData(" stream + monitor + stream ", "Monitor A + Stream", "stream")]
+    public void OutputFeedsResolveSavedWhitespaceAndDeletedMixesLikeTheDaemon(string feed, string label, string next)
+    {
+        (App app, List<string> sent) = Ready(tab: 3);
+        var state = System.Text.Json.Nodes.JsonNode.Parse(StateJson)!;
+        state["mixer"]!["monitorFeeds"]!["alsa_output.arctis"] = feed;
+        app.Link.Receive(state.ToJsonString());
+        SelectOutputRow(app, "Arctis Nova Elite");
+        Screen screen = new(150, 42);
+        app.Draw(screen);
+        Assert.Contains(label, Frame(screen), StringComparison.Ordinal);
+        Assert.DoesNotContain("removed", Frame(screen), StringComparison.Ordinal);
+        app.Handle(new KeyPress(Key.Right));
+        Assert.Equal(next, Text(Command(sent), "mix"));
+    }
+
     [Fact]
     public void TheOutputVolumeIsTheOneTheSelectedSinksShare()
     {

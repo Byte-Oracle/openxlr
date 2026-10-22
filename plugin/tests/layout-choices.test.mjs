@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { channelName, layoutChoices, mixName, defaultMonitorMix, controllableOutputs, outputKey, targetAppearance, iconPath } from "../com.emaspa.openxlr.sdPlugin/layout-choices.mjs";
+import { channelName, layoutChoices, mixName, defaultMonitorMix, monitorFeed, controllableOutputs, outputKey, targetAppearance, iconPath } from "../com.emaspa.openxlr.sdPlugin/layout-choices.mjs";
 
 const mixer = {
   mixes: [
@@ -175,4 +175,19 @@ test("default monitor follows the daemon and stays stable after deleting or reor
   assert.equal(defaultMonitorMix({mixes:[...mixes, {id:"monitor",kind:"monitor"}]}), "monitor");
   assert.equal(defaultMonitorMix({mixes, defaultMonitorMix:"stream"}), "aaa");
   assert.equal(defaultMonitorMix({mixes:[{id:"monitor2"},{id:"monitor"}]}), "monitor");
+});
+
+
+test("saved feed ids follow the daemon after whitespace, renames and deletions", () => {
+  const state = { mixes: [{id:"monitor2", name:"Renamed", kind:"monitor"}, {id:"chat", kind:"virtualMic"}],
+    defaultMonitorMix:"monitor2", monitorFeeds:{} };
+  for (const [saved, expected] of [[undefined,"monitor2"], ["","monitor2"], ["gone","monitor2"],
+    [" gone + chat ","chat"], [" chat + monitor2 + chat ","monitor2+chat"]]) {
+    state.monitorFeeds.output = saved;
+    assert.equal(monitorFeed(state, "output"), expected);
+  }
+  assert.equal(monitorFeed(undefined, "output"), "monitor");
+  for (const output of ["constructor", "__proto__", "toString"]) {
+    assert.equal(monitorFeed({monitorFeeds:{}}, output), "monitor");
+  }
 });

@@ -289,6 +289,8 @@ public sealed partial class Mixer
                     foreach (string output in fallbackOutputs)
                         _monitorFeeds[output] = previousDefault;
                 _mixVolume[id] = 1.0;
+                // A monitor added during a pause is not part of its saved listening selection.
+                if (kind == MixKind.Monitor && _monitorMuted) _mixMuted.Add(id);
                 foreach (ChannelDefinition ch in _config.Channels)
                 {
                     string cell = Cell(ch.Id, id);
@@ -389,10 +391,25 @@ public sealed partial class Mixer
                 else _monitorFeeds[output] = remaining;
             }
             CellSnapshot cells = TakeMixCellsLocked(id);
-            try { PersistLocked(persist); }
+            bool wasPaused = _monitorMuted;
+            // The unmuted monitor ids are the selection a pause will resume.
+            // Deleting its last member clears the pause, never the other mutes.
+            bool clearsPause = mix.Kind == MixKind.Monitor && _monitorMuted && !cells.MixMuted
+                && !_config.Mixes.Any(m => m.Kind == MixKind.Monitor && !_mixMuted.Contains(m.Id));
+            try
+            {
+                if (clearsPause)
+                {
+                    if (!RemovePausedMonitorRoutesLocked())
+                        throw new InvalidOperationException("The monitor cannot be deleted until its paused output routes can be disconnected.");
+                    _monitorMuted = false;
+                }
+                PersistLocked(persist);
+            }
             catch
             {
                 _config = previous;
+                _monitorMuted = wasPaused;
                 cells.Restore(this);
                 if (savedInserts is not null) _inserts[key] = savedInserts;
                 _enforcedSource = previousSource;
@@ -402,8 +419,9 @@ public sealed partial class Mixer
                 throw;
             }
 
+            if (wasPaused != _monitorMuted) _desktopMonitorIntent = null;
             PruneDuckPlanLocked();   // the bus goes before the mix it feeds
-            if (previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id))
+            if (wasPaused != _monitorMuted || previousFeeds.Values.Any(feed => MonitorFeed.Includes(feed, id))
                 || wasDefault && _monitorOutputs.Any(output => !previousFeeds.ContainsKey(output)))
                 SetMonitorOutputsLocked([.. _monitorOutputs]);
             SyncDuckingLocked();

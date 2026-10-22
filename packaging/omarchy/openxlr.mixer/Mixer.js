@@ -205,12 +205,12 @@ function monitorFeeds(mixer) {
     var outputs = mixer.monitorOutputs || (mixer.monitorOutput ? [mixer.monitorOutput] : []);
     return outputs.map(function (output) {
         var feeds = mixer.monitorFeeds || {};
-        var feed = Object.prototype.hasOwnProperty.call(feeds, output) ? feeds[output] : (first ? first.id : "");
-        var names = String(feed || "").split("+").filter(Boolean).map(function (id) {
-            var mix = mixes.filter(function (entry) { return entry.id === id; })[0];
-            return mix ? mix.name : id;
-        });
-        return { output: output, ids: String(feed || "").split("+").filter(Boolean), name: names.join(" + ") || "Silent" };
+        var saved = Object.prototype.hasOwnProperty.call(feeds, output) ? feeds[output] : "";
+        var parts = String(saved || "").split("+").map(function (id) { return id.trim(); });
+        var chosen = mixes.filter(function (mix) { return parts.indexOf(mix.id) >= 0; });
+        if (!chosen.length && first) chosen = [first];
+        return { output: output, ids: chosen.map(function (mix) { return mix.id; }),
+            name: chosen.map(function (mix) { return mix.name; }).join(" + ") || "Silent" };
     });
 }
 

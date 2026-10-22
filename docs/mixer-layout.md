@@ -23,6 +23,16 @@ editing. Missing or null `mixes` reads the older `userMixes` list, with Monitor 
 and B kept ahead of it; a missing or null legacy list also keeps Stream and Chat.
 New daemon saves write only `mixes`, so removing or renaming a built-in monitor
 survives a restart. When both fields exist, `mixes` wins.
+
+While monitoring is paused, adding a monitor keeps its master muted. Deleting
+one removes only its id from the paused listening selection. The pause clears
+if its last previously open monitor is deleted; remaining individual mutes stay
+closed. If a paused output route refuses removal, deletion is refused before
+saving, with the layout and pause retained. Renaming changes no id or mute. The pause, mutes and layout edits are
+saved together and restored after a daemon restart. Clients resolve saved output
+feeds by surviving mix ids, ignoring whitespace and removed ids. An empty or
+entirely stale feed follows the default monitor, just as the daemon does.
+
 A single invalid entry is dropped and logged with its path, and the rest of the
 file still applies; a file that cannot be parsed at all is copied to
 `mixer.json.corrupt` before the next save replaces it. An empty or malformed
@@ -262,7 +272,9 @@ debounced, retried behaviour.
   again and the command fails, for the same reason. Creating a monitor
   never changes an existing output's feed: an implicit feed is saved explicitly
   if the new monitor would become the default. Removed built-in monitor ids
-  remain reserved when generating a new mix id.
+  remain reserved when generating a new mix id. A monitor created while
+  monitoring is paused also starts with its master muted, so resuming keeps
+  the listening selection from before the pause.
 - `renameMix {mix, name}` changes the name of a user mix in OpenXLR only.
   Reloading its sink or capture device would drop every app using it onto
   another device, so the PipeWire description keeps the old name until the

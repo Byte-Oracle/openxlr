@@ -223,12 +223,12 @@ test('block glyphs use the TUI fractions and its dBFS scale', () => {
   assert.equal(mixer.rms(0.9), '-6');
 });
 
-test('monitor labels describe default feeds, sums, silent routes and custom names', () => {
+test('monitor labels describe default feeds, sums and custom names', () => {
   assert.deepEqual(plain(mixer.monitorFeeds(state.mixer)), [
     { output: 'headset', ids: ['monitor'], name: 'Monitor A' },
     { output: 'speakers', ids: ['monitor', 'stream'], name: 'Monitor A + Stream' }
   ]);
-  assert.equal(mixer.monitorFeeds({ ...state.mixer, monitorFeeds: { headset: '' } })[0].name, 'Silent');
+  assert.equal(mixer.monitorFeeds({ ...state.mixer, monitorFeeds: { headset: '' } })[0].name, 'Monitor A');
   assert.deepEqual(plain(mixer.monitorFeeds({ mixes: [] })), []);
 });
 
@@ -393,4 +393,14 @@ test('implicit monitor follows the daemon and does not follow layout order', () 
   assert.equal(mixer.monitorFeeds({...source, defaultMonitorMix:'monitor2'})[0].name, 'Studio');
   assert.equal(mixer.monitorFeeds(source)[0].name, 'Speakers');
   assert.equal(mixer.monitorFeeds({...source, mixes:[...source.mixes].reverse()})[0].name, 'Speakers');
+});
+
+
+test('saved monitor feeds discard deleted ids and whitespace like the daemon', () => {
+  const source = { mixes:[{id:'monitor2',name:'Studio',kind:'monitor'},{id:'chat',name:'Chat',kind:'virtualMic'}],
+    monitorOutputs:['headset'],defaultMonitorMix:'monitor2' };
+  for (const [saved, ids] of [['', ['monitor2']], ['gone', ['monitor2']], [' gone + chat ', ['chat']],
+    [' chat + monitor2 + chat ', ['monitor2','chat']]]) {
+    assert.deepEqual(plain(mixer.monitorFeeds({...source,monitorFeeds:{headset:saved}}))[0].ids, ids);
+  }
 });

@@ -521,6 +521,10 @@ that was the default.
    output feeds keep their settings, so a mix or send that was already muted
    stays muted. The pause survives a daemon restart and profile recall leaves
    it unchanged. The terminal mixer's Outputs tab has **Mute monitoring** too.
+   Adding a monitor during the pause leaves it individually muted. Renaming
+   keeps the remembered selection; deleting removes only that monitor. If the
+   last previously open monitor is deleted, the pause clears and the remaining
+   individually muted monitors stay muted. These choices survive a restart.
    This pauses OpenXLR's feeds. An application left to desktop routing bypasses
    those feeds and remains audible; route it to an OpenXLR channel if it should
    follow this pause.

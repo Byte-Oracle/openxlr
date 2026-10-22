@@ -5,7 +5,7 @@
 
 import process from "node:process";
 import { KeyCommands } from "./key-commands.mjs";
-import { channelName, mixName, mixShortName, defaultMonitorMix, layoutChoices, controllableOutputs, outputKey, targetAppearance, openGroupMember } from "./layout-choices.mjs";
+import { channelName, mixName, mixShortName, defaultMonitorMix, monitorFeed, layoutChoices, controllableOutputs, outputKey, targetAppearance, openGroupMember } from "./layout-choices.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
@@ -464,7 +464,7 @@ const groupOpenMember = (group) => openGroupMember(mixer(), group);
 
 // An output's feed as the daemon stores it: any mix id, or ids
 // joined with '+' when the output hears them summed.
-const feedOf = (sink) => mixer()?.monitorFeeds?.[sink] ?? defaultMonitorMix(mixer());
+const feedOf = (sink) => monitorFeed(mixer(), sink);
 const FEED_LETTER = { monitor: "A", monitor2: "B" };
 const feedLetters = (feed) => feed.split("+").map((id) => FEED_LETTER[id] ?? mixName(mixer(), id)).join("+");
 const feedLabel = (feed) => feed === "" ? "Silent" : feed.split("+").every(id => Object.hasOwn(FEED_LETTER, id) && mixName(mixer(), id) === `Monitor ${FEED_LETTER[id]}`)
