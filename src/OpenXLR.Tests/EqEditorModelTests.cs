@@ -74,6 +74,8 @@ public sealed class EqEditorModelTests
     [Fact]
     public void TheCurveIsTheDaemonsResponseAtEveryPointOnALogAxis()
     {
+        // The texts below are written as an English desktop formats numbers.
+        using var culture = new CultureScope("en-US");
         EqBand[] bands =
         [
             new() { Enabled = true, Type = MicEq.LowCut, Frequency = 120, Q = MicEq.SnapQ(4) },
@@ -162,6 +164,8 @@ public sealed class EqEditorModelTests
     [Fact]
     public void ReportedValuesAreShownAndAnOlderEchoWaitsForTheEdit()
     {
+        // The texts below are written as an English desktop formats numbers.
+        using var culture = new CultureScope("en-US");
         var time = new ManualTime();
         var (eq, sent) = Model(time: time);
         eq.Apply(State(true, """
@@ -223,9 +227,23 @@ public sealed class EqEditorModelTests
         Assert.Equal(5, band.Gain);
     }
 
+
+    [Fact]
+    public void NumbersFollowTheDesktopsDecimalSeparator()
+    {
+        // The editor writes values as the desktop's own locale does; only
+        // what goes to the daemon is locale-free.
+        using var culture = new CultureScope("it-IT");
+        Assert.Equal("1,4k", EqCurve.Label(1400));
+        Assert.Equal("1,41", EqText.Q(1.4125375446227544));
+        Assert.Equal("+9,25", EqText.Gain(9.25).Split(' ')[0]);
+        Assert.Equal("2,3", EqText.Frequency(2300).Split(' ')[0]);
+    }
     [Fact]
     public void TheWheelTheKeysAndATypeChangeEachSendTheirOneChange()
     {
+        // The texts below are written as an English desktop formats numbers.
+        using var culture = new CultureScope("en-US");
         var (eq, sent) = Model();
         EqBandViewModel band = eq.Bands[2];
         double q = band.Q;

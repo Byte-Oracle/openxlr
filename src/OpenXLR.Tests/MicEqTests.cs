@@ -53,6 +53,17 @@ public sealed class MicEqTests
         Assert.Equal(band, MicEq.Snap(band));
     }
 
+
+    [Fact]
+    public void ARangeErrorWritesItsLimitsTheSameWayInEveryLocale()
+    {
+        // The reason goes back to clients as protocol text; a daemon started
+        // under an Italian, Spanish or German locale must not say "0,1".
+        using var culture = new CultureScope("it-IT");
+        Assert.Equal("q must be 0.1 to 10", MicEq.Check(new EqBand { Type = "peak", Frequency = 1000, Gain = 0, Q = 0.09 }));
+        Assert.Equal("gain must be -12 to +12 dB", MicEq.Check(new EqBand { Type = "peak", Frequency = 1000, Gain = 12.5, Q = 1 }));
+        Assert.Equal("frequency must be 20 to 20000 Hz", MicEq.Check(new EqBand { Type = "peak", Frequency = 10, Gain = 0, Q = 1 }));
+    }
     [Theory]
     [InlineData("bell", 1000, 0, 1, "type must be one of")]
     [InlineData("peak", 19.9, 0, 1, "frequency must be 20 to 20000 Hz")]
