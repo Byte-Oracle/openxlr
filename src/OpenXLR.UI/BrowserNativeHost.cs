@@ -47,17 +47,28 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
             Environment.ExitCode = 2;
             return true;
         }
+        Environment.ExitCode = Serve(new BrowserNativeHost(new DaemonClient(), Console.OpenStandardInput(), Console.OpenStandardOutput()));
+        return true;
+    }
+
+    /// <summary>
+    /// Run until the browser closes the connection. A broken or invalid
+    /// message ends the host with exit code 2 and a line on standard error,
+    /// never with an unhandled exception: the browser then reports a closed
+    /// host instead of a crash.
+    /// </summary>
+    internal static int Serve(BrowserNativeHost host, TextWriter? log = null)
+    {
         try
         {
-            new BrowserNativeHost(new DaemonClient(), Console.OpenStandardInput(), Console.OpenStandardOutput())
-                .RunAsync().GetAwaiter().GetResult();
+            host.RunAsync().GetAwaiter().GetResult();
+            return 0;
         }
-        catch (Exception ex) when (ex is IOException or JsonException or OperationCanceledException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or JsonException or OperationCanceledException)
         {
-            Console.Error.WriteLine("OpenXLR browser host: the native messaging connection closed or sent invalid data.");
-            Environment.ExitCode = 2;
+            (log ?? Console.Error).WriteLine("OpenXLR browser host: the native messaging connection closed or sent invalid data.");
+            return 2;
         }
-        return true;
     }
 
     internal async Task RunAsync(CancellationToken cancel = default)
@@ -367,20 +378,21 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
         foreach (JsonNode? item in array)
         {
             if (item is not JsonObject tab || tab["id"] is not JsonValue idNode || !idNode.TryGetValue<int>(out int id)
-                || id < 0 || !ids.Add(id) || String(tab, "site") is not { } site || !ValidSite(site)
+                || id < 0 || !ids.Add(id) || String(tab, "site") is not { } site
                 || String(tab, "title") is not { Length: <= 160 } title || title.Any(char.IsControl)
                 || tab["capturing"] is not JsonValue capture || !capture.TryGetValue<bool>(out bool capturing)
                 || tab["error"] is not null && (String(tab, "error") is not { Length: <= 200 } error || error.Any(char.IsControl)))
                 throw new InvalidDataException("Invalid browser tab metadata.");
-            tabs.Add(new(id, site, title, capturing, String(tab, "error")));
+            // An address the daemon cannot take in the browser's own form, such
+            // as a host holding "*" or an IPv4-mapped IPv6 address, leaves that
+            // tab unlisted. The other tabs still register.
+            if (ValidSite(site)) tabs.Add(new(id, site, title, capturing, String(tab, "error")));
         }
         return tabs;
     }
 
-    private static bool ValidSite(string site)
-        => site.Length <= 512 && !site.Any(char.IsControl) && Uri.TryCreate(site, UriKind.Absolute, out Uri? uri)
-           && uri.Scheme is "http" or "https" && uri.UserInfo.Length == 0
-           && site == uri.GetLeftPart(UriPartial.Authority);
+    /// <summary>A bare origin exactly as the daemon will report it back.</summary>
+    private static bool ValidSite(string site) => string.Equals(BrowserOrigin.Canonical(site), site, StringComparison.Ordinal);
 
     private static bool ValidChannel(string channel)
         => channel is { Length: > 0 and <= 36 } && channel[0] is >= 'a' and <= 'z'

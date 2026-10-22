@@ -22,14 +22,8 @@ public static class BrowserTabRouting
     public const int MaxProviders = 8, MaxTabs = 128, MaxSites = 128;
     public const int MaxOrigin = 512, MaxTitle = 160, MaxError = 200;
 
-    public static string? CanonicalSite(string? value)
-    {
-        if (value is not { Length: > 0 and <= MaxOrigin } || value.Any(char.IsControl)
-            || !Uri.TryCreate(value, UriKind.Absolute, out Uri? uri)
-            || uri.Scheme is not ("http" or "https") || uri.UserInfo.Length != 0 || uri.Host.Length == 0
-            || uri.AbsolutePath != "/" || uri.Query.Length != 0 || uri.Fragment.Length != 0) return null;
-        return uri.GetLeftPart(UriPartial.Authority);
-    }
+    /// <summary>The origin as the browser serializes it; see <see cref="BrowserOrigin"/>.</summary>
+    public static string? CanonicalSite(string? value) => BrowserOrigin.Canonical(value);
 
     public static bool ValidSession(string? session)
         => session is { Length: 32 } && Guid.TryParseExact(session, "N", out _);

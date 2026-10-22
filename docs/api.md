@@ -951,8 +951,13 @@ HTTPS origin, at most 512 characters), `title` (at most 160 characters),
 `capturing` (boolean), and optional `error` (at most 200 characters).
 Origins cannot contain credentials, a browsing path, query or fragment.
 Titles and errors cannot contain control characters. The daemon normalizes
-origins, for example `https://EXAMPLE.com:443/` becomes
-`https://example.com`. The normal 64 KiB incoming-frame limit also applies.
+origins to the form a Chromium browser serializes them in, for example
+`https://EXAMPLE.com:443/` becomes `https://example.com` and
+`http://[::ffff:1.2.3.4]` becomes `http://[::ffff:102:304]`. A host the
+daemon cannot parse, such as one holding `*`, `!` or `&`, has no canonical
+form, and a list that contains one is refused. The browser's native host
+leaves such tabs out of the list it sends, so the other tabs still
+register. The normal 64 KiB incoming-frame limit also applies.
 At most eight companions and 128 tabs per companion can be registered.
 
 The mixer state's `browserTabs` entries carry `session`, `id`, `site`,

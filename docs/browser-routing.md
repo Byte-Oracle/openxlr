@@ -87,7 +87,10 @@ browser, website defaults remain, but each tab needs activation again.
 OpenXLR supports up to eight
 active tab takeovers and 128 listed tabs per browser connection, with up
 to eight connections and 128 saved website defaults. Private browsing,
-browser settings pages and non-HTTP(S) URLs are excluded.
+browser settings pages and non-HTTP(S) URLs are excluded. A tab whose
+host name holds a character such as `*`, `!` or `&` is left out of the
+list too, because OpenXLR cannot store its address in the form the browser
+uses. The other tabs stay listed and routable.
 The daemon also limits each command to 64 KiB. Long tab metadata can reach
 that limit before 128 tabs; the popup reports it instead of sending a
 partial list. Close some tabs and reconnect to publish a smaller list.

@@ -64,7 +64,92 @@ public sealed class BrowserNativeHostTests
     public void MetadataContainsOriginsRatherThanPageUrls(string site)
     {
         var tabs = new JsonArray(Tab(site: site));
-        Assert.Throws<InvalidDataException>(() => BrowserNativeHost.ReadTabs(tabs));
+        Assert.Empty(BrowserNativeHost.ReadTabs(tabs));
+    }
+
+    [Theory]
+    [InlineData("http://[::ffff:102:304]", true)]
+    [InlineData("http://[::1]:8080", true)]
+    [InlineData("http://[::ffff:1.2.3.4]", false)]
+    [InlineData("https://a*b.example", false)]
+    [InlineData("https://a!b.example", false)]
+    [InlineData("https://EXAMPLE.com", false)]
+    public void OnlyOriginsTheDaemonReportsUnchangedAreListed(string site, bool listed)
+    {
+        var other = Tab(); other["id"] = 8;
+        IReadOnlyList<BrowserNativeTab> tabs = BrowserNativeHost.ReadTabs(new JsonArray(Tab(site: site), other));
+        Assert.Equal(listed ? new[] { 7, 8 } : new[] { 8 }, tabs.Select(tab => tab.Id));
+    }
+
+    [Fact]
+    public async Task UnsupportedTabOriginsAreSkippedWithoutStoppingTheHost()
+    {
+        string session = new('a', 32);
+        var registered = new TaskCompletionSource<JsonArray>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var enabled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var server = await SocketTestServer.Start(async (socket, stop) =>
+        {
+            await SocketTestServer.Receive(socket, stop);
+            await SocketTestServer.Send(socket, State(session), stop);
+            while (!stop.IsCancellationRequested)
+            {
+                JsonNode command = await SocketTestServer.Receive(socket, stop);
+                string cmd = command["cmd"]!.GetValue<string>();
+                if (cmd == "getBrowserSession") await SocketTestServer.Send(socket, new { type = "browserSession", session }, stop);
+                if (cmd == "syncBrowserTabs" && command["tabs"]!.AsArray().Count > 0) registered.TrySetResult(command["tabs"]!.AsArray());
+                if (cmd == "setPreserveBrowserOutputs") enabled.TrySetResult();
+                await SocketTestServer.Send(socket, new { type = "commandResult", requestId = command["requestId"]!.GetValue<string>() }, stop);
+            }
+        });
+        var input = new Pipe(); var output = new Pipe();
+        var host = new BrowserNativeHost(new DaemonClient(server.Url), input.Reader.AsStream(), output.Writer.AsStream());
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        Task running = host.RunAsync(timeout.Token);
+        Task draining = Task.Run(async () =>
+        {
+            try { while (await BrowserNativeHost.ReadFrameAsync(output.Reader.AsStream(), timeout.Token) is not null) { } }
+            catch (Exception ex) when (ex is OperationCanceledException or IOException) { }
+        });
+        try
+        {
+            JsonObject Listed(int id, string site) { var tab = Tab(site: site); tab["id"] = id; return tab; }
+            await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), new JsonObject { ["type"] = "tabs", ["tabs"] = new JsonArray(
+                Listed(1, "http://[::ffff:102:304]"), Listed(2, "https://a*b.example"), Listed(3, "https://a&b.example"),
+                Listed(4, "https://example.com")) }, timeout.Token);
+            JsonArray tabs = await registered.Task.WaitAsync(timeout.Token);
+            Assert.Equal([1, 4], tabs.Select(tab => tab!["id"]!.GetValue<int>()));
+            Assert.Equal("http://[::ffff:102:304]", tabs[0]!["site"]!.GetValue<string>());
+            Assert.False(running.IsCompleted);
+            // The host keeps serving the browser after skipping the tabs.
+            await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), new JsonObject { ["type"] = "enable", ["value"] = true }, timeout.Token);
+            await enabled.Task.WaitAsync(timeout.Token);
+            Assert.False(running.IsCompleted);
+            await input.Writer.CompleteAsync();
+            await running.WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        finally
+        {
+            await timeout.CancelAsync();
+            try { await running; } catch (OperationCanceledException) { }
+            await draining;
+            await output.Reader.CompleteAsync();
+        }
+    }
+
+    [Fact]
+    public async Task InvalidBrowserDataEndsTheHostWithAnExitCodeInsteadOfACrash()
+    {
+        // The input stays open, as the browser's does, so only the invalid
+        // message can end the host.
+        var input = new Pipe();
+        var log = new StringWriter();
+        var host = new BrowserNativeHost(new DaemonClient("ws://127.0.0.1:1/ws"), input.Reader.AsStream(), new MemoryStream());
+        Task<int> serving = Task.Run(() => BrowserNativeHost.Serve(host, log));
+        await BrowserNativeHost.WriteFrameAsync(input.Writer.AsStream(), new JsonObject { ["type"] = "assign", ["tabId"] = 7,
+            ["site"] = "https://example.com/private", ["channel"] = "music", ["remember"] = false });
+        Assert.Equal(2, await serving.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Contains("invalid data", log.ToString(), StringComparison.Ordinal);
+        await input.Writer.CompleteAsync();
     }
 
     [Fact]

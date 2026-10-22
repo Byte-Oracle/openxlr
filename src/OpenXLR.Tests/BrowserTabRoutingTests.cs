@@ -207,6 +207,32 @@ public sealed class BrowserTabRoutingTests
     public void SitesCannotCarryBrowsingPathsOrCredentials(string site)
         => Assert.Null(BrowserTabRouting.CanonicalSite(site));
 
+    // The browser's own serialization is the canonical form, so a tab the
+    // companion lists is reported back with the text it sent.
+    [Theory]
+    [InlineData("http://[::ffff:102:304]", "http://[::ffff:102:304]")]
+    [InlineData("http://[::ffff:1.2.3.4]", "http://[::ffff:102:304]")]
+    [InlineData("http://[::102:304]", "http://[::102:304]")]
+    [InlineData("http://[0:0:0:0:0:0:0:1]:8080", "http://[::1]:8080")]
+    [InlineData("http://[1:0:0:2:0:0:3:4]", "http://[1::2:0:0:3:4]")]
+    [InlineData("http://[2001:DB8:0:0:1:0:0:0]", "http://[2001:db8:0:0:1::]")]
+    [InlineData("https://EXAMPLE.com:443/", "https://example.com")]
+    [InlineData("http://example.com:8080", "http://example.com:8080")]
+    public void OriginsAreCanonicalInTheBrowsersForm(string site, string expected)
+        => Assert.Equal(expected, BrowserTabRouting.CanonicalSite(site));
+
+    [Theory]
+    [InlineData("https://a*b.example")]
+    [InlineData("https://a!b.example")]
+    [InlineData("https://a$b.example")]
+    [InlineData("https://a&b.example")]
+    [InlineData("https://a(b).example")]
+    public void OriginsWithoutACanonicalFormAreRefusedForTheWholeList(string site)
+    {
+        Assert.Null(BrowserTabRouting.CanonicalSite(site));
+        Assert.NotNull(BrowserTabRouting.CheckTabs([Tab(1), Tab(2, site)]));
+    }
+
     [Fact]
     public void RegistrationsAndSavedSitesHaveIndependentBounds()
     {
