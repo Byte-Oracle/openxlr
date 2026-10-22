@@ -196,6 +196,9 @@
   <data name="BuyMeACoffee" xml:space="preserve">
     <value>Paliti ko og kape</value>
   </data>
+  <data name="SupportMeOnKoFi" xml:space="preserve">
+    <value>Suportahi ko sa Ko-fi</value>
+  </data>
   <data name="Bypass" xml:space="preserve">
     <value>Bypass</value>
   </data>

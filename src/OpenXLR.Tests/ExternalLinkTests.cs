@@ -13,6 +13,28 @@ public sealed class ExternalLinkTests
         Assert.False(ExternalLink.Open("not a link"));
     }
 
+    [Theory]
+    [InlineData("https://github.com/emaspa/openxlr")]
+    [InlineData("https://discord.gg/4bswtnGPW4")]
+    [InlineData("https://www.reddit.com/r/OpenXLR/")]
+    [InlineData("https://buymeacoffee.com/emaspa")]
+    [InlineData("https://ko-fi.com/emaspa")]
+    public void TheAboutWindowsLinksAreHandedOut(string link)
+    {
+        string dir = Directory.CreateTempSubdirectory("openxlr-link-").FullName;
+        string prev = ExternalLink.Opener;
+        try
+        {
+            ExternalLink.Opener = ExecutableScript.Write(Path.Combine(dir, "opener"), "exit 0\n");
+            Assert.True(ExternalLink.Open(link));
+        }
+        finally
+        {
+            ExternalLink.Opener = prev;
+            try { Directory.Delete(dir, recursive: true); } catch (IOException) { }
+        }
+    }
+
     [Fact]
     public async Task TheLinkReachesTheOpenerAndAMissingOpenerIsReported()
     {
