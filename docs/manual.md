@@ -3188,6 +3188,15 @@ show a hint to edit them in the desktop's shortcut settings. If the desktop
 refuses the editor request after binding succeeded, the error is shown and
 the working bindings stay active.
 
+Outside the Flatpak, OpenXLR introduces itself to the portal as `openxlr`
+before it asks for keys. Current portals accept that name only when an
+`openxlr.desktop` entry is installed, which the packages provide. A portal
+that lacks this step or refuses the name does not stop Desktop keys: OpenXLR
+continues and the portal identifies the process itself. Some portals then
+refuse the shortcut session, and Desktop keys shows that error. A source
+installation can add the entry as shown in
+[installing from source](install-from-source.md#desktop-entry).
+
 The GlobalShortcuts portal registers keys on Wayland. It does not expose the
 focused application's identity. Focused routing therefore currently requires
 KDE Plasma, where a short-lived KWin script reads the active process id. It
