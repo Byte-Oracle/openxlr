@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.2.1
+Version: 0.2.2
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
 License:        GPL-3.0-only
@@ -187,6 +187,12 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Fri Oct 23 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.2-1
+- Ducking: the Wave XLR Pro now ducks the headphone jacks and Line Out on its own processor when the setup fits, keyed by XLR 1; the daemon writes both bits of a ducked pair's field, which the unit needs.
+- UI: a mix matrix row shows the input's gain under its Mic button, and the volume while the volume fader moves.
+- Docs: the Pro's five mix sections mapped in the protocol notes; a shorter readme with limitations and plans; the Wave:3 and Wave:1 out of beta; the EQ on the unit verified on the Pro and the MK.2 family; no Flathub release.
+- Tools: the Pro probe can commit and write a whole block.
+
 * Fri Oct 23 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.1-1
 - Browser: Chromium tabs routed to separate OpenXLR channels through an optional browser companion, with a Browser tabs window, website defaults and Activate from the UI; the packages install its native messaging host.
 - Monitor: an output can hear several mixes, every monitor mix can be renamed, reordered or deleted, and monitor mutes reach the physical outputs.

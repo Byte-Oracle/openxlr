@@ -678,8 +678,8 @@ setting while OpenXLR runs, OpenXLR writes its own back within a few
 seconds. In hardware-control mode OpenXLR writes nothing and the unit
 keeps what it holds, and the Ducking window shows the setup without
 letting you change it. The unit's bytes
-come from Wave Link captures on Windows, and nobody has listened to the
-result on Linux yet
+come from Wave Link captures on Windows and a desk probe on Linux, and the
+result was checked by ear on Headphones 1
 ([hardware support](hardware-support.md#wave-xlr-pro-0fd900b4)).
 
 On this computer a muted key does not duck: XLR 1 muted in every mix it is
@@ -687,8 +687,8 @@ sent to lowers nothing, and a key paused by **Mute microphone sends with
 monitoring** lowers nothing either until monitoring resumes. On the Pro the
 unit listens to XLR 1 before USB, so it ducks while XLR 1 is muted in every
 mix; choose **This computer** if muting the microphone should stop ducking.
-The unit reacts to XLR 1 only: talking into XLR 2 does not duck. On this computer, [Sound Check](#sound-check)'s loop plays through
-the key channel, so a looped take ducks the music, which is a quick way to
+The unit reacts to XLR 1 only: talking into XLR 2 does not duck. On this
+computer, [Sound Check](#sound-check)'s loop plays through the key channel, so a looped take ducks the music, which is a quick way to
 try a sensitivity. On the Pro the unit hears the live microphone, so the
 loop does not duck.
 
