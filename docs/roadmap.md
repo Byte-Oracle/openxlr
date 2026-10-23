@@ -370,18 +370,17 @@ while fixes to existing hosts remain part of normal maintenance.
   directory already used by the release workflows; the PPA source package
   carries the NuGet packages (packaging/ppa/make-source.sh) because
   Launchpad builders have no network.
-- [ ] Flatpak on Flathub. The Flatpak mode and the manifest are on main
-  as experimental ([flatpak.md](flatpak.md)): the sandbox cannot install
+- [x] An experimental Flatpak, built from the manifest on main
+  ([flatpak.md](flatpak.md)). It will not be submitted to Flathub, whose
+  rules do not allow AI-assisted development: the sandbox cannot install
   the udev rules, the WirePlumber rules, the UCM profile or the systemd
   unit, so the UI starts the daemon as a child process and uses the
   background portal for login start, the daemon logs to a file instead
   of the journal, the WirePlumber rules are written to the user's config
   directory, the udev rule is a documented copy, and the UCM profile
-  stays a manual step. LV2 inserts follow the Flathub audio plugin
-  extension instead of host plugins. The watchdog does not work in the
-  sandbox, so the packaged units stay the recommended install and the
-  Flatpak covers the distributions without a package. Open: the Flathub
-  submission.
+  stays a manual step. LV2 inserts follow the LinuxAudio plugin
+  extensions instead of host plugins. The watchdog does not work in the
+  sandbox, so the packaged units stay the recommended install.
 
 ## Devices
 

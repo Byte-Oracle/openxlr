@@ -201,8 +201,9 @@ OPENXLR_BUILD_MIXER=1 ./src/OpenXLR.Daemon/bin/Release/net10.0/OpenXLR.Daemon
 ./src/OpenXLR.UI/bin/Release/net10.0/OpenXLR.UI   # in a second terminal
 ```
 
-An experimental Flatpak manifest is in the tree but not published
-([flatpak.md](docs/flatpak.md)).
+An experimental Flatpak manifest is in the tree for building yourself
+([flatpak.md](docs/flatpak.md)). OpenXLR will not be published on
+Flathub, whose rules do not allow AI-assisted development.
 
 ## Limitations
 
@@ -220,7 +221,7 @@ An experimental Flatpak manifest is in the tree but not published
 
 The [roadmap](docs/roadmap.md) has the order. In short: a hardware
 mixing mode on the Wave XLR Pro, which builds the mixes in the unit for
-Wave Link's per-channel ducking, and Flathub.
+Wave Link's per-channel ducking.
 
 ## Documentation
 

@@ -55,7 +55,6 @@ class PackageTests(unittest.TestCase):
         metadata = ET.parse(HERE / (app + '.metainfo.xml')).getroot()
         self.assertEqual(app, metadata.findtext('id'))
         self.assertEqual(app + '.desktop', metadata.findtext('launchable'))
-        self.assertEqual(['x86_64'], json.loads((HERE / 'flathub.json').read_text())['only-arches'])
 
     def test_imports_are_private_and_do_not_grant_host_plugin_folders(self):
         permissions = json.loads((HERE / 'io.github.emaspa.openxlr.json').read_text())['finish-args']
