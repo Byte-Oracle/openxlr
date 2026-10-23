@@ -1907,6 +1907,9 @@ Seleziona l'interfaccia gestita da OpenXLR</value>
   <data name="StartupAudioOnly" xml:space="preserve">
     <value>L'audio si avvierà all'accesso senza l'app né l'icona nel vassoio di sistema.</value>
   </data>
+  <data name="StartupAudioService" xml:space="preserve">
+    <value>L'audio gira come servizio utente fuori dall'app, quindi queste opzioni avviano solo l'app.</value>
+  </data>
   <data name="StartupAudioInTray" xml:space="preserve">
     <value>L'audio si avvierà all'accesso con l'app nel vassoio di sistema.</value>
   </data>

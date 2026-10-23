@@ -376,6 +376,10 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
     public Task SetRecallOnConnectAsync(string? name)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "setRecallOnConnect", ["name"] = name ?? "" });
 
+    /// <summary>Ask a daemon this UI did not start to exit so its service manager restarts it.</summary>
+    public Task<bool> RestartDaemonAsync()
+        => SendAsync(new Dictionary<string, object> { ["cmd"] = "restartDaemon" });
+
     /// <summary>Reset an interface without settings memory to its firmware defaults.</summary>
     public Task ResetDeviceAsync()
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "resetDevice" });

@@ -1907,6 +1907,9 @@ Select the interface OpenXLR drives</value>
   <data name="StartupAudioOnly" xml:space="preserve">
     <value>Audio will start at login without the app or tray icon.</value>
   </data>
+  <data name="StartupAudioService" xml:space="preserve">
+    <value>Audio runs as a user service outside the app, so these options only start the app.</value>
+  </data>
   <data name="StartupAudioInTray" xml:space="preserve">
     <value>Audio will start at login with the app in the tray.</value>
   </data>

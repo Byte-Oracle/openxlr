@@ -154,6 +154,43 @@ public sealed class FlatpakRuntimeTests
     }
 
     [Theory]
+    [InlineData("gamescope", true)]
+    [InlineData("KDE:gamescope", true)]
+    [InlineData("KDE", false)]
+    [InlineData(null, false)]
+    public void GameModeIsTheGamescopeSession(string? desktop, bool gameMode)
+    {
+        string? previous = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_CURRENT_DESKTOP", desktop);
+            Assert.Equal(gameMode, OpenXLR.UI.MainWindow.GameMode);
+        }
+        finally { Environment.SetEnvironmentVariable("XDG_CURRENT_DESKTOP", previous); }
+    }
+
+    [Fact]
+    public async Task ADaemonAlreadyHoldingTheLockLeavesTheSessionAttached()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "openxlr-attached-" + Guid.NewGuid());
+        Directory.CreateDirectory(root);
+        try
+        {
+            // 73 is the sandbox daemon's answer when the user service holds the lock.
+            string script = ExecutableScript.Write(Path.Combine(root, "child"),
+                "#!/bin/sh\necho start >> '" + root + "/events'\nexit 73\n");
+            using var session = new OpenXLR.UI.FlatpakSession(script);
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            while (!session.Attached) await Task.Delay(10, deadline.Token);
+            await Task.Delay(300, deadline.Token);
+            Assert.Equal(new[] { "start" }, File.ReadAllLines(Path.Combine(root, "events")));
+            // The UI's own retry loop has ended; the service restarts its daemon.
+            Assert.False(session.Restart());
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task OwnedChildStopsGracefullyOrIsKilledWithinItsDeadline(bool ignoreTerm)

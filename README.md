@@ -201,9 +201,10 @@ OPENXLR_BUILD_MIXER=1 ./src/OpenXLR.Daemon/bin/Release/net10.0/OpenXLR.Daemon
 ./src/OpenXLR.UI/bin/Release/net10.0/OpenXLR.UI   # in a second terminal
 ```
 
-An experimental Flatpak manifest is in the tree for building yourself
-([flatpak.md](docs/flatpak.md)). OpenXLR will not be published on
-Flathub, whose rules do not allow AI-assisted development.
+**SteamOS and Bazzite**: each release carries an experimental Flatpak,
+with steps for Desktop Mode and Game Mode in [flatpak.md](docs/flatpak.md).
+OpenXLR will not be published on Flathub, whose rules do not allow
+AI-assisted development.
 
 ## Limitations
 

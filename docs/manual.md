@@ -1936,7 +1936,8 @@ Under WINDOW:
   menu always exits. Neither choice stops the background audio service,
   except under Flatpak, where the UI owns its daemon and Quit stops
   both, so the Flatpak keeps running in the tray unless you choose
-  otherwise ([Flatpak](flatpak.md)).
+  otherwise ([Flatpak](flatpak.md)). In Game Mode on SteamOS and
+  Bazzite, which has no tray, closing always quits the UI.
 
 Launching OpenXLR again shows the UI that is already running. A launch requested while
 the first process is still initializing is kept until the UI is ready,

@@ -52,6 +52,8 @@ public partial class MainWindow : Window
         _ = _desktopKeys.StartAsync();
         DataContext = _vm;
         _client.Start();          // connects, and keeps retrying if the daemon isn't up yet
+        // Queued rather than awaited: Options calls the restart on the UI thread.
+        StartupIntegration.AttachedRestart = () => { _ = _client.RestartDaemonAsync(); return _vm.DaemonConnected; };
         HeaderVersion.Text = $"v{AppVersion.Current}";
         UpdateControlSizing();
         Skinning.SkinService.Changed += UpdateControlSizing;
@@ -118,7 +120,9 @@ public partial class MainWindow : Window
             // user-initiated window close is intercepted: cancelling an
             // OS/application shutdown request here blocks the whole system
             // from logging out or rebooting.
-            if (_vm.MinimizeToTray && !_reallyExit &&
+            // Game Mode on SteamOS and Bazzite has no tray: a hidden window
+            // would leave Steam showing OpenXLR as a game still running.
+            if (_vm.MinimizeToTray && !_reallyExit && !GameMode &&
                 e.CloseReason == WindowCloseReason.WindowClosing)
             {
                 e.Cancel = true;
@@ -225,6 +229,10 @@ public partial class MainWindow : Window
         Grid.SetColumn(MonitorVolumeReadout, readout);
         Grid.SetRow(MonitorVolumeReadout, stacked ? 1 : 0);
     }
+
+    /// <summary>A gamescope session, which SteamOS and Bazzite call Game Mode.</summary>
+    internal static bool GameMode => (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "")
+        .Split(':').Contains("gamescope", StringComparer.OrdinalIgnoreCase);
 
     private void SetupTray()
     {

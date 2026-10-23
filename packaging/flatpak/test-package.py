@@ -56,6 +56,13 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(app, metadata.findtext('id'))
         self.assertEqual(app + '.desktop', metadata.findtext('launchable'))
 
+    def test_service_script_is_packaged(self):
+        build = (HERE / 'build.sh').read_text()
+        self.assertIn('install -Dm755 packaging/flatpak/openxlr-flatpak-service /app/share/openxlr/openxlr-flatpak-service', build)
+        script = (HERE / 'openxlr-flatpak-service').read_text()
+        self.assertIn('--command=/app/lib/openxlr/daemon/OpenXLR.Daemon', script)
+        self.assertIn('Restart=on-failure', script)
+
     def test_imports_are_private_and_do_not_grant_host_plugin_folders(self):
         permissions = json.loads((HERE / 'io.github.emaspa.openxlr.json').read_text())['finish-args']
         for folder in ('.lv2', '.clap', '.vst3'):
