@@ -65,6 +65,8 @@ Routing hints keep the mixer's default channel and mix names, such as
    that name `de`, `es`, `it`, `tl`, `ceb` and `sr-Cyrl`; add a row for the new language. The
    layout tests measure the fixed-width captions of the main window and
    Options in every shipped language, whichever language the run uses.
+   Keep literal English expectations in UI tests for English runs so a wrong
+   catalogue value fails; use localized expectations for non-English runs.
 
 A translation that has the old wording of a changed entry still shows it,
 so a change of meaning gets a new key.
@@ -135,9 +137,12 @@ The UI chooses its language once, when it starts:
    Simplified (`zh-Hans`), and the old .NET names `zh-CHT` and `zh-CHS`
    map to the same two.
 5. Serbian without a script (`sr`, including `sr_RS.UTF-8`) selects
-   Cyrillic (`sr-Cyrl`). An explicit script is respected: `sr-Latn` and
-   POSIX `sr_RS.UTF-8@latin` do not select Cyrillic. Latin Serbian is not
-   shipped; unsupported choices follow the fallback rules below.
+   Cyrillic (`sr-Cyrl`), including `sr_ME.UTF-8`. An explicit script is
+   respected: `sr-Latn`, POSIX `sr_RS.UTF-8@latin` and the older spellings
+   `sr@Latn` and `sr_RS@Latn` do not select Cyrillic. The `@latin` and
+   `@Latn` modifiers are case-insensitive and also work with an encoding
+   suffix, such as `sr_RS.UTF-8@Latn`. Latin Serbian is not shipped;
+   unsupported choices follow the fallback rules below.
 6. Anything else is English. Malformed tags, including empty subtags, are
    ignored; an invalid entry in `LANGUAGE` does not stop later entries
    from being tried.

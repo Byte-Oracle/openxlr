@@ -198,7 +198,7 @@ internal static partial class SkinLayoutWindowTests
             Assert.True(rackVolume.IsEffectivelyVisible);
             Slider xlr1Volume = rackVolume.GetVisualDescendants().OfType<Slider>().Single();
             Assert.Equal(0.75, xlr1Volume.Value);
-            Assert.Equal(Localizer.Format("ChannelVolumeName", "XLR 1"), AutomationProperties.GetName(xlr1Volume));
+            Assert.Equal(Localizer.Language == "en" ? "XLR 1 volume" : Localizer.Format("ChannelVolumeName", "XLR 1"), AutomationProperties.GetName(xlr1Volume));
             Assert.True(xlr1Volume.TranslatePoint(default, xlr1)!.Value.Y >= rackGain.TranslatePoint(new Point(0, rackGain.Bounds.Height), xlr1)!.Value.Y - 0.5);
             Assert.Same(Part(xlr1, SkinStripParts.Gain), rackVolume.Parent);
             AssertInside(xlr1Volume, xlr1);
@@ -224,7 +224,7 @@ internal static partial class SkinLayoutWindowTests
             Border mic2 = RackStrip(rack, "mic2");
             Slider mic2Volume = Assert.Single(mic2.GetVisualDescendants().OfType<Slider>(), s => s.IsEffectivelyVisible);
             Assert.Equal(0.5, mic2Volume.Value);
-            Assert.Equal(Localizer.Format("ChannelVolumeName", "Second microphone"), AutomationProperties.GetName(mic2Volume));
+            Assert.Equal(Localizer.Language == "en" ? "Second microphone volume" : Localizer.Format("ChannelVolumeName", "Second microphone"), AutomationProperties.GetName(mic2Volume));
             Assert.Equal("♫", music.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsEffectivelyVisible).Text);
             Assert.Equal("Music with a long display name", AutomationProperties.GetName(
                 music.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsEffectivelyVisible)));

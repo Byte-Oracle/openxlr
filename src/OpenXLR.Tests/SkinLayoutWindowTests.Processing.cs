@@ -46,10 +46,12 @@ internal static partial class SkinLayoutWindowTests
         // The flyout holds the classic set beside the mute, and no mute: the head has its own.
         ToggleButton[] switches = OpenSwitches(window, button);
         Assert.Equal(ClassicSwitches(window, "InputControls"), switches.Select(Lettering));
-        Assert.Equal([Localizer.Text("LowCut"), Localizer.Text("Expander"), Localizer.Text("VoiceTune"), Localizer.Text("Phantom"), Localizer.Text("ClipGuard"), Localizer.Text("Compressor")], switches.Select(Lettering));
+        Assert.Equal(Localizer.Language == "en"
+            ? ["Low Cut", "Expander", "Voice Tune", "Phantom", "ClipGuard", "Compressor"]
+            : new[] { Localizer.Text("LowCut"), Localizer.Text("Expander"), Localizer.Text("VoiceTune"), Localizer.Text("Phantom"), Localizer.Text("ClipGuard"), Localizer.Text("Compressor") }, switches.Select(Lettering));
         Assert.DoesNotContain(FlyoutPanel(button).GetVisualDescendants().OfType<ToggleButton>(), t => t.Classes.Contains("mute") && t.IsEffectivelyVisible);
         // Styled as the classic ones.
-        ToggleButton classic = ClassicToggle(window, "InputControls", Localizer.Text("LowCut"));
+        ToggleButton classic = ClassicToggle(window, "InputControls", Localizer.Language == "en" ? "Low Cut" : Localizer.Text("LowCut"));
         foreach (ToggleButton toggle in switches)
         {
             Assert.Equal(classic.FontSize, toggle.FontSize);
@@ -60,7 +62,7 @@ internal static partial class SkinLayoutWindowTests
         }
 
         // A toggle there is the classic button's own write; the button lights while one is on.
-        ToggleButton lowCut = switches.Single(t => Lettering(t) == Localizer.Text("LowCut"));
+        ToggleButton lowCut = switches.Single(t => Lettering(t) == (Localizer.Language == "en" ? "Low Cut" : Localizer.Text("LowCut")));
         lowCut.IsChecked = true;
         Assert.True(model.LowCut);
         Layout(window, 1040, 1400);
@@ -70,7 +72,7 @@ internal static partial class SkinLayoutWindowTests
         // Voice Tune brings its strength, bound to the same value.
         Grid strength = FlyoutPanel(button).GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "MatrixVoiceTuneStrength");
         Assert.False(strength.IsEffectivelyVisible);
-        switches.Single(t => Lettering(t) == Localizer.Text("VoiceTune")).IsChecked = true;
+        switches.Single(t => Lettering(t) == (Localizer.Language == "en" ? "Voice Tune" : Localizer.Text("VoiceTune"))).IsChecked = true;
         Assert.True(model.VoiceTune);
         Layout(window, 1040, 1400);
         Assert.True(strength.IsEffectivelyVisible);
@@ -79,7 +81,7 @@ internal static partial class SkinLayoutWindowTests
         AssertInside(strength, FlyoutPanel(button));
 
         // Phantom power: the closed button's lamp lights in the alert colour, and a screen reader hears it.
-        switches.Single(t => Lettering(t) == Localizer.Text("Phantom")).IsChecked = true;
+        switches.Single(t => Lettering(t) == (Localizer.Language == "en" ? "Phantom" : Localizer.Text("Phantom"))).IsChecked = true;
         Assert.True(model.Phantom);
         Capture(window, $"skin-{skin}-processing-open-1040", FlyoutPanel(button));
         button.Flyout!.Hide();
@@ -138,7 +140,9 @@ internal static partial class SkinLayoutWindowTests
         switches = OpenSwitches(window, button);
         Assert.Equal(ClassicSwitches(window, "InputControls").Concat(ClassicSwitches(window, "SoftwareControls", skipMute: false)),
             switches.Select(Lettering));
-        Assert.Equal([Localizer.Text("Phantom"), model.SoftLowCutText, Localizer.Text("ClipGuard")], switches.Select(Lettering));
+        Assert.Equal(Localizer.Language == "en"
+            ? ["Phantom", model.SoftLowCutText, "ClipGuard"]
+            : new[] { Localizer.Text("Phantom"), model.SoftLowCutText, Localizer.Text("ClipGuard") }, switches.Select(Lettering));
         Capture(window, $"skin-{skin}-processing-phantom-only-1040", FlyoutPanel(button));
         button.Flyout!.Hide();
         // Neither switches nor software processing: no part.
@@ -184,10 +188,10 @@ internal static partial class SkinLayoutWindowTests
         ToggleButton[] switches = OpenSwitches(window, button);
         Assert.Equal(ClassicSwitches(window, "Input2Controls"), switches.Select(Lettering));
         Assert.Equal(6, switches.Length);
-        switches.Single(t => Lettering(t) == Localizer.Text("Compressor")).IsChecked = true;
+        switches.Single(t => Lettering(t) == (Localizer.Language == "en" ? "Compressor" : Localizer.Text("Compressor"))).IsChecked = true;
         Assert.True(model.Compressor2);
         Assert.False(model.Compressor);
-        switches.Single(t => Lettering(t) == Localizer.Text("Compressor")).IsChecked = false;
+        switches.Single(t => Lettering(t) == (Localizer.Language == "en" ? "Compressor" : Localizer.Text("Compressor"))).IsChecked = false;
         Assert.False(model.Compressor2);
         button.Flyout!.Hide();
         Layout(window, 1040, 1400);
