@@ -4,7 +4,8 @@
 // call is allowed to index, so a host that hands it fewer sends it past the
 // end of the array; and the scanner and the loader have to agree about which
 // layouts can be carried, or the catalogue offers a plugin that is then
-// refused. No PipeWire and no audio device: the buffers are plain malloc.
+// refused. Teardown checks use a private event loop, without a PipeWire
+// server or an audio device.
 //
 // host.c is included under a renamed main, as tests/editor.c does, and clap.c
 // after the macro is undone, since clap_map_ports has a local called main.
@@ -242,7 +243,84 @@ static void latency_reports(void) {
   puts("PASS: CLAP latency is read at activation and reported once per change");
 }
 
+typedef struct {
+  const clap_host_t *host;
+  clap_id timer;
+  int fd;
+  bool unregister_timer, unregister_fd;
+  unsigned destroyed;
+} Teardown;
+
+static void unregister_on_destroy(const clap_plugin_t *plugin) {
+  Teardown *t = plugin->plugin_data;
+  const clap_host_timer_support_t *timers =
+      t->host->get_extension(t->host, CLAP_EXT_TIMER_SUPPORT);
+  const clap_host_posix_fd_support_t *fds =
+      t->host->get_extension(t->host, CLAP_EXT_POSIX_FD_SUPPORT);
+  if (t->unregister_timer) {
+    assert(timers->unregister_timer(t->host, t->timer));
+    assert(!timers->unregister_timer(t->host, t->timer));
+  }
+  if (t->unregister_fd) {
+    assert(fds->unregister_fd(t->host, t->fd));
+    assert(!fds->unregister_fd(t->host, t->fd));
+  }
+  ++t->destroyed;
+}
+
+static void teardown_sources(bool unregister_timer, bool unregister_fd,
+                             bool with_plugin) {
+  Host h = {.loop = pw_main_loop_new(NULL)};
+  assert(h.loop);
+  Clap *c = fresh(&h);
+  c->host = (clap_host_t){.host_data = c, .get_extension = host_get_extension};
+  Teardown t = {.host = &c->host, .unregister_timer = unregister_timer,
+                .unregister_fd = unregister_fd};
+  clap_plugin_t plugin = fake;
+  plugin.plugin_data = &t;
+  plugin.destroy = unregister_on_destroy;
+  c->plugin = with_plugin ? &plugin : NULL;
+  clap_id ids[2];
+  int timer_fds[2], pipes[2][2];
+  for (unsigned i = 0; i < 2; ++i) {
+    assert(timer_register(&c->host, 1000, &ids[i]));
+    timer_fds[i] = c->timers[ids[i] - 1].source->fd;
+    assert(pipe(pipes[i]) == 0);
+    assert(fd_register(&c->host, pipes[i][0], CLAP_POSIX_FD_READ));
+  }
+  t.timer = ids[0];
+  t.fd = pipes[0][0];
+  // One source of each kind is always left for the host to collect.
+  clap_unload(&h);
+  assert(!h.impl && t.destroyed == (with_plugin ? 1u : 0u));
+  for (unsigned i = 0; i < 2; ++i) {
+    assert(fcntl(timer_fds[i], F_GETFD) == -1 && errno == EBADF);
+    assert(fcntl(pipes[i][0], F_GETFD) >= 0);  // plugin owns the descriptor
+    assert(write(pipes[i][1], "x", 1) == 1);
+  }
+  // A removed FD watch must not dispatch into the freed plugin or its host.
+  pw_loop_enter(host_loop(&h));
+  assert(pw_loop_iterate(host_loop(&h), 0) >= 0);
+  pw_loop_leave(host_loop(&h));
+  pw_main_loop_destroy(h.loop);
+  for (unsigned i = 0; i < 2; ++i) {
+    assert(fcntl(pipes[i][0], F_GETFD) >= 0);
+    close(pipes[i][0]);
+    close(pipes[i][1]);
+  }
+}
+
+static void sources_live_through_plugin_destruction(void) {
+  pw_init(NULL, NULL);
+  for (unsigned i = 0; i < 4; ++i)
+    teardown_sources((i & 1) != 0, (i & 2) != 0, true);
+  teardown_sources(false, false, false);
+  pw_deinit();
+  puts("PASS: plugin destruction can unregister timers and FDs, and the host collects leftovers");
+}
+
 int main(void) {
+  sources_live_through_plugin_destruction();
   readonly_parameters_use_main_thread();
   latency_reports();
   Host h = {.rate = 48000, .channels = 2};

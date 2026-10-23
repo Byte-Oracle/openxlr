@@ -44,8 +44,11 @@ CLAP port layout against fake plugins that declare more buses than the
 chain uses, and that the scanner and the loader agree about which layouts
 can be carried. It also checks that a CLAP plugin's latency is read after
 activation and again only after the plugin says it changed, and that the
-host reports it once and then once per change. Neither needs PipeWire, a
-display or an installed plugin.
+host reports it once and then once per change. Teardown checks use a private
+event loop: a plugin may unregister timers and file-descriptor watches in
+its destructor, and the host collects any remaining watches afterwards
+without closing the plugin's descriptors. Neither test needs a PipeWire
+server, a display or an installed plugin.
 
 `make -C native test-lv2` loads the fixture in `tests/latency.lv2`, a stereo
 delay whose latency port follows its delay control, through lilv and the LV2
