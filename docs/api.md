@@ -1635,7 +1635,7 @@ rule that fails gives `reason`:
 |---|---|---|
 | the software mixer runs | `mixerOff` | The software mixer is off, so ducking does not run. |
 | the key carries the unit's input 1 | `keyNotSupported` | The Wave XLR Pro ducks only with XLR 1 as the key. |
-| the unit's ducking is heard on the jacks: no target mix is heard on them while the unit cannot reach them | `monitorReturn` | The Wave XLR Pro ducks inside its own mix, and OpenXLR feeds the jacks around that mix, so this computer ducks. |
+| the unit's ducking is heard on the jacks: no target mix is heard on them while the last read shows the jacks' feed outside the mix they play | `monitorReturn` | The jacks' feed is not in the Wave XLR Pro's headphone mix, where it ducks, so this computer ducks. |
 | the unit's ducking is known to reach the USB Aux port: no target mix is heard there until it is | `auxNotChecked` | Ducking on the Wave XLR Pro's USB Aux port has not been checked by ear yet, so this computer ducks. |
 | every target mix that is heard is heard only on the unit: a monitor mix in the jacks' feed, or the Aux mix on the USB Aux port, and on no other output, virtual microphone or feed | `mixElsewhere` | Monitor A also plays on Speakers, which the Wave XLR Pro cannot duck. |
 | when one mix of the jacks' feed is ducked, all of them are | `sharedOutput` | The jacks play Monitor A and Chat together, and only Monitor A is ducked. |
@@ -1644,9 +1644,11 @@ rule that fails gives `reason`:
 | the unit kept the ducking written to it (two misses fail it) | `failed` | The Wave XLR Pro did not keep the ducking written to it. Switch ducking off and on to try again. |
 | the unit answers a read of its ducking block | `unsupportedBlock` | The Wave XLR Pro did not answer a read of its ducking block. |
 
-On the Wave XLR Pro both of these fail today, so it reports the unit's
-side and runs ducking in software. The unit's ducking has not been
-verified on the jacks as the daemon writes it.
+On the Wave XLR Pro the jacks pass once a poll reads their feed in the
+mix they play, which OpenXLR sets whenever a jack is a monitor output.
+`monitorReturn` shows for the sweep before that read, or while another
+program holds the feed out of the mix. The USB Aux port fails
+`auxNotChecked` until it is checked by ear.
 A target mix no output, virtual microphone or feed hears is left out of
 these rules; a setup whose target mixes nobody hears runs on the unit with
 no pairs ducked. The unit ducks the pairs `outputs` names.

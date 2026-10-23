@@ -46,7 +46,7 @@ the commit block every selector write needs.
 | Mic and PC crossfade | verified | direct monitor inside the device |
 | Physical output routing | verified | HP1, HP2, Line Out, USB Aux; verified by listening on both jacks |
 | USB Aux input level + lock, aux return | verified | return routing latches at stream open; the daemon bounces the stream |
-| Ducking on the unit, keyed by XLR 1 | not used; [ducking](manual.md#ducking) runs in software | blocks 0x0008 and 0x0001 as Wave Link 3.5 writes them (captures of 2026-10-21). On Linux the unit takes the writes and its meters show it ducking USB pair 2/3 while XLR 1 is loud, but the jacks do not dip. A desk probe (2026-10-23) found why: the unit ducks a pair only when its field reads `11`, and the daemon sets the high bit alone, which on this unit writes `10`. With `11` the jacks dipped by the set depth. The USB Aux port was not listened to. Software ducking was checked by ear |
+| Ducking on the unit, keyed by XLR 1 | coded | blocks 0x0008 and 0x0001 as Wave Link 3.5 writes them (captures of 2026-10-21). A desk probe (2026-10-23) found that the unit ducks a pair only when both bits of its field are set; with both set the jacks dipped by the configured depth, on the feed OpenXLR uses, with a test tone as the key. The daemon now writes both bits, and on the desk (2026-10-23) a voice on XLR 1 ducked the music on Headphones 1 at each amount and speed, with no dropout when switching ducking or its side. XLR 2 does not trigger it, and a muted XLR 1 still does. The USB Aux port's mix ducked on its USB stream and was not listened to, so it stays in software |
 | Reset to OpenXLR's baseline | verified | the device keeps its settings, so the reset writes a known set (gain 30 dB, everything off, levels at half, crossfade on PC) instead of recorded firmware defaults |
 | Microphone EQ on the unit, firmware 1.0.14 or later | coded | both inputs, captured from Wave Link 3.5 on firmware 1.0.14; the encoder reproduces the captured writes byte for byte. Measured once on the desk: a +12 dB bell at 5 kHz written from OpenXLR read +12.3 to +12.7 dB on the raw USB capture, and software mode left the capture flat. The other filter types, the zero-latency headphone path and survival across a power cycle are not checked. On older firmware, or when the version or the EQ fields cannot be read, both inputs' EQ runs in software |
 
@@ -90,12 +90,13 @@ whose high bit Wave Link sets on a ducked pair. With XLR 1 loud the unit
 lowered the ducked pairs by the configured depth with no host write. The
 daemon can write the same bytes, without the commit block, on the two pairs
 OpenXLR streams to: 2/3 for the jacks and Line Out, 10/11 for the USB Aux
-port. On the desk the unit took them and its meters showed pair 2/3 lowered
-while XLR 1 was loud, but the headphones did not dip. A probe on the desk
-found why: the unit ducks a pair only when both bits of its field are set,
-and the daemon sets the high bit alone. With both bits set, the jacks
-dipped by the configured depth on the path OpenXLR feeds them through. So
-for now the daemon keeps the unit's ducking off and the computer runs it. The captures never show how the key is encoded, so the unit
+port. A first desk test saw the unit's meters lower pair 2/3 while XLR 1
+was loud and the headphones stay level: the daemon set the high bit of
+each field alone, and the unit ducks a pair only when both bits are set.
+With both bits set the jacks dipped by the configured depth on the path
+OpenXLR feeds them through, so the daemon writes both and the unit runs
+ducking on the jacks when the setup fits. The USB Aux port stays in
+software until it is checked by ear. The captures never show how the key is encoded, so the unit
 would run only a setup keyed by XLR 1. Details are in the
 [protocol notes](wave-xlr-pro-protocol.md#11-ducking-captures-of-2026-10-21),
 and the probe in

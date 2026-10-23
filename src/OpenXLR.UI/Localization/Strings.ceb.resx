@@ -2766,7 +2766,7 @@ Kamot gihapon nga host setup ang Wave XLR Pro UCM profile. I-install ang mga LV2
     <value>Paspas</value>
   </data>
   <data name="DuckingHint" xml:space="preserve">
-    <value>Pahinayon sa ducking ang gipiling mga channel sa gipiling mga mix samtang kusog ang key microphone. Niining computer kini nagdagan alang sa tanang device, apil ang Wave XLR Pro: sa kaugalingong mix niini mag-duck ang Pro, nga wala pa agi-i sa mga jack.</value>
+    <value>Pahinayon sa ducking ang gipiling mga channel sa gipiling mga mix samtang kusog ang key microphone. Niining computer kini nagdagan, o sa kaugalingong processor sa Wave XLR Pro kung mohaum ang setup sa mahimo sa unit.</value>
   </data>
   <data name="DuckingNotHeld" xml:space="preserve">
     <value>Wala pa tipigi sa unit kining setting; isulat kini pag-usab sa OpenXLR sulod sa pipila ka segundo.</value>
