@@ -1,10 +1,21 @@
 import { siteOf } from './routing.mjs';
+import { localized, t, translatePage } from './text.mjs';
 
+translatePage(document);
 const $ = id => document.getElementById(id);
 let tab;
 let shown = '';
 let disposed = false;
 let operationError = '';
+// Chrome shows output devices only after a microphone grant; the devices page asks for it.
+let access = 'granted';
+const watchAccess = async () => {
+  try {
+    const status = await navigator.permissions.query({ name: 'microphone' });
+    access = status.state;
+    status.addEventListener('change', () => { access = status.state; });
+  } catch { access = 'granted'; }
+};
 const send = async message => {
   const result = await chrome.runtime.sendMessage({ ...message, target: 'worker' });
   if (result?.error) throw new Error(result.error);
@@ -14,7 +25,7 @@ const act = operation => {
   operationError = '';
   void operation().catch(error => {
     operationError = error.message;
-    $('error').textContent = operationError;
+    $('error').textContent = localized(operationError);
   });
 };
 
@@ -22,14 +33,15 @@ async function refresh() {
   const snapshot = await send({ type: 'snapshot' });
   const state = snapshot?.state;
   const selected = state?.tabs.find(item => item.id === tab?.id);
-  $('error').textContent = operationError || snapshot?.error || selected?.error || '';
-  $('status').textContent = !state ? 'OpenXLR is not connected.'
-    : !selected ? 'This tab is not available for routing.'
-    : selected.capturing ? 'Tab audio is routed through OpenXLR.' : 'Choose a channel, then activate this tab.';
+  $('error').textContent = localized(operationError || snapshot?.error || selected?.error || '');
+  $('status').textContent = !state ? t('statusDisconnected')
+    : !selected ? t('statusUnavailable')
+    : selected.capturing ? t('statusRouted') : t('statusChoose');
   $('enable').hidden = !state || state.preserveBrowserOutputs;
   const starting = snapshot?.startingTabs?.includes(tab?.id);
   const assigning = snapshot?.pendingTabs?.includes(tab?.id);
-  $('start').disabled = !state?.preserveBrowserOutputs || !selected?.channelId || selected.capturing || starting || assigning;
+  $('access').hidden = access === 'granted';
+  $('start').disabled = access !== 'granted' || !state?.preserveBrowserOutputs || !selected?.channelId || selected.capturing || starting || assigning;
   $('stop').disabled = !selected?.capturing && !starting;
   $('channel').disabled = !selected;
   $('remember').disabled = !selected;
@@ -37,7 +49,7 @@ async function refresh() {
   const encoded = JSON.stringify([state?.channels, selected?.channelId, selected?.remember]);
   if (encoded !== shown) {
     shown = encoded;
-    const choices = [new Option('Browser default', ''), ...(state?.channels ?? []).map(channel => new Option(channel.name, channel.id))];
+    const choices = [new Option(t('channelDefault'), ''), ...(state?.channels ?? []).map(channel => new Option(channel.name, channel.id))];
     $('channel').replaceChildren(...choices);
     $('channel').value = selected?.channelId ?? '';
     $('remember').checked = selected?.remember !== false;
@@ -52,14 +64,17 @@ $('start').addEventListener('click', () => act(() => send({ type: 'start', id: t
 $('stop').addEventListener('click', () => act(() => send({ type: 'stop', id: tab.id })));
 $('retry').addEventListener('click', () => act(() => send({ type: 'retry' })));
 $('forget').addEventListener('click', () => act(() => send({ type: 'assign', id: tab.id, site: siteOf(tab.url), channel: null, remember: true })));
-$('devices').addEventListener('click', () => { void chrome.tabs.create({ url: chrome.runtime.getURL('devices.html') }); });
+const openDevices = () => { void chrome.tabs.create({ url: chrome.runtime.getURL('devices.html') }); };
+$('devices').addEventListener('click', openDevices);
+$('grant').addEventListener('click', openDevices);
 
 window.addEventListener('pagehide', () => { disposed = true; });
 void (async () => {
+  await watchAccess();
   [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  $('title').textContent = tab?.title || 'Current tab';
+  $('title').textContent = tab?.title || t('currentTab');
   while (!disposed) {
-    try { await refresh(); } catch (error) { $('error').textContent = error.message; }
+    try { await refresh(); } catch (error) { $('error').textContent = localized(error.message); }
     await new Promise(resolve => setTimeout(resolve, 350));
   }
 })();

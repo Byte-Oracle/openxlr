@@ -3,9 +3,10 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import test from 'node:test';
 import { HOST, MAX_TABS, deviceFor, errorText, siteOf, tabRecords } from '../chromium/routing.mjs';
+import { t } from '../chromium/text.mjs';
 
 const workerSource = (await readFile(new URL('../chromium/worker.mjs', import.meta.url), 'utf8'))
-  .replace(/^import[^\n]+\n/, '');
+  .replace(/^import[^\n]+\n/gm, '');
 const deferred = () => {
   let resolve, reject;
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
@@ -71,6 +72,7 @@ function fixture({ existing = [], recovery } = {}) {
         }
       } },
     tabs: { onCreated: event(), onUpdated: event(), onRemoved: event(),
+      async create(options) { (f.opened ??= []).push(options.url); },
       async query(query) { return query.active ? f.tabs.filter(tab => tab.active) : [...f.tabs]; } },
     offscreen: { async hasDocument() { return f.document; },
       async createDocument() { f.document = true; f.created = (f.created ?? 0) + 1; },
@@ -93,7 +95,7 @@ function fixture({ existing = [], recovery } = {}) {
     chrome.tabs.onUpdated.emit(id, { url: nextUrl }, tab);
   };
   let timer = 0;
-  vm.runInNewContext(workerSource, { chrome, HOST, MAX_TABS, deviceFor, errorText, siteOf, tabRecords,
+  vm.runInNewContext(workerSource, { chrome, HOST, MAX_TABS, deviceFor, errorText, siteOf, tabRecords, t,
     setTimeout(callback, delay) { f.timers.set(++timer, callback); f.timerDelays.set(timer, delay); return timer; },
     clearTimeout(id) { f.timers.delete(id); f.timerDelays.delete(id); } }, { filename: 'worker.mjs' });
   return f;
@@ -440,4 +442,12 @@ test('only the offscreen document can report capture state', { timeout: 2000 }, 
   assert.deepEqual(result, [undefined]);
   const timer = [...f.timers.values()].at(-1); if (timer) await timer();
   assert.equal(f.posts.at(-1).tabs.find(tab => tab.id === 1).capturing, false);
+});
+
+test('a fresh install opens the output access page and an update does not', { timeout: 2000 }, async () => {
+  const f = fixture(); await f.ready;
+  f.chrome.runtime.onInstalled.emit({ reason: 'update' }); await tick();
+  assert.equal(f.opened, undefined);
+  f.chrome.runtime.onInstalled.emit({ reason: 'install' }); await tick();
+  assert.deepEqual(f.opened, ['chrome-extension://openxlr-test/devices.html']);
 });

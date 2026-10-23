@@ -1,0 +1,161 @@
+{
+  "extensionName": {
+    "message": "OpenXLR-Browser-Zuordnung"
+  },
+  "extensionDescription": {
+    "message": "Für jeden Browser-Tab einen OpenXLR-Kanal wählen. Erfordert die installierte OpenXLR-Anwendung."
+  },
+  "actionTitle": {
+    "message": "Diesen Tab mit OpenXLR zuordnen"
+  },
+  "commandOpen": {
+    "message": "Kanalauswahl für diesen Tab öffnen"
+  },
+  "popupTitle": {
+    "message": "OpenXLR-Tab-Zuordnung"
+  },
+  "popupConnecting": {
+    "message": "Verbindung zu OpenXLR wird hergestellt…"
+  },
+  "popupChannel": {
+    "message": "Kanal"
+  },
+  "popupRemember": {
+    "message": "Für diese Website merken"
+  },
+  "popupEnable": {
+    "message": "Den Browser seine Ausgaben wählen lassen"
+  },
+  "popupStart": {
+    "message": "Diesen Tab aktivieren"
+  },
+  "popupStop": {
+    "message": "Zuordnung beenden"
+  },
+  "popupDevices": {
+    "message": "Zugriff auf Ausgaben"
+  },
+  "popupRetry": {
+    "message": "Neu verbinden"
+  },
+  "popupForget": {
+    "message": "Website-Standard vergessen"
+  },
+  "popupAccessNeeded": {
+    "message": "Den Zugriff auf Ausgaben einmal für dieses Browserprofil erlauben. Bis dahin blendet Chrome die OpenXLR-Ausgaben aus und kein Tab kann zugeordnet werden."
+  },
+  "popupAccessGrant": {
+    "message": "Zugriff auf Ausgaben erlauben"
+  },
+  "popupHelp": {
+    "message": "Kanäle hier oder in OpenXLR wählen. Jeden Tab zuerst im Browser aktivieren. Nach dem Beenden spielt der Browser wieder normal ab."
+  },
+  "statusDisconnected": {
+    "message": "OpenXLR ist nicht verbunden."
+  },
+  "statusUnavailable": {
+    "message": "Dieser Tab kann nicht zugeordnet werden."
+  },
+  "statusRouted": {
+    "message": "Das Audio des Tabs läuft über OpenXLR."
+  },
+  "statusChoose": {
+    "message": "Einen Kanal wählen und dann diesen Tab aktivieren."
+  },
+  "channelDefault": {
+    "message": "Browser-Standard"
+  },
+  "currentTab": {
+    "message": "Aktueller Tab"
+  },
+  "devicesTitle": {
+    "message": "OpenXLR-Zugriff auf Ausgaben"
+  },
+  "devicesHeading": {
+    "message": "Erkennung von Ausgabegeräten erlauben"
+  },
+  "devicesExplain": {
+    "message": "Chrome zeigt andere Ausgabegeräte als das Standardgerät erst nach einer Mikrofonberechtigung an. Diese Seite öffnet das Mikrofon nur, um diese Berechtigung zu erhalten, und schließt es sofort wieder. Es wird kein Mikrofonton aufgenommen, an OpenXLR gesendet oder weitergeleitet."
+  },
+  "devicesAllow": {
+    "message": "Geräteerkennung erlauben"
+  },
+  "devicesNote": {
+    "message": "OpenXLR-Kanalnamen eindeutig halten, damit die Erweiterung die passenden Ausgaben findet. Berechtigung und Ausgabekennungen gehören zu diesem Browserprofil."
+  },
+  "devicesFound": {
+    "message": "Gefundene OpenXLR-Ausgaben: $1. Zum Tab mit dem Audio zurückkehren und die Zuordnung aktivieren."
+  },
+  "devicesNone": {
+    "message": "Der Zugriff wurde erteilt, aber es wurden keine OpenXLR-Ausgaben gefunden. Prüfen, ob der Daemon läuft."
+  },
+  "devicesDenied": {
+    "message": "Der Zugriff auf Ausgaben wurde nicht erteilt. Das Tab-Audio wurde nicht verändert. Ein neuer Versuch ist jederzeit möglich."
+  },
+  "assignmentPending": {
+    "message": "Warten, bis OpenXLR den Kanal dieses Tabs bestätigt."
+  },
+  "assignmentTimeout": {
+    "message": "OpenXLR hat die Tab-Zuordnung nicht rechtzeitig bestätigt. Den Kanal erneut wählen."
+  },
+  "bridgeUnavailable": {
+    "message": "Die OpenXLR-Browserintegration ist nicht verfügbar. Die Einrichtung des Native Hosts prüfen."
+  },
+  "bridgeDisconnected": {
+    "message": "Die OpenXLR-Browserintegration wurde getrennt."
+  },
+  "tabUnregistered": {
+    "message": "Dieser Tab ist bei OpenXLR nicht mehr registriert."
+  },
+  "siteChanged": {
+    "message": "Die Website dieses Tabs hat sich geändert. Die Kanalauswahl vor dem Zuordnen erneut öffnen."
+  },
+  "channelUnavailable": {
+    "message": "Dieser OpenXLR-Kanal ist nicht verfügbar."
+  },
+  "tooManyAssignments": {
+    "message": "Zu viele Browser-Zuordnungen warten auf OpenXLR. Erneut versuchen, sobald eine davon abgeschlossen ist."
+  },
+  "activateFromTab": {
+    "message": "Die Zuordnung in dem Tab aktivieren, der gehört werden soll."
+  },
+  "enableOutputsFirst": {
+    "message": "Zuerst die Auswahl der Browser-Ausgaben in OpenXLR aktivieren."
+  },
+  "chooseChannelFirst": {
+    "message": "Zuerst einen OpenXLR-Kanal wählen und warten, bis die Zuordnung erscheint."
+  },
+  "alreadyStarting": {
+    "message": "Die Zuordnung für diesen Tab startet bereits."
+  },
+  "changedWhileStarting": {
+    "message": "Tab oder Kanal haben sich beim Start der Zuordnung geändert. Den Tab erneut aktivieren."
+  },
+  "outputAmbiguous": {
+    "message": "Mehrere Ausgaben tragen diesen Namen. Dem OpenXLR-Kanal einen eindeutigen Namen geben."
+  },
+  "outputUnavailable": {
+    "message": "Diese OpenXLR-Ausgabe ist nicht verfügbar. Den Zugriff auf Ausgaben und den Kanal in OpenXLR prüfen."
+  },
+  "routingFailed": {
+    "message": "Die Zuordnung des Browser-Audios ist fehlgeschlagen."
+  },
+  "tooManyCaptures": {
+    "message": "Höchstens $1 Tabs können gleichzeitig zugeordnet werden."
+  },
+  "noSinkSelection": {
+    "message": "Dieser Browser kann keine Web-Audio-Ausgabe wählen."
+  },
+  "startTimeout": {
+    "message": "Der Browser hat das Tab-Audio nicht rechtzeitig gestartet. Diesen Tab erneut aktivieren."
+  },
+  "noAudioTrack": {
+    "message": "Der Tab hat keine Audiospur geliefert."
+  },
+  "routingEnded": {
+    "message": "Der Browser hat die Zuordnung des Tab-Audios beendet."
+  },
+  "outputGone": {
+    "message": "Die gewählte OpenXLR-Ausgabe ist verschwunden. Der Tab spielt wieder normal ab."
+  }
+}

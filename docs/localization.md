@@ -71,6 +71,16 @@ Routing hints keep the mixer's default channel and mix names, such as
 A translation that has the old wording of a changed entry still shows it,
 so a change of meaning gets a new key.
 
+## The browser companion
+
+The browser companion in `browser/chromium` has its own catalogue in Chrome's
+format: `_locales/<locale>/messages.json`, one folder per language. The
+English text also lives in `browser/chromium/text.mjs`, which answers where
+Chrome's lookup is missing, and `browser/tests/text.test.mjs` keeps the two
+equal and every language complete. Chrome's locale names differ from the
+UI's: Tagalog is `fil` and Serbian is `sr`, which Chrome shows in Cyrillic.
+Chrome has no Cebuano. Keep each `$1` as written.
+
 ## Adding a language
 
 1. Copy `src/OpenXLR.UI/Localization/Strings.resx` to

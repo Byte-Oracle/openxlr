@@ -1,0 +1,161 @@
+{
+  "extensionName": {
+    "message": "OpenXLR browser routing"
+  },
+  "extensionDescription": {
+    "message": "Choose an OpenXLR channel for each browser tab. Requires the OpenXLR native application."
+  },
+  "actionTitle": {
+    "message": "Route this tab with OpenXLR"
+  },
+  "commandOpen": {
+    "message": "Open the channel picker for this tab"
+  },
+  "popupTitle": {
+    "message": "OpenXLR tab routing"
+  },
+  "popupConnecting": {
+    "message": "Connecting to OpenXLR…"
+  },
+  "popupChannel": {
+    "message": "Channel"
+  },
+  "popupRemember": {
+    "message": "Remember for this website"
+  },
+  "popupEnable": {
+    "message": "Let the browser choose its outputs"
+  },
+  "popupStart": {
+    "message": "Activate this tab"
+  },
+  "popupStop": {
+    "message": "Stop routing"
+  },
+  "popupDevices": {
+    "message": "Output access"
+  },
+  "popupRetry": {
+    "message": "Reconnect"
+  },
+  "popupForget": {
+    "message": "Forget website default"
+  },
+  "popupAccessNeeded": {
+    "message": "Allow output access once for this browser profile. Until then Chrome hides the OpenXLR outputs and no tab can be routed."
+  },
+  "popupAccessGrant": {
+    "message": "Allow output access"
+  },
+  "popupHelp": {
+    "message": "Choose channels here or in OpenXLR. Activate each tab in the browser first. Stopping restores normal browser playback."
+  },
+  "statusDisconnected": {
+    "message": "OpenXLR is not connected."
+  },
+  "statusUnavailable": {
+    "message": "This tab is not available for routing."
+  },
+  "statusRouted": {
+    "message": "Tab audio is routed through OpenXLR."
+  },
+  "statusChoose": {
+    "message": "Choose a channel, then activate this tab."
+  },
+  "channelDefault": {
+    "message": "Browser default"
+  },
+  "currentTab": {
+    "message": "Current tab"
+  },
+  "devicesTitle": {
+    "message": "OpenXLR output access"
+  },
+  "devicesHeading": {
+    "message": "Allow output device discovery"
+  },
+  "devicesExplain": {
+    "message": "Chrome requires microphone permission before it reveals nondefault output devices. This page opens the microphone only to obtain that permission and immediately stops it. No microphone audio is recorded, sent to OpenXLR or routed."
+  },
+  "devicesAllow": {
+    "message": "Allow device discovery"
+  },
+  "devicesNote": {
+    "message": "Keep OpenXLR channel names unique so the extension can find the matching outputs. Permission and output identifiers belong to this browser profile."
+  },
+  "devicesFound": {
+    "message": "Found $1 OpenXLR outputs. Return to your audio tab and activate routing."
+  },
+  "devicesNone": {
+    "message": "Access was granted, but no OpenXLR outputs were found. Check that the daemon is running."
+  },
+  "devicesDenied": {
+    "message": "Output access was not granted. Tab audio has not been changed. You can retry when ready."
+  },
+  "assignmentPending": {
+    "message": "Waiting for OpenXLR to confirm this tab's channel assignment."
+  },
+  "assignmentTimeout": {
+    "message": "OpenXLR did not confirm the tab assignment in time. Choose the channel again."
+  },
+  "bridgeUnavailable": {
+    "message": "OpenXLR browser integration is unavailable. Check the native host setup."
+  },
+  "bridgeDisconnected": {
+    "message": "OpenXLR browser integration disconnected."
+  },
+  "tabUnregistered": {
+    "message": "This tab is no longer registered with OpenXLR."
+  },
+  "siteChanged": {
+    "message": "This tab's website changed. Reopen the channel picker before assigning it."
+  },
+  "channelUnavailable": {
+    "message": "This OpenXLR channel is unavailable."
+  },
+  "tooManyAssignments": {
+    "message": "Too many browser assignments are waiting for OpenXLR. Try again after a pending assignment finishes."
+  },
+  "activateFromTab": {
+    "message": "Activate routing from the tab you want to listen to."
+  },
+  "enableOutputsFirst": {
+    "message": "Enable browser output selection in OpenXLR first."
+  },
+  "chooseChannelFirst": {
+    "message": "Choose an OpenXLR channel and wait for the assignment to appear first."
+  },
+  "alreadyStarting": {
+    "message": "Routing is already starting for this tab."
+  },
+  "changedWhileStarting": {
+    "message": "The tab or channel changed while routing was starting. Activate the tab again."
+  },
+  "outputAmbiguous": {
+    "message": "Several outputs have this name. Give the OpenXLR channel a unique name."
+  },
+  "outputUnavailable": {
+    "message": "This OpenXLR output is unavailable. Check output access and the channel in OpenXLR."
+  },
+  "routingFailed": {
+    "message": "Browser audio routing failed."
+  },
+  "tooManyCaptures": {
+    "message": "At most $1 tabs can be routed at once."
+  },
+  "noSinkSelection": {
+    "message": "This browser cannot select a Web Audio output."
+  },
+  "startTimeout": {
+    "message": "The browser did not start tab audio in time. Try activating this tab again."
+  },
+  "noAudioTrack": {
+    "message": "The tab supplied no audio track."
+  },
+  "routingEnded": {
+    "message": "The browser ended tab audio routing."
+  },
+  "outputGone": {
+    "message": "The selected OpenXLR output disappeared. Normal tab playback has resumed."
+  }
+}

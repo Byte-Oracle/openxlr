@@ -1,3 +1,5 @@
+import { t } from './text.mjs';
+
 export const HOST = 'com.emaspa.openxlr.browser';
 export const MAX_TABS = 128;
 export const MAX_CAPTURES = 8;
@@ -35,13 +37,13 @@ export function deviceFor(channel, devices, bindings = {}) {
   if (bound) return bound.deviceId;
   const matches = outputs.filter(device => device.label === channel.label);
   if (matches.length !== 1)
-    throw new Error(matches.length ? 'Several outputs have this name. Give the OpenXLR channel a unique name.'
-      : 'This OpenXLR output is unavailable. Check output access and the channel in OpenXLR.');
+    throw new Error(matches.length ? t('outputAmbiguous')
+      : t('outputUnavailable'));
   return matches[0].deviceId;
 }
 
 export function errorText(error) {
-  return boundedText(error?.message || error || 'Browser audio routing failed.', 200);
+  return boundedText(error?.message || error || t('routingFailed'), 200);
 }
 
 /** Native Web Audio does the playback. No audio samples enter JavaScript. */
@@ -56,7 +58,7 @@ export class TabAudio {
 
   async start(id, streamId, deviceId) {
     const previous = this.sessions.get(id);
-    if (!previous && this.sessions.size >= MAX_CAPTURES) throw new Error(`At most ${MAX_CAPTURES} tabs can be routed at once.`);
+    if (!previous && this.sessions.size >= MAX_CAPTURES) throw new Error(t('tooManyCaptures', MAX_CAPTURES));
     const session = { id, context: null, stream: null, source: null, closed: false, capturing: false, deviceId };
     this.sessions.set(id, session);
     let timer;
@@ -64,7 +66,7 @@ export class TabAudio {
       if (previous) await this.close(previous);
       if (session.closed || this.sessions.get(id) !== session) return;
       session.context = this.createContext();
-      if (typeof session.context.setSinkId !== 'function') throw new Error('This browser cannot select a Web Audio output.');
+      if (typeof session.context.setSinkId !== 'function') throw new Error(t('noSinkSelection'));
       await session.context.setSinkId(deviceId);
       if (session.closed) return;
       const acquisition = this.mediaDevices.getUserMedia({
@@ -73,15 +75,15 @@ export class TabAudio {
       // getUserMedia cannot be cancelled. A late result must release its tracks.
       acquisition.then(stream => { if (session.closed) stream.getTracks().forEach(track => track.stop()); }, () => {});
       session.stream = await Promise.race([acquisition, new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error('The browser did not start tab audio in time. Try activating this tab again.')), this.timeoutMs);
+        timer = setTimeout(() => reject(new Error(t('startTimeout'))), this.timeoutMs);
       })]);
       if (session.closed) { session.stream.getTracks().forEach(track => track.stop()); return; }
-      if (!session.stream.getAudioTracks().length) throw new Error('The tab supplied no audio track.');
+      if (!session.stream.getAudioTracks().length) throw new Error(t('noAudioTrack'));
       for (const track of session.stream.getTracks()) track.addEventListener('ended', () => {
-        if (this.sessions.get(id) === session) void this.stop(id, 'The browser ended tab audio routing.');
+        if (this.sessions.get(id) === session) void this.stop(id, t('routingEnded'));
       }, { once: true });
       if (session.stream.getAudioTracks().some(track => track.readyState === 'ended'))
-        throw new Error('The browser ended tab audio routing.');
+        throw new Error(t('routingEnded'));
       session.source = session.context.createMediaStreamSource(session.stream);
       session.source.connect(session.context.destination);
       await session.context.resume();
@@ -137,6 +139,6 @@ export class TabAudio {
     const present = new Set((await this.mediaDevices.enumerateDevices()).filter(device => device.kind === 'audiooutput').map(device => device.deviceId));
     for (const { id, session, deviceId } of checking)
       if (this.sessions.get(id) === session && session.deviceId === deviceId && !present.has(deviceId))
-        await this.stop(id, 'The selected OpenXLR output disappeared. Normal tab playback has resumed.');
+        await this.stop(id, t('outputGone'));
   }
 }

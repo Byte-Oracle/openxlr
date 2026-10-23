@@ -108,6 +108,8 @@ jobs:
           for file in browser/chromium/*.mjs; do node --check "$file"; done
           node --test browser/tests/*.test.mjs
           node --check browser/tests/chromium-integration.mjs
+          python3 -I tools/browser-extension.py --check
+          python3 tools/test-browser-extension.py
 
       - name: Validate the Omarchy bar plugin
         run: |

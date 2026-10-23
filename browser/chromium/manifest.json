@@ -1,9 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "OpenXLR browser routing",
-  "version": "0.1.0",
-  "description": "Choose an OpenXLR channel for each browser tab. Requires the OpenXLR native application.",
+  "name": "__MSG_extensionName__",
+  "version": "0.2.0",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
   "minimum_chrome_version": "116",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwZw7V4f1R/sbm1WZIizNbEbzraNsqmYp9kHe5DfFHW82U6GGV/lxUsNF+j8IiOtv2rK7an0Gqa71bZUpGXcXRO5xThlrHQqUF3ELs1mLreNH8Ytl2ojjCeF9/v0zbKgmw5HZUq2DYr5y1na1WTfPTTLrcZDVugXKReCI3HMRBAion/B/n/lsywBIRXYfGWfZVyaHBiCt4kQ+I+eP6jbrQauolHGi+UcxOQfrgiigXsBM+/BzID8e42qlcHFKWPBbg+1m5C/iTKk+2nNZdWoe50h8pSqdutdkGVTDHIA6es99pUBQpaf4d/ZgVtxe0kHAf62Sx3fz74nfa4VRFY4qswIDAQAB",
   "permissions": [
     "activeTab",
@@ -20,14 +27,20 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Route this tab with OpenXLR"
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "__MSG_actionTitle__"
   },
   "commands": {
     "_execute_action": {
       "suggested_key": {
         "default": "Ctrl+Shift+9"
       },
-      "description": "Open the channel picker for this tab"
+      "description": "__MSG_commandOpen__"
     }
   }
 }
