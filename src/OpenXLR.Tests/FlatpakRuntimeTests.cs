@@ -47,6 +47,23 @@ public sealed class FlatpakRuntimeTests
     }
 
     [Fact]
+    public void FlatpakClosesToTheTrayUntilTheUserChoosesOtherwise()
+    {
+        string? previous = Environment.GetEnvironmentVariable("FLATPAK_ID");
+        try
+        {
+            Environment.SetEnvironmentVariable("FLATPAK_ID", null);
+            Assert.False(new OpenXLR.UI.UiSettings().MinimizeToTray);
+            // The Flatpak UI owns its daemon, so a plain close would stop audio.
+            Environment.SetEnvironmentVariable("FLATPAK_ID", OpenXLR.UI.FlatpakEnvironment.AppId);
+            Assert.True(new OpenXLR.UI.UiSettings().MinimizeToTray);
+            Assert.True(System.Text.Json.JsonSerializer.Deserialize<OpenXLR.UI.UiSettings>("{}")!.MinimizeToTray);
+            Assert.False(System.Text.Json.JsonSerializer.Deserialize<OpenXLR.UI.UiSettings>("{\"MinimizeToTray\":false}")!.MinimizeToTray);
+        }
+        finally { Environment.SetEnvironmentVariable("FLATPAK_ID", previous); }
+    }
+
+    [Fact]
     public void SessionRulesKeepExistingUserFiles()
     {
         string root = Path.Combine(Path.GetTempPath(), "openxlr-rules-" + Guid.NewGuid());
@@ -64,6 +81,30 @@ public sealed class FlatpakRuntimeTests
             File.Delete(target); File.CreateSymbolicLink(target, Path.Combine(source, OpenXLR.UI.FlatpakSetup.Rules[0]));
             Assert.Throws<IOException>(() => OpenXLR.UI.FlatpakSetup.InstallRules(source, config));
             Assert.Equal("rule", File.ReadAllText(target));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+    public void SessionRulesAreReadableAndLeaveTheDirectoryMode()
+    {
+        string root = Directory.CreateTempSubdirectory("openxlr-rule-modes-").FullName;
+        string source = Directory.CreateDirectory(Path.Combine(root, "source")).FullName;
+        string directory = Path.Combine(root, "config", "wireplumber", "wireplumber.conf.d");
+        const UnixFileMode Shared = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+            | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
+        try
+        {
+            foreach (string rule in OpenXLR.UI.FlatpakSetup.Rules) File.WriteAllText(Path.Combine(source, rule), "rule");
+            Directory.CreateDirectory(directory, Shared);
+            File.SetUnixFileMode(directory, Shared);
+            OpenXLR.UI.FlatpakSetup.InstallRules(source, Path.Combine(root, "config"));
+            Assert.Equal(Shared, File.GetUnixFileMode(directory));
+            foreach (string rule in OpenXLR.UI.FlatpakSetup.Rules)
+                Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead,
+                    File.GetUnixFileMode(Path.Combine(directory, rule)));
+            Assert.Equal(OpenXLR.UI.FlatpakSetup.Rules.Order(), Directory.EnumerateFileSystemEntries(directory).Select(Path.GetFileName).Order());
         }
         finally { Directory.Delete(root, true); }
     }

@@ -2,7 +2,9 @@
 
 Flatpak support is experimental. Distro packages remain the recommended
 installation. The Flatpak UI owns its daemon: closing to the tray keeps
-audio running; Quit stops both. Stop the packaged daemon before launching
+audio running; Quit stops both. For that reason the close button keeps
+the Flatpak in the tray unless "When closing" in Options says "Quit app".
+Stop the packaged daemon before launching
 the Flatpak, since they use the same control port. Disable the native
 installation's login options before enabling Flatpak login startup.
 
@@ -32,8 +34,11 @@ Tray hosts can request the complete menu with an empty item list.
 
 ## Host setup
 
-On first opening the mixer, the four WirePlumber rules are installed in
-the host user's `~/.config/wireplumber/wireplumber.conf.d`. Identical files
+The first launch explains this setup and offers Set up. Set up installs
+the four WirePlumber rules in the host user's
+`~/.config/wireplumber/wireplumber.conf.d`, readable like the packaged
+copies, and leaves that directory's permissions as they were. Cancel
+writes nothing and asks again at the next launch. Identical files
 are kept. Different files and symbolic links are reported and never
 overwritten. Configuration directory links are refused too. These include the capture-hold rule that prevents a silent
 Wave:3 microphone after playback starts. The rules take effect at the next login. For a custom host
@@ -55,6 +60,26 @@ grant unlimited memory locking. Large layouts and bridged Windows plugins
 remain better suited to distro packages. Removing the app leaves manually
 installed host files in place. Remove only the exact files you installed,
 after checking they have not been modified.
+
+## SteamOS
+
+The Flatpak runs in SteamOS Desktop Mode. It was checked on SteamOS 3.8
+with an XLR Dock MK.2: the device connects, the mixer graph builds, the
+monitor mix reaches the Dock's output, and USB controls answer with the
+udev rule in `/etc/udev/rules.d`, which SteamOS keeps across updates.
+Closing to the tray, Quit from the tray menu and Start audio in the
+background were checked too, the last across a reboot.
+
+SteamOS puts a loopback in front of each hardware output and shows
+PulseAudio clients only the loopback. OpenXLR lists the loopback under the
+device's name, and that is the one to pick as a monitor output.
+
+Game Mode does not run desktop autostart entries, so the login options
+start OpenXLR only in Desktop Mode, and switching to Game Mode ends the
+Desktop Mode session with the mixer in it. In Game Mode the interface
+works as a plain USB audio device. A distro package's daemon runs as a
+systemd user service, which runs in both modes, but there is no OpenXLR
+package for SteamOS.
 
 ## Plugins
 

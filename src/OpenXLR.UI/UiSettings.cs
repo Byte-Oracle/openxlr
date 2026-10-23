@@ -18,7 +18,8 @@ public sealed record UiSettings
 {
     public bool StartDaemonAtLogin { get; init; }
     public bool OpenWindowAtLogin { get; init; }
-    public bool MinimizeToTray { get; init; }
+    /// <summary>On by default in the Flatpak, whose UI owns the daemon: closing it would stop audio.</summary>
+    public bool MinimizeToTray { get; init; } = FlatpakEnvironment.IsFlatpak;
     public bool StartMinimized { get; init; }
     /// <summary>Opt-in only. False means the UI performs no startup network request.</summary>
     public bool CheckForUpdates { get; init; }

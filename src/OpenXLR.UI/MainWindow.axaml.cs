@@ -39,7 +39,8 @@ public partial class MainWindow : Window
         _client = client;
         InitializeComponent();
         _vm = new MainViewModel(_client);
-        if (syncDesktopVolume && PlasmaVolumeRange.IsPlasma)
+        // The sandbox has no KDE helpers to read or write Plasma's preference.
+        if (syncDesktopVolume && PlasmaVolumeRange.IsPlasma && !FlatpakEnvironment.IsFlatpak)
         {
             _volumeRange = new PlasmaVolumeRange(_vm.ApplyDesktopVolumeBoost,
                 error => _vm.VolumeRangeError = error, action => Dispatcher.UIThread.Post(action));
@@ -63,20 +64,33 @@ public partial class MainWindow : Window
             _automaticUpdateCheckStarted = true;
             if (FlatpakEnvironment.IsFlatpak && !System.IO.File.Exists(OpenXlrPaths.ConfigFile("flatpak-notice")))
             {
-                string setupError = FlatpakSetup.Prepare();
-                string setup = Localizer.Text("FlatpakSetup") + setupError;
-                if (await Dialogs.ConfirmAsync(this, "OpenXLR Flatpak", setup, Localizer.Text("Close")))
+                // Nothing is written to the host before the user agrees.
+                if (await Dialogs.ConfirmAsync(this, "OpenXLR Flatpak", Localizer.Text("FlatpakSetup"), Localizer.Text("FlatpakSetUpButton")))
                 {
+                    string setupError = FlatpakSetup.Prepare();
+                    var settings = UiSettings.Load();
+                    bool login = settings.StartDaemonAtLogin || settings.OpenWindowAtLogin;
+                    string? problem = setupError.Length > 0 ? setupError : null;
                     try
                     {
-                        var settings = UiSettings.Load();
                         if (!await FlatpakBackground.ConfigureAsync(settings.StartDaemonAtLogin, settings.OpenWindowAtLogin, _lifetime.Token))
                             throw new InvalidOperationException(Localizer.Text("FlatpakBackgroundUnavailable"));
-                        if (setupError.Length == 0) OpenXlrPaths.WriteAtomic(OpenXlrPaths.ConfigFile("flatpak-notice"), "1\n");
                     }
-                    catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { /* show again next time */ }
+                    catch (OperationCanceledException) { return; }
                     catch (Exception ex)
-                    { await Dialogs.ConfirmAsync(this, "OpenXLR Flatpak", ex.Message, Localizer.Text("Close")); }
+                    {
+                        // Without a login option the request only asks to keep
+                        // running in the tray; a desktop with no portal is no
+                        // reason to show this dialog at every launch.
+                        if (login) problem ??= ex.Message;
+                        else Console.Error.WriteLine("Background portal: " + ex.Message);
+                    }
+                    if (problem is null)
+                    {
+                        try { OpenXlrPaths.WriteAtomic(OpenXlrPaths.ConfigFile("flatpak-notice"), "1\n"); }
+                        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { /* show again next time */ }
+                    }
+                    else await Dialogs.ConfirmAsync(this, "OpenXLR Flatpak", problem, Localizer.Text("Close"));
                 }
             }
             await _vm.Updates.CheckAsync(manual: false, cancellation: _lifetime.Token);

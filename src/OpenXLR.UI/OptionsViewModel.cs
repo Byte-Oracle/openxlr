@@ -368,6 +368,8 @@ public sealed class OptionsViewModel : ViewModelBase
     {
         (true, true) => Localizer.Text("StartupAudioAndApp"),
         (false, true) => Localizer.Text("StartupAppOnly"),
+        // The Flatpak's daemon belongs to its UI, which waits in the tray.
+        (true, false) when FlatpakEnvironment.IsFlatpak => Localizer.Text("StartupAudioInTray"),
         (true, false) => Localizer.Text("StartupAudioOnly"),
         _ => Localizer.Text("StartupNothing"),
     };
