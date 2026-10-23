@@ -82,6 +82,32 @@ public sealed class BrowserTabRoutingTests
     }
 
     [Fact]
+    public async Task ATitleFlushSkipsATickWhileABuildHoldsTheMixerInsteadOfWaiting()
+    {
+        using var mixer = new Mixer();
+        Guid owner = Guid.NewGuid();
+        string session = mixer.OpenBrowserSession(owner);
+        mixer.SyncBrowserTabs(owner, session, [Tab(1) with { Capturing = true }]);
+        mixer.SyncBrowserTabs(owner, session, [Tab(1, title: "Call 2") with { Capturing = true }]);
+        object gate = typeof(Mixer).GetField("_gate", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(mixer)!;
+        using var held = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var build = new Thread(() => { lock (gate) { held.Set(); release.Wait(); } });
+        build.Start();
+        held.Wait();
+        try
+        {
+            Task<bool> flush = Task.Run(mixer.FlushBrowserTabTitles);
+            Assert.Same(flush, await Task.WhenAny(flush, Task.Delay(TimeSpan.FromSeconds(5))));
+            Assert.False(await flush);
+        }
+        finally { release.Set(); build.Join(); }
+        Assert.Equal("Call", Assert.Single(mixer.BrowserTabs).Title);
+        Assert.True(mixer.FlushBrowserTabTitles());
+        Assert.Equal("Call 2", Assert.Single(mixer.BrowserTabs).Title);
+    }
+
+    [Fact]
     public void OnlyCapturingOrAssignedTabsShareTheirTitles()
     {
         using var mixer = new Mixer();

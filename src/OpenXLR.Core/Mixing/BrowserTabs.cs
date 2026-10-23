@@ -122,7 +122,11 @@ public sealed partial class Mixer
     /// <summary>Publish the latest titles once per daemon tick, without delaying routing changes.</summary>
     public bool FlushBrowserTabTitles()
     {
-        lock (_gate)
+        // A timer calls this every second, and a graph build holds the gate for
+        // seconds. Waiting would tie up a pool thread per tick; the next tick
+        // publishes the titles instead.
+        if (!Monitor.TryEnter(_gate)) return false;
+        try
         {
             IReadOnlyList<BrowserTabState> before = BrowserTabsLocked();
             foreach (Dictionary<int, BrowserTab> tabs in _browserSessions.Values)
@@ -130,6 +134,7 @@ public sealed partial class Mixer
                     if (tab.PublishedTitle != tab.Metadata.Title) tabs[id] = tab with { PublishedTitle = tab.Metadata.Title };
             return !before.SequenceEqual(BrowserTabsLocked());
         }
+        finally { Monitor.Exit(_gate); }
     }
 
     public void AssignBrowserTab(string session, int tabId, string site, string? channel, bool remember, Func<MixerSettings, string?> persist)
