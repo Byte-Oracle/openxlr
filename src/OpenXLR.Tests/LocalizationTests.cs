@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using OpenXLR.Core.Mixing;
 using OpenXLR.UI;
 using OpenXLR.UI.Localization;
 
@@ -129,6 +130,7 @@ public sealed class LocalizationTests
     [Theory]
     [InlineData("Strings.de.resx")]
     [InlineData("Strings.es.resx")]
+    [InlineData("Strings.it.resx")]
     [InlineData("Strings.tl.resx")]
     [InlineData("Strings.ceb.resx")]
     [InlineData("Strings.sr-Cyrl.resx")]
@@ -155,6 +157,7 @@ public sealed class LocalizationTests
     [Theory]
     [InlineData("de", "Deutsch", "de-AT", "Schließen")]
     [InlineData("es", "Español", "es-MX", "Cerrar")]
+    [InlineData("it", "Italiano", "it-CH", "Chiudi")]
     [InlineData("tl", "Tagalog", "tl-PH", "Isara")]
     [InlineData("ceb", "Bisaya (Cebuano)", "ceb-PH", "Sirad-i")]
     [InlineData("sr-Cyrl", "Српски (ћирилица)", "sr-Cyrl-RS", "Затвори")]
@@ -271,6 +274,37 @@ public sealed class LocalizationTests
             [.. Localizer.Languages.Select(c => c.Id!)]));
     }
 
+    [Fact]
+    public void ItalianRoutingHintsKeepTheDefaultApplicationChannelName()
+    {
+        ChannelDefinition fallback = Assert.IsType<ChannelDefinition>(MixerConfig.Default().FallbackApplicationChannel);
+        Assert.Contains(fallback.Name, Localizer.Get("ANewChannelStartsMutedInEvery", CultureInfo.GetCultureInfo("it")),
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null, "LANG=it_IT.UTF-8", "it")]
+    [InlineData(null, "LANG=it_CH.UTF-8", "it")]
+    [InlineData(null, "LANG=it_SM.UTF-8", "it")]
+    [InlineData(null, "LANG=it_IT.UTF-8@euro", "it")]
+    [InlineData(null, "LANG=en_US.UTF-8 LANGUAGE=fr:it_CH", "it")]
+    [InlineData(null, "LANG=en_US.UTF-8 LANGUAGE=it--IT:it", "it")]
+    [InlineData(null, "LANG=de_CH.UTF-8 LANGUAGE=it_CH:de_CH", "it")]
+    [InlineData(null, "LANG=it_IT.UTF-8 LC_MESSAGES=C.UTF-8", "en")]
+    [InlineData(null, "LANG=POSIX LANGUAGE=it", "en")]
+    [InlineData("it-IT", "LANG=en_US.UTF-8", "it")]
+    [InlineData("it-CH", "LANG=de_DE.UTF-8", "it")]
+    [InlineData("system", "LANG=it_CH.UTF-8", "it")]
+    [InlineData("en", "LANG=it_IT.UTF-8", "en")]
+    [InlineData("es", "LANG=it_IT.UTF-8", "es")]
+    public void ItalianIsChosenFromTheSavedChoiceOrDesktop(string? saved, string environment, string expected)
+    {
+        Dictionary<string, string> variables = environment.Split(' ')
+            .Select(v => v.Split('=', 2)).ToDictionary(v => v[0], v => v[1]);
+        Assert.Equal(expected, Localizer.Resolve(saved, n => variables.GetValueOrDefault(n),
+            [.. Localizer.Languages.Select(c => c.Id!)]));
+    }
+
     [Theory]
     [InlineData(null, "LANG=de_DE.UTF-8", "de")]
     [InlineData(null, "LANG=en_US.UTF-8 LANGUAGE=fr:de", "de")]
@@ -380,7 +414,7 @@ public sealed class LanguageSettingsTests : IDisposable
         File.WriteAllText(UiJson, """{ "skin": "nord", "futureChoice": 3 }""");
         OptionsViewModel options = Options();
         Assert.Null(options.SelectedLanguage!.Id);
-        Assert.Equal([Localizer.Text("SystemLanguage"), "English", "Deutsch", "Español", "Tagalog", "Bisaya (Cebuano)", "Српски (ћирилица)"],
+        Assert.Equal([Localizer.Text("SystemLanguage"), "English", "Deutsch", "Español", "Italiano", "Tagalog", "Bisaya (Cebuano)", "Српски (ћирилица)"],
             options.LanguageChoices.Select(c => c.Label));
 
         options.SelectedLanguage = options.LanguageChoices.Single(c => c.Id == "en");
@@ -400,6 +434,7 @@ public sealed class LanguageSettingsTests : IDisposable
 
     [Theory]
     [InlineData("es")]
+    [InlineData("it")]
     [InlineData("tl")]
     [InlineData("ceb")]
     [InlineData("sr-Cyrl")]
@@ -434,6 +469,8 @@ public sealed class LanguageSettingsTests : IDisposable
     [Theory]
     [InlineData("es-MX", "es")]
     [InlineData("ES-419", "es")]
+    [InlineData("it-CH", "it")]
+    [InlineData("IT-it", "it")]
     [InlineData("de-AT", "de")]
     [InlineData("tl-PH", "tl")]
     [InlineData("fil-PH", "tl")]
@@ -444,6 +481,7 @@ public sealed class LanguageSettingsTests : IDisposable
     [InlineData("en-GB", "en")]
     [InlineData("fr", "en")]
     [InlineData("../es", "en")]
+    [InlineData("../it", "en")]
     [InlineData("system", null)]
     [InlineData("", null)]
     [InlineData("  ", null)]

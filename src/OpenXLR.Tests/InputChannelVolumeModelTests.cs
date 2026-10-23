@@ -83,7 +83,7 @@ public sealed class InputChannelVolumeModelTests
     public void EveryLanguageNamesTheNote()
     {
         foreach (string key in new[] { "ChannelVolumeDirectTip", "ChannelVolumeMixesOnly", "ChannelVolumeName", "ChannelVolumeTip" })
-            foreach (string language in new[] { "de", "es" })
+            foreach (string language in new[] { "de", "es", "it" })
             {
                 var culture = System.Globalization.CultureInfo.GetCultureInfo(language);
                 string? translated = Localizer.Resources.GetString(key, culture);

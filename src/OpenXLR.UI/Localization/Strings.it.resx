@@ -1,0 +1,2940 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The window's Italian text. Keys, placeholders and line breaks follow
+     Strings.resx; see docs/localization.md. -->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ABComparison" xml:space="preserve">
+    <value>Confronto A/B</value>
+  </data>
+  <data name="About" xml:space="preserve">
+    <value>Informazioni</value>
+  </data>
+  <data name="AboutOpenXLR" xml:space="preserve">
+    <value>Informazioni su OpenXLR</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Aggiungi</value>
+  </data>
+  <data name="AddAPluginFolder" xml:space="preserve">
+    <value>Aggiungi una cartella di plugin</value>
+  </data>
+  <data name="AddCaptureInput" xml:space="preserve">
+    <value>Aggiungi ingresso di acquisizione</value>
+  </data>
+  <data name="AddCaptureInputHint" xml:space="preserve">
+    <value>Scegli una sorgente e una porta mono o una coppia stereo. Gli ingressi mono possono usare Sound Check. Il nuovo ingresso parte silenziato in ogni mix e resta muto finché la sua sorgente non è collegata.</value>
+  </data>
+  <data name="AddChannel" xml:space="preserve">
+    <value>Aggiungi canale</value>
+  </data>
+  <data name="AddFolder" xml:space="preserve">
+    <value>Aggiungi cartella</value>
+  </data>
+  <data name="AddInputChannel" xml:space="preserve">
+    <value>Aggiungi canale di ingresso</value>
+  </data>
+  <data name="AddingFolder" xml:space="preserve">
+    <value>Aggiunta della cartella…</value>
+  </data>
+  <data name="AddingFolderAndScanning" xml:space="preserve">
+    <value>Aggiunta della cartella e scansione dei plugin…</value>
+  </data>
+  <data name="AddInput" xml:space="preserve">
+    <value>Aggiungi ingresso</value>
+  </data>
+  <data name="ADDINSTALLEDAPPLICATION" xml:space="preserve">
+    <value>AGGIUNGI APPLICAZIONE INSTALLATA</value>
+  </data>
+  <data name="AddMix" xml:space="preserve">
+    <value>Aggiungi mix</value>
+  </data>
+  <data name="AddPlugin" xml:space="preserve">
+    <value>Aggiungi plugin</value>
+  </data>
+  <data name="AddPluginFolder" xml:space="preserve">
+    <value>Aggiungi cartella di plugin</value>
+  </data>
+  <data name="AddPluginInsert" xml:space="preserve">
+    <value>Aggiungi insert plugin</value>
+  </data>
+  <data name="AddRenameReorderAndRemoveApplicationChannelsAnd" xml:space="preserve">
+    <value>Aggiungi, rinomina, riordina e rimuovi canali applicazione e microfoni virtuali mentre l'audio è in riproduzione</value>
+  </data>
+  <data name="AddVolumeAndMuteKeys" xml:space="preserve">
+    <value>Aggiungi tasti per volume e muto</value>
+  </data>
+  <data name="AddWindowsPluginFolder" xml:space="preserve">
+    <value>Aggiungi una cartella di plugin Windows</value>
+  </data>
+  <data name="AdditionalInterfaces" xml:space="preserve">
+    <value>Interfacce aggiuntive</value>
+  </data>
+  <data name="AdditionalInterfacesHint" xml:space="preserve">
+    <value>L'interfaccia principale fornisce il segnale a XLR 1 e alle strisce hardware. Attiva qui fino a quattro unità in più per controllarle insieme a essa, poi aggiungi ogni microfono come canale di acquisizione.</value>
+  </data>
+  <data name="AffectsSystemYabridge" xml:space="preserve">
+    <value>Questo vale anche per le altre applicazioni che usano yabridge di sistema.</value>
+  </data>
+  <data name="AllowEditor" xml:space="preserve">
+    <value>Consenti editor</value>
+  </data>
+  <data name="AllowNativeEditor" xml:space="preserve">
+    <value>Consenti editor nativo</value>
+  </data>
+  <data name="AllowNativeEditorDetail" xml:space="preserve">
+    <value>Consentire di nuovo a {0} di aprire il proprio editor? Se il problema di compatibilità persiste, la sua finestra potrebbe bloccarsi o il suo processo potrebbe andare in crash. La tua scelta avrà la precedenza sui predefiniti della versione.</value>
+  </data>
+  <data name="AllowNativeEditorTitle" xml:space="preserve">
+    <value>Consentire questo editor nativo?</value>
+  </data>
+  <data name="AllowOutputVolumeAbove100UpTo" xml:space="preserve">
+    <value>Consenti un volume di uscita oltre il 100%, fino al 150%. Disattivando l'opzione, un'uscita amplificata torna al 100%. Su KDE Plasma corrisponde all'impostazione del desktop Aumenta il volume massimo, condivisa da tutti i controlli del monitor.</value>
+  </data>
+  <data name="AllowThisMonitorMixAbove100Up" xml:space="preserve">
+    <value>Consenti a questo mix monitor di superare il 100%, fino al 150%. Disattivando l'opzione, un mix amplificato torna al 100%. Su KDE Plasma corrisponde all'impostazione del desktop Aumenta il volume massimo, condivisa da tutti i controlli del monitor.</value>
+  </data>
+  <data name="ANewChannelStartsMutedInEvery" xml:space="preserve">
+    <value>Un nuovo canale parte silenziato in ogni mix. Gli ingressi hardware restano dove sono. Le app il cui canale viene eliminato passano a System.</value>
+  </data>
+  <data name="AnotherApplicationChannel" xml:space="preserve">
+    <value>un altro canale applicazione</value>
+  </data>
+  <data name="APPEARANCE" xml:space="preserve">
+    <value>ASPETTO</value>
+  </data>
+  <data name="AppearanceDark" xml:space="preserve">
+    <value>Scuro</value>
+  </data>
+  <data name="AppearanceDialogHint" xml:space="preserve">
+    <value>La finestra, il mixer da terminale e i tasti dello Stream Deck mostrano l'icona e il colore. Instradamento e livelli non cambiano.</value>
+  </data>
+  <data name="AppearanceLight" xml:space="preserve">
+    <value>Chiaro</value>
+  </data>
+  <data name="AppearanceMode" xml:space="preserve">
+    <value>Modalità aspetto</value>
+  </data>
+  <data name="AppearanceModeOtherSkin" xml:space="preserve">
+    <value>Questa skin ha colori propri. La modalità vale per Material.</value>
+  </data>
+  <data name="AppearanceModeOverridden" xml:space="preserve">
+    <value>L'aspetto è stato scelto all'avvio; scegli una skin per usare di nuovo la modalità.</value>
+  </data>
+  <data name="AppearanceModeSystemNote" xml:space="preserve">
+    <value>Sistema segue la preferenza chiaro o scuro del desktop.</value>
+  </data>
+  <data name="AppearanceOfTitle" xml:space="preserve">
+    <value>Aspetto di {0}</value>
+  </data>
+  <data name="AppearanceSystem" xml:space="preserve">
+    <value>Sistema</value>
+  </data>
+  <data name="ApplicationChannel" xml:space="preserve">
+    <value>Canale applicazione</value>
+  </data>
+  <data name="ApplicationChannelsAreThePlaybackDevicesYouRoute" xml:space="preserve">
+    <value>I canali applicazione sono i dispositivi di riproduzione verso cui instradi i programmi. I microfoni virtuali sono i dispositivi di registrazione che OBS, Discord e altre app possono usare. Ogni modifica viene salvata prima di essere confermata, e l'audio degli altri canali continua a scorrere.</value>
+  </data>
+  <data name="ApplicationChannelsMixesVirtualMicrophonesAndInserts" xml:space="preserve">
+    <value>Canali applicazione, mix, microfoni virtuali e insert.</value>
+  </data>
+  <data name="APPLICATIONS" xml:space="preserve">
+    <value>APPLICAZIONI</value>
+  </data>
+  <data name="ApplyAndConfigureKeys" xml:space="preserve">
+    <value>Applica e configura i tasti</value>
+  </data>
+  <data name="APresetKeepsTheOrderNamesBypass" xml:space="preserve">
+    <value>Un preset conserva ordine, nomi, bypass, scelta dell'host e valori dei controlli di ogni effetto. Lo stato privato dei plugin e i file esterni come i campioni non sono inclusi. Il caricamento sostituisce la catena; un plugin mancante o incompatibile viene rifiutato.</value>
+  </data>
+  <data name="ARenamedVirtualMicrophoneKeepsItsOldName" xml:space="preserve">
+    <value>Un microfono virtuale rinominato mantiene il vecchio nome nelle altre applicazioni finché il demone non si riavvia. Riavvia il demone quando nulla sta registrando da esso.</value>
+  </data>
+  <data name="ARescanReadsEveryFormatAgainAnd" xml:space="preserve">
+    <value>Una nuova scansione rilegge tutti i formati e riprova i bundle che non erano riusciti. Gli insert in funzione continuano; un insert il cui plugin non c'è più non riuscirà al caricamento successivo.</value>
+  </data>
+  <data name="Arrange" xml:space="preserve">
+    <value>Disponi</value>
+  </data>
+  <data name="ATLOGIN" xml:space="preserve">
+    <value>ALL'ACCESSO</value>
+  </data>
+  <data name="AUDIO" xml:space="preserve">
+    <value>AUDIO</value>
+  </data>
+  <data name="AudioFlow" xml:space="preserve">
+    <value>Flusso audio</value>
+  </data>
+  <data name="AutostartRemovedOutside" xml:space="preserve">
+    <value>La voce di avvio automatico del mixer è stata rimossa al di fuori di OpenXLR, quindi non è stata ricreata. Disattiva e riattiva questa opzione per crearla.</value>
+  </data>
+  <data name="BridgeAgainEveryFolderYabridgeKnowsForWindows" xml:space="preserve">
+    <value>Ricollega ogni cartella nota a yabridge, per i plugin Windows installati nel frattempo</value>
+  </data>
+  <data name="BridgeWinePluginFolders" xml:space="preserve">
+    <value>Collega le cartelle dei plugin {0} di Wine</value>
+  </data>
+  <data name="BridgeWinePlugins" xml:space="preserve">
+    <value>Collega i plugin di Wine</value>
+  </data>
+  <data name="BridgingWindowsPlugins" xml:space="preserve">
+    <value>Collegamento dei plugin Windows…</value>
+  </data>
+  <data name="BridgingWinePlugins" xml:space="preserve">
+    <value>Collegamento dei plugin di Wine…</value>
+  </data>
+  <data name="BuyMeACoffee" xml:space="preserve">
+    <value>Offrimi un caffè</value>
+  </data>
+  <data name="SupportMeOnKoFi" xml:space="preserve">
+    <value>Sostienimi su Ko-fi</value>
+  </data>
+  <data name="Bypass" xml:space="preserve">
+    <value>Bypass</value>
+  </data>
+  <data name="BypassLetter" xml:space="preserve">
+    <value>B</value>
+  </data>
+  <data name="BypassThisPlugin" xml:space="preserve">
+    <value>Metti in bypass questo plugin</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Annulla</value>
+  </data>
+  <data name="CannotChangePlasmaRange" xml:space="preserve">
+    <value>Impossibile cambiare l'intervallo di volume di Plasma: {0}</value>
+  </data>
+  <data name="CannotChangePlasmaRangeKept" xml:space="preserve">
+    <value>Impossibile cambiare l'intervallo di volume di Plasma: il desktop non l'ha mantenuto.</value>
+  </data>
+  <data name="CannotChangePlasmaRangeSave" xml:space="preserve">
+    <value>Impossibile cambiare l'intervallo di volume di Plasma: non è stato possibile salvare la preferenza del desktop.</value>
+  </data>
+  <data name="CannotFollowPlasmaRange" xml:space="preserve">
+    <value>Impossibile seguire l'intervallo di volume di Plasma: {0}</value>
+  </data>
+  <data name="CannotReadPlasmaRange" xml:space="preserve">
+    <value>Impossibile leggere l'intervallo di volume di Plasma: {0}</value>
+  </data>
+  <data name="CaptureChannel" xml:space="preserve">
+    <value>Canale di acquisizione</value>
+  </data>
+  <data name="CaptureConnectedPair" xml:space="preserve">
+    <value>Collegato · coppia {0}</value>
+  </data>
+  <data name="CaptureConnectedPort" xml:space="preserve">
+    <value>Collegato · porta {0}</value>
+  </data>
+  <data name="CaptureOfflinePair" xml:space="preserve">
+    <value>Scollegato · coppia {0}</value>
+  </data>
+  <data name="CaptureOfflinePort" xml:space="preserve">
+    <value>Scollegato · porta {0}</value>
+  </data>
+  <data name="CaptureSourcePlaceholder" xml:space="preserve">
+    <value>Sorgente di acquisizione</value>
+  </data>
+  <data name="CatalogueNew" xml:space="preserve">
+    <value>{0} plugin nuovi nel catalogo.</value>
+  </data>
+  <data name="CatalogueNothingNew" xml:space="preserve">
+    <value>{0} plugin nel catalogo, nessuno nuovo.</value>
+  </data>
+  <data name="CatalogueOneNew" xml:space="preserve">
+    <value>1 plugin nuovo nel catalogo.</value>
+  </data>
+  <data name="ChainTooLong" xml:space="preserve">
+    <value>Una catena può contenere al massimo 16 effetti. Rimuovi degli effetti o sostituisci la catena prima di incollare.</value>
+  </data>
+  <data name="ChainUnsupported" xml:space="preserve">
+    <value>Versione, larghezza o dimensione della catena di effetti non supportata.</value>
+  </data>
+  <data name="ChangesApplyTheNextTimeAnEditorIs" xml:space="preserve">
+    <value>Le modifiche valgono dalla prossima apertura di un editor. Le finestre di editor già aperte non vengono chiuse.</value>
+  </data>
+  <data name="ChangeTheNameThisEffectShowsThe" xml:space="preserve">
+    <value>Cambia il nome mostrato da questo effetto; il plugin continua a funzionare</value>
+  </data>
+  <data name="ChangingThisRestartsTheAudioServiceAndBriefly" xml:space="preserve">
+    <value>Cambiare questa opzione riavvia il servizio audio e interrompe brevemente l'audio.</value>
+  </data>
+  <data name="Channel" xml:space="preserve">
+    <value>canale</value>
+  </data>
+  <data name="ChannelNamePlaceholder" xml:space="preserve">
+    <value>Nome del canale</value>
+  </data>
+  <data name="CHANNELS" xml:space="preserve">
+    <value>CANALI</value>
+  </data>
+  <data name="ChannelShown" xml:space="preserve">
+    <value>Canale mostrato</value>
+  </data>
+  <data name="ChannelsOfWhichOnlyOneIsHeard" xml:space="preserve">
+    <value>Canali di cui se ne sente solo uno alla volta</value>
+  </data>
+  <data name="ChannelToMix" xml:space="preserve">
+    <value>Dal canale al mix</value>
+  </data>
+  <data name="ChannelUnavailable" xml:space="preserve">
+    <value>Canale non disponibile</value>
+  </data>
+  <data name="CheckAgain" xml:space="preserve">
+    <value>Controlla di nuovo</value>
+  </data>
+  <data name="CheckGitHubForStableReleasesAtStartupAt" xml:space="preserve">
+    <value>Cerca versioni stabili su GitHub all'avvio
+(al massimo una volta al giorno)</value>
+  </data>
+  <data name="CheckNow" xml:space="preserve">
+    <value>Controlla ora</value>
+  </data>
+  <data name="ChooseAFolderThenSelectAnIndividualPlugin" xml:space="preserve">
+    <value>Scegli una cartella, poi seleziona un singolo plugin qui sotto.</value>
+  </data>
+  <data name="ChooseAnApplication" xml:space="preserve">
+    <value>scegli un'applicazione</value>
+  </data>
+  <data name="ChooseAPreset" xml:space="preserve">
+    <value>Scegli un preset</value>
+  </data>
+  <data name="ChooseInterfaceSourceFirst" xml:space="preserve">
+    <value>Scegli prima la sorgente di acquisizione dell'interfaccia.</value>
+  </data>
+  <data name="ChoosePresetForEffect" xml:space="preserve">
+    <value>Scegli un preset per questo effetto su un canale attivo.</value>
+  </data>
+  <data name="ClearSelection" xml:space="preserve">
+    <value>×  Annulla selezione</value>
+  </data>
+  <data name="ClickAnyElementToTraceItsSignalPath" xml:space="preserve">
+    <value>Fai clic su un elemento per seguirne il percorso del segnale</value>
+  </data>
+  <data name="ClipGuard" xml:space="preserve">
+    <value>ClipGuard</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Chiudi</value>
+  </data>
+  <data name="CollectDiagnostics" xml:space="preserve">
+    <value>Raccogli diagnostica</value>
+  </data>
+  <data name="CollectDiagnosticsGathersAppAndDeviceStateThe" xml:space="preserve">
+    <value>Raccogli diagnostica riunisce lo stato dell'app e del dispositivo, il grafo di PipeWire, i log e le configurazioni del demone in un unico archivio nella tua cartella home, pronto da allegare a una segnalazione di bug. Non viene caricato nulla.</value>
+  </data>
+  <data name="Collecting" xml:space="preserve">
+    <value>raccolta in corso…</value>
+  </data>
+  <data name="Colour" xml:space="preserve">
+    <value>Colore</value>
+  </data>
+  <data name="ColourFormatHint" xml:space="preserve">
+    <value>Inserisci un colore come # seguito da sei cifre esadecimali, oppure lascia vuoto.</value>
+  </data>
+  <data name="ColourPlaceholder" xml:space="preserve">
+    <value>#RRGGBB, o vuoto per i colori della skin</value>
+  </data>
+  <data name="CompactShowsOneChannelStripWithEvery" xml:space="preserve">
+    <value>Compatta mostra la striscia di un canale con tutte le sue mandate. Mini mostra la mandata di quel canale verso un mix, con il master del mix, e mette da parte INGRESSI, CUFFIE e APPLICAZIONI. Scegli il canale e il mix sopra il submixer. Livelli e instradamento non cambiano.</value>
+  </data>
+  <data name="CompensatePluginLatencyAcrossMixes" xml:space="preserve">
+    <value>Compensa la latenza dei plugin tra i mix</value>
+  </data>
+  <data name="Compressor" xml:space="preserve">
+    <value>Compressore</value>
+  </data>
+  <data name="Connecting" xml:space="preserve">
+    <value>connessione in corso…</value>
+  </data>
+  <data name="ConnectionLostCheckChange" xml:space="preserve">
+    <value>Connessione persa. Verifica se la modifica è stata applicata prima di riprovare.</value>
+  </data>
+  <data name="ConnectionLostUnconfirmed" xml:space="preserve">
+    <value>Connessione persa; non è stato possibile confermare la modifica.</value>
+  </data>
+  <data name="ContributorsAndCredits" xml:space="preserve">
+    <value>Collaboratori e riconoscimenti</value>
+  </data>
+  <data name="Controls" xml:space="preserve">
+    <value>Controlli</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Copia</value>
+  </data>
+  <data name="CopyAndPaste" xml:space="preserve">
+    <value>Copia e incolla</value>
+  </data>
+  <data name="CopyAndPasteEffectsCompareTwoSettings" xml:space="preserve">
+    <value>Copia e incolla effetti, confronta due impostazioni e salva o carica preset</value>
+  </data>
+  <data name="CopyAnEffectFromItsRowOr" xml:space="preserve">
+    <value>Copia un effetto dalla sua riga, oppure copia l'intera catena. Incolla effetti aggiunge gli effetti copiati dopo quelli di questa catena; Sostituisci catena li mette al loro posto. Una copia resta disponibile finché OpenXLR non viene chiuso.</value>
+  </data>
+  <data name="CopyChain" xml:space="preserve">
+    <value>Copia catena</value>
+  </data>
+  <data name="CopyFirst" xml:space="preserve">
+    <value>Copia prima un effetto o una catena in OpenXLR.</value>
+  </data>
+  <data name="CopyThisEffectToPasteOnAny" xml:space="preserve">
+    <value>Copia questo effetto, per incollarlo su qualsiasi catena da Preset e A/B</value>
+  </data>
+  <data name="CouldNotDisableDaemonAtLogin" xml:space="preserve">
+    <value>Impossibile impedire l'avvio del servizio audio all'accesso. Verifica che i servizi utente di systemd funzionino qui (systemctl --user status).</value>
+  </data>
+  <data name="CouldNotEnableDaemonAtLogin" xml:space="preserve">
+    <value>Impossibile avviare il servizio audio all'accesso. Verifica che OpenXLR sia installato e che i servizi utente di systemd funzionino qui (systemctl --user status).</value>
+  </data>
+  <data name="CouldNotReadPluginFolder" xml:space="preserve">
+    <value>Impossibile leggere la cartella dei plugin.</value>
+  </data>
+  <data name="CouldNotRepairAutostart" xml:space="preserve">
+    <value>Impossibile riparare la voce di avvio automatico del mixer. Verifica che OpenXLR sia installato, che la cartella di avvio automatico sia scrivibile e che la voce al suo interno non sia un collegamento simbolico.</value>
+  </data>
+  <data name="CouldNotUpdateAutostart" xml:space="preserve">
+    <value>Impossibile aggiornare l'avvio automatico del mixer. Verifica che OpenXLR sia installato, che la cartella di avvio automatico sia scrivibile e che la voce al suo interno non sia un collegamento simbolico.</value>
+  </data>
+  <data name="CouldNotVerifyPlugin" xml:space="preserve">
+    <value>Impossibile verificare il plugin prima di aprire il programma di disinstallazione.</value>
+  </data>
+  <data name="CrossfadeCentre" xml:space="preserve">
+    <value>centro</value>
+  </data>
+  <data name="CrossfadeMic" xml:space="preserve">
+    <value>mic +{0}</value>
+  </data>
+  <data name="CrossfadePc" xml:space="preserve">
+    <value>pc +{0}</value>
+  </data>
+  <data name="CurrentChain" xml:space="preserve">
+    <value>Catena attuale</value>
+  </data>
+  <data name="CurrentEffect" xml:space="preserve">
+    <value>Effetto attuale</value>
+  </data>
+  <data name="CurrentSystemDefaultOutput" xml:space="preserve">
+    <value>Uscita predefinita di sistema attuale</value>
+  </data>
+  <data name="DaemonDisconnectedNoChange" xml:space="preserve">
+    <value>Demone disconnesso; nessuna modifica inviata.</value>
+  </data>
+  <data name="DaemonNotRunning" xml:space="preserve">
+    <value>Demone non in esecuzione</value>
+  </data>
+  <data name="DaemonNotRunningSentence" xml:space="preserve">
+    <value>Il demone non è in esecuzione.</value>
+  </data>
+  <data name="DaemonOlderVersionNote" xml:space="preserve">
+    <value>Il demone è di una versione precedente; questa finestra è la v{0}. Riavvia il demone per eseguire la versione installata.</value>
+  </data>
+  <data name="DaemonRefusedWindow" xml:space="preserve">
+    <value>il demone ha rifiutato questa finestra: {0}</value>
+  </data>
+  <data name="DaemonRestartedHardwareOnly" xml:space="preserve">
+    <value>Demone riavviato in modalità solo controllo hardware; la scheda audio mantiene il layout di fabbrica e gli insert non vengono caricati.</value>
+  </data>
+  <data name="DaemonRestartedSubmixerOn" xml:space="preserve">
+    <value>Demone riavviato con il submixer attivo.</value>
+  </data>
+  <data name="DaemonVersionNote" xml:space="preserve">
+    <value>Il demone è la v{0}; questa finestra è la v{1}. Riavvia il demone per eseguire la versione installata.</value>
+  </data>
+  <data name="DeepWineTraceForPluginScans" xml:space="preserve">
+    <value>Traccia Wine dettagliata per la scansione dei plugin</value>
+  </data>
+  <data name="DefaultInput" xml:space="preserve">
+    <value>Ingresso pred.</value>
+  </data>
+  <data name="DefaultOutput" xml:space="preserve">
+    <value>Uscita pred.</value>
+  </data>
+  <data name="Defaults" xml:space="preserve">
+    <value>Predefiniti</value>
+  </data>
+  <data name="DelayTheOtherMixesSoEachLines" xml:space="preserve">
+    <value>Ritarda gli altri mix in modo che ognuno sia allineato con il mix i cui plugin impiegano più tempo, fino a due secondi. Cambiare questa opzione ricostruisce tutte le catene di plugin e interrompe brevemente l'audio.</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Elimina</value>
+  </data>
+  <data name="DeleteAppChannelDetail" xml:space="preserve">
+    <value>I programmi instradati qui passano a {0}. Il suo dispositivo di riproduzione scompare dal desktop.</value>
+  </data>
+  <data name="DeleteCaptureChannelDetail" xml:space="preserve">
+    <value>L'ingresso di acquisizione e le sue mandate vengono rimossi. Il dispositivo sorgente resta disponibile per le altre applicazioni.</value>
+  </data>
+  <data name="DeleteChainPresetDetail" xml:space="preserve">
+    <value>Eliminare il preset salvato '{0}'? La catena attiva viene mantenuta.</value>
+  </data>
+  <data name="DeleteChannelTitle" xml:space="preserve">
+    <value>Eliminare il canale '{0}'?</value>
+  </data>
+  <data name="DeleteEffectPresetDetail" xml:space="preserve">
+    <value>Eliminare il preset salvato '{0}'?</value>
+  </data>
+  <data name="DeleteFile" xml:space="preserve">
+    <value>Elimina file</value>
+  </data>
+  <data name="DeleteGroup" xml:space="preserve">
+    <value>Elimina gruppo</value>
+  </data>
+  <data name="DeleteMixTitle" xml:space="preserve">
+    <value>Eliminare il mix '{0}'?</value>
+  </data>
+  <data name="DeleteMonitorMixDetail" xml:space="preserve">
+    <value>Le sue mandate e i suoi insert vengono rimossi. Le uscite che seguono solo questo mix tornano al mix monitor predefinito; le uscite che sommano più mix mantengono gli altri. Se questo mix è il predefinito di sistema imposto, quell'impostazione viene annullata.</value>
+  </data>
+  <data name="DeletePluginFileDetail" xml:space="preserve">
+    <value>Eliminare definitivamente {0} e i wrapper generati? Viene rimosso solo questo file o bundle autonomo; gli altri plugin nella cartella restano. L'operazione non può essere annullata.</value>
+  </data>
+  <data name="DeletePluginFileTitle" xml:space="preserve">
+    <value>Eliminare il file del plugin?</value>
+  </data>
+  <data name="DeletePreset" xml:space="preserve">
+    <value>Elimina preset</value>
+  </data>
+  <data name="DeleteThisProfile" xml:space="preserve">
+    <value>Elimina questo profilo</value>
+  </data>
+  <data name="DeleteVirtualMicDetail" xml:space="preserve">
+    <value>Il suo microfono virtuale scompare; tutto ciò che registra da esso perde il dispositivo. Le sue mandate e i suoi insert vengono rimossi insieme a esso.</value>
+  </data>
+  <data name="DeletingPlugin" xml:space="preserve">
+    <value>Eliminazione del plugin…</value>
+  </data>
+  <data name="DESKTOP" xml:space="preserve">
+    <value>DESKTOP</value>
+  </data>
+  <data name="DesktopConnectionLost" xml:space="preserve">
+    <value>Connessione con il desktop persa. Apri Scorciatoie desktop e applica per ricollegarti.</value>
+  </data>
+  <data name="DesktopInvalidVolumeRange" xml:space="preserve">
+    <value>Il desktop ha restituito un intervallo di volume non valido.</value>
+  </data>
+  <data name="DesktopKeyCompleted" xml:space="preserve">
+    <value>Completato: {0}.</value>
+  </data>
+  <data name="DesktopKeyQueueFull" xml:space="preserve">
+    <value>La coda delle scorciatoie desktop è piena; questa pressione non è stata accodata. Attendi il demone prima di riprovare.</value>
+  </data>
+  <data name="DesktopKeys" xml:space="preserve">
+    <value>Scorciatoie desktop</value>
+  </data>
+  <data name="DesktopKeysActive" xml:space="preserve">
+    <value>Le scorciatoie desktop sono attive. Lascia OpenXLR in esecuzione, anche nel vassoio di sistema.</value>
+  </data>
+  <data name="DesktopKeysConnecting" xml:space="preserve">
+    <value>Connessione al desktop...</value>
+  </data>
+  <data name="DesktopKeysDisabled" xml:space="preserve">
+    <value>Le scorciatoie desktop sono disattivate.</value>
+  </data>
+  <data name="DesktopKeysError" xml:space="preserve">
+    <value>Scorciatoie desktop: {0}</value>
+  </data>
+  <data name="DesktopKeysFocusOnly" xml:space="preserve">
+    <value>L'instradamento dell'app attiva per OpenDeck è attivo. Seleziona i canali qui sotto per assegnare scorciatoie del PC.</value>
+  </data>
+  <data name="DesktopKeysIntro" xml:space="preserve">
+    <value>L'instradamento dell'app attiva usa KDE Plasma. Attivalo per i tasti di OpenDeck, poi seleziona i canali qui sotto per assegnare scorciatoie del PC tramite la finestra dei permessi del desktop. Lascia OpenXLR in esecuzione, anche nel vassoio di sistema.</value>
+  </data>
+  <data name="DesktopKeysNote" xml:space="preserve">
+    <value>Scorciatoie da tastiera per i canali applicazione, il volume e l'uscita di sistema, e l'instradamento dell'app attiva di OpenDeck, che richiede KDE Plasma.</value>
+  </data>
+  <data name="DesktopKeysTitle" xml:space="preserve">
+    <value>Scorciatoie desktop di OpenXLR</value>
+  </data>
+  <data name="DesktopKeysVolumeNote" xml:space="preserve">
+    <value>I tasti del volume lo cambiano del 5%, fino al 150%. I tasti dell'uscita di sistema cambiano l'uscita predefinita imposta al desktop; le uscite del mixer mantengono le proprie selezioni.</value>
+  </data>
+  <data name="DesktopKeysWaiting" xml:space="preserve">
+    <value>In attesa che la configurazione precedente finisca...</value>
+  </data>
+  <data name="DesktopPreferenceUnreadable" xml:space="preserve">
+    <value>Non è stato possibile leggere la preferenza del desktop.</value>
+  </data>
+  <data name="DesktopRouting" xml:space="preserve">
+    <value>Instradamento desktop</value>
+  </data>
+  <data name="Devices" xml:space="preserve">
+    <value>Dispositivi</value>
+  </data>
+  <data name="DiagnosticsFailed" xml:space="preserve">
+    <value>non riuscita: {0}</value>
+  </data>
+  <data name="DiagnosticsSavedTo" xml:space="preserve">
+    <value>salvata in {0}</value>
+  </data>
+  <data name="DirectMonitorBlendLeftOnlyYourMicRight" xml:space="preserve">
+    <value>Bilanciamento del monitoraggio diretto: sinistra = solo il tuo microfono, destra = solo l'audio del PC</value>
+  </data>
+  <data name="Disable" xml:space="preserve">
+    <value>Disattiva</value>
+  </data>
+  <data name="DisableInOpenXLR" xml:space="preserve">
+    <value>Disattiva in OpenXLR</value>
+  </data>
+  <data name="DisablePluginDetail" xml:space="preserve">
+    <value>Disattivare {0} nella configurazione di yabridge selezionata? I suoi file restano al loro posto.</value>
+  </data>
+  <data name="DisablePluginTitle" xml:space="preserve">
+    <value>Disattivare il plugin?</value>
+  </data>
+  <data name="DisablingKeepsTheFilesDeleteFilePermanentlyRemoves" xml:space="preserve">
+    <value>La disattivazione conserva i file. Elimina file rimuove definitivamente un plugin autonomo. I plugin installati con Wine usano il proprio programma di disinstallazione. Le modifiche aggiornano il catalogo dei plugin.</value>
+  </data>
+  <data name="DisablingPlugin" xml:space="preserve">
+    <value>Disattivazione del plugin…</value>
+  </data>
+  <data name="DiscordCommunity" xml:space="preserve">
+    <value>Community Discord</value>
+  </data>
+  <data name="Dismiss" xml:space="preserve">
+    <value>Ignora</value>
+  </data>
+  <data name="DockMixer" xml:space="preserve">
+    <value>Riporta il mixer nella finestra principale</value>
+  </data>
+  <data name="DoNotLeaveThisOnTheSwitchIs" xml:space="preserve">
+    <value>Non lasciarla attiva. L'opzione non viene conservata tra i riavvii del demone; una traccia attivata nell'ambiente di avvio del demone resta comunque valida. Un WINEDEBUG esplicito mantiene i propri canali.</value>
+  </data>
+  <data name="DontEnforce" xml:space="preserve">
+    <value>(non imporre)</value>
+  </data>
+  <data name="DragAHandleOntoAnotherSectionOr" xml:space="preserve">
+    <value>Trascina una maniglia su un'altra sezione o un altro riquadro, oppure selezionala e usa i tasti freccia. Esc annulla il trascinamento.</value>
+  </data>
+  <data name="DragOntoAnotherChannelYouCanEdit" xml:space="preserve">
+    <value>Trascina su un altro canale modificabile; i tasti freccia lo spostano di una posizione</value>
+  </data>
+  <data name="DragOntoAnotherMixYouAddedArrow" xml:space="preserve">
+    <value>Trascina su un altro mix che hai aggiunto; i tasti freccia lo spostano di una posizione</value>
+  </data>
+  <data name="DragToAnotherSectionArrowKeysMove" xml:space="preserve">
+    <value>Trascina in un'altra sezione; i tasti freccia la spostano di una posizione</value>
+  </data>
+  <data name="DriveAsAdditionalInterface" xml:space="preserve">
+    <value>Gestisci come interfaccia aggiuntiva</value>
+  </data>
+  <data name="EachMixHasItsOwnMasterSends" xml:space="preserve">
+    <value>Ogni mix ha il proprio master, le proprie mandate e i propri insert. Un mix monitor arriva alle tue uscite senza pubblicare un microfono virtuale. Le nuove mandate partono silenziate. I mix monitor si possono rinominare, spostare e rimuovere, ma ne deve restare almeno uno. Aux resta dov'è.</value>
+  </data>
+  <data name="EditLayout" xml:space="preserve">
+    <value>Modifica layout</value>
+  </data>
+  <data name="EffectChainsTitle" xml:space="preserve">
+    <value>Catene di effetti di {0}</value>
+  </data>
+  <data name="EffectDefinitionMissing" xml:space="preserve">
+    <value>Manca la definizione di un effetto.</value>
+  </data>
+  <data name="EffectFieldInvalid" xml:space="preserve">
+    <value>Effetto {0} non valido.</value>
+  </data>
+  <data name="EffectIdInvalid" xml:space="preserve">
+    <value>L'id o il formato di un effetto non è valido.</value>
+  </data>
+  <data name="EffectNoLongerInChain" xml:space="preserve">
+    <value>L'effetto non è più nella sua catena.</value>
+  </data>
+  <data name="EffectParameterInvalid" xml:space="preserve">
+    <value>Un parametro di un effetto non è valido.</value>
+  </data>
+  <data name="EffectParametersInvalid" xml:space="preserve">
+    <value>Un effetto ha parametri non validi.</value>
+  </data>
+  <data name="EffectPresetFileType" xml:space="preserve">
+    <value>Preset di effetti OpenXLR</value>
+  </data>
+  <data name="EffectSwitchInvalid" xml:space="preserve">
+    <value>Un interruttore di un effetto non è valido.</value>
+  </data>
+  <data name="EnableDesktopIntegration" xml:space="preserve">
+    <value>Attiva l'integrazione con il desktop</value>
+  </data>
+  <data name="EnableInOpenXLR" xml:space="preserve">
+    <value>Attiva in OpenXLR</value>
+  </data>
+  <data name="EnableSoftwareMixer" xml:space="preserve">
+    <value>Attiva il mixer software</value>
+  </data>
+  <data name="EnablingPlugin" xml:space="preserve">
+    <value>Attivazione del plugin…</value>
+  </data>
+  <data name="EveryAppOpenXLRHasRoutedPlayingOrSilent" xml:space="preserve">
+    <value>Tutte le app che OpenXLR ha instradato, in riproduzione o silenziose. Le assegnazioni valgono per il prossimo flusso aperto dall'app; ignore restituisce l'app all'instradamento del desktop e ve la lascia; Dimentica rimuove l'app e il canale ricordato per essa.</value>
+  </data>
+  <data name="ExclusiveChannelGroups" xml:space="preserve">
+    <value>Gruppi di canali esclusivi</value>
+  </data>
+  <data name="ExclusiveGroups" xml:space="preserve">
+    <value>Gruppi esclusivi</value>
+  </data>
+  <data name="ExclusiveGroupsIntro" xml:space="preserve">
+    <value>Di un gruppo si sente un solo canale. Riattivare l'audio di un membro in un mix silenzia gli altri membri in tutti i mix; i loro livelli restano invariati.</value>
+  </data>
+  <data name="ExclusiveGroupsInvalid" xml:space="preserve">
+    <value>Inserisci un nome e scegli almeno due canali.</value>
+  </data>
+  <data name="ExclusiveGroupsProNote" xml:space="preserve">
+    <value>Su un Wave XLR Pro, XLR 1 in un gruppo raggiunge le uscite cuffie passando dal mixer invece che dal percorso a latenza zero dell'interfaccia.</value>
+  </data>
+  <data name="ExclusiveGroupsRules" xml:space="preserve">
+    <value>Scegli almeno due canali. Un canale appartiene al massimo a un gruppo. Se al salvataggio più di un membro non è silenziato, tutti i membri vengono silenziati e riattivi tu quello che vuoi. Eliminare un gruppo lascia i muti come sono.</value>
+  </data>
+  <data name="Expander" xml:space="preserve">
+    <value>Expander</value>
+  </data>
+  <data name="ExportEffectPreset" xml:space="preserve">
+    <value>Esporta preset dell'effetto</value>
+  </data>
+  <data name="ExportPreset" xml:space="preserve">
+    <value>Esporta preset</value>
+  </data>
+  <data name="FaderPrecisionHint" xml:space="preserve">
+    <value>Tieni premuto Maiusc durante il trascinamento per un controllo più fine. I tasti freccia cambiano di un passo; Pag su e Pag giù di dieci.</value>
+  </data>
+  <data name="FindAnInstalledPlugin" xml:space="preserve">
+    <value>Cerca un plugin installato…</value>
+  </data>
+  <data name="FixWindowsEditorInput" xml:space="preserve">
+    <value>Correggi l'input degli editor Windows</value>
+  </data>
+  <data name="Flow" xml:space="preserve">
+    <value>Flusso</value>
+  </data>
+  <data name="FlowDaemonDisconnected" xml:space="preserve">
+    <value>Demone disconnesso. In attesa dell'instradamento attivo.</value>
+  </data>
+  <data name="FlowHardware" xml:space="preserve">
+    <value>Hardware</value>
+  </data>
+  <data name="FlowInputProcessing" xml:space="preserve">
+    <value>Elaborazione dell'ingresso:</value>
+  </data>
+  <data name="FlowInsertBypassed" xml:space="preserve">
+    <value>{0} (in bypass)</value>
+  </data>
+  <data name="FlowInsertProblem" xml:space="preserve">
+    <value>{0} (problema)</value>
+  </data>
+  <data name="FlowLowCut" xml:space="preserve">
+    <value>Taglio basse {0} Hz</value>
+  </data>
+  <data name="FlowMixProcessing" xml:space="preserve">
+    <value>Elaborazione del mix:</value>
+  </data>
+  <data name="FlowMuted" xml:space="preserve">
+    <value>Silenziato</value>
+  </data>
+  <data name="FlowOff" xml:space="preserve">
+    <value>Disattivato</value>
+  </data>
+  <data name="FlowSoftware" xml:space="preserve">
+    <value>Software</value>
+  </data>
+  <data name="FlowSubmixerOff" xml:space="preserve">
+    <value>Attiva il submixer in Opzioni per vedere il flusso audio.</value>
+  </data>
+  <data name="FlowVolume" xml:space="preserve">
+    <value>Vol {0}</value>
+  </data>
+  <data name="FoldersBridged" xml:space="preserve">
+    <value>{0} cartelle collegate</value>
+  </data>
+  <data name="FollowMonitorOutput" xml:space="preserve">
+    <value>Segui l'uscita MONITOR (controlli del volume di sistema)</value>
+  </data>
+  <data name="FollowSelectedMonitorOutput" xml:space="preserve">
+    <value>Segui l'uscita monitor selezionata</value>
+  </data>
+  <data name="Forget" xml:space="preserve">
+    <value>Dimentica</value>
+  </data>
+  <data name="ForReproducingABridgedPluginFailureForA" xml:space="preserve">
+    <value>Serve a riprodurre un errore di un plugin collegato per una segnalazione di bug. Le scansioni diventano molto più lente e producono log di grandi dimensioni. Attivala, premi Ripeti scansione in PLUGIN, attendi che finisca, raccogli la diagnostica, poi disattivala. La nuova scansione riprova i bundle non riusciti; i bundle riusciti e invariati restano in cache.</value>
+  </data>
+  <data name="FrontJack" xml:space="preserve">
+    <value>Presa frontale</value>
+  </data>
+  <data name="GainLockTheDaemonRejectsEveryGainChange" xml:space="preserve">
+    <value>Blocco del guadagno: finché è attivo, il demone rifiuta ogni modifica del guadagno</value>
+  </data>
+  <data name="GroupNamePlaceholder" xml:space="preserve">
+    <value>Nome del gruppo, ad es. Microfoni</value>
+  </data>
+  <data name="HandThePluginsAWindowsInstallerLeftIn" xml:space="preserve">
+    <value>Affida a yabridge i plugin che un programma di installazione Windows ha lasciato in Wine</value>
+  </data>
+  <data name="HardwareChannel" xml:space="preserve">
+    <value>Canale hardware</value>
+  </data>
+  <data name="HardwareInput" xml:space="preserve">
+    <value>ingresso hardware</value>
+  </data>
+  <data name="HEADPHONES" xml:space="preserve">
+    <value>CUFFIE</value>
+  </data>
+  <data name="HearA" xml:space="preserve">
+    <value>Ascolta A</value>
+  </data>
+  <data name="HearB" xml:space="preserve">
+    <value>Ascolta B</value>
+  </data>
+  <data name="HearingA" xml:space="preserve">
+    <value>In ascolto: A</value>
+  </data>
+  <data name="HearingB" xml:space="preserve">
+    <value>In ascolto: B</value>
+  </data>
+  <data name="HearLiveMic" xml:space="preserve">
+    <value>Ascolta il microfono dal vivo</value>
+  </data>
+  <data name="HiddenInTheMixer" xml:space="preserve">
+    <value>nascosto nel mixer</value>
+  </data>
+  <data name="HideChannelStrip" xml:space="preserve">
+    <value>Nascondi la striscia di questo canale nel mixer. Il suo audio, le mandate e le app restano come sono.</value>
+  </data>
+  <data name="HideMix" xml:space="preserve">
+    <value>Nascondi questo mix nel mixer. Il suo audio, le uscite, le mandate e il livello restano come sono.</value>
+  </data>
+  <data name="HostSideLowCutForThisDeviceIts" xml:space="preserve">
+    <value>Taglio basse lato host per questo dispositivo (il suo DSP è nel software); alterna tra spento, 80 Hz e 120 Hz</value>
+  </data>
+  <data name="Icon" xml:space="preserve">
+    <value>Icona</value>
+  </data>
+  <data name="IconAndColour" xml:space="preserve">
+    <value>Icona e colore</value>
+  </data>
+  <data name="IconColourAndWhetherTheStripShows" xml:space="preserve">
+    <value>Icona, colore e visibilità della striscia nel mixer</value>
+  </data>
+  <data name="IconColourAndWhetherTheMixShows" xml:space="preserve">
+    <value>Icona, colore e visibilità del mix nel mixer</value>
+  </data>
+  <data name="ImportEffectPreset" xml:space="preserve">
+    <value>Importa preset dell'effetto</value>
+  </data>
+  <data name="ImportPreset" xml:space="preserve">
+    <value>Importa preset</value>
+  </data>
+  <data name="InputChainHint" xml:space="preserve">
+    <value>Plugin, in ordine, prima che questo ingresso raggiunga i mix</value>
+  </data>
+  <data name="INPUTS" xml:space="preserve">
+    <value>INGRESSI</value>
+  </data>
+  <data name="InputToChannel" xml:space="preserve">
+    <value>Dall'ingresso al canale</value>
+  </data>
+  <data name="Inserts" xml:space="preserve">
+    <value>Insert</value>
+  </data>
+  <data name="InsertsCount" xml:space="preserve">
+    <value>Insert ({0})</value>
+  </data>
+  <data name="InsertsNone" xml:space="preserve">
+    <value>nessuno</value>
+  </data>
+  <data name="InsertStateActive" xml:space="preserve">
+    <value>attivo</value>
+  </data>
+  <data name="InsertStateBypassed" xml:space="preserve">
+    <value>in bypass</value>
+  </data>
+  <data name="InsertStateProblem" xml:space="preserve">
+    <value>problema</value>
+  </data>
+  <data name="InsertsTitle" xml:space="preserve">
+    <value>Insert di {0}</value>
+  </data>
+  <data name="InstallAClapOrVst3FileOrA" xml:space="preserve">
+    <value>Installa un file .clap o .vst3, oppure un plugin Windows tramite yabridge</value>
+  </data>
+  <data name="InstallAPluginFolder" xml:space="preserve">
+    <value>Installa una cartella di plugin</value>
+  </data>
+  <data name="InstallAVst3OrLv2BundleOrEvery" xml:space="preserve">
+    <value>Installa un bundle .vst3 o .lv2, oppure tutti i plugin di una cartella</value>
+  </data>
+  <data name="InstalledAndLatest" xml:space="preserve">
+    <value>Versione installata: {0}. Ultima versione stabile: {1}.</value>
+  </data>
+  <data name="InstallFile" xml:space="preserve">
+    <value>Installa file</value>
+  </data>
+  <data name="InstallFolder" xml:space="preserve">
+    <value>Installa cartella</value>
+  </data>
+  <data name="Installing" xml:space="preserve">
+    <value>Installazione…</value>
+  </data>
+  <data name="InstallPluginFiles" xml:space="preserve">
+    <value>Installa file di plugin</value>
+  </data>
+  <data name="DeviceFirmware" xml:space="preserve">
+    <value>Firmware {0}</value>
+  </data>
+  <data name="INTERFACE" xml:space="preserve">
+    <value>INTERFACCIA</value>
+  </data>
+  <data name="InterfaceCaptureSource" xml:space="preserve">
+    <value>Sorgente di acquisizione</value>
+  </data>
+  <data name="InterfaceChannelName" xml:space="preserve">
+    <value>Nome del canale</value>
+  </data>
+  <data name="InterfaceChannelNamePlaceholder" xml:space="preserve">
+    <value>Nome dell'interfaccia e numero dell'ingresso</value>
+  </data>
+  <data name="InterfaceConnection" xml:space="preserve">
+    <value>Collegamento dell'interfaccia</value>
+  </data>
+  <data name="InterfaceInputChannelName" xml:space="preserve">
+    <value>{0} ingresso {1}</value>
+  </data>
+  <data name="InterfaceMicrophone" xml:space="preserve">
+    <value>Microfono</value>
+  </data>
+  <data name="InterfaceNotConnected" xml:space="preserve">
+    <value>L'interfaccia non è collegata.</value>
+  </data>
+  <data name="InterfaceSourcePlaceholder" xml:space="preserve">
+    <value>Scegli la sorgente dell'interfaccia</value>
+  </data>
+  <data name="InvalidPresetName" xml:space="preserve">
+    <value>Nome del preset dell'effetto non valido.</value>
+  </data>
+  <data name="InvalidPresetNameOrChain" xml:space="preserve">
+    <value>Nome del preset dell'effetto o catena non validi.</value>
+  </data>
+  <data name="KeepRunningInTray" xml:space="preserve">
+    <value>Resta attivo nel vassoio di sistema</value>
+  </data>
+  <data name="KeyOutputVolumeDown" xml:space="preserve">
+    <value>Abbassa il volume di uscita del 5%</value>
+  </data>
+  <data name="KeyOutputVolumeUp" xml:space="preserve">
+    <value>Alza il volume di uscita del 5%</value>
+  </data>
+  <data name="KeyRouteFocusedApp" xml:space="preserve">
+    <value>Instrada l'app attiva su {0}</value>
+  </data>
+  <data name="KeySetSystemOutput" xml:space="preserve">
+    <value>Imposta l'uscita di sistema su {0}</value>
+  </data>
+  <data name="KeyToggleOutputMute" xml:space="preserve">
+    <value>Attiva o disattiva il muto dell'uscita</value>
+  </data>
+  <data name="KNOWNAPPLICATIONS" xml:space="preserve">
+    <value>APPLICAZIONI CONOSCIUTE</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Lingua</value>
+  </data>
+  <data name="LanguageHint" xml:space="preserve">
+    <value>La finestra legge la lingua all'avvio, quindi una modifica vale dalla prossima apertura di OpenXLR. Lingua di sistema segue il desktop e altrimenti usa l'inglese. Le lingue arrivano dai collaboratori; il manuale spiega come aggiungerne una.</value>
+  </data>
+  <data name="LatencyMilliseconds" xml:space="preserve">
+    <value>Latenza: {0:0.##} ms</value>
+  </data>
+  <data name="LatencyUnknown" xml:space="preserve">
+    <value>Latenza: sconosciuta. La compensazione della latenza la conta come zero.</value>
+  </data>
+  <data name="LeftLevel" xml:space="preserve">
+    <value>Livello sinistro</value>
+  </data>
+  <data name="LevelLock" xml:space="preserve">
+    <value>Blocco livello</value>
+  </data>
+  <data name="LineInUsbAux" xml:space="preserve">
+    <value>Line In / USB Aux</value>
+  </data>
+  <data name="LoadPreset" xml:space="preserve">
+    <value>Carica preset</value>
+  </data>
+  <data name="LoadThisProfile" xml:space="preserve">
+    <value>Carica questo profilo</value>
+  </data>
+  <data name="Lock" xml:space="preserve">
+    <value>Blocca</value>
+  </data>
+  <data name="LoopSample" xml:space="preserve">
+    <value>Riproduci in loop</value>
+  </data>
+  <data name="LowCut" xml:space="preserve">
+    <value>Taglio basse</value>
+  </data>
+  <data name="LowCutFrequency" xml:space="preserve">
+    <value>Taglio basse {0}</value>
+  </data>
+  <data name="LowCutOff" xml:space="preserve">
+    <value>Nessun taglio basse</value>
+  </data>
+  <data name="LowImp" xml:space="preserve">
+    <value>Bassa imp.</value>
+  </data>
+  <data name="LV2CLAPAndVST3PluginsAreFound" xml:space="preserve">
+    <value>I plugin LV2, CLAP e VST3 vengono cercati nelle cartelle standard e in quelle indicate da LV2_PATH, CLAP_PATH o VST3_PATH. Aggiungi una cartella per trovarne i plugin dove si trovano, senza copiarli. Rimuovere una cartella aggiunta ne conserva i file.</value>
+  </data>
+  <data name="Manage" xml:space="preserve">
+    <value>Gestisci</value>
+  </data>
+  <data name="ManageThisPluginSNativeEditorCompatibilityRule" xml:space="preserve">
+    <value>Gestisci la regola di compatibilità dell'editor nativo di questo plugin</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>Manuale</value>
+  </data>
+  <data name="MaterialDescription" xml:space="preserve">
+    <value>L'aspetto classico, con una modalità chiara e una scura.</value>
+  </data>
+  <data name="MemoryLockSetup" xml:space="preserve">
+    <value>Configurazione del blocco della memoria</value>
+  </data>
+  <data name="MicPC" xml:space="preserve">
+    <value>Mic ↔ PC</value>
+  </data>
+  <data name="MixChainHint" xml:space="preserve">
+    <value>Plugin stereo, in ordine, prima che questo mix raggiunga le sue uscite</value>
+  </data>
+  <data name="MixerAppearance" xml:space="preserve">
+    <value>Aspetto</value>
+  </data>
+  <data name="MixerControlSize" xml:space="preserve">
+    <value>Dimensione dei controlli</value>
+  </data>
+  <data name="MixerDetached" xml:space="preserve">
+    <value>Il submixer è aperto in una finestra separata.</value>
+  </data>
+  <data name="MixerLayout" xml:space="preserve">
+    <value>Layout del mixer</value>
+  </data>
+  <data name="MixerView" xml:space="preserve">
+    <value>Vista</value>
+  </data>
+  <data name="MixerViewCompact" xml:space="preserve">
+    <value>Compatta: un canale</value>
+  </data>
+  <data name="MixerViewFull" xml:space="preserve">
+    <value>Mixer completo</value>
+  </data>
+  <data name="MixerViewMini" xml:space="preserve">
+    <value>Mini: un canale in un mix</value>
+  </data>
+  <data name="MixerWindowTitle" xml:space="preserve">
+    <value>Mixer OpenXLR</value>
+  </data>
+  <data name="MIXES" xml:space="preserve">
+    <value>MIX</value>
+  </data>
+  <data name="MixInsertsTitle" xml:space="preserve">
+    <value>Mix {0}</value>
+  </data>
+  <data name="MixShown" xml:space="preserve">
+    <value>Mix mostrato</value>
+  </data>
+  <data name="MixToOutput" xml:space="preserve">
+    <value>Dal mix all'uscita</value>
+  </data>
+  <data name="MixType" xml:space="preserve">
+    <value>Tipo di mix</value>
+  </data>
+  <data name="Mode" xml:space="preserve">
+    <value>Modalità</value>
+  </data>
+  <data name="MONITOR" xml:space="preserve">
+    <value>MONITOR</value>
+  </data>
+  <data name="MonitorMix" xml:space="preserve">
+    <value>Mix monitor</value>
+  </data>
+  <data name="MonitorMixKind" xml:space="preserve">
+    <value>mix monitor</value>
+  </data>
+  <data name="MonitorNotRouted" xml:space="preserve">
+    <value>non instradato</value>
+  </data>
+  <data name="MonitorOutput" xml:space="preserve">
+    <value>Uscita monitor</value>
+  </data>
+  <data name="MonitorOutputMissing" xml:space="preserve">
+    <value>{0} (non collegata)</value>
+  </data>
+  <data name="MonitorOutputsMore" xml:space="preserve">
+    <value>{0} + altre {1}</value>
+  </data>
+  <data name="MonoPickerHint" xml:space="preserve">
+    <value>Plugin che possono funzionare in mono sul percorso del microfono</value>
+  </data>
+  <data name="MonoPluginsAvailable" xml:space="preserve">
+    <value>{0} plugin mono disponibili</value>
+  </data>
+  <data name="MoreBundlesOmitted" xml:space="preserve">
+    <value>Altri {0} bundle omessi da questo elenco.</value>
+  </data>
+  <data name="MoveApplications" xml:space="preserve">
+    <value>Sposta applicazioni</value>
+  </data>
+  <data name="MoveDown" xml:space="preserve">
+    <value>Sposta giù</value>
+  </data>
+  <data name="MoveHeadphones" xml:space="preserve">
+    <value>Sposta cuffie</value>
+  </data>
+  <data name="MoveInputs" xml:space="preserve">
+    <value>Sposta ingressi</value>
+  </data>
+  <data name="MoveItem" xml:space="preserve">
+    <value>Sposta {0}</value>
+  </data>
+  <data name="MoveMonitor" xml:space="preserve">
+    <value>Sposta monitor</value>
+  </data>
+  <data name="MovePluginDown" xml:space="preserve">
+    <value>Sposta il plugin giù</value>
+  </data>
+  <data name="MovePluginUp" xml:space="preserve">
+    <value>Sposta il plugin su</value>
+  </data>
+  <data name="MoveSubmixer" xml:space="preserve">
+    <value>Sposta submixer</value>
+  </data>
+  <data name="MoveUp" xml:space="preserve">
+    <value>Sposta su</value>
+  </data>
+  <data name="Mute" xml:space="preserve">
+    <value>Muto</value>
+  </data>
+  <data name="MuteInput2" xml:space="preserve">
+    <value>Silenzia ingresso 2</value>
+  </data>
+  <data name="MuteMonitoring" xml:space="preserve">
+    <value>Silenzia monitoraggio</value>
+  </data>
+  <data name="MuteMonitoringTip" xml:space="preserve">
+    <value>Silenzia tutte le uscite monitor selezionate senza cambiare i muti salvati di mix e canali. Se attivato in Audio, si mettono in pausa anche le mandate del microfono. Il resto dell'audio in registrazione e in streaming continua.</value>
+  </data>
+  <data name="MutedInactive" xml:space="preserve">
+    <value>Silenziato / inattivo</value>
+  </data>
+  <data name="NativeEditorCompatibility" xml:space="preserve">
+    <value>Compatibilità degli editor nativi</value>
+  </data>
+  <data name="NativeEditorDisabled" xml:space="preserve">
+    <value>Questo editor nativo è disattivato in Opzioni. Usa i controlli OpenXLR.</value>
+  </data>
+  <data name="NativeEditors" xml:space="preserve">
+    <value>Editor nativi</value>
+  </data>
+  <data name="NativeHost" xml:space="preserve">
+    <value>Host nativo</value>
+  </data>
+  <data name="NativeHostLetter" xml:space="preserve">
+    <value>N</value>
+  </data>
+  <data name="NativeHostMissing" xml:space="preserve">
+    <value>L'host nativo dei plugin non è installato accanto al demone, quindi i plugin CLAP e VST3 non possono funzionare.</value>
+  </data>
+  <data name="NewChannelEGPodcast" xml:space="preserve">
+    <value>Nuovo canale, ad es. Podcast</value>
+  </data>
+  <data name="NewGroup" xml:space="preserve">
+    <value>Nuovo gruppo</value>
+  </data>
+  <data name="NewMixEGRecordingOrHeadphones" xml:space="preserve">
+    <value>Nuovo mix, ad es. Registrazione o Cuffie</value>
+  </data>
+  <data name="NewPresetName" xml:space="preserve">
+    <value>Nome del nuovo preset</value>
+  </data>
+  <data name="NewRelease" xml:space="preserve">
+    <value>Nuova versione di OpenXLR {0}</value>
+  </data>
+  <data name="NoAnswerCheckChange" xml:space="preserve">
+    <value>Nessuna risposta dal demone. Verifica se la modifica è stata applicata prima di riprovare.</value>
+  </data>
+  <data name="NoAnswerForPath" xml:space="preserve">
+    <value>Nessuna risposta dal demone per {0}.</value>
+  </data>
+  <data name="NoAnswerMayStillRun" xml:space="preserve">
+    <value>Nessuna risposta dal demone; {0} potrebbe essere ancora in corso.</value>
+  </data>
+  <data name="NoDevice" xml:space="preserve">
+    <value>Nessun dispositivo</value>
+  </data>
+  <data name="NoFolderBridged" xml:space="preserve">
+    <value>nessuna cartella ancora collegata</value>
+  </data>
+  <data name="NoInsertsYet" xml:space="preserve">
+    <value>Ancora nessun insert.</value>
+  </data>
+  <data name="NoLongerInWinePrefix" xml:space="preserve">
+    <value>Questo plugin non appartiene più a un prefisso Wine.</value>
+  </data>
+  <data name="NoMonoPlugins" xml:space="preserve">
+    <value>Nessun plugin mono trovato. Installane qualcuno, o aggiungine uno con i pulsanti qui sotto</value>
+  </data>
+  <data name="NoNativeEditorsAreBlocked" xml:space="preserve">
+    <value>Nessun editor nativo è bloccato.</value>
+  </data>
+  <data name="NoNetworkRequest" xml:space="preserve">
+    <value>Non viene fatta alcuna richiesta di rete, a meno che tu non controlli manualmente o dia il consenso qui sotto.</value>
+  </data>
+  <data name="NoProfilesSavedYet" xml:space="preserve">
+    <value>ancora nessun profilo salvato</value>
+  </data>
+  <data name="NoRegisteredFolders" xml:space="preserve">
+    <value>Nessuna cartella registrata.</value>
+  </data>
+  <data name="NoSessionBus" xml:space="preserve">
+    <value>Nessun bus di sessione disponibile.</value>
+  </data>
+  <data name="NoStereoPlugins" xml:space="preserve">
+    <value>Nessun plugin stereo trovato. Installane qualcuno, o aggiungine uno con i pulsanti qui sotto</value>
+  </data>
+  <data name="NotAffiliatedWithOrEndorsedByElgatoBuilt" xml:space="preserve">
+    <value>Non affiliato a Elgato né da essa approvato. Realizzato analizzando il protocollo sull'hardware dell'autore, con un ringraziamento al progetto openwave per il dialetto del Wave XLR.</value>
+  </data>
+  <data name="NotInPath" xml:space="preserve">
+    <value>Fuori dal percorso</value>
+  </data>
+  <data name="NotManaged" xml:space="preserve">
+    <value>Non gestita</value>
+  </data>
+  <data name="NotRunning" xml:space="preserve">
+    <value>non in esecuzione</value>
+  </data>
+  <data name="NoWindowsPluginFiles" xml:space="preserve">
+    <value>Nessun file di plugin Windows VST3 o CLAP trovato.</value>
+  </data>
+  <data name="OffByDefaultCheckNowMakesOneExplicit" xml:space="preserve">
+    <value>Disattivato per impostazione predefinita. Controlla ora fa una singola richiesta esplicita. Non viene scaricato né installato nulla.</value>
+  </data>
+  <data name="OffOpenXLRControlsTheHardwareOnlyAndLeaves" xml:space="preserve">
+    <value>Disattivato: OpenXLR controlla solo l'hardware e lascia la scheda audio nel layout PipeWire di fabbrica (il profilo UCM, dove esiste).</value>
+  </data>
+  <data name="OnConnect" xml:space="preserve">
+    <value>Alla connessione</value>
+  </data>
+  <data name="OneFolderBridged" xml:space="preserve">
+    <value>1 cartella collegata</value>
+  </data>
+  <data name="OnePlugin" xml:space="preserve">
+    <value>1 plugin</value>
+  </data>
+  <data name="OnLaunch" xml:space="preserve">
+    <value>All'avvio</value>
+  </data>
+  <data name="OnLaunchAppliesTheNextTimeTheApp" xml:space="preserve">
+    <value>L'impostazione All'avvio vale dal prossimo avvio dell'app. Uscire dall'app lascia l'audio in funzione.</value>
+  </data>
+  <data name="OpenManualDesktopKeys" xml:space="preserve">
+    <value>Apri la sezione del manuale sulle scorciatoie desktop</value>
+  </data>
+  <data name="OpenOnGitHub" xml:space="preserve">
+    <value>Apri su GitHub</value>
+  </data>
+  <data name="OpenPluginOwnEditor" xml:space="preserve">
+    <value>Apri l'editor proprio di questo plugin</value>
+  </data>
+  <data name="OpenSourceControlSuiteForElgatoXLRInterfaces" xml:space="preserve">
+    <value>Suite di controllo open source per le interfacce XLR di Elgato su Linux (Wave XLR Pro, XLR Dock, XLR Dock MK.2, Wave XLR, Wave XLR MK.2): controllo dell'hardware tramite protocolli ricostruiti con reverse engineering, un submixer PipeWire in stile Wave Link con canali per applicazione e microfoni virtuali, monitoraggio su più uscite, un mix dedicato per un secondo computer sulla porta USB Aux e un plugin OpenDeck per il controllo tramite Stream Deck.</value>
+  </data>
+  <data name="OpenTheManualSectionOnInstallingPlugins" xml:space="preserve">
+    <value>Apri la sezione del manuale sull'installazione dei plugin</value>
+  </data>
+  <data name="OpenTheManualSectionOnPluginEditors" xml:space="preserve">
+    <value>Apri la sezione del manuale sugli editor dei plugin</value>
+  </data>
+  <data name="OpenTheManualSectionOnSkins" xml:space="preserve">
+    <value>Apri la sezione del manuale sulle skin</value>
+  </data>
+  <data name="OpenTheManualSectionOnThePipewirePulse" xml:space="preserve">
+    <value>Apri la sezione del manuale sul limite di file aperti di pipewire-pulse</value>
+  </data>
+  <data name="OpenThisPluginSControls" xml:space="preserve">
+    <value>Apri i controlli di questo plugin</value>
+  </data>
+  <data name="OpenThisPluginSOwnEditorOnThe" xml:space="preserve">
+    <value>Apri l'editor proprio di questo plugin sull'istanza audio attiva</value>
+  </data>
+  <data name="OpenUninstaller" xml:space="preserve">
+    <value>Apri il programma di disinstallazione</value>
+  </data>
+  <data name="OpenWineUninstallerDetail" xml:space="preserve">
+    <value>Aprire l'elenco delle app installate per {0}? Scegli lì la voce del programma di installazione del plugin. Un programma di disinstallazione può rimuovere più effetti dello stesso pacchetto. Chiudi prima le altre applicazioni Wine e rimuovi gli insert interessati. OpenXLR ripeterà la scansione quando il programma di disinstallazione si chiude.</value>
+  </data>
+  <data name="OpenWineUninstallerTitle" xml:space="preserve">
+    <value>Aprire il programma di disinstallazione di Wine?</value>
+  </data>
+  <data name="OpenXLRApplications" xml:space="preserve">
+    <value>Applicazioni OpenXLR</value>
+  </data>
+  <data name="OpenXLRAudioFlow" xml:space="preserve">
+    <value>OpenXLR · Flusso audio</value>
+  </data>
+  <data name="OpenXlrBridgeVersion" xml:space="preserve">
+    <value>OpenXLR bridge {0} (64 bit)</value>
+  </data>
+  <data name="OpenXLRMixerLayout" xml:space="preserve">
+    <value>Layout del mixer OpenXLR</value>
+  </data>
+  <data name="OpenXLROptions" xml:space="preserve">
+    <value>Opzioni di OpenXLR</value>
+  </data>
+  <data name="OpenXLRUpdates" xml:space="preserve">
+    <value>Aggiornamenti di OpenXLR</value>
+  </data>
+  <data name="Options" xml:space="preserve">
+    <value>Opzioni</value>
+  </data>
+  <data name="OutputMixesHeading" xml:space="preserve">
+    <value>MIX DI USCITA</value>
+  </data>
+  <data name="OUTPUTS" xml:space="preserve">
+    <value>USCITE</value>
+  </data>
+  <data name="OutputUnavailable" xml:space="preserve">
+    <value>{0} (non disponibile)</value>
+  </data>
+  <data name="Overwrite" xml:space="preserve">
+    <value>Sovrascrivi</value>
+  </data>
+  <data name="OverwriteProfileTitle" xml:space="preserve">
+    <value>Sovrascrivere il profilo?</value>
+  </data>
+  <data name="OwnDeviceLabel" xml:space="preserve">
+    <value>{0} (OpenXLR)</value>
+  </data>
+  <data name="ParameterGroupDisplay" xml:space="preserve">
+    <value>Visualizzazione</value>
+  </data>
+  <data name="ParameterGroupDynamics" xml:space="preserve">
+    <value>Dinamica</value>
+  </data>
+  <data name="ParameterGroupFilter" xml:space="preserve">
+    <value>Filtro</value>
+  </data>
+  <data name="ParameterGroupGeneral" xml:space="preserve">
+    <value>Generale</value>
+  </data>
+  <data name="ParameterGroupLevels" xml:space="preserve">
+    <value>Livelli</value>
+  </data>
+  <data name="ParameterGroupSidechain" xml:space="preserve">
+    <value>Sidechain</value>
+  </data>
+  <data name="ParamOff" xml:space="preserve">
+    <value>disattivo</value>
+  </data>
+  <data name="ParamOn" xml:space="preserve">
+    <value>attivo</value>
+  </data>
+  <data name="PasteEffects" xml:space="preserve">
+    <value>Incolla effetti</value>
+  </data>
+  <data name="Phantom" xml:space="preserve">
+    <value>Phantom</value>
+  </data>
+  <data name="PhantomPowerSettling" xml:space="preserve">
+    <value>Alimentazione phantom in assestamento</value>
+  </data>
+  <data name="Phones1" xml:space="preserve">
+    <value>Cuffie 1</value>
+  </data>
+  <data name="Phones2" xml:space="preserve">
+    <value>Cuffie 2</value>
+  </data>
+  <data name="PickAPluginYouDownloadedAndOpenXLRPuts" xml:space="preserve">
+    <value>Scegli un plugin che hai scaricato e OpenXLR lo mette al suo posto: un file .clap o .vst3, una cartella .vst3 o .lv2, o una cartella che contiene plugin.</value>
+  </data>
+  <data name="PickerNew" xml:space="preserve">
+    <value>{0} plugin nuovi nell'elenco di scelta.</value>
+  </data>
+  <data name="PickerOneNew" xml:space="preserve">
+    <value>1 plugin nuovo nell'elenco di scelta.</value>
+  </data>
+  <data name="Playing" xml:space="preserve">
+    <value>in riproduzione</value>
+  </data>
+  <data name="PluginDirectoriesDefault" xml:space="preserve">
+    <value>I plugin vengono cercati nelle cartelle dei plugin della home e di sistema.</value>
+  </data>
+  <data name="PluginDirectoriesFound" xml:space="preserve">
+    <value>I plugin vengono cercati in {0}, {1} e {2} e nelle cartelle dei plugin di sistema.</value>
+  </data>
+  <data name="PluginDisabled" xml:space="preserve">
+    <value>Disattivato</value>
+  </data>
+  <data name="PluginEnabled" xml:space="preserve">
+    <value>Attivato</value>
+  </data>
+  <data name="PluginFilesNoAnswer" xml:space="preserve">
+    <value>Il demone non ha risposto alla richiesta sui file dei plugin.</value>
+  </data>
+  <data name="PluginFileType" xml:space="preserve">
+    <value>Plugin</value>
+  </data>
+  <data name="PluginFolders" xml:space="preserve">
+    <value>Cartelle dei plugin</value>
+  </data>
+  <data name="PluginInUse" xml:space="preserve">
+    <value>In uso</value>
+  </data>
+  <data name="PluginInUseDetail" xml:space="preserve">
+    <value>Rimuovi questo plugin dalle sue catene di insert prima di disattivarlo o disinstallarlo.</value>
+  </data>
+  <data name="PluginListUnavailable" xml:space="preserve">
+    <value>L'elenco dei plugin non è disponibile.</value>
+  </data>
+  <data name="PluginListUnavailableShort" xml:space="preserve">
+    <value>Elenco dei plugin non disponibile</value>
+  </data>
+  <data name="PluginManager" xml:space="preserve">
+    <value>Gestione plugin</value>
+  </data>
+  <data name="PLUGINS" xml:space="preserve">
+    <value>PLUGIN</value>
+  </data>
+  <data name="PluginsInChain" xml:space="preserve">
+    <value>{0} plugin nella catena</value>
+  </data>
+  <data name="PluginsProcessingXLR1BeforeItReachesThe" xml:space="preserve">
+    <value>Plugin che elaborano XLR 1 prima che raggiunga i mix</value>
+  </data>
+  <data name="PluginsProcessingXLR2BeforeItReachesThe" xml:space="preserve">
+    <value>Plugin che elaborano XLR 2 prima che raggiunga i mix</value>
+  </data>
+  <data name="PluginState" xml:space="preserve">
+    <value>Stato del plugin</value>
+  </data>
+  <data name="PluginUI" xml:space="preserve">
+    <value>Interfaccia del plugin</value>
+  </data>
+  <data name="PopOutMixer" xml:space="preserve">
+    <value>Stacca</value>
+  </data>
+  <data name="PopOutMixerHint" xml:space="preserve">
+    <value>Sposta il submixer in una finestra propria, per un altro schermo.</value>
+  </data>
+  <data name="ShowHidden" xml:space="preserve">
+    <value>Mostra nascosti</value>
+  </data>
+  <data name="ShowHiddenHint" xml:space="preserve">
+    <value>Mostra al loro posto, sbiaditi, i canali e i mix nascosti in Modifica layout. Funzionano come sempre; nel layout non cambia nulla.</value>
+  </data>
+  <data name="PreAssignAChannelToAnAppThat" xml:space="preserve">
+    <value>Preassegna un canale a un'app che non ha ancora riprodotto audio. L'identità viene dedotta dal suo lanciatore; se alla prima riproduzione l'app si presenta in modo diverso, compare semplicemente come una nuova voce.</value>
+  </data>
+  <data name="PreferenceFileHoldsNull" xml:space="preserve">
+    <value>Il file contiene null invece di un oggetto JSON.</value>
+  </data>
+  <data name="PreferenceFileNotSaved" xml:space="preserve">
+    <value>Impossibile salvare {0}. {1}</value>
+  </data>
+  <data name="PreferenceFileUnreadable" xml:space="preserve">
+    <value>Non è stato possibile leggere {0}, che è stato lasciato com'è. Correggilo o rimuovilo per poter salvare di nuovo le preferenze. {1}</value>
+  </data>
+  <data name="PresetEmpty" xml:space="preserve">
+    <value>Il preset dell'effetto è vuoto.</value>
+  </data>
+  <data name="PresetExportTimedOut" xml:space="preserve">
+    <value>Tempo scaduto per l'esportazione del preset.</value>
+  </data>
+  <data name="PresetFileChanged" xml:space="preserve">
+    <value>Il file del preset dell'effetto è cambiato durante la lettura.</value>
+  </data>
+  <data name="PresetFileEmpty" xml:space="preserve">
+    <value>Il file del preset dell'effetto è vuoto.</value>
+  </data>
+  <data name="PresetFileInvalidEntry" xml:space="preserve">
+    <value>Il file del preset dell'effetto contiene una voce non valida.</value>
+  </data>
+  <data name="PresetFileTimedOut" xml:space="preserve">
+    <value>Tempo scaduto per l'operazione sul file del preset.</value>
+  </data>
+  <data name="PresetFileTooLarge" xml:space="preserve">
+    <value>Il file del preset dell'effetto è troppo grande.</value>
+  </data>
+  <data name="PresetFileTooMany" xml:space="preserve">
+    <value>Sono supportati al massimo 64 preset di effetti.</value>
+  </data>
+  <data name="PresetFileWouldExceed" xml:space="preserve">
+    <value>Il file del preset dell'effetto supererebbe 8 MiB.</value>
+  </data>
+  <data name="PresetForDifferentEffect" xml:space="preserve">
+    <value>Questo preset appartiene a un altro effetto.</value>
+  </data>
+  <data name="PresetImportTimedOut" xml:space="preserve">
+    <value>Tempo scaduto per l'importazione del preset.</value>
+  </data>
+  <data name="PresetLimitReached" xml:space="preserve">
+    <value>È stato raggiunto il limite di 64 preset.</value>
+  </data>
+  <data name="PresetNameExists" xml:space="preserve">
+    <value>Esiste già un preset con questo nome. Scegli un nome nuovo o elimina il preset precedente.</value>
+  </data>
+  <data name="PresetNameRule" xml:space="preserve">
+    <value>Usa un nome di preset da 1 a 80 caratteri, senza caratteri di controllo.</value>
+  </data>
+  <data name="Presets" xml:space="preserve">
+    <value>Preset</value>
+  </data>
+  <data name="PresetsAndAB" xml:space="preserve">
+    <value>Preset e A/B</value>
+  </data>
+  <data name="PresetsForThisPluginOnlyFromThe" xml:space="preserve">
+    <value>Preset solo per questo plugin, dallo stesso archivio dei preset di catena. Caricarne uno cambia questo effetto e lascia invariato il resto della catena.</value>
+  </data>
+  <data name="PresetsLimitedTo8MiB" xml:space="preserve">
+    <value>I preset degli effetti sono limitati a 8 MiB.</value>
+  </data>
+  <data name="PresetsTitle" xml:space="preserve">
+    <value>Preset di {0}</value>
+  </data>
+  <data name="PrimaryInterface" xml:space="preserve">
+    <value>Interfaccia principale</value>
+  </data>
+  <data name="ProfileName" xml:space="preserve">
+    <value>nome del profilo</value>
+  </data>
+  <data name="ProfileOverwriteMessage" xml:space="preserve">
+    <value>Esiste già un profilo chiamato "{0}" per questo dispositivo.
+Il salvataggio lo sostituirà con la scena attuale.</value>
+  </data>
+  <data name="Profiles" xml:space="preserve">
+    <value>Profili</value>
+  </data>
+  <data name="PutEveryControlBackToThePluginS" xml:space="preserve">
+    <value>Riporta ogni controllo ai valori predefiniti del plugin</value>
+  </data>
+  <data name="PutTheFiveSectionsBackInTheir" xml:space="preserve">
+    <value>Riporta le cinque sezioni nel loro ordine originale</value>
+  </data>
+  <data name="PutTheSectionsBackInTheSkinsOrder" xml:space="preserve">
+    <value>Riporta le sezioni dove le colloca questa skin, mostrate o nascoste come indica</value>
+  </data>
+  <data name="QuitApp" xml:space="preserve">
+    <value>Esci dall'app</value>
+  </data>
+  <data name="QuitOpenXLR" xml:space="preserve">
+    <value>Esci da OpenXLR</value>
+  </data>
+  <data name="ReadingPluginFolders" xml:space="preserve">
+    <value>Lettura delle cartelle dei plugin…</value>
+  </data>
+  <data name="ReadThePluginDirectoriesAgainForPluginsInstalled" xml:space="preserve">
+    <value>Rileggi le cartelle dei plugin, per i plugin installati in altri modi</value>
+  </data>
+  <data name="ReadTheSkinFoldersAgainForASkin" xml:space="preserve">
+    <value>Rileggi le cartelle delle skin, per una skin aggiunta o modificata nel frattempo</value>
+  </data>
+  <data name="RearJack" xml:space="preserve">
+    <value>Presa posteriore</value>
+  </data>
+  <data name="RecalledWhenTheInterfaceConnectsDaemonStartA" xml:space="preserve">
+    <value>Richiamato quando l'interfaccia si collega: avvio del demone, ricollegamento o riaccensione, o passaggio a essa</value>
+  </data>
+  <data name="Record" xml:space="preserve">
+    <value>Registra</value>
+  </data>
+  <data name="RecordUpToTenSecondsOfYour" xml:space="preserve">
+    <value>Registra fino a dieci secondi del tuo microfono, poi riproducili in loop attraverso gli effetti attuali. Regolali mentre ascolti la stessa ripresa.</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Aggiorna</value>
+  </data>
+  <data name="RefreshPresets" xml:space="preserve">
+    <value>Aggiorna i preset</value>
+  </data>
+  <data name="ReleaseDefaultControls" xml:space="preserve">
+    <value>Predefinito della versione: controlli OpenXLR</value>
+  </data>
+  <data name="ReleaseDefaultEditor" xml:space="preserve">
+    <value>Predefinito della versione: editor nativo consentito</value>
+  </data>
+  <data name="ReleaseDefaultsCanChangeAsCompatibilityImprovesYour" xml:space="preserve">
+    <value>I predefiniti della versione possono cambiare man mano che la compatibilità migliora. Le tue scelte hanno la precedenza finché non scegli Usa il predefinito della versione.</value>
+  </data>
+  <data name="ReleaseNotesArePlainTextOpenXLRNeverInstalls" xml:space="preserve">
+    <value>Le note di rilascio sono testo semplice. OpenXLR non installa mai un aggiornamento automaticamente.</value>
+  </data>
+  <data name="ReleaseNotesTruncated" xml:space="preserve">
+    <value>… Apri GitHub per le note complete.</value>
+  </data>
+  <data name="Reload" xml:space="preserve">
+    <value>Ricarica</value>
+  </data>
+  <data name="RemoveAddedFolder" xml:space="preserve">
+    <value>Rimuovi cartella aggiunta</value>
+  </data>
+  <data name="RemoveFolderDetail" xml:space="preserve">
+    <value>Rimuovere {0} dall'elenco di scansione e rimuovere i suoi wrapper VST3 e CLAP generati? I file originali dei plugin restano dove sono.</value>
+  </data>
+  <data name="RemoveFromAllChains" xml:space="preserve">
+    <value>Rimuovi da tutte le catene</value>
+  </data>
+  <data name="RemoveFromList" xml:space="preserve">
+    <value>Rimuovi dall'elenco</value>
+  </data>
+  <data name="RemovePlugin" xml:space="preserve">
+    <value>Rimuovi plugin</value>
+  </data>
+  <data name="RemovePluginFolderTitle" xml:space="preserve">
+    <value>Rimuovere la cartella dei plugin?</value>
+  </data>
+  <data name="RemovePluginUsesDetail" xml:space="preserve">
+    <value>Rimuovere ogni occorrenza di {0} dalle catene attuali degli ingressi e dei mix, inclusi gli insert in bypass? Gli altri plugin mantengono il loro ordine. L'audio potrebbe interrompersi brevemente nelle catene interessate. File dei plugin, esclusioni e profili salvati non vengono modificati.</value>
+  </data>
+  <data name="RemovePluginUsesTitle" xml:space="preserve">
+    <value>Rimuovere il plugin da tutte le catene?</value>
+  </data>
+  <data name="RemoveUsesBeforeUninstalling" xml:space="preserve">
+    <value>Rimuovi questo plugin dalle sue catene di insert prima di disinstallarlo.</value>
+  </data>
+  <data name="RemovingFolder" xml:space="preserve">
+    <value>Rimozione della cartella…</value>
+  </data>
+  <data name="RemovingFolderAndScanning" xml:space="preserve">
+    <value>Rimozione della cartella e scansione dei plugin…</value>
+  </data>
+  <data name="RemovingPluginUses" xml:space="preserve">
+    <value>Rimozione del plugin da tutte le catene…</value>
+  </data>
+  <data name="Rename" xml:space="preserve">
+    <value>Rinomina</value>
+  </data>
+  <data name="RenameAppChannelHint" xml:space="preserve">
+    <value>I programmi che riproducono su questo canale continuano a suonare; il dispositivo di riproduzione mostra subito il nuovo nome.</value>
+  </data>
+  <data name="RenameCaptureChannelHint" xml:space="preserve">
+    <value>La sorgente di acquisizione e l'instradamento del canale restano invariati.</value>
+  </data>
+  <data name="RenameChannelTitle" xml:space="preserve">
+    <value>Rinomina il canale '{0}'</value>
+  </data>
+  <data name="RenameEffectHint" xml:space="preserve">
+    <value>Cambia solo il nome. Il plugin, le sue impostazioni e l'audio continuano a funzionare.</value>
+  </data>
+  <data name="RenameEffectTitle" xml:space="preserve">
+    <value>Rinomina l'effetto '{0}'</value>
+  </data>
+  <data name="RenameMixHint" xml:space="preserve">
+    <value>OpenXLR mostra subito il nuovo nome. Le altre applicazioni continuano a elencare il vecchio nome del dispositivo finché il demone non si riavvia, così i client che lo usano non vengono interrotti.</value>
+  </data>
+  <data name="RenameMixTitle" xml:space="preserve">
+    <value>Rinomina il mix '{0}'</value>
+  </data>
+  <data name="ReplaceChain" xml:space="preserve">
+    <value>Sostituisci catena</value>
+  </data>
+  <data name="Rescan" xml:space="preserve">
+    <value>Ripeti scansione</value>
+  </data>
+  <data name="RescanAllPlugins" xml:space="preserve">
+    <value>Ripeti la scansione di tutti i plugin</value>
+  </data>
+  <data name="RescanningAllPlugins" xml:space="preserve">
+    <value>Nuova scansione di tutti i plugin…</value>
+  </data>
+  <data name="RescanRetriesTheseBundlesAChangedBundleOr" xml:space="preserve">
+    <value>Ripeti scansione riprova questi bundle. Un bundle o uno scanner modificato viene provato da solo.</value>
+  </data>
+  <data name="Reset" xml:space="preserve">
+    <value>Ripristina</value>
+  </data>
+  <data name="ResetDeviceTitle" xml:space="preserve">
+    <value>Ripristinare i valori predefiniti del dispositivo?</value>
+  </data>
+  <data name="ResetDeviceToDefaults" xml:space="preserve">
+    <value>Ripristina i valori predefiniti del dispositivo</value>
+  </data>
+  <data name="ResetSections" xml:space="preserve">
+    <value>Ripristina sezioni</value>
+  </data>
+  <data name="ResetToBaselineDescription" xml:space="preserve">
+    <value>Scrive sull'interfaccia la configurazione di base di OpenXLR: guadagno di 30 dB su entrambi gli ingressi, tutte le fasi di elaborazione e l'alimentazione phantom disattivate, livello di cuffie e aux a metà, crossfade tutto sul PC. L'instradamento delle uscite resta. I profili salvati restano.</value>
+  </data>
+  <data name="ResetToFirmwareDescription" xml:space="preserve">
+    <value>L'interfaccia torna alle impostazioni con cui parte il suo firmware, e le impostazioni che OpenXLR ripristina alla connessione vengono dimenticate. I profili salvati restano.</value>
+  </data>
+  <data name="RestartDaemon" xml:space="preserve">
+    <value>Riavvia il demone</value>
+  </data>
+  <data name="RestartFailed" xml:space="preserve">
+    <value>Riavvio non riuscito. Controlla i log del servizio utente.</value>
+  </data>
+  <data name="RestartFailedManualDaemon" xml:space="preserve">
+    <value>Riavvio non riuscito. Controlla i log del servizio utente; un demone avviato manualmente va riavviato a mano.</value>
+  </data>
+  <data name="RestartingDaemon" xml:space="preserve">
+    <value>Riavvio del demone...</value>
+  </data>
+  <data name="RestartTheOpenXLRUserServiceAudioWillBe" xml:space="preserve">
+    <value>Riavvia il servizio utente di OpenXLR. L'audio si interromperà brevemente.</value>
+  </data>
+  <data name="RightLevel" xml:space="preserve">
+    <value>Livello destro</value>
+  </data>
+  <data name="ROpenXLROnReddit" xml:space="preserve">
+    <value>r/OpenXLR su Reddit</value>
+  </data>
+  <data name="RuleControlsReleaseDefault" xml:space="preserve">
+    <value>Controlli OpenXLR · Predefinito della versione</value>
+  </data>
+  <data name="RuleControlsYourOverride" xml:space="preserve">
+    <value>Controlli OpenXLR · Tua scelta</value>
+  </data>
+  <data name="RuleEditorReleaseDefault" xml:space="preserve">
+    <value>Editor nativo consentito · Predefinito della versione</value>
+  </data>
+  <data name="RuleEditorYourOverride" xml:space="preserve">
+    <value>Editor nativo consentito · Tua scelta</value>
+  </data>
+  <data name="RulesDisconnected" xml:space="preserve">
+    <value>Disconnesso dal demone. Le regole si aggiorneranno quando si ricollega.</value>
+  </data>
+  <data name="RulesNoAnswer" xml:space="preserve">
+    <value>Il demone non ha restituito le regole degli editor. Aggiornalo o riavvialo se necessario.</value>
+  </data>
+  <data name="RulesPluginListUnavailable" xml:space="preserve">
+    <value>L'elenco dei plugin non è disponibile. Le regole esistenti si possono comunque modificare.</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value>in esecuzione</value>
+  </data>
+  <data name="RunThisInsertInItsOwnProcessWhich" xml:space="preserve">
+    <value>Esegui questo insert in un processo proprio, che è ciò che permette di aprire il suo editor. Il cambio ricostruisce la catena e interrompe l'audio per un istante.</value>
+  </data>
+  <data name="RunThisPluginInItsOwnProcess" xml:space="preserve">
+    <value>Esegui questo plugin in un processo proprio</value>
+  </data>
+  <data name="RunThisPluginInItsOwnProcessWhich" xml:space="preserve">
+    <value>Esegui questo plugin in un processo proprio, che è ciò che permette di aprire il suo editor. Il cambio ricostruisce la catena e interrompe l'audio per un istante.</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Salva</value>
+  </data>
+  <data name="SaveAndRecallCompleteScenesHardwareDSPPlus" xml:space="preserve">
+    <value>Salva e richiama scene complete: il DSP hardware più l'intero submix</value>
+  </data>
+  <data name="SaveCurrentChain" xml:space="preserve">
+    <value>Salva la catena attuale</value>
+  </data>
+  <data name="SavedPresets" xml:space="preserve">
+    <value>Preset salvati</value>
+  </data>
+  <data name="SavedRestartDaemonToApply" xml:space="preserve">
+    <value>Salvato. Riavvia il demone per applicare (systemctl --user restart openxlr-daemon).</value>
+  </data>
+  <data name="SaveGroup" xml:space="preserve">
+    <value>Salva gruppo</value>
+  </data>
+  <data name="SaveLoadImportAndExportPresetsFor" xml:space="preserve">
+    <value>Salva, carica, importa ed esporta i preset di questo plugin</value>
+  </data>
+  <data name="SavePreset" xml:space="preserve">
+    <value>Salva preset</value>
+  </data>
+  <data name="Scanning" xml:space="preserve">
+    <value>Scansione…</value>
+  </data>
+  <data name="ScanningPlugins" xml:space="preserve">
+    <value>Scansione dei plugin…</value>
+  </data>
+  <data name="SearchByNameOrCategory" xml:space="preserve">
+    <value>Cerca per nome o categoria</value>
+  </data>
+  <data name="SearchDirectoryAdded" xml:space="preserve">
+    <value>{0}, cartella aggiunta</value>
+  </data>
+  <data name="SearchDirectoryAddedMissing" xml:space="preserve">
+    <value>{0}, cartella aggiunta, mancante o illeggibile</value>
+  </data>
+  <data name="SearchDirectoryStandard" xml:space="preserve">
+    <value>{0}, standard o dall'ambiente</value>
+  </data>
+  <data name="SearchDirectoryStandardMissing" xml:space="preserve">
+    <value>{0}, standard o dall'ambiente, mancante o illeggibile</value>
+  </data>
+  <data name="SecondComputer" xml:space="preserve">
+    <value>Secondo computer</value>
+  </data>
+  <data name="SectionFoldsNotSaved" xml:space="preserve">
+    <value>Le sezioni chiuse restano tali finché la finestra non si chiude, ma non è stato possibile salvarle: {0}</value>
+  </data>
+  <data name="SectionOrderNotSaved" xml:space="preserve">
+    <value>L'ordine delle sezioni vale finché la finestra non si chiude, ma non è stato possibile salvarlo: {0}</value>
+  </data>
+  <data name="SelectAFolderToSeeItsPlugins" xml:space="preserve">
+    <value>Seleziona una cartella per vederne i plugin.</value>
+  </data>
+  <data name="SelectAPluginToManageIt" xml:space="preserve">
+    <value>Seleziona un plugin per gestirlo.</value>
+  </data>
+  <data name="SelectARule" xml:space="preserve">
+    <value>Seleziona una regola per modificarla, oppure cerca un plugin qui sotto per aggiungerne una.</value>
+  </data>
+  <data name="SelectDevice" xml:space="preserve">
+    <value>seleziona dispositivo</value>
+  </data>
+  <data name="SelectInterfaceTip" xml:space="preserve">
+    <value>{0}
+Seleziona l'interfaccia gestita da OpenXLR</value>
+  </data>
+  <data name="SendThisMixToTheSecondComputerOn" xml:space="preserve">
+    <value>Invia questo mix al secondo computer sulla porta USB Aux. L'attivazione interrompe brevemente l'audio dell'interfaccia mentre il suo flusso si riavvia.</value>
+  </data>
+  <data name="ServiceRestartedWaiting" xml:space="preserve">
+    <value>Servizio riavviato. In attesa della connessione al demone.</value>
+  </data>
+  <data name="ShortcutSessionClosed" xml:space="preserve">
+    <value>Sessione delle scorciatoie chiusa. Apri Scorciatoie desktop e applica per ricollegarti.</value>
+  </data>
+  <data name="ShortcutSessionClosedWhileConfiguring" xml:space="preserve">
+    <value>Il desktop ha chiuso la sessione delle scorciatoie durante la configurazione.</value>
+  </data>
+  <data name="ShowCLAPPlugins" xml:space="preserve">
+    <value>Mostra plugin CLAP</value>
+  </data>
+  <data name="ShowHandlesToMoveSectionsChannelsAnd" xml:space="preserve">
+    <value>Mostra le maniglie per spostare sezioni, canali e mix trascinandoli o con i tasti freccia</value>
+  </data>
+  <data name="ShowLV2Plugins" xml:space="preserve">
+    <value>Mostra plugin LV2</value>
+  </data>
+  <data name="ShowMixer" xml:space="preserve">
+    <value>Mostra mixer</value>
+  </data>
+  <data name="ShowTheLiveAudioRoutingGraph" xml:space="preserve">
+    <value>Mostra il grafo dell'instradamento audio in tempo reale</value>
+  </data>
+  <data name="ShowVST3Plugins" xml:space="preserve">
+    <value>Mostra plugin VST3</value>
+  </data>
+  <data name="SinglePluginImportsIn" xml:space="preserve">
+    <value>I plugin importati singolarmente sono conservati in {0}.</value>
+  </data>
+  <data name="SizingStandard" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="SizingTouch" xml:space="preserve">
+    <value>Touch</value>
+  </data>
+  <data name="Skin" xml:space="preserve">
+    <value>Skin</value>
+  </data>
+  <data name="SkinBuiltIn" xml:space="preserve">
+    <value>integrata</value>
+  </data>
+  <data name="SkinByAuthor" xml:space="preserve">
+    <value>Di {0}.</value>
+  </data>
+  <data name="SkinChoiceLabel" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="SkinChosenByLaunch" xml:space="preserve">
+    <value>OpenXLR è stato avviato con {0} impostata, quindi la skin è stata scelta all'avvio.</value>
+  </data>
+  <data name="SkinFolderHint" xml:space="preserve">
+    <value>Le skin sono cartelle che contengono un file skin.json, lette da {0} e dalle cartelle dati di sistema. Avvia OpenXLR con OPENXLR_SKIN=default per tornare all'aspetto originale senza aprire questa finestra.</value>
+  </data>
+  <data name="SkinInstalledForYou" xml:space="preserve">
+    <value>installata per te</value>
+  </data>
+  <data name="SkinInstalledOnSystem" xml:space="preserve">
+    <value>installata su questo sistema</value>
+  </data>
+  <data name="SkinNoteByAuthor" xml:space="preserve">
+    <value>{0} Di {1}.</value>
+  </data>
+  <data name="SkippedBundlesAfterFailedScan" xml:space="preserve">
+    <value>Saltati dopo una scansione non riuscita: {0}</value>
+  </data>
+  <data name="SkippedBundlesChecking" xml:space="preserve">
+    <value>Bundle saltati: verifica in corso…</value>
+  </data>
+  <data name="SkippedBundlesUnavailable" xml:space="preserve">
+    <value>Bundle saltati: non disponibile</value>
+  </data>
+  <data name="SoftClipGuardTip" xml:space="preserve">
+    <value>ClipGuard lato host: un limitatore rigido dopo l'ADC a -3 dB; non può riparare il clipping nel preamplificatore analogico o nell'ADC</value>
+  </data>
+  <data name="SoftClipGuardUnavailable" xml:space="preserve">
+    <value>ClipGuard software non disponibile</value>
+  </data>
+  <data name="SoundCheck" xml:space="preserve">
+    <value>Sound Check</value>
+  </data>
+  <data name="SoundCheckEmpty" xml:space="preserve">
+    <value>Microfono dal vivo. Nessun campione registrato</value>
+  </data>
+  <data name="SoundCheckLooping" xml:space="preserve">
+    <value>Riproduzione in loop di {0:0.0} secondi attraverso la catena attiva</value>
+  </data>
+  <data name="SoundCheckReady" xml:space="preserve">
+    <value>Microfono dal vivo. {0:0.0} secondi pronti per il loop</value>
+  </data>
+  <data name="SoundCheckRecording" xml:space="preserve">
+    <value>Registrazione: {0:0.0} / 10 secondi</value>
+  </data>
+  <data name="StartAudioInTheBackground" xml:space="preserve">
+    <value>Avvia l'audio in background</value>
+  </data>
+  <data name="StartTheOpenXLRApp" xml:space="preserve">
+    <value>Avvia l'app OpenXLR</value>
+  </data>
+  <data name="StartupAppOnly" xml:space="preserve">
+    <value>L'app si avvierà all'accesso. Avvia il servizio audio separatamente per usarla.</value>
+  </data>
+  <data name="StartupAudioAndApp" xml:space="preserve">
+    <value>L'audio e l'app si avvieranno quando accedi.</value>
+  </data>
+  <data name="StartupAudioOnly" xml:space="preserve">
+    <value>L'audio si avvierà all'accesso senza l'app né l'icona nel vassoio di sistema.</value>
+  </data>
+  <data name="StartupNothing" xml:space="preserve">
+    <value>All'accesso non si avvieranno né l'audio né l'app.</value>
+  </data>
+  <data name="StatusDaemonNotRunning" xml:space="preserve">
+    <value>demone non in esecuzione</value>
+  </data>
+  <data name="StatusNoDevice" xml:space="preserve">
+    <value>nessun dispositivo</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>pronto</value>
+  </data>
+  <data name="StereoPickerHint" xml:space="preserve">
+    <value>Plugin adatti a un mix stereo (due ingressi, due uscite)</value>
+  </data>
+  <data name="StereoPluginsAvailable" xml:space="preserve">
+    <value>{0} plugin stereo disponibili</value>
+  </data>
+  <data name="StereoPluginsProcessingThisMixBeforeItReaches" xml:space="preserve">
+    <value>Plugin stereo che elaborano questo mix prima che raggiunga le sue uscite</value>
+  </data>
+  <data name="StopAndDiscard" xml:space="preserve">
+    <value>Ferma e scarta</value>
+  </data>
+  <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
+    <value>Ferma o chiudi questa finestra per ripristinare il microfono e scartare il campione. La sessione termina anche con un cambio di sorgente, la perdita del dispositivo, l'eliminazione del canale, il riavvio del demone o dopo dieci minuti. Le modifiche agli effetti vengono mantenute.</value>
+  </data>
+  <data name="StoreA" xml:space="preserve">
+    <value>Memorizza A</value>
+  </data>
+  <data name="StoreAFirst" xml:space="preserve">
+    <value>Memorizza prima A.</value>
+  </data>
+  <data name="StoreB" xml:space="preserve">
+    <value>Memorizza B</value>
+  </data>
+  <data name="StoreBFirst" xml:space="preserve">
+    <value>Memorizza prima B.</value>
+  </data>
+  <data name="StoredA" xml:space="preserve">
+    <value>A memorizzato</value>
+  </data>
+  <data name="StoredB" xml:space="preserve">
+    <value>B memorizzato</value>
+  </data>
+  <data name="StoreTheCurrentSettingsAsAOr" xml:space="preserve">
+    <value>Memorizza le impostazioni attuali come A o B, poi ascolta l'una o l'altra. Memorizza di nuovo per conservare le modifiche successive. I due slot durano finché la finestra non perde il demone. Il passaggio ricostruisce la catena, il che può interrompere l'audio per un istante.</value>
+  </data>
+  <data name="StreamState" xml:space="preserve">
+    <value>Stato del flusso</value>
+  </data>
+  <data name="SUBMIXER" xml:space="preserve">
+    <value>SUBMIXER</value>
+  </data>
+  <data name="MixerWaitingForAudioServer" xml:space="preserve">
+    <value>Il mixer è in attesa del server audio, che non ha risposto all'avvio del demone. Compare qui appena il server risponde, senza bisogno di riavviare.</value>
+  </data>
+  <data name="SubmixerIsOffTurnItOnInOptions" xml:space="preserve">
+    <value>Il submixer è disattivato. Attivalo in Opzioni per avere canali per app, mix, microfoni virtuali e insert; OpenXLR sta controllando solo l'hardware.</value>
+  </data>
+  <data name="SUPPORT" xml:space="preserve">
+    <value>SUPPORTO</value>
+  </data>
+  <data name="SwitchSystemOutput" xml:space="preserve">
+    <value>Cambia uscita di sistema: {0}</value>
+  </data>
+  <data name="SyncingAndRescanning" xml:space="preserve">
+    <value>Sincronizzazione e nuova scansione…</value>
+  </data>
+  <data name="SyncWindowsPlugins" xml:space="preserve">
+    <value>Sincronizza i plugin Windows</value>
+  </data>
+  <data name="SYSTEMDEFAULTDEVICES" xml:space="preserve">
+    <value>DISPOSITIVI PREDEFINITI DI SISTEMA</value>
+  </data>
+  <data name="SystemLanguage" xml:space="preserve">
+    <value>Lingua di sistema</value>
+  </data>
+  <data name="ThanksToEveryoneWhoContributedCodeTestedOn" xml:space="preserve">
+    <value>Grazie a tutti coloro che hanno contribuito con il codice, hanno fatto prove sulle proprie interfacce o hanno svolto il lavoro precedente sul protocollo su cui si basa questo progetto.</value>
+  </data>
+  <data name="TheChannelThisViewShowsHiddenChannels" xml:space="preserve">
+    <value>Il canale mostrato da questa vista. Qui si possono scegliere anche i canali nascosti.</value>
+  </data>
+  <data name="TheDeviceMutesThisInputForAbout13" xml:space="preserve">
+    <value>Il dispositivo silenzia questo ingresso per circa 13 secondi a ogni cambio dei 48V e poi lo riattiva da solo</value>
+  </data>
+  <data name="TheMixThisViewShowsItsMaster" xml:space="preserve">
+    <value>Il mix mostrato da questa vista: il suo master e la mandata del canale verso di esso</value>
+  </data>
+  <data name="ThePluginOperation" xml:space="preserve">
+    <value>l'operazione sul plugin</value>
+  </data>
+  <data name="TheRecordingStaysInMemoryItIsCapturedBeforeSoftwareEffectsButAfterTheI" xml:space="preserve">
+    <value>La registrazione resta in memoria. Viene acquisita prima degli effetti software, ma dopo il guadagno e l'elaborazione hardware dell'interfaccia.</value>
+  </data>
+  <data name="TheRescan" xml:space="preserve">
+    <value>la nuova scansione</value>
+  </data>
+  <data name="TheScan" xml:space="preserve">
+    <value>la scansione</value>
+  </data>
+  <data name="TheseFoldersAndExclusionsAreSharedWithOther" xml:space="preserve">
+    <value>Queste cartelle ed esclusioni sono condivise con le altre applicazioni che usano yabridge di sistema.</value>
+  </data>
+  <data name="TheSync" xml:space="preserve">
+    <value>la sincronizzazione</value>
+  </data>
+  <data name="MonitorOutputRoutingTip" xml:space="preserve">
+    <value>Spunta ogni uscita che vuoi ascoltare, poi scegli uno o più mix accanto a ciascuna uscita. I mix vengono sommati ai loro livelli attuali. Tieni selezionato almeno un mix; togli la spunta all'uscita per scollegarla. Le uscite Headphones 1/2 e Line Out del Wave XLR Pro condividono lo stesso segnale. La sua porta USB Aux segue il mix Aux separato. I dispositivi predefiniti di sistema per le app si impostano in Opzioni.</value>
+  </data>
+  <data name="TimeNotRecorded" xml:space="preserve">
+    <value>ora non registrata</value>
+  </data>
+  <data name="TipEnforcingOpenXLRChatAsDefaultInputMakes" xml:space="preserve">
+    <value>Suggerimento: imporre OpenXLR Chat come ingresso predefinito fa sì che le app vocali registrino automaticamente il mix Chat.</value>
+  </data>
+  <data name="TouchGivesTheMixerSButtonsFaders" xml:space="preserve">
+    <value>Touch dà ai pulsanti, ai fader e agli elenchi del mixer aree più grandi per uno schermo touch, con strisce di canale più larghe.</value>
+  </data>
+  <data name="ToUSBAuxPort" xml:space="preserve">
+    <value>Alla porta USB Aux</value>
+  </data>
+  <data name="TrayOnly" xml:space="preserve">
+    <value>Solo vassoio</value>
+  </data>
+  <data name="UnknownError" xml:space="preserve">
+    <value>errore sconosciuto</value>
+  </data>
+  <data name="UpdateCheckUnavailable" xml:space="preserve">
+    <value>Controllo degli aggiornamenti non disponibile</value>
+  </data>
+  <data name="UpdateCheckUnavailableDetail" xml:space="preserve">
+    <value>L'audio non è interessato. Riprova più tardi o apri manualmente la pagina delle versioni.</value>
+  </data>
+  <data name="UPDATES" xml:space="preserve">
+    <value>AGGIORNAMENTI</value>
+  </data>
+  <data name="UpdatesNotChecked" xml:space="preserve">
+    <value>Gli aggiornamenti non sono stati controllati</value>
+  </data>
+  <data name="UpToDate" xml:space="preserve">
+    <value>OpenXLR è aggiornato</value>
+  </data>
+  <data name="USBAuxIn" xml:space="preserve">
+    <value>In USB Aux</value>
+  </data>
+  <data name="UsbAuxPortKind" xml:space="preserve">
+    <value>Porta USB Aux</value>
+  </data>
+  <data name="UseOpenXLRControls" xml:space="preserve">
+    <value>Usa i controlli OpenXLR</value>
+  </data>
+  <data name="UseOpenXLRControlsForPluginsWhoseOwnEditor" xml:space="preserve">
+    <value>Usa i controlli OpenXLR per i plugin il cui editor si blocca o non funziona bene. L'elaborazione audio non cambia.</value>
+  </data>
+  <data name="UseReleaseDefault" xml:space="preserve">
+    <value>Usa il predefinito della versione</value>
+  </data>
+  <data name="ViewChanges" xml:space="preserve">
+    <value>Vedi modifiche</value>
+  </data>
+  <data name="ViewResult" xml:space="preserve">
+    <value>Vedi risultato</value>
+  </data>
+  <data name="VirtualMicrophone" xml:space="preserve">
+    <value>Microfono virtuale</value>
+  </data>
+  <data name="VoiceTune" xml:space="preserve">
+    <value>Voice Tune</value>
+  </data>
+  <data name="Volume" xml:space="preserve">
+    <value>Volume</value>
+  </data>
+  <data name="VTStrength" xml:space="preserve">
+    <value>Intensità VT</value>
+  </data>
+  <data name="WaitingForWineUninstaller" xml:space="preserve">
+    <value>In attesa del programma di disinstallazione di Wine…</value>
+  </data>
+  <data name="WhenClosing" xml:space="preserve">
+    <value>Alla chiusura</value>
+  </data>
+  <data name="WhenSetOpenXLRHoldsTheseAsTheSystem" xml:space="preserve">
+    <value>Se impostati, OpenXLR li mantiene come predefiniti di sistema e annulla ogni modifica esterna, come fa Wave Link. Le applicazioni che seguono il predefinito di sistema li useranno. Scegli Segui l'uscita MONITOR per usare i tasti del volume della tastiera e il cursore del volume del desktop per il dispositivo monitor selezionato.</value>
+  </data>
+  <data name="ChooseOutputMixes" xml:space="preserve">
+    <value>Scegli uno o più mix per questa uscita.</value>
+  </data>
+  <data name="WINDOW" xml:space="preserve">
+    <value>FINESTRA</value>
+  </data>
+  <data name="WindowsPluginsChecking" xml:space="preserve">
+    <value>Plugin Windows: ricerca di yabridge…</value>
+  </data>
+  <data name="WindowsPluginsNoAnswer" xml:space="preserve">
+    <value>Plugin Windows: il demone non ha risposto.</value>
+  </data>
+  <data name="WindowsPluginsNothingInstalled" xml:space="preserve">
+    <value>Plugin Windows: yabridge e Wine non sono installati. Installa il pacchetto facoltativo openxlr-yabridge e Wine, poi installa qui un plugin Windows VST3 o CLAP.</value>
+  </data>
+  <data name="WindowsPluginsNoWine" xml:space="preserve">
+    <value>Plugin Windows: {0} è installato, Wine no. Installa Wine dalla tua distribuzione.</value>
+  </data>
+  <data name="WindowsPluginsNoYabridge" xml:space="preserve">
+    <value>Plugin Windows: Wine è installato, yabridge no. Installa il pacchetto facoltativo openxlr-yabridge, poi installa qui un plugin Windows VST3 o CLAP.</value>
+  </data>
+  <data name="WindowsPluginsReady" xml:space="preserve">
+    <value>Plugin Windows: {0} e Wine sono installati, {1}. Esegui il programma di installazione di un plugin con Wine, poi installa la cartella che ha creato.</value>
+  </data>
+  <data name="WindowsPluginWrappersIn" xml:space="preserve">
+    <value>I wrapper dei plugin Windows di OpenXLR si trovano in {0}.</value>
+  </data>
+  <data name="WindowsVST3AndCLAPPlugins" xml:space="preserve">
+    <value>Plugin Windows VST3 e CLAP</value>
+  </data>
+  <data name="WineTraceChecking" xml:space="preserve">
+    <value>Traccia Wine: verifica del demone…</value>
+  </data>
+  <data name="WineTraceUnavailable" xml:space="preserve">
+    <value>Traccia Wine non disponibile. Il demone deve essere connesso e supportare questa opzione.</value>
+  </data>
+  <data name="WineTraceUpdating" xml:space="preserve">
+    <value>Aggiornamento della traccia Wine…</value>
+  </data>
+  <data name="WineUninstaller" xml:space="preserve">
+    <value>Disinstallazione Wine</value>
+  </data>
+  <data name="WineUninstallerClosed" xml:space="preserve">
+    <value>Programma di disinstallazione di Wine chiuso.</value>
+  </data>
+  <data name="WineUninstallerExited" xml:space="preserve">
+    <value>Il programma di disinstallazione di Wine è terminato con codice {0}.</value>
+  </data>
+  <data name="XLR1Gain" xml:space="preserve">
+    <value>Guad. XLR 1</value>
+  </data>
+  <data name="Xlr1Jack" xml:space="preserve">
+    <value>Presa XLR 1</value>
+  </data>
+  <data name="XLR2Gain" xml:space="preserve">
+    <value>Guad. XLR 2</value>
+  </data>
+  <data name="Xlr2Jack" xml:space="preserve">
+    <value>Presa XLR 2</value>
+  </data>
+  <data name="StartupDoctorHint" xml:space="preserve">
+    <value>Esegui openxlr doctor per conoscere il percorso interessato e un comando di riparazione.</value>
+  </data>
+  <data name="ArrangeSwapHint" xml:space="preserve">
+    <value>Trascina la maniglia di una sezione su un'altra sezione per scambiarle di posto, o la maniglia di un riquadro su un altro riquadro. Una maniglia con il focus si sposta con i tasti freccia, e Invio sulla maniglia di una sezione elenca le sezioni con cui può scambiarsi di posto. Esc annulla il trascinamento.</value>
+  </data>
+  <data name="ArrangementDropped" xml:space="preserve">
+    <value>La disposizione che hai creato con questa skin non è più compatibile con il suo layout, quindi viene usata la disposizione propria della skin.</value>
+  </data>
+  <data name="HiddenSections" xml:space="preserve">
+    <value>Sezioni nascoste</value>
+  </data>
+  <data name="ShowSection" xml:space="preserve">
+    <value>Mostra {0}</value>
+  </data>
+  <data name="SwapWithSection" xml:space="preserve">
+    <value>Scambia con {0}</value>
+  </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>Altre azioni</value>
+  </data>
+  <data name="BankPickerName" xml:space="preserve">
+    <value>Mix mostrato nel banco {0}</value>
+  </data>
+  <data name="BankPickerTip" xml:space="preserve">
+    <value>Il mix mostrato da questo banco. Sono elencati tutti i mix; sceglierne uno mostrato da un altro banco scambia i due. La scelta viene conservata per questa skin e non cambia mai l'ordine del mixer.</value>
+  </data>
+  <data name="BankSendName" xml:space="preserve">
+    <value>Mandata di {0} verso {1}</value>
+  </data>
+  <data name="BankMuteName" xml:space="preserve">
+    <value>Silenzia {0} in {1}</value>
+  </data>
+  <data name="ChannelLevelLeft" xml:space="preserve">
+    <value>Livello del canale {0}, sinistro</value>
+  </data>
+  <data name="ChannelLevelRight" xml:space="preserve">
+    <value>Livello del canale {0}, destro</value>
+  </data>
+  <data name="ChannelMeterTip" xml:space="preserve">
+    <value>Il livello proprio del canale, prima della sua mandata verso questo mix</value>
+  </data>
+  <data name="ChannelVolumeName" xml:space="preserve">
+    <value>Volume di {0}</value>
+  </data>
+  <data name="ChannelVolumeTip" xml:space="preserve">
+    <value>Il volume proprio del canale. Scala tutte le mandate del canale insieme; ogni mandata mantiene il proprio livello e il proprio muto.</value>
+  </data>
+  <data name="ChannelVolumeDirectTip" xml:space="preserve">
+    <value>Il volume proprio del canale. Cambia ogni mix a cui il canale viene inviato. Le tue cuffie sentono questo microfono attraverso il percorso a latenza zero dell'interfaccia, che il volume non modifica.</value>
+  </data>
+  <data name="ChannelVolumeMixesOnly" xml:space="preserve">
+    <value>Il volume agisce solo sui mix, non sul monitoraggio diretto</value>
+  </data>
+  <data name="MixFaderName" xml:space="preserve">
+    <value>Livello master di {0}</value>
+  </data>
+  <data name="MixMuteName" xml:space="preserve">
+    <value>Silenzia {0}</value>
+  </data>
+  <data name="BankChoiceNotSaved" xml:space="preserve">
+    <value>La scelta del banco vale finché la finestra non si chiude, ma non è stato possibile salvarla: {0}</value>
+  </data>
+  <data name="ApplicationChannelName" xml:space="preserve">
+    <value>Canale per {0}</value>
+  </data>
+  <data name="DockingNotSaved" xml:space="preserve">
+    <value>La posizione del submixer vale finché la finestra non si chiude, ma non è stato possibile salvarla: {0}</value>
+  </data>
+  <data name="SkinLayoutClassic" xml:space="preserve">
+    <value>Questa skin mantiene la disposizione abituale della finestra.</value>
+  </data>
+  <data name="SkinLayoutSummary" xml:space="preserve">
+    <value>Questa skin dispone la finestra così: {0}. Gli spostamenti fatti con Disponi e le scelte dei banchi vengono conservati per ogni skin.</value>
+  </data>
+  <data name="LayoutPartColumn" xml:space="preserve">
+    <value>le sezioni una sopra l'altra</value>
+  </data>
+  <data name="LayoutPartRow" xml:space="preserve">
+    <value>le sezioni affiancate</value>
+  </data>
+  <data name="LayoutPartGrid" xml:space="preserve">
+    <value>una griglia</value>
+  </data>
+  <data name="LayoutPartDock" xml:space="preserve">
+    <value>un dock</value>
+  </data>
+  <data name="LayoutPartInputRack" xml:space="preserve">
+    <value>un rack di ingressi</value>
+  </data>
+  <data name="LayoutPartOneBank" xml:space="preserve">
+    <value>un banco di mix</value>
+  </data>
+  <data name="LayoutPartBanks" xml:space="preserve">
+    <value>{0} banchi di mix</value>
+  </data>
+  <data name="LayoutPartOutputToolbar" xml:space="preserve">
+    <value>una barra del monitor</value>
+  </data>
+  <data name="LayoutPartApplicationList" xml:space="preserve">
+    <value>un elenco di applicazioni</value>
+  </data>
+  <data name="LayoutPartApplicationColumns" xml:space="preserve">
+    <value>colonne di applicazioni</value>
+  </data>
+  <data name="LayoutPartDetached" xml:space="preserve">
+    <value>il submixer in una finestra propria</value>
+  </data>
+  <data name="MixerDockingDocked" xml:space="preserve">
+    <value>Submixer: nella finestra principale, dove l'hai messo l'ultima volta. Nessuna skin lo sposta da lì.</value>
+  </data>
+  <data name="MixerDockingDetached" xml:space="preserve">
+    <value>Submixer: staccato, dove l'hai messo l'ultima volta. Nessuna skin lo sposta da lì.</value>
+  </data>
+  <data name="MixerDockingSkinDetached" xml:space="preserve">
+    <value>Submixer: non hai ancora scelto una posizione, quindi questa skin lo stacca una volta quando viene applicata.</value>
+  </data>
+  <data name="MixerDockingNone" xml:space="preserve">
+    <value>Submixer: nella finestra principale. Sia Stacca sia il ritorno nella finestra principale mantengono la tua scelta.</value>
+  </data>
+  <data name="ResetSkinArrangement" xml:space="preserve">
+    <value>Ripristina la disposizione di questa skin</value>
+  </data>
+  <data name="ResetSkinArrangementHint" xml:space="preserve">
+    <value>Riporta le sezioni dove le mette questa skin, riporta i suoi banchi ai mix predefiniti e dimentica dove hai messo il submixer</value>
+  </data>
+  <data name="LayoutPartMatrix" xml:space="preserve">
+    <value>una matrice di mix</value>
+  </data>
+  <data name="MatrixOneOutput" xml:space="preserve">
+    <value>1 uscita</value>
+  </data>
+  <data name="MatrixOutputs" xml:space="preserve">
+    <value>{0} uscite</value>
+  </data>
+  <data name="MatrixNoOutput" xml:space="preserve">
+    <value>Nessuna uscita</value>
+  </data>
+  <data name="MatrixEffects" xml:space="preserve">
+    <value>FX</value>
+  </data>
+  <data name="MatrixProcessing" xml:space="preserve">
+    <value>Mic</value>
+  </data>
+  <data name="MatrixProcessingName" xml:space="preserve">
+    <value>Interruttori del microfono {0}</value>
+  </data>
+  <data name="MatrixProcessingPhantomName" xml:space="preserve">
+    <value>Interruttori del microfono {0}, alimentazione phantom attiva</value>
+  </data>
+  <data name="MatrixProcessingTip" xml:space="preserve">
+    <value>Gli interruttori del microfono: taglio basse, expander, Voice Tune, alimentazione phantom, ClipGuard e compressore, dove l'interfaccia li ha. Si accende quando uno è attivo. La spia diventa rossa quando l'alimentazione phantom è attiva.</value>
+  </data>
+  <data name="IconDefaultNamed" xml:space="preserve">
+    <value>Predefinita ({0})</value>
+  </data>
+  <data name="IconNone" xml:space="preserve">
+    <value>Nessuna</value>
+  </data>
+  <data name="IconTextHeading" xml:space="preserve">
+    <value>Testo</value>
+  </data>
+  <data name="NewChannelIcon" xml:space="preserve">
+    <value>Icona per il nuovo canale</value>
+  </data>
+  <data name="NewMixIcon" xml:space="preserve">
+    <value>Icona per il nuovo mix</value>
+  </data>
+  <data name="HeadphoneOutputs" xml:space="preserve">
+    <value>Uscite cuffie</value>
+  </data>
+  <data name="Phones1Appearance" xml:space="preserve">
+    <value>Icona e colore di Cuffie 1</value>
+  </data>
+  <data name="Phones2Appearance" xml:space="preserve">
+    <value>Icona e colore di Cuffie 2</value>
+  </data>
+  <data name="InputBindings" xml:space="preserve">
+    <value>Associazioni degli ingressi</value>
+  </data>
+  <data name="InputBindingsHint" xml:space="preserve">
+    <value>Da dove arriva il segnale di XLR 1 e XLR 2. L'interfaccia resta gestita qualunque sorgente usino le sue strisce, e i suoi controlli seguono il canale che porta il suo microfono.</value>
+  </data>
+  <data name="InputBindingChipName" xml:space="preserve">
+    <value>Ingresso {0}: {1}</value>
+  </data>
+  <data name="InputBindingTitle" xml:space="preserve">
+    <value>Ingresso per {0}</value>
+  </data>
+  <data name="InputBindingHint" xml:space="preserve">
+    <value>Scegli da dove arriva il segnale di {0}: la presa dell'interfaccia, o una porta di un'altra sorgente di acquisizione. L'interfaccia resta gestita, e i suoi controlli passano al canale che porta il suo microfono. Dopo una modifica, {0} parte silenziato nei mix monitor. Il segnale può arrivare anche dal microfono di un'altra interfaccia Elgato, con i controlli di quell'interfaccia sulla striscia mentre OpenXLR la gestisce.</value>
+  </data>
+  <data name="InputBindingInterfaceJack" xml:space="preserve">
+    <value>Presa dell'interfaccia (XLR {0})</value>
+  </data>
+  <data name="InputBindingSourceMissing" xml:space="preserve">
+    <value>{0} (non collegata)</value>
+  </data>
+  <data name="InputBindingSourceName" xml:space="preserve">
+    <value>Sorgente per {0}</value>
+  </data>
+  <data name="InputBindingSourcePort" xml:space="preserve">
+    <value>{0}, porta {1}</value>
+  </data>
+  <data name="InputBindingPort" xml:space="preserve">
+    <value>Porta</value>
+  </data>
+  <data name="InputBindingPortName" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="KeepInterfaceMicrophone" xml:space="preserve">
+    <value>Mantieni il microfono dell'interfaccia come canale di acquisizione</value>
+  </data>
+  <data name="InputBindingBluetoothHint" xml:space="preserve">
+    <value>Una cuffia Bluetooth passa al profilo headset mentre fornisce il segnale a questa striscia, e la sua qualità di riproduzione si abbassa finché la striscia non prende un'altra sorgente.</value>
+  </data>
+  <data name="InputBindingKeepFailed" xml:space="preserve">
+    <value>{0} è associato, ma non è stato possibile aggiungere il canale di acquisizione per il microfono dell'interfaccia: {1}</value>
+  </data>
+  <data name="AlsoDriveThisInterface" xml:space="preserve">
+    <value>Gestisci anche questa interfaccia</value>
+  </data>
+  <data name="InputBindingDriveFailed" xml:space="preserve">
+    <value>{0} è associato, ma non è stato possibile gestire {1} come interfaccia aggiuntiva: {2}</value>
+  </data>
+  <data name="UnitGainName" xml:space="preserve">
+    <value>Guadagno di {0}</value>
+  </data>
+  <data name="UnitGainInput2Name" xml:space="preserve">
+    <value>Guadagno di {0}, ingresso 2</value>
+  </data>
+  <data name="UnitInputGain" xml:space="preserve">
+    <value>Guadagno</value>
+  </data>
+  <data name="TheInterface" xml:space="preserve">
+    <value>Interfaccia</value>
+  </data>
+  <data name="UnitInputPlaysOn" xml:space="preserve">
+    <value>{0}, ingresso {1}: suona su {2}</value>
+  </data>
+  <data name="UnitInputNotInMixer" xml:space="preserve">
+    <value>{0}, ingresso {1}: non nel mixer</value>
+  </data>
+  <data name="CrossfadeMicPlaysOn" xml:space="preserve">
+    <value>Bilancia il microfono dell'interfaccia stessa, che suona su {0}.</value>
+  </data>
+  <data name="CrossfadeMicNotInMixer" xml:space="preserve">
+    <value>Bilancia il microfono dell'interfaccia stessa, che non è nel mixer.</value>
+  </data>
+  <data name="NoInterface" xml:space="preserve">
+    <value>Nessuna interfaccia.</value>
+  </data>
+  <data name="StripInputLabel" xml:space="preserve">
+    <value>Ingresso {0}</value>
+  </data>
+  <data name="ChooseMicrophoneForStrip" xml:space="preserve">
+    <value>Scegli un microfono per {0}</value>
+  </data>
+  <data name="UnitCapsule" xml:space="preserve">
+    <value>Microfono integrato</value>
+  </data>
+  <data name="InputBindingUnitCapsule" xml:space="preserve">
+    <value>Microfono integrato ({0})</value>
+  </data>
+  <data name="Mic1Gain" xml:space="preserve">
+    <value>Guad. Mic 1</value>
+  </data>
+  <data name="FlatpakBackgroundReason" xml:space="preserve">
+    <value>Mantieni il mixer audio in esecuzione e ripristinalo all'accesso.</value>
+  </data>
+  <data name="FlatpakBackgroundRefused" xml:space="preserve">
+    <value>Impossibile confermare con il desktop la preferenza di avvio all'accesso richiesta.</value>
+  </data>
+  <data name="FlatpakSetup" xml:space="preserve">
+    <value>Flatpak mantiene l'audio in funzione mentre OpenXLR è nel vassoio di sistema. Il comando Esci ferma anche il suo demone audio. Non eseguire contemporaneamente un demone OpenXLR installato da un pacchetto.
+
+I controlli USB richiedono la regola udev sull'host. Esegui fuori dalla sandbox:
+sudo install -m 644 "$(flatpak info --show-location io.github.emaspa.openxlr)/files/share/openxlr/70-openxlr.rules" /etc/udev/rules.d/70-openxlr.rules
+sudo udevadm control --reload-rules
+Poi ricollega l'interfaccia. Le regole WirePlumber dell'utente hanno effetto dal prossimo accesso.
+
+Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Installa i plugin LV2 dalle estensioni LinuxAudio di Flathub; i plugin dell'host e il bridge Windows non sono inclusi. Consulta docs/flatpak.md per la configurazione e i limiti.</value>
+  </data>
+  <data name="FlatpakBackgroundUnavailable" xml:space="preserve">
+    <value>Il desktop non ha consentito l'attività in background. OpenXLR potrebbe fermarsi quando è nascosto.</value>
+  </data>
+  <data name="Eq" xml:space="preserve">
+    <value>EQ</value>
+  </data>
+  <data name="EqButtonTip" xml:space="preserve">
+    <value>L'EQ a quattro bande del microfono, all'inizio dell'ingresso prima del taglio basse, di ClipGuard e dei plugin. Acceso quando è attivo, rosso quando non può funzionare. Apre l'editor.</value>
+  </data>
+  <data name="EqButtonTipCapture" xml:space="preserve">
+    <value>L'EQ a quattro bande del microfono, su questo computer all'inizio dell'ingresso prima dei plugin. Acceso quando è attivo, rosso quando non può funzionare. Apre l'editor.</value>
+  </data>
+  <data name="EqButtonNameOn" xml:space="preserve">
+    <value>EQ di {0}, acceso</value>
+  </data>
+  <data name="EqButtonNameOff" xml:space="preserve">
+    <value>EQ di {0}, spento</value>
+  </data>
+  <data name="EqButtonNameUnavailable" xml:space="preserve">
+    <value>EQ di {0}, non disponibile</value>
+  </data>
+  <data name="EqWindowTitle" xml:space="preserve">
+    <value>EQ di {0}</value>
+  </data>
+  <data name="EqSwitch" xml:space="preserve">
+    <value>EQ acceso</value>
+  </data>
+  <data name="EqSwitchTip" xml:space="preserve">
+    <value>Accendi o spegni l'EQ. Da spento, le bande mantengono i loro valori per la prossima volta.</value>
+  </data>
+  <data name="EqCompare" xml:space="preserve">
+    <value>Confronta</value>
+  </data>
+  <data name="EqCompareTip" xml:space="preserve">
+    <value>Ascolta il microfono senza l'EQ finché questa opzione è attiva, e di nuovo con l'EQ quando la disattivi. L'EQ resta acceso.</value>
+  </data>
+  <data name="EqCopy" xml:space="preserve">
+    <value>Copia</value>
+  </data>
+  <data name="EqCopyTip" xml:space="preserve">
+    <value>Copia questo EQ, il suo interruttore e le sue quattro bande, per incollarlo su un altro microfono.</value>
+  </data>
+  <data name="EqPaste" xml:space="preserve">
+    <value>Incolla</value>
+  </data>
+  <data name="EqPasteTip" xml:space="preserve">
+    <value>Sostituisci questo EQ con quello copiato.</value>
+  </data>
+  <data name="EqReset" xml:space="preserve">
+    <value>Ripristina</value>
+  </data>
+  <data name="EqResetTip" xml:space="preserve">
+    <value>Riporta le quattro bande ai valori iniziali. L'EQ resta acceso o spento.</value>
+  </data>
+  <data name="EqResetConfirm" xml:space="preserve">
+    <value>Riportare le quattro bande dell'EQ di {0} ai valori iniziali? L'EQ resta acceso o spento come è ora.</value>
+  </data>
+  <data name="EqColumnOn" xml:space="preserve">
+    <value>Attiva</value>
+  </data>
+  <data name="EqColumnType" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="EqColumnFrequency" xml:space="preserve">
+    <value>Frequenza (Hz)</value>
+  </data>
+  <data name="EqColumnGain" xml:space="preserve">
+    <value>Guadagno (dB)</value>
+  </data>
+  <data name="EqColumnQ" xml:space="preserve">
+    <value>Q</value>
+  </data>
+  <data name="EqGraphName" xml:space="preserve">
+    <value>Risposta dell'EQ</value>
+  </data>
+  <data name="EqUnavailable" xml:space="preserve">
+    <value>L'EQ non può funzionare.</value>
+  </data>
+  <data name="EqStatusOff" xml:space="preserve">
+    <value>Spento. Le modifiche vengono conservate e si applicano quando l'EQ viene acceso.</value>
+  </data>
+  <data name="EqStatusComparing" xml:space="preserve">
+    <value>In bypass per il confronto. L'EQ torna attivo quando Confronta viene disattivato.</value>
+  </data>
+  <data name="EqStatusSoftware" xml:space="preserve">
+    <value>Acceso, in funzione su questo computer all'inizio dell'ingresso, prima del taglio basse, di ClipGuard e dei plugin.</value>
+  </data>
+  <data name="EqStatusSoftwareCapture" xml:space="preserve">
+    <value>Acceso, in funzione su questo computer all'inizio dell'ingresso, prima dei plugin.</value>
+  </data>
+  <data name="EqStatusDevice" xml:space="preserve">
+    <value>Acceso, in funzione sull'interfaccia a monte dell'USB, dei plugin e di tutto il resto su questo computer.</value>
+  </data>
+  <data name="EqHardwareBadge" xml:space="preserve">
+    <value>Elaborazione hardware</value>
+  </data>
+  <data name="EqHardwareBadgeTip" xml:space="preserve">
+    <value>Questo EQ funziona sul processore interno di {0}, prima dell'USB.</value>
+  </data>
+  <data name="EqHardwareBadgeTipUnnamed" xml:space="preserve">
+    <value>Questo EQ funziona sul processore interno dell'interfaccia, prima dell'USB.</value>
+  </data>
+  <data name="EqTheInterface" xml:space="preserve">
+    <value>questa interfaccia</value>
+  </data>
+  <data name="EqStatusDeviceNamed" xml:space="preserve">
+    <value>Acceso, in funzione sul processore interno di {0}, a monte dell'USB, dei plugin e di tutto il resto su questo computer.</value>
+  </data>
+  <data name="EqDeviceFirmwareOld" xml:space="preserve">
+    <value>Funziona via software: il firmware di {0} è {1}, e l'unità esegue l'EQ da sé solo dal firmware {2}. Lo strumento di aggiornamento di Elgato si trova in Wave Link su Windows o macOS.</value>
+  </data>
+  <data name="EqDeviceFirmwareUnknown" xml:space="preserve">
+    <value>Funziona via software: non è stato possibile leggere la versione del firmware di {0}, e l'unità esegue l'EQ da sé solo dal firmware {1}.</value>
+  </data>
+  <data name="EqDeviceUnsupported" xml:space="preserve">
+    <value>Funziona via software: {0} contiene impostazioni dell'EQ che OpenXLR non riconosce. Raccogli la diagnostica per una segnalazione sul dispositivo.</value>
+  </data>
+  <data name="EqDeviceFailed" xml:space="preserve">
+    <value>Funziona via software: l'EQ scritto su {0} non è stato mantenuto. Spegni e riaccendi l'EQ per riprovare con l'unità.</value>
+  </data>
+  <data name="EqDeviceBySoftware" xml:space="preserve">
+    <value>Funziona via software come scelto; {0} può eseguirlo sul proprio processore.</value>
+  </data>
+  <data name="EqButtonTipDevice" xml:space="preserve">
+    <value>L'EQ a quattro bande del microfono, in funzione sul processore interno di {0} prima dell'USB. Acceso quando è attivo. Apre l'editor.</value>
+  </data>
+  <data name="EqStatusStarting" xml:space="preserve">
+    <value>Acceso, in avvio.</value>
+  </data>
+  <data name="EqProcessingLabel" xml:space="preserve">
+    <value>Dove funziona l'EQ</value>
+  </data>
+  <data name="EqProcessingDevice" xml:space="preserve">
+    <value>Sull'unità</value>
+  </data>
+  <data name="EqProcessingSoftware" xml:space="preserve">
+    <value>Via software</value>
+  </data>
+  <data name="EqProcessingDeviceTip" xml:space="preserve">
+    <value>Esegui l'EQ sul processore interno di {0}, prima dell'USB. Ogni canale che riceve l'audio di questa unità lo sente, e l'unità lo mantiene anche dopo che OpenXLR si ferma.</value>
+  </data>
+  <data name="EqProcessingSoftwareTip" xml:space="preserve">
+    <value>Esegui l'EQ su questo computer, all'inizio dell'ingresso. L'EQ proprio dell'unità viene spento e mantiene le sue bande.</value>
+  </data>
+  <data name="EqBandValues" xml:space="preserve">
+    <value>{0}, {1}, {2}, Q {3}</value>
+  </data>
+  <data name="EqBandValuesNoGain" xml:space="preserve">
+    <value>{0}, {1}, Q {2}</value>
+  </data>
+  <data name="EqBandName" xml:space="preserve">
+    <value>Banda {0}, {1}</value>
+  </data>
+  <data name="EqBandNameOff" xml:space="preserve">
+    <value>Banda {0}, spenta, {1}</value>
+  </data>
+  <data name="EqHandleTip" xml:space="preserve">
+    <value>Trascina per spostare frequenza e guadagno. Scorri per il Q, doppio clic per accendere o spegnere la banda, clic destro per sceglierne il tipo.</value>
+  </data>
+  <data name="EqHandleTipNoGain" xml:space="preserve">
+    <value>Trascina in orizzontale per la frequenza e in verticale per il Q. Scorri per il Q, doppio clic per accendere o spegnere la banda, clic destro per sceglierne il tipo.</value>
+  </data>
+  <data name="EqBandSwitchName" xml:space="preserve">
+    <value>Banda {0} attiva</value>
+  </data>
+  <data name="EqBandTypeName" xml:space="preserve">
+    <value>Tipo della banda {0}</value>
+  </data>
+  <data name="EqBandFrequencyName" xml:space="preserve">
+    <value>Frequenza della banda {0} in hertz</value>
+  </data>
+  <data name="EqBandGainName" xml:space="preserve">
+    <value>Guadagno della banda {0} in decibel</value>
+  </data>
+  <data name="EqBandQName" xml:space="preserve">
+    <value>Q della banda {0}</value>
+  </data>
+  <data name="EqBandOn" xml:space="preserve">
+    <value>Banda attiva</value>
+  </data>
+  <data name="EqReadout" xml:space="preserve">
+    <value>Banda {0}: {1}, {2}, Q {3}</value>
+  </data>
+  <data name="EqReadoutNoGain" xml:space="preserve">
+    <value>Banda {0}: {1}, Q {2}</value>
+  </data>
+  <data name="EqHertz" xml:space="preserve">
+    <value>{0} Hz</value>
+  </data>
+  <data name="EqKilohertz" xml:space="preserve">
+    <value>{0} kHz</value>
+  </data>
+  <data name="EqDecibels" xml:space="preserve">
+    <value>{0} dB</value>
+  </data>
+  <data name="EqTypeLowCut" xml:space="preserve">
+    <value>Passa alto</value>
+  </data>
+  <data name="EqTypeLowShelf" xml:space="preserve">
+    <value>Shelf basso</value>
+  </data>
+  <data name="EqTypePeak" xml:space="preserve">
+    <value>Campana</value>
+  </data>
+  <data name="EqTypeNotch" xml:space="preserve">
+    <value>Notch</value>
+  </data>
+  <data name="EqTypeHighShelf" xml:space="preserve">
+    <value>Shelf alto</value>
+  </data>
+  <data name="EqTypeHighCut" xml:space="preserve">
+    <value>Passa basso</value>
+  </data>
+  <data name="EqTypeLowCutTip" xml:space="preserve">
+    <value>Rimuove ciò che sta sotto la sua frequenza. Il Q modella il punto di taglio. Il guadagno qui non ha effetto e viene conservato.</value>
+  </data>
+  <data name="EqTypeLowShelfTip" xml:space="preserve">
+    <value>Alza o abbassa di quanto indica il guadagno tutto ciò che sta sotto la sua frequenza.</value>
+  </data>
+  <data name="EqTypePeakTip" xml:space="preserve">
+    <value>Alza o abbassa di quanto indica il guadagno il suono attorno alla sua frequenza, su una larghezza impostata dal Q. Alcuni editor chiamano questo filtro Band Pass.</value>
+  </data>
+  <data name="EqTypeNotchTip" xml:space="preserve">
+    <value>Elimina una banda stretta attorno alla sua frequenza. Il Q ne imposta la larghezza. Il guadagno qui non ha effetto e viene conservato.</value>
+  </data>
+  <data name="EqTypeHighShelfTip" xml:space="preserve">
+    <value>Alza o abbassa di quanto indica il guadagno tutto ciò che sta sopra la sua frequenza.</value>
+  </data>
+  <data name="EqTypeHighCutTip" xml:space="preserve">
+    <value>Rimuove ciò che sta sopra la sua frequenza. Il Q modella il punto di taglio. Il guadagno qui non ha effetto e viene conservato.</value>
+  </data>
+  <data name="EqRegionRumble" xml:space="preserve">
+    <value>Rombo</value>
+  </data>
+  <data name="EqRegionBody" xml:space="preserve">
+    <value>Corpo</value>
+  </data>
+  <data name="EqRegionRoom" xml:space="preserve">
+    <value>Ambiente</value>
+  </data>
+  <data name="EqRegionPresence" xml:space="preserve">
+    <value>Presenza</value>
+  </data>
+  <data name="EqRegionSibilance" xml:space="preserve">
+    <value>Sibilanti</value>
+  </data>
+  <data name="EqRegionAir" xml:space="preserve">
+    <value>Aria</value>
+  </data>
+  <data name="EqRegionRumbleTip" xml:space="preserve">
+    <value>Da 20 a 80 Hz: colpi sulla scrivania, traffico e rumori dell'asta, più percepiti che uditi in una voce. Un passa alto qui li elimina.</value>
+  </data>
+  <data name="EqRegionBodyTip" xml:space="preserve">
+    <value>Da 80 a 300 Hz: il peso e il calore di una voce. Se è troppo suona rimbombante, se è troppo poco suona sottile.</value>
+  </data>
+  <data name="EqRegionRoomTip" xml:space="preserve">
+    <value>Da 300 Hz a 1,4 kHz: il suono scatolato e quello della stanza. Un piccolo taglio qui spesso apre una voce.</value>
+  </data>
+  <data name="EqRegionPresenceTip" xml:space="preserve">
+    <value>Da 1,4 a 5 kHz: la chiarezza, e quanto una voce sta in primo piano. Una piccola enfasi aiuta le parole a farsi strada.</value>
+  </data>
+  <data name="EqRegionSibilanceTip" xml:space="preserve">
+    <value>Da 5 a 12 kHz: i suoni duri della s e della t. Un taglio stretto li attenua.</value>
+  </data>
+  <data name="EqRegionAirTip" xml:space="preserve">
+    <value>Da 12 a 20 kHz: il respiro e l'apertura. Un leggero shelf alto aggiunge brillantezza.</value>
+  </data>
+  <data name="FlowEq" xml:space="preserve">
+    <value>EQ via software, {0} bande su 4 attive</value>
+  </data>
+  <data name="FlowEqDevice" xml:space="preserve">
+    <value>EQ su {1}, {0} bande su 4 attive</value>
+  </data>
+  <data name="CaptureSourcePair" xml:space="preserve">
+    <value>{0}, coppia {1}</value>
+  </data>
+  <data name="StereoInputPickerHint" xml:space="preserve">
+    <value>Plugin adatti a un ingresso stereo (due ingressi, due uscite)</value>
+  </data>
+  <data name="DisableInterface" xml:space="preserve">
+    <value>Disattiva interfaccia</value>
+  </data>
+  <data name="DisableInterfaceCaptureDetail" xml:space="preserve">
+    <value>Smettere di gestire {0}? I suoi ingressi di acquisizione e le loro catene di insert verranno eliminati, a meno che tu non li mantenga. Gli ingressi mantenuti suonano finché la loro sorgente è disponibile.</value>
+  </data>
+  <data name="KeepInterfaceCaptureChannels" xml:space="preserve">
+    <value>Mantieni gli ingressi di acquisizione e le loro catene</value>
+  </data>
+  <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
+    <value>Smettere di gestire {0}? I suoi ingressi di acquisizione e le loro catene di insert verranno eliminati. Questo demone non dichiara di supportarne il mantenimento.</value>
+  </data>
+  <data name="Ducking" xml:space="preserve">
+    <value>Ducking</value>
+  </data>
+  <data name="DuckingEnabled" xml:space="preserve">
+    <value>Abbassa il resto dell'audio mentre il microfono chiave è forte</value>
+  </data>
+  <data name="DuckingSensitivity" xml:space="preserve">
+    <value>Sensibilità</value>
+  </data>
+  <data name="DuckingAmount" xml:space="preserve">
+    <value>Quantità</value>
+  </data>
+  <data name="DuckingSpeed" xml:space="preserve">
+    <value>Velocità</value>
+  </data>
+  <data name="DuckingLow" xml:space="preserve">
+    <value>Bassa</value>
+  </data>
+  <data name="DuckingMedium" xml:space="preserve">
+    <value>Media</value>
+  </data>
+  <data name="DuckingHigh" xml:space="preserve">
+    <value>Alta</value>
+  </data>
+  <data name="DuckingAmountLow" xml:space="preserve">
+    <value>Bassa, 6 dB</value>
+  </data>
+  <data name="DuckingAmountMedium" xml:space="preserve">
+    <value>Media, 12 dB</value>
+  </data>
+  <data name="DuckingAmountHigh" xml:space="preserve">
+    <value>Alta, 24 dB</value>
+  </data>
+  <data name="DuckingSlow" xml:space="preserve">
+    <value>Lenta</value>
+  </data>
+  <data name="DuckingFast" xml:space="preserve">
+    <value>Veloce</value>
+  </data>
+  <data name="DuckingHint" xml:space="preserve">
+    <value>Il ducking abbassa i canali scelti nei mix scelti mentre il microfono chiave è forte. Questo computer lo esegue su ogni dispositivo, Wave XLR Pro incluso: il Pro attenua all'interno del proprio mix, da cui le prese non passano ancora.</value>
+  </data>
+  <data name="DuckingNotHeld" xml:space="preserve">
+    <value>L'unità non mantiene ancora questa impostazione; OpenXLR la riscrive entro pochi secondi.</value>
+  </data>
+  <data name="DuckingStatusOff" xml:space="preserve">
+    <value>Spento.</value>
+  </data>
+  <data name="DuckingHardwareBadgeTip" xml:space="preserve">
+    <value>Il ducking funziona sul processore interno di {0}.</value>
+  </data>
+  <data name="DuckingNotRunning" xml:space="preserve">
+    <value>Questa configurazione non è in funzione da nessuna parte.</value>
+  </data>
+  <data name="DuckingButtonTip" xml:space="preserve">
+    <value>Abbassa il resto dell'audio mentre un microfono è forte: la chiave, i canali, i mix, i preset e dove funziona.</value>
+  </data>
+  <data name="DuckingKey" xml:space="preserve">
+    <value>Microfono chiave</value>
+  </data>
+  <data name="DuckingKeyTip" xml:space="preserve">
+    <value>Il microfono la cui voce abbassa il resto dell'audio. Non viene mai abbassato a sua volta.</value>
+  </data>
+  <data name="DuckingChannels" xml:space="preserve">
+    <value>Abbassa questi canali</value>
+  </data>
+  <data name="DuckingMixes" xml:space="preserve">
+    <value>In questi mix</value>
+  </data>
+  <data name="DuckingAllApplications" xml:space="preserve">
+    <value>Tutti i canali applicazione</value>
+  </data>
+  <data name="DuckingNone" xml:space="preserve">
+    <value>Nessuno</value>
+  </data>
+  <data name="DuckingNoneTip" xml:space="preserve">
+    <value>Non abbassare nessun canale. Il ducking non abbassa nulla finché non ne spunti uno.</value>
+  </data>
+  <data name="DuckingProcessingLabel" xml:space="preserve">
+    <value>Funziona su</value>
+  </data>
+  <data name="DuckingProcessingDevice" xml:space="preserve">
+    <value>Questa unità</value>
+  </data>
+  <data name="DuckingProcessingSoftware" xml:space="preserve">
+    <value>Questo computer</value>
+  </data>
+  <data name="DuckingProcessingDeviceTip" xml:space="preserve">
+    <value>Ducking sul processore interno di {0}. Ascolta XLR 1 come lo sente l'unità, prima dell'USB, quindi prima dell'EQ via software, degli insert e di qualsiasi gate su questo computer. Un noise gate o un soppressore su XLR 1 non gli impedisce di attivarsi sul rumore. Abbassa il mix finito così come l'unità lo riproduce sulle sue uscite, dopo tutto ciò che avviene su questo computer. Se un gate su XLR 1 deve evitare gli inneschi indesiderati, scegli questo computer.</value>
+  </data>
+  <data name="DuckingProcessingSoftwareTip" xml:space="preserve">
+    <value>Ducking su questo computer. La chiave è il microfono dopo il suo EQ, gli insert e il loop di Sound Check, prima del suo volume e delle mandate, quindi un gate su di esso evita gli inneschi indesiderati. I canali scelti si abbassano all'interno di ogni mix, prima dei plugin propri di quel mix e del ritardo di latenza. Il ducking proprio dell'unità viene spento.</value>
+  </data>
+  <data name="DuckingStatusOnUnit" xml:space="preserve">
+    <value>Acceso, in funzione sul processore interno di {0}. Sente XLR 1 prima dell'USB, a monte di ogni gate e plugin su questo computer, e abbassa il mix finito sulle uscite dell'unità.</value>
+  </data>
+  <data name="DuckingStatusOnComputer" xml:space="preserve">
+    <value>Acceso, in funzione su questo computer. Sente {0} dopo il suo EQ, gli insert e il loop di Sound Check, e abbassa i canali scelti all'interno di ogni mix, prima dei plugin propri del mix.</value>
+  </data>
+  <data name="DuckingMixerOff" xml:space="preserve">
+    <value>Il mixer software è spento, quindi il ducking non funziona. Attivalo in Opzioni, AUDIO.</value>
+  </data>
+  <data name="DuckingNothingChosen" xml:space="preserve">
+    <value>Acceso, ma non viene abbassato nulla. Scegli almeno un canale e un mix.</value>
+  </data>
+  <data name="DuckingDeviceKeyNotSupported" xml:space="preserve">
+    <value>Con {0} il ducking funziona solo con XLR 1 come chiave.</value>
+  </data>
+  <data name="DuckingDeviceFailed" xml:space="preserve">
+    <value>Il ducking scritto su {0} non è stato mantenuto. Disattiva e riattiva il ducking per riprovare con l'unità.</value>
+  </data>
+  <data name="DuckingDeviceUnsupported" xml:space="preserve">
+    <value>Nessuna risposta da {0} alla lettura del blocco di ducking.</value>
+  </data>
+  <data name="DuckingDeviceNotReady" xml:space="preserve">
+    <value>Questa configurazione non può funzionare su {0}.</value>
+  </data>
+  <data name="DuckingReduction" xml:space="preserve">
+    <value>Riduzione</value>
+  </data>
+  <data name="DuckingReductionValue" xml:space="preserve">
+    <value>{0:0} dB</value>
+  </data>
+  <data name="CaptureBindingHint" xml:space="preserve">
+    <value>Scegli una sorgente e una porta per {0}. Le sue mandate, il volume, gli insert e il gruppo restano al loro posto. Dopo una modifica le mandate monitor partono silenziate e Sound Check termina. Rimuovi i suoi insert prima di passare tra mono e stereo.</value>
+  </data>
+  <data name="CaptureMonoPort" xml:space="preserve">
+    <value>Porta mono {0}</value>
+  </data>
+  <data name="CaptureStereoPorts" xml:space="preserve">
+    <value>Porte stereo {0} + {1}{2}</value>
+  </data>
+  <data name="PreserveBrowserOutputs" xml:space="preserve">
+    <value>Attiva l'instradamento delle singole schede del browser</value>
+  </data>
+  <data name="PreserveBrowserOutputsHint" xml:space="preserve">
+    <value>Finché è attivo, OpenXLR non sposta l'audio del browser e le assegnazioni dell'intero browser restano sospese finché non lo disattivi. Le schede senza un canale proprio mantengono l'uscita scelta dal browser o dal desktop, che può essere un canale OpenXLR su cui il desktop le ha ripristinate.</value>
+  </data>
+  <data name="BrowserOutputHeld" xml:space="preserve">
+    <value>L'instradamento delle singole schede del browser è attivo, quindi OpenXLR non sposta questo browser. Il canale scelto qui si applica quando l'opzione è disattivata.</value>
+  </data>
+  <data name="BrowserOutputHeldOnChannel" xml:space="preserve">
+    <value>L'instradamento delle singole schede del browser è attivo, quindi OpenXLR non sposta questo browser. Ora suona su {0}, dove l'hanno messo il browser o il desktop. Il canale scelto qui si applica quando l'opzione è disattivata.</value>
+  </data>
+  <data name="BrowserOutputHeldElsewhere" xml:space="preserve">
+    <value>L'instradamento delle singole schede del browser è attivo, quindi OpenXLR non sposta questo browser. Suona sull'uscita scelta dal browser o dal desktop, fuori dai canali applicazione di OpenXLR. Il canale scelto qui si applica quando l'opzione è disattivata.</value>
+  </data>
+  <data name="BrowserTabsHeading" xml:space="preserve">
+    <value>SCHEDE DEL BROWSER</value>
+  </data>
+  <data name="BrowserTabCaptureHint" xml:space="preserve">
+    <value>Attiva l'audio di ogni scheda nell'estensione del browser. Scegliere un canale qui non attiva l'audio della scheda.</value>
+  </data>
+  <data name="BrowserTabCaptureState" xml:space="preserve">
+    <value>Stato dell'audio della scheda</value>
+  </data>
+  <data name="BrowserTabChannelName" xml:space="preserve">
+    <value>Canale per la scheda del browser {0}</value>
+  </data>
+  <data name="BrowserTabRemember" xml:space="preserve">
+    <value>Ricorda sito</value>
+  </data>
+  <data name="BrowserTabDefault" xml:space="preserve">
+    <value>Predefinito del browser</value>
+  </data>
+  <data name="BrowserTabRoutingDisabled" xml:space="preserve">
+    <value>Attiva l'instradamento delle singole schede del browser per assegnare questa scheda.</value>
+  </data>
+  <data name="BrowserTabApplying" xml:space="preserve">
+    <value>Applicazione dell'assegnazione della scheda...</value>
+  </data>
+  <data name="BrowserTabCapturing" xml:space="preserve">
+    <value>Audio della scheda attivo</value>
+  </data>
+  <data name="BrowserTabActivationRequired" xml:space="preserve">
+    <value>Attiva l'audio della scheda nell'estensione del browser.</value>
+  </data>
+  <data name="BrowserTabUsesDefault" xml:space="preserve">
+    <value>Usa la destinazione predefinita del browser</value>
+  </data>
+  <data name="BrowserTabRememberHint" xml:space="preserve">
+    <value>Se disattivato, le modifiche valgono solo per questa scheda. Una scelta salvata in precedenza per il sito resta valida per le altre schede.</value>
+  </data>
+  <data name="BrowserTabForgetWebsite" xml:space="preserve">
+    <value>Dimentica sito</value>
+  </data>
+  <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
+    <value>Dimentica la destinazione salvata per questo sito e usa quella predefinita del browser per questa scheda.</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
+    <value>Silenzia le mandate del microfono con il monitoraggio</value>
+  </data>
+  <data name="MuteMicrophoneSendsWithMonitoringHint" xml:space="preserve">
+    <value>Mette in pausa anche le mandate XLR e di acquisizione mono verso tutti i mix OpenXLR, incluse le registrazioni instradate. Riattivare l'audio di un monitor riprende queste mandate. Le app che registrano direttamente la sorgente fisica non ne risentono.</value>
+  </data>
+  <data name="MicrophonePausePendingNote" xml:space="preserve">
+    <value>Lo stato dell'audio del microfono non è ancora confermato. L'audio potrebbe ancora raggiungere i mix OpenXLR. Verifica prima di fare affidamento sul silenziamento del microfono.</value>
+  </data>
+  <data name="AddMonitoringPauseKey" xml:space="preserve">
+    <value>Aggiungi un tasto di pausa del monitoraggio</value>
+  </data>
+  <data name="KeyToggleMonitoringPause" xml:space="preserve">
+    <value>Metti in pausa o riprendi il monitoraggio</value>
+  </data>
+  <data name="MonitoringPauseKeysNote" xml:space="preserve">
+    <value>Assegna qui il tasto muto invece dell'azione muto del desktop. Lascia OpenXLR in esecuzione nel vassoio di sistema. Anche l'opzione del microfono in Audio vale per questo tasto.</value>
+  </data>
+  <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
+    <value>Questo desktop non può riaprire l'editor delle scorciatoie. Cambia le associazioni nelle impostazioni delle scorciatoie del desktop.</value>
+  </data>
+</root>
