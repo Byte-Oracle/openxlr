@@ -111,7 +111,8 @@ public static class Localizer
     /// becomes <c>zh-Hans-CN</c>, and the legacy .NET names <c>zh-CHT</c> and
     /// <c>zh-CHS</c> become <c>zh-Hant</c> and <c>zh-Hans</c>. Names that are
     /// not tags come back empty. Filipino selects Tagalog; Serbian without a
-    /// script selects Cyrillic, while an explicit script is preserved.
+    /// script selects Cyrillic, while an explicit script is preserved. The POSIX
+    /// modifiers @latin and @Latn select Latin, ignoring case.
     /// </summary>
     internal static string Canonical(string name)
     {
@@ -127,13 +128,17 @@ public static class Localizer
         // Filipino is the desktop locale name used for the Tagalog catalogue.
         if (parts[0].Equals("fil", StringComparison.OrdinalIgnoreCase)) parts[0] = "tl";
         // Serbian without a script uses Cyrillic. Respect explicit Latin or
-        // other scripts, including the POSIX @latin modifier, so they do not
-        // silently select the Cyrillic catalogue.
+        // other scripts, including the POSIX @latin and @Latn modifiers, so
+        // they do not silently select the Cyrillic catalogue.
         if (parts[0].Equals("sr", StringComparison.OrdinalIgnoreCase))
         {
             bool hasScript = parts.Length > 1 && parts[1].Length == 4 && parts[1].All(char.IsAsciiLetter);
             if (!hasScript)
-                parts = [parts[0], string.Equals(modifier, "latin", StringComparison.OrdinalIgnoreCase) ? "Latn" : "Cyrl", .. parts.Skip(1)];
+            {
+                bool latin = string.Equals(modifier, "latin", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(modifier, "latn", StringComparison.OrdinalIgnoreCase);
+                parts = [parts[0], latin ? "Latn" : "Cyrl", .. parts.Skip(1)];
+            }
             return string.Join('-', parts);
         }
         if (!parts[0].Equals("zh", StringComparison.OrdinalIgnoreCase)) return string.Join('-', parts);
