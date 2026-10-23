@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.2.0
+Version: 0.2.1
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
 License:        GPL-3.0-only
@@ -187,6 +187,13 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Fri Oct 23 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.1-1
+- Browser: Chromium tabs routed to separate OpenXLR channels through an optional browser companion, with a Browser tabs window, website defaults and Activate from the UI; the packages install its native messaging host.
+- Monitor: an output can hear several mixes, every monitor mix can be renamed, reordered or deleted, and monitor mutes reach the physical outputs.
+- Mixer: an option pauses microphone sends with monitoring; hardware outputs are named without their ALSA profile; pending settings survive unchanged renames.
+- UI: Italian, Tagalog, Bisaya and Serbian translations; a quieter Broadcast and Wave matrix; Ko-fi in About.
+- Fixes: CLAP plugins that unregister host sources while closing no longer crash the host; diagnostics keep pw-dump.json valid; desktop keys survive a refused portal app ID.
+
 * Wed Oct 21 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.0-1
 - EQ: a four-band microphone EQ on XLR 1, XLR 2 and mono capture inputs, in software or on the Wave XLR Pro and MK.2 units, with an editor and a switch for where it runs.
 - Ducking: a key microphone lowers chosen channels in chosen mixes while it is loud, in software on every device, set up in the Ducking window, the terminal mixer and a Stream Deck key.
