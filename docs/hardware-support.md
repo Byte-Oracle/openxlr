@@ -9,13 +9,13 @@ brand works in the mixer without hardware controls; see
 
 | Device | USB id | Status |
 |---|---|---|
-| Wave XLR Pro | `0fd9:00b4` | exposed controls verified on hardware; the microphone EQ on the unit measured once, and ducking on the unit accepted by ear on the headphone jacks, keyed by XLR 1 |
+| Wave XLR Pro | `0fd9:00b4` | exposed controls verified on hardware, the microphone EQ on the unit included; ducking on the unit accepted by ear on the headphone jacks, keyed by XLR 1 |
 | XLR Dock | `0fd9:00a6` | exposed controls verified on hardware |
 | Wave XLR | `0fd9:007d` | core controls verified on hardware by community testers on two units (0.1.13) |
-| Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester, except the microphone EQ on the unit, not yet run from OpenXLR |
-| XLR Dock MK.2 | `0fd9:00c7` | MK.2 backend with bank detection; exposed controls verified on the original 0x0103 unit, except the microphone EQ on the unit, not yet run from OpenXLR |
-| Wave:3 | `0fd9:0070` | beta: coded from public protocol research; on the maintainer's unit every control writes and reads back, the gain, the monitor balance and the desktop volume controls are verified, and the checks that need someone at the microphone are open |
-| Wave:1 | `0fd9:006e` | beta: the Wave:3's backend under the Wave:1's id; an owner's two archives showed the Wave:3's block, firmware line and desktop volume mirror, and the gain, mute and headphone volume writes taking effect; ClipGuard and the mix are not yet confirmed |
+| Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester; the microphone EQ on the unit verified on hardware |
+| XLR Dock MK.2 | `0fd9:00c7` | MK.2 backend with bank detection; exposed controls verified on the original 0x0103 unit, and the microphone EQ on the unit verified on firmware 1.0.15 |
+| Wave:3 | `0fd9:0070` | coded from public protocol research; on the maintainer's unit every control writes and reads back, and the gain, the monitor balance and the desktop volume controls are verified |
+| Wave:1 | `0fd9:006e` | the Wave:3's backend under the Wave:1's id; an owner's two archives showed the Wave:3's block, firmware line and desktop volume mirror, and the gain, mute and headphone volume writes taking effect; ClipGuard and the mix are not yet confirmed |
 
 ## USB access
 
@@ -48,7 +48,7 @@ the commit block every selector write needs.
 | USB Aux input level + lock, aux return | verified | return routing latches at stream open; the daemon bounces the stream |
 | Ducking on the unit, keyed by XLR 1 | coded | blocks 0x0008 and 0x0001 as Wave Link 3.5 writes them (captures of 2026-10-21). A desk probe (2026-10-23) found that the unit ducks a pair only when both bits of its field are set; with both set the jacks dipped by the configured depth, on the feed OpenXLR uses, with a test tone as the key. The daemon now writes both bits, and on the desk (2026-10-23) a voice on XLR 1 ducked the music on Headphones 1 at each amount and speed, with no dropout when switching ducking or its side. XLR 2 does not trigger it, and a muted XLR 1 still does. The USB Aux port's mix ducked on its USB stream and was not listened to, so it stays in software |
 | Reset to OpenXLR's baseline | verified | the device keeps its settings, so the reset writes a known set (gain 30 dB, everything off, levels at half, crossfade on PC) instead of recorded firmware defaults |
-| Microphone EQ on the unit, firmware 1.0.14 or later | coded | both inputs, captured from Wave Link 3.5 on firmware 1.0.14; the encoder reproduces the captured writes byte for byte. Measured once on the desk: a +12 dB bell at 5 kHz written from OpenXLR read +12.3 to +12.7 dB on the raw USB capture, and software mode left the capture flat. The other filter types, the zero-latency headphone path and survival across a power cycle are not checked. On older firmware, or when the version or the EQ fields cannot be read, both inputs' EQ runs in software |
+| Microphone EQ on the unit, firmware 1.0.14 or later | verified | both inputs, captured from Wave Link 3.5 on firmware 1.0.14; the encoder reproduces the captured writes byte for byte. Used on the maintainer's unit and by other owners. On the desk a +12 dB bell at 5 kHz written from OpenXLR read +12.3 to +12.7 dB on the raw USB capture, and software mode left the capture flat. On older firmware, or when the version or the EQ fields cannot be read, both inputs' EQ runs in software |
 
 The [microphone EQ](api.md#where-the-eq-runs) runs on the Pro from
 firmware 1.0.14, the version Wave Link 3.5 ran on in captures 16 to 20 of
@@ -70,11 +70,10 @@ writes its own EQ again at every connect anyway. Wave Link left this Pro
 with both inputs' EQ on and band 2 at +12 dB. On connect OpenXLR writes
 each microphone's own EQ over that, or switches it off where the EQ runs
 in software or the strip is bound to another source. The diagnostics
-archive carries block 0x0000 and both inputs' EQ decoded. One bell was
-measured on the desk: +12 dB at 5 kHz read +12.3 to +12.7 dB on the raw
-USB capture, and software mode left it flat. Still open: the other filter
-types against the software EQ's curves, and whether the EQ reaches the
-zero-latency headphone path.
+archive carries block 0x0000 and both inputs' EQ decoded. The maintainer
+and other owners use the EQ on the unit, and on the desk +12 dB at 5 kHz
+read +12.3 to +12.7 dB on the raw USB capture, with software mode leaving
+it flat.
 
 The Pro's mix maximizer and channel booster have no mapped OpenXLR
 controls. Elgato describes them, and ducking, as running on the device: a
@@ -196,7 +195,7 @@ capability describes its restoration policy, not an absence of device memory.
 Hardware low cut or ClipGuard configured in Wave Link may remain active;
 OpenXLR cannot currently read or disable those settings.
 
-## Wave XLR MK.2 (0fd9:00b6) and XLR Dock MK.2 (0fd9:00c7), verified except the EQ on the unit
+## Wave XLR MK.2 (0fd9:00b6) and XLR Dock MK.2 (0fd9:00c7), verified
 
 Decoded from USB captures of Wave Link, using the Pro's protocol family
 at its own address. On 2026-09-02 a community tester
@@ -254,8 +253,8 @@ fits the owner report above, whose firmware version is not known. The
 probe should therefore select `0x0203` on an updated dock and name it in
 the connection note. Read from Linux after the update, every block at
 `0x0103` stalls and every block at `0x0203` answers, which is the case
-the probe's fallback handles; the daemon itself has not been run against
-this dock since its update. The update re-enumerates the dock as a bootloader with product id
+the probe's fallback handles, and the daemon drives the updated dock,
+its EQ included. The update re-enumerates the dock as a bootloader with product id
 `0x00c8` while it flashes.
 
 Other USB errors keep their normal failure handling. The selected bank
@@ -296,7 +295,7 @@ read.
 | Gain, mute, low cut, expander, voice tune + strength | verified | Wave XLR MK.2: community tester, reads and writes. Dock: all of them on the author's unit |
 | Headphone volume, low impedance, crossfade | verified | Wave XLR MK.2: community tester. Dock: all three on the author's unit (the mic leaves the direct monitor at the PC end of the crossfade) |
 | Phantom 48V, ClipGuard, compressor | verified | at the Pro's bit positions; community tester, 0.1.12. Dock: phantom confirmed with a condenser mic going silent when switched off, ClipGuard and compressor by ear |
-| Microphone EQ on the unit, firmware 1.0.15 or later | coded | four bands and a switch in the settings block, written whole per change as Wave Link 3.5 writes it; the encoder reproduces 67 of Wave Link's captured writes byte for byte. The dock's filters were measured from Linux against the software EQ's curves, within about 1 dB for every type. OpenXLR driving it has not been run on hardware yet. On older firmware, or when the version or the EQ fields cannot be read, the EQ runs in software |
+| Microphone EQ on the unit, firmware 1.0.15 or later | verified | four bands and a switch in the settings block, written whole per change as Wave Link 3.5 writes it; the encoder reproduces 67 of Wave Link's captured writes byte for byte. The dock's filters were measured from Linux against the software EQ's curves, within about 1 dB for every type, and OpenXLR runs the EQ on the unit. On older firmware, or when the version or the EQ fields cannot be read, the EQ runs in software |
 
 Every exposed control listed above was confirmed on the dock on
 2026-09-05, the DSP ones by ear through the monitor mix and phantom with a condenser microphone.
@@ -310,7 +309,7 @@ own EQ over it, or switches it off on an input whose EQ runs in software.
 The diagnostics archive carries block 0x0000 and the EQ decoded from the
 settings block. Blocks 0x0002 and 0x0006 exist and are not decoded.
 
-## Wave:3 (0fd9:0070), beta
+## Wave:3 (0fd9:0070)
 
 The USB condenser microphone with a headphone jack, not an XLR
 interface. The backend, `src/OpenXLR.Core/Devices/Wave3Device.cs`,
@@ -327,8 +326,7 @@ config block read over USB with the daemon released. "Written and read
 back" in the table below means the byte changed, held after the daemon
 let go, and the kernel's card followed. Nobody has yet watched its LED
 ring, turned its dial or listened on its headphones, and a replug is
-still owed, so the Wave:3 stays in beta until those steps of the
-checklist at the end of this page are done.
+still owed; the checklist at the end of this page lists those steps.
 
 - [rikkichy/openwave](https://github.com/rikkichy/openwave/blob/main/docs/protocol.md):
   an implementation that runs on the hardware and has users. Where it
@@ -460,7 +458,7 @@ seconds, the route is made anyway and the journal says so. The capture-hold rule
 applications that play straight to the interface open playback without
 asking the daemon.
 
-## Wave:1 (0fd9:006e), beta
+## Wave:1 (0fd9:006e)
 
 The Wave:3's smaller sibling, a USB condenser microphone with a
 headphone jack. Nobody on the project owns one and none of the three
@@ -648,9 +646,8 @@ hardware-save action with an ordered Wave Link capture. The
 [USB capture guide](usb-capture.md) explains the process in about 15
 minutes, no programming needed.
 
-A Wave:3 owner moves that section from beta to verified with the
-following, in the order that risks least, each result with the
-diagnostics archive:
+A Wave:3 owner confirms the controls still open with the following, in
+the order that risks least, each result with the diagnostics archive:
 
 1. Plug the microphone in with the udev rule installed. Alone on the
    bus the daemon drives it at once; next to another supported

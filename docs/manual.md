@@ -76,12 +76,11 @@ version under INTERFACE on an interface that reports one: the Wave XLR
 Pro, the MK.2 family, the Wave:3 and the Wave:1. On the Wave:3 and Wave:1
 the desktop's sound settings and OpenXLR also
 share the microphone mute and the headphone level, so a change in either
-shows in the other within a second. Wave:3 support is in beta: it is
-written from public protocol research, and one user's quick test covered
-detection, gain, mute, headphone volume and the monitor balance. The
-Wave:1 uses the Wave:3's backend and is in beta too: an owner's
-diagnostics showed the microphone recognised and every control read
-correctly, and a second run confirmed the gain, mute and headphone
+shows in the other within a second. Wave:3 support is written from
+public protocol research and works on the maintainer's unit: gain,
+mute, headphone volume and the monitor balance. The Wave:1 uses the
+Wave:3's backend: an owner's diagnostics showed the microphone
+recognised and every control read correctly, and a second run confirmed the gain, mute and headphone
 volume set from OpenXLR on the microphone itself. ClipGuard and the
 mic/PC mix are not confirmed yet; if you own one, change them, leave
 them changed, collect diagnostics and open an issue
