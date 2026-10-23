@@ -796,6 +796,13 @@ the picker's tooltip names the channel the browser plays into meanwhile,
 or says it plays outside OpenXLR's application channels. Choosing another
 channel for the whole browser then only saves it, and so does a routing
 key on an OpenDeck or the keyboard.
+The tooltip follows moves made in desktop audio controls on each stream
+sweep. Non-browser streams with the same application identity still follow
+their assignments. Tabs that are neither capturing nor assigned to a
+channel show their website origin instead of a page title. Shared titles
+refresh at most once per second for title-only changes. Deleting a channel
+moves its remembered website defaults to the fallback application channel;
+tab-only choices return to Browser default.
 
 OpenXLR remembers up to 512 explicit app assignments. Once that limit is
 reached, existing assignments can still be changed, including "Not managed".

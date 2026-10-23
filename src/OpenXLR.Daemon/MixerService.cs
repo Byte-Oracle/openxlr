@@ -27,6 +27,7 @@ public sealed class MixerService : IHostedService, IDisposable
     private volatile bool _checkingProgress;
     internal bool IsResponsive(TimeSpan limit) => !_checkingProgress || _progress.IsRecent(limit);
     private Timer? _streamSweep;
+    private readonly ITimer _browserTitles;
     private Timer? _meterPush;
     // The default-device defense after a build: stored and cancellable, so a
     // stop never leaves a pass behind that would override a default the
@@ -82,7 +83,7 @@ public sealed class MixerService : IHostedService, IDisposable
 
     public MixerService(ILogger<MixerService> log, IConfiguration config, DeviceManager devices,
         IHostApplicationLifetime? lifetime = null, NativeEditorPolicy? editorPolicy = null,
-        StartupDefaults? startupDefaults = null, WaveInterfaces? waveInterfaces = null)
+        StartupDefaults? startupDefaults = null, WaveInterfaces? waveInterfaces = null, TimeProvider? time = null)
     {
         _log = log;
         _config = config;
@@ -117,6 +118,8 @@ public sealed class MixerService : IHostedService, IDisposable
                 else _log.LogWarning("mixer settings not saved: {err}; retrying", error);
             },
             () => Changed?.Invoke());
+        _browserTitles = (time ?? TimeProvider.System).CreateTimer(_ => PublishBrowserTabTitles(), null,
+            TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
     /// <summary>
@@ -713,6 +716,7 @@ public sealed class MixerService : IHostedService, IDisposable
         // phases instead of starting the rest of its repair work.
         await sweep;
         await meters;
+        await _browserTitles.DisposeAsync();
         // Nothing is written to a unit at stop: it keeps the ducking it holds.
         _mixer.SetDeviceDuckingPort(null);
         try { await _defaultDefense.WaitAsync(TimeSpan.FromSeconds(4)); }   // one in-flight pactl call at most, 3 s
@@ -743,6 +747,11 @@ public sealed class MixerService : IHostedService, IDisposable
 
     public string OpenBrowserSession(Guid owner) => _mixer.OpenBrowserSession(owner);
 
+    private void PublishBrowserTabTitles()
+    {
+        if (_mixer.FlushBrowserTabTitles()) Changed?.Invoke();
+    }
+
     public void RemoveBrowserSession(Guid owner)
     {
         if (_mixer.RemoveBrowserSession(owner)) Changed?.Invoke();
@@ -754,8 +763,7 @@ public sealed class MixerService : IHostedService, IDisposable
         if (invalid is not null) return invalid;
         try
         {
-            _mixer.SyncBrowserTabs(owner, command.Session!, command.Tabs!);
-            Changed?.Invoke();
+            if (_mixer.SyncBrowserTabs(owner, command.Session!, command.Tabs!)) Changed?.Invoke();
             return null;
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return ex.Message; }
@@ -1087,6 +1095,7 @@ public sealed class MixerService : IHostedService, IDisposable
 
     public void Dispose()
     {
+        _browserTitles.Dispose();
         _streamSweep?.Dispose();
         _meterPush?.Dispose();
         _saves.Dispose();

@@ -35,6 +35,18 @@ public sealed class BrowserTabViewModelTests
     }
 
     [Fact]
+    public void ATabWithoutASharedTitleUsesItsOriginAndRemainsSelectable()
+    {
+        var f = new Recorder();
+        f.Apply(title: "");
+        Assert.Equal("https://example.com", f.Model.Title);
+        f.Model.SelectedChannel = f.Model.Channels[1];
+        Assert.Equal("https://example.com", Assert.Single(f.Sent).Site);
+        f.Apply("music", title: "Selected tab");
+        Assert.Equal("Selected tab", f.Model.Title);
+    }
+
+    [Fact]
     public void DaemonStateUpdatesTheSameChoicesWithoutSendingAssignments()
     {
         var f = new Recorder();

@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenXLR.Core.Mixing;
 using OpenXLR.Daemon;
 
@@ -10,6 +12,89 @@ public sealed class BrowserTabRoutingTests
 {
     private static BrowserTabRegistration Tab(int id, string site = "https://teams.microsoft.com", string title = "Call")
         => new() { Id = id, Site = site, Title = title };
+
+    [Fact]
+    public void IdenticalRegistrationsDoNotBroadcastState()
+    {
+        var config = new ConfigurationBuilder().Build();
+        using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => []);
+        using var service = new MixerService(NullLogger<MixerService>.Instance, config, devices, time: new ManualTime());
+        Guid owner = Guid.NewGuid();
+        string session = service.OpenBrowserSession(owner);
+        var command = new Command { Cmd = "syncBrowserTabs", Session = session, Tabs = [Tab(1), Tab(2)] };
+        int changes = 0;
+        service.Changed += () => changes++;
+        Assert.Null(service.SyncBrowserTabs(owner, command));
+        Assert.Equal(1, changes);
+        Assert.Null(service.SyncBrowserTabs(owner, new Command
+        {
+            Cmd = "syncBrowserTabs", Session = session, Tabs = [Tab(2), Tab(1, "https://TEAMS.microsoft.com:443/")],
+        }));
+        Assert.Equal(1, changes);
+        Assert.Null(service.SyncBrowserTabs(owner, command));
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public void TitleChurnPublishesTheLatestValueOncePerSecondAndRoutingChangesAreImmediate()
+    {
+        var config = new ConfigurationBuilder().Build();
+        var time = new ManualTime();
+        using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => []);
+        using var service = new MixerService(NullLogger<MixerService>.Instance, config, devices, time: time);
+        Mixer mixer = (Mixer)typeof(MixerService).GetField("_mixer", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(service)!;
+        Guid owner = Guid.NewGuid();
+        string session = service.OpenBrowserSession(owner);
+        int changes = 0;
+        service.Changed += () => changes++;
+        void Sync(params BrowserTabRegistration[] tabs) => Assert.Null(service.SyncBrowserTabs(owner,
+            new Command { Cmd = "syncBrowserTabs", Session = session, Tabs = [.. tabs] }));
+        Sync(Tab(1) with { Capturing = true }, Tab(2));
+        for (int n = 1; n <= 9; n++)
+        {
+            time.Advance(TimeSpan.FromMilliseconds(100));
+            Sync(Tab(2, title: $"Private {n}"), Tab(1, title: $"Call {n}") with { Capturing = true });
+            Assert.Equal(1, changes);
+            Assert.Equal("Call", mixer.BrowserTabs.Single(t => t.Id == 1).Title);
+        }
+        time.Advance(TimeSpan.FromMilliseconds(100));
+        Assert.Equal(2, changes);
+        Assert.Equal("Call 9", mixer.BrowserTabs.Single(t => t.Id == 1).Title);
+        Assert.Equal("", mixer.BrowserTabs.Single(t => t.Id == 2).Title);
+        time.Advance(TimeSpan.FromSeconds(1));
+        Assert.Equal(2, changes);
+        Sync(Tab(1, title: "Call 9") with { Capturing = true }, Tab(2, title: "Only a private title changed"));
+        time.Advance(TimeSpan.FromSeconds(1));
+        Assert.Equal(2, changes);
+        Sync(Tab(1, title: "Call 10") with { Capturing = true }, Tab(2));
+        Sync(Tab(1, title: "Call 11") with { Error = "Capture stopped" }, Tab(2));
+        Assert.Equal(3, changes);
+        Assert.False(mixer.BrowserTabs.Single(t => t.Id == 1).Capturing);
+        Sync(Tab(1, "https://youtube.com", "Video") with { Capturing = true });
+        Assert.Equal(4, changes);
+        Assert.Equal("Video", Assert.Single(mixer.BrowserTabs).Title);
+        Sync(Tab(1, "https://youtube.com", "Pending") with { Capturing = true });
+        service.RemoveBrowserSession(owner);
+        Assert.Equal(5, changes);
+        time.Advance(TimeSpan.FromSeconds(1));
+        Assert.Equal(5, changes);
+        Assert.Empty(mixer.BrowserTabs);
+    }
+
+    [Fact]
+    public void OnlyCapturingOrAssignedTabsShareTheirTitles()
+    {
+        using var mixer = new Mixer();
+        Guid owner = Guid.NewGuid();
+        string session = mixer.OpenBrowserSession(owner);
+        mixer.SyncBrowserTabs(owner, session, [Tab(1), Tab(2) with { Capturing = true }, Tab(3)]);
+        mixer.AssignBrowserTab(session, 3, "https://teams.microsoft.com", "music", false, _ => null);
+        Assert.Equal("", mixer.Snapshot().BrowserTabs.Single(t => t.Id == 1).Title);
+        Assert.Equal("Call", mixer.Snapshot().BrowserTabs.Single(t => t.Id == 2).Title);
+        Assert.Equal("Call", mixer.Snapshot().BrowserTabs.Single(t => t.Id == 3).Title);
+        mixer.AssignBrowserTab(session, 3, "https://teams.microsoft.com", null, false, _ => null);
+        Assert.Equal("", mixer.Snapshot().BrowserTabs.Single(t => t.Id == 3).Title);
+    }
 
     [Fact]
     public void ProvidersOwnTheirSessionsAndDisconnectDropsOnlyTheirTabs()
@@ -254,23 +339,32 @@ public sealed class BrowserTabRoutingTests
         Assert.Throws<InvalidOperationException>(() => mixer.OpenBrowserSession(Guid.NewGuid()));
     }
 
-    [Fact]
-    public void DeletingAChannelClearsItsTabAndSavedSiteWithoutChangingOtherTabs()
+    [Theory]
+    [InlineData("music", "system")]
+    [InlineData("system", "music")]
+    public void DeletingAChannelMovesSavedSitesToTheFallbackWithoutChangingOtherTabs(string deleted, string fallback)
     {
         using var graph = new BrowserGraph();
         graph.Build();
         Guid owner = Guid.NewGuid();
         string session = graph.Mixer.OpenBrowserSession(owner);
-        graph.Mixer.SyncBrowserTabs(owner, session, [Tab(1), Tab(2, "https://youtube.com")]);
-        graph.Mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", "music", true, _ => null);
-        graph.Mixer.AssignBrowserTab(session, 2, "https://youtube.com", "system", false, _ => null);
-        Assert.Throws<IOException>(() => graph.Mixer.DeleteApplicationChannel("music", _ => "disk full"));
-        Assert.Equal("music", graph.Mixer.BrowserTabs.Single(t => t.Id == 1).ChannelId);
+        graph.Mixer.SyncBrowserTabs(owner, session, [Tab(1), Tab(2, "https://youtube.com"), Tab(3)]);
+        graph.Mixer.AssignBrowserTab(session, 1, "https://teams.microsoft.com", deleted, true, _ => null);
+        graph.Mixer.AssignBrowserTab(session, 2, "https://youtube.com", fallback, true, _ => null);
+        graph.Mixer.AssignBrowserTab(session, 3, "https://teams.microsoft.com", deleted, false, _ => null);
+        Assert.Throws<IOException>(() => graph.Mixer.DeleteApplicationChannel(deleted, _ => "disk full"));
+        Assert.Equal(deleted, graph.Mixer.BrowserTabs.Single(t => t.Id == 1).ChannelId);
+        Assert.Equal(deleted, graph.Mixer.ExportSettings().BrowserSiteChannels["https://teams.microsoft.com"]);
+        Assert.Equal(deleted, graph.Mixer.BrowserTabs.Single(t => t.Id == 3).ChannelId);
         MixerSettings? saved = null;
-        graph.Mixer.DeleteApplicationChannel("music", settings => { saved = settings; return null; });
-        Assert.Empty(saved!.BrowserSiteChannels);
-        Assert.Null(graph.Mixer.BrowserTabs.Single(t => t.Id == 1).ChannelId);
-        Assert.Equal("system", graph.Mixer.BrowserTabs.Single(t => t.Id == 2).ChannelId);
+        graph.Mixer.DeleteApplicationChannel(deleted, settings => { saved = settings; return null; });
+        Assert.Equal(fallback, saved!.BrowserSiteChannels["https://teams.microsoft.com"]);
+        Assert.Equal(fallback, graph.Mixer.BrowserTabs.Single(t => t.Id == 1).ChannelId);
+        Assert.True(graph.Mixer.BrowserTabs.Single(t => t.Id == 1).Remember);
+        Assert.Equal(fallback, graph.Mixer.BrowserTabs.Single(t => t.Id == 2).ChannelId);
+        Assert.Equal(fallback, saved.BrowserSiteChannels["https://youtube.com"]);
+        Assert.Null(graph.Mixer.BrowserTabs.Single(t => t.Id == 3).ChannelId);
+        Assert.False(graph.Mixer.BrowserTabs.Single(t => t.Id == 3).Remember);
     }
 
     [Fact]
@@ -346,6 +440,18 @@ public sealed class BrowserTabRoutingTests
         Assert.Equal("music", held.ChannelId);
         Assert.Equal("system", held.OutputChannelId);
 
+        Assert.False(graph.Mixer.SyncStreams());
+        graph.SetStreamSink(2);
+        Assert.True(graph.Mixer.SyncStreams());
+        Assert.Equal("music", Assert.Single(graph.Mixer.Snapshot().Streams).OutputChannelId);
+        Assert.False(graph.Mixer.SyncStreams());
+        graph.SetStreamSink(3);
+        Assert.True(graph.Mixer.SyncStreams());
+        Assert.Null(Assert.Single(graph.Mixer.Snapshot().Streams).OutputChannelId);
+        Assert.False(graph.Mixer.SyncStreams());
+        Assert.DoesNotContain(graph.Calls, c => c.StartsWith("move-sink-input", StringComparison.Ordinal)
+            || c.StartsWith("set-sink-input-mute", StringComparison.Ordinal));
+
         graph.Mixer.SetPreserveBrowserOutputs(false);
         graph.ClearCalls();
         graph.Mixer.SyncStreams();
@@ -405,6 +511,75 @@ public sealed class BrowserTabRoutingTests
         Assert.Equal("system", Assert.Single(graph.Mixer.Streams).ChannelId);
     }
 
+    [Theory]
+    [InlineData(false, "system")]
+    [InlineData(false, "ignore")]
+    [InlineData(true, "system")]
+    [InlineData(true, "ignore")]
+    public void AFormerBrowserIdentityDoesNotHoldAnElectronStream(bool singleStream, string channel)
+    {
+        using var graph = new BrowserGraph();
+        graph.Build();
+        graph.Mixer.SetPreserveBrowserOutputs(true);
+        graph.Mixer.SyncStreams();
+        graph.SetStream("\"application.name\":\"Chromium\",\"media.name\":\"Discord\"", 101);
+        graph.Mixer.SyncStreams();
+        Assert.False(Assert.Single(graph.Mixer.Streams).BrowserHeld);
+        Assert.Equal(101, Assert.Single(graph.Mixer.Streams).Serial);
+        Assert.Null(Assert.Single(graph.Mixer.Streams).OutputChannelId);
+        Assert.False(Assert.Single(graph.Mixer.Snapshot().Streams).BrowserHeld);
+        Assert.Null(Assert.Single(graph.Mixer.Snapshot().Streams).OutputChannelId);
+        graph.ClearCalls();
+        if (singleStream) graph.Mixer.AssignStream(10, channel);
+        else graph.Mixer.AssignApp("Chromium", channel);
+        Assert.Contains(graph.Calls, c => c.StartsWith("move-sink-input 101 ", StringComparison.Ordinal));
+        graph.Mixer.SyncStreams();
+        Assert.Equal(channel, Assert.Single(graph.Mixer.Streams).ChannelId);
+    }
+
+    [Theory]
+    [InlineData("system", false)]
+    [InlineData("ignore", false)]
+    [InlineData("system", true)]
+    [InlineData("ignore", true)]
+    public void AssigningASharedIdentityMovesOnlyItsNonBrowserStreams(string channel, bool singleStream)
+    {
+        using var graph = new BrowserGraph();
+        graph.Build();
+        graph.Mixer.SetPreserveBrowserOutputs(true);
+        graph.AddElectronStream();
+        graph.Mixer.SyncStreams();
+        Assert.True(graph.Mixer.Streams.Single(s => s.Serial == 100).BrowserHeld);
+        Assert.False(graph.Mixer.Streams.Single(s => s.Serial == 101).BrowserHeld);
+        graph.ClearCalls();
+        if (singleStream) graph.Mixer.AssignStream(11, channel);
+        else graph.Mixer.AssignApp("Chromium", channel);
+        Assert.Contains(graph.Calls, c => c.StartsWith("move-sink-input 101 ", StringComparison.Ordinal));
+        Assert.DoesNotContain(graph.Calls, c => c.StartsWith("move-sink-input 100 ", StringComparison.Ordinal));
+        graph.Mixer.SyncStreams();
+        Assert.Equal(channel, graph.Mixer.Streams.Single(s => s.Serial == 101).ChannelId);
+    }
+
+    [Fact]
+    public void AnUnplacedReplacementDoesNotInheritTheBrowsersHeldOutput()
+    {
+        using var graph = new BrowserGraph();
+        graph.Build();
+        graph.Mixer.SetPreserveBrowserOutputs(true);
+        graph.Mixer.SyncStreams();
+        Assert.True(Assert.Single(graph.Mixer.Snapshot().Streams).BrowserHeld);
+        Assert.Equal("music", Assert.Single(graph.Mixer.Snapshot().Streams).OutputChannelId);
+        graph.SetStream("\"application.name\":\"Chromium\",\"media.name\":\"Discord\"", 101);
+        graph.RefuseMoves();
+        graph.Mixer.SyncStreams();
+        Assert.Empty(graph.Mixer.Streams);
+        StreamAssignment app = Assert.Single(graph.Mixer.Snapshot().Streams);
+        Assert.Equal(101, app.Serial);
+        Assert.True(app.Active);
+        Assert.False(app.BrowserHeld);
+        Assert.Null(app.OutputChannelId);
+    }
+
     private sealed class BrowserGraph : IDisposable
     {
         private readonly string _directory = Directory.CreateTempSubdirectory("openxlr-browser-routing-").FullName;
@@ -420,23 +595,51 @@ public sealed class BrowserTabRoutingTests
         {
             File.WriteAllText(Path.Combine(_directory, "calls"), "");
             File.WriteAllText(Path.Combine(_directory, "inputs"), "100\t2\n");
-            ExecutableScript.Write(Path.Combine(_directory, "pw-dump"),
-                """printf '[{"id":10,"type":"PipeWire:Interface:Node","info":{"props":{"object.serial":100,"media.class":"Stream/Output/Audio",""" + props + "}}}]'");
+            SetStream(props);
+            ExecutableScript.Write(Path.Combine(_directory, "pw-dump"), "dir=${0%/*}\n/bin/cat \"$dir/streams\"");
             ExecutableScript.Write(Path.Combine(_directory, "pactl"), """
                 dir=${0%/*}
                 echo "$*" >> "$dir/calls"
                 case "$*" in
-                  'list sinks short') printf '1\tOpenXLR_ch_system\n2\tOpenXLR_ch_music\n' ;;
+                  move-sink-input\ *) [ ! -e "$dir/refuse-moves" ] || exit 0 ;;
+                esac
+                case "$*" in
+                  'list sinks short') printf '1\tOpenXLR_ch_system\n2\tOpenXLR_ch_music\n3\tdesktop\n' ;;
+                  get-default-sink) printf 'desktop\n' ;;
                   'list sink-inputs short') /bin/cat "$dir/inputs" ;;
                   load-module\ *) printf '1\n' ;;
                   'move-sink-input 100 OpenXLR_ch_system') printf '100\t1\n' > "$dir/inputs" ;;
                   'move-sink-input 100 OpenXLR_ch_music') printf '100\t2\n' > "$dir/inputs" ;;
+                  'move-sink-input 101 OpenXLR_ch_system') printf '101\t1\n' > "$dir/inputs" ;;
+                  'move-sink-input 101 desktop') printf '101\t3\n' > "$dir/inputs" ;;
                 esac
                 """);
             Environment.SetEnvironmentVariable("PATH", _directory);
         }
 
         public string Folder => _directory;
+
+        public void SetStream(string props, int serial = 100)
+        {
+            File.WriteAllText(Path.Combine(_directory, "streams"),
+                """[{"id":10,"type":"PipeWire:Interface:Node","info":{"props":{"object.serial":SERIAL,"media.class":"Stream/Output/Audio",""".Replace("SERIAL", serial.ToString()) + props + "}}}]");
+            File.WriteAllText(Path.Combine(_directory, "inputs"), $"{serial}\t2\n");
+            // A fixture replacement is a new registry observation, not a
+            // second read of the adapter's 400 ms standalone snapshot.
+            var adapter = (PipeWireAdapter)typeof(Mixer).GetField("_pw", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(Mixer)!;
+            typeof(PipeWireAdapter).GetMethod("InvalidateDump", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(adapter, null);
+        }
+
+        public void RefuseMoves() => File.WriteAllText(Path.Combine(_directory, "refuse-moves"), "");
+
+        public void AddElectronStream()
+        {
+            string path = Path.Combine(_directory, "streams");
+            File.WriteAllText(path, File.ReadAllText(path).TrimEnd(']') + """
+                ,{"id":11,"type":"PipeWire:Interface:Node","info":{"props":{"object.serial":101,"media.class":"Stream/Output/Audio","application.name":"Chromium","media.name":"Discord"}}}]
+                """);
+            File.WriteAllText(Path.Combine(_directory, "inputs"), "100\t2\n101\t2\n");
+        }
 
         public void Build(Mixer? mixer = null)
         {

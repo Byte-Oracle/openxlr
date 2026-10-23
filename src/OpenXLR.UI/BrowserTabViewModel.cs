@@ -83,7 +83,7 @@ public sealed class BrowserTabViewModel : ViewModelBase
         try
         {
             bool navigated = _site.Length > 0 && _site != site;
-            Set(ref _title, title, nameof(Title));
+            Set(ref _title, title.Length == 0 ? site : title, nameof(Title));
             Set(ref _site, site, nameof(Site));
             _reported = new(channel, channel is not null && remember);
             if (navigated) CancelPending();

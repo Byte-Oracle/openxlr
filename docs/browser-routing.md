@@ -4,7 +4,9 @@ The optional Chromium companion gives each HTTP or HTTPS tab a separate
 entry under APPLICATIONS and in Manage. Choose Music for YouTube and Voice
 Chat for a Teams tab or PWA, for example. It supports native Linux installs
 of Chrome, Chromium, Brave and Edge, starting with Chromium 116. Firefox and
-the Flatpak build are not supported by this companion.
+the Flatpak build are not supported by this companion. Snap-confined
+Chromium cannot launch a native host outside the snap; use a native browser
+package for this companion.
 
 PipeWire often calls every browser stream `Playback`. It can also combine
 several tabs into one stream. OpenXLR therefore does not guess a tab from a
@@ -25,9 +27,17 @@ checkout of the same version as your native OpenXLR installation.
 2. Check that its id is `beeohanoffjpcofbjiiamkdammhcihaf`. The public key in
    the manifest keeps this id stable across checkouts. No private signing
    key is shipped.
-3. Copy `browser/native-host.json` into your browser's native messaging
-   directory as `com.emaspa.openxlr.browser.json`. Use the row for your
-   browser:
+3. Debian and RPM packages install `com.emaspa.openxlr.browser.json` in
+   `/etc/chromium/native-messaging-hosts` and
+   `/etc/opt/chrome/native-messaging-hosts`, pointing at `/usr/bin/openxlr`.
+   The Nix package generates both manifests with its store path, and the
+   OpenXLR NixOS module exposes them in those system directories. Restart
+   the browser after installing or updating the package.
+
+   For other browsers or source installs, copy `browser/native-host.json`
+   into the directory below as `com.emaspa.openxlr.browser.json`. OpenXLR
+   does not write a per-user manifest at runtime. A per-user manifest takes
+   precedence over the system one, so remove a stale copy or update its path.
 
    | Browser | Directory under `~/.config` |
    | --- | --- |
@@ -51,6 +61,21 @@ checkout of the same version as your native OpenXLR installation.
    Keep `allowed_origins` restricted to the extension id above. Restart the
    browser after installing the host, or press Reconnect in the popup.
 
+With Nix outside the NixOS module, copy the generated manifest from
+`<package>/etc/chromium/native-messaging-hosts/` into the per-user directory.
+Its path names that package's `bin/openxlr`; update the copy when changing
+package versions.
+
+The AUR `PKGBUILD` is maintained outside this repository. Its `package()`
+function can install the same manifest for the `/usr/bin/openxlr` wrapper:
+
+```sh
+install -Dm644 browser/native-host.json \
+    "$pkgdir/etc/chromium/native-messaging-hosts/com.emaspa.openxlr.browser.json"
+install -Dm644 browser/native-host.json \
+    "$pkgdir/etc/opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json"
+```
+
 ## Choose and activate a tab
 
 1. In OpenXLR's APPLICATIONS card, enable browser output selection. This
@@ -63,7 +88,8 @@ checkout of the same version as your native OpenXLR installation.
    a new browser stream back to the channel the browser last used. The
    browser keeps its assigned channel in the application list. The
    picker's tooltip says the assignment is on hold and names the channel
-   the browser plays into now. Choosing a channel for the whole browser,
+   the browser plays into now, refreshed on each stream sweep, including
+   moves made in pavucontrol. Choosing a channel for the whole browser,
    from that list, an OpenDeck key or a desktop key, saves it for later
    and moves nothing while the option is on.
 2. Open the companion's popup on the tab that should play into OpenXLR.
@@ -96,6 +122,9 @@ A same-origin page change keeps the tab's selection. A different origin
 uses its own saved default. A late assignment from the previous website is
 refused instead of changing the new website's routing. After restarting the
 browser, website defaults remain, but each tab needs activation again.
+Deleting a channel moves its remembered website defaults to the fallback
+application channel, just like application assignments. Tab-only choices
+for the deleted channel return to Browser default.
 OpenXLR supports up to eight
 active tab takeovers and 128 listed tabs per browser connection, with up
 to eight connections and 128 saved website defaults. Private browsing,
@@ -120,7 +149,15 @@ The companion sends the current tab list to the local native host: tab id,
 bounded title, HTTP(S) origin and routing status. The URL field is reduced
 to its origin, excluding its path, query and credentials. Page titles come
 from the website and are not redacted on their way to the daemon; a title
-can itself include a name or link. The daemon keeps live tab ids and titles
+can itself include a name or link. Shared daemon state includes a title
+only while the tab is capturing or has an assigned channel. Other titles
+are empty, and the UI labels those tabs by origin. Origins remain available
+so every eligible tab can be selected and assignments can reject stale
+navigation. All authenticated clients, including HTTP clients, receive
+this reduced list. Title-only changes are coalesced to the latest title on
+a one-second timer; identical lists do not trigger state broadcasts.
+Navigation, tab additions and removals, capture and error changes are
+published immediately. The daemon keeps live tab ids and titles
 in memory and saves only remembered origin-to-channel defaults in machine
 settings, outside profiles. A manually collected diagnostic archive
 includes the current tab list without its titles. It keeps the origin of

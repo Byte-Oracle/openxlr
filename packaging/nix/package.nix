@@ -95,6 +95,13 @@ buildDotnetModule {
   '';
 
   postInstall = ''
+    # Native messaging for the separately installed browser companion.
+    sed "s|/usr/bin/openxlr|$out/bin/openxlr|" browser/native-host.json > browser-host.json
+    install -Dm644 browser-host.json \
+      $out/etc/chromium/native-messaging-hosts/com.emaspa.openxlr.browser.json
+    install -Dm644 browser-host.json \
+      $out/etc/opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json
+
     install -Dm644 packaging/70-openxlr.rules -t $out/lib/udev/rules.d
     install -Dm644 packaging/50-xlr-dock-capture-hold.conf \
       packaging/51-openxlr-pro-raw-names.conf \

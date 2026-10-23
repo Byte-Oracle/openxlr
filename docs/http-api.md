@@ -59,10 +59,16 @@ a command or another of these reads is in flight they answer 429.
 Changes still go through `/commands`.
 
 The mixer resource also reports `preserveBrowserOutputs` and `browserTabs`
-as documented in [browser tabs](api.md#browser-tabs). Use
+as documented in [browser tabs](api.md#browser-tabs). A tab's `title` is empty
+unless it is capturing or has an assigned channel; its origin remains
+available for selection. Title-only updates are coalesced on a one-second
+timer, and unchanged tab lists do not generate state events. Routing and
+tab lifecycle changes are immediate. Use
 `{"cmd":"setPreserveBrowserOutputs","value":true}` to preserve browser-selected
 outputs. While it is on, `assignApp` and `assignStream` for a recognized
 browser return success and save the assignment without moving its audio.
+Non-browser streams sharing that identity are still moved. The held
+browser's `outputChannelId` follows its current target on each stream sweep.
 Then use `assignBrowserTab` with a connected tab's `session`, `tabId`,
 and expected `site`, an application `channel` or `null`, and boolean `remember`.
 The required `site` must still match the tab's current canonical origin;

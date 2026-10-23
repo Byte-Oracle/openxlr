@@ -46,7 +46,7 @@ internal static class BrowserTabsWindowTests
         typeof(MainViewModel).GetProperty(nameof(MainViewModel.DaemonConnected))!.SetValue(model, true);
         BrowserTabViewModelTests.Report(model, true, new JsonArray(
             BrowserTabViewModelTests.Tab(title: "A long browser tab title with a video, a playlist and more details that must remain within the row", channel: "music", remember: true, capturing: true),
-            BrowserTabViewModelTests.Tab(id: 8, title: "Second tab waiting for extension activation", channel: "chat")));
+            BrowserTabViewModelTests.Tab(id: 8, title: "", channel: null)));
         foreach (string name in new[] { "InputsTile", "HeadphonesTile", "MonitorTile", "SubmixerTile" })
             main.FindControl<Expander>(name)!.IsExpanded = false;
         var apps = new AppsWindow { DataContext = model };

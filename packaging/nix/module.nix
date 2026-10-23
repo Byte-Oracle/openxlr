@@ -47,6 +47,11 @@ in
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ cfg.package ] ++ lib.optional (cfg.yabridgePackage != null) cfg.yabridgePackage;
 
+    environment.etc."chromium/native-messaging-hosts/com.emaspa.openxlr.browser.json".source =
+      "${cfg.package}/etc/chromium/native-messaging-hosts/com.emaspa.openxlr.browser.json";
+    environment.etc."opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json".source =
+      "${cfg.package}/etc/opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json";
+
     # Device access for regular users (uaccess tag).
     services.udev.packages = [ cfg.package ];
 
