@@ -599,8 +599,9 @@ restores the split profile when it stops.
   keeping each browser's saved assignment and showing where it plays
   meanwhile; restarting the browser requires activating tabs again
 
-- The companion follows the browser's language and is packaged for the
-  Chrome Web Store by `tools/browser-extension.py`. Its
+- The companion follows the browser's language. `tools/browser-extension.py`
+  packages it for the Chrome Web Store, and as the tar.gz each release
+  offers for loading unpacked. Its
   [privacy policy](browser-privacy.md) lists what it reads and keeps.
 
 - Audio clients are detected from their PipeWire client registration

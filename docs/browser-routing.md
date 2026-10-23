@@ -18,11 +18,12 @@ with your headset before relying on this for meetings.
 
 ## Install the companion
 
-The companion is loaded unpacked from a checkout, as described in
-[Load from a checkout](#load-from-a-checkout), until its Chrome Web Store
-listing is published. Its id is `beeohanoffjpcofbjiiamkdammhcihaf`, the only
-extension the native host accepts. What it reads and where that goes is in
-the [privacy policy](browser-privacy.md).
+Until its Chrome Web Store listing is published, the companion is loaded
+unpacked, either from the release or from a checkout, as described in
+[Load it unpacked](#load-it-unpacked). Its id is
+`beeohanoffjpcofbjiiamkdammhcihaf`, the only extension the native host
+accepts. What it reads and where that goes is in the
+[privacy policy](browser-privacy.md).
 
 ### Native messaging host
 
@@ -76,23 +77,36 @@ install -Dm644 browser/native-host.json \
     "$pkgdir/etc/opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json"
 ```
 
-### Load from a checkout
+### Load it unpacked
 
-For development, load the extension unpacked from a checkout of the same
-version as your native OpenXLR installation.
+Use the companion of the same version as your OpenXLR installation. Each
+release carries it as `openxlr-browser-<version>.tar.gz`. Extract it to a
+folder you keep, since the browser loads the extension from there:
+
+```sh
+rm -rf ~/.local/share/openxlr/browser
+mkdir -p ~/.local/share/openxlr/browser
+tar -xzf openxlr-browser-<version>.tar.gz --strip-components=1 \
+    -C ~/.local/share/openxlr/browser
+```
 
 1. Open `chrome://extensions`, `brave://extensions` or `edge://extensions`.
    Enable Developer mode, choose Load unpacked and select
-   `browser/chromium` from the checkout.
+   `~/.local/share/openxlr/browser`. From a checkout, select
+   `browser/chromium` instead.
 2. Check that its id is `beeohanoffjpcofbjiiamkdammhcihaf`. The public key in
-   the manifest keeps this id stable across checkouts. No private signing
+   the manifest keeps this id stable across copies. No private signing
    key is shipped.
 
-`python3 -I tools/browser-extension.py <directory>` writes
-`openxlr-browser-<version>.zip`, the package uploaded to the Store. It
-leaves out the manifest's public key, which the Store refuses, so an
-unpacked copy of that zip gets another id and the native host refuses it.
-Load the checkout instead.
+After an OpenXLR upgrade, run the same commands with the new release's
+archive and press Reload on the extension's card.
+
+`python3 -I tools/browser-extension.py <directory> --unpacked` writes that
+archive. It is a tar.gz, not a zip, because OpenDeck offers every zip on
+the latest release as a Stream Deck plugin. Without `--unpacked` the tool
+writes `openxlr-browser-<version>.zip`, the package uploaded to the Store.
+That zip leaves out the manifest's public key, which the Store refuses, so
+an unpacked copy of it gets another id and the native host refuses it.
 
 ### Languages
 
