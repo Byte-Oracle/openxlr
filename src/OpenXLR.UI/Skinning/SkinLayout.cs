@@ -271,6 +271,15 @@ public enum SkinMatrixMuted
     Dim,
 }
 
+/// <summary>Where a matrix cell draws its send's level as a number.</summary>
+public enum SkinMatrixValue
+{
+    /// <summary>Beside the fader, in the place the cell's part order gives it.</summary>
+    Beside,
+    /// <summary>At the top centre of the cell while the fader is being moved, so the fader keeps the cell's width.</summary>
+    OverFader,
+}
+
 /// <summary>Where a matrix draws a channel's meter beside its faders.</summary>
 public enum SkinMatrixMeter
 {
@@ -310,7 +319,8 @@ public sealed record SkinMatrixOptions(
     SkinMatrixPartOptions ColumnHead,
     SkinMatrixPartOptions Cell,
     SkinMatrixMuted Muted = SkinMatrixMuted.Tint,
-    SkinMatrixMeter Meter = SkinMatrixMeter.UnderFader)
+    SkinMatrixMeter Meter = SkinMatrixMeter.UnderFader,
+    SkinMatrixValue Value = SkinMatrixValue.Beside)
 {
     /// <summary>Every part in its default order, muted cells tinted and the meter under the faders.</summary>
     public static SkinMatrixOptions Default { get; } = new(
@@ -319,7 +329,7 @@ public sealed record SkinMatrixOptions(
         new SkinMatrixPartOptions(SkinMatrixParts.Cell, [], SkinLabelStyle.Text));
 
     internal string Description() =>
-        $"{RowHead.Description()}/{ColumnHead.Description()}/{Cell.Description()}/{Muted}/{Meter}";
+        $"{RowHead.Description()}/{ColumnHead.Description()}/{Cell.Description()}/{Muted}/{Meter}/{Value}";
 }
 
 /// <summary>How a strip names its channel.</summary>

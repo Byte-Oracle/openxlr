@@ -48,20 +48,20 @@
     "Ox.Meter.Height": 3,
     "Ox.Meter.WarningLevel": 0.7,
     "Ox.Meter.HotLevel": 0.9,
-    "Ox.Mute.Background": "#2a2a2a",
-    "Ox.Mute.Foreground": "#d4d4d4",
-    "Ox.Mute.BackgroundPointerOver": "#3a3a3a",
-    "Ox.Mute.BackgroundChecked": "#dc2626",
-    "Ox.Mute.ForegroundChecked": "#ffffff",
-    "Ox.Mute.BorderBrush": "#00000000",
-    "Ox.Mute.BorderThickness": 0,
-    "Ox.Fader.Track": "#3a3a3a",
-    "Ox.Fader.Fill": "#3b82f6",
+    "Ox.Mute.Background": "#2f2f2f",
+    "Ox.Mute.Foreground": "#e6e6e6",
+    "Ox.Mute.BackgroundPointerOver": "#383838",
+    "Ox.Mute.BackgroundChecked": "#2f2f2f",
+    "Ox.Mute.ForegroundChecked": "#f87171",
+    "Ox.Mute.BorderBrush": "#3a3a3a",
+    "Ox.Mute.BorderThickness": 1,
+    "Ox.Fader.Track": "#333333",
+    "Ox.Fader.Fill": "#737373",
     "Ox.Fader.TrackHeight": 4,
     "Ox.Fader.TrackCornerRadius": 2,
-    "Ox.Fader.Thumb.Background": "#3b82f6",
-    "Ox.Fader.Thumb.BorderBrush": "#bfdbfe",
-    "Ox.Fader.Thumb.BorderThickness": 2,
+    "Ox.Fader.Thumb.Background": "#cfcfcf",
+    "Ox.Fader.Thumb.BorderBrush": "#0a0a0a",
+    "Ox.Fader.Thumb.BorderThickness": 1,
     "Ox.Fader.Thumb.Width": 14,
     "Ox.Fader.Thumb.Height": 14,
     "Ox.Fader.Thumb.CornerRadius": 7,
@@ -126,7 +126,8 @@
     "Ox.Matrix.CellWidth": 168,
     "Ox.Matrix.RowHeight": 40,
     "Ox.Matrix.MutedBackground": "#4def4444",
-    "Ox.Matrix.MutedForeground": "#ffffff"
+    "Ox.Matrix.MutedForeground": "#ffffff",
+    "Ox.Matrix.MutedOpacity": 0.3
   },
   "layout": {
     "version": 1,
@@ -167,9 +168,9 @@
             "label": { "style": "icon-and-text" }
           },
           "cell": {
-            "parts": ["mute", "fader"],
-            "hidden": ["value"],
-            "muted": "tint"
+            "parts": ["mute", "fader", "value"],
+            "muted": "dim",
+            "valuePlacement": "over-fader"
           },
           "meter": "under-fader"
         },

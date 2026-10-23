@@ -36,7 +36,7 @@ every package has them and there is nothing to install:
   and segmented green, amber and red meters. It keeps the classic mixer
   arrangement and the saved section order.
 - **Wave**, Broadcast's arrangement in a palette of its own: dark charcoal
-  cards with a thin border, blue faders and green meters, and a wider name
+  cards with a thin border, grey faders and green meters, and a wider name
   column in the matrix. HEADPHONES and MONITOR's toolbar share the row
   above the matrix, INPUTS is hidden, and APPLICATIONS is under the matrix
   in columns of six. Its cards sit 8 pixels apart where Broadcast's sit 12.
@@ -796,6 +796,7 @@ controls.
 | `Ox.Matrix.RowHeight` | number | 40 | 28 to 120 | the height of a row: its head and every cell in it; a row whose head stacks a gain over the channel volume, or the **EQ** button over the chain's, is as tall as the two need, never less |
 | `Ox.Matrix.MutedBackground` | brush | #40a03434 | | the background of a cell whose send is muted, when the matrix tints muted cells. Translucent by default, so the cell's own surface shows through as a red tint |
 | `Ox.Matrix.MutedForeground` | brush | #f6dede | | the lettering of a muted send's mute in a tinted cell |
+| `Ox.Matrix.MutedOpacity` | number | 0.5 | 0.1 to 1 | how far a muted send's fader and level fade when the matrix dims muted cells; the mute keeps its own colour |
 
 ## Images
 
@@ -1496,11 +1497,13 @@ says what the mix is: a monitor mix with no output, a virtual microphone or
 the USB Aux port.
 
 A muted send's cell is tinted with `Ox.Matrix.MutedBackground` and its mute
-lettered in `Ox.Matrix.MutedForeground`, or, with `"muted": "dim"`, faded
-to `Ox.Control.DisabledOpacity`. The thumb of every fader keeps the
-`controls.fader` appearance. The meter is the channel's own, before its
-send, and a screen reader hears it by the channel's name; the fader is
-named for the channel and the mix.
+lettered in `Ox.Matrix.MutedForeground`, or, with `"muted": "dim"`, its
+fader and level number are faded to `Ox.Matrix.MutedOpacity` while its
+mute keeps its `Ox.Mute.BackgroundChecked` colour, so the cell greys out
+and the mute still shows. Broadcast and Wave dim. The thumb of every
+fader keeps the `controls.fader` appearance. The meter is the channel's
+own, before its send, and a screen reader hears it by the channel's
+name; the fader is named for the channel and the mix.
 
 `matrix` takes these, all optional:
 
@@ -1508,7 +1511,7 @@ named for the channel and the mix.
 |---|---|
 | `rowHead` | `{ "parts": [...], "hidden": [...], "label": { "style": ... } }`, how a row head is drawn |
 | `columnHead` | `{ "parts": [...], "hidden": [...], "label": { "style": ... } }`, how a column head is drawn |
-| `cell` | `{ "parts": [...], "hidden": [...], "muted": ... }`, how a cell is drawn. `"muted"` is `"tint"`, the default, or `"dim"` |
+| `cell` | `{ "parts": [...], "hidden": [...], "muted": ..., "valuePlacement": ... }`, how a cell is drawn. `"muted"` is `"tint"`, the default, or `"dim"`. `"valuePlacement"` is `"beside"`, the default, the `value` part beside the fader in its part order, or `"over-fader"`, the level at the top centre of the cell, on `Ox.Control.Background` like the buttons, only while the fader is being moved, so the fader keeps the cell's width; a hidden `value` part draws nothing in either place |
 | `meter` | `"under-fader"`, the default, the channel's meter drawn as the track of every fader in its row; or `"none"`, plain faders. With `"none"` a row head's `meter` part still shows the meter unless it is hidden |
 
 `parts` lists part names in the order they are drawn; parts it leaves out

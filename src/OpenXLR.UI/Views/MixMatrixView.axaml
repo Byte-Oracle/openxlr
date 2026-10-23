@@ -37,15 +37,19 @@
       <Setter Property="Height" Value="NaN"/>
       <Setter Property="MinHeight" Value="{DynamicResource Ox.Matrix.RowHeight}"/>
     </Style>
-    <!-- a muted send: the cell tinted and its mute lettered in the muted colour, or the cell faded -->
+    <!-- a muted send: the cell tinted and its mute lettered in the muted colour, or its fader and level
+         faded while the mute keeps its own colour, so the cell greys out and still says it is muted -->
     <Style Selector="Border.matrixCell.tinted">
       <Setter Property="Background" Value="{DynamicResource Ox.Matrix.MutedBackground}"/>
     </Style>
     <Style Selector="Border.matrixCell.tinted ToggleButton.matrixMute:checked /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Foreground" Value="{DynamicResource Ox.Matrix.MutedForeground}"/>
     </Style>
-    <Style Selector="Border.matrixCell.dimmed">
-      <Setter Property="Opacity" Value="{DynamicResource Ox.Control.DisabledOpacity}"/>
+    <Style Selector="Border.matrixCell.dimmed layout|MeterFader">
+      <Setter Property="Opacity" Value="{DynamicResource Ox.Matrix.MutedOpacity}"/>
+    </Style>
+    <Style Selector="Border.matrixCell.dimmed TextBlock.val">
+      <Setter Property="Opacity" Value="{DynamicResource Ox.Matrix.MutedOpacity}"/>
     </Style>
     <!-- after .dimmed, so a muted cell in a revealed column still reads as hidden -->
     <Style Selector="Border.matrixCell.revealed">
@@ -648,6 +652,7 @@
                   <DataTemplate x:DataType="layout:MatrixCellViewModel">
                     <Border Classes="tile matrixCell" Name="MatrixCell" Classes.tinted="{Binding Tinted}" Classes.stacked="{Binding Row.Tall}"
                             Classes.dimmed="{Binding Dimmed}" Classes.empty="{Binding IsEmpty}" Classes.revealed="{Binding Send.Revealed}">
+                      <Panel>
                       <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding HasSend}">
                         <ToggleButton layout:StripPanel.Part="mute" Classes="mute mutemini matrixMute" IsChecked="{Binding Send.Muted, Mode=TwoWay}"
                                       Padding="5,2" FontSize="11" VerticalAlignment="Center"
@@ -657,12 +662,21 @@
                                            LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}" Mono="{Binding Channel.MonoMeter}"
                                            LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}"
                                            VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
-                          <Slider Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                          <Slider Classes="matrixFader" vm:FaderInput.Step="0.01" vm:FaderInput.IsAdjusting="{Binding Adjusting, Mode=OneWayToSource}" Minimum="0" Maximum="1"
                                   Value="{Binding Send.Level, Mode=TwoWay}" AutomationProperties.Name="{Binding SendName}"/>
                         </layout:MeterFader>
                         <TextBlock layout:StripPanel.Part="value" Text="{Binding Send.LevelText}" Classes="val" FontSize="11"
                                    MinWidth="22" TextAlignment="Right" VerticalAlignment="Center"/>
                       </layout:StripPanel>
+                      <!-- the send's level over the fader, where the skin puts it there: a chip in the
+                           buttons' own face at the top of the cell, only while the fader is being moved -->
+                      <Border Name="MatrixValueOverFader" Classes="matrixValueChip" HorizontalAlignment="Center" VerticalAlignment="Top"
+                              IsHitTestVisible="False" Padding="5,0" IsVisible="{Binding ShowsValueChip}"
+                              Background="{DynamicResource Ox.Control.Background}" BorderBrush="{DynamicResource Ox.Control.BorderBrush}"
+                              BorderThickness="{DynamicResource Ox.Control.BorderThickness}" CornerRadius="{DynamicResource Ox.Control.CornerRadius}">
+                        <TextBlock Text="{Binding Send.LevelText}" FontSize="11" Foreground="{DynamicResource Ox.Control.Foreground}"/>
+                      </Border>
+                      </Panel>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

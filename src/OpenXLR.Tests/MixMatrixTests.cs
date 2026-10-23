@@ -418,6 +418,28 @@ public sealed class MixMatrixTests
     }
 
     [Fact]
+    public void ACellDrawsItsValueBesideOrOverTheFaderAsTheSkinSays()
+    {
+        var model = new MainViewModel(new DaemonClient());
+        Apply(model, ["game"], ["monitor"]);
+        using var matrix = new MixMatrixViewModel(model);
+        MatrixCellViewModel beside = matrix.Rows[0].Cells[0];
+        Assert.Equal(["mute", "fader", "value"], beside.Spec.Parts);
+        Assert.False(beside.ValueOverFader);
+        // Over the fader, the value is no part beside it.
+        matrix.Configure(SkinMatrixOptions.Default with { Value = SkinMatrixValue.OverFader });
+        MatrixCellViewModel over = matrix.Rows[0].Cells[0];
+        Assert.Equal(["mute", "fader"], over.Spec.Parts);
+        Assert.True(over.ValueOverFader);
+        // A hidden value is drawn in neither place.
+        SkinMatrixPartOptions hidden = SkinMatrixOptions.Default.Cell with { Hidden = ["value"] };
+        matrix.Configure(SkinMatrixOptions.Default with { Cell = hidden, Value = SkinMatrixValue.OverFader });
+        MatrixCellViewModel none = matrix.Rows[0].Cells[0];
+        Assert.Equal(["mute", "fader"], none.Spec.Parts);
+        Assert.False(none.ValueOverFader);
+    }
+
+    [Fact]
     public void ADisposedMatrixStopsFollowing()
     {
         var model = new MainViewModel(new DaemonClient());

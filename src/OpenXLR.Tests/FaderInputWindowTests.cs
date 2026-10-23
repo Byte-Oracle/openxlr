@@ -78,6 +78,64 @@ internal static class FaderInputWindowTests
         }
         finally { SkinService.Apply(saved); }
         CheckOrientations();
+        CheckAdjusting();
+    }
+
+    /// <summary>
+    /// A fader says it is being changed from the press until the release,
+    /// through a drag, and for a moment after a key moves it.
+    /// </summary>
+    internal static void CheckAdjusting()
+    {
+        var window = new Window { Width = 400, Height = 200 };
+        var slider = new Slider { Minimum = 0, Maximum = 1, Width = 200, Margin = new Thickness(40, 80), VerticalAlignment = VerticalAlignment.Top };
+        FaderInput.SetStep(slider, 0.01);
+        window.Content = slider;
+        try
+        {
+            window.Show();
+            WindowLayoutTests.Layout(window, 400, 200);
+            slider.Value = .5;
+            Pump();
+            Assert.False(FaderInput.GetIsAdjusting(slider));
+            using var input = new XPointer();
+            input.Focus(window.TryGetPlatformHandle()!.Handle);
+            var thumb = slider.GetVisualDescendants().OfType<Thumb>().Single();
+            PixelPoint point = thumb.PointToScreen(new Point(thumb.Bounds.Width / 2, thumb.Bounds.Height / 2));
+            input.MoveTo(point.X, point.Y);
+            Pump();
+            try
+            {
+                input.SetButton(true);
+                Pump();
+                Assert.True(FaderInput.GetIsAdjusting(slider));
+                input.MoveTo(point.X + 60, point.Y);
+                Pump();
+                Assert.True(FaderInput.GetIsAdjusting(slider));
+                Assert.True(slider.Value > .5);
+            }
+            finally
+            {
+                input.SetButton(false);
+                Pump();
+            }
+            Assert.False(FaderInput.GetIsAdjusting(slider));
+
+            slider.Focus();
+            slider.Value = .5;
+            Pump();
+            input.Key(0xff53); // Right
+            Pump();
+            Assert.Equal(.51, slider.Value, 10);
+            Assert.True(FaderInput.GetIsAdjusting(slider));
+            for (int i = 0; i < 20 && FaderInput.GetIsAdjusting(slider); i++) Pump();
+            Assert.False(FaderInput.GetIsAdjusting(slider));
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
     }
 
     /// <summary>

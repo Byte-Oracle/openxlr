@@ -770,6 +770,12 @@
         "Ox.Matrix.MutedForeground": {
           "$ref": "#/$defs/brush",
           "description": "the lettering of a muted send's mute in a tinted cell"
+        },
+        "Ox.Matrix.MutedOpacity": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1,
+          "description": "how far a muted send's fader and level fade when the matrix dims muted cells; the mute keeps its own colour"
         }
       }
     },
@@ -1850,7 +1856,15 @@
             "dim"
           ],
           "default": "tint",
-          "description": "tint colours a muted send's cell with Ox.Matrix.MutedBackground; dim fades it to Ox.Control.DisabledOpacity."
+          "description": "tint colours a muted send's cell with Ox.Matrix.MutedBackground; dim fades its fader and level to Ox.Matrix.MutedOpacity."
+        },
+        "valuePlacement": {
+          "enum": [
+            "beside",
+            "over-fader"
+          ],
+          "default": "beside",
+          "description": "Where the value part draws the send's level: beside the fader in its part order, or at the top centre of the cell only while the fader is being moved."
         }
       }
     },

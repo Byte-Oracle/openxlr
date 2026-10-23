@@ -109,7 +109,9 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
         Sync();
     }
 
-    private static StripSpec BuildCellSpec(SkinMatrixOptions options) => new(options.Cell.Shown, Orientation.Horizontal, null,
+    // A value drawn over the fader is not a part beside it.
+    private static StripSpec BuildCellSpec(SkinMatrixOptions options) => new(
+        [.. options.Cell.Shown.Where(p => options.Value == SkinMatrixValue.Beside || p != SkinStripParts.Value)], Orientation.Horizontal, null,
         SkinLabelStyle.Text, Orientation.Horizontal, false, Orientation.Horizontal);
 
     /// <summary>The parts a row head can draw for a channel of this kind, its name included.</summary>
@@ -764,7 +766,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
 public sealed class MatrixCellViewModel : ViewModelBase
 {
     private SendViewModel? _send;
-    private bool _detached;
+    private bool _detached, _adjusting;
 
     internal MatrixCellViewModel(MatrixRowViewModel row, MatrixColumnViewModel column)
     {
@@ -801,6 +803,26 @@ public sealed class MatrixCellViewModel : ViewModelBase
 
     /// <summary>True when the fader draws the channel's meter as its track.</summary>
     public bool MeterUnderFader => Row.Matrix.MeterUnderFader;
+
+    /// <summary>True when the send's level is drawn over the fader while it moves instead of beside it.</summary>
+    public bool ValueOverFader => Row.Matrix.Options.Value == SkinMatrixValue.OverFader
+        && Row.Matrix.Options.Cell.Shows(SkinStripParts.Value);
+
+    /// <summary>True while the user is moving the cell's fader; the fader writes it.</summary>
+    public bool Adjusting
+    {
+        get => _adjusting;
+        set
+        {
+            if (_adjusting == value) return;
+            _adjusting = value;
+            Raise(nameof(Adjusting));
+            Raise(nameof(ShowsValueChip));
+        }
+    }
+
+    /// <summary>True when the level shows over the fader now: the skin puts it there and the fader is moving.</summary>
+    public bool ShowsValueChip => ValueOverFader && HasSend && _adjusting;
 
     /// <summary>The fader's name for a screen reader: whose send, into which mix.</summary>
     public string SendName => Localizer.Format("BankSendName", Channel.Name, Mix.Name);
@@ -842,6 +864,7 @@ public sealed class MatrixCellViewModel : ViewModelBase
         Raise(nameof(HasSend));
         Raise(nameof(Tinted));
         Raise(nameof(Dimmed));
+        Raise(nameof(ShowsValueChip));
     }
 
     private void OnSendChanged(object? sender, PropertyChangedEventArgs e)

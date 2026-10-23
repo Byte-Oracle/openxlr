@@ -405,6 +405,9 @@ public static class SkinTokens
         // shows through as a red tint.
         Brush("Ox.Matrix.MutedBackground", "#40a03434"),
         Brush("Ox.Matrix.MutedForeground", "#f6dede"),
+        // How far a muted send's fader and level fade where the matrix dims
+        // muted cells instead of tinting them. The mute keeps its own colour.
+        Number("Ox.Matrix.MutedOpacity", 0.5, 0.1, 1),
     ];
 
     private static readonly Dictionary<string, SkinToken> ByName =

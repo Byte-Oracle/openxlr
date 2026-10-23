@@ -920,7 +920,7 @@ public sealed class SkinLayoutTests
         SkinLayout layout = Taken(Matrix("""
             "matrix":{"rowHead":{"parts":["identity","mute","gain"],"hidden":["effects"],"label":{"style":"icon-and-text"}},
                       "columnHead":{"parts":["outputs","identity"],"hidden":["master"],"label":{"style":"icon"}},
-                      "cell":{"parts":["fader","mute"],"hidden":["value"],"muted":"dim"},
+                      "cell":{"parts":["fader","mute"],"hidden":["value"],"muted":"dim","valuePlacement":"over-fader"},
                       "meter":"none"}
             """));
         SkinSubmixerOptions submixer = layout.Submixer;
@@ -937,6 +937,7 @@ public sealed class SkinLayoutTests
         Assert.False(matrix.Cell.Shows("value"));
         Assert.Equal(SkinMatrixMuted.Dim, matrix.Muted);
         Assert.Equal(SkinMatrixMeter.None, matrix.Meter);
+        Assert.Equal(SkinMatrixValue.OverFader, matrix.Value);
 
         // A matrix with nothing else said: every part in its default order, muted cells tinted, the meter under the faders.
         SkinSubmixerOptions plain = Taken(Matrix()).Submixer;
@@ -947,6 +948,7 @@ public sealed class SkinLayoutTests
         Assert.Equal(SkinMatrixParts.Cell, plain.Matrix.Cell.Shown);
         Assert.Equal(SkinMatrixMuted.Tint, plain.Matrix.Muted);
         Assert.Equal(SkinMatrixMeter.UnderFader, plain.Matrix.Meter);
+        Assert.Equal(SkinMatrixValue.Beside, plain.Matrix.Value);
         // An empty block, or empty lists, keep the defaults too.
         Assert.Equal(SkinMatrixOptions.Default.Description(),
             Taken(Matrix("\"matrix\":{\"rowHead\":{},\"columnHead\":{\"parts\":[]},\"cell\":{\"hidden\":[]}}")).Submixer.Matrix.Description());
@@ -970,7 +972,7 @@ public sealed class SkinLayoutTests
                  {
                      "\"rowHead\":{\"parts\":[\"mute\"]}", "\"rowHead\":{\"hidden\":[\"meter\"]}", "\"rowHead\":{\"label\":{\"style\":\"icon\"}}",
                      "\"columnHead\":{\"parts\":[\"outputs\"]}", "\"columnHead\":{\"hidden\":[\"effects\"]}",
-                     "\"cell\":{\"hidden\":[\"value\"]}", "\"cell\":{\"muted\":\"dim\"}", "\"meter\":\"none\"",
+                     "\"cell\":{\"hidden\":[\"value\"]}", "\"cell\":{\"muted\":\"dim\"}", "\"cell\":{\"valuePlacement\":\"over-fader\"}", "\"meter\":\"none\"",
                  })
             Assert.NotEqual(matrix, Described("\"submixer\":{\"template\":\"mix-matrix\",\"matrix\":{" + change + "}}"));
         // The same matrix written two ways describes alike.
@@ -1008,6 +1010,8 @@ public sealed class SkinLayoutTests
         Refused(Matrix("\"matrix\":{\"cell\":{\"parts\":[\"mute\"],\"hidden\":[\"mute\"]}}"), "layout.regions.submixer.matrix.cell.hidden[0]");
         Refused(Matrix("\"matrix\":{\"rowHead\":{\"label\":{\"style\":\"bold\"}}}"), "layout.regions.submixer.matrix.rowHead.label.style");
         Refused(Matrix("\"matrix\":{\"cell\":{\"muted\":\"red\"}}"), "layout.regions.submixer.matrix.cell.muted");
+        Refused(Matrix("\"matrix\":{\"cell\":{\"valuePlacement\":\"under\"}}"), "layout.regions.submixer.matrix.cell.valuePlacement");
+        Refused(Matrix("\"matrix\":{\"rowHead\":{\"valuePlacement\":\"over-fader\"}}"), "layout.regions.submixer.matrix.rowHead.valuePlacement");
         Refused(Matrix("\"matrix\":{\"cell\":{\"muted\":true}}"), "layout.regions.submixer.matrix.cell.muted");
         Refused(Matrix("\"matrix\":{\"meter\":\"beside-fader\"}"), "layout.regions.submixer.matrix.meter");
         Refused(Matrix("\"matrix\":{\"meter\":{}}"), "layout.regions.submixer.matrix.meter");

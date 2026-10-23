@@ -300,7 +300,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   [Switching skins](skins.md#switching-skins)
 - A mix matrix for the submixer: a row per channel, a column per mix, and
   each channel's send into each mix where they cross, its fader drawn over
-  the channel's meter and its cell tinted red while muted. Row heads carry
+  the channel's meter and its cell tinted red or greyed out while muted, as
+  the skin chooses. Row heads carry
   the input gain, mute, microphone switches and plugin chain under the
   INPUTS panel's rules, the switches behind a **Mic** button that shows
   whether one is on and whether phantom power is, and
@@ -316,7 +317,7 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
 - Nyan Pink: dark plum surfaces, pink faders and cyan details, keeping the
   classic mixer arrangement and the saved section order.
 - The Wave skin: Broadcast's arrangement on a dark charcoal palette with
-  blue faders and green meters. HEADPHONES and MONITOR's toolbar side by
+  grey faders and green meters. HEADPHONES and MONITOR's toolbar side by
   side above the mix matrix, INPUTS hidden until Arrange mode shows it, and
   APPLICATIONS in columns of six under the matrix. Its palette also
   reaches the terminal, Deck and bar through the shared skin palettes. See
