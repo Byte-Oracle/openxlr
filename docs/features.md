@@ -589,7 +589,9 @@ restores the split profile when it stops.
 ## Application routing
 
 - The optional [Chromium companion](browser-routing.md) lists individual
-  tabs in APPLICATIONS and Manage. User-activated tab audio can follow
+  tabs in a Browser tabs window, opened from the button beside Manage in
+  APPLICATIONS, which also holds the option that turns tab routing on.
+  User-activated tab audio can follow
   separate application channels, with saved website defaults. Browser
   output selection suspends generic Chromium routing while enabled,
   keeping each browser's saved assignment and showing where it plays

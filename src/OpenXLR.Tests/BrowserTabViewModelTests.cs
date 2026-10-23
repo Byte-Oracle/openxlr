@@ -291,7 +291,9 @@ public sealed class BrowserTabViewModelTests
         var model = new MainViewModel(new DaemonClient("ws://127.0.0.1:1/ws"));
         Report(model, true, new JsonArray(Tab(), Tab(id: 8), Tab(session: "fedcba9876543210fedcba9876543210"), Tab(), Tab(session: "invalid")));
         Assert.Equal(3, model.BrowserTabs.Count);
-        Assert.True(model.HasApps);
+        Assert.True(model.HasBrowserTabs);
+        // Tabs live in their own window; they no longer enable Manage apps.
+        Assert.False(model.HasApps);
         BrowserTabViewModel first = model.BrowserTabs[0];
         BrowserTabViewModel removed = model.BrowserTabs[1];
         Report(model, true, new JsonArray(Tab(title: "Updated")));
@@ -306,7 +308,7 @@ public sealed class BrowserTabViewModelTests
         Assert.False(Assert.Single(model.BrowserTabs).CanEdit);
         Invoke(model, "ResetBrowserTabs");
         Assert.Empty(model.BrowserTabs);
-        Assert.False(model.HasApps);
+        Assert.False(model.HasBrowserTabs);
     }
 
     [Fact]

@@ -83,7 +83,7 @@ public sealed partial class MainViewModel
                 BrowserTabs[i].SetCanEdit(false);
                 BrowserTabs.RemoveAt(i);
             }
-        Raise(nameof(HasBrowserTabs)); Raise(nameof(HasApps));
+        Raise(nameof(HasBrowserTabs));
     }
 
     private void ResetBrowserTabs()
@@ -95,6 +95,6 @@ public sealed partial class MainViewModel
         Set(ref _preserveBrowserOutputs, false, nameof(PreserveBrowserOutputs));
         foreach (BrowserTabViewModel tab in BrowserTabs) { tab.SetCanEdit(false); tab.CancelPending(); }
         BrowserTabs.Clear();
-        Raise(nameof(CanSetBrowserRouting)); Raise(nameof(HasBrowserTabs)); Raise(nameof(HasApps));
+        Raise(nameof(CanSetBrowserRouting)); Raise(nameof(HasBrowserTabs));
     }
 }

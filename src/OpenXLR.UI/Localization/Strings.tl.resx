@@ -2915,6 +2915,21 @@ Mano-manong host setup pa rin ang Wave XLR Pro UCM profile. I-install ang mga LV
   <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
     <value>Kalimutan ang naka-save na destinasyon ng website at gamitin ang default ng browser para sa tab na ito.</value>
   </data>
+  <data name="BrowserTabs" xml:space="preserve">
+    <value>Mga tab</value>
+  </data>
+  <data name="BrowserTabsHint" xml:space="preserve">
+    <value>I-on o i-off ang routing ng browser tab at pumili ng channel para sa bawat tab</value>
+  </data>
+  <data name="BrowserTabsTitle" xml:space="preserve">
+    <value>Mga browser tab ng OpenXLR</value>
+  </data>
+  <data name="BrowserTabsEmpty" xml:space="preserve">
+    <value>Lalabas dito ang mga tab kapag iniulat na ng browser extension.</value>
+  </data>
+  <data name="BrowserTabsGuideHint" xml:space="preserve">
+    <value>Buksan ang gabay sa routing ng browser tab</value>
+  </data>
   <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
     <value>I-mute ang microphone send kasabay ng monitoring</value>
   </data>

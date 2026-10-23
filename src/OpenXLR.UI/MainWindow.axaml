@@ -825,15 +825,16 @@
             <TextBlock Text="{loc:Text Key=APPLICATIONS}" Classes="h" VerticalAlignment="Center"/>
             <Button Name="ManageApps" Content="{loc:Text Key=Manage}" Padding="8,1" FontSize="11" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center"
                     IsEnabled="{Binding HasApps}" Click="OnManageApps"/>
+            <!-- Enabled whenever shown: the window is also where tab routing is turned on. -->
+            <Button Name="ManageBrowserTabs" Content="{loc:Text Key=BrowserTabs}" Padding="8,1" FontSize="11" MinHeight="{DynamicResource Ox.Mixer.SmallControlMinSize}" VerticalAlignment="Center"
+                    IsVisible="{Binding BrowserTabSupport}" Click="OnManageBrowserTabs"
+                    ToolTip.Tip="{loc:Text Key=BrowserTabsHint}"/>
           </StackPanel>
         </Expander.Header>
         <!-- the chips, the list or the columns, as the skin's template picks
              (ApplicationChip, ApplicationLine and their panels above) -->
-        <StackPanel Spacing="8">
-          <ItemsControl Name="ApplicationRows" ItemsSource="{Binding ActiveApps}"
-                        ItemsPanel="{StaticResource ApplicationChipsPanel}" ItemTemplate="{StaticResource ApplicationChip}"/>
-          <views:BrowserTabsView/>
-        </StackPanel>
+        <ItemsControl Name="ApplicationRows" ItemsSource="{Binding ActiveApps}"
+                      ItemsPanel="{StaticResource ApplicationChipsPanel}" ItemTemplate="{StaticResource ApplicationChip}"/>
       </Expander>
     </Border>
 

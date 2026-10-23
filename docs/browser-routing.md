@@ -1,7 +1,7 @@
 # Browser tab routing
 
 The optional Chromium companion gives each HTTP or HTTPS tab a separate
-entry under APPLICATIONS and in Manage. Choose Music for YouTube and Voice
+entry in OpenXLR's Browser tabs window. Choose Music for YouTube and Voice
 Chat for a Teams tab or PWA, for example. It supports native Linux installs
 of Chrome, Chromium, Brave and Edge, starting with Chromium 116. Firefox and
 the Flatpak build are not supported by this companion. Snap-confined
@@ -78,7 +78,11 @@ install -Dm644 browser/native-host.json \
 
 ## Choose and activate a tab
 
-1. In OpenXLR's APPLICATIONS card, enable browser output selection. This
+1. In OpenXLR's APPLICATIONS card, press Browser tabs beside Manage. The
+   button shows once the daemon supports browser routing. The window it
+   opens holds the option and one row per tab, and says so when the
+   companion has reported no tab yet. Enable individual browser tab
+   routing at the top of the window. This
    suspends generic application routing for recognized Chromium browsers:
    OpenXLR stops moving their audio. Existing browser-wide assignments
    stay saved and resume when you turn the option off. Browser audio that
@@ -97,8 +101,9 @@ install -Dm644 browser/native-host.json \
    permission to reveal non-default output devices. Press the setup
    button to grant it; the companion immediately stops the temporary
    microphone stream and neither records nor forwards it.
-3. Pick a channel in OpenXLR's tab entry or in the popup. Check Remember
-   website to save that origin's default. A tab-only choice leaves the
+3. Pick a channel in the tab's row in the Browser tabs window or in the
+   popup. Check Remember website to save that origin's default. A
+   tab-only choice leaves the
    site's existing default for other tabs intact. Forget website removes
    the saved default and returns that tab to Browser default.
 4. Return to the audio tab, open the companion and press Activate. A PWA

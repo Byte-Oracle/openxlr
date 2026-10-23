@@ -5,51 +5,60 @@
              xmlns:skin="using:OpenXLR.UI.Skinning"
              x:Class="OpenXLR.UI.Views.BrowserTabsView"
              x:DataType="vm:MainViewModel">
-  <StackPanel Spacing="6" IsVisible="{Binding BrowserTabSupport}">
-    <CheckBox Name="PreserveBrowserOutputs" IsChecked="{Binding PreserveBrowserOutputs, Mode=TwoWay}"
-              IsEnabled="{Binding CanSetBrowserRouting}">
-      <TextBlock Text="{loc:Text Key=PreserveBrowserOutputs}" TextWrapping="Wrap"/>
-    </CheckBox>
-    <TextBlock Text="{loc:Text Key=PreserveBrowserOutputsHint}" Classes="note" TextWrapping="Wrap"/>
-    <TextBlock Text="{loc:Text Key=BrowserTabsHeading}" Classes="h" IsVisible="{Binding HasBrowserTabs}"/>
-    <TextBlock Text="{loc:Text Key=BrowserTabCaptureHint}" Classes="note" TextWrapping="Wrap"
-               IsVisible="{Binding HasBrowserTabs}"/>
-    <ItemsControl Name="BrowserTabRows" ItemsSource="{Binding BrowserTabs}">
-      <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-      <ItemsControl.ItemTemplate>
-        <DataTemplate x:DataType="vm:BrowserTabViewModel">
-          <Border Name="BrowserTabRow" Classes="tile" Padding="8,6">
-            <StackPanel Spacing="4">
-              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                <skin:StatusLed IsOn="{Binding Capturing}" VerticalAlignment="Center"
-                                AutomationProperties.Name="{loc:Text Key=BrowserTabCaptureState}"
-                                ToolTip.Tip="{Binding StatusText}"/>
-                <TextBlock Name="BrowserTabTitle" Grid.Column="1" Text="{Binding Title}" Classes="body"
-                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
-              </Grid>
-              <TextBlock Name="BrowserTabSite" Text="{Binding Site}" Classes="note"
-                         TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Site}"/>
-              <WrapPanel Orientation="Horizontal">
-                <ComboBox Name="BrowserTabChannel" ItemsSource="{Binding Channels}" Width="200" MaxWidth="200"
-                          HorizontalAlignment="Left" Margin="0,0,12,4" IsEnabled="{Binding CanEdit}"
-                          SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
-                          AutomationProperties.Name="{Binding Title, StringFormat={loc:Text Key=BrowserTabChannelName}}">
-                  <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:ChannelChoice">
-                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-                  </DataTemplate></ComboBox.ItemTemplate>
-                </ComboBox>
-                <CheckBox Name="BrowserTabRemember" IsChecked="{Binding Remember, Mode=TwoWay}"
-                          IsEnabled="{Binding CanRemember}" Margin="0,0,12,4"
-                          Content="{loc:Text Key=BrowserTabRemember}" ToolTip.Tip="{loc:Text Key=BrowserTabRememberHint}"/>
-                <Button Name="BrowserTabForgetWebsite" Content="{loc:Text Key=BrowserTabForgetWebsite}"
-                        IsEnabled="{Binding CanEdit}" Margin="0,0,0,4" Padding="8,4"
-                        ToolTip.Tip="{loc:Text Key=BrowserTabForgetWebsiteHint}" Click="OnForgetWebsite"/>
-              </WrapPanel>
-              <TextBlock Name="BrowserTabStatus" Text="{Binding StatusText}" Classes="note" TextWrapping="Wrap"/>
-            </StackPanel>
-          </Border>
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
-  </StackPanel>
+  <!-- The routing option stays on top and the tab list takes what is left and
+       scrolls, so a long list never pushes the option out of reach. -->
+  <DockPanel LastChildFill="True">
+    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,6">
+      <CheckBox Name="PreserveBrowserOutputs" IsChecked="{Binding PreserveBrowserOutputs, Mode=TwoWay}"
+                IsEnabled="{Binding CanSetBrowserRouting}">
+        <TextBlock Text="{loc:Text Key=PreserveBrowserOutputs}" TextWrapping="Wrap"/>
+      </CheckBox>
+      <TextBlock Text="{loc:Text Key=PreserveBrowserOutputsHint}" Classes="note" TextWrapping="Wrap"/>
+      <TextBlock Text="{loc:Text Key=BrowserTabsHeading}" Classes="h" Margin="0,6,0,0"/>
+      <TextBlock Name="BrowserTabsEmpty" Text="{loc:Text Key=BrowserTabsEmpty}" Classes="note" TextWrapping="Wrap"
+                 IsVisible="{Binding !HasBrowserTabs}"/>
+      <TextBlock Text="{loc:Text Key=BrowserTabCaptureHint}" Classes="note" TextWrapping="Wrap"
+                 IsVisible="{Binding HasBrowserTabs}"/>
+    </StackPanel>
+    <ScrollViewer Name="BrowserTabList" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <!-- the overlay scrollbar would sit on the row controls -->
+      <ItemsControl Name="BrowserTabRows" ItemsSource="{Binding BrowserTabs}" Margin="0,0,16,0">
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:BrowserTabViewModel">
+            <Border Name="BrowserTabRow" Classes="tile" Padding="8,6">
+              <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                  <skin:StatusLed IsOn="{Binding Capturing}" VerticalAlignment="Center"
+                                  AutomationProperties.Name="{loc:Text Key=BrowserTabCaptureState}"
+                                  ToolTip.Tip="{Binding StatusText}"/>
+                  <TextBlock Name="BrowserTabTitle" Grid.Column="1" Text="{Binding Title}" Classes="body"
+                             TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
+                </Grid>
+                <TextBlock Name="BrowserTabSite" Text="{Binding Site}" Classes="note"
+                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Site}"/>
+                <WrapPanel Orientation="Horizontal">
+                  <ComboBox Name="BrowserTabChannel" ItemsSource="{Binding Channels}" Width="200" MaxWidth="200"
+                            HorizontalAlignment="Left" Margin="0,0,12,4" IsEnabled="{Binding CanEdit}"
+                            SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                            AutomationProperties.Name="{Binding Title, StringFormat={loc:Text Key=BrowserTabChannelName}}">
+                    <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:ChannelChoice">
+                      <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                    </DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <CheckBox Name="BrowserTabRemember" IsChecked="{Binding Remember, Mode=TwoWay}"
+                            IsEnabled="{Binding CanRemember}" Margin="0,0,12,4"
+                            Content="{loc:Text Key=BrowserTabRemember}" ToolTip.Tip="{loc:Text Key=BrowserTabRememberHint}"/>
+                  <Button Name="BrowserTabForgetWebsite" Content="{loc:Text Key=BrowserTabForgetWebsite}"
+                          IsEnabled="{Binding CanEdit}" Margin="0,0,0,4" Padding="8,4"
+                          ToolTip.Tip="{loc:Text Key=BrowserTabForgetWebsiteHint}" Click="OnForgetWebsite"/>
+                </WrapPanel>
+                <TextBlock Name="BrowserTabStatus" Text="{Binding StatusText}" Classes="note" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
 </UserControl>
