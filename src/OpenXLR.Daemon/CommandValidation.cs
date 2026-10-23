@@ -196,6 +196,9 @@ public static class CommandValidation
                 if (BrowserTabRouting.CanonicalSite(cmd.Site) is null) return "assignBrowserTab: supply the tab's HTTP or HTTPS origin";
                 if (cmd.Channel is not null && !layout.HasApplicationChannel(cmd.Channel)) return "assignBrowserTab: select an application channel or browser default";
                 return cmd.Remember.ValueKind is JsonValueKind.True or JsonValueKind.False ? null : "assignBrowserTab: remember must be a boolean";
+            case "activateBrowserTab":
+                if (!BrowserTabRouting.ValidSession(cmd.Session) || cmd.TabId is not >= 0) return "activateBrowserTab: supply a browser session and tabId";
+                return BrowserTabRouting.CanonicalSite(cmd.Site) is null ? "activateBrowserTab: supply the tab's HTTP or HTTPS origin" : null;
             case "getBrowserSession":
                 return null;
             case "syncBrowserTabs":

@@ -132,11 +132,28 @@ Chrome has no Cebuano, so a browser set to it shows English.
    tab-only choice leaves the
    site's existing default for other tabs intact. Forget website removes
    the saved default and returns that tab to Browser default.
-4. Return to the audio tab, open the companion and press Activate. A PWA
+4. Press Activate in the tab's row in the Browser tabs window, or return
+   to the audio tab, open the companion and press Activate this tab. A PWA
    without a toolbar can use the extension action shortcut, initially
    Ctrl+Shift+9. Change it in your browser's extension shortcuts page if
-   another application owns it. Activation requires a browser gesture;
-   choosing a channel in OpenXLR alone cannot grant capture permission.
+   another application owns it. Choosing a channel alone never starts
+   capture.
+
+   The browser captures a tab only after you invoked the companion on it,
+   with its toolbar button or its shortcut, and forgets that when the tab
+   navigates. Activate in OpenXLR is not such a gesture, so it brings the
+   tab's window and the tab forward and tries. If the browser still holds
+   the grant from an earlier click, routing starts and the row's light
+   turns on. Otherwise the companion opens its popup on that tab, which
+   Chrome 127 and later allow, and the popup says OpenXLR asked to route
+   the tab; press Activate this tab there. If the browser refuses that
+   press too, or cannot open the popup, the popup or the row says to click
+   the OpenXLR icon on the tab or press the shortcut, then Activate this
+   tab. The row reads Starting in the browser while the companion works,
+   then names the step left for you, and clears when routing starts, when
+   the companion reports an error, or after two minutes.
+   An older companion ignores the request; the row then returns to its
+   usual text after ten seconds.
 5. While active, channel changes in either place reroute that tab. Other
    active tabs keep their own channel. Stop, closing the tab, navigating
    to another origin, disabling browser output selection or losing the
@@ -198,7 +215,9 @@ defaults. Review it before sharing.
 No tab audio is sent through the control API or stored by the companion.
 
 The host accepts only tab registration, channel assignment and the browser
-output preference. It authenticates using the existing local daemon client
+output preference. Towards the browser it passes the daemon's state and
+OpenXLR's requests to activate a tab, each for a tab id and origin the
+companion itself registered. It authenticates using the existing local daemon client
 and does not expose the API token or unrelated daemon state to the browser.
 Web pages cannot call this host through the extension.
 

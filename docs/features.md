@@ -592,7 +592,9 @@ restores the split profile when it stops.
   tabs in a Browser tabs window, opened from the button beside Manage in
   APPLICATIONS, which also holds the option that turns tab routing on.
   User-activated tab audio can follow
-  separate application channels, with saved website defaults. Browser
+  separate application channels, with saved website defaults. Activate
+  in a tab's row brings the tab forward in the browser and starts it, or
+  says what the browser still needs. Browser
   output selection suspends generic Chromium routing while enabled,
   keeping each browser's saved assignment and showing where it plays
   meanwhile; restarting the browser requires activating tabs again

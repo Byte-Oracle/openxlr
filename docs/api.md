@@ -82,6 +82,7 @@ Messages from the daemon, each a JSON object with a `type` field:
 | `nativeEditorRules` | in answer to `getNativeEditorRules` or `setNativeEditorRule` | `rules` with `kind`, `plugin`, `name`, `reason`, `defaultBlocked`, `override` and effective `blocked`; `error` describes a refused change or unreadable configuration |
 | `nativeEditorRulesChanged` | after a successful rule change | notification to refresh the catalogue and editor availability; no plugin rescan is needed |
 | `browserSession` | in answer to `getBrowserSession` over WebSocket | `session`, a server-generated 32-character hexadecimal id owned by that connection; see [browser tabs](#browser-tabs) |
+| `browserTabActivation` | to the browser companion connection that registered the tab, after an accepted `activateBrowserTab` | `tabId` and `site`, the tab's canonical origin; no other client receives it. See [browser tabs](#browser-tabs) |
 | `pluginDiagnostics` | in answer to `getPluginDiagnostics` | `discovery`: daemon host/controller paths, Wine prefix, architecture, effective search paths, bounded `yabridgectl status` output and latest completed CLAP/VST3 scan reports. A scan entry that failed carries `logId`, the name of the file holding that attempt's bounded scanner output, or `logNote` saying why there is none; both are absent from an entry that did not fail and from one an older daemon recorded. `scanLogs` gives the `directory` those files are in and the bounds they are kept under (`stderrCapBytes`, `traceStderrCapBytes`, `traceCaptureBytes`, `stdoutCapBytes`, `maxFiles`, `maxTotalBytes`). Reading the reply or the directory scans nothing and starts no process |
 | `pluginInstall` | in answer to `installPlugin`, `addPluginSearchPath`, `removePluginSearchPath`, `addWindowsPluginFolder`, `removeWindowsPluginFolder`, `removeWindowsPluginInserts`, `setWindowsPluginEnabled`, `deleteWindowsPlugin`, `syncWindowsPlugins` and `rescanPlugins` | `ok`, `message` (a sentence or two for the user, ending with the bundles the scan that followed could not read, up to three by name and the rest as a count), `installed` (the bundles or folders put in place), `added` (plugins in the catalogue that were not before) and `total` |
 | `error` | when a command without a `requestId` is rejected | `message`; for the mixer commands a `state` follows, so an optimistic edit can be reverted |
@@ -217,6 +218,7 @@ that final acknowledgement (or an `error` without a request id):
 | `getBrowserSession` | none | WebSocket only; register this connection as a browser companion and return its `browserSession`. Repeated calls on the same connection return the same id |
 | `syncBrowserTabs` | `session`, `tabs` | WebSocket only; replace this companion's complete tab list. Only the connection that obtained the session may publish it; see [browser tabs](#browser-tabs) |
 | `assignBrowserTab` | `session`, `tabId`, `site`, `channel`, `remember` | select an application channel or `null` for browser default for a connected tab. Required `site` is the origin the caller saw; an assignment is refused if that tab has navigated to another origin. `remember` must be boolean; true saves the website origin preference, and `channel:null, remember:true` forgets it. False changes only this tab |
+| `activateBrowserTab` | `session`, `tabId`, `site` | ask the companion that registered a connected tab to bring it forward and start routing it, as its own Activate does. Refused unless `preserveBrowserOutputs` is on, `site` still matches the tab's origin, the tab has a channel, and it is neither capturing nor reporting an `activation`. Success means the request reached the companion, not that capture started; see [browser tabs](#browser-tabs) |
 | `setPreserveBrowserOutputs` | `value` | boolean only; explicitly enable or disable preservation of Chromium-family playback outputs. Saved in `mixer.json`, never recalled by a profile. Registration alone does not enable it |
 | `setMonitorMuteMicrophones` | `value` | boolean only, false by default; include XLR 1, XLR 2 and mono capture channels in the monitoring pause, across every OpenXLR mix. Stereo captures, Aux In and application channels keep playing. Saved only in `mixer.json`; takes effect immediately without restarting the daemon. See [monitoring and microphones](#monitoring-and-microphones) |
 | `listPlugins` | none | the installed LV2, CLAP and VST3 plugins, answered with a `plugins` message |
@@ -970,7 +972,8 @@ A companion authenticates a WebSocket, calls `getBrowserSession`, then
 publishes `syncBrowserTabs` with that session and its full `tabs` array.
 Each entry has `id` (a distinct non-negative integer), `site` (an HTTP or
 HTTPS origin, at most 512 characters), `title` (at most 160 characters),
-`capturing` (boolean), and optional `error` (at most 200 characters).
+`capturing` (boolean), optional `error` (at most 200 characters) and
+optional `activation` (`starting`, `popup`, `browser` or null; see below).
 Origins cannot contain credentials, a browsing path, query or fragment.
 Titles and errors cannot contain control characters. The daemon normalizes
 origins to the form a Chromium browser serializes them in, for example
@@ -983,7 +986,8 @@ register. The normal 64 KiB incoming-frame limit also applies.
 At most eight companions and 128 tabs per companion can be registered.
 
 The mixer state's `browserTabs` entries carry `session`, `id`, `site`,
-`title`, `channelId`, `remember`, `capturing` and optional `error`.
+`title`, `channelId`, `remember`, `capturing`, optional `error` and optional
+`activation`.
 `channelId:null` explicitly means browser default. Title and capture updates
 on the same origin preserve the tab's choice. Navigation to another origin
 clears its temporary choice and uses the new origin's saved default, if any.
@@ -992,7 +996,8 @@ The shared `title` is empty unless the tab is capturing or has a non-null
 available for selection and navigation checks. The daemon coalesces
 title-only changes to the latest value on a one-second timer. An identical
 list, including one sent in a different order, causes no state broadcast.
-Changes to the tab list, origins, capture or errors publish immediately.
+Changes to the tab list, origins, capture, errors or activation publish
+immediately.
 Deleting a channel moves remembered website defaults to the fallback
 application channel; tab-only choices for it return to browser default.
 `capturing` and `error` describe the browser's last report,
@@ -1005,6 +1010,25 @@ such as `https://EXAMPLE.com:443/` and `https://example.com` match. Only the
 owning socket can replace the tab metadata. Closing it removes its runtime
 tabs and frees the companion slot. Reconnect, authenticate, get a new session and resync;
 there is no heartbeat or persisted session id.
+
+A controller can ask for capture with `activateBrowserTab`. The daemon
+checks the tab as it does for `assignBrowserTab` and sends a
+`browserTabActivation` message with `tabId` and `site` to the companion's
+connection alone, since the session is that connection. The browser lets
+the companion capture a tab only after the user invoked the extension on
+that tab, by its toolbar button or keyboard shortcut, and that grant ends
+when the tab navigates. The companion brings the tab's
+window and the tab forward and starts it as its popup's Activate would.
+While it works on the request the tab reports `activation:"starting"`. If
+the browser still holds the grant, capture starts and `activation` is
+cleared. Otherwise the companion opens its popup on the tab where the
+browser allows that (`popup`); when it cannot, or a press in that popup
+is refused too, the tab reports `browser`, meaning the user has to invoke
+the extension on the tab and press Activate there. Any other failure clears
+`activation` and sets the tab's `error`. The companion drops a request after
+two minutes, on navigation to another origin, when the tab closes or when
+`preserveBrowserOutputs` is turned off. A companion that predates this
+command ignores the message and never reports `activation`.
 
 With `remember:true`, a non-null channel saves a default for the origin and
 applies to other tabs from it that have no tab-only choice. At most 128
