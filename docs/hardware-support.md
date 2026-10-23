@@ -9,7 +9,7 @@ brand works in the mixer without hardware controls; see
 
 | Device | USB id | Status |
 |---|---|---|
-| Wave XLR Pro | `0fd9:00b4` | exposed controls verified on hardware, except the microphone EQ on the unit and ducking on the unit; ducking runs in software |
+| Wave XLR Pro | `0fd9:00b4` | exposed controls verified on hardware; the microphone EQ on the unit measured once, and ducking on the unit accepted by ear on the headphone jacks, keyed by XLR 1 |
 | XLR Dock | `0fd9:00a6` | exposed controls verified on hardware |
 | Wave XLR | `0fd9:007d` | core controls verified on hardware by community testers on two units (0.1.13) |
 | Wave XLR MK.2 | `0fd9:00b6` | exposed controls verified on hardware by a community tester, except the microphone EQ on the unit, not yet run from OpenXLR |
@@ -85,7 +85,7 @@ applied per mix.
 Ducking comes from captures of Wave Link 3.5 on Windows, firmware 1.0.14. Block
 0x0008 holds twelve entries, one per hardware input and USB playback pair,
 with the key threshold, depth, attack, release and a ducked flag, and each
-of the three mix sections of block 0x0001 holds a 2-bit field per USB pair
+of the five mix sections of block 0x0001 holds a 2-bit field per USB pair
 whose high bit Wave Link sets on a ducked pair. With XLR 1 loud the unit
 lowered the ducked pairs by the configured depth with no host write. The
 daemon can write the same bytes, without the commit block, on the two pairs
