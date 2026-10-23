@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using OpenXLR.Core.Mixing;
 using OpenXLR.UI;
 using OpenXLR.UI.Localization;
 
@@ -271,6 +272,14 @@ public sealed class LocalizationTests
             .Select(v => v.Split('=', 2)).ToDictionary(v => v[0], v => v[1]);
         Assert.Equal(expected, Localizer.Resolve(saved, n => variables.GetValueOrDefault(n),
             [.. Localizer.Languages.Select(c => c.Id!)]));
+    }
+
+    [Fact]
+    public void ItalianRoutingHintsKeepTheDefaultApplicationChannelName()
+    {
+        ChannelDefinition fallback = Assert.IsType<ChannelDefinition>(MixerConfig.Default().FallbackApplicationChannel);
+        Assert.Contains(fallback.Name, Localizer.Get("ANewChannelStartsMutedInEvery", CultureInfo.GetCultureInfo("it")),
+            StringComparison.Ordinal);
     }
 
     [Theory]

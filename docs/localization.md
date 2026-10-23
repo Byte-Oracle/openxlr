@@ -47,6 +47,9 @@ daemon sends, the diagnostics archive, and the messages a skin author
 reads when a skin does not load. The terminal mixer and the OpenDeck plugin
 are not part of the catalogue.
 
+Routing hints keep the mixer's default channel and mix names, such as
+`System`, so they match the labels the user sees.
+
 ## Adding or changing a string
 
 1. Add an entry to `Strings.resx`, or change the value of an existing one.

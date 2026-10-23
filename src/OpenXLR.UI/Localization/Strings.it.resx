@@ -105,7 +105,7 @@
     <value>Consenti a questo mix monitor di superare il 100%, fino al 150%. Disattivando l'opzione, un mix amplificato torna al 100%. Su KDE Plasma corrisponde all'impostazione del desktop Aumenta il volume massimo, condivisa da tutti i controlli del monitor.</value>
   </data>
   <data name="ANewChannelStartsMutedInEvery" xml:space="preserve">
-    <value>Un nuovo canale parte silenziato in ogni mix. Gli ingressi hardware restano dove sono. Le app il cui canale viene eliminato passano a Sistema.</value>
+    <value>Un nuovo canale parte silenziato in ogni mix. Gli ingressi hardware restano dove sono. Le app il cui canale viene eliminato passano a System.</value>
   </data>
   <data name="AnotherApplicationChannel" xml:space="preserve">
     <value>un altro canale applicazione</value>
