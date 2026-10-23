@@ -1645,8 +1645,8 @@ rule that fails gives `reason`:
 | the unit answers a read of its ducking block | `unsupportedBlock` | The Wave XLR Pro did not answer a read of its ducking block. |
 
 On the Wave XLR Pro both of these fail today, so it reports the unit's
-side and runs ducking in software: the unit ducks inside its own mix, and
-OpenXLR feeds the jacks through the monitor return, which goes around it.
+side and runs ducking in software. The unit's ducking has not been
+verified on the jacks as the daemon writes it.
 A target mix no output, virtual microphone or feed hears is left out of
 these rules; a setup whose target mixes nobody hears runs on the unit with
 no pairs ducked. The unit ducks the pairs `outputs` names.

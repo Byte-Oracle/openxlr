@@ -26,9 +26,8 @@ Wave XLR Pro:
 - Physical output routing: Headphones 1, Headphones 2, Line Out and USB
   Aux are each switched in the device's hardware mixer
 - Ducking on the device, mapped from Wave Link on Windows but not used:
-  the unit lowers a whole output inside its own mix, and OpenXLR feeds
-  the jacks through the monitor return, which goes around that mix, so
-  on the desk the jacks did not dip. [Ducking](#submixer) runs in
+  as the daemon writes it the jacks did not dip on the desk, though they
+  do once both bits of a pair's field are set. [Ducking](#submixer) runs in
   software on the Pro, and the state says why
   ([api.md](api.md#where-ducking-runs)). The unit is written with ducking
   off while the submixer runs, which clears ducking Wave Link left
