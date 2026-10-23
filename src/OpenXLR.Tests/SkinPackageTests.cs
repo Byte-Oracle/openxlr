@@ -200,9 +200,11 @@ public sealed class SkinPackageTests : IDisposable
         // XLR 1's and XLR 2's binding, drawn under the name wherever the order puts it.
         Assert.Equal(["identity", "binding", "mute", "gain", "meter", "processing", "effects"], matrix.RowHead.Shown);
         Assert.Equal(["identity", "outputs", "mute", "master", "effects"], matrix.ColumnHead.Shown);
-        Assert.Equal(["mute", "fader"], matrix.Cell.Shown);
+        Assert.Equal(["mute", "fader", "value"], matrix.Cell.Shown);
         Assert.Equal(SkinLabelStyle.IconAndText, matrix.RowHead.Label);
-        Assert.Equal(SkinMatrixMuted.Tint, matrix.Muted);
+        // A muted send greys out, and the send's level shows over its fader while it moves.
+        Assert.Equal(SkinMatrixMuted.Dim, matrix.Muted);
+        Assert.Equal(SkinMatrixValue.OverFader, matrix.Value);
         Assert.Equal(SkinMatrixMeter.UnderFader, matrix.Meter);
         Assert.Equal(SkinLayoutTemplates.OutputToolbar, layout.Monitor);
         Assert.Equal(SkinLayoutTemplates.ApplicationColumns, layout.Applications);

@@ -45,6 +45,7 @@ public static class SkinLayoutReader
     private static readonly string[] MatrixOnlyOptions = ["matrix"];
     private static readonly string[] MatrixOptions = ["rowHead", "columnHead", "cell", "meter"];
     private static readonly string[] MatrixMuted = ["tint", "dim"];
+    private static readonly string[] MatrixValues = ["beside", "over-fader"];
     private static readonly string[] MatrixMeters = ["under-fader", "none"];
     private static readonly string[] Orientations = ["horizontal", "vertical"];
     private static readonly string[] Placements = ["below-label", "beside-label", "beside-fader"];
@@ -506,6 +507,12 @@ public static class SkinLayoutReader
             (SkinMatrixPartOptions parts, SkinMatrixMuted? muted) = ReadMatrixParts(cell, path + ".cell", "\"cell\"", "a cell",
                 SkinMatrixParts.Cell, SkinMatrixParts.CellKept, label: false, muted: true);
             options = options with { Cell = parts, Muted = muted ?? SkinMatrixMuted.Tint };
+            if (cell.TryGetProperty("valuePlacement", out JsonElement value))
+                options = options with
+                {
+                    Value = Name(value, path + ".cell.valuePlacement", MatrixValues, "a cell value placement") == "over-fader"
+                        ? SkinMatrixValue.OverFader : SkinMatrixValue.Beside,
+                };
         }
         if (fields.TryGetValue("meter", out JsonElement meter))
             options = options with
@@ -526,7 +533,7 @@ public static class SkinLayoutReader
         string quoted, string what, IReadOnlyList<string> parts, string kept, bool label, bool muted)
     {
         Dictionary<string, JsonElement> fields = Fields(element, path, quoted);
-        Only(fields, path, quoted, label ? ["parts", "hidden", "label"] : ["parts", "hidden", "muted"]);
+        Only(fields, path, quoted, label ? ["parts", "hidden", "label"] : ["parts", "hidden", "muted", "valuePlacement"]);
         var seen = new HashSet<string>(StringComparer.Ordinal);
         List<string> Parts(string name)
         {

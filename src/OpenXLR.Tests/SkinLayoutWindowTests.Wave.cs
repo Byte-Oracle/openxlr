@@ -88,10 +88,12 @@ internal static partial class SkinLayoutWindowTests
         CheckProcessing(window, model, "wave");
         Layout(window, 1040, 1400);
 
-        // A muted send's cell takes Wave's muted colour.
+        // A muted send's cell greys out as Broadcast's does, its mute at full strength.
         Border muted = MatrixCell(window, "music", "stream");
-        Assert.Contains("tinted", muted.Classes);
-        Assert.Equal(((ISolidColorBrush)window.FindResource("Ox.Matrix.MutedBackground")!).Color, ((ISolidColorBrush)muted.Background!).Color);
+        Assert.Contains("dimmed", muted.Classes);
+        Assert.DoesNotContain("tinted", muted.Classes);
+        Assert.Equal((double)window.FindResource("Ox.Matrix.MutedOpacity")!, muted.GetVisualDescendants().OfType<MeterFader>().Single().Opacity);
+        Assert.Equal(1, muted.GetVisualDescendants().OfType<ToggleButton>().Single(t => t.Classes.Contains("matrixMute")).Opacity);
 
         // INPUTS comes back from Arrange mode under the matrix, and Reset hides it again.
         Arrange(window, true);

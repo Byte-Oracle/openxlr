@@ -180,22 +180,51 @@ internal static partial class SkinLayoutWindowTests
             apply.Invoke(model, [JsonNode.Parse(mixer)]);
             Layout(window, 1040, 1400);
 
-            // A muted send's cell is tinted, its mute lettered in the muted colour; the others are not.
+            // A muted send's cell greys out: its fader fades while its mute keeps the
+            // muted colour at full strength, and the cell keeps its tile surface.
+            double mutedOpacity = (double)window.FindResource("Ox.Matrix.MutedOpacity")!;
             Border muted = MatrixCell(window, "music", "stream");
-            Assert.Contains("tinted", muted.Classes);
-            Assert.Equal(((ISolidColorBrush)window.FindResource("Ox.Matrix.MutedBackground")!).Color, ((ISolidColorBrush)muted.Background!).Color);
+            Assert.Contains("dimmed", muted.Classes);
+            Assert.DoesNotContain("tinted", muted.Classes);
+            Assert.Equal(1, muted.Opacity);
+            Assert.Equal(((ISolidColorBrush)window.FindResource("Ox.Tile.Background")!).Color, ((ISolidColorBrush)muted.Background!).Color);
+            Assert.Equal(mutedOpacity, muted.GetVisualDescendants().OfType<MeterFader>().Single().Opacity);
             ToggleButton mute = muted.GetVisualDescendants().OfType<ToggleButton>().Single(t => t.Classes.Contains("matrixMute"));
             Assert.True(mute.IsChecked);
-            Assert.Equal(((ISolidColorBrush)window.FindResource("Ox.Matrix.MutedForeground")!).Color,
-                ((ISolidColorBrush)mute.GetVisualDescendants().OfType<Avalonia.Controls.Presenters.ContentPresenter>().First().Foreground!).Color);
-            Assert.DoesNotContain("tinted", MatrixCell(window, "music", "monitor").Classes);
+            Assert.Equal(1, mute.Opacity);
+            Assert.Equal(((ISolidColorBrush)window.FindResource("Ox.Mute.BackgroundChecked")!).Color,
+                ((ISolidColorBrush)mute.GetVisualDescendants().OfType<Avalonia.Controls.Presenters.ContentPresenter>().First().Background!).Color);
+            Border open = MatrixCell(window, "music", "monitor");
+            Assert.DoesNotContain("dimmed", open.Classes);
+            Assert.Equal(1, open.GetVisualDescendants().OfType<MeterFader>().Single().Opacity);
+            // The send's level is no part beside the fader: a chip in the buttons' face at the
+            // top centre of the cell, shown only while the fader is being moved.
+            Border chip = open.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MatrixValueOverFader");
+            Slider openSlider = open.GetVisualDescendants().OfType<Slider>().Single();
+            Assert.DoesNotContain(open.GetVisualDescendants().OfType<TextBlock>(), b => b.IsEffectivelyVisible && b.Classes.Contains("val"));
+            Assert.False(chip.IsEffectivelyVisible);
+            FaderInput.SetIsAdjusting(openSlider, true);
+            Layout(window, 1040, 1400);
+            Assert.True(chip.IsEffectivelyVisible);
+            Assert.Equal(model.Channels.Single(c => c.Id == "music").Sends.Single(s => s.MixId == "monitor").LevelText,
+                chip.GetVisualDescendants().OfType<TextBlock>().Single().Text);
+            Assert.Equal(((ISolidColorBrush)window.FindResource("Ox.Control.Background")!).Color, ((ISolidColorBrush)chip.Background!).Color);
+            Assert.Equal(((ISolidColorBrush)window.FindResource("Ox.Control.BorderBrush")!).Color, ((ISolidColorBrush)chip.BorderBrush!).Color);
+            // Centred to the pixel: layout rounding can put it half a pixel off.
+            Assert.InRange(chip.TranslatePoint(new Point(chip.Bounds.Width / 2, 0), open)!.Value.X - open.Bounds.Width / 2, -1, 1);
+            Assert.InRange(chip.TranslatePoint(default, open)!.Value.Y, 0, 1);
+            AssertInside(chip, open);
+            FaderInput.SetIsAdjusting(openSlider, false);
+            Layout(window, 1040, 1400);
+            Assert.False(chip.IsEffectivelyVisible);
             mute.IsChecked = false;
             Assert.False(model.Channels.Single(c => c.Id == "music").Sends.Single(s => s.MixId == "stream").Muted);
             Layout(window, 1040, 1400);
-            Assert.DoesNotContain("tinted", muted.Classes);
+            Assert.DoesNotContain("dimmed", muted.Classes);
+            Assert.Equal(1, muted.GetVisualDescendants().OfType<MeterFader>().Single().Opacity);
             mute.IsChecked = true;
             Layout(window, 1040, 1400);
-            Assert.Contains("tinted", muted.Classes);
+            Assert.Contains("dimmed", muted.Classes);
 
             // A capture channel that is not connected keeps its row: its name,
             // and its own volume with its meter under it, as XLR 1's gain has.

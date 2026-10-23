@@ -620,15 +620,15 @@ public sealed class SkinDocumentTests
         Assert.Equal(["rowHead", "columnHead", "cell", "meter"], Names(Properties("layoutMatrix")));
         Assert.Equal(["under-fader", "none"], Strings(Properties("layoutMatrix").GetProperty("meter").GetProperty("enum")));
         Assert.Equal(Enum.GetValues<SkinMatrixMeter>().Length, Properties("layoutMatrix").GetProperty("meter").GetProperty("enum").GetArrayLength());
-        foreach ((string def, IReadOnlyList<string> parts, string kept, string last) in new[]
+        foreach ((string def, IReadOnlyList<string> parts, string kept, string[] rest) in new[]
                  {
-                     ("layoutMatrixRowHead", SkinMatrixParts.RowHead, SkinMatrixParts.HeadKept, "label"),
-                     ("layoutMatrixColumnHead", SkinMatrixParts.ColumnHead, SkinMatrixParts.HeadKept, "label"),
-                     ("layoutMatrixCell", SkinMatrixParts.Cell, SkinMatrixParts.CellKept, "muted"),
+                     ("layoutMatrixRowHead", SkinMatrixParts.RowHead, SkinMatrixParts.HeadKept, new[] { "label" }),
+                     ("layoutMatrixColumnHead", SkinMatrixParts.ColumnHead, SkinMatrixParts.HeadKept, ["label"]),
+                     ("layoutMatrixCell", SkinMatrixParts.Cell, SkinMatrixParts.CellKept, ["muted", "valuePlacement"]),
                  })
         {
             JsonElement fields = Properties(def);
-            Assert.Equal(["parts", "hidden", last], Names(fields));
+            Assert.Equal(["parts", "hidden", .. rest], Names(fields));
             Assert.Equal(parts, Strings(fields.GetProperty("parts").GetProperty("items").GetProperty("enum")));
             Assert.Equal(parts.Count, fields.GetProperty("parts").GetProperty("maxItems").GetInt32());
             Assert.Equal(parts.Where(p => p != kept), Strings(fields.GetProperty("hidden").GetProperty("items").GetProperty("enum")));
@@ -637,6 +637,8 @@ public sealed class SkinDocumentTests
         Assert.Equal(["tint", "dim"], Strings(Properties("layoutMatrixCell").GetProperty("muted").GetProperty("enum")));
         Assert.Equal(Enum.GetNames<SkinMatrixMuted>().Select(n => n.ToLowerInvariant()),
             Strings(Properties("layoutMatrixCell").GetProperty("muted").GetProperty("enum")));
+        Assert.Equal(["beside", "over-fader"], Strings(Properties("layoutMatrixCell").GetProperty("valuePlacement").GetProperty("enum")));
+        Assert.Equal(Enum.GetValues<SkinMatrixValue>().Length, Properties("layoutMatrixCell").GetProperty("valuePlacement").GetProperty("enum").GetArrayLength());
         Assert.Equal("#/$defs/layoutPopOut", submixer.GetProperty("popOut").GetProperty("$ref").GetString());
         Assert.Equal(SkinLayoutTemplates.Submixer, Strings(submixer.GetProperty("template").GetProperty("enum")));
         Assert.Equal(["horizontal", "vertical"], Strings(submixer.GetProperty("orientation").GetProperty("enum")));

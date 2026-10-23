@@ -35,11 +35,25 @@ public sealed class FaderInput : AvaloniaObject
             if (ToolTip.GetTip(slider) is null)
                 ToolTip.SetTip(slider, Localizer.Text("FaderPrecisionHint"));
             Gestures.GetValue(slider, s => new Gesture(s));
+            Adjustments.GetValue(slider, s => new Adjustment(s));
         }
     });
 
     public static double GetStep(Slider slider) => slider.GetValue(StepProperty);
     public static void SetStep(Slider slider, double value) => slider.SetValue(StepProperty, value);
+
+    /// <summary>
+    /// True while the user is changing the fader: from a press on it until the
+    /// release, and for a moment after a key moves it. A value drawn only while
+    /// the fader moves binds to this.
+    /// </summary>
+    public static readonly AttachedProperty<bool> IsAdjustingProperty =
+        AvaloniaProperty.RegisterAttached<FaderInput, Slider, bool>("IsAdjusting");
+
+    private static readonly ConditionalWeakTable<Slider, Adjustment> Adjustments = new();
+
+    public static bool GetIsAdjusting(Slider slider) => slider.GetValue(IsAdjustingProperty);
+    public static void SetIsAdjusting(Slider slider, bool value) => slider.SetValue(IsAdjustingProperty, value);
 
     /// <summary>One tenth of normal travel, snapped to the fader's displayed units.</summary>
     internal static double FineValue(double value, double distance, double span, double min, double max, double step)
@@ -137,6 +151,62 @@ public sealed class FaderInput : AvaloniaObject
             foreach (Visual ancestor in _ancestors) ancestor.PropertyChanged -= OnAncestorChanged;
             _ancestors = [];
             if (release) pointer?.Capture(null);
+        }
+    }
+
+    /// <summary>Keeps <see cref="IsAdjustingProperty"/> for one fader.</summary>
+    private sealed class Adjustment
+    {
+        private static readonly TimeSpan KeyHold = TimeSpan.FromSeconds(1.2);
+
+        private readonly Slider _slider;
+        private readonly Avalonia.Threading.DispatcherTimer _keyTimer;
+        private bool _held;
+
+        internal Adjustment(Slider slider)
+        {
+            _slider = slider;
+            _keyTimer = new Avalonia.Threading.DispatcherTimer { Interval = KeyHold };
+            _keyTimer.Tick += (_, _) =>
+            {
+                _keyTimer.Stop();
+                if (!_held) SetIsAdjusting(_slider, false);
+            };
+            // Seen even when the slider, its thumb or the fine drag handles
+            // them, so every way of dragging counts.
+            slider.AddHandler(InputElement.PointerPressedEvent, (_, e) =>
+            {
+                if (!e.GetCurrentPoint(slider).Properties.IsLeftButtonPressed || !slider.IsEffectivelyEnabled) return;
+                _held = true;
+                SetIsAdjusting(slider, true);
+            }, RoutingStrategies.Tunnel, handledEventsToo: true);
+            slider.AddHandler(InputElement.PointerReleasedEvent, (_, _) => Release(), RoutingStrategies.Bubble, handledEventsToo: true);
+            slider.AddHandler(InputElement.PointerCaptureLostEvent, (_, e) =>
+            {
+                // Capture passing to the thumb inside the fader is still the same drag.
+                if (e.Pointer.Captured is Visual to && (to == slider || slider.IsVisualAncestorOf(to))) return;
+                Release();
+            }, RoutingStrategies.Bubble, handledEventsToo: true);
+            slider.DetachedFromVisualTree += (_, _) =>
+            {
+                _held = false;
+                _keyTimer.Stop();
+                SetIsAdjusting(slider, false);
+            };
+            slider.PropertyChanged += (_, e) =>
+            {
+                if (e.Property != RangeBase.ValueProperty || _held || !slider.IsKeyboardFocusWithin) return;
+                SetIsAdjusting(slider, true);
+                _keyTimer.Stop();
+                _keyTimer.Start();
+            };
+        }
+
+        private void Release()
+        {
+            if (!_held) return;
+            _held = false;
+            if (!_keyTimer.IsEnabled) SetIsAdjusting(_slider, false);
         }
     }
 }

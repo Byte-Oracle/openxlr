@@ -49,18 +49,18 @@
     "Ox.Meter.WarningLevel": 0.7,
     "Ox.Meter.HotLevel": 0.9,
     "Ox.Mute.Background": "#2b3340",
-    "Ox.Mute.Foreground": "#c4cfde",
+    "Ox.Mute.Foreground": "#eef3fb",
     "Ox.Mute.BackgroundPointerOver": "#394556",
-    "Ox.Mute.BackgroundChecked": "#b82746",
-    "Ox.Mute.ForegroundChecked": "#ffffff",
-    "Ox.Mute.BorderBrush": "#00000000",
-    "Ox.Mute.BorderThickness": 0,
-    "Ox.Fader.Track": "#4c596c",
-    "Ox.Fader.Fill": "#45b7ff",
+    "Ox.Mute.BackgroundChecked": "#2b3340",
+    "Ox.Mute.ForegroundChecked": "#ff7a8e",
+    "Ox.Mute.BorderBrush": "#4c596c",
+    "Ox.Mute.BorderThickness": 1,
+    "Ox.Fader.Track": "#384353",
+    "Ox.Fader.Fill": "#7d8899",
     "Ox.Fader.TrackHeight": 2,
     "Ox.Fader.TrackCornerRadius": 1,
-    "Ox.Fader.Thumb.Background": "#45b7ff",
-    "Ox.Fader.Thumb.BorderBrush": "#45b7ff",
+    "Ox.Fader.Thumb.Background": "#c4cfde",
+    "Ox.Fader.Thumb.BorderBrush": "#c4cfde",
     "Ox.Fader.Thumb.BorderThickness": 0,
     "Ox.Fader.Thumb.Width": 8,
     "Ox.Fader.Thumb.Height": 12,
@@ -127,6 +127,7 @@
     "Ox.Matrix.RowHeight": 48,
     "Ox.Matrix.MutedBackground": "#482634",
     "Ox.Matrix.MutedForeground": "#ffffff",
+    "Ox.Matrix.MutedOpacity": 0.3,
     "Ox.Label.FontSize": 12,
     "Ox.Label.FontWeight": "SemiBold",
     "Ox.Title.FontSize": 18
@@ -233,12 +234,11 @@
           "cell": {
             "parts": [
               "mute",
-              "fader"
-            ],
-            "hidden": [
+              "fader",
               "value"
             ],
-            "muted": "tint"
+            "muted": "dim",
+            "valuePlacement": "over-fader"
           },
           "meter": "under-fader"
         },

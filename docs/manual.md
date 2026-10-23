@@ -2135,7 +2135,7 @@ the application, so a package brings them with it:
   the UI, described below;
 - **Nyan Pink**, dark plum cards, candy pink faders and cyan details,
   using the classic arrangement and your saved section order;
-- **Wave**, dark charcoal cards, blue faders and green meters, arranged
+- **Wave**, dark charcoal cards, grey faders and green meters, arranged
   the way Broadcast is: everything said about Broadcast below holds for
   Wave too, in its own colours, with a wider name column and the cards a
   little closer together. Your Arrange moves are kept for each of the two
@@ -2154,8 +2154,10 @@ Material from then on.
 each column a mix, both in the mixer's order, and where a row crosses a
 column is a cell with that channel's send into that mix: a mute button on
 the left and a short fader whose track is the channel's own meter, green
-rising to yellow and red. A muted send's cell turns red, its mute button
-with it. A channel with no send into a mix has an empty cell there.
+rising to yellow and red. A muted send's cell greys out, its fader faded,
+and its mute button's letter turns red. While you move a fader, its level
+shows at the top of the cell. A channel with no send into a mix has an
+empty cell there.
 
 The head at the start of each row carries the channel's icon and name and
 what INPUTS would show for it. XLR 1 and XLR 2 have their mute, their gain
