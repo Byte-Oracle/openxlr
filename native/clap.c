@@ -603,14 +603,16 @@ static void clap_deactivate(Host *h) {
 
 static void clap_unload(Host *h) {
   Clap *c = h->impl;
+  // Host services stay valid through destroy: the plugin may unregister
+  // its timers and FDs there. The stopped loop cannot dispatch callbacks.
+  if (c->plugin)
+    c->plugin->destroy(c->plugin);
   for (int i = 0; i < MAX_TIMERS; ++i)
     if (c->timers[i].source)
       pw_loop_destroy_source(host_loop(h), c->timers[i].source);
   for (int i = 0; i < MAX_FDS; ++i)
     if (c->fds[i].source)
       pw_loop_destroy_source(host_loop(h), c->fds[i].source);
-  if (c->plugin)
-    c->plugin->destroy(c->plugin);
   if (c->entry)
     c->entry->deinit();
   if (c->library)
