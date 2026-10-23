@@ -1,0 +1,161 @@
+{
+  "extensionName": {
+    "message": "Routing ng browser ng OpenXLR"
+  },
+  "extensionDescription": {
+    "message": "Pumili ng OpenXLR channel para sa bawat browser tab. Kailangan ang naka-install na OpenXLR application."
+  },
+  "actionTitle": {
+    "message": "I-route ang tab na ito gamit ang OpenXLR"
+  },
+  "commandOpen": {
+    "message": "Buksan ang pagpili ng channel para sa tab na ito"
+  },
+  "popupTitle": {
+    "message": "Routing ng tab ng OpenXLR"
+  },
+  "popupConnecting": {
+    "message": "Kumokonekta sa OpenXLR…"
+  },
+  "popupChannel": {
+    "message": "Channel"
+  },
+  "popupRemember": {
+    "message": "Tandaan para sa website na ito"
+  },
+  "popupEnable": {
+    "message": "Hayaang pumili ang browser ng mga output nito"
+  },
+  "popupStart": {
+    "message": "Paganahin ang tab na ito"
+  },
+  "popupStop": {
+    "message": "Ihinto ang routing"
+  },
+  "popupDevices": {
+    "message": "Access sa mga output"
+  },
+  "popupRetry": {
+    "message": "Kumonekta muli"
+  },
+  "popupForget": {
+    "message": "Kalimutan ang default ng website"
+  },
+  "popupAccessNeeded": {
+    "message": "Payagan nang isang beses ang access sa mga output para sa profile ng browser na ito. Hanggang doon, itinatago ng Chrome ang mga output ng OpenXLR at walang tab na mai-route."
+  },
+  "popupAccessGrant": {
+    "message": "Payagan ang access sa mga output"
+  },
+  "popupHelp": {
+    "message": "Pumili ng mga channel dito o sa OpenXLR. Paganahin muna ang bawat tab sa browser. Kapag inihinto, babalik sa normal ang pag-play ng browser."
+  },
+  "statusDisconnected": {
+    "message": "Hindi nakakonekta ang OpenXLR."
+  },
+  "statusUnavailable": {
+    "message": "Hindi magagamit ang tab na ito para sa routing."
+  },
+  "statusRouted": {
+    "message": "Dumadaan sa OpenXLR ang audio ng tab."
+  },
+  "statusChoose": {
+    "message": "Pumili ng channel, pagkatapos ay paganahin ang tab na ito."
+  },
+  "channelDefault": {
+    "message": "Default ng browser"
+  },
+  "currentTab": {
+    "message": "Kasalukuyang tab"
+  },
+  "devicesTitle": {
+    "message": "Access sa mga output ng OpenXLR"
+  },
+  "devicesHeading": {
+    "message": "Payagan ang paghahanap ng mga output device"
+  },
+  "devicesExplain": {
+    "message": "Kailangan ng Chrome ng pahintulot sa mikropono bago nito ipakita ang mga output device na hindi default. Binubuksan lang ng pahinang ito ang mikropono para makuha ang pahintulot na iyon at agad itong isinasara. Walang audio ng mikropono na nire-record, ipinapadala sa OpenXLR, o niru-route."
+  },
+  "devicesAllow": {
+    "message": "Payagan ang paghahanap ng device"
+  },
+  "devicesNote": {
+    "message": "Gawing natatangi ang mga pangalan ng channel sa OpenXLR para mahanap ng extension ang mga katugmang output. Ang pahintulot at mga identifier ng output ay para lang sa profile ng browser na ito."
+  },
+  "devicesFound": {
+    "message": "Mga output ng OpenXLR na nahanap: $1. Bumalik sa tab na may audio at paganahin ang routing."
+  },
+  "devicesNone": {
+    "message": "Naibigay ang access, pero walang nahanap na output ng OpenXLR. Tingnan kung tumatakbo ang daemon."
+  },
+  "devicesDenied": {
+    "message": "Hindi naibigay ang access sa mga output. Walang binago sa audio ng tab. Maaari mong subukan muli anumang oras."
+  },
+  "assignmentPending": {
+    "message": "Hinihintay na kumpirmahin ng OpenXLR ang channel ng tab na ito."
+  },
+  "assignmentTimeout": {
+    "message": "Hindi nakumpirma ng OpenXLR sa oras ang pagtatalaga ng tab. Piliin muli ang channel."
+  },
+  "bridgeUnavailable": {
+    "message": "Hindi magagamit ang browser integration ng OpenXLR. Tingnan ang setup ng native host."
+  },
+  "bridgeDisconnected": {
+    "message": "Nadiskonekta ang browser integration ng OpenXLR."
+  },
+  "tabUnregistered": {
+    "message": "Hindi na nakarehistro sa OpenXLR ang tab na ito."
+  },
+  "siteChanged": {
+    "message": "Nagbago ang website ng tab na ito. Buksan muli ang pagpili ng channel bago ito italaga."
+  },
+  "channelUnavailable": {
+    "message": "Hindi magagamit ang OpenXLR channel na ito."
+  },
+  "tooManyAssignments": {
+    "message": "Masyadong maraming pagtatalaga mula sa browser ang naghihintay sa OpenXLR. Subukan muli kapag natapos ang isa sa mga ito."
+  },
+  "activateFromTab": {
+    "message": "Paganahin ang routing mula sa tab na gusto mong pakinggan."
+  },
+  "enableOutputsFirst": {
+    "message": "Paganahin muna sa OpenXLR ang pagpili ng output ng browser."
+  },
+  "chooseChannelFirst": {
+    "message": "Pumili muna ng OpenXLR channel at hintaying lumabas ang pagtatalaga."
+  },
+  "alreadyStarting": {
+    "message": "Nagsisimula na ang routing para sa tab na ito."
+  },
+  "changedWhileStarting": {
+    "message": "Nagbago ang tab o channel habang nagsisimula ang routing. Paganahin muli ang tab."
+  },
+  "outputAmbiguous": {
+    "message": "May ilang output na may ganitong pangalan. Bigyan ng natatanging pangalan ang OpenXLR channel."
+  },
+  "outputUnavailable": {
+    "message": "Hindi magagamit ang OpenXLR output na ito. Tingnan ang access sa mga output at ang channel sa OpenXLR."
+  },
+  "routingFailed": {
+    "message": "Nabigo ang routing ng audio ng browser."
+  },
+  "tooManyCaptures": {
+    "message": "Hanggang $1 tab lang ang maaaring i-route nang sabay-sabay."
+  },
+  "noSinkSelection": {
+    "message": "Hindi makapili ang browser na ito ng Web Audio output."
+  },
+  "startTimeout": {
+    "message": "Hindi nasimulan ng browser sa oras ang audio ng tab. Paganahin muli ang tab na ito."
+  },
+  "noAudioTrack": {
+    "message": "Walang ibinigay na audio track ang tab."
+  },
+  "routingEnded": {
+    "message": "Tinapos ng browser ang routing ng audio ng tab."
+  },
+  "outputGone": {
+    "message": "Nawala ang napiling OpenXLR output. Normal na muling nagpe-play ang tab."
+  }
+}

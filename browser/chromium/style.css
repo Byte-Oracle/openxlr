@@ -10,3 +10,5 @@ button { cursor: pointer; margin: 4px 4px 4px 0; }
 button:disabled { cursor: default; }
 .status { border-inline-start: 3px solid AccentColor; padding-inline-start: 10px; }
 #error { white-space: pre-wrap; }
+.notice { border-inline-start: 3px solid Mark; padding-inline-start: 10px; margin: 12px 0; }
+.notice p { margin: 0 0 6px; }

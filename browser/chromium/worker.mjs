@@ -1,7 +1,8 @@
 import { HOST, MAX_TABS, deviceFor, errorText, siteOf, tabRecords } from './routing.mjs';
+import { t } from './text.mjs';
 
-const ASSIGNMENT_PENDING = "Waiting for OpenXLR to confirm this tab's channel assignment.";
-const ASSIGNMENT_TIMEOUT = 'OpenXLR did not confirm the tab assignment in time. Choose the channel again.';
+const ASSIGNMENT_PENDING = t('assignmentPending');
+const ASSIGNMENT_TIMEOUT = t('assignmentTimeout');
 
 let native = null;
 let state = null;
@@ -55,7 +56,7 @@ function connect() {
       if (native !== port) return;
       // Read lastError while its callback is active, but expose no native paths.
       const disconnected = chrome.runtime.lastError;
-      bridgeError = disconnected ? 'OpenXLR browser integration is unavailable. Check the native host setup.' : 'OpenXLR browser integration disconnected.';
+      bridgeError = disconnected ? t('bridgeUnavailable') : t('bridgeDisconnected');
       native = null;
       state = null;
       clearAssignments();
@@ -65,12 +66,12 @@ function connect() {
   } catch {
     native = null;
     clearAssignments();
-    bridgeError = 'OpenXLR browser integration is unavailable. Check the native host setup.';
+    bridgeError = t('bridgeUnavailable');
   }
 }
 
 function post(message) {
-  if (!native) throw new Error(bridgeError || 'OpenXLR is not connected.');
+  if (!native) throw new Error(bridgeError || t('statusDisconnected'));
   native.postMessage(message);
 }
 
@@ -221,11 +222,11 @@ async function handle(message) {
     case 'enable': post({ type: 'enable', value: message.value === true }); return null;
     case 'assign': {
       const tab = state?.tabs.find(candidate => candidate.id === message.id);
-      if (!Number.isSafeInteger(message.id) || !tab) throw new Error('This tab is no longer registered with OpenXLR.');
-      if (message.site !== tab.site) throw new Error('This tab\'s website changed. Reopen the channel picker before assigning it.');
-      if (message.channel !== null && !state.channels.some(channel => channel.id === message.channel)) throw new Error('This OpenXLR channel is unavailable.');
+      if (!Number.isSafeInteger(message.id) || !tab) throw new Error(t('tabUnregistered'));
+      if (message.site !== tab.site) throw new Error(t('siteChanged'));
+      if (message.channel !== null && !state.channels.some(channel => channel.id === message.channel)) throw new Error(t('channelUnavailable'));
       if (!assignments.has(message.id) && assignments.size >= MAX_TABS)
-        throw new Error('Too many browser assignments are waiting for OpenXLR. Try again after a pending assignment finishes.');
+        throw new Error(t('tooManyAssignments'));
       clearAssignment(message.id);
       const pending = { site: message.site, channel: message.channel, remember: message.channel !== null && message.remember === true };
       assignments.set(message.id, pending);
@@ -243,20 +244,20 @@ async function handle(message) {
     case 'start': {
       if (assignments.has(message.id)) throw new Error(ASSIGNMENT_PENDING);
       const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!active || active.id !== message.id || active.incognito || !siteOf(active.url)) throw new Error('Activate routing from the tab you want to listen to.');
+      if (!active || active.id !== message.id || active.incognito || !siteOf(active.url)) throw new Error(t('activateFromTab'));
       if (assignments.has(active.id)) throw new Error(ASSIGNMENT_PENDING);
       const selected = state?.tabs.find(tab => tab.id === active.id && tab.site === siteOf(active.url));
       const channel = state?.channels.find(channel => channel.id === selected?.channelId);
-      if (!state?.preserveBrowserOutputs) throw new Error('Enable browser output selection in OpenXLR first.');
-      if (!channel) throw new Error('Choose an OpenXLR channel and wait for the assignment to appear first.');
-      if (starts.has(active.id)) throw new Error('Routing is already starting for this tab.');
+      if (!state?.preserveBrowserOutputs) throw new Error(t('enableOutputsFirst'));
+      if (!channel) throw new Error(t('chooseChannelFirst'));
+      if (starts.has(active.id)) throw new Error(t('alreadyStarting'));
       const pending = { site: selected.site, channel: channel.id, cancelled: false };
       starts.set(active.id, pending);
       const check = () => {
         const latest = state?.tabs.find(candidate => candidate.id === active.id);
         if (assignments.has(active.id)) throw new Error(ASSIGNMENT_PENDING);
         if (pending.cancelled || !state?.preserveBrowserOutputs || latest?.site !== pending.site || latest?.channelId !== pending.channel)
-          throw new Error('The tab or channel changed while routing was starting. Activate the tab again.');
+          throw new Error(t('changedWhileStarting'));
         return true;
       };
       try {
@@ -308,7 +309,11 @@ chrome.tabs.onRemoved.addListener(id => {
   scheduleRefresh();
 });
 chrome.runtime.onStartup.addListener(connect);
-chrome.runtime.onInstalled.addListener(connect);
+chrome.runtime.onInstalled.addListener(details => {
+  connect();
+  // Output access is the one step Chrome asks for once; offer it straight after installing.
+  if (details?.reason === 'install') void chrome.tabs.create({ url: chrome.runtime.getURL('devices.html') }).catch(() => {});
+});
 
 // A service worker can sleep while its offscreen audio continues. Recover the
 // active sessions before publishing a replacement provider to the daemon.

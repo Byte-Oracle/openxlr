@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>OpenXLR output access</title><link rel="stylesheet" href="style.css"></head>
-<body><main><h1>Allow output device discovery</h1>
-<p>Chrome requires microphone permission before it reveals nondefault output devices. This page opens the microphone only to obtain that permission and immediately stops it. No microphone audio is recorded, sent to OpenXLR or routed.</p>
-<button id="allow">Allow device discovery</button><p id="status" role="status"></p>
-<p>Keep OpenXLR channel names unique so the extension can find the matching outputs. Permission and output identifiers belong to this browser profile.</p>
+<html lang="en"><head><meta charset="utf-8"><title data-i18n="devicesTitle">OpenXLR output access</title><link rel="stylesheet" href="style.css"></head>
+<body><main><h1 data-i18n="devicesHeading">Allow output device discovery</h1>
+<p data-i18n="devicesExplain">Chrome requires microphone permission before it reveals nondefault output devices. This page opens the microphone only to obtain that permission and immediately stops it. No microphone audio is recorded, sent to OpenXLR or routed.</p>
+<button id="allow" data-i18n="devicesAllow">Allow device discovery</button><p id="status" role="status"></p>
+<p data-i18n="devicesNote">Keep OpenXLR channel names unique so the extension can find the matching outputs. Permission and output identifiers belong to this browser profile.</p>
 </main><script type="module" src="devices.mjs"></script></body></html>

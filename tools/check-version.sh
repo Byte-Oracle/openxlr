@@ -6,13 +6,15 @@ set -eu
 cd "$(dirname "$0")/.."
 props=$(sed -n 's/.*<Version>\([0-9.]*\)<\/Version>.*/\1/p' src/Directory.Build.props)
 plugin=$(sed -n 's/.*"Version": *"\([0-9.]*\)".*/\1/p' plugin/com.emaspa.openxlr.sdPlugin/manifest.json)
+browser=$(sed -n 's/.*"version": *"\([0-9.]*\)".*/\1/p' browser/chromium/manifest.json)
 nix=$(sed -n 's/.*version = "\([0-9.]*\)".*/\1/p' packaging/nix/package.nix)
 spec=$(sed -n 's/^Version: *\([0-9.]*\).*/\1/p' packaging/rpm/openxlr.spec)
 deb=$(sed -n '1s/^openxlr (\([0-9.]*\)).*/\1/p' debian/changelog)
-printf '%-28s %s\n' src/Directory.Build.props "$props" plugin/manifest.json "$plugin" \
+printf '%-31s %s\n' src/Directory.Build.props "$props" plugin/manifest.json "$plugin" \
+    browser/chromium/manifest.json "$browser" \
     packaging/nix/package.nix "$nix" packaging/rpm/openxlr.spec "$spec" debian/changelog "$deb"
 status=0
-for v in "$plugin" "$nix" "$spec" "$deb"; do
+for v in "$plugin" "$browser" "$nix" "$spec" "$deb"; do
     [ "$v" = "$props" ] || status=1
 done
 [ -n "$props" ] || status=1

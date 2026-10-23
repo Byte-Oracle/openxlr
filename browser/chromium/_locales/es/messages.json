@@ -1,0 +1,161 @@
+{
+  "extensionName": {
+    "message": "Enrutamiento del navegador de OpenXLR"
+  },
+  "extensionDescription": {
+    "message": "Elige un canal de OpenXLR para cada pestaña del navegador. Requiere la aplicación OpenXLR instalada."
+  },
+  "actionTitle": {
+    "message": "Enrutar esta pestaña con OpenXLR"
+  },
+  "commandOpen": {
+    "message": "Abrir el selector de canal de esta pestaña"
+  },
+  "popupTitle": {
+    "message": "Enrutamiento de pestañas de OpenXLR"
+  },
+  "popupConnecting": {
+    "message": "Conectando con OpenXLR…"
+  },
+  "popupChannel": {
+    "message": "Canal"
+  },
+  "popupRemember": {
+    "message": "Recordar para este sitio web"
+  },
+  "popupEnable": {
+    "message": "Dejar que el navegador elija sus salidas"
+  },
+  "popupStart": {
+    "message": "Activar esta pestaña"
+  },
+  "popupStop": {
+    "message": "Detener el enrutamiento"
+  },
+  "popupDevices": {
+    "message": "Acceso a las salidas"
+  },
+  "popupRetry": {
+    "message": "Reconectar"
+  },
+  "popupForget": {
+    "message": "Olvidar el predeterminado del sitio"
+  },
+  "popupAccessNeeded": {
+    "message": "Permite el acceso a las salidas una vez para este perfil del navegador. Hasta entonces Chrome oculta las salidas de OpenXLR y no se puede enrutar ninguna pestaña."
+  },
+  "popupAccessGrant": {
+    "message": "Permitir el acceso a las salidas"
+  },
+  "popupHelp": {
+    "message": "Elige los canales aquí o en OpenXLR. Primero activa cada pestaña en el navegador. Al detenerlo, el navegador vuelve a reproducir con normalidad."
+  },
+  "statusDisconnected": {
+    "message": "OpenXLR no está conectado."
+  },
+  "statusUnavailable": {
+    "message": "Esta pestaña no se puede enrutar."
+  },
+  "statusRouted": {
+    "message": "El audio de la pestaña pasa por OpenXLR."
+  },
+  "statusChoose": {
+    "message": "Elige un canal y luego activa esta pestaña."
+  },
+  "channelDefault": {
+    "message": "Predeterminado del navegador"
+  },
+  "currentTab": {
+    "message": "Pestaña actual"
+  },
+  "devicesTitle": {
+    "message": "Acceso a las salidas de OpenXLR"
+  },
+  "devicesHeading": {
+    "message": "Permitir la detección de dispositivos de salida"
+  },
+  "devicesExplain": {
+    "message": "Chrome pide permiso de micrófono antes de mostrar los dispositivos de salida que no son el predeterminado. Esta página abre el micrófono solo para obtener ese permiso y lo cierra de inmediato. No se graba audio del micrófono, ni se envía a OpenXLR, ni se enruta."
+  },
+  "devicesAllow": {
+    "message": "Permitir la detección de dispositivos"
+  },
+  "devicesNote": {
+    "message": "Usa nombres de canal únicos en OpenXLR para que la extensión encuentre las salidas correspondientes. El permiso y los identificadores de salida pertenecen a este perfil del navegador."
+  },
+  "devicesFound": {
+    "message": "Salidas de OpenXLR encontradas: $1. Vuelve a la pestaña con audio y activa el enrutamiento."
+  },
+  "devicesNone": {
+    "message": "Se concedió el acceso, pero no se encontraron salidas de OpenXLR. Comprueba que el daemon esté en ejecución."
+  },
+  "devicesDenied": {
+    "message": "No se concedió el acceso a las salidas. El audio de la pestaña no ha cambiado. Puedes volver a intentarlo cuando quieras."
+  },
+  "assignmentPending": {
+    "message": "Esperando a que OpenXLR confirme el canal de esta pestaña."
+  },
+  "assignmentTimeout": {
+    "message": "OpenXLR no confirmó a tiempo la asignación de la pestaña. Vuelve a elegir el canal."
+  },
+  "bridgeUnavailable": {
+    "message": "La integración de OpenXLR con el navegador no está disponible. Revisa la configuración del host nativo."
+  },
+  "bridgeDisconnected": {
+    "message": "La integración de OpenXLR con el navegador se desconectó."
+  },
+  "tabUnregistered": {
+    "message": "Esta pestaña ya no está registrada en OpenXLR."
+  },
+  "siteChanged": {
+    "message": "El sitio web de esta pestaña cambió. Vuelve a abrir el selector de canal antes de asignarla."
+  },
+  "channelUnavailable": {
+    "message": "Este canal de OpenXLR no está disponible."
+  },
+  "tooManyAssignments": {
+    "message": "Hay demasiadas asignaciones del navegador esperando a OpenXLR. Inténtalo de nuevo cuando termine alguna."
+  },
+  "activateFromTab": {
+    "message": "Activa el enrutamiento desde la pestaña que quieres escuchar."
+  },
+  "enableOutputsFirst": {
+    "message": "Primero activa en OpenXLR la selección de salidas del navegador."
+  },
+  "chooseChannelFirst": {
+    "message": "Primero elige un canal de OpenXLR y espera a que aparezca la asignación."
+  },
+  "alreadyStarting": {
+    "message": "El enrutamiento de esta pestaña ya se está iniciando."
+  },
+  "changedWhileStarting": {
+    "message": "La pestaña o el canal cambiaron mientras se iniciaba el enrutamiento. Vuelve a activar la pestaña."
+  },
+  "outputAmbiguous": {
+    "message": "Varias salidas tienen este nombre. Da al canal de OpenXLR un nombre único."
+  },
+  "outputUnavailable": {
+    "message": "Esta salida de OpenXLR no está disponible. Revisa el acceso a las salidas y el canal en OpenXLR."
+  },
+  "routingFailed": {
+    "message": "Falló el enrutamiento del audio del navegador."
+  },
+  "tooManyCaptures": {
+    "message": "Se pueden enrutar como máximo $1 pestañas a la vez."
+  },
+  "noSinkSelection": {
+    "message": "Este navegador no puede elegir una salida de Web Audio."
+  },
+  "startTimeout": {
+    "message": "El navegador no inició a tiempo el audio de la pestaña. Vuelve a activar esta pestaña."
+  },
+  "noAudioTrack": {
+    "message": "La pestaña no proporcionó ninguna pista de audio."
+  },
+  "routingEnded": {
+    "message": "El navegador terminó el enrutamiento del audio de la pestaña."
+  },
+  "outputGone": {
+    "message": "La salida de OpenXLR seleccionada desapareció. La pestaña vuelve a reproducirse con normalidad."
+  }
+}

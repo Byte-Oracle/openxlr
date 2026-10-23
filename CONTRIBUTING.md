@@ -46,6 +46,8 @@ node --check plugin/com.emaspa.openxlr.sdPlugin/plugin.mjs
 node --test plugin/tests/*.test.mjs
 node --test browser/tests/*.test.mjs
 node --check browser/tests/chromium-integration.mjs
+python3 -I tools/browser-extension.py --check  # the Chrome Web Store zip: no manifest key, every referenced file present
+python3 tools/test-browser-extension.py
 python3 -m json.tool plugin/com.emaspa.openxlr.sdPlugin/manifest.json >/dev/null
 python3 -m json.tool packaging/omarchy/openxlr.mixer/manifest.json >/dev/null
 python3 tools/deck-skins.py --check  # regenerate with no flag after changing embedded skins or colour defaults
@@ -54,7 +56,7 @@ python3 tools/eq-reference.py --check  # regenerate with no flag after changing 
 python3 packaging/flatpak/test-package.py  # the Flatpak manifest and its files
 python3 packaging/flatpak/nuget-sources.py --check  # regenerate with no flag after a package change
 shellcheck --severity=error tools/check-version.sh tools/check-locked-restore.sh tools/ci-install-packages.sh packaging/ppa/make-source.sh
-tools/check-version.sh                          # the five version locations agree
+tools/check-version.sh                          # the six version locations agree
 tools/check-locked-restore.sh                   # every packaging path restores locked
 tools/check-openapi.py docs/openapi-v1.json     # the HTTP API document keeps its shape
 tools/check-spec.py packaging/rpm/openxlr.spec  # every installed file is in %files

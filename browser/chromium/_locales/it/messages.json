@@ -1,0 +1,161 @@
+{
+  "extensionName": {
+    "message": "Instradamento browser OpenXLR"
+  },
+  "extensionDescription": {
+    "message": "Scegli un canale OpenXLR per ogni scheda del browser. Richiede l'applicazione OpenXLR installata."
+  },
+  "actionTitle": {
+    "message": "Instrada questa scheda con OpenXLR"
+  },
+  "commandOpen": {
+    "message": "Apri la scelta del canale per questa scheda"
+  },
+  "popupTitle": {
+    "message": "Instradamento schede OpenXLR"
+  },
+  "popupConnecting": {
+    "message": "Connessione a OpenXLR…"
+  },
+  "popupChannel": {
+    "message": "Canale"
+  },
+  "popupRemember": {
+    "message": "Ricorda per questo sito"
+  },
+  "popupEnable": {
+    "message": "Lascia scegliere le uscite al browser"
+  },
+  "popupStart": {
+    "message": "Attiva questa scheda"
+  },
+  "popupStop": {
+    "message": "Interrompi l'instradamento"
+  },
+  "popupDevices": {
+    "message": "Accesso alle uscite"
+  },
+  "popupRetry": {
+    "message": "Riconnetti"
+  },
+  "popupForget": {
+    "message": "Dimentica la scelta per questo sito"
+  },
+  "popupAccessNeeded": {
+    "message": "Consenti l'accesso alle uscite una volta per questo profilo del browser. Fino ad allora Chrome nasconde le uscite OpenXLR e nessuna scheda può essere instradata."
+  },
+  "popupAccessGrant": {
+    "message": "Consenti l'accesso alle uscite"
+  },
+  "popupHelp": {
+    "message": "Scegli i canali qui o in OpenXLR. Prima attiva ogni scheda nel browser. Quando interrompi, il browser torna a riprodurre normalmente."
+  },
+  "statusDisconnected": {
+    "message": "OpenXLR non è connesso."
+  },
+  "statusUnavailable": {
+    "message": "Questa scheda non può essere instradata."
+  },
+  "statusRouted": {
+    "message": "L'audio della scheda passa per OpenXLR."
+  },
+  "statusChoose": {
+    "message": "Scegli un canale, poi attiva questa scheda."
+  },
+  "channelDefault": {
+    "message": "Predefinito del browser"
+  },
+  "currentTab": {
+    "message": "Scheda corrente"
+  },
+  "devicesTitle": {
+    "message": "Accesso alle uscite OpenXLR"
+  },
+  "devicesHeading": {
+    "message": "Consenti il rilevamento dei dispositivi di uscita"
+  },
+  "devicesExplain": {
+    "message": "Chrome chiede il permesso del microfono prima di mostrare i dispositivi di uscita diversi da quello predefinito. Questa pagina apre il microfono solo per ottenere quel permesso e lo chiude subito. Nessun audio del microfono viene registrato, inviato a OpenXLR o instradato."
+  },
+  "devicesAllow": {
+    "message": "Consenti il rilevamento dei dispositivi"
+  },
+  "devicesNote": {
+    "message": "Usa nomi di canale univoci in OpenXLR, così l'estensione trova le uscite corrispondenti. Il permesso e gli identificativi delle uscite appartengono a questo profilo del browser."
+  },
+  "devicesFound": {
+    "message": "Uscite OpenXLR trovate: $1. Torna alla scheda con l'audio e attiva l'instradamento."
+  },
+  "devicesNone": {
+    "message": "L'accesso è stato concesso, ma non è stata trovata nessuna uscita OpenXLR. Controlla che il daemon sia in esecuzione."
+  },
+  "devicesDenied": {
+    "message": "L'accesso alle uscite non è stato concesso. L'audio della scheda non è cambiato. Puoi riprovare quando vuoi."
+  },
+  "assignmentPending": {
+    "message": "In attesa che OpenXLR confermi il canale di questa scheda."
+  },
+  "assignmentTimeout": {
+    "message": "OpenXLR non ha confermato in tempo l'assegnazione della scheda. Scegli di nuovo il canale."
+  },
+  "bridgeUnavailable": {
+    "message": "L'integrazione di OpenXLR con il browser non è disponibile. Controlla la configurazione del native host."
+  },
+  "bridgeDisconnected": {
+    "message": "L'integrazione di OpenXLR con il browser si è disconnessa."
+  },
+  "tabUnregistered": {
+    "message": "Questa scheda non è più registrata in OpenXLR."
+  },
+  "siteChanged": {
+    "message": "Il sito di questa scheda è cambiato. Riapri la scelta del canale prima di assegnarla."
+  },
+  "channelUnavailable": {
+    "message": "Questo canale OpenXLR non è disponibile."
+  },
+  "tooManyAssignments": {
+    "message": "Troppe assegnazioni del browser sono in attesa di OpenXLR. Riprova quando una di esse è conclusa."
+  },
+  "activateFromTab": {
+    "message": "Attiva l'instradamento dalla scheda che vuoi ascoltare."
+  },
+  "enableOutputsFirst": {
+    "message": "Prima attiva in OpenXLR la scelta delle uscite del browser."
+  },
+  "chooseChannelFirst": {
+    "message": "Prima scegli un canale OpenXLR e attendi che compaia l'assegnazione."
+  },
+  "alreadyStarting": {
+    "message": "L'instradamento di questa scheda è già in avvio."
+  },
+  "changedWhileStarting": {
+    "message": "La scheda o il canale sono cambiati durante l'avvio dell'instradamento. Attiva di nuovo la scheda."
+  },
+  "outputAmbiguous": {
+    "message": "Più uscite hanno questo nome. Dai al canale OpenXLR un nome univoco."
+  },
+  "outputUnavailable": {
+    "message": "Questa uscita OpenXLR non è disponibile. Controlla l'accesso alle uscite e il canale in OpenXLR."
+  },
+  "routingFailed": {
+    "message": "Instradamento dell'audio del browser non riuscito."
+  },
+  "tooManyCaptures": {
+    "message": "Si possono instradare al massimo $1 schede alla volta."
+  },
+  "noSinkSelection": {
+    "message": "Questo browser non può scegliere un'uscita Web Audio."
+  },
+  "startTimeout": {
+    "message": "Il browser non ha avviato in tempo l'audio della scheda. Attiva di nuovo questa scheda."
+  },
+  "noAudioTrack": {
+    "message": "La scheda non ha fornito nessuna traccia audio."
+  },
+  "routingEnded": {
+    "message": "Il browser ha terminato l'instradamento dell'audio della scheda."
+  },
+  "outputGone": {
+    "message": "L'uscita OpenXLR scelta è scomparsa. La scheda torna a riprodurre normalmente."
+  }
+}

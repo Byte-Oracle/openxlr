@@ -18,48 +18,48 @@ with your headset before relying on this for meetings.
 
 ## Install the companion
 
-This is an unpacked extension, installed separately from OpenXLR. Use a
-checkout of the same version as your native OpenXLR installation.
+The companion is loaded unpacked from a checkout, as described in
+[Load from a checkout](#load-from-a-checkout), until its Chrome Web Store
+listing is published. Its id is `beeohanoffjpcofbjiiamkdammhcihaf`, the only
+extension the native host accepts. What it reads and where that goes is in
+the [privacy policy](browser-privacy.md).
 
-1. Open `chrome://extensions`, `brave://extensions` or `edge://extensions`.
-   Enable Developer mode, choose Load unpacked and select
-   `browser/chromium` from the checkout. Pin its action if useful.
-2. Check that its id is `beeohanoffjpcofbjiiamkdammhcihaf`. The public key in
-   the manifest keeps this id stable across checkouts. No private signing
-   key is shipped.
-3. Debian and RPM packages install `com.emaspa.openxlr.browser.json` in
-   `/etc/chromium/native-messaging-hosts` and
-   `/etc/opt/chrome/native-messaging-hosts`, pointing at `/usr/bin/openxlr`.
-   The Nix package generates both manifests with its store path, and the
-   OpenXLR NixOS module exposes them in those system directories. Restart
-   the browser after installing or updating the package.
+### Native messaging host
 
-   For other browsers or source installs, copy `browser/native-host.json`
-   into the directory below as `com.emaspa.openxlr.browser.json`. OpenXLR
-   does not write a per-user manifest at runtime. A per-user manifest takes
-   precedence over the system one, so remove a stale copy or update its path.
+The packages also install the native messaging host the companion talks
+to. Debian and RPM packages install `com.emaspa.openxlr.browser.json` in
+`/etc/chromium/native-messaging-hosts` and
+`/etc/opt/chrome/native-messaging-hosts`, pointing at `/usr/bin/openxlr`.
+The Nix package generates both manifests with its store path, and the
+OpenXLR NixOS module exposes them in those system directories. Restart
+the browser after installing or updating the package.
 
-   | Browser | Directory under `~/.config` |
-   | --- | --- |
-   | Chrome | `google-chrome/NativeMessagingHosts` |
-   | Chrome Beta | `google-chrome-beta/NativeMessagingHosts` |
-   | Chrome Unstable | `google-chrome-unstable/NativeMessagingHosts` |
-   | Chromium | `chromium/NativeMessagingHosts` |
-   | Brave | `BraveSoftware/Brave-Browser/NativeMessagingHosts` |
-   | Edge | `microsoft-edge/NativeMessagingHosts` |
+For other browsers or source installs, copy `browser/native-host.json`
+into the directory below as `com.emaspa.openxlr.browser.json`. OpenXLR
+does not write a per-user manifest at runtime. A per-user manifest takes
+precedence over the system one, so remove a stale copy or update its path.
 
-   For example, for Chromium:
+| Browser | Directory under `~/.config` |
+| --- | --- |
+| Chrome | `google-chrome/NativeMessagingHosts` |
+| Chrome Beta | `google-chrome-beta/NativeMessagingHosts` |
+| Chrome Unstable | `google-chrome-unstable/NativeMessagingHosts` |
+| Chromium | `chromium/NativeMessagingHosts` |
+| Brave | `BraveSoftware/Brave-Browser/NativeMessagingHosts` |
+| Edge | `microsoft-edge/NativeMessagingHosts` |
 
-   ```sh
-   mkdir -p ~/.config/chromium/NativeMessagingHosts
-   cp browser/native-host.json ~/.config/chromium/NativeMessagingHosts/com.emaspa.openxlr.browser.json
-   ```
+For example, for Chromium:
 
-   Custom browser profiles and managed installations can use another
-   directory. The manifest's `path` must be the absolute path to your
-   installed `openxlr` executable. Its default is `/usr/bin/openxlr`.
-   Keep `allowed_origins` restricted to the extension id above. Restart the
-   browser after installing the host, or press Reconnect in the popup.
+```sh
+mkdir -p ~/.config/chromium/NativeMessagingHosts
+cp browser/native-host.json ~/.config/chromium/NativeMessagingHosts/com.emaspa.openxlr.browser.json
+```
+
+Custom browser profiles and managed installations can use another
+directory. The manifest's `path` must be the absolute path to your
+installed `openxlr` executable. Its default is `/usr/bin/openxlr`.
+Keep `allowed_origins` restricted to the extension id above. Restart the
+browser after installing the host, or press Reconnect in the popup.
 
 With Nix outside the NixOS module, copy the generated manifest from
 `<package>/etc/chromium/native-messaging-hosts/` into the per-user directory.
@@ -75,6 +75,30 @@ install -Dm644 browser/native-host.json \
 install -Dm644 browser/native-host.json \
     "$pkgdir/etc/opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json"
 ```
+
+### Load from a checkout
+
+For development, load the extension unpacked from a checkout of the same
+version as your native OpenXLR installation.
+
+1. Open `chrome://extensions`, `brave://extensions` or `edge://extensions`.
+   Enable Developer mode, choose Load unpacked and select
+   `browser/chromium` from the checkout.
+2. Check that its id is `beeohanoffjpcofbjiiamkdammhcihaf`. The public key in
+   the manifest keeps this id stable across checkouts. No private signing
+   key is shipped.
+
+`python3 -I tools/browser-extension.py <directory>` writes
+`openxlr-browser-<version>.zip`, the package uploaded to the Store. It
+leaves out the manifest's public key, which the Store refuses, so an
+unpacked copy of that zip gets another id and the native host refuses it.
+Load the checkout instead.
+
+### Languages
+
+The companion follows the browser's language. It ships in English, German,
+Spanish, Italian, Filipino (Chrome's name for Tagalog) and Serbian (Cyrillic).
+Chrome has no Cebuano, so a browser set to it shows English.
 
 ## Choose and activate a tab
 
@@ -96,11 +120,13 @@ install -Dm644 browser/native-host.json \
    moves made in pavucontrol. Choosing a channel for the whole browser,
    from that list, an OpenDeck key or a desktop key, saves it for later
    and moves nothing while the option is on.
-2. Open the companion's popup on the tab that should play into OpenXLR.
-   Output access opens a visible setup page. Chromium requires microphone
-   permission to reveal non-default output devices. Press the setup
-   button to grant it; the companion immediately stops the temporary
-   microphone stream and neither records nor forwards it.
+2. Allow output access once per browser profile. The companion opens the
+   Output access page by itself right after it is installed, and until
+   access is granted its popup says so, offers the page, and keeps Activate
+   unavailable. Chromium requires microphone permission to reveal
+   non-default output devices. Press the setup button to grant it; the
+   companion immediately stops the temporary microphone stream and neither
+   records nor forwards it.
 3. Pick a channel in the tab's row in the Browser tabs window or in the
    popup. Check Remember website to save that origin's default. A
    tab-only choice leaves the

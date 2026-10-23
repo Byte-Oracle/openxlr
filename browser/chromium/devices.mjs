@@ -1,3 +1,6 @@
+import { t, translatePage } from './text.mjs';
+
+translatePage(document);
 document.getElementById('allow').addEventListener('click', async () => {
   let stream;
   const button = document.getElementById('allow');
@@ -9,11 +12,10 @@ document.getElementById('allow').addEventListener('click', async () => {
     stream = null;
     const devices = await navigator.mediaDevices.enumerateDevices();
     const outputs = devices.filter(device => device.kind === 'audiooutput' && device.label.startsWith('OpenXLR '));
-    status.textContent = outputs.length ? `Found ${outputs.length} OpenXLR outputs. Return to your audio tab and activate routing.`
-      : 'Access was granted, but no OpenXLR outputs were found. Check that the daemon is running.';
+    status.textContent = outputs.length ? t('devicesFound', outputs.length) : t('devicesNone');
     await chrome.runtime.sendMessage({ target: 'worker', type: 'devicesChanged' });
   } catch {
-    status.textContent = 'Output access was not granted. Tab audio has not been changed. You can retry when ready.';
+    status.textContent = t('devicesDenied');
   } finally {
     stream?.getTracks().forEach(track => track.stop());
     button.disabled = false;

@@ -1,0 +1,161 @@
+{
+  "extensionName": {
+    "message": "OpenXLR усмеравање прегледача"
+  },
+  "extensionDescription": {
+    "message": "Изабери OpenXLR канал за сваку картицу прегледача. Потребна је инсталирана апликација OpenXLR."
+  },
+  "actionTitle": {
+    "message": "Усмери ову картицу кроз OpenXLR"
+  },
+  "commandOpen": {
+    "message": "Отвори избор канала за ову картицу"
+  },
+  "popupTitle": {
+    "message": "OpenXLR усмеравање картица"
+  },
+  "popupConnecting": {
+    "message": "Повезивање са OpenXLR-ом…"
+  },
+  "popupChannel": {
+    "message": "Канал"
+  },
+  "popupRemember": {
+    "message": "Запамти за овај веб-сајт"
+  },
+  "popupEnable": {
+    "message": "Пусти прегледач да бира своје излазе"
+  },
+  "popupStart": {
+    "message": "Активирај ову картицу"
+  },
+  "popupStop": {
+    "message": "Заустави усмеравање"
+  },
+  "popupDevices": {
+    "message": "Приступ излазима"
+  },
+  "popupRetry": {
+    "message": "Повежи поново"
+  },
+  "popupForget": {
+    "message": "Заборави подразумевано за веб-сајт"
+  },
+  "popupAccessNeeded": {
+    "message": "Дозволи приступ излазима једном за овај профил прегледача. Дотле Chrome скрива OpenXLR излазе и ниједна картица не може да се усмери."
+  },
+  "popupAccessGrant": {
+    "message": "Дозволи приступ излазима"
+  },
+  "popupHelp": {
+    "message": "Изабери канале овде или у OpenXLR-у. Прво активирај сваку картицу у прегледачу. Заустављање враћа нормалну репродукцију у прегледачу."
+  },
+  "statusDisconnected": {
+    "message": "OpenXLR није повезан."
+  },
+  "statusUnavailable": {
+    "message": "Ова картица није доступна за усмеравање."
+  },
+  "statusRouted": {
+    "message": "Звук картице иде кроз OpenXLR."
+  },
+  "statusChoose": {
+    "message": "Изабери канал, па активирај ову картицу."
+  },
+  "channelDefault": {
+    "message": "Подразумевано прегледача"
+  },
+  "currentTab": {
+    "message": "Тренутна картица"
+  },
+  "devicesTitle": {
+    "message": "OpenXLR приступ излазима"
+  },
+  "devicesHeading": {
+    "message": "Дозволи откривање излазних уређаја"
+  },
+  "devicesExplain": {
+    "message": "Chrome тражи дозволу за микрофон пре него што прикаже излазне уређаје који нису подразумевани. Ова страница отвара микрофон само да би добила ту дозволу и одмах га зауставља. Звук микрофона се не снима, не шаље OpenXLR-у и не усмерава."
+  },
+  "devicesAllow": {
+    "message": "Дозволи откривање уређаја"
+  },
+  "devicesNote": {
+    "message": "Дај OpenXLR каналима јединствена имена да би проширење нашло одговарајуће излазе. Дозвола и ознаке излаза припадају овом профилу прегледача."
+  },
+  "devicesFound": {
+    "message": "Пронађени OpenXLR излази: $1. Врати се на картицу са звуком и активирај усмеравање."
+  },
+  "devicesNone": {
+    "message": "Приступ је дозвољен, али није пронађен ниједан OpenXLR излаз. Провери да ли демон ради."
+  },
+  "devicesDenied": {
+    "message": "Приступ излазима није дозвољен. Звук картице није промењен. Можеш поново да покушаш било када."
+  },
+  "assignmentPending": {
+    "message": "Чека се да OpenXLR потврди канал ове картице."
+  },
+  "assignmentTimeout": {
+    "message": "OpenXLR није на време потврдио доделу картице. Поново изабери канал."
+  },
+  "bridgeUnavailable": {
+    "message": "Интеграција OpenXLR-а са прегледачем није доступна. Провери подешавање native host-а."
+  },
+  "bridgeDisconnected": {
+    "message": "Интеграција OpenXLR-а са прегледачем је прекинута."
+  },
+  "tabUnregistered": {
+    "message": "Ова картица више није регистрована у OpenXLR-у."
+  },
+  "siteChanged": {
+    "message": "Веб-сајт ове картице се променио. Поново отвори избор канала пре доделе."
+  },
+  "channelUnavailable": {
+    "message": "Овај OpenXLR канал није доступан."
+  },
+  "tooManyAssignments": {
+    "message": "Превише додела из прегледача чека OpenXLR. Покушај поново када се нека од њих заврши."
+  },
+  "activateFromTab": {
+    "message": "Активирај усмеравање из картице коју желиш да слушаш."
+  },
+  "enableOutputsFirst": {
+    "message": "Прво укључи избор излаза прегледача у OpenXLR-у."
+  },
+  "chooseChannelFirst": {
+    "message": "Прво изабери OpenXLR канал и сачекај да се додела појави."
+  },
+  "alreadyStarting": {
+    "message": "Усмеравање за ову картицу се већ покреће."
+  },
+  "changedWhileStarting": {
+    "message": "Картица или канал су се променили док се усмеравање покретало. Поново активирај картицу."
+  },
+  "outputAmbiguous": {
+    "message": "Више излаза има ово име. Дај OpenXLR каналу јединствено име."
+  },
+  "outputUnavailable": {
+    "message": "Овај OpenXLR излаз није доступан. Провери приступ излазима и канал у OpenXLR-у."
+  },
+  "routingFailed": {
+    "message": "Усмеравање звука прегледача није успело."
+  },
+  "tooManyCaptures": {
+    "message": "Највише $1 картица може истовремено да се усмерава."
+  },
+  "noSinkSelection": {
+    "message": "Овај прегледач не може да изабере Web Audio излаз."
+  },
+  "startTimeout": {
+    "message": "Прегледач није на време покренуо звук картице. Поново активирај ову картицу."
+  },
+  "noAudioTrack": {
+    "message": "Картица није дала ниједну аудио-траку."
+  },
+  "routingEnded": {
+    "message": "Прегледач је прекинуо усмеравање звука картице."
+  },
+  "outputGone": {
+    "message": "Изабрани OpenXLR излаз је нестао. Картица поново нормално репродукује звук."
+  }
+}
