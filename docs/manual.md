@@ -2194,8 +2194,10 @@ interface without a hardware low cut or ClipGuard, XLR 1's software low cut
 and ClipGuard are there too. They are the same buttons as in INPUTS, so
 switching one here switches it there. **Mic** turns green while one of them
 is on, and its small lamp lights red while phantom power is on, so you can
-see both without opening it. A capture channel that carries the interface's
-microphone has **Mic** too, and a strip bound to an additional interface
+see both without opening it. Under **Mic** is the input's gain in dB. While
+you move the row's volume fader it shows the volume instead, as a
+percentage, and goes back to the gain when you let go. A capture channel
+that carries the interface's microphone has **Mic** too, and a strip bound to an additional interface
 has that interface's switches. Aux In has its level and **Lock**. Each of
 them also has its [volume](#channel-volume),
 a second fader under the gain or the level, and the row grows to hold
