@@ -1907,6 +1907,12 @@ Seleziona l'interfaccia gestita da OpenXLR</value>
   <data name="StartupAudioOnly" xml:space="preserve">
     <value>L'audio si avvierà all'accesso senza l'app né l'icona nel vassoio di sistema.</value>
   </data>
+  <data name="StartupAudioService" xml:space="preserve">
+    <value>L'audio gira come servizio utente fuori dall'app, quindi queste opzioni avviano solo l'app.</value>
+  </data>
+  <data name="StartupAudioInTray" xml:space="preserve">
+    <value>L'audio si avvierà all'accesso con l'app nel vassoio di sistema.</value>
+  </data>
   <data name="StartupNothing" xml:space="preserve">
     <value>All'accesso non si avvieranno né l'audio né l'app.</value>
   </data>
@@ -2432,12 +2438,18 @@ Seleziona l'interfaccia gestita da OpenXLR</value>
 I controlli USB richiedono la regola udev sull'host. Esegui fuori dalla sandbox:
 sudo install -m 644 "$(flatpak info --show-location io.github.emaspa.openxlr)/files/share/openxlr/70-openxlr.rules" /etc/udev/rules.d/70-openxlr.rules
 sudo udevadm control --reload-rules
-Poi ricollega l'interfaccia. Le regole WirePlumber dell'utente hanno effetto dal prossimo accesso.
+Poi ricollega l'interfaccia. Le regole WirePlumber di OpenXLR vanno in ~/.config/wireplumber/wireplumber.conf.d durante la configurazione del primo avvio e hanno effetto dal prossimo accesso.
 
 Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Installa i plugin LV2 dalle estensioni LinuxAudio di Flathub; i plugin dell'host e il bridge Windows non sono inclusi. Consulta docs/flatpak.md per la configurazione e i limiti.</value>
   </data>
   <data name="FlatpakBackgroundUnavailable" xml:space="preserve">
     <value>Il desktop non ha consentito l'attività in background. OpenXLR potrebbe fermarsi quando è nascosto.</value>
+  </data>
+  <data name="FlatpakSetUpButton" xml:space="preserve">
+    <value>Configura</value>
+  </data>
+  <data name="FlatpakRulesFailed" xml:space="preserve">
+    <value>La configurazione di WirePlumber richiede attenzione: {0}</value>
   </data>
   <data name="Eq" xml:space="preserve">
     <value>EQ</value>

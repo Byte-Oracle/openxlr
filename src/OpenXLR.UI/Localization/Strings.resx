@@ -1907,6 +1907,12 @@ Select the interface OpenXLR drives</value>
   <data name="StartupAudioOnly" xml:space="preserve">
     <value>Audio will start at login without the app or tray icon.</value>
   </data>
+  <data name="StartupAudioService" xml:space="preserve">
+    <value>Audio runs as a user service outside the app, so these options only start the app.</value>
+  </data>
+  <data name="StartupAudioInTray" xml:space="preserve">
+    <value>Audio will start at login with the app in the tray.</value>
+  </data>
   <data name="StartupNothing" xml:space="preserve">
     <value>Neither audio nor the app will start at login.</value>
   </data>
@@ -2425,10 +2431,12 @@ Select the interface OpenXLR drives</value>
 USB controls require the host udev rule. Run outside the sandbox:
 sudo install -m 644 "$(flatpak info --show-location io.github.emaspa.openxlr)/files/share/openxlr/70-openxlr.rules" /etc/udev/rules.d/70-openxlr.rules
 sudo udevadm control --reload-rules
-Then reconnect the interface. The user WirePlumber rules take effect at the next login.
+Then reconnect the interface. OpenXLR's WirePlumber rules go in ~/.config/wireplumber/wireplumber.conf.d during the first launch's setup and take effect at the next login.
 
 The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins from Flathub's LinuxAudio extensions; host plugins and the Windows bridge are not included. See docs/flatpak.md for setup and limitations.</value></data>
   <data name="FlatpakBackgroundUnavailable" xml:space="preserve"><value>The desktop did not allow background activity. OpenXLR may stop when hidden.</value></data>
+  <data name="FlatpakSetUpButton" xml:space="preserve"><value>Set up</value></data>
+  <data name="FlatpakRulesFailed" xml:space="preserve"><value>WirePlumber setup needs attention: {0}</value></data>
   <data name="Eq" xml:space="preserve">
     <value>EQ</value>
   </data>

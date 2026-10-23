@@ -225,6 +225,8 @@ public static class CommandValidation
                 return null;   // no arguments; toggle the current state under the mixer lock
             case "resetDevice":
                 return null;   // no arguments; the device manager checks the device
+            case "restartDaemon":
+                return null;   // no arguments
             case "setMonitorFeed":
                 if (TooLong(cmd.Device, MaxText)) return "setMonitorFeed: device name too long";
                 if (cmd.Mix is null || !layout.IsMonitorFeed(cmd.Mix)) return $"setMonitorFeed: '{Short(cmd.Mix ?? "")}' is not a mix or a sum of distinct mixes";

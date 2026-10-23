@@ -366,8 +366,12 @@ public sealed class OptionsViewModel : ViewModelBase
 
     public string StartupHint => (StartDaemonAtLogin, OpenWindowAtLogin) switch
     {
+        // The Flatpak's user service runs audio whatever these options say.
+        _ when FlatpakSession.Current is { Attached: true } => Localizer.Text("StartupAudioService"),
         (true, true) => Localizer.Text("StartupAudioAndApp"),
         (false, true) => Localizer.Text("StartupAppOnly"),
+        // The Flatpak's daemon belongs to its UI, which waits in the tray.
+        (true, false) when FlatpakEnvironment.IsFlatpak => Localizer.Text("StartupAudioInTray"),
         (true, false) => Localizer.Text("StartupAudioOnly"),
         _ => Localizer.Text("StartupNothing"),
     };
