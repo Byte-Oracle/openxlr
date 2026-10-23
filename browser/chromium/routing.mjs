@@ -17,7 +17,15 @@ export function siteOf(url) {
   } catch { return null; }
 }
 
-export function tabRecords(tabs, captures = new Map()) {
+/**
+ * True for Chrome's refusal to capture a tab the user has not invoked the
+ * extension on: a toolbar click, the extension's shortcut or a menu item.
+ */
+export function notInvoked(error) {
+  return /has not been invoked|activeTab permission/i.test(String(error?.message ?? error ?? ''));
+}
+
+export function tabRecords(tabs, captures = new Map(), requests = new Map()) {
   return tabs.filter(tab => Number.isSafeInteger(tab.id) && tab.id >= 0 && tab.id <= 2147483647 && !tab.incognito && siteOf(tab.url))
     .sort((a, b) => Number(captures.get(b.id)?.capturing ?? false) - Number(captures.get(a.id)?.capturing ?? false)
       || Number(!!b.active) - Number(!!a.active) || Number(!!b.audible) - Number(!!a.audible) || a.id - b.id)
@@ -27,6 +35,7 @@ export function tabRecords(tabs, captures = new Map()) {
       title: boundedText(tab.title || siteOf(tab.url), 160),
       capturing: captures.get(tab.id)?.capturing === true,
       error: captures.get(tab.id)?.error?.slice(0, 200) || null,
+      activation: requests.get(tab.id)?.stage ?? null,
     }));
 }
 

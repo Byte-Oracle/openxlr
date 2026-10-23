@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { deviceFor, errorText, MAX_CAPTURES, siteOf, tabRecords, TabAudio } from '../chromium/routing.mjs';
+import { deviceFor, errorText, MAX_CAPTURES, notInvoked, siteOf, tabRecords, TabAudio } from '../chromium/routing.mjs';
 
 const deferred = () => {
   let resolve, reject;
@@ -52,6 +52,20 @@ test('tab metadata excludes private/restricted tabs, bounds titles and keeps cap
   assert.equal(records[0].id, 179);
   assert(records.every(tab => tab.title.length <= 160 && !tab.title.includes('\n') && !tab.site.includes('secret')));
   assert(!records.some(tab => tab.id >= 200));
+});
+
+test('a tab record carries the stage of an activation OpenXLR asked for', () => {
+  const tabs = [{ id: 1, url: 'https://one.example' }, { id: 2, url: 'https://two.example' }];
+  const records = tabRecords(tabs, new Map(), new Map([[2, { stage: 'popup' }]]));
+  assert.deepEqual(records.map(tab => [tab.id, tab.activation]), [[1, null], [2, 'popup']]);
+  assert.deepEqual(Object.keys(records[0]), ['id', 'site', 'title', 'capturing', 'error', 'activation']);
+});
+
+test('only the refusal for a tab the user did not invoke the extension on counts as one', () => {
+  assert(notInvoked(new Error('Extension has not been invoked for the current page (see activeTab permission). Chrome pages cannot be captured.')));
+  assert(notInvoked('Extension has not been invoked for the current page (see activeTab permission).'));
+  for (const other of [new Error('Permission denied'), 'Cannot capture a tab with an active stream.', undefined, null])
+    assert.equal(notInvoked(other), false);
 });
 
 test('output matching refuses guesses and never chooses default-device aliases', () => {

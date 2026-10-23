@@ -2878,7 +2878,7 @@ Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Inst
     <value>SCHEDE DEL BROWSER</value>
   </data>
   <data name="BrowserTabCaptureHint" xml:space="preserve">
-    <value>Attiva l'audio di ogni scheda nell'estensione del browser. Scegliere un canale qui non attiva l'audio della scheda.</value>
+    <value>Premi Attiva per instradare l'audio di una scheda, qui o nell'estensione del browser. Scegliere un canale non attiva l'audio della scheda.</value>
   </data>
   <data name="BrowserTabCaptureState" xml:space="preserve">
     <value>Stato dell'audio della scheda</value>
@@ -2902,7 +2902,25 @@ Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Inst
     <value>Audio della scheda attivo</value>
   </data>
   <data name="BrowserTabActivationRequired" xml:space="preserve">
-    <value>Attiva l'audio della scheda nell'estensione del browser.</value>
+    <value>Premi Attiva per instradare l'audio di questa scheda.</value>
+  </data>
+  <data name="BrowserTabActivate" xml:space="preserve">
+    <value>Attiva</value>
+  </data>
+  <data name="BrowserTabActivateName" xml:space="preserve">
+    <value>Attiva la scheda del browser {0}</value>
+  </data>
+  <data name="BrowserTabActivateHint" xml:space="preserve">
+    <value>Porta in primo piano questa scheda nel browser e avvia l'instradamento del suo audio. Il browser può chiederti di completare lì.</value>
+  </data>
+  <data name="BrowserTabActivating" xml:space="preserve">
+    <value>Avvio nel browser...</value>
+  </data>
+  <data name="BrowserTabActivatePopup" xml:space="preserve">
+    <value>Completa nel browser: premi Attiva questa scheda nel popup di OpenXLR.</value>
+  </data>
+  <data name="BrowserTabActivateToolbar" xml:space="preserve">
+    <value>Completa nel browser: in questa scheda fai clic sull'icona di OpenXLR nella barra degli strumenti o premi la sua scorciatoia, poi premi Attiva questa scheda.</value>
   </data>
   <data name="BrowserTabUsesDefault" xml:space="preserve">
     <value>Usa la destinazione predefinita del browser</value>

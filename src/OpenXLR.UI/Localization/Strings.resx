@@ -2868,7 +2868,7 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>BROWSER TABS</value>
   </data>
   <data name="BrowserTabCaptureHint" xml:space="preserve">
-    <value>Activate audio for each tab in the browser extension. Choosing a channel here does not activate tab audio.</value>
+    <value>Press Activate to route a tab's audio, here or in the browser extension. Choosing a channel does not activate tab audio.</value>
   </data>
   <data name="BrowserTabCaptureState" xml:space="preserve">
     <value>Browser tab audio state</value>
@@ -2892,7 +2892,25 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>Tab audio active</value>
   </data>
   <data name="BrowserTabActivationRequired" xml:space="preserve">
-    <value>Activate tab audio in the browser extension.</value>
+    <value>Press Activate to route this tab's audio.</value>
+  </data>
+  <data name="BrowserTabActivate" xml:space="preserve">
+    <value>Activate</value>
+  </data>
+  <data name="BrowserTabActivateName" xml:space="preserve">
+    <value>Activate browser tab {0}</value>
+  </data>
+  <data name="BrowserTabActivateHint" xml:space="preserve">
+    <value>Bring this tab forward in the browser and start routing its audio. The browser can ask you to finish there.</value>
+  </data>
+  <data name="BrowserTabActivating" xml:space="preserve">
+    <value>Starting in the browser...</value>
+  </data>
+  <data name="BrowserTabActivatePopup" xml:space="preserve">
+    <value>Finish in the browser: press Activate this tab in the OpenXLR popup.</value>
+  </data>
+  <data name="BrowserTabActivateToolbar" xml:space="preserve">
+    <value>Finish in the browser: on this tab, click the OpenXLR icon in the toolbar or press its shortcut, then press Activate this tab.</value>
   </data>
   <data name="BrowserTabUsesDefault" xml:space="preserve">
     <value>Uses the browser default destination</value>

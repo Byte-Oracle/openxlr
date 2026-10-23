@@ -2878,7 +2878,7 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>PESTAÑAS DEL NAVEGADOR</value>
   </data>
   <data name="BrowserTabCaptureHint" xml:space="preserve">
-    <value>Activa el audio de cada pestaña en la extensión del navegador. Elegir un canal aquí no activa el audio de la pestaña.</value>
+    <value>Pulsa Activar para enrutar el audio de una pestaña, aquí o en la extensión del navegador. Elegir un canal no activa el audio de la pestaña.</value>
   </data>
   <data name="BrowserTabCaptureState" xml:space="preserve">
     <value>Estado del audio de la pestaña</value>
@@ -2902,7 +2902,25 @@ Selecciona la interfaz que controla OpenXLR</value>
     <value>Audio de la pestaña activo</value>
   </data>
   <data name="BrowserTabActivationRequired" xml:space="preserve">
-    <value>Activa el audio de la pestaña en la extensión del navegador.</value>
+    <value>Pulsa Activar para enrutar el audio de esta pestaña.</value>
+  </data>
+  <data name="BrowserTabActivate" xml:space="preserve">
+    <value>Activar</value>
+  </data>
+  <data name="BrowserTabActivateName" xml:space="preserve">
+    <value>Activar la pestaña del navegador {0}</value>
+  </data>
+  <data name="BrowserTabActivateHint" xml:space="preserve">
+    <value>Trae esta pestaña al frente en el navegador y empieza a enrutar su audio. Puede que el navegador te pida terminar allí.</value>
+  </data>
+  <data name="BrowserTabActivating" xml:space="preserve">
+    <value>Iniciando en el navegador...</value>
+  </data>
+  <data name="BrowserTabActivatePopup" xml:space="preserve">
+    <value>Termina en el navegador: pulsa Activar esta pestaña en la ventana emergente de OpenXLR.</value>
+  </data>
+  <data name="BrowserTabActivateToolbar" xml:space="preserve">
+    <value>Termina en el navegador: en esta pestaña, haz clic en el icono de OpenXLR de la barra de herramientas o pulsa su atajo, y luego pulsa Activar esta pestaña.</value>
   </data>
   <data name="BrowserTabUsesDefault" xml:space="preserve">
     <value>Usa el destino predeterminado del navegador</value>

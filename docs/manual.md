@@ -793,8 +793,15 @@ and off. Below it, each tab has a row with its title, website, capture
 light, channel picker, Remember website and Forget website. Until the
 companion reports a tab, the window says so under the option. Its Manual
 button opens the browser routing guide.
-Enable the option, choose a channel and activate each tab from the
-browser. Remember website saves its origin's
+Enable the option, choose a channel and press Activate in the tab's row.
+The button shows on a row with a channel that is not routed yet. The
+browser lets the companion take a tab's audio only after you clicked its
+toolbar icon or pressed its shortcut on that tab. Activate brings the tab
+forward and starts it when the browser still allows that. When it does
+not, the row tells you what to press in the browser, either Activate this
+tab in the popup the companion opens or the OpenXLR icon on the tab. See the
+[browser routing guide](browser-routing.md#choose-and-activate-a-tab).
+Remember website saves its origin's
 default across restarts. Browser permission must be granted again for
 each tab after restarting the browser. While browser output selection is
 on, OpenXLR does not move the browser itself. Its row keeps the channel
