@@ -222,7 +222,7 @@ every save. Every field is optional on read; an absent one is empty or off.
 | `enforcedDefaultSource` | the source held as the system default |
 | `appOverrides` | application identity to remembered channel |
 | `preserveBrowserOutputs` | leave recognized Chromium playback on its browser/desktop-selected output; false when absent. Machine setting, never recalled by a profile |
-| `browserSiteChannels` | up to 128 canonical HTTP(S) origins to application channel ids for the optional [browser companion](browser-routing.md). Missing channels are discarded. Machine settings only; live tab titles, ids and sessions are not saved |
+| `browserSiteChannels` | up to 128 canonical HTTP(S) origins to application channel ids for the optional [browser companion](browser-routing.md). Deleting a channel moves its defaults to the fallback application channel; unknown channels in loaded settings are discarded. Machine settings only; live tab titles, ids and sessions are not saved |
 | `knownApps` | `{identity, label, channelId}` for every application seen |
 | `lowCutHz` | the software low cut, 0, 80 or 120 |
 | `softClipGuard` | the software ClipGuard |
@@ -269,6 +269,8 @@ debounced, retried behaviour.
   routed to it, remembered assignments included, and whatever is playing
   into its sink at that moment move to the fallback application channel
   (`system`, or the remaining application channel whose id sorts first);
+  remembered website defaults move there too, in the same saved change.
+  Tab-only browser choices for that channel return to Browser default;
   then its sink is unloaded, and a capture channel's links, insert hosts,
   EQ stage and session stop with it. Its insert key and its `eq` entry are removed from the saved settings. The last application channel stays.
 - `createMix {name, kind?, icon?}` adds a user mix after the existing ones,

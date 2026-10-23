@@ -184,6 +184,7 @@ public sealed partial class Mixer
 
             var movedOverrides = Matcher.Overrides.Where(kv => kv.Value == id).Select(kv => kv.Key).ToList();
             var movedApps = _apps.Where(kv => kv.Value.ChannelId == id).ToDictionary(kv => kv.Key, kv => kv.Value);
+            string[] movedSites = [.. _browserSiteChannels.Where(kv => kv.Value == id).Select(kv => kv.Key)];
             _inserts.Remove(id, out List<InsertDefinition>? previousInserts);
             // The saved file loses the channel's EQ with the channel.
             _eq.Remove(id, out MicEq? previousEq);
@@ -191,6 +192,7 @@ public sealed partial class Mixer
             _config = next;
             foreach (string identity in movedOverrides) Matcher.SetOverride(identity, fallback.Id);
             foreach ((string identity, StreamAssignment app) in movedApps) _apps[identity] = app with { ChannelId = fallback.Id };
+            foreach (string site in movedSites) _browserSiteChannels[site] = fallback.Id;
             try { PersistLocked(persist); }
             catch
             {
@@ -200,6 +202,7 @@ public sealed partial class Mixer
                 cells.Restore(this);
                 foreach (string identity in movedOverrides) Matcher.SetOverride(identity, id);
                 foreach ((string identity, StreamAssignment app) in movedApps) _apps[identity] = app;
+                foreach (string site in movedSites) _browserSiteChannels[site] = id;
                 throw;
             }
 

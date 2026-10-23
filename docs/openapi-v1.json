@@ -101,7 +101,7 @@
       "get": {
         "responses": {
           "200": {
-            "description": "The state's mixer"
+            "description": "The state's mixer. browserTabs titles are empty unless the tab is capturing or has an assigned channel; origins remain available for selection. Title-only updates are coalesced on a one-second timer. Identical tab lists cause no state event; tab lifecycle and routing changes publish immediately. Held browser streams refresh outputChannelId from their current target on each sweep."
           },
           "401": {
             "description": "Credential required"

@@ -958,6 +958,12 @@ and adds `browserHeld:true`. A playing entry also carries `outputChannelId`,
 the application channel its stream plays into now, which is absent when it
 plays on another output. Turning the mode off drops both fields and moves
 the browser's streams to `channelId`.
+Each stream sweep refreshes `outputChannelId` from the current target
+without moving held streams. Preservation is decided per stream from its
+browser binary; `assignApp` still moves non-browser streams that happen to
+share its identity, including Electron applications.
+When a stream is replaced, its browser flags follow the replacement even
+while routing is pending; the previous stream's `outputChannelId` is cleared.
 
 A companion authenticates a WebSocket, calls `getBrowserSession`, then
 publishes `syncBrowserTabs` with that session and its full `tabs` array.
@@ -980,6 +986,14 @@ The mixer state's `browserTabs` entries carry `session`, `id`, `site`,
 `channelId:null` explicitly means browser default. Title and capture updates
 on the same origin preserve the tab's choice. Navigation to another origin
 clears its temporary choice and uses the new origin's saved default, if any.
+The shared `title` is empty unless the tab is capturing or has a non-null
+`channelId`. Clients can label other tabs by `site`; the origin remains
+available for selection and navigation checks. The daemon coalesces
+title-only changes to the latest value on a one-second timer. An identical
+list, including one sent in a different order, causes no state broadcast.
+Changes to the tab list, origins, capture or errors publish immediately.
+Deleting a channel moves remembered website defaults to the fallback
+application channel; tab-only choices for it return to browser default.
 `capturing` and `error` describe the browser's last report,
 not an audio-server confirmation. Authenticated controllers can select a
 connected tab with `assignBrowserTab`, including the `site` from the tab

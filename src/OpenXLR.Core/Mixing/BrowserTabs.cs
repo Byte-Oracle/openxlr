@@ -65,7 +65,7 @@ public static class BrowserTabRouting
 
 public sealed partial class Mixer
 {
-    private sealed record BrowserTab(BrowserTabRegistration Metadata, bool Override = false, string? Channel = null);
+    private sealed record BrowserTab(BrowserTabRegistration Metadata, string PublishedTitle, bool Override = false, string? Channel = null);
     private readonly Dictionary<string, Dictionary<int, BrowserTab>> _browserSessions = new(StringComparer.Ordinal);
     private Dictionary<string, string> _browserSiteChannels = new(StringComparer.Ordinal);
     private bool _preserveBrowserOutputs;
@@ -101,16 +101,34 @@ public sealed partial class Mixer
         lock (_gate) return _browserSessions.Remove(owner.ToString("N"));
     }
 
-    public void SyncBrowserTabs(Guid owner, string session, IReadOnlyList<BrowserTabRegistration> tabs)
+    public bool SyncBrowserTabs(Guid owner, string session, IReadOnlyList<BrowserTabRegistration> tabs)
     {
         if (BrowserTabRouting.CheckTabs(tabs) is { } problem) throw new ArgumentException(problem);
         lock (_gate)
         {
             if (session != owner.ToString("N") || !_browserSessions.TryGetValue(session, out Dictionary<int, BrowserTab>? previous))
                 throw new InvalidOperationException("syncBrowserTabs: this connection does not own the browser session");
+            IReadOnlyList<BrowserTabState> before = BrowserTabsLocked();
+            // Title-only updates wait for the timer, including in snapshots
+            // sent for unrelated mixer changes.
             _browserSessions[session] = tabs.Select(t => t with { Site = BrowserTabRouting.CanonicalSite(t.Site)! })
                 .ToDictionary(t => t.Id, t => previous.TryGetValue(t.Id, out BrowserTab? held) && held.Metadata.Site == t.Site
-                    ? held with { Metadata = t } : new BrowserTab(t));
+                    ? held with { Metadata = t, PublishedTitle = (held.Metadata with { Title = t.Title }) == t ? held.PublishedTitle : t.Title }
+                    : new BrowserTab(t, t.Title));
+            return !before.SequenceEqual(BrowserTabsLocked());
+        }
+    }
+
+    /// <summary>Publish the latest titles once per daemon tick, without delaying routing changes.</summary>
+    public bool FlushBrowserTabTitles()
+    {
+        lock (_gate)
+        {
+            IReadOnlyList<BrowserTabState> before = BrowserTabsLocked();
+            foreach (Dictionary<int, BrowserTab> tabs in _browserSessions.Values)
+                foreach ((int id, BrowserTab tab) in tabs.ToArray())
+                    if (tab.PublishedTitle != tab.Metadata.Title) tabs[id] = tab with { PublishedTitle = tab.Metadata.Title };
+            return !before.SequenceEqual(BrowserTabsLocked());
         }
     }
 
@@ -157,7 +175,8 @@ public sealed partial class Mixer
 
     private IReadOnlyList<BrowserTabState> BrowserTabsLocked()
         => [.. _browserSessions.OrderBy(s => s.Key, StringComparer.Ordinal).SelectMany(s => s.Value.Values.OrderBy(t => t.Metadata.Id)
-            .Select(t => new BrowserTabState(s.Key, t.Metadata.Id, t.Metadata.Site, t.Metadata.Title,
+            .Select(t => new BrowserTabState(s.Key, t.Metadata.Id, t.Metadata.Site,
+                t.Metadata.Capturing || (t.Override ? t.Channel : _browserSiteChannels.GetValueOrDefault(t.Metadata.Site)) is not null ? t.PublishedTitle : "",
                 t.Override ? t.Channel : _browserSiteChannels.GetValueOrDefault(t.Metadata.Site),
                 !t.Override && _browserSiteChannels.ContainsKey(t.Metadata.Site), t.Metadata.Capturing, t.Metadata.Error)))];
 

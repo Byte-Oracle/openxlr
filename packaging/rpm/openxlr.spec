@@ -109,6 +109,13 @@ printf '#!/bin/sh\nexec %{_prefix}/lib/openxlr/tui/openxlr-tui "$@"\n' \
 chmod 755 %{buildroot}%{_bindir}/openxlr-daemon %{buildroot}%{_bindir}/openxlr \
     %{buildroot}%{_bindir}/openxlr-tui
 
+# Native messaging for the separately installed browser companion.
+sed 's|/usr/bin/openxlr|%{_bindir}/openxlr|' browser/native-host.json > browser-host.json
+install -Dm644 browser-host.json \
+    %{buildroot}%{_sysconfdir}/chromium/native-messaging-hosts/com.emaspa.openxlr.browser.json
+install -Dm644 browser-host.json \
+    %{buildroot}%{_sysconfdir}/opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json
+
 install -Dm644 packaging/70-openxlr.rules \
     %{buildroot}%{_udevrulesdir}/70-openxlr.rules
 install -Dm644 packaging/50-xlr-dock-capture-hold.conf \
@@ -166,6 +173,8 @@ MSG
 %{_bindir}/openxlr
 %{_bindir}/openxlr-daemon
 %{_bindir}/openxlr-tui
+%config(noreplace) %{_sysconfdir}/chromium/native-messaging-hosts/com.emaspa.openxlr.browser.json
+%config(noreplace) %{_sysconfdir}/opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json
 %{_udevrulesdir}/70-openxlr.rules
 %{_datadir}/wireplumber/wireplumber.conf.d/50-xlr-dock-capture-hold.conf
 %{_datadir}/wireplumber/wireplumber.conf.d/51-openxlr-pro-raw-names.conf

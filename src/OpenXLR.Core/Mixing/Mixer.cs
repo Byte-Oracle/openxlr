@@ -2779,21 +2779,39 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             var seen = new HashSet<int>();
-            var liveIdentities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _browserIdentities.Clear();
+            foreach (AudioStream source in live.Concat(clients))
+                if (BrowserTabRouting.IsChromium(source.Binary)) _browserIdentities.Add(source.Identity);
             foreach (AudioStream s in live)
             {
                 string identity = s.Identity;
                 seen.Add(s.Id);
-                liveIdentities.Add(identity);
                 bool browser = BrowserTabRouting.IsChromium(s.Binary);
-                if (browser) _browserIdentities.Add(identity);
                 if (_streams.TryGetValue(s.Id, out StreamAssignment? previous))
                 {
                     // Registry ids are reused, and an app can publish its
                     // identity after playback starts. Only keep the placement
                     // while both the stream serial and app still match.
                     if (previous.Serial == s.Serial &&
-                        string.Equals(previous.Identity, identity, StringComparison.OrdinalIgnoreCase)) continue;
+                        string.Equals(previous.Identity, identity, StringComparison.OrdinalIgnoreCase)
+                        && previous.BrowserHeld == (_preserveBrowserOutputs && browser))
+                    {
+                        if (previous.BrowserHeld)
+                        {
+                            string? sink;
+                            try { sink = _pw.StreamSinkName(s.Serial); }
+                            catch (InvalidOperationException) { continue; }
+                            string? output = _config.Channels.FirstOrDefault(c => c.IsApplication && c.SinkName == sink)?.Id;
+                            if (previous.OutputChannelId != output)
+                            {
+                                _streams[s.Id] = previous with { OutputChannelId = output };
+                                if (_apps.TryGetValue(identity, out StreamAssignment? app) && app.Id == s.Id)
+                                    _apps[identity] = app with { OutputChannelId = output };
+                                changed = true;
+                            }
+                        }
+                        continue;
+                    }
                     _streams.Remove(s.Id);
                     changed = true;
                 }
@@ -2880,7 +2898,6 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 string identity = client.Identity;
                 if (PipeWireAdapter.IsPlumbingIdentity(identity)) continue;
                 runningIdentities.Add(identity);
-                if (BrowserTabRouting.IsChromium(client.Binary)) _browserIdentities.Add(identity);
                 if (!_apps.ContainsKey(identity))
                 {
                     _apps[identity] = new StreamAssignment(0, 0, client.Label, identity,
@@ -2904,19 +2921,28 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             // An app keeps the icon it was last seen with once it stops.
             foreach ((string identity, StreamAssignment app) in _apps.ToList())
             {
-                bool activeNow = liveIdentities.Contains(identity);
+                AudioStream? stream = live.FirstOrDefault(s => s.Id == app.Id && s.Serial == app.Serial
+                    && string.Equals(s.Identity, identity, StringComparison.OrdinalIgnoreCase))
+                    ?? live.LastOrDefault(s => string.Equals(s.Identity, identity, StringComparison.OrdinalIgnoreCase));
+                bool activeNow = stream is not null;
                 bool runningNow = activeNow || runningIdentities.Contains(identity);
                 string? icon = icons.GetValueOrDefault(identity) ?? app.Icon
                     ?? _icons.Resolve(ApplicationIconHints.Remembered(identity, app.Label))?.Icon;
-                // Only a live stream plays anywhere.
-                string? output = activeNow ? app.OutputChannelId : null;
-                if (app.Active != activeNow || app.Running != runningNow || app.Icon != icon || app.OutputChannelId != output)
+                // A replacement can still be waiting for placement. Its
+                // browser flags must not come from the previous stream.
+                bool held = stream is null ? BrowserHeldLocked(identity)
+                    : _preserveBrowserOutputs && BrowserTabRouting.IsChromium(stream.Binary);
+                string? output = held && stream is not null && _streams.TryGetValue(stream.Id, out StreamAssignment? placed)
+                    && placed.Serial == stream.Serial ? placed.OutputChannelId : null;
+                int id = stream?.Id ?? 0, serial = stream?.Serial ?? 0;
+                if (app.Active != activeNow || app.Running != runningNow || app.Icon != icon || app.OutputChannelId != output
+                    || app.BrowserHeld != held || app.Id != id || app.Serial != serial)
                 {
                     _apps[identity] = app with
                     {
                         Active = activeNow, Running = runningNow,
-                        Id = activeNow ? app.Id : 0, Serial = activeNow ? app.Serial : 0,
-                        Icon = icon, OutputChannelId = output,
+                        Id = id, Serial = serial,
+                        Icon = icon, OutputChannelId = output, BrowserHeld = held,
                     };
                     changed = true;
                 }
@@ -2992,7 +3018,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 Matcher.SetOverride(identity, StreamMatcher.Ignore);
                 foreach ((int id, StreamAssignment placed) in _streams.ToList())
                     if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase)
-                        && !BrowserHeldLocked(identity))
+                        && !placed.BrowserHeld)
                     {
                         try { ReleaseStreamLocked(placed.Serial); }
                         catch (InvalidOperationException) { /* the sweep retries */ }
@@ -3012,7 +3038,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
             foreach ((int id, StreamAssignment placed) in _streams.ToList())
                 if (string.Equals(placed.Identity, identity, StringComparison.OrdinalIgnoreCase)
-                    && !BrowserHeldLocked(identity))
+                    && !placed.BrowserHeld)
                 {
                     try { _pw.MoveStreamToSink(placed.Serial, ch.SinkName); }
                     catch (InvalidOperationException) { /* the sweep retries */ }
@@ -3044,7 +3070,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (channelId == StreamMatcher.Ignore)
             {
                 EnsureOverrideCapacity(existing.Identity);
-                if (!BrowserHeldLocked(existing.Identity)) ReleaseStreamLocked(existing.Serial);
+                if (!existing.BrowserHeld) ReleaseStreamLocked(existing.Serial);
                 Matcher.SetOverride(existing.Identity, StreamMatcher.Ignore);
                 _streams.Remove(streamId);   // the next sweep lists it as unmanaged
                 return;
@@ -3053,7 +3079,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             if (ch is null) return;
 
             EnsureOverrideCapacity(existing.Identity);
-            if (!BrowserHeldLocked(existing.Identity)) _pw.MoveStreamToSink(existing.Serial, ch.SinkName);
+            if (!existing.BrowserHeld) _pw.MoveStreamToSink(existing.Serial, ch.SinkName);
             Matcher.SetOverride(existing.Identity, channelId);
             _streams.Remove(streamId); // the next sweep confirms the destination
         }

@@ -54,6 +54,12 @@ override_dh_auto_install:
 	chmod 755 $(PKG)/usr/bin/openxlr-daemon $(PKG)/usr/bin/openxlr \
 		$(PKG)/usr/bin/openxlr-tui
 
+	# Native messaging for the separately installed browser companion.
+	install -Dm644 browser/native-host.json \
+		$(PKG)/etc/chromium/native-messaging-hosts/com.emaspa.openxlr.browser.json
+	install -Dm644 browser/native-host.json \
+		$(PKG)/etc/opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json
+
 	install -Dm644 packaging/70-openxlr.rules \
 		$(PKG)/usr/lib/udev/rules.d/70-openxlr.rules
 	install -Dm644 packaging/50-xlr-dock-capture-hold.conf \
