@@ -131,6 +131,30 @@ public sealed class CardProfileTests : IDisposable
         Assert.Equal(2, adapter.ListDevices(true, [Fragment + "_absent-"]).Count);
     }
 
+    [Fact]
+    public void HardwareOutputsAreNamedWithoutTheirAlsaProfileApartFromSources()
+    {
+        static string Node(int id, string name, string mediaClass, string description, string? profile, bool hardware = true) => $$"""
+            {"id":{{id}},"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"{{name}}","media.class":"{{mediaClass}}",
+              "node.description":"{{description}}"{{(hardware ? ",\"device.api\":\"alsa\"" : "")}}{{(profile is null ? "" : $",\"device.profile.description\":\"{profile}\"")}}} } }
+            """;
+        Dump("[" + string.Join(",",
+            Node(1, "alsa_output.webcam", "Audio/Sink", "Webcam Analog Stereo", "Analog Stereo"),
+            Node(2, "alsa_input.webcam", "Audio/Source", "Webcam Analog Stereo", "Analog Stereo"),
+            Node(3, "alsa_output.ryzen.analog", "Audio/Sink", "Ryzen Analog Stereo", "Analog Stereo"),
+            Node(4, "alsa_output.ryzen.hdmi", "Audio/Sink", "Ryzen Digital Stereo (HDMI)", "Digital Stereo (HDMI)"),
+            Node(5, "virtual_out", "Audio/Sink", "Virtual Analog Stereo", "Analog Stereo", hardware: false)) + "]");
+        var devices = new PipeWireAdapter().ListDevices().ToDictionary(d => d.Name, d => d.Description);
+        // An output and a source of one card both lose the profile; they never share a picker.
+        Assert.Equal("Webcam", devices["alsa_output.webcam"]);
+        Assert.Equal("Webcam", devices["alsa_input.webcam"]);
+        // Two outputs of one card that would read alike keep their full names.
+        Assert.Equal("Ryzen Analog Stereo", devices["alsa_output.ryzen.analog"]);
+        Assert.Equal("Ryzen Digital Stereo (HDMI)", devices["alsa_output.ryzen.hdmi"]);
+        // Software outputs keep the name they were given.
+        Assert.Equal("Virtual Analog Stereo", devices["virtual_out"]);
+    }
+
     private static string Card(int id, string active, int pro = 3, int hifi = 2) => $$"""
         {"id":{{id}},"type":"PipeWire:Interface:Device","info":{
           "props":{"device.name":"alsa_card.usb-Elgato_Wave_XLR_Pro-00"},

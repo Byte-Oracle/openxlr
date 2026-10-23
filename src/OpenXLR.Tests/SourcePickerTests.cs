@@ -63,7 +63,7 @@ public sealed class SourcePickerTests
     [Fact]
     public void HardwareSourcesAreNamedWithoutTheirAlsaProfile()
     {
-        string[] names = PipeWireAdapter.ShortSourceNames([
+        string[] names = PipeWireAdapter.ShortHardwareNames([
             ("Elgato Wave XLR Dock MK.2 Analog Stereo", "Analog Stereo"),
             ("Ryzen HD Audio Controller Stereo analogico", "Stereo analogico"),
             ("Wave XLR Pro mic (raw, driven by OpenXLR)", "Pro"),

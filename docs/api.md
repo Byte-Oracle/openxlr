@@ -150,8 +150,9 @@ to a source, or the driven unit lacks the control, so `lowCutHz` and
 selection also carries `browserHeld` and `outputChannelId`, see
 [browser tabs](#browser-tabs)), `renamedSinceStart`
 and `layoutWarning`. A `devices` entry carries `name`, `description` (a
-hardware source's description leaves out the ALSA profile PipeWire appends,
-such as "Analog Stereo", unless that would give two sources one name), `kind`
+hardware output's or source's description leaves out the ALSA profile
+PipeWire appends, such as "Analog Stereo", unless that would give two
+outputs, or two sources, one name), `kind`
 (0 for a sink, 1 for a source), `isOwn`, `isPhysical`, for a sink
 `volume` and `muted`, and for a source `channels` (its channel count from
 PipeWire's `audio.channels`) and `positions` (its channel positions in port
