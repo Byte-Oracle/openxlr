@@ -409,14 +409,14 @@ while fixes to existing hosts remain part of normal maintenance.
   against the software EQ's curves, and whether its EQ reaches the
   zero-latency headphone path.
 - [ ] Ducking on the Pro's own processor. Mapped from Wave Link 3.5 on
-  Windows, and the daemon can write it, but the unit ducks inside its own
-  mix and OpenXLR feeds the jacks through the monitor return, which goes
-  around that mix, so the Pro runs ducking in software for now
-  ([manual](manual.md#ducking)). A desk test with USB pair 2/3 in the
-  Personal mix and the monitor return off gave clean music that the unit
-  ducked. Open: feeding the jacks through the unit's mix (levels, latency,
-  the direct microphone path, Headphones 2 and Line Out), a by-ear check of
-  the USB Aux port, the encoding of keys other than XLR 1, and per-channel
+  Windows, and the daemon can write it, but it sets only the high bit of a
+  pair's field and the unit ducks only when both are set, so the Pro runs
+  ducking in software for now ([manual](manual.md#ducking)). With both
+  bits set the jacks dipped by the set depth on the desk
+  ([protocol notes section 12](wave-xlr-pro-protocol.md#12-the-mix-sections-and-the-jacks-desk-probe-of-2026-10-23)).
+  Open: writing both bits and letting the unit run the setup, a by-ear
+  check of the USB Aux port, the encoding of keys other than XLR 1, and
+  per-channel
   hardware ducking, which needs each channel on its own pair: the hardware
   mixing track, starting with the remaining mix matrix above.
 - [ ] The Pro's mix maximizer and channel booster, the other two onboard
