@@ -268,6 +268,29 @@ public partial class MainWindow : Window
     private void OnManageApps(object? sender, RoutedEventArgs e)
         => new AppsWindow { DataContext = _vm }.ShowDialog(this);
 
+    private BrowserTabsWindow? _browserTabs;
+
+    private void OnManageBrowserTabs(object? sender, RoutedEventArgs e) => OpenBrowserTabs();
+
+    /// <summary>
+    /// Opens the browser tabs dialog the way Manage opens its window, owned by
+    /// this one. A second request while it is open brings the same window
+    /// forward rather than stacking another.
+    /// </summary>
+    internal BrowserTabsWindow OpenBrowserTabs()
+    {
+        if (_browserTabs is { } open)
+        {
+            open.Activate();
+            return open;
+        }
+        var window = new BrowserTabsWindow { DataContext = _vm };
+        _browserTabs = window;
+        window.Closed += (_, _) => { if (_browserTabs == window) _browserTabs = null; };
+        _ = window.ShowDialog(this);
+        return window;
+    }
+
     private void OnEditLayout(object? sender, RoutedEventArgs e)
         => new MixerSetupWindow { DataContext = _vm }.ShowDialog(this);
 

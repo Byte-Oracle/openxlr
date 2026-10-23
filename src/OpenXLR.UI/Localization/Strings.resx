@@ -2906,6 +2906,21 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
     <value>Forget the saved destination for this website and use the browser default for this tab.</value>
   </data>
+  <data name="BrowserTabs" xml:space="preserve">
+    <value>Browser tabs</value>
+  </data>
+  <data name="BrowserTabsHint" xml:space="preserve">
+    <value>Turn browser tab routing on or off and choose a channel for each tab</value>
+  </data>
+  <data name="BrowserTabsTitle" xml:space="preserve">
+    <value>OpenXLR browser tabs</value>
+  </data>
+  <data name="BrowserTabsEmpty" xml:space="preserve">
+    <value>Tabs appear here once the browser companion reports them.</value>
+  </data>
+  <data name="BrowserTabsGuideHint" xml:space="preserve">
+    <value>Open the guide to browser tab routing</value>
+  </data>
   <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
     <value>Mute microphone sends with monitoring</value>
   </data>

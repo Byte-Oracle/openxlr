@@ -2895,6 +2895,21 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
     <value>Das gespeicherte Ziel dieser Website vergessen und für diesen Tab das Standardziel des Browsers verwenden.</value>
   </data>
+  <data name="BrowserTabs" xml:space="preserve">
+    <value>Browser-Tabs</value>
+  </data>
+  <data name="BrowserTabsHint" xml:space="preserve">
+    <value>Zuordnung von Browser-Tabs ein- oder ausschalten und für jeden Tab einen Kanal wählen</value>
+  </data>
+  <data name="BrowserTabsTitle" xml:space="preserve">
+    <value>OpenXLR-Browser-Tabs</value>
+  </data>
+  <data name="BrowserTabsEmpty" xml:space="preserve">
+    <value>Tabs erscheinen hier, sobald die Browser-Erweiterung sie meldet.</value>
+  </data>
+  <data name="BrowserTabsGuideHint" xml:space="preserve">
+    <value>Anleitung zur Zuordnung von Browser-Tabs öffnen</value>
+  </data>
   <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
     <value>Mikrofon-Sends mit dem Abhören stummschalten</value>
   </data>

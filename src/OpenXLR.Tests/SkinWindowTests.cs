@@ -841,6 +841,7 @@ public sealed partial class SkinWindowTests
         [
             ("about", new AboutWindow()),
             ("apps", new AppsWindow { DataContext = vm }),
+            ("browser-tabs", new BrowserTabsWindow { DataContext = vm }),
             ("layout", new MixerSetupWindow { DataContext = vm }),
             ("exclusive-groups", new ExclusiveGroupsWindow(vm)),
             ("ducking", new DuckingWindow { DataContext = vm.Ducking }),

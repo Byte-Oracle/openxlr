@@ -2916,6 +2916,21 @@ Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Inst
   <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
     <value>Dimentica la destinazione salvata per questo sito e usa quella predefinita del browser per questa scheda.</value>
   </data>
+  <data name="BrowserTabs" xml:space="preserve">
+    <value>Schede</value>
+  </data>
+  <data name="BrowserTabsHint" xml:space="preserve">
+    <value>Attiva o disattiva l'instradamento delle schede del browser e scegli un canale per ogni scheda</value>
+  </data>
+  <data name="BrowserTabsTitle" xml:space="preserve">
+    <value>Schede del browser OpenXLR</value>
+  </data>
+  <data name="BrowserTabsEmpty" xml:space="preserve">
+    <value>Le schede compaiono qui quando l'estensione del browser le segnala.</value>
+  </data>
+  <data name="BrowserTabsGuideHint" xml:space="preserve">
+    <value>Apri la guida all'instradamento delle schede del browser</value>
+  </data>
   <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
     <value>Silenzia le mandate del microfono con il monitoraggio</value>
   </data>

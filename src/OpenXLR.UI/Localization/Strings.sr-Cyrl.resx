@@ -2915,6 +2915,21 @@ Wave XLR Pro UCM профил и даље захтева ручно подеша
   <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
     <value>Заборави сачувано одредиште овог веб-сајта и користи подразумевано прегледача за ову картицу.</value>
   </data>
+  <data name="BrowserTabs" xml:space="preserve">
+    <value>Картице</value>
+  </data>
+  <data name="BrowserTabsHint" xml:space="preserve">
+    <value>Укључи или искључи усмеравање картица прегледача и изабери канал за сваку картицу</value>
+  </data>
+  <data name="BrowserTabsTitle" xml:space="preserve">
+    <value>OpenXLR картице прегледача</value>
+  </data>
+  <data name="BrowserTabsEmpty" xml:space="preserve">
+    <value>Картице се појављују овде када их проширење прегледача пријави.</value>
+  </data>
+  <data name="BrowserTabsGuideHint" xml:space="preserve">
+    <value>Отвори водич за усмеравање картица прегледача</value>
+  </data>
   <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
     <value>Утишај слања микрофона са слушањем</value>
   </data>

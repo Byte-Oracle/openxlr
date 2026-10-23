@@ -3,7 +3,7 @@ using Avalonia.Interactivity;
 
 namespace OpenXLR.UI.Views;
 
-/// <summary>The same browser tab controls in APPLICATIONS and its management window.</summary>
+/// <summary>The browser tab routing option and tab rows shown in the Browser tabs window.</summary>
 public partial class BrowserTabsView : UserControl
 {
     public BrowserTabsView() => InitializeComponent();

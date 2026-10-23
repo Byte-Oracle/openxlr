@@ -724,8 +724,9 @@ scroll horizontally and vertically. Resizing the window manually turns off autom
 
 The APPLICATIONS card lists every app that is currently registered with
 PipeWire as an audio client; a green light means it is playing. Manage sits
-beside the APPLICATIONS heading, like Edit layout beside SUBMIXER. The app
-controls wrap onto further rows when the UI is narrower.
+beside the APPLICATIONS heading, like Edit layout beside SUBMIXER. Browser
+tabs sits beside Manage when the daemon supports browser tab routing. The
+app controls wrap onto further rows when the UI is narrower.
 
 Each app shows its icon before its name, the one your desktop's launcher
 shows for it. The UI looks it up in your icon theme, then in hicolor
@@ -785,9 +786,15 @@ as a client. That happens with some applications until they start
 playing.
 
 For separate Teams, YouTube or other browser tabs, the optional
-[Chromium companion](browser-routing.md) adds individual tab entries here
-and in Manage. Enable browser output selection, choose a channel and
-activate each tab from the browser. Remember website saves its origin's
+[Chromium companion](browser-routing.md) reports individual tabs. Press
+Browser tabs beside Manage to open the Browser tabs window. The option
+at its top, Enable individual browser tab routing, turns tab routing on
+and off. Below it, each tab has a row with its title, website, capture
+light, channel picker, Remember website and Forget website. Until the
+companion reports a tab, the window says so under the option. Its Manual
+button opens the browser routing guide.
+Enable the option, choose a channel and activate each tab from the
+browser. Remember website saves its origin's
 default across restarts. Browser permission must be granted again for
 each tab after restarting the browser. While browser output selection is
 on, OpenXLR does not move the browser itself. Its row keeps the channel

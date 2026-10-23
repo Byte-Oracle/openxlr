@@ -2915,6 +2915,21 @@ Kamot gihapon nga host setup ang Wave XLR Pro UCM profile. I-install ang mga LV2
   <data name="BrowserTabForgetWebsiteHint" xml:space="preserve">
     <value>Kalimti ang na-save nga padulngan sa website ug gamita ang default sa browser alang niining tab.</value>
   </data>
+  <data name="BrowserTabs" xml:space="preserve">
+    <value>Mga tab</value>
+  </data>
+  <data name="BrowserTabsHint" xml:space="preserve">
+    <value>I-on o i-off ang routing sa browser tab ug pagpili og channel alang sa matag tab</value>
+  </data>
+  <data name="BrowserTabsTitle" xml:space="preserve">
+    <value>Mga browser tab sa OpenXLR</value>
+  </data>
+  <data name="BrowserTabsEmpty" xml:space="preserve">
+    <value>Makita dinhi ang mga tab kung i-report na kini sa browser extension.</value>
+  </data>
+  <data name="BrowserTabsGuideHint" xml:space="preserve">
+    <value>Ablihi ang giya bahin sa routing sa browser tab</value>
+  </data>
   <data name="MuteMicrophoneSendsWithMonitoring" xml:space="preserve">
     <value>I-mute ang send sa mikropono uban sa monitoring</value>
   </data>

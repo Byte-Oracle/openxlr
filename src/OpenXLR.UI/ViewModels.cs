@@ -531,7 +531,7 @@ public sealed partial class MainViewModel : ViewModelBase
     public ObservableCollection<AppStreamViewModel> ActiveApps { get; } = [];
 
     /// <summary>True when the registry holds anything (enables Manage).</summary>
-    public bool HasApps => Apps.Count > 0 || HasBrowserTabs;
+    public bool HasApps => Apps.Count > 0;
 
     /// <summary>Pre-register an installed app with a channel (Manage dialog).</summary>
     public void AddApp(string identity, string label, string channel)
