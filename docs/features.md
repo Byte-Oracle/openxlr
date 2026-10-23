@@ -43,16 +43,16 @@ Wave:3: gain (0 to 40 dB), mute, ClipGuard, headphone volume and the
 direct monitor balance, shown as the crossfade; the low cut is the
 submixer's, by design. The desktop's volume controls follow the
 microphone's mute and headphone level and can set them, and Options
-shows the firmware version. Beta: written from public protocol research;
+shows the firmware version. Written from public protocol research;
 on the maintainer's unit every control writes and reads back, and the
-gain, the monitor balance and the desktop volume controls are verified,
-while the mute pad, the LED ring and a replug are not yet checked, so
-with another supported interface attached the daemon drives that one and
-the Wave:3 only when picked from the header. [hardware-support.md](hardware-support.md)
+gain, the monitor balance and the desktop volume controls are verified;
+the mute pad, the LED ring and a replug are not yet checked. With an XLR
+interface attached too, the daemon drives the interface and the Wave:3
+only when picked from the header. [hardware-support.md](hardware-support.md)
 names the sources, the bytes they dispute and what an owner checks.
 
 Wave:1: the same controls as the Wave:3, from the same backend under the
-Wave:1's product id, in beta. An owner's diagnostics showed the
+Wave:1's product id. An owner's diagnostics showed the
 microphone answering the Wave:3's block, firmware line and desktop
 volume mirror, and a second run showed the gain, mute and headphone
 volume set from the UI taking effect on the microphone. ClipGuard and
@@ -66,8 +66,8 @@ and the Wave XLR Pro on each of its two inputs from firmware 1.0.14, the
 way Wave Link 3.5 does ([findings](mk2-eq-findings.md),
 [Pro](hardware-support.md#wave-xlr-pro-0fd900b4)); every other model and
 older firmware run it in software. The Pro's EQ follows Wave Link
-captures and was measured once on the desk: a +12 dB bell written from
-OpenXLR read +12 dB on the unit's USB capture. The Pro's mix
+captures and is verified on hardware by the maintainer and other owners.
+The Pro's mix
 maximizer, channel booster and remaining hardware mix matrix are
 unmapped, as is any ducking key but XLR 1. Wave Link configures those onboard effects on supported systems;
 OpenXLR's LV2, CLAP and VST3 inserts process audio on the Linux host.

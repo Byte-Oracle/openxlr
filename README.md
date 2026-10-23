@@ -50,13 +50,13 @@ These Elgato devices also get their hardware controls over USB:
 
 | Device | USB id | Status |
 |---|---|---|
-| Wave XLR Pro | 0fd9:00b4 | controls verified on hardware; the EQ on the unit measured once, ducking on the unit accepted by ear on the headphone jacks |
+| Wave XLR Pro | 0fd9:00b4 | controls and the EQ on the unit verified on hardware; ducking on the unit accepted by ear on the headphone jacks |
 | XLR Dock (Stream Deck+ module) | 0fd9:00a6 | gain, mute, headphone volume, 48V phantom power, low impedance; verified |
 | Wave XLR | 0fd9:007d | gain, mute, headphone volume and low impedance verified by community testers; phantom power awaits a check |
 | Wave XLR MK.2 | 0fd9:00b6 | gain, mute, phantom power, DSP, ClipGuard, compressor, headphone volume, crossfade; verified by a community tester |
 | XLR Dock MK.2 (Stream Deck+ module) | 0fd9:00c7 | the Wave XLR MK.2's controls, verified |
-| Wave:3 (beta) | 0fd9:0070 | every control writes and reads back on the maintainer's unit; the checks at the microphone are open |
-| Wave:1 (beta) | 0fd9:006e | detection, gain, mute and headphone volume confirmed from an owner's diagnostics |
+| Wave:3 | 0fd9:0070 | gain, mute, ClipGuard, headphone volume and the monitor balance, each written and read back on the maintainer's unit |
+| Wave:1 | 0fd9:006e | the Wave:3's controls; gain, mute and headphone volume confirmed by an owner |
 
 The per-control state of every device, including what is coded but not
 yet run on hardware, is in [hardware support](docs/hardware-support.md).
@@ -201,15 +201,14 @@ OPENXLR_BUILD_MIXER=1 ./src/OpenXLR.Daemon/bin/Release/net10.0/OpenXLR.Daemon
 ./src/OpenXLR.UI/bin/Release/net10.0/OpenXLR.UI   # in a second terminal
 ```
 
-An experimental Flatpak manifest is in the tree but not published
-([flatpak.md](docs/flatpak.md)).
+An experimental Flatpak manifest is in the tree for building yourself
+([flatpak.md](docs/flatpak.md)). OpenXLR will not be published on
+Flathub, whose rules do not allow AI-assisted development.
 
 ## Limitations
 
 - Another brand's microphone or interface gets the mixer, not its
   hardware controls.
-- The Wave:3 and Wave:1 are in beta, and on the MK.2 units the EQ on the
-  device is coded but not yet run from OpenXLR.
 - On the Pro, the unit's ducking runs only on the headphone jacks and only
   keyed by XLR 1; other setups duck in software. The mix maximizer, the
   channel booster and mixing on the unit itself are not available yet.
@@ -222,8 +221,7 @@ An experimental Flatpak manifest is in the tree but not published
 
 The [roadmap](docs/roadmap.md) has the order. In short: a hardware
 mixing mode on the Wave XLR Pro, which builds the mixes in the unit for
-Wave Link's per-channel ducking; the EQ on the MK.2 units checked on
-hardware; the Wave:3 and Wave:1 out of beta; and Flathub.
+Wave Link's per-channel ducking.
 
 ## Documentation
 

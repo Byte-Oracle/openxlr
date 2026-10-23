@@ -9,8 +9,8 @@ namespace OpenXLR.Core.Devices;
 /// jack, not an XLR interface. Every protocol fact below comes from public
 /// work on other people's units and each line names its source. The
 /// maintainer's unit (firmware 1.2.4) has since confirmed the writes and
-/// readbacks listed in docs/hardware-support.md, which keeps the checks
-/// that need someone at the microphone open and the device in beta.
+/// readbacks listed in docs/hardware-support.md, which also lists the checks
+/// that need someone at the microphone.
 ///
 /// Sources, by the tag used below:
 ///   OW   rikkichy/openwave, crates/openwave-core/src/profiles.rs and
