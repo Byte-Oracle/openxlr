@@ -20,9 +20,16 @@ This is what 0.2.1 ships. A checked item is in the released packages.
 
 - [x] Wave XLR Pro, XLR Dock (MK.1 and MK.2 modules), Wave XLR, Wave XLR
   MK.2: hardware controls, verified by owners of each device.
-- [x] Wave:3, in beta: gain, mute, headphone volume and the monitor
-  balance from one user's quick test, the rest coded from public
-  research ([hardware-support.md](hardware-support.md)).
+- [x] Wave:3 and Wave:1, in beta: every Wave:3 control writes and reads
+  back on the maintainer's unit, and a Wave:1 owner confirmed gain, mute
+  and headphone volume ([hardware-support.md](hardware-support.md)).
+- [x] Ducking on every device, and on the Wave XLR Pro's own processor
+  for a setup it can run; a microphone EQ on XLR 1, XLR 2 and mono capture
+  inputs, on the unit where the hardware has one; Sound Check.
+- [x] Capture inputs with their own insert chain, EQ and Sound Check;
+  browser tabs routed to channels through the Chromium companion; skins,
+  with Broadcast and Wave drawing the mixer as a matrix; the UI in seven
+  languages.
 - [x] Submixer: hardware and application channels, the monitor mixes
   (Monitor A, Monitor B), virtual microphones (Stream and Chat by
   default) and Aux; an editable layout (channels and microphones added,
@@ -383,11 +390,16 @@ while fixes to existing hosts remain part of normal maintenance.
   bytes 3 to 17 of the settings block,
   several of which change the level (likely compressor and expander
   parameters).
-- [ ] Pro: the remaining hardware mix matrix (which return feeds which
-  jack, per-return levels), now that the headphone mix bytes are known
-  (see the protocol notes, block 0x0001 bytes 12 and 13). Direct control
-  of that matrix from the UI is the long-term answer to the
-  crossfade and mic-monitoring questions.
+- [ ] Pro: a hardware mixing mode. The layout of block 0x0001 is known
+  ([protocol notes section 12](wave-xlr-pro-protocol.md#12-the-mix-sections-and-the-jacks-desk-probe-of-2026-10-23)):
+  five mix sections, each with a level per source and a membership mask,
+  each selectable for a jack and streamed back on its own capture pair. A
+  mode that builds the mixes in the unit, one USB pair per channel, would
+  give Wave Link's per-channel ducking and mixing without the computer in
+  the path, at the cost of eight channels, five mixes and no plugin inserts
+  on a mix. Desk probes come first: whether the unit takes level and
+  membership changes live, the gain of each section, and the latency of
+  the returned mixes.
 - [ ] The microphone EQ on hardware. On firmware 1.0.15 the XLR Dock
   MK.2 and the Wave XLR MK.2 run a four-band equalizer on the device
   behind a master enable bit, as Wave Link 3.5 writes it; on the dock's
