@@ -232,12 +232,12 @@ ones: the [manual](docs/manual.md), [features](docs/features.md),
 [skins](docs/skins.md), the [architecture](docs/architecture.md) and the
 [Wave XLR Pro protocol](docs/wave-xlr-pro-protocol.md).
 
-## Community and problems
+## Community and issues
 
 Support, hardware reports and release news are on
 [Discord](https://discord.gg/4bswtnGPW4), on
-[r/OpenXLR](https://www.reddit.com/r/OpenXLR/) and in GitHub issues. For a
-problem, open Options, SUPPORT, Collect diagnostics: it writes
+[r/OpenXLR](https://www.reddit.com/r/OpenXLR/) and in GitHub issues. To
+report an issue, open Options, SUPPORT, Collect diagnostics: it writes
 `~/openxlr-diagnostics-<timestamp>.tar.gz` with the device state, the
 PipeWire graph, logs and configs. Nothing is uploaded; attach it yourself.
 To contribute, read [CONTRIBUTING.md](CONTRIBUTING.md).
