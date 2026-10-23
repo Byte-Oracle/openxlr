@@ -2746,7 +2746,7 @@ Von OpenXLR gesteuertes Interface wählen</value>
     <value>Schnell</value>
   </data>
   <data name="DuckingHint" xml:space="preserve">
-    <value>Ducking senkt die gewählten Kanäle in den gewählten Mixen ab, solange das Auslösemikrofon laut ist. Dieser Computer übernimmt das auf jedem Gerät, auch auf dem Wave XLR Pro: Das Pro senkt in seinem eigenen Mix ab, über den die Buchsen noch nicht laufen.</value>
+    <value>Ducking senkt die gewählten Kanäle in den gewählten Mixen ab, solange das Auslösemikrofon laut ist. Dieser Computer übernimmt das, oder das Wave XLR Pro auf seinem eigenen Prozessor, wenn die Einstellung zu dem passt, was das Gerät kann.</value>
   </data>
   <data name="DuckingNotHeld" xml:space="preserve">
     <value>Das Gerät hält diese Einstellung noch nicht; OpenXLR schreibt sie in wenigen Sekunden erneut.</value>

@@ -2766,7 +2766,7 @@ Mano-manong host setup pa rin ang Wave XLR Pro UCM profile. I-install ang mga LV
     <value>Mabilis</value>
   </data>
   <data name="DuckingHint" xml:space="preserve">
-    <value>Pinahihina ng ducking ang napiling channel sa napiling mix habang malakas ang key microphone. Sa computer na ito ito tumatakbo para sa lahat ng device, kasama ang Wave XLR Pro: sa sariling mix nito ginagawa ng Pro ang ducking, na hindi pa dinaraanan ng mga jack.</value>
+    <value>Pinahihina ng ducking ang napiling channel sa napiling mix habang malakas ang key microphone. Sa computer na ito ito tumatakbo, o sa sariling processor ng Wave XLR Pro kapag tugma ang setup sa kaya ng unit.</value>
   </data>
   <data name="DuckingNotHeld" xml:space="preserve">
     <value>Hindi pa pinananatili ng unit ang setting na ito; isusulat muli ito ng OpenXLR sa loob ng ilang segundo.</value>

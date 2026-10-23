@@ -2767,7 +2767,7 @@ Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Inst
     <value>Veloce</value>
   </data>
   <data name="DuckingHint" xml:space="preserve">
-    <value>Il ducking abbassa i canali scelti nei mix scelti mentre il microfono chiave è forte. Questo computer lo esegue su ogni dispositivo, Wave XLR Pro incluso: il Pro attenua all'interno del proprio mix, da cui le prese non passano ancora.</value>
+    <value>Il ducking abbassa i canali scelti nei mix scelti mentre il microfono chiave è forte. Lo esegue questo computer, oppure il Wave XLR Pro sul proprio processore quando l'impostazione rientra in ciò che il dispositivo sa fare.</value>
   </data>
   <data name="DuckingNotHeld" xml:space="preserve">
     <value>L'unità non mantiene ancora questa impostazione; OpenXLR la riscrive entro pochi secondi.</value>
