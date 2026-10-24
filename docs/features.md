@@ -875,7 +875,9 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   tarball for bug reports. It also includes plugin catalogue and bridge
   setup, effective search paths and bounded native scan outcomes, with
   personal paths, the login name and host names redacted, and no forced
-  sync or insert changes
+  sync or insert changes. On-demand audio evidence adds node statistics,
+  playback and recording stream metadata, command outcomes and timings, and
+  native service settings compared with running process resource limits
 - Deep Wine trace checkbox in Options, SUPPORT for reproducing a bridged
   plugin scan failure. Enable it, Rescan, collect diagnostics, then disable
   it. Scans get much slower and produce large logs. The switch takes effect

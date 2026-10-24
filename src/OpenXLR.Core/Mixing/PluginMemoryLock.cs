@@ -12,25 +12,12 @@ internal static class PluginMemoryLock
     internal static (long? Soft, long? Hard) ReadLimits()
     {
         if (!OperatingSystem.IsLinux()) return (null, null);
-        try { return ParseLimits(File.ReadAllText("/proc/self/limits")); }
+        try { return ParseLimits(RegularFile.ReadText("/proc/self/limits", 1024 * 1024)); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return (null, null); }
     }
 
     internal static (long? Soft, long? Hard) ParseLimits(string limits)
-    {
-        const string label = "Max locked memory";
-        foreach (string line in limits.Split('\n'))
-        {
-            if (!line.StartsWith(label, StringComparison.Ordinal)) continue;
-            string[] fields = line[label.Length..].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-            if (fields.Length != 3 || fields[2] != "bytes") return (null, null);
-            return (Bytes(fields[0]), Bytes(fields[1]));
-        }
-        return (null, null);
-    }
-
-    private static long? Bytes(string field) => field == "unlimited" ? -1
-        : long.TryParse(field, NumberStyles.None, CultureInfo.InvariantCulture, out long bytes) ? bytes : null;
+        => LinuxProcessResources.ParseLimit(limits, "Max locked memory", "bytes");
 
     internal static string? Note(long? limit, long? hardLimit, bool windowsPluginsAvailable)
     {
