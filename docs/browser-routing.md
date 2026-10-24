@@ -201,9 +201,14 @@ partial list. Close some tabs and reconnect to publish a smaller list.
 If outputs cannot be enumerated, a channel is missing or an output label
 is ambiguous, activation is refused without taking over audio. Renaming
 an already matched channel preserves its output-device binding. A removed
-output or a failed reroute stops only the affected tab. The companion
-does not keep retrying a failed capture or native host in the background;
-correct the problem and activate or reconnect explicitly.
+output or a failed reroute stops only the affected tab. A failed output
+discovery also releases affected captures, but a late result cannot stop a
+replacement capture or undo a successful output change, including a switch
+away and back. Older queries cannot override a newer device snapshot.
+Invalid saved output bindings are repaired when selecting an output;
+valid bindings for other channels are kept. The companion does not keep
+retrying a failed capture or native host in the background; correct the
+problem and activate or reconnect explicitly.
 
 ## Privacy and removal
 

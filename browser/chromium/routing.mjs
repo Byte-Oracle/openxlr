@@ -63,12 +63,13 @@ export class TabAudio {
     this.status = status;
     this.timeoutMs = timeoutMs;
     this.sessions = new Map();
+    this.deviceCheck = null;
   }
 
   async start(id, streamId, deviceId) {
     const previous = this.sessions.get(id);
     if (!previous && this.sessions.size >= MAX_CAPTURES) throw new Error(t('tooManyCaptures', MAX_CAPTURES));
-    const session = { id, context: null, stream: null, source: null, closed: false, capturing: false, deviceId };
+    const session = { id, context: null, stream: null, source: null, closed: false, capturing: false, deviceId, routeVersion: 0 };
     this.sessions.set(id, session);
     let timer;
     try {
@@ -111,7 +112,7 @@ export class TabAudio {
     if (!session || session.closed || session.deviceId === deviceId) return;
     try {
       await session.context.setSinkId(deviceId);
-      if (this.sessions.get(id) === session) session.deviceId = deviceId;
+      if (this.sessions.get(id) === session) { session.deviceId = deviceId; session.routeVersion++; }
     } catch (error) {
       if (this.sessions.get(id) === session) await this.stop(id, errorText(error));
       throw error;
@@ -144,10 +145,16 @@ export class TabAudio {
   }
 
   async checkDevices() {
-    const checking = [...this.sessions].map(([id, session]) => ({ id, session, deviceId: session.deviceId }));
-    const present = new Set((await this.mediaDevices.enumerateDevices()).filter(device => device.kind === 'audiooutput').map(device => device.deviceId));
-    for (const { id, session, deviceId } of checking)
-      if (this.sessions.get(id) === session && session.deviceId === deviceId && !present.has(deviceId))
-        await this.stop(id, t('outputGone'));
+    const check = this.deviceCheck = Symbol();
+    const checking = [...this.sessions].map(([id, session]) => ({ id, session, deviceId: session.deviceId, version: session.routeVersion }));
+    let devices = [], error = null;
+    try { devices = await this.mediaDevices.enumerateDevices(); }
+    catch (failure) { error = errorText(failure); }
+    if (this.deviceCheck !== check) return;
+    const present = new Set(devices.filter(device => device.kind === 'audiooutput').map(device => device.deviceId));
+    // Another check or reroute can also finish while a context closes below.
+    for (const { id, session, deviceId, version } of checking)
+      if (this.deviceCheck === check && this.sessions.get(id) === session && session.routeVersion === version && !present.has(deviceId))
+        await this.stop(id, error ?? t('outputGone'));
   }
 }
