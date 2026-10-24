@@ -2842,11 +2842,15 @@ other devices this would be new information: collect diagnostics
 <a name="daemon-hang"></a>
 ### 5.7 The daemon froze, or a control hung the UI
 
-The header's **Restart daemon** button restarts the systemd user service.
-Audio is interrupted during the restart. The UI stays responsive, and
-the button is disabled until the service command finishes. If it fails,
-check `journalctl --user -u openxlr-daemon`. A daemon started by hand must
-be restarted by hand.
+On a native installation, the header's **Restart daemon** button restarts
+the systemd user service. Audio is interrupted during the restart. The UI
+stays responsive, and the button is disabled until the service commands
+finish. An explicit restart first clears the daemon service's failed state
+and start counter, so the button also works after repeated starts produced
+`start-limit-hit` in the journal. Automatic restarts after crashes still
+obey the service's start limit. If the explicit restart fails, check
+`journalctl --user -u openxlr-daemon`. A daemon started by hand must be
+restarted by hand.
 
 An older user unit can fail before starting the daemon with
 `218/CAPABILITIES` and `Failed to drop capabilities`. Update the package
