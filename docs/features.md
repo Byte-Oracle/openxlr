@@ -38,6 +38,9 @@ expander, voice tune with strength, ClipGuard, compressor, headphone
 volume, low impedance, crossfade.
 
 Wave XLR: gain, mute, headphone volume, low impedance, phantom power.
+The desktop's volume controls follow the interface's gain, mute and
+headphone level and can set the mute and headphone level; this is not yet
+checked on an MK.1.
 
 Wave:3: gain (0 to 40 dB), mute, ClipGuard, headphone volume and the
 direct monitor balance, shown as the crossfade; the low cut is the
