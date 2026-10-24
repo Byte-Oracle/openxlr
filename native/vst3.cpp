@@ -635,6 +635,12 @@ tresult PLUGIN_API ComponentHandler::performEdit(ParamID id,
 
 // --- the run loop -------------------------------------------------------------
 
+void destroy_source(Vst3 *v, struct spa_source *source) {
+  // Older SPA headers expand a signed version check that warns inside a
+  // template instantiation. Keep their macro in an ordinary function.
+  pw_loop_destroy_source(host_loop(v->h), source);
+}
+
 template <typename Watch>
 void remove_watch(Vst3 *v, Watch &watch) {
   auto *source = watch.source;
@@ -642,7 +648,7 @@ void remove_watch(Vst3 *v, Watch &watch) {
   // Releasing a plugin object can call back into the run loop. Detach the
   // record first so it cannot remove this source or handler a second time.
   watch = {};
-  pw_loop_destroy_source(host_loop(v->h), source);
+  destroy_source(v, source);
   handler->release();
 }
 
