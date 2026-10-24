@@ -503,6 +503,7 @@ public sealed class DiagnosticsTests
                  {"id":60,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"OpenXLR_mix_monitor",
                   "media.name":"/run/media/{{login}}/Samples/take.wav","clock.max-quantum":8192} } }]
                 JSON
+                {{(commandWarning ? "printf '%s\\n' '[{\"id\":62,\"type\":\"PipeWire:Interface:Node\",\"info\":{\"state\":\"error\",\"error\":\"fixture graph error\",\"props\":{\"node.name\":\"OpenXLR_fixture\",\"media.class\":\"Audio/Source\"} } }]'" : "")}}
                 """);
             ExecutableScript.Write(Path.Combine(bin, "journalctl"), $$"""
                 case "$*" in
@@ -599,6 +600,16 @@ public sealed class DiagnosticsTests
                 Assert.Contains("warning for <redacted>@<redacted>: optional metadata unavailable", entries["pw-dump-errors.txt"]);
             else
                 Assert.DoesNotContain("pw-dump-errors.txt", entries.Keys);
+            using var inspection = System.Text.Json.JsonDocument.Parse(entries["audio-graph.json"]);
+            Assert.True(inspection.RootElement.GetProperty("available").GetBoolean());
+            Assert.Equal(commandWarning ? 2 : 1, inspection.RootElement.GetProperty("nodeCount").GetInt32());
+            Assert.Contains("Source: pw-dump.json", entries["audio-graph.txt"]);
+            if (commandWarning)
+            {
+                Assert.Contains("fixture graph error", entries["audio-graph.txt"]);
+                Assert.Contains(inspection.RootElement.GetProperty("observations").EnumerateArray(),
+                    o => o.GetProperty("code").GetString() == "node-error");
+            }
             using var preferences = System.Text.Json.JsonDocument.Parse(entries["ui.json"]);
             Assert.Equal(1024, preferences.RootElement.GetProperty("numericValue").GetInt32());
             using var streams = System.Text.Json.JsonDocument.Parse(entries["sink-inputs.json"]);

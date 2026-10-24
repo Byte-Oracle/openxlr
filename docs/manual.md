@@ -3056,6 +3056,15 @@ audio, recording samples or starting plugins. The extra reports are:
   differs from the loaded unit. Reloading a unit does not update a process
   already running. Flatpak does not inspect host user units or host processes.
 
+`audio-graph.txt` and `audio-graph.json` inspect the archived graph: node and
+link states, reported errors, endpoints, link counts and selected clock,
+format and latency properties. Complete `pw-dump` update batches are folded
+with the daemon's registry rules before JSON redaction. Malformed or
+interrupted output keeps its error note and is not treated as a healthy empty
+graph. The [inspection guide](diagnostics.md) explains the fields, budgets
+and how to compare observations without treating idle nodes or resampling as
+faults. Inspection makes no second query and repairs nothing.
+
 These are sequential observations, not one atomic snapshot. A process can
 restart between sources; unknown or unavailable data is not proof of a fault.
 The archive stays local for review before sharing.

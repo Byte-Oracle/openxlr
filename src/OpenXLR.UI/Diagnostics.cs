@@ -70,7 +70,7 @@ public static class Diagnostics
                 recent openxlr-daemon journal entries or Flatpak logs,
                 native audio-server and session-manager journal entries, unit settings,
                 same-user audio-process resource usage and limits, command outcomes and
-                collection timestamps, short PipeWire node statistics, application audio metadata,
+                collection timestamps, short PipeWire node statistics, application audio metadata, and an inspection of that graph,
                 configuration files, plugin names and paths, the plugin catalogue,
                 Wine/yabridge versions and status, latest scan results, the saved
                 output of plugin scans that failed, and system
@@ -97,7 +97,10 @@ public static class Diagnostics
             await WritePluginDataAsync(client, work, TimeSpan.FromSeconds(15), login);
 
             // Audio stack.
-            await Capture("pw-dump.json", "pw-dump");
+            string graph = await Capture("pw-dump.json", "pw-dump");
+            var inspection = AudioGraphInspection.Read(graph);
+            await File.WriteAllTextAsync(Path.Combine(work, "audio-graph.json"), JsonSerializer.Serialize(inspection, ReportJson));
+            await File.WriteAllTextAsync(Path.Combine(work, "audio-graph.txt"), AudioGraphInspection.ToText(inspection));
             await Capture("pactl-info.txt", "pactl", "info");
             await Capture("wpctl-status.txt", "wpctl", "status");
             await Capture("sinks.txt", "pactl", "list", "short", "sinks");
@@ -477,7 +480,7 @@ public static class Diagnostics
         bool? valid = null;
         if (json)
         {
-            var result = cleanJson(output);
+            var result = cleanJson(file == "pw-dump.json" ? GraphForArchive(output) : output);
             saved = result.Text;
             valid = result.Valid;
             if (!result.Valid) errors += $"\n[{exe} did not return complete valid JSON]";
@@ -488,7 +491,17 @@ public static class Diagnostics
         await File.WriteAllTextAsync(Path.Combine(dir, file), json ? saved : saved + separator + clean(errors));
         if (json && errors.Length > 0)
             await File.WriteAllTextAsync(Path.Combine(dir, Path.GetFileNameWithoutExtension(file) + "-errors.txt"), clean(errors));
-        return output;
+        return json ? saved : output;
+    }
+
+    internal static string GraphForArchive(string output)
+    {
+        try
+        {
+            using JsonDocument snapshot = PipeWireSnapshot.Parse(Encoding.UTF8.GetBytes(output));
+            return snapshot.RootElement.GetRawText();
+        }
+        catch (JsonException) { return output; }
     }
 
     internal static string CommandNotes(string exe, ProcessResult result)
