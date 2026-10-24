@@ -41,7 +41,6 @@ public sealed class DiagnosticCommandTests
             ExecutableScript.Write(helper, "printf '%s|%s' \"$LC_ALL\" \"$LANGUAGE\"\n");
             var result = await Diagnostics.RunCommandAsync(helper, []);
             Assert.Equal("C|C", result.Output);
-            Assert.Equal(0, result.Status.ExitCode);
         }
         finally
         {
@@ -52,7 +51,7 @@ public sealed class DiagnosticCommandTests
     }
 
     [Fact]
-    public async Task AHelperFailureWithoutStderrStillHasAnExitStatus()
+    public async Task AHelperFailureWithoutStderrStillNamesItsExitStatus()
     {
         string root = Directory.CreateTempSubdirectory("openxlr-diagnostic-command-").FullName;
         try
@@ -62,19 +61,34 @@ public sealed class DiagnosticCommandTests
             var result = await Diagnostics.RunCommandAsync(helper, []);
             Assert.Equal("partial", result.Output);
             Assert.Contains("exited with status 17", result.Errors);
-            Assert.Equal(17, result.Status.ExitCode);
-            Assert.True(result.Status.Started);
-            Assert.False(result.Status.TimedOut);
         }
         finally { Directory.Delete(root, true); }
     }
 
     [Fact]
+    public void AppendedGraphUpdatesFoldIntoOneArray()
+    {
+        string raw = """
+            [{"id":1,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"first"}}},
+             {"id":2,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"gone"}}}]
+            [{"id":1,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"updated"}}},
+             {"id":2,"info":null}]
+            """;
+        using var graph = JsonDocument.Parse(Diagnostics.GraphForArchive(raw));
+        var node = Assert.Single(graph.RootElement.EnumerateArray());
+        Assert.Equal("updated", node.GetProperty("info").GetProperty("props").GetProperty("node.name").GetString());
+    }
+
+    [Theory]
+    [InlineData("[] [")]
+    [InlineData("[] {}")]
+    public void AnInterruptedGraphIsKeptForTheErrorSidecar(string json)
+        => Assert.Equal(json, Diagnostics.GraphForArchive(json));
+
+    [Fact]
     public async Task AMissingHelperIsUnknownRatherThanASuccessfulEmptyReport()
     {
         var result = await Diagnostics.RunCommandAsync("/nonexistent/openxlr-diagnostics-helper", []);
-        Assert.False(result.Status.Started);
-        Assert.Null(result.Status.ExitCode);
         Assert.Contains("failed to run", result.Errors);
         Assert.Equal("", result.Output);
     }

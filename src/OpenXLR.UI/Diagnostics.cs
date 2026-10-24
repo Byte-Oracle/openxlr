@@ -23,9 +23,6 @@ namespace OpenXLR.UI;
 public static class Diagnostics
 {
     private static readonly JsonSerializerOptions ReportJson = new(JsonSerializerDefaults.Web) { WriteIndented = true };
-    internal sealed record CommandStatus(string Source, string Program, DateTimeOffset StartedAtUtc,
-        long DurationMilliseconds, int? ExitCode, bool Started, bool TimedOut, bool Truncated, bool Incomplete,
-        bool Cancelled, bool? ValidJson = null);
 
     public static Task<string> CollectAsync(DaemonClient client)
         => CollectAsync(client, Environment.UserName, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
@@ -43,24 +40,20 @@ public static class Diagnostics
             string redacted = RedactJsonText(text, secrets, login, out bool valid);
             return (redacted, valid);
         }
-        DateTimeOffset started = DateTimeOffset.UtcNow;
-        long began = Stopwatch.GetTimestamp();
-        var sources = new List<CommandStatus>();
         string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
         string work = Directory.CreateTempSubdirectory("openxlr-diag-").FullName;
         if (!OperatingSystem.IsWindows())
             File.SetUnixFileMode(work, UnixFileMode.UserRead | UnixFileMode.UserWrite |
                                        UnixFileMode.UserExecute);
-        Task<string> Capture(string file, string program, params string[] args)
-            => WriteCmd(Clean, CleanJson, work, file, program, args, sources);
+        Task Capture(string file, string program, params string[] args)
+            => WriteCmd(Clean, CleanJson, work, file, program, args);
         try
         {
             var meta = new StringBuilder();
             meta.AppendLine($"OpenXLR diagnostics {stamp}");
             meta.AppendLine($"version: {AppVersion.Current}");
-            var uname = await RunCommandAsync("uname", ["-a"]);
-            sources.Add(uname.Status with { Source = "meta.txt" });
-            meta.AppendLine($"uname: {Clean(uname.Output + uname.Errors)}");
+            var (unameOutput, unameErrors) = await RunCommandAsync("uname", ["-a"]);
+            meta.AppendLine($"uname: {Clean(unameOutput + unameErrors)}");
             meta.AppendLine($"os-release: {TryReadFile("/etc/os-release")}");
             meta.AppendLine($"dotnet: {Environment.Version}");
             await File.WriteAllTextAsync(Path.Combine(work, "meta.txt"), meta.ToString());
@@ -68,9 +61,8 @@ public static class Diagnostics
                 This archive is created locally and is never uploaded automatically.
                 It contains OpenXLR state, USB control blocks, PipeWire topology,
                 recent openxlr-daemon journal entries or Flatpak logs,
-                native audio-server and session-manager journal entries, unit settings,
-                same-user audio-process resource usage and limits, command outcomes and
-                collection timestamps, short PipeWire node statistics, application audio metadata, and an inspection of that graph,
+                native audio-server and session-manager journal entries,
+                short PipeWire node statistics, application audio metadata,
                 configuration files, plugin names and paths, the plugin catalogue,
                 Wine/yabridge versions and status, latest scan results, the saved
                 output of plugin scans that failed, and system
@@ -97,10 +89,7 @@ public static class Diagnostics
             await WritePluginDataAsync(client, work, TimeSpan.FromSeconds(15), login);
 
             // Audio stack.
-            string graph = await Capture("pw-dump.json", "pw-dump");
-            var inspection = AudioGraphInspection.Read(graph);
-            await File.WriteAllTextAsync(Path.Combine(work, "audio-graph.json"), JsonSerializer.Serialize(inspection, ReportJson));
-            await File.WriteAllTextAsync(Path.Combine(work, "audio-graph.txt"), AudioGraphInspection.ToText(inspection));
+            await Capture("pw-dump.json", "pw-dump");
             await Capture("pactl-info.txt", "pactl", "info");
             await Capture("wpctl-status.txt", "wpctl", "status");
             await Capture("sinks.txt", "pactl", "list", "short", "sinks");
@@ -119,25 +108,12 @@ public static class Diagnostics
                 await Capture("audio-journal.txt", "journalctl", "--user",
                     "-u", "pipewire.service", "-u", "pipewire-pulse.service", "-u", "wireplumber.service",
                     "--since", "2 hours ago", "--no-pager");
-                string units = await Capture("audio-services.txt", "systemctl", "--user", "show",
-                    "openxlr-daemon.service", "pipewire.service", "pipewire-pulse.service", "wireplumber.service",
-                    "--property=Id,MainPID,ActiveState,SubState,Result,NRestarts,ExecMainStatus,LimitNOFILESoft,LimitMEMLOCKSoft,ActiveEnterTimestamp,ExecMainStartTimestamp",
-                    "--no-pager");
-                await File.WriteAllTextAsync(Path.Combine(work, "audio-processes.json"),
-                    JsonSerializer.Serialize(AudioRuntimeDiagnostics.Read(units), ReportJson));
             }
 
             // Configs may include remembered application identities and device
             // names; redact common personal fields and disclose them above.
             CopyRedactedIfExists(text => CleanJson(text).Text, UiSettings.ConfigDir, "mixer.json", work);
             CopyRedactedIfExists(text => CleanJson(text).Text, UiSettings.ConfigDir, "ui.json", work);
-
-            await File.WriteAllTextAsync(Path.Combine(work, "collection.json"), JsonSerializer.Serialize(new
-            {
-                schemaVersion = 1, version = AppVersion.Current, startedAtUtc = started, completedAtUtc = DateTimeOffset.UtcNow,
-                durationMilliseconds = (long)Stopwatch.GetElapsedTime(began).TotalMilliseconds,
-                flatpak = FlatpakEnvironment.IsFlatpak, commandSources = sources,
-            }, ReportJson));
             return await WriteArchiveAsync(work, destination, stamp);
         }
         finally
@@ -470,28 +446,23 @@ public static class Diagnostics
         }
     }
 
-    private static async Task<string> WriteCmd(Func<string, string> clean, Func<string, (string Text, bool Valid)> cleanJson,
-        string dir, string file, string exe,
-        string[] args, List<CommandStatus> sources)
+    private static async Task WriteCmd(Func<string, string> clean, Func<string, (string Text, bool Valid)> cleanJson,
+        string dir, string file, string exe, string[] args)
     {
-        var (output, errors, status) = await RunCommandAsync(exe, args);
+        var (output, errors) = await RunCommandAsync(exe, args);
         bool json = file.EndsWith(".json", StringComparison.Ordinal);
         string saved;
-        bool? valid = null;
         if (json)
         {
             var result = cleanJson(file == "pw-dump.json" ? GraphForArchive(output) : output);
             saved = result.Text;
-            valid = result.Valid;
             if (!result.Valid) errors += $"\n[{exe} did not return complete valid JSON]";
         }
         else saved = clean(output);
-        sources.Add(status with { Source = file, ValidJson = valid });
         string separator = output.Length > 0 && errors.Length > 0 && !output.EndsWith('\n') ? "\n" : "";
         await File.WriteAllTextAsync(Path.Combine(dir, file), json ? saved : saved + separator + clean(errors));
         if (json && errors.Length > 0)
             await File.WriteAllTextAsync(Path.Combine(dir, Path.GetFileNameWithoutExtension(file) + "-errors.txt"), clean(errors));
-        return json ? saved : output;
     }
 
     internal static string GraphForArchive(string output)
@@ -515,25 +486,17 @@ public static class Diagnostics
         return notes.Count == 0 ? "" : "\n" + string.Join("\n", notes);
     }
 
-    internal static async Task<(string Output, string Errors, CommandStatus Status)> RunCommandAsync(string exe, string[] args)
+    internal static async Task<(string Output, string Errors)> RunCommandAsync(string exe, string[] args)
     {
-        DateTimeOffset started = DateTimeOffset.UtcNow;
-        long began = Stopwatch.GetTimestamp();
-        long Elapsed() => (long)Stopwatch.GetElapsedTime(began).TotalMilliseconds;
         try
         {
             // 15 s and 8 MiB per command; a helper that goes past either is
             // killed with its children and the archive says so.
             ProcessResult r = await ProcessRunner.RunAsync(exe, args, TimeSpan.FromSeconds(15),
                 stdoutCap: 8 * 1024 * 1024, stderrCap: 64 * 1024);
-            return (r.StdoutText, r.Stderr + CommandNotes(exe, r), new("", Path.GetFileName(exe), started,
-                Elapsed(), r.ExitCode, true, r.TimedOut, r.Truncated, r.Incomplete, r.Cancelled));
+            return (r.StdoutText, r.Stderr + CommandNotes(exe, r));
         }
-        catch (Exception ex)
-        {
-            return ("", $"failed to run {exe}: {ex.Message}", new("", Path.GetFileName(exe), started,
-                Elapsed(), null, false, false, false, false, false));
-        }
+        catch (Exception ex) { return ("", $"failed to run {exe}: {ex.Message}"); }
     }
 
     private static string TryReadFile(string path)
@@ -617,7 +580,6 @@ public static class Diagnostics
             Add("(?<=/(?:home|var/home|media|run/media|mnt)/)" + name + "(?![A-Za-z0-9._-])", "<redacted>");
         }
 
-        Add("(?m)^(MainPID=)[0-9]+", "$1<redacted>");
         Add("(?m)^((?:User|Host) Name:[ \\t]*)[^\\r\\n]+", "$1<redacted>");
         Add("(\\[[^\\[\\],\\r\\n]*, )[^\\s,@\\[\\]]+@[^\\s,\\[\\]]+(?=[,\\]])", "$1<redacted>@<redacted>");
         Add("(\"(?:device\\.serial|object\\.serial|application\\.process\\.id|" +
