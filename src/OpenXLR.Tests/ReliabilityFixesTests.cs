@@ -322,6 +322,18 @@ public sealed class ReliabilityFixesTests
         Assert.Null(NativePluginHost.FoldErrorBlock(line, "\n   \n", seen.Add));
     }
 
+    [Fact]
+    public void SplitBlankLogLinesKeepTheLastMeaningfulLineAndForwardEveryCompletion()
+    {
+        var line = new StringBuilder();
+        var seen = new List<string>();
+        Assert.Null(NativePluginHost.FoldErrorBlock(line, "failure\r", seen.Add));
+        Assert.Equal("failure", NativePluginHost.FoldErrorBlock(line, "\n \t", seen.Add));
+        Assert.Null(NativePluginHost.FoldErrorBlock(line, "\r\n\u2003\nlast", seen.Add));
+        Assert.Equal("last failure", NativePluginHost.FoldErrorBlock(line, " failure\n\n", seen.Add));
+        Assert.Equal(["failure", " \t", "\u2003", "last failure", ""], seen);
+    }
+
     // --- retiring a meter while its pump thread starts up -----------------------
 
     [Fact]
