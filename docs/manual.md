@@ -2848,9 +2848,15 @@ stays responsive, and the button is disabled until the service commands
 finish. An explicit restart first clears the daemon service's failed state
 and start counter, so the button also works after repeated starts produced
 `start-limit-hit` in the journal. Automatic restarts after crashes still
-obey the service's start limit. If the explicit restart fails, check
+obey the service's start limit. The waiting message clears when the daemon
+reconnects, including a connection restored before the service command
+finishes. If the explicit restart fails, check
 `journalctl --user -u openxlr-daemon`. A daemon started by hand must be
 restarted by hand.
+
+Changing **Enable software mixer** in Options uses the same background
+restart. Its switch is disabled while a restart is in progress, so the
+window stays responsive and concurrent changes cannot race the restart.
 
 An older user unit can fail before starting the daemon with
 `218/CAPABILITIES` and `Failed to drop capabilities`. Update the package
