@@ -63,6 +63,12 @@ only, however often the host reads the figure. Invalid
 lengths, seek modes and arithmetic overflow are rejected without changing
 stream contents. Reads at or beyond EOF return zero bytes; a later write
 fills the skipped bytes with zeroes. Empty binary attributes are supported.
+The component can unregister run-loop watches during termination; the host
+releases remaining watches before unloading the module and keeps plugin-owned
+file descriptors open. Unregistering detaches a watch before releasing its
+handler, so a callback from that release cannot destroy the source twice.
+Closing an editor or a failed editor attachment also collects its run-loop
+watches before releasing the view, including handlers owned by the view.
 These checks need no display, installed plugin or PipeWire server. They do
 not turn a native plugin into a sandbox or cap its own allocations.
 
