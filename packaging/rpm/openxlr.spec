@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.2.2
+Version: 0.2.3
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
 License:        GPL-3.0-only
@@ -187,6 +187,14 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Sat Oct 24 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.3-1
+- Devices: the Wave XLR keeps its ALSA mute and headphone controls in step with the unit, and its capture volume at the unit's gain, as the Wave:3 does; a missing amixer no longer stops polling.
+- UI: Restart daemon recovers a service stopped by systemd's start limit, and the software mixer switch restarts in the background.
+- Plugins: VST3 editors and timers are torn down without a use-after-free; a failed host keeps its last nonblank error line.
+- Diagnostics: the export adds audio journals, pw-top, client lists and a merged graph dump; copies are bounded and special files refused.
+- Browser: a failed output lookup stops only the tabs it affects, and a damaged saved output choice is reset.
+- Flatpak: SteamOS and Bazzite, a user service for audio in Game Mode, and the restartDaemon command.
+
 * Fri Oct 23 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.2-1
 - Ducking: the Wave XLR Pro now ducks the headphone jacks and Line Out on its own processor when the setup fits, keyed by XLR 1; the daemon writes both bits of a ducked pair's field, which the unit needs.
 - UI: a mix matrix row shows the input's gain under its Mic button, and the volume while the volume fader moves.
