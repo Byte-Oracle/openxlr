@@ -551,3 +551,43 @@ test('a waiting request ends after its timeout, on navigation and when routing i
   assert.equal((await f.request('snapshot')).value.requestedTabs.length, 0);
   assert.equal([...f.timerDelays.values()].includes(120000), false);
 });
+
+test('a malformed saved output binding is repaired without blocking capture', { timeout: 2000 }, async () => {
+  for (const invalid of [null, [], 'corrupt', 42, true]) {
+    const f = await readyFixture();
+    f.bindings = invalid;
+    assert.equal((await f.request('start', { id: 1 })).error, undefined);
+    assert.equal(f.active.get(1).deviceId, 'chat-device');
+    assert.deepEqual(JSON.parse(JSON.stringify(f.bindings)), { chat: 'chat-device' });
+  }
+});
+
+test('repair keeps other valid output bindings and drops malformed values', { timeout: 2000 }, async () => {
+  const f = await readyFixture();
+  await f.publish({ channels: [...f.state.channels, { id: 'other', label: 'OpenXLR Other' }] });
+  f.bindings = { music: 'music-device', chat: null, other: { malformed: true }, removed: 'old-device' };
+  assert.equal((await f.request('start', { id: 1 })).error, undefined);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.bindings)), { music: 'music-device', chat: 'chat-device' });
+});
+
+for (const change of ['disconnect', 'channel removal']) {
+  test(`an output lookup interrupted by ${change} preserves saved bindings`, { timeout: 2000 }, async () => {
+    const f = await readyFixture();
+    f.bindings = { music: 'music-device' };
+    const reading = deferred(), release = deferred();
+    f.chrome.storage.local.get = async () => {
+      reading.resolve(); await release.promise;
+      return { deviceBindings: f.bindings };
+    };
+    const starting = f.request('start', { id: 1 });
+    await reading.promise;
+    if (change === 'disconnect') f.ports.at(-1).onDisconnect.emit();
+    else await f.publish({ channels: f.state.channels.filter(channel => channel.id !== 'chat'),
+      tabs: f.state.tabs.map(tab => tab.id === 1 ? { ...tab, channelId: null } : tab) });
+    release.resolve();
+    assert.ok((await starting).error);
+    assert.deepEqual(JSON.parse(JSON.stringify(f.bindings)), { music: 'music-device' });
+    assert.equal(f.tokens.length, 0);
+    assert.equal(f.active.size, 0);
+  });
+}

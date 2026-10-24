@@ -195,12 +195,14 @@ async function refreshTabs() {
 async function outputFor(channel) {
   const devices = await audio({ type: 'devices' }, true);
   const task = bindingOperation.catch(() => {}).then(async () => {
-    const { deviceBindings = {} } = await chrome.storage.local.get('deviceBindings');
+    const { deviceBindings: saved } = await chrome.storage.local.get('deviceBindings');
+    const deviceBindings = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+    if (!state?.channels.some(item => item.id === channel.id)) throw new Error(t('changedWhileStarting'));
     const id = deviceFor(channel, devices ?? [], deviceBindings);
     const alive = new Set(state?.channels.map(item => item.id) ?? []);
-    const next = Object.fromEntries(Object.entries(deviceBindings).filter(([key]) => alive.has(key)));
+    const next = Object.fromEntries(Object.entries(deviceBindings).filter(([key, value]) => alive.has(key) && typeof value === 'string'));
     next[channel.id] = id;
-    if (JSON.stringify(next) !== JSON.stringify(deviceBindings)) await chrome.storage.local.set({ deviceBindings: next });
+    if (JSON.stringify(next) !== JSON.stringify(saved)) await chrome.storage.local.set({ deviceBindings: next });
     return id;
   });
   bindingOperation = task;
