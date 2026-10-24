@@ -3010,6 +3010,40 @@ truncated credentials. If this masking exceeds its time limit, the archive
 contains an omission notice in place of that log's text, never its
 unredacted contents. The original log on disk is kept.
 
+For audio glitches, collect while the problem is present and before restarting
+the daemon, if possible. Collection reads the current state without changing
+audio, recording samples or starting plugins. The extra reports are:
+
+- `collection.json`: UTC start and completion times, elapsed collection time,
+  and each helper's start time, duration, exit status, timeout, truncation and
+  incomplete-output flags. An unavailable helper is marked as not started;
+  JSON sources also say whether their output was complete valid JSON. Helper
+  errors stay beside the report and do not prevent the other sources being
+  collected. Each command has a 15-second deadline, an 8 MiB stdout limit and
+  a 64 KiB stderr limit. Helpers use the C locale so metadata field names
+  match the redaction rules even on a translated desktop.
+- `pw-top.txt`: three batches of node statistics, including rate, quantum and
+  error counters. Counters are evidence to compare with the journals, not a
+  diagnosis of the cause of a glitch.
+- `sink-inputs.json` and `source-outputs.json`: current playback and recording
+  streams, their formats, mute state and buffering information as Pulse reports
+  them. Process identity fields are masked while numeric audio values stay
+  numeric, even when a USB serial happens to contain the same digits.
+- `audio-services.txt` and `audio-processes.json`, on native installations:
+  loaded service settings and the actual running audio processes' file counts,
+  soft and hard open-file and locked-memory limits, resident memory, state and
+  thread count. A process is read only when its name and real user match the
+  expected service. No process arguments, environment, file descriptor targets
+  or process ids are included in the resource report. A missing field is null,
+  an unlimited limit is -1, and a capped file count is explicitly a lower bound.
+  The report warns at 75% of the actual open-file limit and when that limit
+  differs from the loaded unit. Reloading a unit does not update a process
+  already running. Flatpak does not inspect host user units or host processes.
+
+These are sequential observations, not one atomic snapshot. A process can
+restart between sources; unknown or unavailable data is not proof of a fault.
+The archive stays local for review before sharing.
+
 For a Windows plugin missing from the picker, collect diagnostics after the
 scan finishes and name the plugin and intended insert slot in the report.
 The archive adds:

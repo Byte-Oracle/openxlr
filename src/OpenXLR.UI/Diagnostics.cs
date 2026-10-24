@@ -22,6 +22,11 @@ namespace OpenXLR.UI;
 /// </summary>
 public static class Diagnostics
 {
+    private static readonly JsonSerializerOptions ReportJson = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+    internal sealed record CommandStatus(string Source, string Program, DateTimeOffset StartedAtUtc,
+        long DurationMilliseconds, int? ExitCode, bool Started, bool TimedOut, bool Truncated, bool Incomplete,
+        bool Cancelled, bool? ValidJson = null);
+
     public static Task<string> CollectAsync(DaemonClient client)
         => CollectAsync(client, Environment.UserName, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
@@ -33,17 +38,29 @@ public static class Diagnostics
     {
         string[] secrets = DefaultSecrets().ToArray();
         string Clean(string text) => Redact(text, secrets, login);
+        (string Text, bool Valid) CleanJson(string text)
+        {
+            string redacted = RedactJsonText(text, secrets, login, out bool valid);
+            return (redacted, valid);
+        }
+        DateTimeOffset started = DateTimeOffset.UtcNow;
+        long began = Stopwatch.GetTimestamp();
+        var sources = new List<CommandStatus>();
         string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
         string work = Directory.CreateTempSubdirectory("openxlr-diag-").FullName;
         if (!OperatingSystem.IsWindows())
             File.SetUnixFileMode(work, UnixFileMode.UserRead | UnixFileMode.UserWrite |
                                        UnixFileMode.UserExecute);
+        Task<string> Capture(string file, string program, params string[] args)
+            => WriteCmd(Clean, CleanJson, work, file, program, args, sources);
         try
         {
             var meta = new StringBuilder();
             meta.AppendLine($"OpenXLR diagnostics {stamp}");
             meta.AppendLine($"version: {AppVersion.Current}");
-            meta.AppendLine($"uname: {await RunAsync(Clean, "uname", "-a")}");
+            var uname = await RunCommandAsync("uname", ["-a"]);
+            sources.Add(uname.Status with { Source = "meta.txt" });
+            meta.AppendLine($"uname: {Clean(uname.Output + uname.Errors)}");
             meta.AppendLine($"os-release: {TryReadFile("/etc/os-release")}");
             meta.AppendLine($"dotnet: {Environment.Version}");
             await File.WriteAllTextAsync(Path.Combine(work, "meta.txt"), meta.ToString());
@@ -51,7 +68,9 @@ public static class Diagnostics
                 This archive is created locally and is never uploaded automatically.
                 It contains OpenXLR state, USB control blocks, PipeWire topology,
                 recent openxlr-daemon journal entries or Flatpak logs,
-                native audio-server and session-manager journal entries, application audio metadata,
+                native audio-server and session-manager journal entries, unit settings,
+                same-user audio-process resource usage and limits, command outcomes and
+                collection timestamps, short PipeWire node statistics, application audio metadata,
                 configuration files, plugin names and paths, the plugin catalogue,
                 Wine/yabridge versions and status, latest scan results, the saved
                 output of plugin scans that failed, and system
@@ -70,7 +89,7 @@ public static class Diagnostics
 
             // Daemon views: the newest state push plus a fresh vendor-block dump.
             await File.WriteAllTextAsync(Path.Combine(work, "daemon-state.json"),
-                Clean(StateForArchive(client.LastStateJson)));
+                CleanJson(StateForArchive(client.LastStateJson)).Text);
             var blocks = await client.RequestDiagnosticsAsync(TimeSpan.FromSeconds(5));
             await File.WriteAllTextAsync(Path.Combine(work, "device-blocks.json"),
                 RedactHex(blocks?.ToJsonString() ?? "unavailable (daemon not running or no device)", secrets));
@@ -78,29 +97,44 @@ public static class Diagnostics
             await WritePluginDataAsync(client, work, TimeSpan.FromSeconds(15), login);
 
             // Audio stack.
-            await WriteCmd(Clean, work, "pw-dump.json", "pw-dump");
-            await WriteCmd(Clean, work, "pactl-info.txt", "pactl", "info");
-            await WriteCmd(Clean, work, "wpctl-status.txt", "wpctl", "status");
-            await WriteCmd(Clean, work, "sinks.txt", "pactl", "list", "short", "sinks");
-            await WriteCmd(Clean, work, "sources.txt", "pactl", "list", "short", "sources");
-            await WriteCmd(Clean, work, "modules.txt", "pactl", "list", "short", "modules");
-            await WriteCmd(Clean, work, "lsusb.txt", "lsusb");
+            await Capture("pw-dump.json", "pw-dump");
+            await Capture("pactl-info.txt", "pactl", "info");
+            await Capture("wpctl-status.txt", "wpctl", "status");
+            await Capture("sinks.txt", "pactl", "list", "short", "sinks");
+            await Capture("sources.txt", "pactl", "list", "short", "sources");
+            await Capture("modules.txt", "pactl", "list", "short", "modules");
+            await Capture("lsusb.txt", "lsusb");
+            await Capture("pw-top.txt", "pw-top", "--batch-mode", "--iterations", "3");
+            await Capture("sink-inputs.json", "pactl", "--format=json", "list", "sink-inputs");
+            await Capture("source-outputs.json", "pactl", "--format=json", "list", "source-outputs");
             if (FlatpakEnvironment.IsFlatpak)
                 CopyDaemonLogs(Clean, OpenXlrPaths.StateDir, work);
             else
             {
-                await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
+                await Capture("journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
                     "--since", "2 hours ago", "--no-pager");
-                await WriteCmd(Clean, work, "audio-journal.txt", "journalctl", "--user",
+                await Capture("audio-journal.txt", "journalctl", "--user",
                     "-u", "pipewire.service", "-u", "pipewire-pulse.service", "-u", "wireplumber.service",
                     "--since", "2 hours ago", "--no-pager");
+                string units = await Capture("audio-services.txt", "systemctl", "--user", "show",
+                    "openxlr-daemon.service", "pipewire.service", "pipewire-pulse.service", "wireplumber.service",
+                    "--property=Id,MainPID,ActiveState,SubState,Result,NRestarts,ExecMainStatus,LimitNOFILESoft,LimitMEMLOCKSoft,ActiveEnterTimestamp,ExecMainStartTimestamp",
+                    "--no-pager");
+                await File.WriteAllTextAsync(Path.Combine(work, "audio-processes.json"),
+                    JsonSerializer.Serialize(AudioRuntimeDiagnostics.Read(units), ReportJson));
             }
 
             // Configs may include remembered application identities and device
             // names; redact common personal fields and disclose them above.
-            CopyRedactedIfExists(Clean, UiSettings.ConfigDir, "mixer.json", work);
-            CopyRedactedIfExists(Clean, UiSettings.ConfigDir, "ui.json", work);
+            CopyRedactedIfExists(text => CleanJson(text).Text, UiSettings.ConfigDir, "mixer.json", work);
+            CopyRedactedIfExists(text => CleanJson(text).Text, UiSettings.ConfigDir, "ui.json", work);
 
+            await File.WriteAllTextAsync(Path.Combine(work, "collection.json"), JsonSerializer.Serialize(new
+            {
+                schemaVersion = 1, version = AppVersion.Current, startedAtUtc = started, completedAtUtc = DateTimeOffset.UtcNow,
+                durationMilliseconds = (long)Stopwatch.GetElapsedTime(began).TotalMilliseconds,
+                flatpak = FlatpakEnvironment.IsFlatpak, commandSources = sources,
+            }, ReportJson));
             return await WriteArchiveAsync(work, destination, stamp);
         }
         finally
@@ -382,47 +416,111 @@ public static class Diagnostics
     }
 
     private static void RedactJson(JsonNode node, string[] secrets, string? login)
+        => RedactJson(node, CreateRedactor(secrets, login));
+
+    private static void RedactJson(JsonNode node, Func<string, string> clean)
     {
         if (node is JsonObject obj)
         {
             foreach (string key in obj.Select(p => p.Key).ToArray())
-                if (obj[key] is JsonValue value && value.TryGetValue<string>(out string? text)) obj[key] = Redact(text, secrets, login);
-                else if (obj[key] is { } child) RedactJson(child, secrets, login);
+            {
+                if (PrivateJsonFields.Contains(key)) obj[key] = "<redacted>";
+                else if (obj[key] is JsonValue value && value.TryGetValue<string>(out string? text)) obj[key] = clean(text);
+                else if (obj[key] is { } child) RedactJson(child, clean);
+                string redacted = clean(key);
+                if (redacted == key) continue;
+                // Two private paths can become the same key after masking.
+                // Keep both values without putting the private key back.
+                string unique = redacted;
+                for (int suffix = 1; obj.ContainsKey(unique); suffix++) unique = redacted + "_" + suffix;
+                JsonNode? contents = obj[key];
+                obj.Remove(key);
+                obj[unique] = contents;
+            }
         }
         else if (node is JsonArray array)
             for (int i = 0; i < array.Count; i++)
-                if (array[i] is JsonValue value && value.TryGetValue<string>(out string? text)) array[i] = Redact(text, secrets, login);
-                else if (array[i] is { } child) RedactJson(child, secrets, login);
+                if (array[i] is JsonValue value && value.TryGetValue<string>(out string? text)) array[i] = clean(text);
+                else if (array[i] is { } child) RedactJson(child, clean);
     }
 
-    private static async Task WriteCmd(Func<string, string> clean, string dir, string file, string exe, params string[] args)
+    private static readonly HashSet<string> PrivateJsonFields = new(StringComparer.OrdinalIgnoreCase)
     {
-        var (output, errors) = await RunCommandAsync(exe, args);
+        "device.serial", "object.serial", "application.process.id", "application.process.user", "application.process.host",
+        "user-name", "host-name",
+    };
+
+    /// <summary>Redact string values and identity fields without rewriting coincidentally equal numbers.</summary>
+    internal static string RedactJsonText(string text, string[] secrets, string? login, out bool valid)
+    {
+        try
+        {
+            JsonNode? data = JsonNode.Parse(text, documentOptions: new JsonDocumentOptions { AllowDuplicateProperties = false });
+            if (data is not null) RedactJson(data, secrets, login);
+            valid = true;
+            return data?.ToJsonString(ReportJson) ?? "null";
+        }
+        catch (Exception ex) when (ex is JsonException or ArgumentException)
+        {
+            valid = false;
+            return Redact(text, secrets, login);
+        }
+    }
+
+    private static async Task<string> WriteCmd(Func<string, string> clean, Func<string, (string Text, bool Valid)> cleanJson,
+        string dir, string file, string exe,
+        string[] args, List<CommandStatus> sources)
+    {
+        var (output, errors, status) = await RunCommandAsync(exe, args);
         bool json = file.EndsWith(".json", StringComparison.Ordinal);
-        await File.WriteAllTextAsync(Path.Combine(dir, file), clean(json ? output : output + errors));
+        string saved;
+        bool? valid = null;
+        if (json)
+        {
+            var result = cleanJson(output);
+            saved = result.Text;
+            valid = result.Valid;
+            if (!result.Valid) errors += $"\n[{exe} did not return complete valid JSON]";
+        }
+        else saved = clean(output);
+        sources.Add(status with { Source = file, ValidJson = valid });
+        string separator = output.Length > 0 && errors.Length > 0 && !output.EndsWith('\n') ? "\n" : "";
+        await File.WriteAllTextAsync(Path.Combine(dir, file), json ? saved : saved + separator + clean(errors));
         if (json && errors.Length > 0)
             await File.WriteAllTextAsync(Path.Combine(dir, Path.GetFileNameWithoutExtension(file) + "-errors.txt"), clean(errors));
+        return output;
     }
 
-    private static async Task<string> RunAsync(Func<string, string> clean, string exe, params string[] args)
+    internal static string CommandNotes(string exe, ProcessResult result)
     {
-        var (output, errors) = await RunCommandAsync(exe, args);
-        return clean(output + errors);
+        var notes = new List<string>();
+        if (result.TimedOut) notes.Add($"[{exe} killed after 15 s]");
+        if (result.Truncated) notes.Add($"[{exe} output truncated; limits: stdout 8 MiB, stderr 64 KiB]");
+        if (result.Incomplete) notes.Add($"[{exe} output ended before the helper closed it]");
+        if (result.Cancelled) notes.Add($"[{exe} collection cancelled]");
+        if (result.ExitCode != 0) notes.Add($"[{exe} exited with status {result.ExitCode}]");
+        return notes.Count == 0 ? "" : "\n" + string.Join("\n", notes);
     }
 
-    private static async Task<(string Output, string Errors)> RunCommandAsync(string exe, params string[] args)
+    internal static async Task<(string Output, string Errors, CommandStatus Status)> RunCommandAsync(string exe, string[] args)
     {
+        DateTimeOffset started = DateTimeOffset.UtcNow;
+        long began = Stopwatch.GetTimestamp();
+        long Elapsed() => (long)Stopwatch.GetElapsedTime(began).TotalMilliseconds;
         try
         {
             // 15 s and 8 MiB per command; a helper that goes past either is
             // killed with its children and the archive says so.
             ProcessResult r = await ProcessRunner.RunAsync(exe, args, TimeSpan.FromSeconds(15),
-                stdoutCap: 8 * 1024 * 1024, stderrCap: 64 * 1024, cLocale: false);
-            string note = r.TimedOut ? $"\n[{exe} killed after 15 s]" : r.Truncated ? $"\n[{exe} output truncated at 8 MiB]"
-                : r.Incomplete ? $"\n[{exe} output ended before the helper closed it]" : "";
-            return (r.StdoutText, r.Stderr + note);
+                stdoutCap: 8 * 1024 * 1024, stderrCap: 64 * 1024);
+            return (r.StdoutText, r.Stderr + CommandNotes(exe, r), new("", Path.GetFileName(exe), started,
+                Elapsed(), r.ExitCode, true, r.TimedOut, r.Truncated, r.Incomplete, r.Cancelled));
         }
-        catch (Exception ex) { return ("", $"failed to run {exe}: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            return ("", $"failed to run {exe}: {ex.Message}", new("", Path.GetFileName(exe), started,
+                Elapsed(), null, false, false, false, false, false));
+        }
     }
 
     private static string TryReadFile(string path)
@@ -482,39 +580,41 @@ public static class Diagnostics
     /// JSON fields below.
     /// </summary>
     internal static string Redact(string text, IEnumerable<string> secrets, string? login = null)
+        => CreateRedactor(secrets, login)(text);
+
+    private static Func<string, string> CreateRedactor(IEnumerable<string> secrets, string? login)
     {
-        // Whole tokens only: a numeric USB serial once matched inside the
-        // number 2147483647 in a pw-dump and left "2<redacted>", which broke
-        // the JSON. A serial in a node name is bounded by "_" and "-", a host
-        // name by spaces, a path by quotes, so alphanumeric lookarounds keep
-        // those and skip digits inside larger numbers.
+        var rules = new List<(Regex Pattern, string Mask)>();
+        void Add(string pattern, string mask, RegexOptions options = RegexOptions.None)
+            => rules.Add((new Regex(pattern, options), mask));
+
+        // Build once per report. Applying Redact separately to every JSON
+        // field churns the global regex cache when many devices have serials.
         foreach (string value in secrets
                      .Where(v => !string.IsNullOrWhiteSpace(v) && v.Length >= 3)
                      .Distinct(StringComparer.Ordinal)
                      .OrderByDescending(v => v.Length))
-            text = Regex.Replace(text,
-                "(?<![A-Za-z0-9])" + Regex.Escape(value) + "(?![A-Za-z0-9])", "<redacted>");
+            Add("(?<![A-Za-z0-9])" + Regex.Escape(value) + "(?![A-Za-z0-9])", "<redacted>");
 
         if (!string.IsNullOrWhiteSpace(login))
         {
             string name = Regex.Escape(login);
-            // A login name may hold dots, dashes and underscores, so those
-            // bound it too: "a" is not found inside "data@host".
-            text = Regex.Replace(text, "(?<![A-Za-z0-9._-])" + name + "(?=@)", "<redacted>");
-            text = Regex.Replace(text, "(?<=\\bpipewire-)" + name + "(?=-[0-9]+\\b)", "<redacted>");
-            text = Regex.Replace(text, "(?<=/(?:home|var/home|media|run/media|mnt)/)" + name + "(?![A-Za-z0-9._-])", "<redacted>");
+            Add("(?<![A-Za-z0-9._-])" + name + "(?=@)", "<redacted>");
+            Add("(?<=\\bpipewire-)" + name + "(?=-[0-9]+\\b)", "<redacted>");
+            Add("(?<=/(?:home|var/home|media|run/media|mnt)/)" + name + "(?![A-Za-z0-9._-])", "<redacted>");
         }
 
-        // pactl info: "User Name: max" and "Host Name: desk".
-        text = Regex.Replace(text, "(?m)^((?:User|Host) Name:[ \\t]*)[^\\r\\n]+", "$1<redacted>");
-        // wpctl status: "[1.6.9, max@desk, pid:1585]" on every client line.
-        text = Regex.Replace(text, "(\\[[^\\[\\],\\r\\n]*, )[^\\s,@\\[\\]]+@[^\\s,\\[\\]]+(?=[,\\]])", "$1<redacted>@<redacted>");
-
-        return Regex.Replace(text,
-            "(\"(?:device\\.serial|object\\.serial|application\\.process\\.id|" +
+        Add("(?m)^(MainPID=)[0-9]+", "$1<redacted>");
+        Add("(?m)^((?:User|Host) Name:[ \\t]*)[^\\r\\n]+", "$1<redacted>");
+        Add("(\\[[^\\[\\],\\r\\n]*, )[^\\s,@\\[\\]]+@[^\\s,\\[\\]]+(?=[,\\]])", "$1<redacted>@<redacted>");
+        Add("(\"(?:device\\.serial|object\\.serial|application\\.process\\.id|" +
             "application\\.process\\.user|application\\.process\\.host|user-name|host-name)\"\\s*:\\s*)" +
-            "(?:\"[^\"]*\"|[0-9]+)",
-            "$1\"<redacted>\"", RegexOptions.IgnoreCase);
+            "(?:\"[^\"]*\"|[0-9]+)", "$1\"<redacted>\"", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return text =>
+        {
+            foreach (var (pattern, mask) in rules) text = pattern.Replace(text, mask);
+            return text;
+        };
     }
 
     /// <summary>
