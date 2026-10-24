@@ -328,10 +328,10 @@ public static class Diagnostics
                 long had;
                 try
                 {
-                    await using FileStream stream = File.OpenRead(Path.Combine(source, name));
-                    // A plain file has a length and a position; a pipe or a
-                    // device left here by something else has neither, and a
-                    // read of one would block the archive.
+                    string path = Path.Combine(source, name);
+                    // Opening a FIFO already blocks, before CanSeek can help.
+                    RegularFile.Require(path);
+                    await using FileStream stream = File.OpenRead(path);
                     if (!stream.CanSeek) { index.AppendLine($"skipped {name}: not a plain file"); continue; }
                     had = stream.Length;
                     int room = (int)Math.Min(MaxFileBytes, MaxTotalBytes - total);
@@ -645,25 +645,23 @@ public static class Diagnostics
     {
         foreach (string name in new[] { "daemon.log", "daemon.log.old" })
         {
-            if (new FileInfo(Path.Combine(dir, name)).LinkTarget is not null)
-            {
-                File.WriteAllText(Path.Combine(dest, name), "Log unavailable: symbolic links are not collected.");
-                continue;
-            }
             CopyRedactedIfExists(text => clean(RedactSecretValues(text)), dir, name, dest, DaemonLogCopyLimit);
         }
     }
 
-    private static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest, int? maximum = null)
+    internal static void CopyRedactedIfExists(Func<string, string> clean, string dir, string file, string dest, int? maximum = null)
     {
         string src = Path.Combine(dir, file);
-        if (File.Exists(src))
+        string text;
+        try
         {
-            string text;
-            try { text = maximum is { } limit ? RegularFile.ReadText(src, limit) : File.ReadAllText(src); }
-            catch (Exception ex) when (maximum is not null && (ex is IOException or UnauthorizedAccessException))
-            { text = "Log unavailable: " + ex.Message; }
-            File.WriteAllText(Path.Combine(dest, file), clean(text));
+            if (new FileInfo(src).LinkTarget is not null)
+                text = "File unavailable: symbolic links are not collected.";
+            else if (!File.Exists(src)) return;
+            else text = RegularFile.ReadText(src, maximum ?? OpenXlrPaths.MaxPreferenceBytes);
         }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { text = "File unavailable: " + ex.Message; }
+        File.WriteAllText(Path.Combine(dest, file), clean(text));
     }
 }
