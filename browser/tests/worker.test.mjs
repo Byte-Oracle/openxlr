@@ -569,3 +569,25 @@ test('repair keeps other valid output bindings and drops malformed values', { ti
   assert.equal((await f.request('start', { id: 1 })).error, undefined);
   assert.deepEqual(JSON.parse(JSON.stringify(f.bindings)), { music: 'music-device', chat: 'chat-device' });
 });
+
+for (const change of ['disconnect', 'channel removal']) {
+  test(`an output lookup interrupted by ${change} preserves saved bindings`, { timeout: 2000 }, async () => {
+    const f = await readyFixture();
+    f.bindings = { music: 'music-device' };
+    const reading = deferred(), release = deferred();
+    f.chrome.storage.local.get = async () => {
+      reading.resolve(); await release.promise;
+      return { deviceBindings: f.bindings };
+    };
+    const starting = f.request('start', { id: 1 });
+    await reading.promise;
+    if (change === 'disconnect') f.ports.at(-1).onDisconnect.emit();
+    else await f.publish({ channels: f.state.channels.filter(channel => channel.id !== 'chat'),
+      tabs: f.state.tabs.map(tab => tab.id === 1 ? { ...tab, channelId: null } : tab) });
+    release.resolve();
+    assert.ok((await starting).error);
+    assert.deepEqual(JSON.parse(JSON.stringify(f.bindings)), { music: 'music-device' });
+    assert.equal(f.tokens.length, 0);
+    assert.equal(f.active.size, 0);
+  });
+}
