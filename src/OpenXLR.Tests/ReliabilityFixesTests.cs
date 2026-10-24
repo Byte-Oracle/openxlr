@@ -311,6 +311,17 @@ public sealed class ReliabilityFixesTests
         Assert.Equal(["first", "second", "third"], seen);
     }
 
+    [Fact]
+    public void BlankPluginLogLinesDoNotEraseTheLastFailure()
+    {
+        var line = new StringBuilder();
+        var seen = new List<string>();
+        Assert.Equal("fatal: audio backend stopped", NativePluginHost.FoldErrorBlock(line,
+            "fatal: audio backend stopped\n\r\n  \t\n", seen.Add));
+        Assert.Equal(["fatal: audio backend stopped", "", "  \t"], seen);
+        Assert.Null(NativePluginHost.FoldErrorBlock(line, "\n   \n", seen.Add));
+    }
+
     // --- retiring a meter while its pump thread starts up -----------------------
 
     [Fact]

@@ -221,7 +221,8 @@ can still interrupt that insert's chain.
   because every rebuild of an input chain interrupts the microphone. Changing
   or bypassing the chain starts it over. The last line the helper wrote to
   stderr goes to the daemon's log at each death and is shown with that
-  reason, so a helper that gives up says why in its final line.
+  reason. Trailing blank lines and whitespace do not replace the last useful
+  message; a helper that dies mid-line keeps that final partial message.
 - A VST3 plugin that reports a latency change keeps running: the host asks
   for the new figure and reports it, without reactivating the plugin, so a
   plugin that only settles a new figure on reactivation goes on reporting

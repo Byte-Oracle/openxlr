@@ -11,6 +11,28 @@ public sealed class NativeHostProtocolTests
             "test", 2, 48000, "/usr/bin/python3", ["-u", "-c", script], startupTimeout, patience,
             meterSymbols: meters);
 
+    [Theory]
+    [InlineData("\n\n")]
+    [InlineData("\r\n \t\r\n   ")]
+    public void AHelpersFinalBlankOutputPreservesItsFailure(string blank)
+    {
+        string encoded = System.Text.Json.JsonSerializer.Serialize(blank);
+        using var host = Start($$"""
+            import sys
+            print('fatal: audio backend stopped', file=sys.stderr, flush=True)
+            print('ready')
+            for line in sys.stdin:
+                if line.strip() == 'show':
+                    sys.stderr.write({{encoded}})
+                    sys.stderr.flush()
+                    print('ui opened')
+                    break
+            """);
+        host.ShowUi();
+        Assert.True(host.Process.WaitForExit(5000));
+        Assert.Equal("fatal: audio backend stopped", host.LastMessage);
+    }
+
     [Fact]
     public void FakeHelperCoversReadyControlMeterAndUiReplies()
     {
