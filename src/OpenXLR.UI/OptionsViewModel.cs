@@ -2,6 +2,7 @@ using OpenXLR.UI.Localization;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace OpenXLR.UI;
 
@@ -422,18 +423,25 @@ public sealed class OptionsViewModel : ViewModelBase
         get => _submixer;
         set
         {
-            if (!Set(ref _submixer, value)) return;
+            if (!_main.DaemonRestart.CanRestart || !Set(ref _submixer, value)) return;
             // Start from the file so keys this version does not know survive.
             if (Report((DaemonPrefs.Load() with { Submixer = value }).Save()))
             {
                 SubmixerNote = null;
                 return;
             }
-            SubmixerNote = StartupIntegration.RestartDaemon()
-                ? (value ? Localizer.Text("DaemonRestartedSubmixerOn")
-                         : Localizer.Text("DaemonRestartedHardwareOnly"))
-                : Localizer.Text("SavedRestartDaemonToApply");
+            _ = RestartSubmixerAsync(value);
         }
+    }
+
+    private async Task RestartSubmixerAsync(bool enabled)
+    {
+        SubmixerNote = Localizer.Text("RestartingDaemon");
+        bool restarted = await _main.DaemonRestart.RestartAsync();
+        SubmixerNote = restarted
+            ? (enabled ? Localizer.Text("DaemonRestartedSubmixerOn")
+                       : Localizer.Text("DaemonRestartedHardwareOnly"))
+            : Localizer.Text("SavedRestartDaemonToApply");
     }
 
     private string? _submixerNote;
