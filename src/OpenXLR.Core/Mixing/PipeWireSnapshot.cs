@@ -1,6 +1,12 @@
+using System;
+using System.Collections.Generic;
 using System.Text.Json;
 
+#if OPENXLR_UI
+namespace OpenXLR.UI;
+#else
 namespace OpenXLR.Core.Mixing;
+#endif
 
 /// <summary>
 /// pw-dump may append change arrays while the graph is changing. Fold those
@@ -41,7 +47,7 @@ internal static class PipeWireSnapshot
         }
     }
 
-    private static void Apply(JsonElement batch, Dictionary<uint, JsonElement> objects)
+    internal static void Apply(JsonElement batch, Dictionary<uint, JsonElement> objects)
     {
         if (batch.ValueKind != JsonValueKind.Array)
             throw new JsonException("Expected a PipeWire object array.");
