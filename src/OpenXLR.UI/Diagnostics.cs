@@ -50,7 +50,8 @@ public static class Diagnostics
             await File.WriteAllTextAsync(Path.Combine(work, "PRIVACY.txt"), """
                 This archive is created locally and is never uploaded automatically.
                 It contains OpenXLR state, USB control blocks, PipeWire topology,
-                recent openxlr-daemon journal entries or Flatpak logs, application audio metadata,
+                recent openxlr-daemon journal entries or Flatpak logs,
+                native audio-server and session-manager journal entries, application audio metadata,
                 configuration files, plugin names and paths, the plugin catalogue,
                 Wine/yabridge versions and status, latest scan results, the saved
                 output of plugin scans that failed, and system
@@ -86,8 +87,14 @@ public static class Diagnostics
             await WriteCmd(Clean, work, "lsusb.txt", "lsusb");
             if (FlatpakEnvironment.IsFlatpak)
                 CopyDaemonLogs(Clean, OpenXlrPaths.StateDir, work);
-            else await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
-                "--since", "2 hours ago", "--no-pager");
+            else
+            {
+                await WriteCmd(Clean, work, "journal.txt", "journalctl", "--user", "-u", "openxlr-daemon",
+                    "--since", "2 hours ago", "--no-pager");
+                await WriteCmd(Clean, work, "audio-journal.txt", "journalctl", "--user",
+                    "-u", "pipewire.service", "-u", "pipewire-pulse.service", "-u", "wireplumber.service",
+                    "--since", "2 hours ago", "--no-pager");
+            }
 
             // Configs may include remembered application identities and device
             // names; redact common personal fields and disclose them above.

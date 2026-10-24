@@ -502,7 +502,16 @@ public sealed class DiagnosticsTests
                 JSON
                 """);
             ExecutableScript.Write(Path.Combine(bin, "journalctl"), $$"""
-                echo 'Okt 18 11:23:43 {{machine}} openxlr-daemon[2219]: loaded /mnt/{{login}}/lv2/eq.lv2 for {{login}}@{{machine}}'
+                case "$*" in
+                  '--user -u openxlr-daemon --since 2 hours ago --no-pager')
+                    echo 'Okt 18 11:23:43 {{machine}} openxlr-daemon[2219]: loaded /mnt/{{login}}/lv2/eq.lv2 for {{login}}@{{machine}}'
+                    ;;
+                  '--user -u pipewire.service -u pipewire-pulse.service -u wireplumber.service --since 2 hours ago --no-pager')
+                    echo 'Okt 18 11:23:44 {{machine}} pipewire[2220]: xrun for {{login}}@{{machine}}'
+                    {{(commandWarning ? $"echo 'journal warning for {login}@{machine}: access incomplete' >&2\nexit 1" : "")}}
+                    ;;
+                  *) echo 'unexpected journal request' >&2; exit 91 ;;
+                esac
                 """);
             Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + path);
             Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", config);
@@ -569,6 +578,10 @@ public sealed class DiagnosticsTests
             Assert.Contains("Server Name: PulseAudio (on PipeWire 1.6.9)", entries["pactl-info.txt"]);
             Assert.Contains("WirePlumber                         [1.6.9, <redacted>@<redacted>, pid:1585]", entries["wpctl-status.txt"]);
             Assert.Contains("loaded /mnt/<redacted>/lv2/eq.lv2 for <redacted>@<redacted>", entries["journal.txt"]);
+            Assert.Contains("pipewire[2220]: xrun for <redacted>@<redacted>", entries["audio-journal.txt"]);
+            Assert.DoesNotContain("loaded /mnt/", entries["audio-journal.txt"]);
+            if (commandWarning)
+                Assert.Contains("journal warning for <redacted>@<redacted>: access incomplete", entries["audio-journal.txt"]);
             Assert.Contains("/run/media/<redacted>/VST3", entries["plugin-setup.json"]);
             using var graph = System.Text.Json.JsonDocument.Parse(entries["pw-dump.json"]);
             Assert.Equal("pipewire-<redacted>-1655", graph.RootElement[0].GetProperty("info").GetProperty("props").GetProperty("core.name").GetString());
@@ -579,6 +592,7 @@ public sealed class DiagnosticsTests
             else
                 Assert.DoesNotContain("pw-dump-errors.txt", entries.Keys);
             Assert.Contains("login name", entries["PRIVACY.txt"]);
+            Assert.Contains("audio-server", entries["PRIVACY.txt"]);
         }
         finally
         {

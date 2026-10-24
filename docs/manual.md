@@ -2978,7 +2978,13 @@ Options, SUPPORT, Collect diagnostics. It writes
 capabilities, a dump of the interface's vendor blocks, the PipeWire
 graph and device listings, the last two hours of the daemon journal (under
 Flatpak, `daemon.log` and its rotated copy), `mixer.json`, `ui.json` and
-version information. Warnings and command failure notes for the graph dump
+version information. Native installations also include `audio-journal.txt`
+with the last two hours of the PipeWire, pipewire-pulse and WirePlumber user
+service journals. Audio-server errors can explain distortion or disappearing
+nodes even when the daemon's own journal has no error. These entries use the
+same redaction as the daemon journal; unavailable journals leave a command
+failure note. The Flatpak sandbox keeps collecting its own daemon logs and
+does not read host journals. Warnings and command failure notes for the graph dump
 are kept in `pw-dump-errors.txt`, when present, instead of being appended
 to `pw-dump.json`. Plugin evidence includes the
 catalogue, effective bridge setup and latest native scan results. The home path, host name
