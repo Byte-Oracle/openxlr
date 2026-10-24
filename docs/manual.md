@@ -3030,44 +3030,19 @@ For audio glitches, collect while the problem is present and before restarting
 the daemon, if possible. Collection reads the current state without changing
 audio, recording samples or starting plugins. The extra reports are:
 
-- `collection.json`: UTC start and completion times, elapsed collection time,
-  and each helper's start time, duration, exit status, timeout, truncation and
-  incomplete-output flags. An unavailable helper is marked as not started;
-  JSON sources also say whether their output was complete valid JSON. Helper
-  errors stay beside the report and do not prevent the other sources being
-  collected. Each command has a 15-second deadline, an 8 MiB stdout limit and
-  a 64 KiB stderr limit. Helpers use the C locale so metadata field names
-  match the redaction rules even on a translated desktop.
 - `pw-top.txt`: three batches of node statistics, including rate, quantum and
-  error counters. Counters are evidence to compare with the journals, not a
-  diagnosis of the cause of a glitch.
+  error counters.
 - `sink-inputs.json` and `source-outputs.json`: current playback and recording
-  streams, their formats, mute state and buffering information as Pulse reports
-  them. Process identity fields are masked while numeric audio values stay
-  numeric, even when a USB serial happens to contain the same digits.
-- `audio-services.txt` and `audio-processes.json`, on native installations:
-  loaded service settings and the actual running audio processes' file counts,
-  soft and hard open-file and locked-memory limits, resident memory, state and
-  thread count. A process is read only when its name and real user match the
-  expected service. No process arguments, environment, file descriptor targets
-  or process ids are included in the resource report. A missing field is null,
-  an unlimited limit is -1, and a capped file count is explicitly a lower bound.
-  The report warns at 75% of the actual open-file limit and when that limit
-  differs from the loaded unit. Reloading a unit does not update a process
-  already running. Flatpak does not inspect host user units or host processes.
+  streams, their formats, volume, mute state and buffering as Pulse reports
+  them. The archive masks process identity fields and keeps numeric audio
+  values as numbers.
 
-`audio-graph.txt` and `audio-graph.json` inspect the archived graph: node and
-link states, reported errors, endpoints, link counts and selected clock,
-format and latency properties. Complete `pw-dump` update batches are folded
-with the daemon's registry rules before JSON redaction. Malformed or
-interrupted output keeps its error note and is not treated as a healthy empty
-graph. The [inspection guide](diagnostics.md) explains the fields, budgets
-and how to compare observations without treating idle nodes or resampling as
-faults. Inspection makes no second query and repairs nothing.
-
-These are sequential observations, not one atomic snapshot. A process can
-restart between sources; unknown or unavailable data is not proof of a fault.
-The archive stays local for review before sharing.
+Each helper has a 15-second deadline, an 8 MiB stdout limit and a 64 KiB
+stderr limit, and runs in the C locale. A helper that fails, times out or
+exits with an error leaves a note beside its report, and collection goes on
+with the rest. When `pw-dump` appends update arrays because the graph
+changed during collection, the archive folds them into one array with the
+daemon's own rules, so `pw-dump.json` stays one JSON document.
 
 For a Windows plugin missing from the picker, collect diagnostics after the
 scan finishes and name the plugin and intended insert slot in the report.

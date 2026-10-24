@@ -518,7 +518,6 @@ public sealed class DiagnosticsTests
                 esac
                 """);
             ExecutableScript.Write(Path.Combine(bin, "pw-top"), "printf '%s\\n' 'S ID QUANT RATE ERR NAME' 'R 60 1024 48000 2 OpenXLR_mix_monitor'\n");
-            ExecutableScript.Write(Path.Combine(bin, "systemctl"), "printf '%s\\n' 'Id=pipewire-pulse.service' 'MainPID=123456789' 'LimitNOFILESoft=65536' 'ActiveState=active'\n");
             Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + path);
             Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", config);
             Directory.CreateDirectory(UiSettings.ConfigDir);
@@ -600,39 +599,14 @@ public sealed class DiagnosticsTests
                 Assert.Contains("warning for <redacted>@<redacted>: optional metadata unavailable", entries["pw-dump-errors.txt"]);
             else
                 Assert.DoesNotContain("pw-dump-errors.txt", entries.Keys);
-            using var inspection = System.Text.Json.JsonDocument.Parse(entries["audio-graph.json"]);
-            Assert.True(inspection.RootElement.GetProperty("available").GetBoolean());
-            Assert.Equal(commandWarning ? 2 : 1, inspection.RootElement.GetProperty("nodeCount").GetInt32());
-            Assert.Contains("Source: pw-dump.json", entries["audio-graph.txt"]);
-            if (commandWarning)
-            {
-                Assert.Contains("fixture graph error", entries["audio-graph.txt"]);
-                Assert.Contains(inspection.RootElement.GetProperty("observations").EnumerateArray(),
-                    o => o.GetProperty("code").GetString() == "node-error");
-            }
+            Assert.DoesNotContain("audio-graph.json", entries.Keys);
             using var preferences = System.Text.Json.JsonDocument.Parse(entries["ui.json"]);
             Assert.Equal(1024, preferences.RootElement.GetProperty("numericValue").GetInt32());
             using var streams = System.Text.Json.JsonDocument.Parse(entries["sink-inputs.json"]);
             Assert.Equal(1024, streams.RootElement[0].GetProperty("buffer_latency_usec").GetInt32());
             Assert.Equal("<redacted>", streams.RootElement[0].GetProperty("properties").GetProperty("application.process.id").GetString());
             Assert.Contains("48000 2 OpenXLR_mix_monitor", entries["pw-top.txt"]);
-            Assert.DoesNotContain("123456789", entries["audio-services.txt"]);
-            using var processes = System.Text.Json.JsonDocument.Parse(entries["audio-processes.json"]);
-            Assert.Equal(4, processes.RootElement.GetArrayLength());
-            using var collection = System.Text.Json.JsonDocument.Parse(entries["collection.json"]);
-            var manifest = collection.RootElement;
-            Assert.Equal(1, manifest.GetProperty("schemaVersion").GetInt32());
-            Assert.True(manifest.GetProperty("completedAtUtc").GetDateTimeOffset() >= manifest.GetProperty("startedAtUtc").GetDateTimeOffset());
-            var outcomes = manifest.GetProperty("commandSources").EnumerateArray().ToArray();
-            Assert.All(outcomes, source => Assert.True(source.GetProperty("durationMilliseconds").GetInt64() >= 0));
-            var audio = Assert.Single(outcomes, source => source.GetProperty("source").GetString() == "audio-journal.txt");
-            Assert.Equal(commandWarning ? 1 : 0, audio.GetProperty("exitCode").GetInt32());
-            Assert.True(audio.GetProperty("started").GetBoolean());
-            var graphSource = Assert.Single(outcomes, source => source.GetProperty("source").GetString() == "pw-dump.json");
-            Assert.True(graphSource.GetProperty("validJson").GetBoolean());
-            var recording = Assert.Single(outcomes, source => source.GetProperty("source").GetString() == "source-outputs.json");
-            Assert.Equal(!commandWarning, recording.GetProperty("validJson").GetBoolean());
-            Assert.Equal(commandWarning ? 7 : 0, recording.GetProperty("exitCode").GetInt32());
+            Assert.DoesNotContain("collection.json", entries.Keys);
             if (commandWarning)
             {
                 Assert.Contains("exited with status 7", entries["source-outputs-errors.txt"]);

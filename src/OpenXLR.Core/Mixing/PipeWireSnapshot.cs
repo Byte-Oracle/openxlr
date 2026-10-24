@@ -47,7 +47,7 @@ internal static class PipeWireSnapshot
         }
     }
 
-    internal static void Apply(JsonElement batch, Dictionary<uint, JsonElement> objects)
+    private static void Apply(JsonElement batch, Dictionary<uint, JsonElement> objects)
     {
         if (batch.ValueKind != JsonValueKind.Array)
             throw new JsonException("Expected a PipeWire object array.");
