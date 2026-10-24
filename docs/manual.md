@@ -2998,6 +2998,12 @@ created as a new private file; an existing file or symbolic link at its
 path is refused without overwriting its contents. A collection that
 fails part way removes its incomplete archive.
 
+Configuration copies are limited to 4 MiB per file, the preference reader's
+limit. Symbolic links, non-regular files and files that cannot be read are
+replaced with an omission notice. An unavailable configuration does not stop
+the rest of the collection. The Flatpak daemon logs keep their separate size
+limit and use the same file checks.
+
 Saved plugin scan logs also have credential-shaped values such as passwords
 and API tokens masked, including quoted fields, escaped values and long or
 truncated credentials. If this masking exceeds its time limit, the archive

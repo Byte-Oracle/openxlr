@@ -286,13 +286,13 @@ public sealed class FlatpakRuntimeTests
             Assert.DoesNotContain("12345", text);
             File.WriteAllText(path, new string('x', OpenXLR.UI.Diagnostics.DaemonLogCopyLimit + 1));
             OpenXLR.UI.Diagnostics.CopyDaemonLogs(Clean, root, output);
-            Assert.Contains("Log unavailable:", File.ReadAllText(Path.Combine(output, "daemon.log")));
+            Assert.Contains("File unavailable:", File.ReadAllText(Path.Combine(output, "daemon.log")));
             if (OperatingSystem.IsLinux())
             {
                 File.Delete(path);
                 Assert.True(ProcessRunner.Run("mkfifo", [path]).Ok);
                 OpenXLR.UI.Diagnostics.CopyDaemonLogs(Clean, root, output);
-                Assert.Contains("Log unavailable:", File.ReadAllText(Path.Combine(output, "daemon.log")));
+                Assert.Contains("File unavailable:", File.ReadAllText(Path.Combine(output, "daemon.log")));
             }
         }
         finally { Directory.Delete(root, true); }
