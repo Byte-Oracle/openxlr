@@ -428,7 +428,9 @@ public class Wave3Device : IAudioDevice
     private bool TryAlsa(Action action)
     {
         try { action(); return true; }
-        catch (Exception ex) when (ex is InvalidOperationException or TimeoutException)
+        // A missing amixer (alsa-utils is only recommended) fails to start
+        // rather than exiting, and must not take the interface down with it.
+        catch (Exception ex) when (ex is InvalidOperationException or TimeoutException or System.ComponentModel.Win32Exception)
         {
             _mirrorError = ex.Message;
             return false;

@@ -181,11 +181,29 @@ string and are not touched. The Debian, RPM and Nix packages install
 it; a source install copies it by hand. A
 community tester found the bug and verified the rule on their unit.
 
+The MK.1's ALSA card carries 'Mic Capture Volume', 'Mic Capture Switch'
+and 'PCM Playback Volume', the controls a desktop's sound settings and
+WirePlumber's restore at login act on. The kernel caches their values and
+never reads them back from the interface. An owner's archive showed the
+card's capture volume, which spans 0 to 75 dB, cached at about 74 dB while
+the config block read 48 dB. The backend keeps the card in step with
+the block as it does on the Wave:3: a change in the block (the dial, the
+mute pad, a write from OpenXLR) goes to the card on the next poll, and
+every half second a mute or headphone level changed on the card goes into
+the block. The gain only goes from the block to the card. Each control's
+range is read from the card at connect, and a control the card lacks or
+reports with an empty range is left alone. Whether the MK.1's firmware
+applies a gain written through the card, as the XLR Dock's does, has not
+been checked on an MK.1. Without its card, or without `amixer`, the
+interface is still driven, and the diagnostics dump gives the reason on
+its `alsa` line.
+
 | Control | State | Notes |
 |---|---|---|
 | Gain, mute | verified | community tester; scale is 256 raw units per dB ([openwave PR #8](https://github.com/rikkichy/openwave/pull/8) measured it on the shared protocol) |
 | Headphone volume, low impedance | verified | community tester |
 | Phantom 48V | coded | config byte 6, found by [openwave PR #8](https://github.com/rikkichy/openwave/pull/8) against the MK.1's own 48V LED; the same byte is verified on the XLR Dock. Added after the tester's run, so an LED check on a MK.1 is still open |
+| Desktop volume controls | coded | the card's three controls kept in step with the config block, as on the Wave:3; see above. Not yet checked on an MK.1 |
 | Hardware low cut, ClipGuard, mic/PC crossfade | unmapped | Wave Link exposes these controls; their OpenXLR offsets are unknown. Software low cut and limiting are available in the submixer |
 | Save settings to hardware, LED colours | unmapped | OpenXLR restores its last observed settings on connect instead of issuing Wave Link's hardware-save operation |
 
