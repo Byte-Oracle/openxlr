@@ -3035,6 +3035,22 @@ created as a new private file; an existing file or symbolic link at its
 path is refused without overwriting its contents. A collection that
 fails part way removes its incomplete archive.
 
+`meta.txt` identifies the collecting window by its full build version and
+assembly module id. `daemon-state.json` separately identifies the running
+daemon with `daemonBuildVersion` and `daemonBuildId` when it supports those
+fields. A build version includes its source commit when one was stamped
+at build time. The displayed release number can stay the same across
+source rebuilds, so it alone cannot confirm that a fix is running. The
+window and daemon are separate assemblies; their module ids are not
+expected to match. `openxlr doctor` compares the daemon with a receipt-backed
+installation instead.
+The metadata also records when the state was collected and received, in UTC,
+and whether the client was connected then. A disconnected client retains
+its last state for investigation; that is historical evidence. A new
+connection discards the previous connection's state until its first update
+arrives. The graph and vendor blocks are collected separately and can
+describe a later moment.
+
 Configuration copies are limited to 4 MiB per file, the preference reader's
 limit. Symbolic links, non-regular files and files that cannot be read are
 replaced with an omission notice. An unavailable configuration does not stop

@@ -134,7 +134,13 @@ public sealed class HttpApiTests
             http.DefaultRequestHeaders.Remove("Origin");
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using (var state = System.Text.Json.JsonDocument.Parse(await http.GetStringAsync("/api/v1/state")))
+            {
                 Assert.Equal(DaemonVersion.BuildId, state.RootElement.GetProperty("daemonBuildId").GetString());
+                string buildVersion = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
+                    typeof(DaemonVersion).Assembly)!.InformationalVersion;
+                Assert.Equal(buildVersion, state.RootElement.GetProperty("daemonBuildVersion").GetString());
+                Assert.Equal(buildVersion.Split('+')[0], state.RootElement.GetProperty("daemonVersion").GetString());
+            }
             foreach (string path in new[] { "devices", "profiles", "diagnostics", "editor-rules", "plugin-diagnostics" })
             {
                 using var resource = await http.GetAsync("/api/v1/" + path);

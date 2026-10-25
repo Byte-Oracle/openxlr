@@ -34,6 +34,10 @@ query strings are not accepted. Keep the token out of logs and bug reports.
 `/state` also carries `daemonBuildId`, the running daemon assembly's module
 identity. It lets `openxlr doctor` compare the running build with the one
 installed on disk without restarting it. See [installation.md](installation.md).
+`daemonBuildVersion` keeps the full informational version, including the
+source commit when the build provides one. It is independent of the window's
+build and does not change `daemonVersion`'s release-number format. Older
+daemons omit it.
 
 The device, profile and mixer resources are parts of the same snapshot
 `/state` returns, with the same field names; two requests may see two

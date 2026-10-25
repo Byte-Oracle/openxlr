@@ -880,7 +880,9 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   personal paths, the login name and host names redacted, and no forced
   sync or insert changes. For audio glitches it adds the PipeWire,
   pipewire-pulse and WirePlumber journals, node statistics, and playback and
-  recording stream metadata
+  recording stream metadata. Window and daemon build identities, state
+  receive time and connection status distinguish source rebuilds and
+  retained state from an earlier connection
 - Deep Wine trace checkbox in Options, SUPPORT for reproducing a bridged
   plugin scan failure. Enable it, Rescan, collect diagnostics, then disable
   it. Scans get much slower and produce large logs. The switch takes effect

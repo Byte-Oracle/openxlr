@@ -93,6 +93,13 @@ compares it with the installed assembly to detect a daemon left running
 across an upgrade, including two builds with the same version. Older
 daemons omit it; clients that do not use it can ignore it.
 
+`daemonBuildVersion` is the running daemon's full assembly informational
+version. It includes the source commit after `+` when the build stamped one;
+without that metadata it is only the version. `daemonVersion` remains the
+release number used for compatibility checks. A source rebuild can keep
+the same release number while changing either build field. Older daemons
+omit `daemonBuildVersion`; its absence is not evidence of a particular commit.
+
 The daemon builds the device half of a state message from its last good
 read of the unit. Its poll loop reads the unit every 100 ms and a command
 reads it once after writing. The state message itself never reads USB, so it
@@ -100,7 +107,7 @@ does not wait for a transfer in progress. When the daemon reopens a unit after
 failed reads and the unit has not answered yet, `state` holds the last values
 read from it and `warning` says the unit does not answer.
 
-The state message in full. At the top level: `daemonVersion`, `daemonBuildId`, `warning`,
+The state message in full. At the top level: `daemonVersion`, `daemonBuildId`, `daemonBuildVersion`, `warning`,
 `connected`, `device` (`vendor`, `model`, `usbId`; when the unit is driven differently from the usual, `note`: today an XLR Dock taking a control through its config block, or a Wave XLR, Wave:3 or Wave:1 whose ALSA card was not found, so the desktop's volume controls are not kept in step; and `firmware`, the version the unit reports, on a model that reports one, today the Wave:3, the Wave:1, the MK.2 family and the Wave XLR Pro), `capabilities` (`gain`,
 `mute`, `lowCut`, `expander`, `voiceTune`, `hpVolume`, `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`, `compressor`, `outputRouting`,

@@ -52,8 +52,12 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
     /// <summary>Raised on every state push (already on a background thread).</summary>
     public event Action<JsonNode>? StateReceived;
 
-    /// <summary>The raw JSON of the newest state push, for diagnostics.</summary>
-    public string? LastStateJson { get; private set; }
+    internal sealed record StateObservation(string? Json, DateTimeOffset? ReceivedAt, bool Connected);
+    private volatile StateObservation _lastState = new(null, null, false);
+    internal StateObservation StateForDiagnostics => _lastState;
+
+    /// <summary>The last state of this connection, retained after disconnection for diagnostics.</summary>
+    public string? LastStateJson => _lastState.Json;
 
     /// <summary>Request the daemon's vendor-block dump; null on timeout.</summary>
     public Task<JsonNode?> RequestDiagnosticsAsync(TimeSpan timeout)
@@ -276,6 +280,9 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
                 string auth = JsonSerializer.Serialize(new Dictionary<string, object>
                     { ["cmd"] = "auth", ["token"] = OpenXlrPaths.ReadToken() ?? "" });
                 await socket.SendAsync(Encoding.UTF8.GetBytes(auth), WebSocketMessageType.Text, true, connect.Token);
+                // Do not attribute the previous daemon's cached state to this
+                // connection while waiting for its first state message.
+                _lastState = new(null, null, true);
                 ConnectionChanged?.Invoke(true);
                 await ReceiveLoop(socket);
             }
@@ -292,6 +299,7 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
             {
                 _socket?.Dispose();
                 _socket = null;
+                _lastState = _lastState with { Connected = false };
                 lock (_lifecycle)
                 {
                     foreach (var query in _queriesById.Values) query.Reply.TrySetResult(null);
@@ -337,7 +345,11 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
 
             string? type = node["type"]?.GetValue<string>();
             if (type == "error") ErrorReceived?.Invoke(node["message"]?.GetValue<string>() ?? Localizer.Text("UnknownError"));
-            else if (type == "state") { LastStateJson = text; StateReceived?.Invoke(node); }
+            else if (type == "state")
+            {
+                _lastState = new(text, DateTimeOffset.UtcNow, true);
+                StateReceived?.Invoke(node);
+            }
             else if (type == "diagnostics") StoreReply(type, node);
             else if (type == "plugins") StoreReply(type, node["plugins"]);
             else if (type == "nativeEditorRulesChanged") NativeEditorRulesChanged?.Invoke();

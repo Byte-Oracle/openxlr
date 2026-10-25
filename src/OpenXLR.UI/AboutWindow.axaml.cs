@@ -27,8 +27,9 @@ public partial class AboutWindow : Window
 /// <summary>The app version, from the assembly (set once in Directory.Build.props).</summary>
 public static class AppVersion
 {
-    public static readonly string Current =
+    public static readonly string BuildVersion =
         Assembly.GetExecutingAssembly()
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion.Split('+')[0] ?? "0.0.0";
+            .InformationalVersion ?? "0.0.0";
+    public static readonly string Current = BuildVersion.Split('+')[0];
 }
