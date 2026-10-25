@@ -144,6 +144,7 @@ public partial class MainWindow : Window
             _reallyExit = true;
             _hideToTrayPending = false;
             _mixerWindow?.Close();
+            _options?.Close();
             _lifetime.Cancel();
             DisposeTray();
             _desktopKeys.Dispose();
@@ -292,8 +293,24 @@ public partial class MainWindow : Window
         _tray = null;
     }
 
+    private OptionsWindow? _options;
+
+    /// <summary>One owned Options window, leaving the mixer available while settings are changed.</summary>
     private void OnOptions(object? sender, RoutedEventArgs e)
-        => new OptionsWindow(new OptionsViewModel(_client, _vm) { ResetArrangement = ResetSkinArrangement }, _desktopKeys).ShowDialog(this);
+    {
+        if (_options is { } open)
+        {
+            if (open.DataContext is OptionsViewModel vm) vm.RefreshMixerView();
+            if (!open.IsVisible) open.Show(this);
+            if (open.WindowState == WindowState.Minimized) open.WindowState = WindowState.Normal;
+            open.Activate();
+            return;
+        }
+        var window = new OptionsWindow(new OptionsViewModel(_client, _vm) { ResetArrangement = ResetSkinArrangement }, _desktopKeys);
+        _options = window;
+        window.Closed += (_, _) => { if (_options == window) _options = null; };
+        window.Show(this);
+    }
 
     private void OnManageApps(object? sender, RoutedEventArgs e)
         => new AppsWindow { DataContext = _vm }.ShowDialog(this);

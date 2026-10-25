@@ -790,6 +790,8 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
 
 ## Other
 
+- Options stays open beside the mixer without blocking its controls. The
+  header's gear returns to the same window, including when it is minimized.
 - Enforced defaults: the daemon re-asserts the chosen system default
   sink and source on its one-second sweep, undoing WirePlumber's
   auto-switch to newly created nodes. The defaults to restore are read

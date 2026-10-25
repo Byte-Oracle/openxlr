@@ -42,6 +42,7 @@ public partial class OptionsWindow : Window
     {
         DataContext = vm;
         Opened += async (_, _) => await vm.LoadPluginSetupAsync();
+        Activated += (_, _) => vm.RefreshMixerView();
     }
 
     // The desktop keys belong to the main window, which keeps them running

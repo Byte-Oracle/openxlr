@@ -49,6 +49,7 @@ public sealed class WindowLayoutTests
                 OutputControlsWindowTests.Check();
                 ProfileSliderWindowTests.Check();
                 EditorRulesReconnectWindowTests.Check();
+                OptionsInteractionWindowTests.Check();
                 UserMonitorWindowTests.Check();
                 MonitorOutputPickerWindowTests.Check();
                 MonitorMicrophonePauseWindowTests.Check();
