@@ -687,7 +687,10 @@ internal static partial class SkinLayoutWindowTests
             var model = (MatrixRowViewModel)row.DataContext!;
             Border head = row.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MatrixRowHead");
             // The name and source columns, inside the tile's own border where the skin draws one.
-            Assert.Equal(nameWidth + cellWidth + head.BorderThickness.Left + head.BorderThickness.Right, head.Bounds.Width, 0.5);
+            double scale = window.RenderScaling;
+            double border = (Math.Round(head.BorderThickness.Left * scale)
+                + Math.Round(head.BorderThickness.Right * scale)) / scale;
+            Assert.Equal(nameWidth + cellWidth + border, head.Bounds.Width, 0.5);
             // A head that stacks a gain over the volume, or the EQ over the chain,
             // takes what the two need, never less than the row height; every
             // other head is the row height.

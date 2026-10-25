@@ -109,10 +109,12 @@ public partial class MainWindow
         if (_watchedView is not null) _watchedView.PropertyChanged -= OnMixerViewChanged;
         _watchedView = DataContext as MainViewModel;
         if (_watchedView is not null) _watchedView.PropertyChanged += OnMixerViewChanged;
+        LayOutHeadphones();
     }
 
     private void OnMixerViewChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainViewModel.HasHp2)) LayOutHeadphones();
         // A skin's pop-out default waits for a mixer to pop out.
         if (e.PropertyName == nameof(MainViewModel.HasMixer)) ApplyPendingPopOut();
         if (e.PropertyName != nameof(MainViewModel.IsMiniView) || _watchedView?.IsMiniView != true

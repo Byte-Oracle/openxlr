@@ -46,6 +46,7 @@ public sealed class WindowLayoutTests
                 ((DaemonClient)typeof(MainWindow).GetField("_client", BindingFlags.Instance | BindingFlags.NonPublic)!
                     .GetValue(main)!).DisposeAsync().AsTask().GetAwaiter().GetResult();
                 Dispatcher.UIThread.RunJobs();
+                OutputControlsWindowTests.Check();
                 ProfileSliderWindowTests.Check();
                 EditorRulesReconnectWindowTests.Check();
                 UserMonitorWindowTests.Check();
@@ -959,8 +960,10 @@ public sealed class WindowLayoutTests
                 var first = new Rect(controls[i].TranslatePoint(default, root)!.Value, controls[i].Bounds.Size);
                 var second = new Rect(controls[j].TranslatePoint(default, root)!.Value, controls[j].Bounds.Size);
                 var intersection = first.Intersect(second);
-                Assert.True(intersection.Width <= 0 || intersection.Height <= 0,
-                    $"{controls[i].GetType().Name} overlaps {controls[j].GetType().Name}.");
+                // Fractional display scales can transform touching edges a
+                // floating-point rounding error apart. Still reject subpixel overlaps.
+                Assert.True(intersection.Width <= 0.000001 || intersection.Height <= 0.000001,
+                    $"{Describe(controls[i])} at {first} overlaps {Describe(controls[j])} at {second}.");
             }
     }
 

@@ -662,7 +662,7 @@
           <TextBlock Text="{loc:Text Key=HEADPHONES}" Classes="h" VerticalAlignment="Center"/>
         </StackPanel></Expander.Header>
       <StackPanel Classes="dev" Spacing="4">
-        <Grid ColumnDefinitions="90,*,64,20,90,*,64">
+        <Grid Name="HeadphoneControls" ColumnDefinitions="90,*,64,20,90,*,64">
           <Grid Name="Phones1Label" ColumnDefinitions="Auto,*" VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=FrontJack}"
                 DataContext="{Binding Phones1Appearance}" x:DataType="vm:LayoutAppearanceViewModel">
             <vm:LayoutIconBlock Icon="{Binding Icon}" Fallback="{Binding DefaultIcon}" Classes="h" Classes.layoutAccent="{Binding HasColour}"

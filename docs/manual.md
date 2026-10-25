@@ -574,6 +574,10 @@ that was the default.
    the zero-latency direct monitor inside the device: left is only your
    microphone, right is only computer audio.
 
+With one headphone jack, its volume fader uses the whole row. Two jacks
+share the row equally. In MONITOR, a long output name is shortened to
+leave room for the volume fader; hover over the picker for the full name.
+
 On the Wave XLR Pro the headphone jacks are fed by a mix inside the
 device. When a jack is the only monitor output, XLR 1's send to the
 Monitor mix drives that hardware path: unmuted, you hear yourself with
