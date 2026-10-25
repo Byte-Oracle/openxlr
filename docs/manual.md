@@ -2165,7 +2165,7 @@ the old controls cannot affect a plugin that now uses the same slot id.
 <a name="skins"></a>
 ### 3.10 Change how the UI looks
 
-Options, APPEARANCE picks a skin. OpenXLR ships sixteen, all built into
+Options, APPEARANCE picks a skin. OpenXLR ships seventeen, all built into
 the application, so a package brings them with it:
 
 - **Material**, the classic appearance, in a dark palette, which is what
@@ -2183,6 +2183,8 @@ the application, so a package brings them with it:
   Night. Catppuccin Latte and Rose Pine are light;
 - **Broadcast**, the default, a dark neutral palette that also rearranges
   the UI, described below;
+- **Compact Desk**, a denser dark matrix with bounded headphones and
+  application tiles wrapping across the page, described below;
 - **Nyan Pink**, dark plum cards, candy pink faders and cyan details,
   using the classic arrangement and your saved section order;
 - **Wave**, dark charcoal cards, grey faders and green meters, arranged
@@ -2261,6 +2263,17 @@ Your Arrange moves are kept for Broadcast alone, and **Reset this skin's
 arrangement** in Options puts everything back where the skin places it. A
 copy of the skin to start your own from is in
 [docs/examples/skins](examples/skins/README.md).
+
+**Compact Desk** is an optional dark skin for a denser desk. Choose it in
+Options under APPEARANCE. It keeps the headphone card 600 pixels wide and
+lets MONITOR use the rest of the row. Applications wrap across the page
+instead of filling six rows first. Longer matrix faders and wider name
+columns keep a three-mix desk from leaving half the card empty; muted
+faders stay visible against the dark blue-grey surfaces. Profiles,
+Flow and Arrange stay in the header, with Restart daemon, the version and
+About in its overflow menu. All the same headphone, input, effect and mix
+controls remain available. A narrow window scrolls the page sideways as
+Broadcast does, and the normal and Touch control sizes still apply.
 
 The choice takes effect at once. Windows that are already open repaint;
 audio, the mixer, the routing and the layout are untouched, and nothing is

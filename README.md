@@ -102,7 +102,7 @@ If you own an untested device, open an issue with a diagnostics archive
   tiling setup ([manual](docs/manual.md#terminal)).
 - **Omarchy bar**: meters, mutes and sends in Omarchy 4's bar
   ([omarchy.md](docs/omarchy.md)).
-- **Skins**: sixteen built in, among them Broadcast (the default) and
+- **Skins**: seventeen built in, among them Broadcast (the default) and
   Wave, which draw the mixer as a matrix of inputs and mixes. A skin is
   data, not code ([skins.md](docs/skins.md)).
 - **Languages**: English, German, Spanish, Italian, Tagalog, Cebuano and

@@ -112,8 +112,8 @@ public sealed class SkinLayoutTests
     }
 
     /// <summary>
-    /// Broadcast and Wave rearrange the window, and the whole of their
-    /// layouts is taken. Every other shipped skin is colours and
+    /// Broadcast, Wave and Compact Desk rearrange the window, and their
+    /// complete layouts are taken. Every other shipped skin is colours and
     /// control appearances only, so it keeps the classic arrangement and the
     /// user's own section order.
     /// </summary>
@@ -123,7 +123,7 @@ public sealed class SkinLayoutTests
         foreach (SkinEntry entry in SkinCatalog.BuiltIn())
         {
             Assert.Empty(entry.Errors);
-            if (entry.Id is "broadcast" or "wave") Assert.NotNull(entry.Package.Layout);
+            if (entry.Id is "broadcast" or "wave" or "compact-desk") Assert.NotNull(entry.Package.Layout);
             else Assert.Null(entry.Package.Layout);
         }
     }

@@ -99,7 +99,7 @@ public sealed class SkinPackageTests : IDisposable
         // Every appearance the application carries is compiled in, so a
         // package has them all without installing a single file.
         Assert.Equal(
-            ["broadcast", "catppuccin", "catppuccin-latte", "everforest", "gruvbox", "kanagawa", "matte-black",
+            ["broadcast", "catppuccin", "catppuccin-latte", "compact-desk", "everforest", "gruvbox", "kanagawa", "matte-black",
                 "nord", "nyan-pink", "opendeck", "osaka-jade", "ristretto", "rose-pine", "tokyo-night", "wave"],
             built.Select(e => e.Id).Order(StringComparer.Ordinal));
         foreach (SkinEntry entry in built)
