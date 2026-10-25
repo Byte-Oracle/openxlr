@@ -185,6 +185,7 @@ internal static partial class SkinLayoutWindowTests
             CheckBroadcast();
             CheckFreshStart();
             CheckApplicationColumns();
+            CheckCompactDesk();
 
             // Material brings the legacy order back, in the column it always was.
             Wear(SkinPackage.DefaultId);

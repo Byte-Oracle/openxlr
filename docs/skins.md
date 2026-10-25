@@ -6,7 +6,7 @@ appearance values and, if it wants, where the header and the
 UI's sections go ([Layout](#layout)); it carries no markup, no script and
 no code, and it cannot reach a file outside its own folder.
 
-OpenXLR ships sixteen appearances, all compiled into the application, so
+OpenXLR ships seventeen appearances, all compiled into the application, so
 every package has them and there is nothing to install:
 
 - **Material**, the classic appearance, in a dark and a light palette (see
@@ -32,6 +32,11 @@ every package has them and there is nothing to install:
   microphone switches and plugins, and APPLICATIONS is under the matrix in columns of six, on a dark neutral
   palette. It is the reference for writing a layout skin; see
   [Layout](#layout).
+- **Compact Desk**, a dark matrix layout with a 600 pixel headphone column
+  and a monitor toolbar that takes the remaining width. Smaller matrix cells
+  keep the mixer dense, application tiles wrap across the page, and the
+  header keeps Profiles, Flow and Arrange beside an overflow menu for the
+  other actions. It uses the existing controls and does not change Broadcast.
 - **Nyan Pink**, a dark plum palette with candy pink faders, cyan details
   and segmented green, amber and red meters. It keeps the classic mixer
   arrangement and the saved section order.

@@ -55,6 +55,20 @@
     "Ox.Meter.WarningLevel": 0.7,
     "Ox.Meter.HotLevel": 0.9
   },
+  "compact-desk": {
+    "Ox.Card.Background": "#222222",
+    "Ox.Text.Primary": "#e6e6e6",
+    "Ox.Text.Muted": "#8c8c8c",
+    "Ox.Led.On": "#4ade80",
+    "Ox.Led.Off": "#404040",
+    "Ox.Led.Alert": "#ef4444",
+    "Ox.Meter.Track": "#141414",
+    "Ox.Meter.Fill": "#4ade80",
+    "Ox.Meter.Warning": "#facc15",
+    "Ox.Meter.Hot": "#ef4444",
+    "Ox.Meter.WarningLevel": 0.7,
+    "Ox.Meter.HotLevel": 0.9
+  },
   "everforest": {
     "Ox.Card.Background": "#313940",
     "Ox.Text.Primary": "#d3c6aa",

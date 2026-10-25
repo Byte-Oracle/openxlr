@@ -24,6 +24,14 @@ var palettes = {
     "warningLevel": 0.7,
     "hotLevel": 0.9
   },
+  "compact-desk": {
+    "fill": "#4ade80",
+    "warning": "#facc15",
+    "hot": "#ef4444",
+    "track": "#141414",
+    "warningLevel": 0.7,
+    "hotLevel": 0.9
+  },
   "everforest": {
     "fill": "#a7c080",
     "warning": "#dbbc7f",
