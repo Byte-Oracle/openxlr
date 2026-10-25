@@ -16,8 +16,8 @@ The current implementation of this protocol is
 `src/OpenXLR.Core/Devices/WaveXlrProDevice.cs` (libusb control transfers,
 read-modify-write of the blocks below, commit block after selector
 writes): both XLR structures, both headphone volumes, the USB Aux input
-stage, the physical output selectors and the commit sequence, and each
-input's microphone EQ (section 10). The mic map
+stage, the Line In gain (section 13), the physical output selectors and the
+commit sequence, and each input's microphone EQ (section 10). The mic map
 as finally verified (section 6): flags bit 1 = phantom, bit 4 = low cut,
 bit 5 = expander, bit 6 = voice tune, bit 7 = compressor; ClipGuard is the
 inverted `0x04` value at structure offset 2. There is no polarity control.
@@ -205,7 +205,8 @@ structures cleanly (all verified bidirectionally against ALSA on hardware):
   XLR 1 at offset 0, XLR 2 at offset 38, identical field layout (gain byte, flags byte,
   voice-tune strength at +10). Verified: off38 tracks the ALSA rear channel pair exactly
   (vendor write 40 -> ALSA rear reads 40). The tail (off76 = 0x14 = 20) matches the ALSA
-  front-center/woofer pair, a third input stage, not yet exposed.
+  front-center/woofer pair, a third input stage, not yet exposed. (Section 13: off76 is the
+  analog Line In's gain.)
 - **ALSA channel map of the 6-channel capture control: front pair = XLR 1 gain, rear
   pair = XLR 2 gain, center/woofer pair = third stage.** `amixer cset numid=3 <v>` sets
   ALL of them at once, which is why they can appear synced.
@@ -262,7 +263,8 @@ bus -> Headphones 1) confirmed by ear.
 - off79 = input level, quarter-dB attenuation: dB = -byte/4, range 0..240 = 0..-60 dB (same
   encoding as the phones volumes).
 - off77 = level lock, 0x04 = locked.
-- off76 = a further gain-stage byte (memory: third input stage), still unexposed.
+- off76 = a further gain-stage byte (memory: third input stage), still unexposed. Section 13
+  identifies it as the Line In gain; the USB Aux level and lock above are unchanged.
 
 ### Implemented in OpenXLR (same day, all live-verified)
 
@@ -579,3 +581,46 @@ reduce and the headphones stay level.
   not settled.
 - Byte 14 of each section, and what section 0's 21 dB lower level comes
   from.
+
+## 13. Line In and the capture layout (desk measurement of 2026-10-25)
+
+Firmware 1.0.14, the desk unit. This corrects the mixer's earlier model, in
+which the USB Aux port and the Line In jack shared one capture pair (pair
+2) and one channel served both. Elgato documents USB Aux and the analog
+Line In as separate inputs
+([Wave XLR Pro: USB Host and USB Aux](https://www.elgato.com/ch/en/explorer/products/wave/wave-xlr-pro-whats-the-difference-between-usb-host-and-usb-aux/)),
+and the capture source carries them apart.
+
+### The raw capture source
+
+`alsa_input.usb-Elgato_Elgato_Wave_XLR_Pro_*.pro-input-0` has 18 channels:
+
+| Channels | Carries |
+|---|---|
+| AUX0, AUX1 | XLR 1 |
+| AUX2, AUX3 | XLR 2 |
+| AUX4, AUX5 | USB Aux |
+| AUX6, AUX7 | Line In, stereo, confirmed with a source playing into the jack |
+| AUX8 to AUX17 | the five hardware mixes streamed back (section 12) |
+
+OpenXLR's Aux In channel takes AUX4 and AUX5 only, and its Line In channel
+takes AUX6 and AUX7 (capture pair 3). No channel takes AUX8 to AUX17. The
+Line In channel is shown only while the capture source has this 18-channel
+layout; on a source with fewer channels it stays silent.
+
+### The Line In gain
+
+Block 0x0004 byte 76 holds the Line In gain in dB, 0 to 80 (`14`, 20 dB,
+on the desk unit). The same value is the third pair (center and woofer) of
+the six-value ALSA control `Elgato Wave XLR Pro Capture Volume` (numid=3),
+whose front pair is XLR 1's gain and rear pair XLR 2's. OpenXLR writes it
+as it writes the XLR gains: one read of block 0x0004 and one write of the
+whole block, with no 0x0003 commit, every other byte as read. Bytes 77 to
+79 are not written by this control. There is no hardware Line In mute;
+the channel's mute in OpenXLR is the software one.
+
+### Open
+
+- Writing byte 76 from OpenXLR and hearing the gain change on the Line In
+  channel.
+- Bytes 77 to 79 beyond the USB Aux level and lock of section 6.

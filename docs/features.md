@@ -21,6 +21,9 @@ Wave XLR Pro:
 - Per XLR input: gain (0 to 80 dB), mute, low cut, expander, voice tune
   with strength, phantom power, ClipGuard, compressor
 - USB Aux input stage: level (0 to -60 dB) and level lock
+- Analog Line In: its own channel and its own gain (0 to 80 dB), separate
+  from the USB Aux input (the Line In gain write is in beta, see
+  [hardware-support.md](hardware-support.md))
 - Both headphone outputs: independent volumes, low-impedance mode
 - Mic/PC direct-monitor crossfade (inside the device, no host latency)
 - Physical output routing: Headphones 1, Headphones 2, Line Out and USB
@@ -183,8 +186,8 @@ read or disable those unmapped settings.
 Two behaviours apply on multi-device switching: the mixer's hardware
 input channels follow the active device, and after a switch the
 hardware channels' monitor sends come up muted, so the newly patched mic
-does not reach the speakers until unmuted. Aux In and XLR 2 keep their
-monitor sends when either device lacks that input, as a one-input unit does,
+does not reach the speakers until unmuted. Aux In, Line In and XLR 2 keep
+their monitor sends when either device lacks that input, as a one-input unit does,
 since no new microphone reaches them.
 
 ## Submixer
@@ -201,12 +204,18 @@ unrelated routes dimmed. Processing stays inside the channel and mix cards;
 the tooltip lists each insert in signal order. See [Audio flow](manual.md#audio-flow).
 
 Built from PipeWire nodes, no kernel modules or custom drivers:
-- Channels for the hardware inputs (XLR 1, XLR 2, Aux In), for
+- Channels for the hardware inputs (XLR 1, XLR 2, Aux In, Line In), for
   application groups (Game, Music, Browser, System, Voice Chat, SFX) and
-  for other PipeWire capture sources (below). XLR 2 and Aux In are shown
-  only where the device has them, which is the Wave XLR Pro, or while XLR
-  2 is bound to another source; every client
-  reads that from the state rather than deciding for itself
+  for other PipeWire capture sources (below). XLR 2, Aux In and Line In
+  are shown only where the device has them, which is the Wave XLR Pro, or
+  while XLR 2 is bound to another source; Line In also needs the Pro's
+  capture source in its 18-channel layout. Every client reads that from
+  the state rather than deciding for itself
+- Aux In and Line In are separate channels: Aux In takes the USB Aux
+  port's pair (AUX4 and AUX5 of the Pro's capture source), Line In the
+  analog Line In's (AUX6 and AUX7), and the two are never mixed into one
+  channel. Each strip's readout shows its level or gain, and the
+  channel's volume while that volume's fader moves
 - Mixes: Monitor A (what you hear), Monitor B (a second selection for
   outputs that should hear something else), the virtual microphones
   (Stream and Chat by default, published as capture devices selectable
@@ -218,7 +227,7 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
 - A volume for every channel that scales every send of the channel at
   once, like the channel level in Wave Link 3. It is folded into the send
   streams the mixer already has, so it adds no node and no delay. XLR 1,
-  XLR 2 and Aux In have one too, after the interface's gain, so a strip
+  XLR 2, Aux In and Line In have one too, after the interface's gain, so a strip
   bound to a webcam or USB microphone without a gain control still has a
   level, and a strip with plugins has one after them. The UI draws it
   in the channel tiles, in the input rack and in the mix matrix's row
@@ -446,7 +455,7 @@ and healed on its own; a capture input without active inserts adds no node.
 Profiles carry capture chains, and an older profile that does not name one
 leaves it alone. When the source goes away its chain stops, and it starts
 again from the saved parameters on replug. The classic INPUTS panel lists
-each capture input after Aux In with its source, volume and inserts.
+each capture input after Aux In and Line In with its source, volume and inserts.
 An additional interface's gain and switches appear in that capture block,
 labelled with the unit's name; the primary keeps its "plays on" heading.
 Capture inputs remember their Elgato unit and follow a renamed source on

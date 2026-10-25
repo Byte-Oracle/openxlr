@@ -115,7 +115,7 @@ as separate selected outputs.
 `{"cmd":"setChannelVolume","channel":"game","value":0.5}` sets the Game
 channel's own volume, which scales every send of the channel at once, and
 `GET /api/v1/channels/game` reads it back as `volume`. Every channel takes
-one, `xlr1`, `xlr2` and `aux` included.
+one, `xlr1`, `xlr2`, `aux` and `line` included.
 
 A capture channel reports `microphone` and `chainWidth` through
 `GET /api/v1/channels/{id}`. For a mono capture channel named `brio`,
