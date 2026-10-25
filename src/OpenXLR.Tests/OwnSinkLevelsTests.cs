@@ -50,6 +50,29 @@ public sealed class OwnSinkLevelsTests
            "\", \"media.class\": \"Stream/Output/Audio\", \"object.serial\": " + serial + "}, \"params\": {\"Props\": [{\"volume\": 1.0, \"channelVolumes\": [" +
            volumes + "], \"mute\": " + (mute ? "true" : "false") + "}]}}}";
 
+    private static string Stage(string name, string mediaClass, string serial, string volumes, bool mute)
+        => "{\"id\": 9, \"type\": \"PipeWire:Interface:Node\", \"info\": {\"props\": {\"node.name\": \"" + name +
+           "\", \"media.class\": \"" + mediaClass + "\", \"object.serial\": " + serial + "}, \"params\": {\"Props\": [{\"volume\": 1.0, \"channelVolumes\": [" +
+           volumes + "], \"mute\": " + (mute ? "true" : "false") + "}]}}}";
+
+    [Fact]
+    public void OnlyOurStageStreamsAreListedWithTheirDirectionAndLevel()
+    {
+        byte[] json = Dump(
+            Stage("OpenXLR_lc_xlr1_3_in", "Stream/Input/Audio", "40", "1.0", true),
+            Stage("OpenXLR_lc_xlr1_3_out", "Stream/Output/Audio", "\"41\"", "0.125", false),
+            // A combine leg is ours too, but its level is a fader the mixer sets.
+            Stage("output.OpenXLR_ch_game_OpenXLR_mix_monitor", "Stream/Output/Audio", "42", "0.5, 0.5", false),
+            Stage("Firefox", "Stream/Output/Audio", "43", "0.5, 0.5", false),
+            Stage("OpenXLR_lc_xlr2_1_out", "Stream/Output/Audio", "\"not a serial\"", "1.0", false),
+            Node("OpenXLR_ch_game", "Audio/Sink", "1.0, 1.0", false));
+        var stages = PipeWireAdapter.OwnStageStreams(json);
+        Assert.Equal(
+            [new OwnStageStream("OpenXLR_lc_xlr1_3_in", 40, true, 1.0, true),
+             new OwnStageStream("OpenXLR_lc_xlr1_3_out", 41, false, 0.125, false)],
+            stages);
+    }
+
     [Fact]
     public void CombineLegsAreListedBySerialWithTheDesktopPercentageAndMute()
     {

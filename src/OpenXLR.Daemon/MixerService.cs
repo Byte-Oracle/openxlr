@@ -601,7 +601,7 @@ public sealed class MixerService : IHostedService, IDisposable
             stop.ThrowIfCancellationRequested();
             bool monitorChanged = _mixer.SyncOwnSinkLevels(out IReadOnlyList<string> restoredSinks);
             if (restoredSinks.Count > 0)
-                _log.LogWarning("restored the expected level and mute of {n} OpenXLR sink(s) ({names}); something outside OpenXLR had changed them",
+                _log.LogWarning("restored the expected level and mute of {n} OpenXLR sink(s) or stage stream(s) ({names}); something outside OpenXLR had changed them",
                     restoredSinks.Count, string.Join(", ", restoredSinks));
             // Collect what the plugins' own editors changed before the
             // healing pass below, so a chain that is about to be rebuilt

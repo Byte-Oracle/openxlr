@@ -2085,10 +2085,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             _readingDesktopMutes = true;
             try
             {
-                IReadOnlyList<OwnSinkLevel> levels = _pw.OwnSinkLevels();
+                (IReadOnlyList<OwnSinkLevel> levels, IReadOnlyList<OwnStageStream> stages) = _pw.OwnLevels();
                 bool changed = ReadDesktopMonitorMuteLocked(ref levels);
                 bool pending = _microphonePausePending;
-                restored = EnsureOwnSinkLevelsLocked(levels);
+                restored = EnsureOwnSinkLevelsLocked(levels, stages);
                 return SyncMonitorVolumesLocked(levels) || changed || pending != _microphonePausePending;
             }
             finally
@@ -2100,17 +2100,22 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     }
 
     /// <summary>
-    /// Hold internal channel, DSP and non-monitor mix sinks at unity and
-    /// unmuted. Monitor sinks carry their own masters and belong to the
-    /// desktop controls too. Returns the internal sinks put back.
+    /// Hold internal channel, DSP and non-monitor mix sinks, and the DSP
+    /// stage streams, at unity and unmuted. Monitor sinks carry their own
+    /// masters and belong to the desktop controls too. Returns the internal
+    /// sinks and streams put back.
     /// </summary>
     public IReadOnlyList<string> EnsureOwnSinkLevels()
     {
         lock (_gate)
-            return _built ? EnsureOwnSinkLevelsLocked(_pw.OwnSinkLevels()) : [];
+        {
+            if (!_built) return [];
+            (IReadOnlyList<OwnSinkLevel> levels, IReadOnlyList<OwnStageStream> stages) = _pw.OwnLevels();
+            return EnsureOwnSinkLevelsLocked(levels, stages);
+        }
     }
 
-    private IReadOnlyList<string> EnsureOwnSinkLevelsLocked(IReadOnlyList<OwnSinkLevel> levels)
+    private IReadOnlyList<string> EnsureOwnSinkLevelsLocked(IReadOnlyList<OwnSinkLevel> levels, IReadOnlyList<OwnStageStream> stages)
     {
         var restored = new List<string>();
         var microphones = _config.Channels.Where(c => c.Microphone).Select(c => c.SinkName).ToHashSet(StringComparer.Ordinal);
@@ -2140,6 +2145,16 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 restored.Add(sink.Name);
             }
             catch (InvalidOperationException) { /* the sink went away; the next sweep sees the rest */ }
+        }
+        foreach (OwnStageStream stage in stages)
+        {
+            if (Math.Abs(stage.Volume - 1.0) <= 0.01 && !stage.Muted) continue;
+            try
+            {
+                _pw.HoldStageStream(stage);
+                restored.Add(stage.Name);
+            }
+            catch (InvalidOperationException) { /* the stage was rebuilt; the next sweep reads the new one */ }
         }
         return restored;
     }

@@ -425,6 +425,67 @@ public sealed class PipeWireAdapter
     }
 
     /// <summary>
+    /// The daemon's own DSP stages, published as streams so no application
+    /// can record from or play into one as a device. The desktop still lists
+    /// each as an application with a volume and a mute, which nothing of ours
+    /// sets, so the sweep holds them at unity as it holds our sinks.
+    /// </summary>
+    public IReadOnlyList<OwnStageStream> OwnStageStreams() => OwnStageStreams(GraphObjects());
+
+    /// <summary>Our sinks and our stage streams from one graph read, for the sweep that holds both.</summary>
+    public (IReadOnlyList<OwnSinkLevel> Sinks, IReadOnlyList<OwnStageStream> Stages) OwnLevels()
+    {
+        JsonElement[] objects = GraphObjects();
+        return (OwnSinkLevels(objects), OwnStageStreams(objects));
+    }
+
+    internal static IReadOnlyList<OwnStageStream> OwnStageStreams(byte[] json) => OwnStageStreams(ParseObjects(json));
+
+    private static List<OwnStageStream> OwnStageStreams(IEnumerable<JsonElement> objects)
+    {
+        var found = new List<OwnStageStream>();
+        foreach (JsonElement o in objects)
+        {
+            if (!o.TryGetProperty("type", out JsonElement t) ||
+                !(t.GetString()?.EndsWith("Node", StringComparison.Ordinal) ?? false)) continue;
+            if (!o.TryGetProperty("info", out JsonElement info) ||
+                !info.TryGetProperty("props", out JsonElement props)) continue;
+            string? name = props.TryGetProperty("node.name", out JsonElement n) ? n.GetString() : null;
+            if (name is null || !name.StartsWith("OpenXLR_", StringComparison.Ordinal)) continue;
+            string? kind = props.TryGetProperty("media.class", out JsonElement m) ? m.GetString() : null;
+            if (kind is not ("Stream/Input/Audio" or "Stream/Output/Audio")) continue;
+            if (Serial(props) is not int serial) continue;
+            if (SinkLevel(info) is (double volume, _, bool muted))
+                found.Add(new OwnStageStream(name, serial, kind == "Stream/Input/Audio", volume, muted));
+        }
+        return found;
+    }
+
+    /// <summary>Put one of our stage streams back to full volume, unmuted.</summary>
+    public void HoldStageStream(OwnStageStream stage)
+    {
+        string kind = stage.Input ? "source-output" : "sink-input";
+        string index = stage.Serial.ToString(CultureInfo.InvariantCulture);
+        Run("pactl", $"set-{kind}-volume", index, "100%");
+        Run("pactl", $"set-{kind}-mute", index, "0");
+        InvalidateDump();
+    }
+
+    /// <summary>A node's object serial, which pipewire-pulse uses as its stream index.</summary>
+    private static int? Serial(JsonElement props)
+    {
+        if (!props.TryGetProperty("object.serial", out JsonElement s)) return null;
+        int serial = 0;
+        bool parsed = s.ValueKind switch
+        {
+            JsonValueKind.Number => s.TryGetInt32(out serial),
+            JsonValueKind.String => int.TryParse(s.GetString(), NumberStyles.None, CultureInfo.InvariantCulture, out serial),
+            _ => false,
+        };
+        return parsed ? serial : null;
+    }
+
+    /// <summary>
     /// The level and mute each OpenXLR combine leg carries right now, keyed
     /// by its sink-input index (the node's object serial), with the level as
     /// the desktop percentage <see cref="SetSinkInputVolume"/> writes.
@@ -446,16 +507,7 @@ public sealed class PipeWireAdapter
             string? name = props.TryGetProperty("node.name", out JsonElement n) ? n.GetString() : null;
             if (name is null || !name.StartsWith("output.OpenXLR_", StringComparison.Ordinal)) continue;
             if (!props.TryGetProperty("media.class", out JsonElement m) || m.GetString() != "Stream/Output/Audio") continue;
-            if (!props.TryGetProperty("object.serial", out JsonElement s)) continue;
-            int serial = 0;
-            bool parsed = s.ValueKind switch
-            {
-                JsonValueKind.Number => s.TryGetInt32(out serial),
-                JsonValueKind.String => int.TryParse(s.GetString(), System.Globalization.NumberStyles.None,
-                    System.Globalization.CultureInfo.InvariantCulture, out serial),
-                _ => false,
-            };
-            if (!parsed) continue;
+            if (Serial(props) is not int serial) continue;
             if (SinkLevel(info) is (_, double desktop, bool muted))
                 found[serial] = ((int)Math.Round(desktop * 100), muted);
         }
@@ -2302,6 +2354,9 @@ public sealed record AudioNode(string Name, string Description, AudioNodeKind Ki
     /// </summary>
     public string? DrivenUnit { get; init; }
 }
+
+/// <summary>One of the daemon's own DSP stage streams: its Pulse stream index, direction, linear volume and mute.</summary>
+public sealed record OwnStageStream(string Name, int Serial, bool Input, double Volume, bool Muted);
 
 /// <summary>One of the daemon's own sinks: its linear volume (1.0 = unity) and mute.</summary>
 public sealed record OwnSinkLevel(string Name, double Volume, bool Muted)

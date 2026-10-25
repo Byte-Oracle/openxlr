@@ -34,6 +34,43 @@ public sealed class FilterStateIntegrationTests
     }
 
     [MonitorPipeWireFact]
+    public void TheSweepPutsBackAStageStreamTheDesktopTurnedDown()
+    {
+        var pw = new PipeWireAdapter();
+        try
+        {
+            using var mixer = new Mixer(pw);
+            mixer.Build(new MixerConfig { Channels = [], Mixes = [new("monitor", "Monitor", MixKind.Monitor)] });
+            FilterHandle mic = pw.CreateMicFilter("held", 120, false);
+            Assert.True(SpinWait.SpinUntil(() => pw.OwnStageStreams().Count(s => s.Name.StartsWith(mic.SinkName[..^3], StringComparison.Ordinal)) == 2,
+                TimeSpan.FromSeconds(5)));
+            OwnStageStream input = pw.OwnStageStreams().Single(s => s.Name == mic.SinkName);
+            OwnStageStream output = pw.OwnStageStreams().Single(s => s.Name == mic.SourceName);
+            Assert.True(input.Input);
+            Assert.False(output.Input);
+
+            // What a desktop applet does to a stream it lists as an application.
+            foreach ((string command, string index, string value) in new[]
+            {
+                ("set-sink-input-volume", output.Serial.ToString(), "40%"),
+                ("set-source-output-mute", input.Serial.ToString(), "1"),
+            })
+            {
+                ProcessResult result = ProcessRunner.Run("pactl", [command, index, value]);
+                Assert.True(result.Ok, result.Stderr);
+            }
+            Assert.True(SpinWait.SpinUntil(() => pw.OwnStageStreams().Count(s => s.Muted || s.Volume < .99) == 2, TimeSpan.FromSeconds(5)));
+
+            IReadOnlyList<string> restored = mixer.EnsureOwnSinkLevels();
+            Assert.Contains(mic.SinkName, restored);
+            Assert.Contains(mic.SourceName, restored);
+            Assert.True(SpinWait.SpinUntil(() => pw.OwnStageStreams().All(s => !s.Muted && s.Volume > .99), TimeSpan.FromSeconds(5)));
+            Assert.DoesNotContain(mic.SinkName, mixer.EnsureOwnSinkLevels());
+        }
+        finally { pw.TearDown(); }
+    }
+
+    [MonitorPipeWireFact]
     public void InternalMicFiltersIgnoreSavedDesktopMuteAndGain()
     {
         var pw = new PipeWireAdapter();
