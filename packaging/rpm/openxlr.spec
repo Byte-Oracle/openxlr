@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.2.4
+Version: 0.2.5
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
 License:        GPL-3.0-only
@@ -187,6 +187,14 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Sun Oct 25 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.5-1
+- Mixer: Line In on the Wave XLR Pro is its own channel with the jack's hardware gain, separate from Aux In.
+- Mixer: capture inputs on sources OpenXLR does not drive have a gain control, the device's own gain when it has one.
+- UI: the Aux In, Line In and capture input readouts show the gain and switch to the volume while the fader moves.
+- UI: the Compact Desk skin, Options beside the mixer, output rows sized for one headphone jack, and the Italian review.
+- Deck: focused application routing on Sway and Hyprland.
+- Plugins: a CLAP or VST3 plugin that keeps failing to process audio is restarted instead of leaving its chain silent.
+
 * Sun Oct 25 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.4-1
 - Mixer: internal effect stages are no longer offered as microphones or outputs, and the sweep holds them at full volume.
 - Devices: the Wave XLR Pro's headphone jacks play the Monitor mix at 0 dB even when Wave Link left that level lower on the unit.
