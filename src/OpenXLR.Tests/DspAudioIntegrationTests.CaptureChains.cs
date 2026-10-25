@@ -12,6 +12,51 @@ public sealed partial class DspAudioIntegrationTests
     [DspPipeWireFact]
     public void StereoCaptureGainScalesBothPortsIndependently() => CaptureGain(2);
 
+    [DspPipeWireFact]
+    public void InvalidCaptureAudioRestartsOnlyItsNativeChainAndThenRecovers()
+    {
+        var notes = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var pw = new PipeWireAdapter(() => { }, notes.Enqueue);
+        using var registry = pw.WatchGraph();
+        using var mixer = CaptureChainFixture.Build(pw, out _, width: 2);
+        mixer.SetLevel("capture", "monitor", 1);
+        mixer.SetChannelMuted("capture", "monitor", false);
+        mixer.SetMixLatencyCompensation(true);
+        var insert = new InsertDefinition { Id = "delay", Kind = "lv2", Plugin = "urn:openxlr:test:latency",
+            Params = new() { ["delay"] = 0 } };
+        mixer.SetInserts("capture", [insert]);
+        mixer.SetInserts("mix:monitor", [insert]);
+        Assert.True(Assert.Single(mixer.Snapshot().Inserts["capture"]).NativeHostRunning);
+        Assert.True(Assert.Single(mixer.Snapshot().Inserts["mix:monitor"]).NativeHostRunning);
+        int? unaffected = null;
+        CaptureChainFixture.Wait(() =>
+            (unaffected = pw.FindNodeId("OpenXLR_ins_monitor_in_stage_0")) is not null);
+        AssertCaptureDc(2, 1);
+        string[] before = CaptureChainFixture.WaitForChain(pw, "capture");
+        ProcessResult result = ProcessRunner.Run("python3", ["-c", """
+            import struct, subprocess
+            args = ['pw-cat', '--playback', '--properties={ node.link-group = openxlr-test-playback }',
+                    '--format=f32', '--rate=48000', '--channels=2', '--target', 'capture_test_signal', '-']
+            if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.insert(2, '--raw')
+            signal = struct.pack('<ff', .1, .2) * 24000
+            signal += struct.pack('<ff', float('nan'), .2)
+            signal += struct.pack('<ff', .1, .2) * 24000
+            subprocess.run(args, input=signal, check=True, timeout=10)
+            """], TimeSpan.FromSeconds(15));
+        Assert.True(result.Ok, result.Stderr);
+        CaptureChainFixture.Wait(() =>
+        {
+            mixer.EnsureInputFeeds();
+            mixer.EnsureFilterRoutes();
+            string[] after = CaptureChainFixture.Nodes(pw, "capture");
+            return after.Length > 0 && !before.Intersect(after).Any();
+        });
+        Assert.Contains(notes, line => line.Contains("non-finite audio at the plugin input", StringComparison.Ordinal));
+        Assert.True(Assert.Single(mixer.Snapshot().Inserts["capture"]).NativeHostRunning);
+        Assert.Equal(unaffected, pw.FindNodeId("OpenXLR_ins_monitor_in_stage_0"));
+        AssertCaptureDc(2, 1);
+    }
+
     private static void CaptureGain(int width)
     {
         var pw = new PipeWireAdapter();

@@ -3,10 +3,21 @@
 // cycle the fixed buffers cannot carry is refused before anything is
 // written, and a plugin stuck inside one process call is told apart from a
 // node that simply has no work.
+#include "../host.h"
+static float *test_buffers[MAX_CHANNELS * 2];
+static void *test_dsp_buffer(void *port, uint32_t frames);
+#define pw_filter_get_dsp_buffer test_dsp_buffer
 #define main host_program_main
 #include "../host.c"
 #undef main
+#undef pw_filter_get_dsp_buffer
 #include <assert.h>
+
+static void *test_dsp_buffer(void *port, uint32_t frames) {
+  for (unsigned i = 0; i < MAX_CHANNELS * 2; i++)
+    if (port == &test_buffers[i]) return test_buffers[i];
+  return pw_filter_get_dsp_buffer(port, frames);
+}
 
 // A canary past the end of a fallback buffer. Nothing may reach it.
 enum { CANARY = 64 };
@@ -22,6 +33,114 @@ static float *guarded(void) {
 static void assert_canary(const float *buffer) {
   for (unsigned i = MAX_FRAMES; i < MAX_FRAMES + CANARY; ++i)
     assert(buffer[i] == -1.0f);
+}
+
+typedef struct {
+  unsigned calls, channel;
+  bool invalid_output;
+  float invalid;
+} AudioFixture;
+
+static void gain_audio(Host *h, uint32_t frames, float *const *in,
+                       float *const *out) {
+  AudioFixture *fixture = h->impl;
+  fixture->calls++;
+  for (unsigned c = 0; c < h->channels; c++)
+    for (uint32_t n = 0; n < frames; n++) out[c][n] = 2 * in[c][n];
+  if (fixture->invalid_output)
+    out[fixture->channel][frames - 1] = fixture->invalid;
+}
+
+static void check_invalid_audio(void) {
+  const Backend gain = {.process = gain_audio};
+  const float invalid[] = {NAN, INFINITY, -INFINITY};
+  const uint32_t sizes[] = {1, 32, 480, 512, 1024, MAX_FRAMES};
+  for (unsigned i = 0; i < MAX_CHANNELS * 2; i++)
+    test_buffers[i] = guarded();
+  for (unsigned channels = 1; channels <= MAX_CHANNELS; channels++)
+    for (unsigned size = 0; size < sizeof(sizes) / sizeof(sizes[0]); size++)
+      for (unsigned kind = 0; kind < sizeof(invalid) / sizeof(invalid[0]); kind++)
+        for (unsigned channel = 0; channel < channels; channel++)
+          for (unsigned output = 0; output < 2; output++) {
+            AudioFixture fixture = {.channel = channel,
+                                    .invalid = invalid[kind]};
+            Host h = {.backend = &gain, .rate = 48000, .channels = channels,
+                      .impl = &fixture};
+            for (unsigned i = 0; i < MAX_CHANNELS * 2; i++)
+              for (uint32_t n = 0; n < MAX_FRAMES; n++)
+                test_buffers[i][n] = -1;
+            for (unsigned c = 0; c < channels; c++) {
+              h.in_ports[c] = &test_buffers[c];
+              h.out_ports[c] = &test_buffers[MAX_CHANNELS + c];
+              for (uint32_t n = 0; n < sizes[size]; n++)
+                test_buffers[c][n] = .75f;
+            }
+            struct spa_io_position position = {0};
+            position.clock.duration = sizes[size];
+            position.clock.rate.denom = h.rate;
+            // Finite headroom above unity is audio, not a fault.
+            process_audio(&h, &position);
+            assert(fixture.calls == 1 && !atomic_load(&h.audio_error));
+            for (unsigned c = 0; c < channels; c++)
+              for (uint32_t n = 0; n < sizes[size]; n++)
+                assert(test_buffers[MAX_CHANNELS + c][n] == 1.5f);
+            if (output) fixture.invalid_output = true;
+            else test_buffers[channel][sizes[size] - 1] = invalid[kind];
+            process_audio(&h, &position);
+            assert(atomic_load(&h.audio_error));
+            assert(atomic_load(&h.invalid_audio) ==
+                   (output ? AUDIO_INVALID_OUTPUT : AUDIO_INVALID_INPUT));
+            assert(fixture.calls == (output ? 2u : 1u));
+            // The whole block is silent, including the unaffected channel.
+            for (unsigned c = 0; c < channels; c++)
+              for (uint32_t n = 0; n < sizes[size]; n++)
+                assert(test_buffers[MAX_CHANNELS + c][n] == 0);
+            // Until the main-loop tick exits, do not feed the poisoned
+            // instance again, even if the next input is ordinary audio.
+            test_buffers[channel][sizes[size] - 1] = .75f;
+            process_audio(&h, &position);
+            assert(fixture.calls == (output ? 2u : 1u));
+            for (unsigned i = 0; i < MAX_CHANNELS * 2; i++) {
+              assert_canary(test_buffers[i]);
+              for (uint32_t n = sizes[size]; n < MAX_FRAMES; n++)
+                assert(test_buffers[i][n] == -1);
+            }
+          }
+  for (unsigned i = 0; i < MAX_CHANNELS * 2; i++) {
+    free(test_buffers[i]);
+    test_buffers[i] = NULL;
+  }
+  puts("PASS: invalid input never reaches a plugin; invalid output silences the block and retires the instance");
+}
+
+static void check_inplace_audio(void) {
+  const Backend gain = {.process = gain_audio};
+  AudioFixture fixture = {0};
+  Host h = {.backend = &gain, .rate = 48000, .channels = 2,
+            .impl = &fixture};
+  for (unsigned c = 0; c < h.channels; c++) {
+    test_buffers[c] = guarded();
+    h.in_ports[c] = h.out_ports[c] = &test_buffers[c];
+    for (unsigned n = 0; n < 512; n++) test_buffers[c][n] = .75f;
+  }
+  struct spa_io_position position = {0};
+  position.clock.duration = 512;
+  position.clock.rate.denom = h.rate;
+  process_audio(&h, &position);
+  assert(!atomic_load(&h.audio_error) && fixture.calls == 1);
+  for (unsigned c = 0; c < h.channels; c++)
+    for (unsigned n = 0; n < 512; n++) assert(test_buffers[c][n] == 1.5f);
+  fixture.invalid_output = true;
+  fixture.invalid = NAN;
+  process_audio(&h, &position);
+  assert(atomic_load(&h.audio_error) && fixture.calls == 2);
+  for (unsigned c = 0; c < h.channels; c++) {
+    for (unsigned n = 0; n < 512; n++) assert(test_buffers[c][n] == 0);
+    assert_canary(test_buffers[c]);
+    free(test_buffers[c]);
+    test_buffers[c] = NULL;
+  }
+  puts("PASS: in-place buffers keep finite audio and silence invalid output");
 }
 
 static void check_key_silence(Host *h, uint32_t frames, float *const *in,
@@ -74,6 +193,8 @@ static void check_ports(void) {
 
 int main(void) {
   check_ports();
+  check_invalid_audio();
+  check_inplace_audio();
   Host h = {.rate = 48000, .channels = 2};
 
   // The quantum the graph runs at decides whether the cycle can happen at
