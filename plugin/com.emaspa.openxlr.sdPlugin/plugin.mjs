@@ -42,7 +42,7 @@ const DEVICE_TOGGLES = {
 const MUTE_LIKE = new Set(["mute", "mute2"]);
 // Dials on the interface's own controls, which a turn or press of an
 // unsupported one answers with an alert.
-const DEVICE_DIALS = new Set(["gain", "gain2", "hp", "hp2", "auxLevel", "crossfade"]);
+const DEVICE_DIALS = new Set(["gain", "gain2", "hp", "hp2", "auxLevel", "lineIn", "crossfade"]);
 
 // ---------- daemon connection ----------
 let daemon = null;
@@ -703,6 +703,18 @@ function dialValue(target, inst) {
       const p = Math.round(((60 + db) / 60) * 100);
       return { label: "Aux In level", pct: p, text: `${p}%`, muted: false };
     }
+    case "lineIn": {
+      // The Pro's Line In gain; the input has no hardware mute, so the dial
+      // shows the channel muted when every one of its sends is.
+      if (!supported(target)) return null;
+      if (s?.lineInGainDb == null) return null;
+      const db = dialNow(target, s.lineInGainDb);
+      const ch = chOf("line");
+      const levels = Object.keys(ch?.levels ?? {});
+      const muted = levels.length > 0 && levels.every((m) => ch.mutedIn?.includes(m));
+      return { label: `${channelName(mixer(), "line")} gain`,
+               pct: Math.round((db / gainMaxDb()) * 100), text: muted ? "MUTED" : `${db} dB`, muted };
+    }
     case "crossfade": {
       if (!supported(target)) return null;
       if (s?.crossfade == null) return null;
@@ -836,6 +848,11 @@ function onDialRotate(context, inst, ticks) {
     const control = t === "hp" ? "hpVolumeDb" : "hp2VolumeDb";
     const value = decibels(dialNow(t, db), 0.6);
     dialTurn(t, value, () => cmd({ cmd: "set", control, value }));
+  } else if (t === "lineIn") {
+    const db = dev()?.lineInGainDb;
+    if (db == null) return;
+    const value = clamp(dialNow(t, db) + ticks, 0, gainMaxDb());
+    dialTurn(t, value, () => cmd({ cmd: "set", control: "lineInGain", value }));
   } else if (t === "auxLevel") {
     const db = dev()?.auxLevelDb;
     if (db == null) return;
@@ -864,10 +881,11 @@ function onDialPress(context, inst) {
     const [, ch, id] = t.split("|");
     const ins = resolveInsert(ch, id, metaOf(inst, t));
     if (ins) cmd({ cmd: "setInsertBypass", channel: ch, insertId: ins.id, value: !ins.bypass });
-  } else if (t.startsWith("send:") || t.startsWith("chvol:")) {
-    // A channel volume dial mutes the channel the way an all-mixes send dial does.
-    const [, ch, sendMix] = t.split(":");
-    const mix = t.startsWith("chvol:") ? "all" : sendMix;
+  } else if (t.startsWith("send:") || t.startsWith("chvol:") || t === "lineIn") {
+    // A channel volume dial mutes the channel the way an all-mixes send dial
+    // does, and so does the Line In gain dial, whose input has no hardware mute.
+    const [, ch, sendMix] = t === "lineIn" ? ["", "line", "all"] : t.split(":");
+    const mix = t.startsWith("chvol:") || t === "lineIn" ? "all" : sendMix;
     const c = chOf(ch);
     if (!c) return;
     if (mix === "all") {
@@ -1109,6 +1127,7 @@ function meterKeyFor(t) {
   // A gain shows the channel it is heard on, wherever the layout put it.
   if (t === "gain" || t === "gain2" || t.startsWith("chgain:")) return unitMeterKey(mixer(), t);
   if (t === "auxLevel") return "ch:aux";
+  if (t === "lineIn") return "ch:line";
   if (t.startsWith("insparam|")) {
     const ch = t.split("|")[1];
     return ch.startsWith("mix:") ? ch : `ch:${ch}`;
