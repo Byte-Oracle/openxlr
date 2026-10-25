@@ -220,9 +220,11 @@ AI-assisted development.
 
 ## What's next
 
-The [roadmap](docs/roadmap.md) has the order. In short: a hardware
-mixing mode on the Wave XLR Pro, which builds the mixes in the unit for
-Wave Link's per-channel ducking.
+The [roadmap](docs/roadmap.md) has the order. In short: user reports
+and hardware checks of the 0.2 features first, then the microphone EQ in
+the terminal mixer and on the Stream Deck, then a hardware mixing mode on
+the Wave XLR Pro, which builds the mixes in the unit for Wave Link's
+per-channel ducking.
 
 ## Documentation
 

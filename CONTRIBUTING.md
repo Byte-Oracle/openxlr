@@ -21,9 +21,10 @@ or in a GitHub issue.
   values translated. [docs/localization.md](docs/localization.md) has the
   steps. Only translate a language you read and write well.
 - **Code.** The [roadmap](docs/roadmap.md) is the priority list. Right
-  now mixer stability and the mixer's presentation (per-mix
-  customization) come before plugin-host expansion; a pull request in
-  that order of priorities is easier to take than one against it. Ask first for anything large, so the work
+  now stability and correctness on real hardware come before new
+  features, and plugin work is limited to fixes. A pull request names the
+  issue or roadmap item it serves; one that follows that order is easier
+  to take than one against it. Ask first for anything large, so the work
   is not done twice or built on a model that is about to change.
 
 ## Building and testing
