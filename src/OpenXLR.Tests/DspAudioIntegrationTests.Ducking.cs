@@ -258,8 +258,16 @@ public sealed partial class DspAudioIntegrationTests
         // The stream mix is back, but the stored plan lost its cell when the
         // mix was deleted. The sweep settles the new legs first: the session
         // manager's restore can land on a new leg after the build set it.
-        f.Legs(DuckPlan with { Cells = new HashSet<string> { "music|monitor" } });
+        var rebuiltPlan = DuckPlan with { Cells = new HashSet<string> { "music|monitor" } };
+        f.Legs(rebuiltPlan);
         f.Level("monitor", DuckedMusic + .05);
+        // Exercise a late missing native output on the rebuilt graph too.
+        string rebuiltStage = DuckNodes("OpenXLR_duck_monitor").Single().Value;
+        ProcessResult cut = ProcessRunner.Run("pw-link", ["-d", "OpenXLR_duck_monitor:capture_0", "OpenXLR_mix_monitor:playback_FL"]);
+        Assert.True(cut.Ok, cut.Stderr);
+        f.Legs(rebuiltPlan);
+        f.Level("monitor", DuckedMusic + .05);
+        Assert.Equal(rebuiltStage, DuckNodes("OpenXLR_duck_monitor").Single().Value);
         Assert.Equal(["monitor"], f.Mixer.DuckingStatus.RunningMixes);
         f.Mixer.DeleteApplicationChannel("key", _ => null);
         f.Level("monitor", .15);
@@ -443,7 +451,7 @@ public sealed partial class DspAudioIntegrationTests
         public void Level(string name, double left, double? right = null, TimeSpan? timeout = null)
         {
             double last = double.NaN;
-            Assert.True(SpinWait.SpinUntil(() =>
+            bool matched = SpinWait.SpinUntil(() =>
             {
                 Assert.False(_signal?.IsCompleted == true, _signal?.IsCompleted == true ? _signal.Result.Stderr : "");
                 long frames = Frames(name);
@@ -452,7 +460,21 @@ public sealed partial class DspAudioIntegrationTests
                 last = audio.Where((_, i) => i % 2 == 0).Average(v => (double)v);
                 return audio.Select((v, i) => Math.Abs(v - (i % 2 == 0 ? left : right ?? left)))
                     .All(error => error <= Math.Max(.0001, Math.Max(Math.Abs(left), Math.Abs(right ?? left)) * .02));
-            }, timeout ?? TimeSpan.FromSeconds(5)), $"{name}: expected {left}, last left mean {last}");
+            }, timeout ?? TimeSpan.FromSeconds(5));
+            string details = "";
+            if (!matched)
+            {
+                try
+                {
+                    details = "\nDucking: " + JsonSerializer.Serialize(Mixer.DuckingStatus)
+                        + "\nSink levels: " + JsonSerializer.Serialize(Pw.OwnSinkLevels());
+                    ProcessResult links = ProcessRunner.Run("pw-link", ["-l"], TimeSpan.FromSeconds(3),
+                        stdoutCap: 256 * 1024, stderrCap: 64 * 1024);
+                    details += $"\nLinks (exit {links.ExitCode}): {links.StdoutText}{links.Stderr}";
+                }
+                catch (Exception ex) { details += "\nCould not collect graph evidence: " + ex.Message; }
+            }
+            Assert.True(matched, $"{name}: expected {left}, last left mean {last}{details}");
         }
 
         public IReadOnlyDictionary<string, int> ChannelLegs(string channel)
@@ -467,6 +489,7 @@ public sealed partial class DspAudioIntegrationTests
         {
             DuckWait(() =>
             {
+                Mixer.EnsureFilterRoutes();
                 Mixer.EnsureCellLevels();
                 var levels = Pw.CombineLegLevels();
                 foreach (ChannelStatus channel in Mixer.Snapshot().Channels)
