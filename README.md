@@ -82,7 +82,8 @@ If you own an untested device, open an issue with a diagnostics archive
   and steps on XLR 1, XLR 2 and mono capture inputs, run on the unit
   where the hardware has one, and Mic check, which meters the microphone
   before any processing and loops a recorded take through the EQ and
-  plugins while you tune them, raw or processed at a click.
+  plugins while you tune them in the same window, raw or processed at a
+  click, with placement tips and three starting EQ presets.
 - **Plugin inserts**: LV2, CLAP and VST3 chains on each microphone input
   and each mix, with native editors, generated controls and bypass.
   Windows VST3 and CLAP plugins run through the `openxlr-yabridge`

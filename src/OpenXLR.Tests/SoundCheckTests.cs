@@ -295,11 +295,11 @@ public sealed class SoundCheckTests
     {
         await using var client = new DaemonClient();
         var view = new MicCheckViewModel(client, "guest");
-        Assert.True(view.ShowsLevel);
-        Assert.Equal([MicCheckStep.Level, MicCheckStep.Listen], view.Steps.Select(s => s.Step));
-        view.Steps[1].IsSelected = true;
-        Assert.True(view.ShowsListen && view.Steps[1].IsSelected && !view.Steps[0].IsSelected);
-        view.Steps[1].IsSelected = false;   // the step shown stays chosen
+        Assert.True(view.ShowsPosition);
+        Assert.Equal([MicCheckStep.Position, MicCheckStep.Level, MicCheckStep.Listen, MicCheckStep.Shape], view.Steps.Select(s => s.Step));
+        view.Steps[2].IsSelected = true;
+        Assert.True(view.ShowsListen && view.Steps[2].IsSelected && !view.Steps[0].IsSelected && !view.Steps[1].IsSelected);
+        view.Steps[2].IsSelected = false;   // the step shown stays chosen
         Assert.True(view.ShowsListen);
 
         view.ApplyInputLevel(new System.Text.Json.Nodes.JsonArray(.4, .7, 1));

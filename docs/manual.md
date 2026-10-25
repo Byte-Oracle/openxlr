@@ -1028,8 +1028,34 @@ as it is when a profile is loaded.
 <a name="sound-check"></a>
 **Mic check.** In the chain window of XLR 1, XLR 2 or a capture input on
 one mono port, press **Mic check**. Stereo capture inputs have no Mic
-check. The window has two steps, **Level** and **Listen**; press either at
-the top to go to it, in any order.
+check. The window has four steps, **Position**, **Level**, **Listen** and
+**Shape**; press any of them at the top to go to it, in any order. It opens
+on Position the first time and on the step you left it on after that, until
+the UI quits.
+
+**Position** says which unit the microphone is on and gives tips for
+placing it:
+
+- On a Wave:3's or Wave:1's own capsule: speak into its front, not its
+  top, and keep it close, since a condenser capsule hears the room.
+- On an XLR jack of a Wave XLR, a Wave XLR Pro or an XLR Dock: check in
+  the microphone's manual whether it takes sound from its end or its side.
+  A dynamic microphone usually works closer than a condenser.
+- On anything else, a USB microphone, a headset or another make of
+  interface, OpenXLR controls nothing on the device, so its gain and power
+  are set there.
+
+The tips that follow hold for any speech microphone: keep the same
+distance while you talk, aim slightly to one side of your mouth so the air
+of p and b sounds passes the capsule, and point the back of a cardioid
+microphone at noise. They give no distances in centimetres, since none
+were measured. For any microphone but a built-in capsule the step also
+has **Phantom power**: the unit's own switch where OpenXLR drives the unit,
+the same switch as in INPUTS, with a note while the unit reports
+phantom power settling. Condenser microphones need it, dynamic ones do
+not; check a ribbon microphone's manual first, and turn the headphones
+down, since the change can thump. For a microphone on a unit OpenXLR does
+not drive, the step says to switch it on that unit.
 
 **Level** shows the microphone before any of OpenXLR's processing: after
 the interface's gain and whatever the unit does itself, before the EQ, the
@@ -1077,6 +1103,43 @@ and changes nothing in the channel's route.
   including a capture input, so you hear the loop and not your voice, and
   Hear myself plays your voice with its effects. That path never carries
   effects.
+
+**Shape** holds what changes the sound, so you can loop a take on Listen
+and adjust it here while it plays. Every change is heard at once, on the
+take or on the live microphone:
+
+- **Starting presets** put one of three EQs on the microphone and switch
+  the EQ on, as one change. They are OpenXLR's own starting points for a
+  speaking voice; adjust them on the curve. **Undo preset** puts
+  back the EQ as it was before the last preset, switch included; changes
+  made to the EQ since that preset go with it. The UI forgets the undo
+  when it loses the daemon.
+
+  | Preset | Band 1 | Band 2 | Band 3 | Band 4 |
+  | --- | --- | --- | --- | --- |
+  | Clear | high pass 80 Hz | bell 300 Hz -2 dB, Q 1.02 | bell 3.5 kHz +2 dB, Q 1.02 | high shelf 10 kHz +1 dB |
+  | Warm | high pass 60 Hz | low shelf 200 Hz +2 dB | bell 3 kHz +1 dB, Q 1.02 | high shelf 8 kHz -2 dB |
+  | Broadcast | high pass 100 Hz | bell 400 Hz -3 dB, Q 1.42 | bell 4 kHz +3 dB, Q 0.79 | high shelf 12 kHz +2 dB |
+
+  The high pass and the shelves keep the EQ's default Q of 0.70. Every
+  band is on.
+- **EQ** is the graph the [microphone EQ](#microphone-eq) editor draws,
+  edited the same way: drag a handle, use the wheel for Q, double click to
+  switch a band, right click for its type. **EQ on** beside it switches
+  the EQ, and **All bands** opens the full editor with a row of fields per
+  band.
+- **Low cut and ClipGuard** has the interface's own switches where the
+  microphone is on a unit that has them. They act before the take, so a
+  looped take does not change with them; press **Live mic** on Listen to
+  hear them. On XLR 1 the software low cut and ClipGuard come next when
+  they apply, and those run after the EQ, so the loop goes through them. A
+  microphone with neither, such as a capture input, says so; the EQ's high
+  pass band does the same job.
+- **Plugins** lists the channel's insert chain: each plugin's state light,
+  **Bypass**, and **Editor**, which opens the plugin's own editor when it
+  runs in the plugin host and its generated controls otherwise, as the
+  chain's cog does. **Add effect** adds a plugin at the end of the chain.
+  The chain window still moves, renames and removes plugins.
 
 A session starts with **Record**, **Live mic**, **Raw** or **Hear myself**,
 and ends with **Stop and discard** or when the window closes:

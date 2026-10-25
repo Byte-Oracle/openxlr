@@ -566,8 +566,11 @@ for another machine.
 See [effect presets](effect-presets.md) and the
 [manual](manual.md#effect-presets).
 
-Mic check, on XLR 1, XLR 2 and mono capture inputs, is a window in two
-steps. **Level** shows the microphone before any processing on a large
+Mic check, on XLR 1, XLR 2 and mono capture inputs, is a window in four
+steps, free to take in any order. **Position** gives placement tips for
+the kind of unit the microphone is on (a Wave:3's or Wave:1's capsule, an
+XLR jack, or a device OpenXLR does not drive) and the unit's phantom power
+switch where it has one. **Level** shows the microphone before any processing on a large
 meter, with a band for speech, a clip light that holds until cleared and
 the interface's gain beside it where the input has one. **Listen** records
 up to ten seconds and loops that dry take through the channel's software
@@ -577,7 +580,12 @@ playhead. **Processed** and **Raw** flip between the microphone with and
 without its processing on the same take, in the loop helper with a 20 ms
 crossfade and no chain rebuilt, and **Hear myself** puts the processed
 microphone in the monitor mix for the session only, and the window says
-how much latency that adds. On the Wave XLR Pro the session turns the zero-latency
+how much latency that adds. **Shape** holds the microphone EQ's graph,
+edited in place, the unit's and XLR 1's software low cut and ClipGuard, the
+insert chain with bypass, editor and add effect, and three starting
+presets of OpenXLR's own (Clear, Warm and Broadcast), each applied as one
+EQ change with a one-step undo, all heard live while the take loops. On
+the Wave XLR Pro the session turns the zero-latency
 path off, since it cannot carry effects. The take stays in the native
 helper's memory and is discarded on stop; a session ends by itself on a
 source change, a lost audio path, capture channel deletion, a mixer rebuild

@@ -182,6 +182,7 @@ public sealed class CaptureInputWindowTests
         var soundCommands = new ConcurrentQueue<JsonNode>();
         var meterWatches = new ConcurrentQueue<JsonNode>();
         var eqCommands = new ConcurrentQueue<JsonNode>();
+        var bypassCommands = new ConcurrentQueue<JsonNode>();
         var gate = new object();
         JsonNode state = State();
         using var pushes = new SemaphoreSlim(0);
@@ -234,6 +235,23 @@ public sealed class CaptureInputWindowTests
                             lock (gate)
                                 state["mixer"]!["channels"]!.AsArray().Single(c => c!["id"]!.GetValue<string>() == cmd["channel"]!.GetValue<string>())!["eq"]
                                     = CaptureEq(cmd["value"]!.GetValue<bool>());
+                        else if (name == "setEq")
+                            lock (gate)
+                            {
+                                // The whole EQ, as the daemon keeps it: Mic check's presets and their undo.
+                                JsonNode eq = CaptureEq(cmd["eq"]!["enabled"]!.GetValue<bool>());
+                                eq["bands"] = cmd["eq"]!["bands"]!.DeepClone();
+                                state["mixer"]!["channels"]!.AsArray().Single(c => c!["id"]!.GetValue<string>() == cmd["channel"]!.GetValue<string>())!["eq"] = eq;
+                            }
+                        await Send(Snapshot());
+                    }
+                    else if (name == "setInsertBypass")
+                    {
+                        bypassCommands.Enqueue(cmd);
+                        lock (gate)
+                            foreach (JsonNode? slot in state["mixer"]!["inserts"]![cmd["channel"]!.GetValue<string>()]!.AsArray())
+                                if (slot!["insert"]!["id"]!.GetValue<string>() == cmd["insertId"]!.GetValue<string>())
+                                    slot["insert"]!["bypass"] = cmd["value"]!.GetValue<bool>();
                         await Send(Snapshot());
                     }
                     else if (name == "soundCheck")
@@ -313,7 +331,7 @@ public sealed class CaptureInputWindowTests
                 Assert.Equal(id == "guest", model.CanMicCheck);
                 Button micCheck = chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("MicCheck")));
                 Assert.Equal(id == "guest", micCheck.IsEffectivelyVisible);
-                if (id == "guest") await MicCheckWindowTests.CheckCaptureChain(main, chain, soundCommands, meterWatches);
+                if (id == "guest") await MicCheckWindowTests.CheckCaptureChain(main, chain, soundCommands, meterWatches, eqCommands, bypassCommands);
                 chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("AddPlugin")))
                     .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 await Until(() => chain.OwnedWindows.OfType<PluginPickerWindow>().Any(w => w.IsVisible));

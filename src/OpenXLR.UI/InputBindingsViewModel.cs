@@ -330,13 +330,23 @@ public sealed partial class MainViewModel
                     ? unit.InputOf(extra.Input) : null;
             channel.BindingLabel = BindingLabelOf(channel);
         }
-        // Mic check's Level step shows the gain of the input its channel carries.
+        // Mic check shows the controls of the input its channel carries: the
+        // gain on Level, phantom power on Position, low cut, ClipGuard and the
+        // EQ on Shape, and the unit's kind for the Position tips.
         foreach (MicCheckViewModel check in MicChecks())
         {
             ChannelViewModel? carrier = Channels.FirstOrDefault(c => c.Id == check.Channel);
             check.Unit = carrier?.ShownUnitInput is 1 or 2 ? UnitInputOf(carrier.ShownUnitInput) : null;
             check.ExtraUnit = carrier?.ExtraUnitInput;
             check.ProDirect = CapOutputRouting && carrier?.ShownUnitInput == 1;
+            check.Eq = carrier?.Eq;
+            check.Software = check.Channel == "xlr1" && carrier is not null ? this : null;
+            if (check.Unit is { } unit)
+                check.Place(UnitXlrJacks ? MicCheckUnitKind.XlrJack : MicCheckUnitKind.Capsule, DeviceName, unit.Input);
+            else if (check.ExtraUnit is { } extra)
+                check.Place(extra.Unit.XlrJacks ? MicCheckUnitKind.XlrJack : MicCheckUnitKind.Capsule, extra.Unit.Name, extra.Input);
+            else check.Place(MicCheckUnitKind.None, null, 1);
+            check.RaiseCarrier();
         }
         Xlr1InputLabel = Localizer.Format("StripInputLabel", Xlr1Strip?.Name ?? "XLR 1");
         Xlr2InputLabel = Localizer.Format("StripInputLabel", Xlr2Strip?.Name ?? "XLR 2");

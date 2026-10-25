@@ -647,6 +647,11 @@ opening a muted send, with simulated nodes. On real units, so far:
 | Raw and Processed by ear, on a looped take and on the live microphone: no click or gap at the switch | not yet checked | |
 | The meter before the chain against the unit's gain, and the clip light at full scale | not yet checked | |
 | The gain beside the meter on a Pro, an XLR Dock, a Wave:3 and an additional interface | not yet checked | |
+| A starting preset and its undo heard at once on a looped take, with the EQ on the unit outside the session | not yet checked | |
+| Edits on the embedded EQ graph heard live while the take loops | not yet checked | |
+| An insert's bypass and its editor opened from Shape | not yet checked | |
+| Phantom power from Position on a condenser, with the settling note on a Pro | not yet checked | |
+| The Position tips for a Wave:3's capsule: the side to speak into | not yet checked | |
 
 ## Every device gets
 

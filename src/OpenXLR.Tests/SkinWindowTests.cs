@@ -821,11 +821,6 @@ public sealed partial class SkinWindowTests
         Assert.True(fader.Value < restored, "the keyboard stopped working after the skin was taken off");
     }
 
-    /// <summary>
-    /// The windows the mixer opens on demand, each built and checked: no
-    /// surface is left with the shipped colour, and no text is left with no
-    /// colour at all, which is what a token name typed wrong would look like.
-    /// </summary>
     /// <summary>A Mic check on its Listen step with a session, a take and every note showing, so the skin reaches them all.</summary>
     private static MicCheckViewModel ListeningCheck(DaemonClient client)
     {
@@ -836,10 +831,36 @@ public sealed partial class SkinWindowTests
         return check;
     }
 
+    /// <summary>
+    /// A Mic check on its Shape step with the unit's filters, XLR 1's software
+    /// ones, an EQ, a preset status and the chain's plugins showing.
+    /// </summary>
+    private static MicCheckViewModel ShapingCheck(MainViewModel vm, DaemonClient client, MicEqViewModel eq)
+    {
+        var check = new MicCheckViewModel(client, "xlr1", vm.Inserts) { Unit = vm.UnitInput1, Software = vm, Eq = eq };
+        check.Place(MicCheckUnitKind.XlrJack, "Elgato Wave XLR Pro", 1);
+        check.Step = MicCheckStep.Shape;
+        return check;
+    }
+
+    /// <summary>A Mic check on its Position step for a microphone on an XLR jack, with phantom power to switch.</summary>
+    private static MicCheckViewModel PlacingCheck(MainViewModel vm, DaemonClient client)
+    {
+        var check = new MicCheckViewModel(client, "xlr1") { Unit = vm.UnitInput1 };
+        check.Place(MicCheckUnitKind.XlrJack, "Elgato Wave XLR Pro", 1);
+        return check;
+    }
+
+    /// <summary>
+    /// The windows the mixer opens on demand, each built and checked: no
+    /// surface is left with the shipped colour, and no text is left with no
+    /// colour at all, which is what a token name typed wrong would look like.
+    /// </summary>
     private static void EveryWindowWearsTheSkin(MainWindow main)
     {
         var vm = (MainViewModel)main.DataContext!;
         var client = new DaemonClient();
+        using var eq = new MicEqViewModel(client, "xlr1", "XLR 1");
         vm.ApplyWaveInterfaces(JsonNode.Parse("""
             [{"id":"0fd9:00b4@0123456789abcdef","name":"Elgato Wave XLR Pro (1-2)","active":false,"enabled":true,"connected":true,
               "captureHint":"Wave_XLR_Pro_A1-","captureModelHint":"","warning":"A unit warning",
@@ -865,6 +886,8 @@ public sealed partial class SkinWindowTests
             ("plugin-folders", new PluginFoldersWindow()),
             ("mic-check", new MicCheckWindow { DataContext = vm.Inserts.MicCheck }),
             ("mic-check-listen", new MicCheckWindow { DataContext = ListeningCheck(client) }),
+            ("mic-check-position", new MicCheckWindow { DataContext = PlacingCheck(vm, client) }),
+            ("mic-check-shape", new MicCheckWindow { DataContext = ShapingCheck(vm, client, eq) }),
             ("updates", new UpdatesWindow { DataContext = vm.Updates }),
             ("wave-interfaces", new WaveInterfacesWindow(vm)),
         ];

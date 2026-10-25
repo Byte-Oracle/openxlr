@@ -3058,4 +3058,157 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="MicCheckClosingDiscards" xml:space="preserve">
     <value>Closing this window ends the session and discards the take. Hear myself and Raw end with it; your effect settings stay as they are.</value>
   </data>
+  <data name="MicCheckStepPosition" xml:space="preserve">
+    <value>Position</value>
+  </data>
+  <data name="MicCheckStepShape" xml:space="preserve">
+    <value>Shape</value>
+  </data>
+  <data name="MicCheckYourInterface" xml:space="preserve">
+    <value>your interface</value>
+  </data>
+  <data name="MicCheckPositionCapsule" xml:space="preserve">
+    <value>This microphone is the built-in capsule of {0}.</value>
+  </data>
+  <data name="MicCheckPositionXlr" xml:space="preserve">
+    <value>This microphone is on input {1} of {0}.</value>
+  </data>
+  <data name="MicCheckPositionNone" xml:space="preserve">
+    <value>OpenXLR does not control the device this microphone is on, so set its gain and power on that device.</value>
+  </data>
+  <data name="MicCheckPlacement" xml:space="preserve">
+    <value>Where it goes</value>
+  </data>
+  <data name="MicCheckTipCapsuleFront" xml:space="preserve">
+    <value>Speak into the front of the microphone, not into its top.</value>
+  </data>
+  <data name="MicCheckTipCapsuleRoom" xml:space="preserve">
+    <value>The capsule is a condenser, which hears the room more than a dynamic microphone does. Keep it close to your mouth and away from keyboards and fans.</value>
+  </data>
+  <data name="MicCheckTipXlrAddress" xml:space="preserve">
+    <value>Some microphones take sound from their end, others from their side. The microphone's manual says which; speak into that part, not across it.</value>
+  </data>
+  <data name="MicCheckTipXlrDistance" xml:space="preserve">
+    <value>A dynamic microphone usually works close to the mouth. A condenser can sit a little farther back, with more of the room in the sound.</value>
+  </data>
+  <data name="MicCheckTipOtherDevice" xml:space="preserve">
+    <value>Speak into the part of the microphone its manual names, not across it.</value>
+  </data>
+  <data name="MicCheckTipDistance" xml:space="preserve">
+    <value>Keep the same distance while you talk. Closer gives more low end and less room; farther gives more room and less low end.</value>
+  </data>
+  <data name="MicCheckTipAngle" xml:space="preserve">
+    <value>Aim it at your mouth from slightly to one side, so the air of p and b sounds passes it instead of hitting it.</value>
+  </data>
+  <data name="MicCheckTipNoise" xml:space="preserve">
+    <value>On a cardioid microphone, point its back toward fans, keyboards and other noise.</value>
+  </data>
+  <data name="MicCheckPhantomPower" xml:space="preserve">
+    <value>Phantom power</value>
+  </data>
+  <data name="MicCheckPhantomHint" xml:space="preserve">
+    <value>Condenser microphones need phantom power (48 V); dynamic microphones do not, and most are not affected by it. Check a ribbon microphone's manual before you turn it on. Turn your headphones down first, since switching it can thump.</value>
+  </data>
+  <data name="MicCheckPhantomName" xml:space="preserve">
+    <value>Phantom power for this microphone</value>
+  </data>
+  <data name="MicCheckPhantomElsewhere" xml:space="preserve">
+    <value>OpenXLR does not switch phantom power for this microphone. If it needs it, turn it on at the interface it is plugged into.</value>
+  </data>
+  <data name="MicCheckShapeHint" xml:space="preserve">
+    <value>Loop a take on the Listen step, then shape it here. Every change below is heard at once, on the take or on the live microphone.</value>
+  </data>
+  <data name="MicCheckPresets" xml:space="preserve">
+    <value>Starting presets</value>
+  </data>
+  <data name="MicCheckPresetClear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="MicCheckPresetClearTip" xml:space="preserve">
+    <value>Low cut at 80 Hz, a little less boxiness around 300 Hz and a small lift for presence and air.</value>
+  </data>
+  <data name="MicCheckPresetWarm" xml:space="preserve">
+    <value>Warm</value>
+  </data>
+  <data name="MicCheckPresetWarmTip" xml:space="preserve">
+    <value>Low cut at 60 Hz, more body under 200 Hz and a softer top.</value>
+  </data>
+  <data name="MicCheckPresetBroadcast" xml:space="preserve">
+    <value>Broadcast</value>
+  </data>
+  <data name="MicCheckPresetBroadcastTip" xml:space="preserve">
+    <value>Low cut at 100 Hz, less mud around 400 Hz and a forward lift around 4 kHz.</value>
+  </data>
+  <data name="MicCheckPresetHint" xml:space="preserve">
+    <value>A preset sets the four EQ bands and turns the EQ on. It is a starting point: adjust it on the curve below.</value>
+  </data>
+  <data name="MicCheckPresetApplied" xml:space="preserve">
+    <value>{0} is on the EQ. Undo preset puts back the EQ you had before it.</value>
+  </data>
+  <data name="MicCheckPresetUndone" xml:space="preserve">
+    <value>The EQ is back as it was before the preset.</value>
+  </data>
+  <data name="MicCheckUndoPreset" xml:space="preserve">
+    <value>Undo preset</value>
+  </data>
+  <data name="MicCheckUndoPresetTip" xml:space="preserve">
+    <value>Put back the EQ as it was before the last preset. Changes made to it since then go too.</value>
+  </data>
+  <data name="MicCheckEq" xml:space="preserve">
+    <value>EQ</value>
+  </data>
+  <data name="MicCheckEqEditor" xml:space="preserve">
+    <value>All bands</value>
+  </data>
+  <data name="MicCheckEqEditorTip" xml:space="preserve">
+    <value>Open the EQ editor, with a row of fields for each band</value>
+  </data>
+  <data name="MicCheckNoEq" xml:space="preserve">
+    <value>The daemon reports no EQ for this microphone.</value>
+  </data>
+  <data name="MicCheckFilters" xml:space="preserve">
+    <value>Low cut and ClipGuard</value>
+  </data>
+  <data name="MicCheckUnitLowCut" xml:space="preserve">
+    <value>The interface's low cut</value>
+  </data>
+  <data name="MicCheckUnitClipGuard" xml:space="preserve">
+    <value>The interface's ClipGuard</value>
+  </data>
+  <data name="MicCheckUnitFiltersHint" xml:space="preserve">
+    <value>The interface's own low cut and ClipGuard act before the take, so a looped take does not change with them. Use Live mic to hear them.</value>
+  </data>
+  <data name="MicCheckSoftwareLowCut" xml:space="preserve">
+    <value>Software low cut</value>
+  </data>
+  <data name="MicCheckSoftwareClipGuard" xml:space="preserve">
+    <value>Software ClipGuard</value>
+  </data>
+  <data name="MicCheckSoftwareFiltersHint" xml:space="preserve">
+    <value>The software low cut and ClipGuard run on this computer after the EQ, so the loop goes through them.</value>
+  </data>
+  <data name="MicCheckNoFilters" xml:space="preserve">
+    <value>This microphone has no low cut or ClipGuard of its own. The EQ's low cut band does that job.</value>
+  </data>
+  <data name="MicCheckEffects" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
+  <data name="MicCheckAddEffect" xml:space="preserve">
+    <value>Add effect</value>
+  </data>
+  <data name="MicCheckAddEffectTip" xml:space="preserve">
+    <value>Add a plugin at the end of this microphone's chain</value>
+  </data>
+  <data name="MicCheckBypassName" xml:space="preserve">
+    <value>Bypass {0}</value>
+  </data>
+  <data name="MicCheckEditor" xml:space="preserve">
+    <value>Editor</value>
+  </data>
+  <data name="MicCheckEditorName" xml:space="preserve">
+    <value>Open the editor of {0}</value>
+  </data>
+  <data name="MicCheckEffectsHint" xml:space="preserve">
+    <value>Bypass a plugin to hear the chain without it. The chain window moves, renames and removes plugins.</value>
+  </data>
 </root>
