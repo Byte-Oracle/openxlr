@@ -5,7 +5,7 @@ flowchart TD
     UI["Avalonia UI / OpenDeck"] -->|"authenticated WebSocket"| Daemon["OpenXLR daemon"]
     Scripts["Scripts / tools"] -->|"authenticated HTTP or WebSocket"| Daemon
     Clients["Terminal mixer / Omarchy plugin"] -->|"authenticated WebSocket"| Daemon
-    UI -->|"D-Bus"| Desktop["Desktop portal: global shortcuts; KWin: focused process"]
+    UI -->|"D-Bus"| Desktop["Desktop portal: global shortcuts; compositor: focused process"]
     Daemon -->|"gdbus: focused process"| UI
     Daemon --> Core["Core: device control, mixer, profiles"]
     Core --> USB["USB helper: libusb vendor transfers"]
@@ -38,9 +38,9 @@ flowchart TD
   shortcuts through the `org.freedesktop.portal.GlobalShortcuts` portal on
   a private session-bus connection and turns a press into a daemon
   command, while hidden in the tray as well. For focused-application
-  routing it serves `org.openxlr.Desktop` on that bus; a short-lived KWin
-  script reports the focused process id back, and the daemon asks the
-  UI for it with `gdbus`, one request at a time.
+  routing it serves `org.openxlr.Desktop` on that bus. KWin's read-only
+  script, Sway's tree or Hyprland's active window supplies the process id
+  on demand. The daemon asks the UI for it with `gdbus`, one request at a time.
 - The OpenDeck plugin is an OpenAction plugin in OpenDeck's Node runtime,
   using the same authenticated API and live choices as the UI.
 - `OpenXLR.Tui` is the terminal mixer, `openxlr-tui`. It speaks the same

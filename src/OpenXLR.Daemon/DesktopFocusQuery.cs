@@ -16,7 +16,14 @@ internal static class DesktopFocusQuery
             ProcessResult reply = ProcessRunner.Run("gdbus", ["call", "--session", "--dest", "org.openxlr.Desktop",
                 "--object-path", "/org/openxlr/Desktop", "--method", "org.openxlr.Desktop.GetFocusedProcess"], TimeSpan.FromSeconds(4),
                 stdoutCap: 4096, stderrCap: 4096);
-            if (!reply.Ok) throw new InvalidOperationException("focused routing requires the OpenXLR window running with Desktop keys enabled on KDE Plasma");
+            if (!reply.Ok)
+            {
+                const string prefix = "GDBus.Error:org.openxlr.Desktop.Unavailable:";
+                int at = reply.Stderr.IndexOf(prefix, StringComparison.Ordinal);
+                string detail = at < 0 ? "focused routing requires the OpenXLR window running with Desktop keys enabled on KDE Plasma, Sway or Hyprland"
+                    : reply.Stderr[(at + prefix.Length)..].Trim();
+                throw new InvalidOperationException(detail.Length <= 512 ? detail : detail[..512]);
+            }
             return Parse(reply.StdoutText);
         }
         catch (System.ComponentModel.Win32Exception ex)

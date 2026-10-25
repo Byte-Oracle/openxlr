@@ -103,10 +103,10 @@ and [package checks](packaging/yabridge/README.md).
 - `src/OpenXLR.Daemon`: the hosted service, WebSocket hub, command
   validation, token, watchdog, and the focused-application query the
   daemon puts to the UI through `gdbus`.
-- `src/OpenXLR.UI`: the Avalonia UI, and the desktop portal and KWin
-  connection behind desktop keys (`DesktopBus.cs`, `DesktopKeys.cs`,
-  `KWinFocus.cs`). It has no reference to Core; the two files both need
-  are compiled in as linked sources.
+- `src/OpenXLR.UI`: the Avalonia UI, and the desktop portal and compositor
+  connections behind desktop keys (`DesktopBus.cs`, `DesktopKeys.cs`,
+  `DesktopFocus.cs`, `CompositorFocus.cs`). It has no reference to Core;
+  shared files are compiled in as linked sources.
 - `src/OpenXLR.Tui`: the terminal mixer (`openxlr-tui`). It draws its own
   cells (`Screen.cs`, `Widgets.cs`), reads the UI's skins into a
   palette (`Theme.cs`), speaks the documented WebSocket (`DaemonLink.cs`)

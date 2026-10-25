@@ -16,7 +16,7 @@ public sealed class KWinFocusTests
             Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", directory);
             using var connection = new DBusConnection(DBusAddress.Session!);
             await connection.ConnectAsync();
-            var focus = new KWinFocus(new DesktopBus(connection));
+            var focus = new DesktopFocus(new DesktopBus(connection));
             connection.AddMethodHandler(focus);
             // No audio command and no shortcut permission prompt. PID zero is
             // valid when only the desktop is focused.

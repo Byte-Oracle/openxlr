@@ -3392,13 +3392,27 @@ installation can add the entry as shown in
 [installing from source](install-from-source.md#desktop-entry).
 
 The GlobalShortcuts portal registers keys on Wayland. It does not expose the
-focused application's identity. Focused routing therefore currently requires
-KDE Plasma, where a short-lived KWin script reads the active process id. It
-reads no window titles and removes its script after the query. The daemon
-uses `gdbus`, supplied by the GLib command-line tools, to ask the UI for it.
-On unsupported desktops or when the UI is closed, routing reports an error.
-The Flatpak has no access to KWin, so focused routing reports an error there
-on every desktop.
+focused application's identity, so OpenXLR asks the compositor each time
+routing is requested:
+
+- KDE Plasma: a short-lived KWin script reads the active process id and is
+  removed after the query.
+- Sway: `swaymsg get_tree`, which needs `SWAYSOCK` from the session.
+- Hyprland: `hyprctl activewindow`, which needs
+  `HYPRLAND_INSTANCE_SIGNATURE` from the session.
+
+Hyprland routing has been run on a live session; Sway has not yet.
+Launch the UI from the desktop session so it gets these variables, and
+have `swaymsg` or `hyprctl` installed, as the compositors ship them. No window titles are
+read. The daemon uses `gdbus`, supplied by the GLib command-line tools, to
+ask the UI. GNOME and other compositors have no focus source yet, and
+routing reports an error there, when the UI is closed, and inside the
+Flatpak, which has no access to the compositor.
+
+PC shortcuts need the GlobalShortcuts portal; Deck routing does not. On a
+desktop without the portal, Desktop keys says so and routing
+from OpenDeck keeps working. Enable desktop integration and leave the PC key
+choices unchecked to use only Deck routing.
 
 The exact process, or a unique audio identity among its child processes,
 must appear in PipeWire. The existing application assignment is then updated
