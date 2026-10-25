@@ -1205,6 +1205,7 @@ void vst3_process(Host *h, uint32_t frames, float *const *in,
   for (AudioBusBuffers &bus : v->out_buses)
     bus.silenceFlags = 0;
   tresult result = v->processor->process(v->data);
+  host_processing_result(h, result == kResultOk, frames);
   if (result != kResultOk)
     for (unsigned i = 0; i < channels; ++i)
       memset(out[i], 0, frames * sizeof(float));

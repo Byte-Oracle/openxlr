@@ -4,14 +4,54 @@
 // written, and a plugin stuck inside one process call is told apart from a
 // node that simply has no work.
 #include "../host.h"
+#include <poll.h>
+#include <stdio.h>
 static float *test_buffers[MAX_CHANNELS * 2];
 static void *test_dsp_buffer(void *port, uint32_t frames);
+static Host *test_monitor_host;
+static unsigned test_heartbeats;
+static int test_monitor_poll(struct pollfd *fds, nfds_t count, int timeout);
+static int test_host_puts(const char *text);
 #define pw_filter_get_dsp_buffer test_dsp_buffer
+#define poll test_monitor_poll
+#define puts test_host_puts
 #define main host_program_main
 #include "../host.c"
 #undef main
 #undef pw_filter_get_dsp_buffer
+#undef poll
+#undef puts
 #include <assert.h>
+
+static int test_monitor_poll(struct pollfd *fds, nfds_t count, int timeout) {
+  assert(test_monitor_host && count == 1 && timeout == 1000);
+  atomic_store(&test_monitor_host->monitor_stop, true);
+  return 0;
+}
+
+static int test_host_puts(const char *text) {
+  if (!strcmp(text, "heartbeat")) ++test_heartbeats;
+  return puts(text);
+}
+
+static void check_failed_monitor(void) {
+  for (unsigned failed = 0; failed < 4; ++failed) {
+    Host h = {0};
+    atomic_store(&h.audio_error, failed != 0);
+    if (failed == 1) atomic_store(&h.process_failed, true);
+    if (failed == 2) atomic_store(&h.invalid_audio, AUDIO_INVALID_INPUT);
+    if (failed == 3) atomic_store(&h.failure_explained, true);
+    test_monitor_host = &h;
+    test_heartbeats = 0;
+    // No UI tick runs: an editor can block the main loop while the audio
+    // callback has returned after reporting its failure.
+    monitor_audio(&h);
+    assert(test_heartbeats == (failed ? 0u : 1u));
+    assert(atomic_load(&h.failure_explained) == (failed != 0));
+  }
+  test_monitor_host = NULL;
+  puts("PASS: an idle host beats, but a failed host cannot hide behind a blocked editor");
+}
 
 static void *test_dsp_buffer(void *port, uint32_t frames) {
   for (unsigned i = 0; i < MAX_CHANNELS * 2; i++)
@@ -38,6 +78,7 @@ static void assert_canary(const float *buffer) {
 typedef struct {
   unsigned calls, channel;
   bool invalid_output;
+  bool process_error;
   float invalid;
 } AudioFixture;
 
@@ -49,6 +90,53 @@ static void gain_audio(Host *h, uint32_t frames, float *const *in,
     for (uint32_t n = 0; n < frames; n++) out[c][n] = 2 * in[c][n];
   if (fixture->invalid_output)
     out[fixture->channel][frames - 1] = fixture->invalid;
+  host_processing_result(h, !fixture->process_error, frames);
+}
+
+static void check_processing_failure(void) {
+  const Backend gain = {.process = gain_audio};
+  AudioFixture fixture = {.process_error = true};
+  Host h = {.backend = &gain, .rate = 48000, .channels = 2, .impl = &fixture};
+  for (unsigned c = 0; c < h.channels; ++c) {
+    test_buffers[c] = guarded();
+    test_buffers[MAX_CHANNELS + c] = guarded();
+    h.in_ports[c] = &test_buffers[c];
+    h.out_ports[c] = &test_buffers[MAX_CHANNELS + c];
+  }
+  struct spa_io_position position = {0};
+  position.clock.duration = 32;
+  position.clock.rate.denom = h.rate;
+  // Refusals shorter than half a second are glitches, and a good block
+  // starts the count again.
+  const unsigned run = h.rate / 2 / 32;
+  for (unsigned i = 1; i < run; ++i) process_audio(&h, &position);
+  assert(!atomic_load(&h.audio_error));
+  fixture.process_error = false;
+  process_audio(&h, &position);
+  fixture.process_error = true;
+  for (unsigned i = 1; i < run; ++i) process_audio(&h, &position);
+  assert(!atomic_load(&h.audio_error));
+  process_audio(&h, &position);
+  assert(atomic_load(&h.audio_error) && atomic_load(&h.process_failed));
+  assert(!atomic_load(&h.invalid_audio) && fixture.calls == 2 * run);
+  fixture.process_error = false;
+  process_audio(&h, &position);
+  assert(fixture.calls == 2 * run);
+  for (unsigned i = 0; i < MAX_CHANNELS * 2; ++i) {
+    if (i >= MAX_CHANNELS)
+      for (unsigned n = 0; n < 32; ++n) assert(test_buffers[i][n] == 0);
+    assert_canary(test_buffers[i]);
+    free(test_buffers[i]);
+    test_buffers[i] = NULL;
+  }
+  pw_init(NULL, NULL);
+  h.loop = pw_main_loop_new(NULL);
+  assert(h.loop);
+  tick(&h, 1);
+  assert(h.exit_code == 1);
+  pw_main_loop_destroy(h.loop);
+  pw_deinit();
+  puts("PASS: half a second of processing errors silences every channel, stops callbacks and exits for recovery");
 }
 
 static void check_invalid_audio(void) {
@@ -193,6 +281,8 @@ static void check_ports(void) {
 
 int main(void) {
   check_ports();
+  check_failed_monitor();
+  check_processing_failure();
   check_invalid_audio();
   check_inplace_audio();
   Host h = {.rate = 48000, .channels = 2};

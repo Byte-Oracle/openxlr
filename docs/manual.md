@@ -2612,6 +2612,12 @@ replaced under the same restart limit. This handles a processor whose
 internal state would otherwise stay invalid until a daemon restart. Finite
 levels above unity remain unchanged; this check is not a limiter.
 
+A VST3 or CLAP plugin that fails to process a block of audio leaves that
+block silent, and the next block is tried. If it keeps failing for half a
+second, the daemon replaces the chain under the same restart limit, and
+the journal says "the plugin could not process audio". This works even
+while the plugin's editor is frozen.
+
 A VST3 scan that says the original Windows plugin is missing usually means
 its yabridge wrapper still exists under `~/.vst3/yabridge`, but the source
 file was moved or deleted. The wrapper is a bridge, not a copy of the

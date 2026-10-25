@@ -637,6 +637,7 @@ static void clap_process_audio(Host *h, uint32_t frames, float *const *in,
   }
   if (!atomic_load(&c->processing)) {
     if (!c->plugin->start_processing(c->plugin)) {
+      host_processing_result(h, false, frames);
       for (unsigned i = 0; i < h->channels; ++i)
         memset(out[i], 0, frames * sizeof(float));
       return;
@@ -678,6 +679,7 @@ static void clap_process_audio(Host *h, uint32_t frames, float *const *in,
   };
   clap_process_status status = c->plugin->process(c->plugin, &process);
   c->steady += frames;
+  host_processing_result(h, status != CLAP_PROCESS_ERROR, frames);
   if (status == CLAP_PROCESS_ERROR)
     for (unsigned i = 0; i < h->channels; ++i)
       memset(out[i], 0, frames * sizeof(float));

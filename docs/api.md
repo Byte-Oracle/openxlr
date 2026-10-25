@@ -608,6 +608,13 @@ Non-finite samples at a native helper's audio input or output stop that
 helper under the existing chain restart budget. Its last message names the
 input or output in the journal and, if retries are exhausted, in the
 insert's `error`. Finite audio above unity is not rejected.
+A VST3 or CLAP processing error, including a refused CLAP processing start,
+silences that block, and the next block is tried. Half a second of them in
+a row stops the helper under the same budget, with the last message
+`the plugin could not process audio; restart the chain`.
+After a latched audio failure the helper stops reporting audio health even
+if its editor has blocked the main loop, so the existing supervisor can
+replace it. An editor stall alone does not change audio health.
 
 The OpenDeck plugin in `plugin/`, the terminal mixer
 (`src/OpenXLR.Tui/DaemonLink.cs`) and the Omarchy plugin

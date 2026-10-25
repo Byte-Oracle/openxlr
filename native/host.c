@@ -214,6 +214,21 @@ void host_fail(Host *h, const char *why) {
   atomic_store(&h->audio_error, true);
 }
 
+// Plugins may refuse a block now and then (CLAP lets start_processing be
+// retried on the next one), and a refused block costs only its own audio.
+// Replacing the instance costs far more, seconds for a bridged plugin, and
+// spends the restart budget, so only a run of refusals counts as failure.
+void host_processing_result(Host *h, bool ok, uint32_t frames) {
+  if (ok) {
+    h->failed_frames = 0;
+    return;
+  }
+  h->failed_frames += frames;
+  if (h->failed_frames < h->rate / 2) return;
+  atomic_store(&h->process_failed, true);
+  atomic_store(&h->audio_error, true);
+}
+
 struct pw_loop *host_loop(Host *h) { return pw_main_loop_get_loop(h->loop); }
 
 bool host_on_main_thread(Host *h) {
@@ -817,6 +832,21 @@ static bool report_latency(Host *h) {
   return true;
 }
 
+// Either non-audio thread can report a failure. Keep the first explanation,
+// including one a backend already supplied through host_fail.
+static void explain_audio_failure(Host *h) {
+  if (atomic_exchange(&h->failure_explained, true)) return;
+  unsigned invalid = atomic_load(&h->invalid_audio);
+  const char *reason = atomic_load(&h->process_failed)
+      ? "the plugin could not process audio"
+      : invalid == AUDIO_INVALID_INPUT
+      ? "non-finite audio at the plugin input"
+      : invalid == AUDIO_INVALID_OUTPUT
+      ? "non-finite audio from the plugin output"
+      : "unsupported audio quantum or sample-rate change";
+  fprintf(stderr, "%s; restart the chain\n", reason);
+}
+
 static void tick(void *data, uint64_t expirations) {
   Host *h = data;
   // Editor progress is separate from audio progress. A blocked editor must
@@ -826,18 +856,7 @@ static void tick(void *data, uint64_t expirations) {
     h->heartbeat_ticks = 0;
   }
   if (atomic_load(&h->audio_error)) {
-    // The supervisor reports the last line written here, so a reason
-    // host_fail already gave must stay the last one. The audio thread's
-    // own refusals arrive unexplained: it cannot write.
-    if (!atomic_load(&h->failure_explained)) {
-      unsigned invalid = atomic_load(&h->invalid_audio);
-      const char *reason = invalid == AUDIO_INVALID_INPUT
-          ? "non-finite audio at the plugin input"
-          : invalid == AUDIO_INVALID_OUTPUT
-          ? "non-finite audio from the plugin output"
-          : "unsupported audio quantum or sample-rate change";
-      fprintf(stderr, "%s; restart the chain\n", reason);
-    }
+    explain_audio_failure(h);
     h->exit_code = 1;
     pw_main_loop_quit(h->loop);
     return;
@@ -882,6 +901,12 @@ static void *monitor_audio(void *data) {
     struct pollfd input = {STDIN_FILENO, POLLHUP | POLLERR, 0};
     if (poll(&input, 1, 1000) > 0 && (input.revents & (POLLHUP | POLLERR)))
       _exit(0);
+    // A failed callback has returned, but its instance is silent. Do not
+    // keep it looking healthy if an editor blocks the tick that exits it.
+    if (atomic_load(&h->audio_error)) {
+      explain_audio_failure(h);
+      continue;
+    }
     // The beat says the audio is moving, not merely that the process is
     // alive. A plugin that blocks inside its own process callback leaves
     // this thread and the editor loop untouched, so beating regardless
