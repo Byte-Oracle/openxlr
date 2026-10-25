@@ -636,7 +636,7 @@ restores the split profile when it stops.
 - The application that has the focus can be sent to a channel from a
   desktop shortcut or a Stream Deck key. The UI reads the focused
   process id from KWin on KDE Plasma, Sway's tree or Hyprland's active
-  window (Sway and Hyprland not yet run on a live session). The daemon
+  window (Sway not yet run on a live session). The daemon
   asks the UI for it over D-Bus, and the id is matched against the
   daemon's live audio clients; an application that cannot be identified
   without guessing is refused

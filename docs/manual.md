@@ -3401,9 +3401,9 @@ routing is requested:
 - Hyprland: `hyprctl activewindow`, which needs
   `HYPRLAND_INSTANCE_SIGNATURE` from the session.
 
-Sway and Hyprland have not been run on a live session yet. Launch the UI
-from the desktop session so it gets these variables, and have `swaymsg` or
-`hyprctl` installed, as the compositors ship them. No window titles are
+Hyprland routing has been run on a live session; Sway has not yet.
+Launch the UI from the desktop session so it gets these variables, and
+have `swaymsg` or `hyprctl` installed, as the compositors ship them. No window titles are
 read. The daemon uses `gdbus`, supplied by the GLib command-line tools, to
 ask the UI. GNOME and other compositors have no focus source yet, and
 routing reports an error there, when the UI is closed, and inside the

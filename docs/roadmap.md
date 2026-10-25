@@ -137,8 +137,9 @@ them for a while before more is built on top.
 - [ ] The control API on a Unix socket with peer credentials instead of
   a loopback port, so no token file is needed.
 - [ ] Routing the focused application on compositors other than KWin,
-  each with a focus source of its own. Sway and Hyprland have sources
-  waiting for a run on a live session; GNOME and the others have none.
+  each with a focus source of its own. Hyprland has one, run on a
+  live session; Sway has one not yet run live; GNOME and the others have
+  none.
 
 ### Distribution
 
