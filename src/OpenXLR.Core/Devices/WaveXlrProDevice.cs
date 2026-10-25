@@ -100,6 +100,11 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     // The notes' "Personal section" at off16..33 does not affect the jacks.
     private const int HpMixReturnsOffset = 12;
     private const byte HpMixMonitorReturnMask = 0x20;
+    // Pair 2/3's level in the jacks' mix, int8 in half dB, 0x00 = 0 dB
+    // (measured +6.2 dB at 0x0c, -6.1 dB at 0xf4). Wave Link keeps its own
+    // fader level here, so a unit that dual-boots plays the Monitor mix that
+    // far down until the cell is put back to unity.
+    private const int HpMixMonitorReturnLevelOffset = 5;
     private const int HpMixInputsOffset = 13;
     private const byte HpMixMicDirectMask = 0x02;
 
@@ -306,7 +311,8 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
             OutHp2 = b1[OutHp2Offset] != OutSourceOff,
             OutUsbAux = b1[OutUsbAuxOffset] != OutSourceOff,
             OutLineOut = b1[OutLineOutOffset] != OutSourceOff,
-            HpMixMonitorReturn = (b1[HpMixReturnsOffset] & HpMixMonitorReturnMask) != 0,
+            HpMixMonitorReturn = (b1[HpMixReturnsOffset] & HpMixMonitorReturnMask) != 0 &&
+                                 b1[HpMixMonitorReturnLevelOffset] == 0x00,
             HpMixMicDirect = (b1[HpMixInputsOffset] & HpMixMicDirectMask) != 0,
             AuxReturnEnabled = b1[AuxMixMusicLevelOffset] == 0x00 &&
                                (b1[AuxMixMusicMemberOffset] & AuxMixMusicMemberMask) != 0,
@@ -440,7 +446,18 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
 
     // The headphone mix latches membership changes when the host playback
     // stream (re)starts, like the aux return; the caller bounces the sink.
-    public void SetHpMixMonitorReturn(bool on) => SetBlock1Bit(HpMixReturnsOffset, HpMixMonitorReturnMask, on);
+    // Turning the return on also opens its level cell, as the aux return does.
+    public void SetHpMixMonitorReturn(bool on)
+    {
+        byte[] b = Read(BlockCrossfade, CrossfadeLen);
+        if (on)
+        {
+            b[HpMixReturnsOffset] |= HpMixMonitorReturnMask;
+            b[HpMixMonitorReturnLevelOffset] = 0x00;          // 0 dB
+        }
+        else b[HpMixReturnsOffset] &= unchecked((byte)~HpMixMonitorReturnMask);
+        WriteCommitted(BlockCrossfade, b);
+    }
     public void SetHpMixMicDirect(bool on) => SetBlock1Bit(HpMixInputsOffset, HpMixMicDirectMask, on);
 
     private void SetBlock1Bit(int offset, byte mask, bool on)
