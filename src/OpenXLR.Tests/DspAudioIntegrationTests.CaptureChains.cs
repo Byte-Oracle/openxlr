@@ -44,6 +44,9 @@ public sealed partial class DspAudioIntegrationTests
             subprocess.run(args, input=signal, check=True, timeout=10)
             """], TimeSpan.FromSeconds(15));
         Assert.True(result.Ok, result.Stderr);
+        // Observe the host's failure before healing: its ports can disappear
+        // before the process exits, which also permits an ordinary link repair.
+        CaptureChainFixture.Wait(() => !Assert.Single(mixer.Snapshot().Inserts["capture"]).NativeHostRunning);
         CaptureChainFixture.Wait(() =>
         {
             mixer.EnsureInputFeeds();
