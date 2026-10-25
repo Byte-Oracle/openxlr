@@ -3392,13 +3392,43 @@ installation can add the entry as shown in
 [installing from source](install-from-source.md#desktop-entry).
 
 The GlobalShortcuts portal registers keys on Wayland. It does not expose the
-focused application's identity. Focused routing therefore currently requires
-KDE Plasma, where a short-lived KWin script reads the active process id. It
-reads no window titles and removes its script after the query. The daemon
-uses `gdbus`, supplied by the GLib command-line tools, to ask the UI for it.
-On unsupported desktops or when the UI is closed, routing reports an error.
-The Flatpak has no access to KWin, so focused routing reports an error there
-on every desktop.
+focused application's identity. OpenXLR queries the compositor on demand:
+
+| Desktop | Focus source | Session information |
+|---|---|---|
+| KDE Plasma | a short-lived, read-only KWin script | KWin's name on the session bus |
+| Sway | `swaymsg -s "$SWAYSOCK" -r -t get_tree` | this session's absolute `SWAYSOCK` path |
+| Hyprland | `hyprctl -j -i "$HYPRLAND_INSTANCE_SIGNATURE" activewindow` | this session's instance signature, not an instance number |
+
+Launch the UI from that desktop so it inherits the session's environment.
+`XDG_CURRENT_DESKTOP`, or `XDG_SESSION_DESKTOP` when it is absent, selects
+its source. With neither set, one unambiguous IPC hint selects Sway or
+Hyprland; otherwise OpenXLR tries KWin's bus name. An explicitly named
+unsupported desktop never falls back to stale Sway or Hyprland variables.
+Other compositors, including GNOME, need a focus source of their own and
+currently report an error.
+
+The query runs only when routing is requested, with a two-second deadline.
+A Sway tree is bounded to 2 MiB and a Hyprland reply to 64 KiB. Sway uses
+the default seat's focused window, including floating windows. Hyprland
+must report a mapped, non-hidden application. Malformed, duplicate or
+ambiguous focus replies are refused; a failed query never reuses a previous
+process id. Titles are not matched or logged. The KWin script is removed
+after each query.
+
+The daemon uses `gdbus`, supplied by the GLib command-line tools, to ask
+the UI. Install `swaymsg` or `hyprctl` with the corresponding compositor.
+The sources follow the upstream [Sway IPC contract](https://github.com/swaywm/sway/blob/master/sway/sway-ipc.7.scd)
+and [hyprctl commands](https://github.com/hyprwm/hyprland-wiki/blob/main/content/configuring/core/advanced-configuration/using-hyprctl.md).
+When the UI is closed or desktop integration is off, routing reports an
+error. The Flatpak has no access to these compositor interfaces, so focused
+routing remains unavailable inside it; no extra permissions are requested.
+
+PC shortcuts still require the GlobalShortcuts portal. If that interface is
+missing, OpenXLR reports it and keeps the independent focus service running
+for OpenDeck. Permission refusals and lost session-bus connections still
+leave an inactive error state. Without PC shortcuts, enable desktop
+integration and leave the PC key choices unchecked to use just Deck routing.
 
 The exact process, or a unique audio identity among its child processes,
 must appear in PipeWire. The existing application assignment is then updated

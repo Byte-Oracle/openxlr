@@ -178,7 +178,7 @@ public sealed class DesktopKeysTests
         for (int i = 0; i < 20; i++) fake.Activate(ids[i % ids.Length]);
         // A round trip on the sending connection lets all preceding portal
         // signals arrive before we release the blocked daemon reply.
-        await new DesktopBus(desktop).Call(KWinFocus.Service, "/org/openxlr/Desktop",
+        await new DesktopBus(desktop).Call(DesktopFocus.Service, "/org/openxlr/Desktop",
             "org.freedesktop.DBus.Introspectable", "Introspect", null, null,
             static (message, _) => message.GetBodyReader().ReadString());
         await Wait(() => keys.Status.Contains("queue is full", StringComparison.Ordinal));
@@ -458,6 +458,28 @@ public sealed class DesktopKeysTests
         Assert.True(condition());
     }
 
+    [DesktopBusTheory]
+    [InlineData("org.freedesktop.DBus.Error.UnknownMethod")]
+    [InlineData("org.freedesktop.DBus.Error.UnknownInterface")]
+    [InlineData("org.freedesktop.DBus.Error.ServiceUnknown")]
+    public async Task AnUnavailableShortcutPortalKeepsDeckFocusRoutingAvailable(string error)
+    {
+        await using var environment = await PrivateBus.Start();
+        using var desktop = new DBusConnection(environment.Address);
+        await desktop.ConnectAsync();
+        await desktop.RequestNameAsync(DesktopBus.Portal);
+        await desktop.RequestNameAsync("org.kde.KWin");
+        var fake = new DesktopBackend(new DesktopBus(desktop)) { CreateError = error };
+        desktop.AddMethodHandler(fake);
+        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        using var keys = new DesktopKeys(client);
+        await keys.ConfigureAsync(new DesktopKeySettings { Enabled = true, FocusChannels = ["music"] }, save: false);
+        Assert.Contains("focus routing is enabled", keys.Status);
+        Assert.Contains("does not offer global shortcuts", keys.Status);
+        Assert.Equal(4242, await Task.Run(DesktopFocusQuery.Read));
+        Assert.Equal(["CreateSession"], fake.ShortcutMethods);
+    }
+
     private sealed class DesktopBackend(DesktopBus bus) : IPathMethodHandler
     {
         public string Path => "/";
@@ -470,6 +492,7 @@ public sealed class DesktopKeysTests
         public bool CancelBinding { get; set; }
         public bool HoldBindingResponse { get; set; }
         public string? ConfigureError { get; init; }
+        public string? CreateError { get; init; }
         public int ConfigureRequests { get; private set; }
         public List<string> ShortcutMethods { get; } = [];
         private Action? _pendingBinding;
@@ -507,7 +530,11 @@ public sealed class DesktopKeysTests
                     return ValueTask.CompletedTask;
                 }
                 Dictionary<string, VariantValue> options;
-                if (member == "CreateSession") options = reader.ReadDictionaryOfStringToVariantValue();
+                if (member == "CreateSession")
+                {
+                    if (CreateError is { } error) { context.ReplyError(error, "Global shortcuts are unavailable."); return ValueTask.CompletedTask; }
+                    options = reader.ReadDictionaryOfStringToVariantValue();
+                }
                 else
                 {
                     Assert.Equal("BindShortcuts", member);
@@ -589,6 +616,7 @@ public sealed class DesktopKeysTests
         private readonly string _directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "openxlr-keys-" + Guid.NewGuid());
         private readonly string? _oldBus = Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS");
         private readonly string? _oldConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        private readonly string? _oldDesktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
         private readonly CancellationTokenSource _stop = new();
         private Task<ProcessResult>? _process;
         internal string Address => "unix:path=" + _directory + "/bus";
@@ -599,6 +627,7 @@ public sealed class DesktopKeysTests
             {
                 Directory.CreateDirectory(value._directory);
                 Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", value._directory);
+                Environment.SetEnvironmentVariable("XDG_CURRENT_DESKTOP", "KDE");
                 Environment.SetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS", value.Address);
                 value._process = ProcessRunner.RunAsync("dbus-daemon", ["--session", "--nofork", "--address=" + value.Address],
                     TimeSpan.FromSeconds(40), cancel: value._stop.Token);
@@ -614,6 +643,7 @@ public sealed class DesktopKeysTests
             _stop.Dispose();
             Environment.SetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS", _oldBus);
             Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _oldConfig);
+            Environment.SetEnvironmentVariable("XDG_CURRENT_DESKTOP", _oldDesktop);
             Directory.Delete(_directory, recursive: true);
         }
     }

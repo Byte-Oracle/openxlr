@@ -48,17 +48,29 @@ internal sealed class DesktopKeys(DaemonClient client) : IDisposable
             await connection.ConnectAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(3), _lifetime.Token);
             _ = ObserveConnectionAsync(connection);
             var bus = new DesktopBus(connection);
-            connection.AddMethodHandler(new KWinFocus(bus));
-            await connection.RequestNameAsync(KWinFocus.Service).WaitAsync(TimeSpan.FromSeconds(3), _lifetime.Token);
+            connection.AddMethodHandler(new DesktopFocus(bus));
+            await connection.RequestNameAsync(DesktopFocus.Service).WaitAsync(TimeSpan.FromSeconds(3), _lifetime.Token);
             var actions = Actions(settings);
             if (actions.Count == 0)
             {
                 SetStatus(Localizer.Text("DesktopKeysFocusOnly"));
                 return;
             }
-            await bus.RegisterHostAsync(_lifetime.Token);
-            var created = await bus.Request("CreateSession", "a{sv}", token => (ref MessageWriter w) =>
-                w.WriteDictionary(new Dictionary<string, VariantValue> { ["handle_token"] = token, ["session_handle_token"] = token }), _lifetime.Token);
+            Dictionary<string, VariantValue> created;
+            try
+            {
+                await bus.RegisterHostAsync(_lifetime.Token);
+                created = await bus.Request("CreateSession", "a{sv}", token => (ref MessageWriter w) =>
+                    w.WriteDictionary(new Dictionary<string, VariantValue> { ["handle_token"] = token, ["session_handle_token"] = token }), _lifetime.Token);
+            }
+            catch (DBusErrorReplyException ex) when (ex.ErrorName is "org.freedesktop.DBus.Error.UnknownMethod"
+                or "org.freedesktop.DBus.Error.UnknownInterface" or "org.freedesktop.DBus.Error.ServiceUnknown")
+            {
+                // No shortcut session exists. Keep the independent focus
+                // service available to Deck instead of closing its bus too.
+                SetStatus(Localizer.Text("DesktopKeysFocusOnly") + " " + Localizer.Text("DesktopKeysShortcutsUnavailable"));
+                return;
+            }
             string session = created["session_handle"].GetString();
             int active = 0; // 0 binding, 1 active, -1 closed
             bool IsCurrent() => ReferenceEquals(_connection, connection) && !_lifetime.IsCancellationRequested;

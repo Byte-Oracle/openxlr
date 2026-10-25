@@ -8,8 +8,8 @@ using Tmds.DBus.Protocol;
 
 namespace OpenXLR.UI;
 
-/// <summary>Read only the current process id through a short-lived KWin script.</summary>
-internal sealed class KWinFocus(DesktopBus bus) : IPathMethodHandler
+/// <summary>Expose a bounded compositor focus query through the desktop connection.</summary>
+internal sealed class DesktopFocus(DesktopBus bus) : IPathMethodHandler
 {
     internal const string Service = "org.openxlr.Desktop";
     public string Path => "/org/openxlr/Desktop";
@@ -61,9 +61,10 @@ internal sealed class KWinFocus(DesktopBus bus) : IPathMethodHandler
             reply.WriteUInt32(pid);
             context.Reply(reply.CreateMessage());
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            try { context.ReplyError("org.openxlr.Desktop.Unavailable", "Focused routing requires a responsive KDE Plasma session."); }
+            string message = ex is InvalidOperationException ? ex.Message : "The compositor could not report a focused application.";
+            try { context.ReplyError("org.openxlr.Desktop.Unavailable", message); }
             catch (Exception) { /* the requesting connection has already closed */ }
         }
         finally { context.Dispose(); }
@@ -72,10 +73,22 @@ internal sealed class KWinFocus(DesktopBus bus) : IPathMethodHandler
     internal async Task<uint> ReadAsync(CancellationToken cancel)
     {
         if (!await _oneRequest.WaitAsync(0, cancel)) throw new InvalidOperationException("a focus query is already running");
-        const string scriptName = "openxlr-focus-query";
-        string file = OpenXlrPaths.ConfigFile("desktop-focus.js");
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancel);
         deadline.CancelAfter(TimeSpan.FromSeconds(2));
+        try
+        {
+            if (FlatpakEnvironment.IsFlatpak) throw new InvalidOperationException("Focused routing is unavailable in the Flatpak sandbox.");
+            FocusCompositor source = CompositorFocus.Select();
+            return source == FocusCompositor.KWin ? await ReadKWinAsync(deadline.Token)
+                : await CompositorFocus.ReadAsync(source, deadline.Token);
+        }
+        finally { _oneRequest.Release(); }
+    }
+
+    private async Task<uint> ReadKWinAsync(CancellationToken cancel)
+    {
+        const string scriptName = "openxlr-focus-query";
+        string file = OpenXlrPaths.ConfigFile("desktop-focus.js");
         // The scripting calls ride a connection of their own. A compositor
         // that answers late costs this one query, not the shortcut session
         // that the shared connection holds; KWin still reports back there.
@@ -83,11 +96,11 @@ internal sealed class KWinFocus(DesktopBus bus) : IPathMethodHandler
         var kwin = new DesktopBus(scripting);
         try
         {
-            await scripting.ConnectAsync().AsTask().WaitAsync(deadline.Token);
+            await scripting.ConnectAsync().AsTask().WaitAsync(cancel);
             _kwinOwner = await kwin.Call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
                 "GetNameOwner", "s", (ref MessageWriter w) => w.WriteString("org.kde.KWin"),
-                static (message, _) => message.GetBodyReader().ReadString(), deadline.Token);
-            await Unload(deadline.Token);
+                static (message, _) => message.GetBodyReader().ReadString(), cancel);
+            await Unload(cancel);
             _cookie = Guid.NewGuid().ToString("N");
             _answer = new(TaskCreationOptions.RunContinuationsAsynchronously);
             // Serialize every data value as a JavaScript string literal. No
@@ -99,11 +112,11 @@ internal sealed class KWinFocus(DesktopBus bus) : IPathMethodHandler
                 """);
             int id = await kwin.Call("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "loadScript", "ss",
                 (ref MessageWriter w) => { w.WriteString(file); w.WriteString(scriptName); },
-                static (message, _) => message.GetBodyReader().ReadInt32(), deadline.Token);
+                static (message, _) => message.GetBodyReader().ReadInt32(), cancel);
             if (id < 0) throw new InvalidOperationException("KWin refused the focus query");
             await kwin.Empty("org.kde.KWin", "/Scripting/Script" + id.ToString(CultureInfo.InvariantCulture),
-                "org.kde.kwin.Script", "run", cancel: deadline.Token);
-            return await _answer.Task.WaitAsync(deadline.Token);
+                "org.kde.kwin.Script", "run", cancel: cancel);
+            return await _answer.Task.WaitAsync(cancel);
         }
         finally
         {
@@ -116,7 +129,6 @@ internal sealed class KWinFocus(DesktopBus bus) : IPathMethodHandler
             }
             catch (Exception) { /* next query removes a script left by a disappearing compositor */ }
             try { File.Delete(file); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-            _oneRequest.Release();
         }
 
         Task Unload(CancellationToken token) => kwin.Call("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting",
