@@ -761,13 +761,68 @@ public sealed class PipeWireAdapter
         catch (InvalidOperationException) { /* device gone */ }
     }
 
-    /// <summary>Volume of a source as 0..1.</summary>
-    public double? GetSourceVolume(string sourceName)
-        => ParseVolumePercent(TryRun("pactl", "get-source-volume", sourceName));
+    /// <summary>
+    /// The named sources' volumes, base volumes and hardware flags, read in
+    /// one pactl call; null when pactl fails or answers with something that
+    /// is not a source list. A percentage would round a volume to steps of
+    /// up to a decibel, so the raw volumes are read.
+    /// </summary>
+    public IReadOnlyDictionary<string, SourceVolume>? GetSourceVolumes(IReadOnlySet<string> names)
+    {
+        if (names.Count == 0) return new Dictionary<string, SourceVolume>(StringComparer.Ordinal);
+        try { return CaptureGain.ParseSources(RunBytes("pactl", 4 * 1024 * 1024, "--format=json", "list", "sources"), names); }
+        catch (Exception ex) when (ex is InvalidOperationException or JsonException) { return null; }
+    }
 
-    public void SetSourceVolume(string sourceName, double volume)
-        => Run("pactl", "set-source-volume", sourceName,
-            $"{(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}%");
+    /// <summary>
+    /// Set a source's volume to a raw Pulse volume (65536 is 0 dB), on every
+    /// channel. An absolute number, since pactl reads a leading sign as a
+    /// change relative to the current volume.
+    /// </summary>
+    public void SetSourceVolume(string sourceName, long raw)
+    {
+        Run("pactl", "set-source-volume", sourceName, Math.Max(0, raw).ToString(CultureInfo.InvariantCulture));
+        InvalidateDump();
+    }
+
+    /// <summary>
+    /// The named sources' channel volumes and mutes as the registry holds
+    /// them, one line per source, for telling cheaply whether one changed;
+    /// null while the registry cannot be read.
+    /// </summary>
+    public string? SourceVolumeSignature(IReadOnlyCollection<string> names)
+    {
+        if (names.Count == 0) return "";
+        JsonElement[] objects;
+        try { objects = GraphObjects(); }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or JsonException) { return null; }
+        var lines = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (JsonElement o in objects)
+        {
+            if (!o.TryGetProperty("info", out JsonElement info) || !info.TryGetProperty("props", out JsonElement props)
+                || !props.TryGetProperty("node.name", out JsonElement n) || n.GetString() is not { } name || !names.Contains(name)
+                || !props.TryGetProperty("media.class", out JsonElement m) || m.GetString() is not ("Audio/Source" or "Audio/Source/Virtual")) continue;
+            string level = info.TryGetProperty("params", out JsonElement pars) && pars.TryGetProperty("Props", out JsonElement list)
+                && list.ValueKind == JsonValueKind.Array && list.EnumerateArray().FirstOrDefault(p => p.TryGetProperty("channelVolumes", out _)) is
+                    { ValueKind: JsonValueKind.Object } p
+                ? p.GetProperty("channelVolumes").GetRawText() + (p.TryGetProperty("mute", out JsonElement mute) ? mute.GetRawText() : "")
+                : "";
+            lines[name] = lines.ContainsKey(name) ? "twice" : level;
+        }
+        return string.Join('\n', names.Order(StringComparer.Ordinal).Select(name => $"{name}\t{lines.GetValueOrDefault(name, "missing")}"));
+    }
+
+    /// <summary>The controls of one ALSA card as <c>amixer -c N contents</c> prints them, or null.</summary>
+    public static string? AlsaControls(string card)
+    {
+        try
+        {
+            ProcessResult result = ProcessRunner.Run("amixer", ["-c", card, "contents"], TimeSpan.FromSeconds(2),
+                stdoutCap: 1024 * 1024, stderrCap: 64 * 1024);
+            return result is { TimedOut: false, Truncated: false, Incomplete: false, ExitCode: 0 } ? result.StdoutText : null;
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException) { return null; }   // no amixer
+    }
 
     private string? TryRun(string exe, params string[] args)
     {

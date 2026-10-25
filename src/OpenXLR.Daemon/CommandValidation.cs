@@ -168,6 +168,10 @@ public static class CommandValidation
                 if (TooLong(cmd.Channel, 36) || !layout.HasChannel(cmd.Channel))
                     return $"setChannelVolume: unknown channel '{Short(cmd.Channel)}'";
                 return Finite(cmd, "value");
+            case "setCaptureGain":
+                if (cmd.Channel is null || TooLong(cmd.Channel, 36) || !layout.HasCaptureChannel(cmd.Channel))
+                    return "setCaptureGain: need a capture input channel";
+                return Finite(cmd, "value");
             case "setMixVolume":
             case "setMixMuted":
                 if (cmd.Mix is not null && !layout.HasMix(cmd.Mix)) return $"{cmd.Cmd}: unknown mix '{Short(cmd.Mix)}'";

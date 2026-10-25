@@ -16,10 +16,11 @@ namespace OpenXLR.Tests;
 public sealed partial class SkinWindowTests
 {
     /// <summary>
-    /// The Aux In and Line In readouts wear the skin in every place they are
-    /// drawn, the input rack, the mix matrix and the classic INPUTS panel:
-    /// their lettering takes the skin's value colour, a screen reader reads
-    /// what they show, and a moving volume fader turns them to the volume.
+    /// The Aux In, Line In and capture input readouts wear the skin in every
+    /// place they are drawn, the input rack, the mix matrix and the classic
+    /// INPUTS panel: their lettering takes the skin's value colour, a screen
+    /// reader reads what they show, and a moving volume fader turns them to
+    /// the volume. A capture input's gain is a fader over its own range.
     /// </summary>
     private static void TheInputReadoutsWearTheSkin()
     {
@@ -52,6 +53,9 @@ public sealed partial class SkinWindowTests
                  "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":1},"volume":1},
                              {"id":"aux","name":"Aux In","hardware":true,"levels":{"monitor":1},"volume":0.8},
                              {"id":"line","name":"Line In","hardware":true,"levels":{"monitor":1},"volume":0.6},
+                             {"id":"brio","name":"Brio","captureSource":"alsa_input.usb-webcam","captureConnected":true,
+                              "microphone":false,"chainWidth":2,"levels":{"monitor":1},"volume":0.7,
+                              "captureGain":{"gainDb":36,"minDb":18,"maxDb":54,"hardware":true}},
                              {"id":"music","name":"Music","levels":{"monitor":1},"volume":1}],
                  "inserts":{}}
                 """)]);
@@ -67,7 +71,7 @@ public sealed partial class SkinWindowTests
             Assert.IsType<InputRackViewModel>(window.InputRackModel);
             Assert.IsType<MixMatrixViewModel>(window.MixMatrix);
             var rack = window.FindControl<InputRackView>("InputRack")!;
-            foreach ((string id, string gain) in new[] { ("aux", "-12 dB"), ("line", "20 dB") })
+            foreach ((string id, string gain) in new[] { ("aux", "-12 dB"), ("line", "20 dB"), ("brio", "36 dB") })
             {
                 ChannelViewModel channel = model.Channels.Single(c => c.Id == id);
                 var hold = new ManualHold();
@@ -81,7 +85,8 @@ public sealed partial class SkinWindowTests
                     head.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "MatrixReadout"),
                 ];
                 foreach (TextBlock readout in readouts) Wears(readout, gain, channel.ReadoutName, $"{id} {readout.Name}");
-                Assert.Equal(Localizer.Text(id == "aux" ? "USBAuxIn" : "LineInGain"), AutomationProperties.GetName(readouts[0]));
+                Assert.Equal(id switch { "aux" => Localizer.Text("USBAuxIn"), "line" => Localizer.Text("LineInGain"),
+                    _ => Localizer.Format("CaptureGainName", "Brio") }, AutomationProperties.GetName(readouts[0]));
 
                 // The rack's volume fader moves: both readouts read the volume, and the gain again after the hold.
                 Slider volume = strip.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "RackVolume")
@@ -113,6 +118,23 @@ public sealed partial class SkinWindowTests
             Assert.Contains(line.GetVisualDescendants().OfType<Slider>(),
                 s => s.IsEffectivelyVisible && AutomationProperties.GetName(s) == Localizer.Text("LineInGain"));
 
+            // The capture input's gain is a fader over the device's range, in the rack and the matrix.
+            Border brio = rack.GetVisualDescendants().OfType<Border>()
+                .Single(b => b.Name == "InputStrip" && b.DataContext is InputStripViewModel s && s.Channel.Id == "brio");
+            Slider[] gains =
+            [
+                brio.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "RackCaptureGain").GetVisualDescendants().OfType<Slider>().Single(),
+                SkinLayoutWindowTests.RowHead(window, "brio").GetVisualDescendants().OfType<Slider>().Single(s => s.Name == "MatrixCaptureGain"),
+            ];
+            foreach (Slider gain in gains)
+            {
+                Assert.True(gain.IsEffectivelyVisible, gain.Name);
+                Assert.Equal((18, 54, 36), (gain.Minimum, gain.Maximum, gain.Value));
+                Assert.Equal(Localizer.Format("CaptureGainName", "Brio"), AutomationProperties.GetName(gain));
+                Assert.Equal(Localizer.Text("CaptureGainHardwareTip"), ToolTip.GetTip(gain));
+            }
+            Assert.False(SliderSync.RecentlyTouched("capgain:brio"));
+
             // The classic INPUTS panel, under the same value colour.
             SkinEntry classic = Assert.Single(SkinCatalog.Discover(), e => e.Id == "readouts-classic");
             Assert.Empty(classic.Errors);
@@ -122,6 +144,12 @@ public sealed partial class SkinWindowTests
             Assert.True(window.FindControl<Grid>("LineInRow")!.IsEffectivelyVisible);
             Wears(window.FindControl<TextBlock>("AuxInReadout")!, "-12 dB", Localizer.Text("USBAuxIn"), "classic aux");
             Wears(window.FindControl<TextBlock>("LineInReadout")!, "20 dB", Localizer.Text("LineInGain"), "classic line");
+            Grid captureRow = window.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "CaptureGainRow");
+            Assert.True(captureRow.IsEffectivelyVisible);
+            Assert.Equal((18, 54, 36), captureRow.GetVisualDescendants().OfType<Slider>().Select(s => (s.Minimum, s.Maximum, s.Value)).Single());
+            Wears(captureRow.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "CaptureGainReadout"), "36 dB",
+                Localizer.Format("CaptureGainName", "Brio"), "classic capture");
+            Assert.False(SliderSync.RecentlyTouched("capgain:brio"));
         }
         finally
         {

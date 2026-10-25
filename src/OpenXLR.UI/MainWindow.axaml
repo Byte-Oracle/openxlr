@@ -630,9 +630,20 @@
                 </Grid>
                 <TextBlock Text="{Binding BindingWarning}" Classes="hint" FontSize="11"
                            TextWrapping="Wrap" IsVisible="{Binding HasBindingWarning}"/>
+                <!-- the source's own gain, on a source OpenXLR does not drive; its readout shows the
+                     channel's volume while that fader moves and for a second after -->
+                <Grid Name="CaptureGainRow" ColumnDefinitions="90,*,Auto,64" IsVisible="{Binding ShowsCaptureGain}">
+                  <TextBlock Text="{loc:Text Key=UnitInputGain}" Classes="h" VerticalAlignment="Center"/>
+                  <Slider Grid.Column="1" vm:FaderInput.Step="1" Minimum="{Binding CaptureGainMinDb}" Maximum="{Binding CaptureGainMaxDb}"
+                          Value="{Binding CaptureGainDb, Mode=TwoWay}"
+                          AutomationProperties.Name="{Binding CaptureGainName}" ToolTip.Tip="{Binding CaptureGainTip}"/>
+                  <TextBlock Grid.Column="3" Name="CaptureGainReadout" Text="{Binding Readout}" Classes="val" VerticalAlignment="Center"
+                             HorizontalAlignment="Right" AutomationProperties.Name="{Binding ReadoutName}" ToolTip.Tip="{Binding ReadoutName}"/>
+                </Grid>
                 <Grid ColumnDefinitions="90,*,Auto,64" IsVisible="{Binding HasVolume}">
                   <TextBlock Text="{loc:Text Key=Volume}" Classes="h" VerticalAlignment="Center"/>
                   <Slider Grid.Column="1" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}"
+                          vm:FaderInput.IsAdjusting="{Binding VolumeAdjusting, Mode=OneWayToSource}"
                           AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=ChannelVolumeName}}" ToolTip.Tip="{Binding VolumeTip}"/>
                   <TextBlock Grid.Column="2" Text="&#x24D8;" Classes="h" FontSize="12"
                              VerticalAlignment="Center" IsVisible="{Binding DirectMonitored}" ToolTip.Tip="{Binding VolumeTip}"

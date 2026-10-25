@@ -17,8 +17,9 @@ namespace OpenXLR.Tests;
 /// Line In beside Aux In on a real window, at every width the layout test
 /// draws: in the classic INPUTS panel a row of its own with its gain, in the
 /// input rack a strip with its gain over its volume and no lock, and in the
-/// mix matrix a row head with the gain over the volume. Each of the two
-/// strips' readouts sits inside its strip or name column, reads the gain, and
+/// mix matrix a row head with the gain over the volume. A capture input with
+/// a gain of its own is drawn the same way in the rack and the matrix. Each
+/// strip's readout sits inside its strip or name column, reads the gain, and
 /// reads the volume while that fader moves, back to the gain after the hold.
 /// </summary>
 internal static partial class SkinLayoutWindowTests
@@ -38,6 +39,8 @@ internal static partial class SkinLayoutWindowTests
                  "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":1,"stream":1},"volume":1},
                              {"id":"aux","name":"Aux In","hardware":true,"levels":{"monitor":1,"stream":1},"mutedIn":["monitor"],"volume":0.8},
                              {"id":"line","name":"Line In","hardware":true,"levels":{"monitor":1,"stream":1},"mutedIn":["monitor"],"volume":0.6},
+                             {"id":"brio","name":"Brio","captureSource":"alsa_input.usb-webcam","captureConnected":true,"microphone":false,"chainWidth":2,
+                              "levels":{"monitor":1,"stream":1},"mutedIn":["monitor"],"volume":0.7,"captureGain":{"gainDb":36,"minDb":18,"maxDb":54,"hardware":true}},
                              {"id":"music","name":"Music","levels":{"monitor":1,"stream":1},"volume":1}],
                  "inserts":{}}
                 """)]);
@@ -45,7 +48,7 @@ internal static partial class SkinLayoutWindowTests
             model.AuxLevelDb = -12;
             model.LineInGainDb = 20;
             var holds = new Dictionary<string, ManualHold>();
-            foreach (string id in new[] { "aux", "line" })
+            foreach (string id in new[] { "aux", "line", "brio" })
                 model.Channels.Single(c => c.Id == id).StartReadoutHold = (holds[id] = new ManualHold()).Start;
             window.Show();
 
@@ -89,6 +92,8 @@ internal static partial class SkinLayoutWindowTests
                  "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":1,"stream":1},"volume":1},
                              {"id":"aux","name":"Aux In","hardware":true,"levels":{"monitor":1,"stream":1},"mutedIn":["monitor"],"volume":0.8},
                              {"id":"line","name":"Line In","hardware":true,"present":false,"levels":{"monitor":1,"stream":1},"mutedIn":["monitor"],"volume":0.6},
+                             {"id":"brio","name":"Brio","captureSource":"alsa_input.usb-webcam","captureConnected":true,"microphone":false,"chainWidth":2,
+                              "levels":{"monitor":1,"stream":1},"mutedIn":["monitor"],"volume":0.7,"captureGain":{"gainDb":36,"minDb":18,"maxDb":54,"hardware":true}},
                              {"id":"music","name":"Music","levels":{"monitor":1,"stream":1},"volume":1}],
                  "inserts":{}}
                 """)]);
@@ -101,6 +106,8 @@ internal static partial class SkinLayoutWindowTests
                  "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"levels":{"monitor":1,"stream":1},"volume":1},
                              {"id":"aux","name":"Aux In","hardware":true,"levels":{"monitor":1,"stream":1},"mutedIn":["monitor"],"volume":0.8},
                              {"id":"line","name":"Line In","hardware":true,"levels":{"monitor":1,"stream":1},"mutedIn":["monitor"],"volume":0.6},
+                             {"id":"brio","name":"Brio","captureSource":"alsa_input.usb-webcam","captureConnected":true,"microphone":false,"chainWidth":2,
+                              "levels":{"monitor":1,"stream":1},"mutedIn":["monitor"],"volume":0.7,"captureGain":{"gainDb":36,"minDb":18,"maxDb":54,"hardware":true}},
                              {"id":"music","name":"Music","levels":{"monitor":1,"stream":1},"volume":1}],
                  "inserts":{}}
                 """)]);
@@ -113,7 +120,7 @@ internal static partial class SkinLayoutWindowTests
             {
                 Layout(window, width, 1200);
                 string where = $"in the rack at {width}";
-                foreach ((string id, string gain) in new[] { ("aux", "-12 dB"), ("line", "20 dB") })
+                foreach ((string id, string gain) in new[] { ("aux", "-12 dB"), ("line", "20 dB"), ("brio", "36 dB") })
                 {
                     Border strip = RackStrip(rack, id);
                     Assert.True(strip.IsEffectivelyVisible, $"{id} {where}");
@@ -125,8 +132,10 @@ internal static partial class SkinLayoutWindowTests
                     Slider[] faders = [.. Part(strip, OpenXLR.UI.Skinning.SkinStripParts.Gain).GetVisualDescendants().OfType<Slider>()
                         .Where(s => s.IsEffectivelyVisible).OrderBy(s => s.TranslatePoint(default, strip)!.Value.Y)];
                     Assert.Equal(2, faders.Length);
-                    Assert.Equal(Localizer.Text(id == "aux" ? "USBAuxIn" : "LineInGain"), AutomationProperties.GetName(faders[0]));
-                    Assert.Equal(Localizer.Format("ChannelVolumeName", id == "aux" ? "Aux In" : "Line In"), AutomationProperties.GetName(faders[1]));
+                    Assert.Equal(id switch { "aux" => Localizer.Text("USBAuxIn"), "line" => Localizer.Text("LineInGain"), _ => Localizer.Format("CaptureGainName", "Brio") },
+                        AutomationProperties.GetName(faders[0]));
+                    Assert.Equal(Localizer.Format("ChannelVolumeName", id switch { "aux" => "Aux In", "line" => "Line In", _ => "Brio" }),
+                        AutomationProperties.GetName(faders[1]));
                 }
                 Assert.DoesNotContain(RackStrip(rack, "line").GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible);
                 Assert.Single(RackStrip(rack, "aux").GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible);
@@ -141,6 +150,15 @@ internal static partial class SkinLayoutWindowTests
             FaderInput.SetIsAdjusting(rackVolume, false);
             holds["line"].Handles[^1].Elapse();
             Assert.Equal("20 dB", rackReadout.Text);
+            // The capture input's readout does the same with its own gain.
+            Slider brioVolume = RackStrip(rack, "brio").GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "RackVolume")
+                .GetVisualDescendants().OfType<Slider>().Single();
+            TextBlock brioReadout = RackStrip(rack, "brio").GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "RackGainReadout");
+            FaderInput.SetIsAdjusting(brioVolume, true);
+            Assert.Equal("70%", brioReadout.Text);
+            FaderInput.SetIsAdjusting(brioVolume, false);
+            holds["brio"].Handles[^1].Elapse();
+            Assert.Equal("36 dB", brioReadout.Text);
 
             // The mix matrix: both heads stack the gain over the volume, the readout in the name column.
             Wear("broadcast");
@@ -149,7 +167,7 @@ internal static partial class SkinLayoutWindowTests
             {
                 Layout(window, width, 1400);
                 string where = $"in the matrix at {width}";
-                foreach (string id in new[] { "aux", "line" })
+                foreach (string id in new[] { "aux", "line", "brio" })
                 {
                     MatrixRowViewModel row = matrix.Rows.Single(r => r.Channel.Id == id);
                     Border head = RowHead(window, id);

@@ -132,16 +132,19 @@ export function layoutChoices(mixer, devices = []) {
     items: volumes.map((channel) => option(`chvol:${channel.id}`, `${channel.name} volume`)),
   });
   const microphones = channels.filter(channel => channel.unitInput);
-  if (microphones.length) {
+  if (microphones.length)
     toggleGroups.push({id:"layout-microphone-controls", label:"Microphone controls", items:microphones.flatMap(channel => [
       option(`chmute:${channel.id}`, `${channel.name} mute`),
       option(`chphantom:${channel.id}`, `${channel.name} phantom power`),
       option(`chlowcut:${channel.id}`, `${channel.name} low cut`),
       option(`chclipguard:${channel.id}`, `${channel.name} ClipGuard`),
     ])});
-    levelGroups.push({id:"layout-microphone-gains", label:"Microphone controls", items:microphones.map(channel =>
+  // A gain dial turns a unit's gain on the channel carrying its input, and a
+  // capture input's own gain, its source's volume, where the daemon reports one.
+  const gains = channels.filter(channel => channel.unitInput || channel.captureGain);
+  if (gains.length)
+    levelGroups.push({id:"layout-microphone-gains", label:"Microphone controls", items:gains.map(channel =>
       option(`chgain:${channel.id}`, `${channel.name} gain`))});
-  }
   for (const mix of mixes) levelGroups.push({
     id: `layout-send-levels-${mix.id}`,
     label: `Sends: ${mix.name}`,

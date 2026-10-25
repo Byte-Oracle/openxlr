@@ -116,6 +116,10 @@ as separate selected outputs.
 channel's own volume, which scales every send of the channel at once, and
 `GET /api/v1/channels/game` reads it back as `volume`. Every channel takes
 one, `xlr1`, `xlr2`, `aux` and `line` included.
+`{"cmd":"setCaptureGain","channel":"brio","value":36}` sets a capture input's
+gain to +36 dB, its source's volume, and `GET /api/v1/channels/brio` reads it
+back as `captureGain` with its range and whether it is the device's own
+control (see [capture input gain](api.md#capture-input-gain)).
 
 A capture channel reports `microphone` and `chainWidth` through
 `GET /api/v1/channels/{id}`. For a mono capture channel named `brio`,

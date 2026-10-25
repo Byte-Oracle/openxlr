@@ -58,6 +58,14 @@
     <Style Selector="Border.matrixColumn">
       <Setter Property="Width" Value="{DynamicResource Ox.Matrix.CellWidth}"/>
     </Style>
+    <!-- the readout sits under the processing button, or in the middle of the name column when the
+         row shows none, as Aux In's and Line In's do -->
+    <Style Selector="TextBlock#MatrixReadout.under">
+      <Setter Property="Grid.Row" Value="1"/>
+    </Style>
+    <Style Selector="TextBlock#MatrixReadout.centred">
+      <Setter Property="Grid.RowSpan" Value="2"/>
+    </Style>
   </UserControl.Styles>
 
   <UserControl.Resources>
@@ -177,7 +185,8 @@
                       </Flyout>
                     </Button.Flyout>
                   </Button>
-                  <TextBlock Grid.Column="3" Grid.Row="1" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                  <TextBlock Grid.Column="3" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                             Classes.under="{Binding ShowsProcessing}" Classes.centred="{Binding !ShowsProcessing}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowsReadout}"
                              AutomationProperties.Name="{Binding ReadoutName}" ToolTip.Tip="{Binding ReadoutName}"/>
                 </Grid>
@@ -305,7 +314,8 @@
                       </Flyout>
                     </Button.Flyout>
                   </Button>
-                  <TextBlock Grid.Column="3" Grid.Row="1" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                  <TextBlock Grid.Column="3" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                             Classes.under="{Binding ShowsProcessing}" Classes.centred="{Binding !ShowsProcessing}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowsReadout}"
                              AutomationProperties.Name="{Binding ReadoutName}" ToolTip.Tip="{Binding ReadoutName}"/>
                 </Grid>
@@ -562,7 +572,8 @@
                       </Flyout>
                     </Button.Flyout>
                   </Button>
-                  <TextBlock Grid.Column="3" Grid.Row="1" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                  <TextBlock Grid.Column="3" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                             Classes.under="{Binding ShowsProcessing}" Classes.centred="{Binding !ShowsProcessing}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowsReadout}"
                              AutomationProperties.Name="{Binding ReadoutName}" ToolTip.Tip="{Binding ReadoutName}"/>
                 </Grid>
@@ -591,6 +602,16 @@
                       <Slider Name="MatrixExtraGain" Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
                               Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
                               AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
+                    </layout:MeterFader>
+                    <!-- a capture input's own gain, its source's volume, on a source OpenXLR does not drive; the range
+                         before the value, so the fader never clamps the gain to a range it is about to leave -->
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}" Mono="{Binding Channel.MonoMeter}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                       IsVisible="{Binding ShowsCaptureGain}">
+                      <Slider Name="MatrixCaptureGain" Classes="matrixFader" vm:FaderInput.Step="1"
+                              Minimum="{Binding Channel.CaptureGainMinDb}" Maximum="{Binding Channel.CaptureGainMaxDb}"
+                              Value="{Binding Channel.CaptureGainDb, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Channel.CaptureGainName}" ToolTip.Tip="{Binding Channel.CaptureGainTip}"/>
                     </layout:MeterFader>
                   </Grid>
                   <!-- the channel's own volume, under the gain where the row has one, the meter under it

@@ -636,6 +636,10 @@ public sealed class MixerService : IHostedService, IDisposable
             changed |= _mixer.EnsureFilterRoutes();
             stop.ThrowIfCancellationRequested();
             changed |= _mixer.EnsureMonitorRoutes() | _mixer.SyncDeviceList();
+            // A capture input's gain that another program moved is
+            // reported, never written back.
+            stop.ThrowIfCancellationRequested();
+            changed |= _mixer.SyncCaptureGains();
             stop.ThrowIfCancellationRequested();
             // Where ducking runs, after routing and the device status are
             // current: the unit when the setup fits it, software otherwise.
@@ -886,6 +890,12 @@ public sealed class MixerService : IHostedService, IDisposable
                     if (cmd.Channel is null) return "setChannelVolume: need 'channel'";
                     _mixer.SetChannelVolume(cmd.Channel, cmd.Value.GetDouble());
                     break;
+                case "setCaptureGain":
+                    // The source keeps its own volume, as PipeWire saves it;
+                    // nothing goes into mixer.json.
+                    _mixer.SetCaptureGain(cmd.Channel!, cmd.Value.GetDouble());
+                    Changed?.Invoke();
+                    return null;
                 case "setMixVolume":
                     if (cmd.Mix is null) return "setMixVolume: need 'mix'";
                     _mixer.SetMixVolume(cmd.Mix, cmd.Value.GetDouble());

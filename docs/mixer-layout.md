@@ -409,6 +409,13 @@ save restores both and leaves any Sound Check take running. Rebinding rebuilds
 only this input's route and keeps the combine and its sends; a running plugin
 editor may close when its chain restarts. Profiles never restore this wiring.
 
+`setCaptureGain {channel, value}` sets a capture input's gain in dB: the
+volume of its source, which the audio server keeps, so nothing is added to
+the layout or a profile. The state reports it in the channel's
+`captureGain`, on a source that OpenXLR does not drive; a capture input on
+a Wave unit has the unit's gain instead
+([api.md](api.md#capture-input-gain)).
+
 Disconnected sources retain their exact binding and faders. They reconnect
 when that node and pair return. With `captureUnit`, a missing exact name
 follows the one source on that unit's card with the selected port, through

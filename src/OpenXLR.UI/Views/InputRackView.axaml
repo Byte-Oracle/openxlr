@@ -398,10 +398,21 @@
                 <Panel IsVisible="{Binding CarriesExtraUnit}">
                   <views:WaveUnitControls Name="RackExtraGain" Part="Gain" DataContext="{Binding ExtraUnit}"/>
                 </Panel>
+                <!-- a capture input's own gain, its source's volume, on a source OpenXLR does not drive; the
+                     range before the value, so the slider never clamps the gain to a range it is about to leave -->
+                <Grid Name="RackCaptureGain" ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding ShowsCaptureGain}">
+                  <Slider vm:FaderInput.Step="1" Minimum="{Binding Channel.CaptureGainMinDb}" Maximum="{Binding Channel.CaptureGainMaxDb}"
+                          Value="{Binding Channel.CaptureGainDb, Mode=TwoWay}"
+                          AutomationProperties.Name="{Binding Channel.CaptureGainName}" ToolTip.Tip="{Binding Channel.CaptureGainTip}"/>
+                  <!-- the gain, or the channel's volume while its fader moves and for a second after -->
+                  <TextBlock Grid.Column="1" Name="RackGainReadout" Text="{Binding Channel.Readout}" Classes="val" VerticalAlignment="Center"
+                             AutomationProperties.Name="{Binding Channel.ReadoutName}" ToolTip.Tip="{Binding Channel.ReadoutName}"/>
+                </Grid>
                 <!-- the channel's own volume, after the interface's gain; while the Wave XLR Pro's
                      direct path carries this channel to the jacks, a mark says it reaches the mixes only -->
                 <Grid Name="RackVolume" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" IsVisible="{Binding ShowsVolume}">
                   <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Channel.Volume, Mode=TwoWay}"
+                          vm:FaderInput.IsAdjusting="{Binding Channel.VolumeAdjusting, Mode=OneWayToSource}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
                           ToolTip.Tip="{Binding Channel.VolumeTip}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Channel.VolumeText}" Classes="val" VerticalAlignment="Center"/>

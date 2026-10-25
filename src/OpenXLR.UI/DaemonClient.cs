@@ -422,6 +422,9 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
     public Task SetChannelVolumeAsync(string channel, double value)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "setChannelVolume", ["channel"] = channel, ["value"] = value });
 
+    public Task SetCaptureGainAsync(string channel, double gainDb)
+        => SendAsync(new Dictionary<string, object> { ["cmd"] = "setCaptureGain", ["channel"] = channel, ["value"] = gainDb });
+
     public Task SetMixVolumeAsync(string mix, double value)
         => SendAsync(new Dictionary<string, object> { ["cmd"] = "setMixVolume", ["mix"] = mix, ["value"] = value });
 
