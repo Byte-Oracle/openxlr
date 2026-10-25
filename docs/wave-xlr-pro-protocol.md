@@ -296,6 +296,10 @@ second computer on the aux port. Everything below is verified live on Linux by e
     (reporter's: off12 = 0x90 vs 0x24 here) hears no Monitor mix on Headphones 1 at all; the
     daemon now asserts bit5 whenever a jack is the monitor output and drives bit1 from the
     XLR 1 -> Monitor send's mute. Both need the commit and a playback-stream restart to latch.
+    LATER (see Layout below): byte 5 is pair 1's level in that mix after all, int8 in half
+    dB. Wave Link keeps its own fader level there, so a unit that dual-boots can play the
+    Monitor mix 27.5 dB down (`c9`) with bit5 set. The daemon writes byte 5 to `00` with
+    bit5, and reads the return as on only when both hold.
   - Aux-mix section: music-return level off45, line-in membership off48 bit3 (bit0 = mic,
     set on this unit), music membership off49 bit1.
 - USB playback pairs are Wave Link channel returns; the Music channel = pair 10/11 (proven
@@ -537,9 +541,10 @@ The other selector values from `18` to `2f` played nothing.
   `11` added nothing; on `1f`, byte 30 bit 5 with the field at `00` put
   pair 1 on the jacks.
 - Level cells: byte 5 (pair 1 in section 0) measured +6.2 dB at `0c` and
-  -6.1 dB at `f4`. Byte 23 (pair 1 in section 18) measured -30 dB at `c4`,
-  -10 dB at `ec`, -6 dB at `f4`, -3 dB at `fa`, +3 dB at `06` and +12 dB at
-  both `28` and `50`.
+  -6.1 dB at `f4`. The daemon holds it at `00` while a jack is a monitor
+  output; a unit Wave Link had used held `c9` (-27.5 dB) there. Byte 23
+  (pair 1 in section 18) measured -30 dB at `c4`, -10 dB at `ec`, -6 dB
+  at `f4`, -3 dB at `fa`, +3 dB at `06` and +12 dB at both `28` and `50`.
 - At the same level cell, sections 18 to 72 play 21 dB louder than section
   0, on the jacks and on their capture streams alike. With byte 23 at `dc`
   (-18 dB) the difference was a flat 3.0 dB from 1.5 to 11 kHz, each

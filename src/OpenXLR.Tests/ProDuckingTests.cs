@@ -37,7 +37,8 @@ public sealed class ProDuckingTests
 
     /// <summary>
     /// A block 0x0001 with the bytes the protocol notes name: crossfade at 0,
-    /// the head membership bytes 12 and 13, the aa that opens each of the
+    /// the jacks' Monitor return level at 5 (unity), the head membership
+    /// bytes 12 and 13, the aa that opens each of the
     /// five sections at 15, 33, 51, 69 and 87 with 55 55 after it, the aux
     /// cells at 45, 48 and 49 and the output selectors at 90 to 93. Every
     /// other byte holds a pattern, so a write that touches it shows.
@@ -47,6 +48,7 @@ public sealed class ProDuckingTests
         var block = new byte[ProDucking.MixBlockLength];
         for (int i = 0; i < block.Length; i++) block[i] = (byte)(0x80 + i * 7);
         block[0] = 0x64;
+        block[5] = 0x00;
         block[12] = 0x24;
         block[13] = 0x0e;
         foreach (int at in new[] { 15, 33, 51, 69, 87 })

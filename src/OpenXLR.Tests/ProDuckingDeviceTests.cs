@@ -24,7 +24,7 @@ namespace OpenXLR.Tests;
 public sealed class ProDuckingDeviceTests
 {
     /// <summary>Block 0x0004 of the desk's Pro as capture 16 read it.</summary>
-    private const string SettingsBlock =
+    internal const string SettingsBlock =
         "34d800d4200a00c8001832f4040a00640006" + "01003c00f6030de300ff05f45c03f20507fd27e8" +
         "1e0004d4200a00c800180af4040a00640006" + "01003c00f6030de300ff05f45c03f20507fd27e8" + "14000200";
 

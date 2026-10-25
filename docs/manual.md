@@ -580,6 +580,10 @@ Monitor mix drives that hardware path: unmuted, you hear yourself with
 zero latency; muted, you do not. If another device (speakers, a headset)
 is ticked as well, the microphone reaches everything through the
 software mix instead, with a few milliseconds of delay.
+That device mix also holds a level for the computer audio OpenXLR sends,
+and Wave Link writes its own fader setting there. While a jack is a
+monitor output, OpenXLR keeps that level at 0 dB. A unit last used with
+Wave Link on another system would otherwise play quieter on its jacks.
 Muting the mix feeding the jacks also turns off the direct microphone path.
 For a summed feed, it stays on while at least one feeding mix and the
 microphone's send to that mix are both unmuted.
