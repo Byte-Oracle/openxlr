@@ -3143,6 +3143,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                     BindingWarning = BindingWarningLocked(c),
                     UnitInput = unitInputs.GetValueOrDefault(c.Id),
                     Volume = ChannelVolumeLocked(c.Id),
+                    CaptureGain = CaptureGainLocked(c, unitInputs),
                     Eq = CarriesEq(c) ? EqStateLocked(c.Id, unitInputs) : null,
                 })],
                 RenamedSinceStart = _renamedSinceBuild,

@@ -402,6 +402,7 @@ public sealed class WebSocketHub
             case "setLevel":
             case "setChannelMuted":
             case "setChannelVolume":
+            case "setCaptureGain":
             case "setMixVolume":
             case "setMixMuted":
             case "adjustOutputVolume":
