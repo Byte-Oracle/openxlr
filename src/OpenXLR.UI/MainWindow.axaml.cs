@@ -184,6 +184,10 @@ public partial class MainWindow : Window
 
     private void OnMonitorSizeChanged(object? sender, SizeChangedEventArgs e) => LayOutMonitor(e.NewSize.Width);
 
+    private void LayOutHeadphones()
+        => HeadphoneControls.ColumnDefinitions = new(_watchedView?.HasHp2 == true
+            ? "90,*,64,20,90,*,64" : "90,*,64,0,0,0,0");
+
     /// <summary>
     /// Stand MONITOR's controls as its template and its width call for. The
     /// panel puts a label before the output picker and before the volume; the
@@ -198,6 +202,10 @@ public partial class MainWindow : Window
     {
         bool toolbar = _monitorTemplate == Skinning.SkinLayoutTemplates.OutputToolbar;
         bool stacked = width < Skinning.SkinLayoutDefaults.MonitorStackWidth;
+        // A long device name must trim within its share instead of taking
+        // the volume fader's space. Recompute even within the same row mode.
+        MonitorDestination.MaxWidth = stacked ? double.PositiveInfinity
+            : Math.Max(0, (width - (toolbar ? 76 : 264)) / 2);
         if (_monitorStacked == (toolbar, stacked)) return;
         _monitorStacked = (toolbar, stacked);
         MonitorDevicesLabel.IsVisible = MonitorVolumeLabel.IsVisible = !toolbar;
