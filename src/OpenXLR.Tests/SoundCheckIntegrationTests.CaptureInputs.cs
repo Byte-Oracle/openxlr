@@ -13,6 +13,59 @@ public sealed partial class SoundCheckIntegrationTests
     [MonitorPipeWireFact]
     public Task AMonoCaptureTakeLoopsThroughLiveInsertEdits() => CheckCaptureLoop(withInsert: true);
 
+    [MonitorPipeWireFact]
+    public async Task AFailedRecordingKeepsItsNativeReasonAndRestoresTheLiveMicrophone()
+    {
+        const string reason = "non-finite audio at the plugin input";
+        var notes = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var pw = new PipeWireAdapter(() => { }, notes.Enqueue);
+        using var registry = pw.WatchGraph();
+        using var mixer = BuildCapture(pw, out _);
+        using var stop = new CancellationTokenSource();
+        Task<ProcessResult> play = PlayCapture(.25, stop.Token);
+        try
+        {
+            AssertCapture(.25);
+            mixer.SoundCheck("capture", "record");
+            CaptureChainFixture.Wait(() => mixer.Snapshot().SoundCheck.Seconds >= .1);
+            ProcessResult injected = ProcessRunner.Run("python3", ["-c", """
+                import struct, subprocess
+                args = ['pw-cat', '--playback', '--properties={ node.link-group = openxlr-test-playback }',
+                        '--format=f32', '--rate=48000', '--channels=2', '--target', 'soundcheck_capture_signal', '-']
+                if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True): args.insert(2, '--raw')
+                signal = struct.pack('<ff', 0, 0) * 24000
+                signal += struct.pack('<ff', 0, float('nan'))
+                signal += struct.pack('<ff', 0, 0) * 24000
+                subprocess.run(args, input=signal, check=True, timeout=10)
+                """], TimeSpan.FromSeconds(15));
+            Assert.True(injected.Ok, injected.Stderr);
+            CaptureChainFixture.Wait(() =>
+            {
+                mixer.EnsureFilterRoutes();
+                return mixer.SoundCheckChannel is null;
+            });
+            SoundCheckState state = mixer.Snapshot().SoundCheck;
+            Assert.Equal("capture", state.Channel);
+            Assert.Equal("idle", state.Mode);
+            Assert.Contains(reason, state.Error);
+            Assert.Contains(notes, line => line.Contains("Sound Check on capture stopped", StringComparison.Ordinal)
+                && line.Contains(reason, StringComparison.Ordinal));
+            AssertCapture(.25);
+            mixer.SoundCheck("capture", "stop");
+            Assert.Null(mixer.Snapshot().SoundCheck.Error);
+            mixer.SoundCheck("capture", "record");
+            CaptureChainFixture.Wait(() => mixer.Snapshot().SoundCheck.Seconds >= .1);
+            Assert.Null(mixer.Snapshot().SoundCheck.Error);
+            mixer.SoundCheck("capture", "stop");
+            AssertCapture(.25);
+        }
+        finally
+        {
+            stop.Cancel();
+            await play;
+        }
+    }
+
     private static async Task CheckCaptureLoop(bool withInsert)
     {
         var pw = new PipeWireAdapter();

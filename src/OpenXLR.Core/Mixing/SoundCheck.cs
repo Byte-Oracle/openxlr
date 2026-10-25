@@ -186,7 +186,11 @@ public sealed partial class Mixer
         bool failed = !_soundCheck.IsAlive || _soundCheckInput is null || _pw.EnsureLinks(_soundCheckInput) == LinkHealth.Broken;
         bool expired = Stopwatch.GetElapsedTime(_soundCheckStarted) >= SoundCheckSessionLimit;
         if (!failed && !expired) return changed;
-        StopSoundCheckLocked(restore: true, error: failed ? "Sound Check stopped because its audio path was lost." : "Sound Check ended after ten minutes.");
+        string? words = failed ? _soundCheck.LastWords : null;
+        string error = failed ? "Sound Check stopped because its audio path was lost." : "Sound Check ended after ten minutes.";
+        if (words is not null) error += $" The plugin host's last message: {words}";
+        if (failed) _pw.Note($"Sound Check on {_soundCheckChannel} stopped{(words is null ? "." : $". The plugin host's last message: {words}")}");
+        StopSoundCheckLocked(restore: true, error: error);
         return true;
     }
 }

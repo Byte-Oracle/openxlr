@@ -1283,7 +1283,9 @@ microphone channel of the session, including a mono capture input id, null
 when there is none. `mode` is what
 the helper last did: `recording`, `looping` or `live`, and `idle` without a
 session. `seconds` is the length recorded, 0 to 10, and the daemon pushes
-state as it grows. `error` says why a session ended by itself.
+state as it grows. `error` says why a session ended by itself. If its native
+helper failed with a message, that last message is included in `error` and
+written to the daemon's log before the session is discarded.
 
 The sample is taken from the channel's route source and selected mono port,
 after any hardware gain and processing. It enters ahead of the channel's
