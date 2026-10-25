@@ -727,6 +727,14 @@ unit inputs. A target resolves the channel's current unit at each press or
 turn, keeps its id through a rename, and becomes unavailable when the unit
 or control is unavailable. Legacy interface targets remain unchanged.
 
+Microphone EQ groups offer EQ and band on/off keys, filter-type keys and
+dials for a band's frequency, gain, Q and type. The dial press switches
+that band. They follow the daemon's reported bands, types, ranges and
+steps, retain stable channel ids through renames, and use the channel's
+icon and colour. Quick turns lead locally and coalesce through the
+existing dial sender; removal, rebinding and reconnection discard stale
+unsent EQ edits. Changes use the same EQ and saved state as the UI.
+
 ![Keys](plugin-keys.png)
 
 Profiles: a key can recall one of the active device's saved profiles,
