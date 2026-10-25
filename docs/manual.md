@@ -2989,6 +2989,11 @@ own; on every other OpenXLR sink the volume is not a control, so turning
 it down only cuts audio. The daemon puts those other sinks back to full
 volume on its sweep and logs when it had to.
 
+The internal effect stages, such as OpenXLR Mic Filter and a mix's
+inserts, show up in desktop volume panels as applications playing and
+recording. Their volume is not a control either. The sweep puts them back
+to full volume and unmuted in the same way.
+
 Each send is an internal stream of its channel, and the session manager
 can set a remembered level on a new one too. That can be full level, or
 the level and mute of another send on the same channel. WirePlumber 0.4,
