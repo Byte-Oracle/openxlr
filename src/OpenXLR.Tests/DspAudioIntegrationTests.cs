@@ -12,6 +12,9 @@ public sealed partial class DspAudioIntegrationTests
         var pw = new PipeWireAdapter();
         try
         {
+            pw.CreateNullSink("dsp_input", "DSP test input");
+            pw.CreateNullSink("dsp_output", "DSP test output");
+            pw.CreateVirtualMic("dsp_microphone", "dsp_output.monitor", "DSP test microphone");
             foreach (bool native in new[] { false, true })
             foreach (int hz in new[] { 0, 80, 120 })
             {
@@ -23,6 +26,10 @@ public sealed partial class DspAudioIntegrationTests
                 var filter = pw.CreateMicFilter($"signal_{native}_{hz}", hz, true, inserts);
                 try
                 {
+                    // Internal streams are linked explicitly, as in the
+                    // mixer. Only the finished microphone is a capture device.
+                    Assert.True(pw.LinkNodes("dsp_input", "monitor", filter.SinkName, "playback").Complete);
+                    Assert.True(pw.LinkNodes(filter.SourceName, "capture", "dsp_output", "playback").Complete);
                     var result = ProcessRunner.Run("python3", ["-c", """
                         import math, struct, subprocess, sys, tempfile
                         rate = 48000
@@ -58,8 +65,8 @@ public sealed partial class DspAudioIntegrationTests
                                     process.kill()
                                 process.wait()
                             capture.close()
-                        """, filter.SinkName, filter.SourceName], TimeSpan.FromSeconds(20));
-                    Assert.True(result.Ok, result.StdoutText + result.Stderr);
+                        """, "dsp_input", "dsp_microphone"], TimeSpan.FromSeconds(20));
+                    Assert.True(result.Ok, $"Native host: {native}, low cut: {hz} Hz\n" + result.StdoutText + result.Stderr);
                 }
                 finally { pw.StopFilter(filter); }
             }

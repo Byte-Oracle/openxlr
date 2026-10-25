@@ -270,6 +270,17 @@ Options has a tip for step 2: enforcing `OpenXLR Chat` as the system
 default input ([section 3.7](#default-devices)) makes every voice app pick it up without
 configuration.
 
+For an effects-only microphone, add a virtual microphone in the layout,
+name it Mic Effects, and send only your microphone channel to it. Select
+`OpenXLR Mic Effects` in the recording application. Input inserts run before
+the channel reaches the mix; that mix's inserts run before its virtual
+microphone. Restarting a recording application does not change this path.
+The physical microphone bypasses OpenXLR's software effects. Internal
+filter stages, including `OpenXLR Mic Filter`, are graph plumbing rather
+than selectable recording devices; a graph editor can still show them.
+If an application previously selected one of those stages, select the
+finished virtual microphone there instead.
+
 <a name="input-bindings"></a>
 #### Use another microphone on XLR 1 or XLR 2
 

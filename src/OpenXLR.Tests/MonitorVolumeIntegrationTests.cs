@@ -536,7 +536,7 @@ public sealed partial class MonitorVolumeIntegrationTests
     /// recording <paramref name="output"/>, and require the settled recording
     /// to sit at <paramref name="expected"/>.
     /// </summary>
-    private static void CaptureLevel(double expected, string source, string output)
+    private static void CaptureLevel(double expected, string source, string output, bool virtualMicrophone = false)
     {
         var result = ProcessRunner.Run("python3", ["-c", """
             import struct, subprocess, sys, tempfile
@@ -550,7 +550,10 @@ public sealed partial class MonitorVolumeIntegrationTests
             if '--raw' in subprocess.check_output(['pw-cat', '--help'], text=True):
                 args.append('--raw')
             capture = tempfile.TemporaryFile()
-            record = subprocess.Popen(['pw-cat', '--record', *args, '--properties={ node.link-group = openxlr-test-record }', '--target', sys.argv[3], '--properties={ stream.capture.sink = true }', '-'], stdout=capture, stderr=subprocess.PIPE)
+            recorder = (['parec', '--raw', '--format=float32le', '--rate=48000', '--channels=2', '--latency-msec=20', '--device=' + sys.argv[3]]
+                        if sys.argv[4] == 'microphone' else
+                        ['pw-cat', '--record', *args, '--properties={ node.link-group = openxlr-test-record }', '--target', sys.argv[3], '--properties={ stream.capture.sink = true }', '-'])
+            record = subprocess.Popen(recorder, stdout=capture, stderr=subprocess.PIPE)
             play = None
             try:
                 play = subprocess.Popen(['pw-cat', '--playback', *args, '--properties={ node.link-group = openxlr-test-playback }', '--target', sys.argv[2], '-'], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -587,7 +590,7 @@ public sealed partial class MonitorVolumeIntegrationTests
                     process.wait()
                 capture.close()
             """, expected.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            source, output], TimeSpan.FromSeconds(20));
+            source, output, virtualMicrophone ? "microphone" : "sink"], TimeSpan.FromSeconds(20));
         Assert.True(result.Ok, result.StdoutText + result.Stderr);
     }
 

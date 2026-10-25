@@ -8,6 +8,32 @@ namespace OpenXLR.Tests;
 public sealed class FilterStateIntegrationTests
 {
     [MonitorPipeWireFact]
+    public void InternalFiltersAreNotPublishedAsDesktopDevices()
+    {
+        var pw = new PipeWireAdapter();
+        try
+        {
+            FilterHandle mic = pw.CreateMicFilter("visibility", 120, false);
+            FilterHandle delay = pw.CreateMixDelay("visibility");
+            // Created afterwards, these selectable devices also establish
+            // that the Pulse server has seen the graph's new endpoints.
+            pw.CreateNullSink("visibility_output", "Test output");
+            pw.CreateVirtualMic("OpenXLR_visibility_mic", "visibility_output.monitor", "OpenXLR Mic Effects");
+            foreach (string kind in new[] { "sources", "sinks" })
+            {
+                ProcessResult result = ProcessRunner.Run("pactl", ["-f", "json", "list", kind]);
+                Assert.True(result.Ok, result.Stderr);
+                using JsonDocument devices = JsonDocument.Parse(result.Stdout);
+                string[] names = [.. devices.RootElement.EnumerateArray().Select(d => d.GetProperty("name").GetString()!)];
+                Assert.Contains(kind == "sources" ? "OpenXLR_visibility_mic" : "visibility_output", names);
+                foreach (string node in new[] { mic.SinkName, mic.SourceName, delay.SinkName, delay.SourceName })
+                    Assert.DoesNotContain(names, name => name == node || name == node + ".monitor");
+            }
+        }
+        finally { pw.TearDown(); }
+    }
+
+    [MonitorPipeWireFact]
     public void InternalMicFiltersIgnoreSavedDesktopMuteAndGain()
     {
         var pw = new PipeWireAdapter();

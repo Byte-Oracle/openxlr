@@ -86,8 +86,9 @@ def main():
                 state.parent.mkdir(parents=True, exist_ok=True)
                 keys = ["Audio/Sink:media.name:Combine stream"]
                 for description in ("OpenXLR Mic Filter", "OpenXLR mix latency delay"):
-                    for kind, suffix in (("Sink", "input"), ("Source", "output")):
-                        keys.append(f"Audio/{kind}:media.name:{description} {suffix}")
+                    for kind, suffix in (("Audio/Sink", "input"), ("Audio/Source", "output"),
+                                         ("Stream/Input/Audio", "input"), ("Stream/Output/Audio", "output")):
+                        keys.append(f"{kind}:media.name:{description} {suffix}")
                 values = {"volume": 0.125, "mute": True, "channelVolumes": [0.125]}
                 lines = ["[stream-properties]" if modern else "[restore-stream]"]
                 for key in keys:
