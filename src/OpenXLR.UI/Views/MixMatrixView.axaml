@@ -592,6 +592,16 @@
                               Value="{Binding ExtraUnit.GainDb, Mode=TwoWay}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
                               AutomationProperties.Name="{Binding ExtraUnit.GainName}"/>
                     </layout:MeterFader>
+                    <!-- a capture input's own gain, its source's volume, on a source OpenXLR does not drive; the range
+                         before the value, so the fader never clamps the gain to a range it is about to leave -->
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}" Mono="{Binding Channel.MonoMeter}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center"
+                                       IsVisible="{Binding ShowsCaptureGain}">
+                      <Slider Name="MatrixCaptureGain" Classes="matrixFader" vm:FaderInput.Step="1"
+                              Minimum="{Binding Channel.CaptureGainMinDb}" Maximum="{Binding Channel.CaptureGainMaxDb}"
+                              Value="{Binding Channel.CaptureGainDb, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Channel.CaptureGainName}" ToolTip.Tip="{Binding Channel.CaptureGainTip}"/>
+                    </layout:MeterFader>
                   </Grid>
                   <!-- the channel's own volume, under the gain where the row has one, the meter under it
                        otherwise; while the Wave XLR Pro's direct path carries this channel to the jacks, a

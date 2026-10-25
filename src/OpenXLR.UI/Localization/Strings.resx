@@ -236,6 +236,15 @@
   <data name="CaptureConnectedPort" xml:space="preserve">
     <value>Connected · port {0}</value>
   </data>
+  <data name="CaptureGainName" xml:space="preserve">
+    <value>{0} gain</value>
+  </data>
+  <data name="CaptureGainHardwareTip" xml:space="preserve">
+    <value>The device's own capture gain, as its ALSA control reads it. Other programs can change it too; the channel follows them.</value>
+  </data>
+  <data name="CaptureGainSoftwareTip" xml:space="preserve">
+    <value>The source's level in PipeWire; at 0 dB the sound passes as the device sends it. Other programs can change it too; the channel follows them.</value>
+  </data>
   <data name="CaptureOfflinePair" xml:space="preserve">
     <value>Offline · pair {0}</value>
   </data>

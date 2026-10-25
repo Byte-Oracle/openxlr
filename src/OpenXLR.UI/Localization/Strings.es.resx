@@ -236,6 +236,15 @@
   <data name="CaptureConnectedPort" xml:space="preserve">
     <value>Conectado · puerto {0}</value>
   </data>
+  <data name="CaptureGainName" xml:space="preserve">
+    <value>Ganancia de {0}</value>
+  </data>
+  <data name="CaptureGainHardwareTip" xml:space="preserve">
+    <value>La ganancia de captura del propio dispositivo, tal como la muestra su control ALSA. Otros programas también pueden cambiarla; el canal los sigue.</value>
+  </data>
+  <data name="CaptureGainSoftwareTip" xml:space="preserve">
+    <value>El nivel de la fuente en PipeWire; a 0 dB el sonido pasa tal como lo envía el dispositivo. Otros programas también pueden cambiarlo; el canal los sigue.</value>
+  </data>
   <data name="CaptureOfflinePair" xml:space="preserve">
     <value>Desconectado · par {0}</value>
   </data>

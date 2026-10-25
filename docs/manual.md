@@ -180,10 +180,11 @@ the hardware inputs leave an empty space where the Volume row would be, so
 each send row sits at the same height in every tile.
 
 <a name="gain-readout"></a>
-Aux In and Line In each have a readout that shows the input's level or
-gain in dB: on the USB Aux in and Line In rows of the INPUTS card, beside
-the level or gain in an input rack, and in the name column of a mix matrix
-row. While you move the channel's volume fader, by dragging it or with the
+Aux In, Line In and a capture input with a [gain](#capture-gain) each have
+a readout that shows the input's level or gain in dB: on the USB Aux in
+and Line In rows and the capture input's Gain row of the INPUTS card,
+beside the level or gain in an input rack, and in the name column of a mix
+matrix row. While you move the channel's volume fader, by dragging it or with the
 arrow keys, wherever it is drawn, the readout shows the volume as a
 percentage instead, and it goes back to the level or gain one second after
 the fader stops. A screen reader reads the readout under the name of what
@@ -2743,6 +2744,11 @@ and mutes its input on press. Renaming a channel or its unit's capture node
 keeps the target. A missing carrier, an unplugged unit or an unsupported
 control makes it unavailable. An older daemon without `unitInput` offers no
 channel hardware targets; the existing interface targets still work.
+The group also lists a gain dial for each capture input that has a
+[gain of its own](#capture-gain). It turns that gain one dB a tick within
+the source's range with `setCaptureGain`, meters the channel, and on press
+mutes or unmutes the channel in every mix, since OpenXLR does not write the
+source's mute.
 
 Capture chains also appear in the insert key and dial choices, named by
 their channel. Saved insert targets keep the channel id through a rename.
@@ -2763,8 +2769,9 @@ configured. A headphone dial uses the output selector as mute only when
 the device supports output routing. On volume-only jacks, such as the XLR
 Dock, it shows the volume and pressing it sends no command.
 Pressing other dials mutes (or, for a gain, mutes the input;
-for the crossfade, recentres; for a channel volume or the Line In gain,
-whose jack has no hardware mute, mutes or unmutes the channel in every mix,
+for the crossfade, recentres; for a channel volume, the Line In gain or a
+capture input's own gain, none of which has a mute OpenXLR writes, mutes
+or unmutes the channel in every mix,
 as a dial on its sends in all mixes does; for an
 insert control, toggles that insert's bypass; for a named output, toggles
 that output's mute; for the monitor output volume, pauses or resumes
@@ -3308,6 +3315,28 @@ the input's chain restarts. An offline source stays selected and silent until
 it returns. Capture source editing is available in the UI and API; the
 terminal mixer and Stream Deck do not offer this picker.
 
+<a name="capture-gain"></a>
+A capture input on a source OpenXLR does not drive has a **gain**, which
+is the source's own input volume. Webcams and most USB microphones set it
+on the device, and the gain then reads in dB the way the device's capture
+control does in alsamixer. Its range is the device's own: a Logitech BRIO
+goes from +18 to +54 dB. A source without a hardware control has a
+software level instead, from -60 to +10 dB. At 0 dB the sound passes as it
+arrives.
+The gain sits over the channel's volume in an input rack, as a fader over
+the volume in a mix matrix row, and as a Gain row above Volume in the
+classic INPUTS block. Its readout shows the volume while you move the
+volume fader, as Aux In's does ([gain readout](#gain-readout)). The
+terminal mixer has it on the Inputs tab, and a Stream Deck dial can turn
+it. Two capture inputs on one source share its gain.
+
+Other programs can change the same volume: a voice chat with automatic
+gain control, a browser, or a desktop volume panel. OpenXLR shows the new
+value within a second and does not set it back. A capture input on a Wave
+interface or an XLR Dock has no gain of this kind; it shows the unit's own
+gain while OpenXLR drives the unit. OpenXLR never changes the volume of
+those units' sources, the Wave XLR Pro's included.
+
 A capture channel on the primary interface's own source, at the first port
 or pair for its first microphone or the third port or second pair for its
 second, carries that microphone while XLR 1 or XLR 2 is bound to another
@@ -3672,7 +3701,7 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 |---|---|
 | 1 Mixer | channel sends, mix masters, stereo meters and level history; channel and user mix creation, renaming, removal and ordering |
 | 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. A microphone input, including a mono capture input, carries one bar rather than a pair of the same reading. A strip bound to another microphone shows its source, or why it is silent, on the row under its name, and a silent one's name is in the warning colour |
-| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing, [ducking](#terminal-ducking) on any device, USB Aux return and, on a Wave XLR Pro, the Line In gain |
+| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing, [ducking](#terminal-ducking) on any device, USB Aux return and, on a Wave XLR Pro, the Line In gain; each capture input's own gain |
 | 4 Outputs | selected monitor sinks and their feeds, shared output volume, the monitoring pause (**Mute monitoring**, microphone sends also pause when enabled in Options), each sink's volume and mute, and the system default sink and source |
 | 5 Apps | every known application and its channel assignment, including the desktop's own routing |
 | 6 Inserts | the chain on each input and mix, its order, bypass and status; add a plugin from the catalogue, narrowed by typing, of those that fit the chain's width; open a plugin's native editor or edit its generated controls when the editor is blocked or refused |

@@ -1742,6 +1742,8 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         {
             if (!Set(ref _name, value)) return;
             Raise(nameof(BindingChipName));
+            Raise(nameof(CaptureGainName));
+            RefreshCaptureReadout();
             if (_showsVolumeReadout) Raise(nameof(ReadoutName));
             if (_eq is not null) _eq.ChannelName = value;
             if (_inserts is not null) _inserts.Title = value;
@@ -1879,7 +1881,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     /// <see cref="UnitInput"/>, with the strips on the interface standing in
     /// while no unit reports one.
     /// </summary>
-    public int ShownUnitInput { get => _shownUnitInput; internal set => Set(ref _shownUnitInput, value); }
+    public int ShownUnitInput { get => _shownUnitInput; internal set { if (Set(ref _shownUnitInput, value)) Raise(nameof(ShowsCaptureGain)); } }
 
     private WaveUnitInputViewModel? _extraUnitInput;
     /// <summary>
@@ -1891,7 +1893,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     public WaveUnitInputViewModel? ExtraUnitInput
     {
         get => _extraUnitInput;
-        internal set { if (Set(ref _extraUnitInput, value)) Raise(nameof(CarriesExtraUnit)); }
+        internal set { if (Set(ref _extraUnitInput, value)) { Raise(nameof(CarriesExtraUnit)); Raise(nameof(ShowsCaptureGain)); } }
     }
 
     /// <summary>The channel draws an additional unit's gain and switches.</summary>
@@ -2033,6 +2035,91 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     /// <summary>The strip has a gain readout.</summary>
     public bool HasGainReadout => _gainReadout is not null;
 
+    // --- a capture input's gain: its source's volume, on a source OpenXLR does not drive ---
+
+    private bool _hasCaptureGain, _captureGainHardware, _applyingCaptureGain;
+    private double _captureGainDb, _captureGainMinDb = -60, _captureGainMaxDb = 10;
+
+    /// <summary>
+    /// The daemon reports a gain for this capture input: its source is not a
+    /// Wave unit's, the channel does not carry a unit's input, and the source
+    /// is present. The strip then draws the gain and its readout.
+    /// </summary>
+    public bool HasCaptureGain { get => _hasCaptureGain; private set { if (Set(ref _hasCaptureGain, value)) Raise(nameof(ShowsCaptureGain)); } }
+
+    /// <summary>
+    /// The strip draws the capture input's own gain: it has one, and the
+    /// strip draws no Wave unit's gain, which the daemon never pairs with one.
+    /// </summary>
+    public bool ShowsCaptureGain => _hasCaptureGain && _shownUnitInput == 0 && _extraUnitInput is null;
+
+    /// <summary>The gain is the device's own capture control; otherwise the source's software level.</summary>
+    public bool CaptureGainHardware
+    {
+        get => _captureGainHardware;
+        private set { if (Set(ref _captureGainHardware, value)) Raise(nameof(CaptureGainTip)); }
+    }
+
+    public double CaptureGainMinDb { get => _captureGainMinDb; private set => Set(ref _captureGainMinDb, value); }
+    public double CaptureGainMaxDb { get => _captureGainMaxDb; private set => Set(ref _captureGainMaxDb, value); }
+
+    /// <summary>The capture input's gain in dB; moving it sends setCaptureGain.</summary>
+    public double CaptureGainDb
+    {
+        get => _captureGainDb;
+        set
+        {
+            if (!Set(ref _captureGainDb, value)) return;
+            Raise(nameof(CaptureGainText));
+            RefreshCaptureReadout();
+            if (_applyingCaptureGain || _detached || !_hasCaptureGain) return;
+            double v = value;
+            string key = $"capgain:{Id}";
+            SliderSync.Touch(key);
+            SliderSync.Send(key, () => _ = _client.SetCaptureGainAsync(Id, v));
+        }
+    }
+
+    public string CaptureGainText => $"{_captureGainDb:0.#} dB";
+
+    /// <summary>The gain slider's name for a screen reader.</summary>
+    public string CaptureGainName => Localizer.Format("CaptureGainName", Name);
+
+    /// <summary>What the gain is: the device's own control or the source's software level.</summary>
+    public string CaptureGainTip => _captureGainHardware ? Localizer.Text("CaptureGainHardwareTip") : Localizer.Text("CaptureGainSoftwareTip");
+
+    /// <summary>Take the daemon's captureGain, or its absence.</summary>
+    private void ApplyCaptureGain(JsonNode? gain)
+    {
+        bool has = gain is JsonObject && gain["gainDb"] is JsonValue && gain["minDb"] is JsonValue && gain["maxDb"] is JsonValue;
+        _applyingCaptureGain = true;
+        try
+        {
+            if (has)
+            {
+                double min = gain!["minDb"]!.GetValue<double>(), max = gain["maxDb"]!.GetValue<double>();
+                // The range first, so the slider does not clamp the new value to
+                // the old range, and in the order that never inverts it.
+                (min, max) = (Math.Min(min, max), Math.Max(min, max));
+                if (min > _captureGainMaxDb) { CaptureGainMaxDb = max; CaptureGainMinDb = min; }
+                else { CaptureGainMinDb = min; CaptureGainMaxDb = max; }
+                CaptureGainHardware = gain["hardware"]?.GetValue<bool>() ?? false;
+                if (!SliderSync.RecentlyTouched($"capgain:{Id}")) CaptureGainDb = gain["gainDb"]!.GetValue<double>();
+            }
+            HasCaptureGain = has;
+        }
+        finally { _applyingCaptureGain = false; }
+        RefreshCaptureReadout();
+    }
+
+    /// <summary>A capture input with a gain reads it in its readout, the way Aux In reads its level.</summary>
+    private void RefreshCaptureReadout()
+    {
+        if (CaptureSource is null) return;
+        if (_hasCaptureGain) SetGainReadout(CaptureGainText, CaptureGainName);
+        else SetGainReadout(null, null);
+    }
+
     /// <summary>The readout's text: the input's gain, or the channel's volume while its fader moves and shortly after.</summary>
     public string Readout => _showsVolumeReadout ? VolumeText : _gainReadout ?? "";
 
@@ -2047,6 +2134,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         _readoutHold?.Dispose();
         _readoutHold = null;
         SliderSync.Forget($"chvol:{Id}");
+        SliderSync.Forget($"capgain:{Id}");
         ApplyEq(null, null);
         ApplyChainWidth(null);
     }
@@ -2115,6 +2203,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
             : n["captureMonoChannel"]?.GetValue<int>() is int port
                 ? CaptureConnected ? Localizer.Format("CaptureConnectedPort", port + 1) : Localizer.Format("CaptureOfflinePort", port + 1)
                 : CaptureConnected ? Localizer.Format("CaptureConnectedPair", capturePair) : Localizer.Format("CaptureOfflinePair", capturePair);
+        ApplyCaptureGain(n["captureGain"]);
         double? volume = n["volume"]?.GetValue<double>();
         HasVolume = volume is not null;
         _applyingVolume = true;

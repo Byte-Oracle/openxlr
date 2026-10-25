@@ -447,6 +447,18 @@ The API exposes the same edit as `setCaptureSource`. A different source
 replaces the remembered Elgato unit too, so the old unit cannot take over
 when the new source is missing.
 
+A capture input on a source OpenXLR does not drive has a gain, which is the
+source's own volume in dB. On a device with a hardware capture control,
+such as a webcam's microphone, it reads as that control does in alsamixer
+and covers the device's range. On other sources it is a software level
+from -60 to +10 dB. The input rack, the matrix and classic INPUTS draw it as a fader
+with a readout that shows the volume while the volume fader moves. The
+terminal mixer and the OpenDeck gain dial change it too, and the API sets
+it with `setCaptureGain`. A change made by another program, such as a voice
+chat's automatic gain control, shows up within a second and is never
+written back. A capture input on a Wave unit has the unit's gain instead,
+and OpenXLR never writes the volume of a Wave unit's source.
+
 Capture inputs host insert chains, set in the UI or through the API:
 a mono chain on an input that takes one port, a stereo chain on a pair. An
 empty input on the first pair of a one-channel source becomes mono, with

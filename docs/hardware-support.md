@@ -575,9 +575,17 @@ mixes on any PipeWire output, mix inserts, the Flow window, desktop keys,
 the terminal mixer, and the OpenDeck plugin's mixer, insert and output
 actions.
 
-OpenXLR sends nothing to another brand's device. Its preamp gain, phantom
-power, mute button, headphone level and onboard effects stay on the device
-or with its own software. These need an Elgato device: every control in
+A capture input's gain is the source's PipeWire volume
+([manual](manual.md#capture-gain)). On a device with an ALSA capture
+control PipeWire sets that control, so the gain is the device's own
+preamp gain. On the maintainer's Logitech BRIO 4K Stream Edition the gain
+OpenXLR shows matched 'Mic Capture Volume' in `amixer` at +54 and +36 dB,
+and under its +18 dB floor the control stayed at +18 dB while PipeWire
+attenuated the rest in software.
+
+Beyond that volume, OpenXLR sends nothing to another brand's device. Its
+phantom power, mute button, headphone level and onboard effects stay on the
+device or with its own software. These need an Elgato device: every control in
 the device sections above, the gain lock, recall on connect, last settings
 restored on connect, the Wave XLR Pro's output routing, USB Aux mix,
 zero-latency monitor path, Aux In and Line In, and the OpenDeck plugin's hardware

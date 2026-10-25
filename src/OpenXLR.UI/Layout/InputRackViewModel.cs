@@ -188,7 +188,8 @@ public sealed class InputStripViewModel : ViewModelBase
         (InputStripKind.Xlr1, SkinStripParts.HardwareControls) => CarriesUnit || CarriesExtraUnit || Main.ShowSoftLowCut || Main.ShowSoftClipGuard,
         (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         (InputStripKind.Xlr2 or InputStripKind.Capture, SkinStripParts.HardwareControls) => CarriesUnit || CarriesExtraUnit,
-        (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
+        (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume
+            || ShowsCaptureGain,
         (InputStripKind.LineIn, SkinStripParts.Gain) => Main.CapLineInput || Channel.HasVolume,
         (InputStripKind.Capture, SkinStripParts.Binding) => CapturePartOrdered(part),
         (InputStripKind.Capture, SkinStripParts.Effects) => Channel.HasInserts && CapturePartOrdered(part),
@@ -209,8 +210,15 @@ public sealed class InputStripViewModel : ViewModelBase
     /// <summary>The strip draws an additional interface's gain and switches.</summary>
     public bool CarriesExtraUnit => Channel.CarriesExtraUnit;
 
-    /// <summary>The strip draws the channel's own volume, under the interface's gain, Aux In's level or Line In's gain where it has one.</summary>
+    /// <summary>The strip draws the channel's own volume, under the interface's gain, Aux In's level, Line In's gain or a capture input's gain where it has one.</summary>
     public bool ShowsVolume => Channel.HasVolume;
+
+    /// <summary>
+    /// The strip draws a capture input's own gain, its source's volume: the
+    /// daemon reports one, which it does only while the channel carries no
+    /// Wave unit's input, whose gain the strip draws instead.
+    /// </summary>
+    public bool ShowsCaptureGain => Kind == InputStripKind.Capture && Channel.ShowsCaptureGain;
 
     internal void RefreshSpec()
     {
@@ -269,12 +277,13 @@ public sealed class InputStripViewModel : ViewModelBase
             case nameof(ChannelViewModel.IsEditable): Raise(nameof(HandleHidden)); break;
             case nameof(ChannelViewModel.Name): Raise(nameof(LeftLevelName)); Raise(nameof(RightLevelName)); break;
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); Raise(nameof(ShowsVolume)); break;
+            case nameof(ChannelViewModel.ShowsCaptureGain): RefreshSpec(); Raise(nameof(ShowsCaptureGain)); break;
             case nameof(ChannelViewModel.Inserts): Raise(nameof(Inserts)); Raise(nameof(InsertsKey)); RefreshSpec(); break;
             case nameof(ChannelViewModel.ShownUnitInput):
-                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); RefreshSpec();
+                Raise(nameof(Unit)); Raise(nameof(CarriesUnit)); Raise(nameof(ShowsCaptureGain)); RefreshSpec();
                 break;
             case nameof(ChannelViewModel.ExtraUnitInput):
-                Raise(nameof(ExtraUnit)); Raise(nameof(CarriesExtraUnit)); RefreshSpec();
+                Raise(nameof(ExtraUnit)); Raise(nameof(CarriesExtraUnit)); Raise(nameof(ShowsCaptureGain)); RefreshSpec();
                 break;
             case nameof(ChannelViewModel.IsSourceBound): Raise(nameof(Shown)); break;
             case nameof(ChannelViewModel.IsHardware) or nameof(ChannelViewModel.CaptureSource):
