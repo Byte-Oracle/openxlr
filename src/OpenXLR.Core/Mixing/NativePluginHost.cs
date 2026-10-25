@@ -209,6 +209,7 @@ internal sealed class NativePluginHost : IDisposable
     internal static IReadOnlyList<string> Arguments(InsertDefinition insert, string? bundle) => insert.Kind switch
     {
         "soundcheck" => ["soundcheck"],
+        "level" => ["level"],
         "eq" => ["eq"],
         "duck" => ["duck"],
         "clap" => ["clap", bundle ?? throw new InvalidOperationException("A CLAP insert needs the bundle it lives in."), insert.Plugin],

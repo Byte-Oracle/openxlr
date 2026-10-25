@@ -69,6 +69,9 @@ typedef struct {
   // These formats can arrive through Wine and need the coordinate nudge.
   bool editor_coordinate_nudge;
   unsigned key_inputs;  // 0, or one mono detector input separate from the audio
+  // 0, or one mono output beside the audio, port tap_0, which the backend
+  // writes through Host.tap in process. Unlinked, it is written and dropped.
+  unsigned tap_outputs;
 } Backend;
 
 #ifndef __cplusplus
@@ -102,7 +105,10 @@ struct Host {
   void *in_ports[MAX_CHANNELS], *out_ports[MAX_CHANNELS];
   void *key_port;
   const float *key;
+  void *tap_port;
+  float *tap;  // the tap output's buffer for this cycle, or NULL without one
   float *silence, *scratch;  // for a channel PipeWire gave no buffer this cycle
+  float *tap_scratch;        // the same for the tap output
   _Atomic bool audio_error;
   _Atomic bool process_failed;  // the plugin refused to start or process audio
   uint32_t failed_frames;  // audio thread: the current run of refused blocks

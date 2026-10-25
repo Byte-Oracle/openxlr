@@ -83,14 +83,20 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
 
     public Mixer(PipeWireAdapter? adapter = null) => _pw = adapter ?? new PipeWireAdapter();
 
-    /// <summary>Live stereo channel and mix levels, plus one reduction value in dB per running duck stage.</summary>
+    /// <summary>
+    /// Live stereo channel and mix levels, plus one reduction value in dB per
+    /// running duck stage, each microphone meter before its chain that a
+    /// client asked for, and the Sound Check loop's playhead.
+    /// </summary>
     public IReadOnlyDictionary<string, double[]> ReadMeters()
     {
         IReadOnlyDictionary<string, double[]> levels = _meters.Read();
-        if (_duckMeterHosts.IsEmpty) return levels;
+        if (_duckMeterHosts.IsEmpty && _inputMeterHosts.IsEmpty && _soundCheckProbe is null) return levels;
         var meters = new Dictionary<string, double[]>(levels);
         foreach ((string mix, NativePluginHost host) in _duckMeterHosts)
             if (host.IsHealthy) meters[DuckKey(mix)] = [host.Meters.GetValueOrDefault("reduction")];
+        AddInputLevels(meters);
+        AddSoundCheckPosition(meters);
         return meters;
     }
 
@@ -666,6 +672,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         lock (_gate)
         {
             if (!_built) return false;
+            EnsureInputMetersLocked();
             bool soundCheckChanged = EnsureSoundCheckLocked();
             soundCheckChanged |= HealEqStagesLocked();
             soundCheckChanged |= HealDuckBusesLocked();
@@ -3246,6 +3253,14 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         bool muted = waiting || _muted.Contains(cell) || (!monitor && _mixMuted.Contains(mixId));
         if (_hardwareMicChannel == channelId && monitor && MonitorFeed.Includes(JackFeedLocked(), mixId))
             muted = true;   // the hardware direct path carries it to the jacks
+        else if (monitor && HearsMyselfLocked(channelId, mixId))
+        {
+            // Mic check's Hear myself, for the session only: the send opens
+            // at its own level, or at unity when it was pulled all the way
+            // down, and an exclusive group still holds it while it waits.
+            muted = waiting;
+            if (_levels.GetValueOrDefault(cell, 0.0) <= 0) level = SendGain(1, ChannelVolumeLocked(channelId), 1);
+        }
         return (level, muted);
     }
 
@@ -3433,8 +3448,11 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     private void TearDownLocked()
     {
         ResetDesktopMonitorMuteLocked();
+        // The sends go with the graph, so Hear myself has nothing to put back.
+        _soundCheckHearMyself = false;
         if (_soundCheck is not null)
             StopSoundCheckLocked(restore: false, error: "Sound Check stopped because the audio graph was rebuilt.");
+        RemoveInputMetersLocked();
         _meters.Dispose();
         _meters = new MeterReader();   // Dispose is terminal; a rebuild needs a fresh reader
         foreach (PortLink route in _monitorRoutes.Values) _pw.Unlink(route);

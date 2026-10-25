@@ -12,7 +12,7 @@ public sealed class SoundCheckTests
     {
         string missing = Path.Combine(Path.GetTempPath(), $"openxlr-no-host-{Guid.NewGuid():N}", "openxlr-lv2-host");
         var started = System.Diagnostics.Stopwatch.StartNew();
-        var error = Assert.Throws<InvalidOperationException>(() => new PipeWireAdapter().CreateSoundCheck("xlr1", out _, missing));
+        var error = Assert.Throws<InvalidOperationException>(() => new PipeWireAdapter().CreateSoundCheck("xlr1", out _, out _, missing));
         Assert.Equal(Mixer.SoundCheckNeedsHost, error.Message);
         Assert.Contains("EnableNativeLv2Host", error.Message);
         Assert.True(started.Elapsed < TimeSpan.FromSeconds(2));
@@ -201,4 +201,86 @@ public sealed class SoundCheckTests
         await view.RunAsync("record");
         Assert.NotNull(view.Error);
     }
+
+    [Theory]
+    [InlineData("setSoundCheckRaw", "xlr1", "true", true)]
+    [InlineData("setSoundCheckHearMyself", "xlr2", "false", true)]
+    [InlineData("setSoundCheckRaw", "mono", "true", true)]
+    [InlineData("setSoundCheckRaw", "stereo", "true", false)]
+    [InlineData("setSoundCheckHearMyself", "system", "true", false)]
+    [InlineData("setSoundCheckRaw", "xlr1", "1", false)]
+    [InlineData("setSoundCheckHearMyself", "xlr1", null, false)]
+    [InlineData("setSoundCheckRaw", null, "true", false)]
+    [InlineData("watchInputMeter", "xlr1", null, true)]
+    [InlineData("watchInputMeter", "mono", null, true)]
+    [InlineData("watchInputMeter", "aux", null, false)]
+    [InlineData("watchInputMeter", null, null, false)]
+    public void MicCheckCommandsTakeAMicrophoneAndTheHelper(string name, string? channel, string? value, bool valid)
+    {
+        using var mixer = new Mixer();
+        typeof(Mixer).GetField("_config", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(mixer, MixerConfig.Default() with { Channels = [.. MixerConfig.Default().Channels,
+                new("mono", "Mono microphone") { CaptureSource = "absent_mic", CaptureMonoChannel = 2 },
+                new("stereo", "Stereo input") { CaptureSource = "absent_pair", CapturePair = 1 }] });
+        var command = new Command { Cmd = name, Channel = channel,
+            Value = value is null ? default : System.Text.Json.JsonDocument.Parse(value).RootElement.Clone() };
+        string? error = CommandValidation.Check(command, mixer, _ => null, nativeHostInstalled: true);
+        Assert.Equal(valid, error is null);
+        if (!valid) Assert.StartsWith(name + ": need a microphone channel", error);
+        else Assert.Equal(Mixer.SoundCheckNeedsHost, CommandValidation.Check(command, mixer, _ => null, nativeHostInstalled: false));
+    }
+
+    [Fact]
+    public void MicCheckCommandsNeedARunningMixerAndAMicrophone()
+    {
+        using var mixer = new Mixer();
+        Assert.Throws<InvalidOperationException>(() => mixer.WatchInputMeter("xlr1"));
+        Assert.Throws<ArgumentException>(() => mixer.WatchInputMeter("system"));
+        Assert.Throws<InvalidOperationException>(() => mixer.SetSoundCheckRaw("xlr1", true));
+        Assert.Throws<ArgumentException>(() => mixer.SetSoundCheckHearMyself("system", true));
+        Assert.Empty(mixer.InputMeterChannels);
+        Assert.Null(mixer.CurrentSoundCheckTake());
+        Assert.Null(mixer.NewSoundCheckTake());
+        SoundCheckState idle = mixer.Snapshot().SoundCheck;
+        Assert.False(idle.Raw || idle.HearMyself || idle.Heard);
+        Assert.Null(idle.MonitorLatencyMs);
+        Assert.Equal(0, idle.Take);
+        Assert.DoesNotContain("in:", string.Join(",", mixer.ReadMeters().Keys));
+    }
+
+    [Theory]
+    [InlineData("update: id:0 key:'clock.rate' value:'48000' type:''\nupdate: id:0 key:'clock.quantum' value:'1024' type:''\nupdate: id:0 key:'clock.force-quantum' value:'0' type:''", 1024)]
+    [InlineData("update: id:0 key:'clock.quantum' value:'1024' type:''\nupdate: id:0 key:'clock.force-quantum' value:'256' type:''", 256)]
+    [InlineData("update: id:0 key:'clock.rate' value:'48000' type:''", null)]
+    [InlineData("update: id:0 key:'clock.quantum' value:'4' type:''", null)]
+    public void TheQuantumIsTheForcedOneOrTheDefault(string metadata, int? expected)
+        => Assert.Equal(expected, PipeWireAdapter.ParseGraphQuantum(metadata.Replace("\\n", "\n")));
+
+    [Fact]
+    public void ATakeComesFromTheHelpersMetersOnlyOnceItIsCounted()
+    {
+        var meters = new Dictionary<string, double> { ["frames"] = 72000, ["take"] = 0, ["p0"] = .5 };
+        Assert.Null(Mixer.TakeFrom("xlr1", meters, 48000));
+        meters["take"] = 2;
+        meters["p199"] = 1.7;
+        meters["p3"] = .12345;
+        SoundCheckTake take = Mixer.TakeFrom("xlr1", meters, 48000)!;
+        Assert.Equal(("xlr1", 2, 1.5), (take.Channel, take.Take, take.Seconds));
+        Assert.Equal(200, take.Peaks.Count);
+        Assert.Equal([.5, 0, 0, .123], take.Peaks.Take(4));
+        Assert.Equal(1, take.Peaks[199]);
+        Assert.Null(Mixer.TakeFrom("xlr1", meters, 0));
+        var message = System.Text.Json.JsonSerializer.Serialize(SoundCheckTakeMessage.From(null));
+        Assert.Equal("""{"channel":null,"take":0,"seconds":0,"peaks":[],"type":"soundCheckTake"}""", message);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-12, .8)]
+    [InlineData(-60, 0)]
+    [InlineData(-120, 0)]
+    [InlineData(6, 1)]
+    [InlineData(double.NaN, 0)]
+    public void InputLevelsUseTheChannelMetersScale(double dbfs, double scale)
+        => Assert.Equal(scale, Mixer.MeterScale(dbfs));
 }

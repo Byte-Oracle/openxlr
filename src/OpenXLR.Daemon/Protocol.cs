@@ -361,6 +361,23 @@ public sealed record MetersMessage
     [JsonPropertyName("levels")] public IReadOnlyDictionary<string, double[]> Levels { get; }
 }
 
+/// <summary>
+/// A Sound Check take's waveform: broadcast once when the helper finishes a
+/// take, and the reply to <c>getSoundCheckTake</c>. Without a take the
+/// channel is null, the take 0 and the peaks empty.
+/// </summary>
+public sealed record SoundCheckTakeMessage(
+    [property: JsonPropertyName("channel"), JsonIgnore(Condition = JsonIgnoreCondition.Never)] string? Channel,
+    [property: JsonPropertyName("take")] int Take,
+    [property: JsonPropertyName("seconds")] double Seconds,
+    [property: JsonPropertyName("peaks")] IReadOnlyList<double> Peaks)
+{
+    [JsonPropertyName("type")] public string Type => "soundCheckTake";
+
+    public static SoundCheckTakeMessage From(SoundCheckTake? take)
+        => take is null ? new(null, 0, 0, []) : new(take.Channel, take.Take, Math.Round(take.Seconds, 2), take.Peaks);
+}
+
 public sealed record BrowserSessionMessage(string Session)
 {
     [JsonPropertyName("type")] public string Type => "browserSession";

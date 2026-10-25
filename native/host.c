@@ -298,6 +298,11 @@ static void process_audio(void *data, struct spa_io_position *position) {
       if (buffer)
         memset(buffer, 0, sizeof(float) * frames);
     }
+    if (h->tap_port) {
+      float *buffer = pw_filter_get_dsp_buffer(h->tap_port, frames);
+      if (buffer)
+        memset(buffer, 0, sizeof(float) * frames);
+    }
     return;
   }
   float *in[MAX_CHANNELS], *out[MAX_CHANNELS];
@@ -314,6 +319,11 @@ static void process_audio(void *data, struct spa_io_position *position) {
   if (h->key_port) {
     const float *buffer = pw_filter_get_dsp_buffer(h->key_port, frames);
     h->key = buffer ? buffer : host_fallback(h->silence, frames, true);
+  }
+  h->tap = NULL;
+  if (h->tap_port) {
+    float *buffer = pw_filter_get_dsp_buffer(h->tap_port, frames);
+    h->tap = buffer ? buffer : host_fallback(h->tap_scratch, frames, false);
   }
   // One invalid sample can poison a stateful processor until it is replaced.
   // Keep it out of the plugin and of downstream nodes. Finite headroom above
@@ -335,9 +345,12 @@ static void process_audio(void *data, struct spa_io_position *position) {
     }
   }
   // A failed instance stays silent until the next main-loop tick stops it.
-  if (atomic_load(&h->audio_error))
+  if (atomic_load(&h->audio_error)) {
     for (unsigned c = 0; c < h->channels; ++c)
       memset(out[c], 0, sizeof(float) * frames);
+    if (h->tap)
+      memset(h->tap, 0, sizeof(float) * frames);
+  }
 }
 
 static void state_changed(void *data, enum pw_filter_state old,
@@ -386,6 +399,15 @@ static bool add_audio_ports(Host *h) {
                           "MONO", NULL),
         NULL, 0);
     if (!h->key_port) return false;
+  }
+  if (h->backend->tap_outputs == 1) {
+    h->tap_port = pw_filter_add_port(
+        h->filter, PW_DIRECTION_OUTPUT, PW_FILTER_PORT_FLAG_MAP_BUFFERS, 1,
+        pw_properties_new(PW_KEY_FORMAT_DSP, "32 bit float mono audio",
+                          PW_KEY_PORT_NAME, "tap_0", PW_KEY_AUDIO_CHANNEL,
+                          "MONO", NULL),
+        NULL, 0);
+    if (!h->tap_port) return false;
   }
   return true;
 }
@@ -939,6 +961,7 @@ static void *monitor_audio(void *data) {
 extern const Backend sound_check_backend __attribute__((weak));
 extern const Backend eq_backend __attribute__((weak));
 extern const Backend duck_backend __attribute__((weak));
+extern const Backend level_backend __attribute__((weak));
 
 static const Backend *backend_named(const char *name) {
   if (!strcmp(name, "soundcheck"))
@@ -947,6 +970,8 @@ static const Backend *backend_named(const char *name) {
     return &eq_backend;
   if (!strcmp(name, "duck"))
     return &duck_backend;
+  if (!strcmp(name, "level"))
+    return &level_backend;
   if (!strcmp(name, "lv2"))
     return &lv2_backend;
   if (!strcmp(name, "clap"))
@@ -980,6 +1005,7 @@ int main(int argc, char **argv) {
           "       openxlr-lv2-host soundcheck NODE 1 RATE\n"
           "       openxlr-lv2-host eq NODE 1 RATE [SYMBOL=VALUE ...]\n"
           "       openxlr-lv2-host duck NODE 2 RATE [SYMBOL=VALUE ...]\n"
+          "       openxlr-lv2-host level NODE 1 RATE\n"
           "       openxlr-lv2-host scan-clap FILE\n"
           "       openxlr-lv2-host scan-vst3 BUNDLE\n",
           stderr);
@@ -1005,7 +1031,8 @@ int main(int argc, char **argv) {
   XSetIOErrorHandler(lost_x_connection);
   h.silence = calloc(MAX_FRAMES, sizeof(float));
   h.scratch = calloc(MAX_FRAMES, sizeof(float));
-  if (!h.silence || !h.scratch)
+  h.tap_scratch = calloc(MAX_FRAMES, sizeof(float));
+  if (!h.silence || !h.scratch || !h.tap_scratch)
     return 1;
 
   pw_init(NULL, NULL);
@@ -1088,5 +1115,6 @@ cleanup:
     pw_main_loop_destroy(h.loop);
   free(h.silence);
   free(h.scratch);
+  free(h.tap_scratch);
   return h.exit_code;
 }

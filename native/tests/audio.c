@@ -237,12 +237,21 @@ static void check_key_silence(Host *h, uint32_t frames, float *const *in,
   for (uint32_t n = 0; n < frames; n++) assert(host_key(h)[n] == 0);
 }
 
+// A tap output PipeWire gave no buffer writes into the host's own spare,
+// never into the main outputs' scratch.
+static void check_tap_fallback(Host *h, uint32_t frames, float *const *in,
+                               float *const *out) {
+  assert(h->tap == h->tap_scratch && h->tap != h->scratch);
+  for (uint32_t n = 0; n < frames; n++) h->tap[n] = 0.25f;
+}
+
 static void check_ports(void) {
   pw_init(NULL, NULL);
   struct pw_main_loop *loop = pw_main_loop_new(NULL);
   assert(loop);
   const Backend keyed = {.process = check_key_silence, .key_inputs = 1};
-  const Backend *backends[] = {&lv2_backend, &clap_backend, &vst3_backend, &keyed};
+  const Backend tapped = {.process = check_tap_fallback, .tap_outputs = 1};
+  const Backend *backends[] = {&lv2_backend, &clap_backend, &vst3_backend, &keyed, &tapped};
   for (unsigned i = 0; i < sizeof(backends) / sizeof(backends[0]); i++) {
     Host h = {.backend = backends[i], .rate = 48000, .channels = 2};
     h.filter = pw_filter_new_simple(pw_main_loop_get_loop(loop), "port-test",
@@ -254,6 +263,22 @@ static void check_ports(void) {
       const struct pw_properties *out = pw_filter_get_properties(h.filter, h.out_ports[c]);
       assert(!strcmp(pw_properties_get(in, PW_KEY_PORT_NAME), c ? "playback_1" : "playback_0"));
       assert(!strcmp(pw_properties_get(out, PW_KEY_PORT_NAME), c ? "capture_1" : "capture_0"));
+    }
+    if (h.backend != &tapped) {
+      assert(h.backend->tap_outputs == 0 && h.tap_port == NULL);
+    } else {
+      assert(h.tap_port);
+      const struct pw_properties *tap = pw_filter_get_properties(h.filter, h.tap_port);
+      assert(!strcmp(pw_properties_get(tap, PW_KEY_PORT_NAME), "tap_0"));
+      assert(!strcmp(pw_properties_get(tap, PW_KEY_AUDIO_CHANNEL), "MONO"));
+      h.silence = guarded(), h.scratch = guarded(), h.tap_scratch = guarded();
+      struct spa_io_position position = {0};
+      position.clock.duration = 256;
+      position.clock.rate.denom = h.rate;
+      process_audio(&h, &position);
+      assert(atomic_load(&h.audio_left) == 1 && h.tap_scratch[255] == 0.25f);
+      assert_canary(h.silence), assert_canary(h.scratch), assert_canary(h.tap_scratch);
+      free(h.silence), free(h.scratch), free(h.tap_scratch);
     }
     if (h.backend != &keyed) {
       assert(h.backend->key_inputs == 0 && h.key_port == NULL);
@@ -276,7 +301,8 @@ static void check_ports(void) {
   }
   pw_main_loop_destroy(loop);
   pw_deinit();
-  puts("PASS: existing backends get no key port; a keyed backend gets mono key_0 and silence without a buffer");
+  puts("PASS: existing backends get no key or tap port; a keyed backend gets mono key_0 and silence "
+       "without a buffer, a tapped one mono tap_0 and its own spare");
 }
 
 int main(void) {

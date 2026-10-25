@@ -940,21 +940,25 @@ public sealed class PipeWireAdapter
 
     /// <summary>
     /// The Sound Check loop for one microphone channel: the native helper's
-    /// mono "soundcheck" backend, one input and one output, under a fixed
-    /// node name. Refused at once when the helper is not installed, since a
-    /// build without it has nothing that could answer.
+    /// mono "soundcheck" backend, one input, its main output for the chain
+    /// and its tap output past the chain, under a fixed node name. Refused at
+    /// once when the helper is not installed, since a build without it has
+    /// nothing that could answer. <paramref name="quantum"/> is the graph's
+    /// quantum in frames from the same settings, or null when they name none.
     /// </summary>
-    internal FilterHandle CreateSoundCheck(string id, out int rate, string? executable = null)
+    internal FilterHandle CreateSoundCheck(string id, out int rate, out int? quantum, string? executable = null)
     {
         executable ??= NativePluginHost.Executable;
         if (!File.Exists(executable)) throw new InvalidOperationException(Mixer.SoundCheckNeedsHost);
-        rate = ParseGraphSampleRate(Run("pw-metadata", "-n", "settings"));
+        string settings = Run("pw-metadata", "-n", "settings");
+        rate = ParseGraphSampleRate(settings);
+        quantum = ParseGraphQuantum(settings);
         string node = "OpenXLR_soundcheck_" + id;
         NativePluginHost host;
         try
         {
             host = new NativePluginHost(new() { Id = id, Kind = "soundcheck", Plugin = "soundcheck" },
-                node, 1, rate, executable, [], meterSymbols: new HashSet<string>(StringComparer.Ordinal) { "frames", "mode" });
+                node, 1, rate, executable, [], meterSymbols: SoundCheckMeters);
         }
         catch (InvalidOperationException ex)
         {
@@ -963,10 +967,50 @@ public sealed class PipeWireAdapter
         _nativeHosts.Add(host);
         var filter = new FilterHandle(node, node, node, host.Process) { NativeHost = host };
         if (!WaitForPorts(node, "playback", false, TimeSpan.FromSeconds(3), host.Process)
-            || !WaitForPorts(node, "capture", true, TimeSpan.FromSeconds(3), host.Process))
+            || !WaitForPorts(node, "capture", true, TimeSpan.FromSeconds(3), host.Process)
+            || !WaitForPorts(node, "tap", true, TimeSpan.FromSeconds(3), host.Process))
         {
             StopFilter(filter);
             throw new InvalidOperationException("Sound Check audio ports did not appear.");
+        }
+        return filter;
+    }
+
+    /// <summary>How many peaks the Sound Check helper reports for one take.</summary>
+    internal const int TakePeakCount = 200;
+
+    /// <summary>The meters the Sound Check helper reports: progress, the playhead, and the take's peaks with their count.</summary>
+    private static readonly IReadOnlySet<string> SoundCheckMeters = new HashSet<string>(
+        ["frames", "mode", "cursor", "take", .. Enumerable.Range(0, TakePeakCount).Select(i => $"p{i}")], StringComparer.Ordinal);
+
+    /// <summary>
+    /// The level meter Mic check reads ahead of a microphone's chain: the
+    /// native helper's mono "level" backend under a fixed node name, fed by
+    /// the caller from the channel's own capture port, its output left
+    /// unlinked. Refused at once without the helper.
+    /// </summary>
+    internal FilterHandle CreateInputMeter(string id, string? executable = null)
+    {
+        executable ??= NativePluginHost.Executable;
+        if (!File.Exists(executable)) throw new InvalidOperationException(Mixer.SoundCheckNeedsHost);
+        int rate = ParseGraphSampleRate(Run("pw-metadata", "-n", "settings"));
+        string node = "OpenXLR_level_" + id;
+        NativePluginHost host;
+        try
+        {
+            host = new NativePluginHost(new() { Id = id, Kind = "level", Plugin = "level" },
+                node, 1, rate, executable, [], meterSymbols: new HashSet<string>(StringComparer.Ordinal) { "peak", "rms", "clips" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new InvalidOperationException($"The input meter could not start the native plugin host. {ex.Message}", ex);
+        }
+        _nativeHosts.Add(host);
+        var filter = new FilterHandle(node, node, node, host.Process) { NativeHost = host };
+        if (!WaitForPorts(node, "playback", false, TimeSpan.FromSeconds(3), host.Process))
+        {
+            StopFilter(filter);
+            throw new InvalidOperationException("The input meter's audio port did not appear.");
         }
         return filter;
     }
@@ -1339,6 +1383,24 @@ public sealed class PipeWireAdapter
                 return rate;
         }
         throw new InvalidOperationException("PipeWire did not report a supported graph sample rate.");
+    }
+
+    /// <summary>
+    /// The graph's quantum in frames from the settings metadata: a forced
+    /// one when set, else the default. Null when neither is a usable figure.
+    /// Clients can ask for a smaller quantum, so this is the most a cycle
+    /// takes rather than what it takes now.
+    /// </summary>
+    internal static int? ParseGraphQuantum(string metadata)
+    {
+        foreach (string key in new[] { "clock.force-quantum", "clock.quantum" })
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(metadata,
+                $"key:'{System.Text.RegularExpressions.Regex.Escape(key)}' value:'(\\d+)'");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int quantum) && quantum is >= 8 and <= 65536)
+                return quantum;
+        }
+        return null;
     }
 
     /// <summary>

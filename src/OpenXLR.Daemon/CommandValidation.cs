@@ -63,6 +63,16 @@ public static class CommandValidation
                 // the helper's state; anything else needs the helper.
                 return cmd.Action != "stop" && !(nativeHostInstalled ?? PluginCatalog.HostInstalled)
                     ? Mixer.SoundCheckNeedsHost : null;
+            case "setSoundCheckRaw":
+            case "setSoundCheckHearMyself":
+                if (cmd.Channel is null || !layout.IsSoundCheckChannel(cmd.Channel)
+                    || cmd.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                    return $"{cmd.Cmd}: need a microphone channel and a boolean value";
+                return !(nativeHostInstalled ?? PluginCatalog.HostInstalled) ? Mixer.SoundCheckNeedsHost : null;
+            case "watchInputMeter":
+                if (cmd.Channel is null || !layout.IsSoundCheckChannel(cmd.Channel))
+                    return "watchInputMeter: need a microphone channel";
+                return !(nativeHostInstalled ?? PluginCatalog.HostInstalled) ? Mixer.SoundCheckNeedsHost : null;
             case "setWaveInterfaceEnabled":
             case "setWaveControl":
                 return CheckWave(cmd);

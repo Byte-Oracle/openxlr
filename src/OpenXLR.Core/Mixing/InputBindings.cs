@@ -503,8 +503,11 @@ public sealed partial class Mixer
     {
         if (UnconfirmedMicrophonePauseLocked(channel)) return new PortLink([]);
         SourceBinding? binding = _bindings.GetValueOrDefault(channel.Id);
+        // The loop helper's tap goes past the chain on a link of its own, so
+        // only its main output feeds what follows it.
+        string fromPrefix = _soundCheck is not null && source == _soundCheck.SourceName ? "capture" : "";
         PortLink route = channel.CaptureSource is not null
-            ? _pw.LinkNodes(source, "", target, "playback",
+            ? _pw.LinkNodes(source, fromPrefix, target, "playback",
                 fromPairOffset: processed ? 0 : channel.CapturePair,
                 fromChannel: processed ? null : channel.CaptureMonoChannel)
             : binding is not null && !processed
