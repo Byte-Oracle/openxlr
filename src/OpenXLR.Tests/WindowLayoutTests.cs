@@ -46,9 +46,9 @@ public sealed class WindowLayoutTests
                 ((DaemonClient)typeof(MainWindow).GetField("_client", BindingFlags.Instance | BindingFlags.NonPublic)!
                     .GetValue(main)!).DisposeAsync().AsTask().GetAwaiter().GetResult();
                 Dispatcher.UIThread.RunJobs();
-                OptionsInteractionWindowTests.Check();
                 ProfileSliderWindowTests.Check();
                 EditorRulesReconnectWindowTests.Check();
+                OptionsInteractionWindowTests.Check();
                 UserMonitorWindowTests.Check();
                 MonitorOutputPickerWindowTests.Check();
                 MonitorMicrophonePauseWindowTests.Check();
