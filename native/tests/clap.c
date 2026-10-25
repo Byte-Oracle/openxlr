@@ -310,6 +310,36 @@ static void teardown_sources(bool unregister_timer, bool unregister_fd,
   }
 }
 
+static bool refuse_start(const clap_plugin_t *plugin) { return false; }
+
+static clap_process_status refuse_process(const clap_plugin_t *plugin,
+                                           const clap_process_t *process) {
+  return CLAP_PROCESS_ERROR;
+}
+
+static void processing_failure(void) {
+  for (unsigned start = 0; start < 2; ++start) {
+    Host h = {.rate = 48000, .channels = 2};
+    Clap *c = fresh(&h);
+    clap_plugin_t failing = fake;
+    if (start) failing.start_processing = refuse_start;
+    else failing.process = refuse_process;
+    c->plugin = &failing;
+    in_side = out_side = (Side){.count = 1, .channels = {2}, .main = 0,
+                                .flag_main = true};
+    assert(clap_map_ports(c, &h, &ap_ext, true));
+    assert(clap_map_ports(c, &h, &ap_ext, false));
+    float left[32], right[32];
+    float *buffers[] = {left, right};
+    for (unsigned n = 0; n < 32; ++n) left[n] = right[n] = .25f;
+    clap_process_audio(&h, 32, buffers, buffers);
+    for (unsigned n = 0; n < 32; ++n) assert(left[n] == 0 && right[n] == 0);
+    assert(atomic_load(&h.audio_error));
+    release(c);
+  }
+  puts("PASS: CLAP start and processing errors silence audio and request host recovery");
+}
+
 static void sources_live_through_plugin_destruction(void) {
   pw_init(NULL, NULL);
   for (unsigned i = 0; i < 4; ++i)
@@ -320,6 +350,7 @@ static void sources_live_through_plugin_destruction(void) {
 }
 
 int main(void) {
+  processing_failure();
   sources_live_through_plugin_destruction();
   readonly_parameters_use_main_thread();
   latency_reports();

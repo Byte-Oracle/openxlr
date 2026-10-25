@@ -104,8 +104,9 @@ struct Host {
   const float *key;
   float *silence, *scratch;  // for a channel PipeWire gave no buffer this cycle
   _Atomic bool audio_error;
+  _Atomic bool process_failed;  // the plugin refused to start or process audio
   _Atomic unsigned invalid_audio;  // input or output, explained by the main loop
-  _Atomic bool failure_explained;  // host_fail has written the reason
+  _Atomic bool failure_explained;  // a non-audio thread has claimed the report
   _Atomic bool monitor_stop;
   unsigned heartbeat_ticks;
   uint32_t reported_latency;  // the last latency line, valid once reported
@@ -176,6 +177,9 @@ void host_editor_lost(Host *h);
 void host_run_guarded(Host *h, void (*call)(void *), void *argument);
 // Ask the supervisor for a fresh process; audio ends with this one.
 void host_fail(Host *h, const char *why);
+// Real-time counterpart for a failed plugin callback. The tick reports the
+// reason and stops the instance; this only sets atomic flags.
+void host_processing_failed(Host *h);
 // Whether one cycle can be carried at all: the fixed fallback buffers hold
 // MAX_FRAMES frames, and the plugin was activated for one sample rate. A
 // cycle that fails this is refused before anything is written.

@@ -21,3 +21,20 @@ void test_host_free(Host *h) {
   pw_main_loop_destroy(h->loop);
   free(h);
 }
+
+Host *test_audio_host_new(unsigned channels) {
+  pw_init(NULL, NULL);
+  Host *h = test_host_new();
+  h->channels = channels;
+  h->rate = 48000;
+  return h;
+}
+
+void test_audio_host_free(Host *h) {
+  test_host_free(h);
+  pw_deinit();
+}
+
+bool test_host_audio_failed(Host *h) {
+  return atomic_load(&h->audio_error);
+}

@@ -9,6 +9,9 @@
 
 extern "C" Host *test_host_new(void);
 extern "C" void test_host_free(Host *h);
+extern "C" Host *test_audio_host_new(unsigned channels);
+extern "C" void test_audio_host_free(Host *h);
+extern "C" bool test_host_audio_failed(Host *h);
 
 class Watch final : public Linux::ITimerHandler, public Linux::IEventHandler {
  public:
@@ -277,12 +280,13 @@ static void restart() {
   assert(v.restart_requested);
 }
 
-// A processor that only answers the latency question, counting each time it
-// is asked.
+// A processor with controllable audio results and latency, counting each
+// time its latency is asked.
 class LatencyProcessor final : public IAudioProcessor {
  public:
   uint32 samples = 0;
   int asked = 0;
+  tresult process_result = kResultOk;
   tresult PLUGIN_API queryInterface(const TUID, void **obj) override {
     *obj = nullptr;
     return kNoInterface;
@@ -303,9 +307,34 @@ class LatencyProcessor final : public IAudioProcessor {
   }
   tresult PLUGIN_API setupProcessing(ProcessSetup &) override { return kResultOk; }
   tresult PLUGIN_API setProcessing(TBool) override { return kResultOk; }
-  tresult PLUGIN_API process(ProcessData &) override { return kResultOk; }
+  tresult PLUGIN_API process(ProcessData &) override { return process_result; }
   uint32 PLUGIN_API getTailSamples() override { return 0; }
 };
+
+static void processing_failure() {
+  Host *h = test_audio_host_new(2);
+  Vst3 v;
+  LatencyProcessor processor;
+  v.processor = &processor;
+  v.main_in = v.main_out = 0;
+  v.in_buses.resize(1);
+  v.out_buses.resize(1);
+  host_set_impl(h, &v);
+  float left[32], right[32];
+  float *buffers[] = {left, right};
+  for (float *buffer : buffers)
+    std::fill(buffer, buffer + 32, .25f);
+  vst3_process(h, 32, buffers, buffers);
+  assert(!test_host_audio_failed(h));
+  processor.process_result = kResultFalse;
+  vst3_process(h, 32, buffers, buffers);
+  for (float *buffer : buffers)
+    for (unsigned n = 0; n < 32; ++n) assert(buffer[n] == 0);
+  assert(test_host_audio_failed(h));
+  host_set_impl(h, nullptr);
+  test_audio_host_free(h);
+  puts("PASS: a VST3 processing error silences audio and requests host recovery");
+}
 
 // The tick asks for the latency every cycle once audio runs. The plugin is
 // asked once at activation and again only after it signals kLatencyChanged.
@@ -343,6 +372,7 @@ static void latency() {
 }
 
 int main(int argc, char **argv) {
+  if (argc == 1 || !strcmp(argv[1], "processing")) processing_failure();
   if (argc == 1 || !strcmp(argv[1], "parameters")) parameters();
   if (argc == 1 || !strcmp(argv[1], "stream")) stream();
   if (argc == 1 || !strcmp(argv[1], "attributes")) attributes();

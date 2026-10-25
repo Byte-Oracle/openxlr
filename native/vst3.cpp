@@ -1205,9 +1205,11 @@ void vst3_process(Host *h, uint32_t frames, float *const *in,
   for (AudioBusBuffers &bus : v->out_buses)
     bus.silenceFlags = 0;
   tresult result = v->processor->process(v->data);
-  if (result != kResultOk)
+  if (result != kResultOk) {
+    host_processing_failed(h);
     for (unsigned i = 0; i < channels; ++i)
       memset(out[i], 0, frames * sizeof(float));
+  }
   static int traced = 0;
   if (traced < 4 && trace_enabled) {
     float in_peak = 0, out_peak = 0;
