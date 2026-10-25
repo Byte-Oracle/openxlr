@@ -22,6 +22,7 @@
     <Compile Include="../OpenXLR.Core/ProcessRunner.cs" Link="ProcessRunner.cs" />
     <Compile Include="../OpenXLR.Core/AppearanceModes.cs" Link="AppearanceModes.cs" />
     <Compile Include="../OpenXLR.Core/Mixing/LayoutIcons.cs" Link="LayoutIcons.cs" />
+    <Compile Include="../OpenXLR.Core/Mixing/MicEq.cs" Link="MicEq.cs" />
   </ItemGroup>
 
   <ItemGroup>
