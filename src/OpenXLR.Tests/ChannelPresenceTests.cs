@@ -4,9 +4,12 @@ namespace OpenXLR.Tests;
 
 /// <summary>
 /// Which hardware strips the daemon tells clients to show. Only the Wave XLR
-/// Pro has a second XLR jack and the auxiliary input stage, so on every other
-/// model those channels can never carry audio. They stay in the layout and
-/// keep their levels; the state says the device cannot feed them.
+/// Pro has a second XLR jack, the auxiliary input stage and the analog Line
+/// In, so on every other model those channels can never carry audio. They
+/// stay in the layout and keep their levels; the state says the device
+/// cannot feed them. Line In also needs the Pro's capture source in the
+/// layout it was measured in, which only a mixer that wired the interface
+/// knows (see the private PipeWire test of it), so here it is never present.
 /// </summary>
 public sealed class ChannelPresenceTests
 {
@@ -22,15 +25,19 @@ public sealed class ChannelPresenceTests
         Assert.True(single["xlr1"].Present);
         Assert.False(single["xlr2"].Present);
         Assert.False(single["aux"].Present);
+        Assert.False(single["line"].Present);
         // An application channel has no jack behind it and is never absent.
         Assert.True(single["game"].Present);
         // The strip is still there, so its sends survive the device change.
         Assert.NotEmpty(single["xlr2"].Levels);
 
-        Assert.True(mixer.SetInputJacks(2, true));
+        Assert.True(mixer.SetInputJacks(2, true, true));
         Dictionary<string, ChannelStatus> pro = mixer.Snapshot().Channels.ToDictionary(c => c.Id);
         Assert.True(pro["xlr2"].Present);
         Assert.True(pro["aux"].Present);
+        // The Pro's Line In, but no capture source wired in this run to say its layout.
+        Assert.False(pro["line"].Present);
+        Assert.NotEmpty(pro["line"].Levels);
     }
 
     [Fact]
@@ -46,7 +53,8 @@ public sealed class ChannelPresenceTests
         // A Pro attached but not driven yet (boot, a failed claim) keeps its strips.
         Assert.True(mixer.SetAttached(true));
         Assert.False(mixer.SetAttached(true));
-        Assert.All(Present(mixer).Values, Assert.True);
+        Assert.All(Present(mixer).Where(p => p.Key != "line").Select(p => p.Value), Assert.True);
+        Assert.False(Present(mixer)["line"]);
         Assert.True(mixer.SetAttached(false));
         Assert.False(Present(mixer)["aux"]);
     }
@@ -60,7 +68,7 @@ public sealed class ChannelPresenceTests
         // Unplugged: the Pro's strips stay for its return.
         Assert.True(mixer.SetInputJacks(null, null));
         mixer.SetAttached(false);
-        Assert.All(Present(mixer).Values, Assert.True);
+        Assert.All(Present(mixer).Where(p => p.Key != "line").Select(p => p.Value), Assert.True);
         // A one-jack unit came and went: its answer is the one kept now.
         mixer.SetInputJacks(1, false);
         mixer.SetInputJacks(null, null);
@@ -92,5 +100,8 @@ public sealed class ChannelPresenceTests
         Assert.False(mixer.SetInputJacks(1, false));
         Assert.True(mixer.SetInputJacks(null, null));
         Assert.False(mixer.SetInputJacks(null, null));
+        Assert.True(mixer.SetInputJacks(2, true, true));
+        Assert.False(mixer.SetInputJacks(2, true, true));
+        Assert.True(mixer.SetInputJacks(2, true, false));
     }
 }

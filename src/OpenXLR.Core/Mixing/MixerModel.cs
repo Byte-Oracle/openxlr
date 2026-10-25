@@ -21,7 +21,8 @@ public sealed partial record MixerConfig
     /// <summary>
     /// The layout carried over from the user's Wave Link setup: three mixes
     /// (monitor / stream / chat), one channel per hardware input of the Wave
-    /// XLR Pro (XLR 1, XLR 2, Line In, each wired to its capture channel pair),
+    /// XLR Pro (XLR 1, XLR 2, USB Aux, Line In, each wired to its capture
+    /// channel pair),
     /// and the application channel set. The hardware inputs are muted in the
     /// monitor mix by default, exactly like Wave Link mutes the mic locally:
     /// self-monitoring belongs to the device's zero-latency crossfade, not the
@@ -45,13 +46,17 @@ public sealed partial record MixerConfig
         [
             new ChannelDefinition("xlr1", "XLR 1") { Levels = Level(1.0, 1.0, 1.0, 1.0), MutedIn = new HashSet<string> { "monitor", "monitor2" }, InputPair = 0 },
             new ChannelDefinition("xlr2", "XLR 2") { Levels = Level(1.0, 1.0, 1.0, 1.0), MutedIn = new HashSet<string> { "monitor", "monitor2" }, InputPair = 1, NeedsXlrInputs = 2 },
-            // The third hardware input stage is shared: the USB Aux port and the
-            // Line In jack both arrive on capture pair 2 (verified live with a
-            // MacBook on USB Aux; every other capture channel stayed at digital
-            // zero). One channel therefore serves both.
+            // The USB Aux port arrives on capture pair 2 (AUX4/AUX5, verified
+            // live with a MacBook on USB Aux).
             // Aux In must NEVER feed the Aux mix: that would loop the second
             // computer's audio straight back to it.
             new ChannelDefinition("aux", "Aux In") { Levels = Level(1.0, 1.0, 1.0, 0.0), MutedIn = new HashSet<string> { "monitor", "monitor2", "auxout" }, InputPair = 2, NeedsAuxInput = true },
+            // The analog Line In jack is an input of its own on capture pair 3
+            // (AUX6/AUX7 of the Pro's 18-channel source, measured on the desk
+            // with a source playing into the jack). It starts like Aux In:
+            // silent in the monitor mixes and out of the Aux mix until the
+            // user opens them.
+            new ChannelDefinition("line", "Line In") { Levels = Level(1.0, 1.0, 1.0, 0.0), MutedIn = new HashSet<string> { "monitor", "monitor2", "auxout" }, InputPair = 3, NeedsLineInput = true },
             new ChannelDefinition("game", "Game") { Levels = Level(0.5, 0.5, 0.5, 0.5) },
             new ChannelDefinition("music", "Music") { Levels = Level(1.0, 1.0, 1.0, 1.0) },
             new ChannelDefinition("browser", "Browser") { Levels = Level(1.0, 1.0, 1.0, 1.0) },
@@ -113,8 +118,9 @@ public sealed record ChannelDefinition(string Id, string Name)
     /// <summary>
     /// Capture channel pair of the hardware interface feeding this channel
     /// (0 = first stereo pair), or null for a user channel. On the Wave
-    /// XLR Pro's 6-channel source: pair 0 = XLR 1, pair 1 = XLR 2, pair 2 =
-    /// Line In.
+    /// XLR Pro's 18-channel source: pair 0 = XLR 1, pair 1 = XLR 2, pair 2 =
+    /// USB Aux, pair 3 = Line In; AUX8 to AUX17 are the unit's own mixes
+    /// streamed back, which no channel takes.
     /// </summary>
     public int? InputPair { get; init; }
 
@@ -125,8 +131,18 @@ public sealed record ChannelDefinition(string Id, string Name)
     /// </summary>
     public int? NeedsXlrInputs { get; init; }
 
-    /// <summary>Whether this channel needs the device's auxiliary input stage, which is the Pro's Line In.</summary>
+    /// <summary>Whether this channel needs the device's auxiliary input stage, the Pro's USB Aux port.</summary>
     public bool NeedsAuxInput { get; init; }
+
+    /// <summary>
+    /// Whether this channel needs the device's analog Line In, which it
+    /// takes from the raw capture source only in the layout it was measured
+    /// in (<see cref="LineInputSourcePorts"/> ports).
+    /// </summary>
+    public bool NeedsLineInput { get; init; }
+
+    /// <summary>The port count of the Wave XLR Pro's raw capture source, the one layout Line In is known in.</summary>
+    public const int LineInputSourcePorts = 18;
 
     /// <summary>Explicit capture node name for a user input, independent of the active Wave interface.</summary>
     public string? CaptureSource { get; init; }

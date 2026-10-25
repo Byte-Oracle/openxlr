@@ -96,6 +96,7 @@ public static class CommandValidation
                 return CheckPluginPath(cmd);
             case "setInputBinding":
                 if (cmd.Channel == "aux") return "setInputBinding: Aux In stays on the interface; bind 'xlr1' or 'xlr2'";
+                if (cmd.Channel == "line") return "setInputBinding: Line In stays on the interface; bind 'xlr1' or 'xlr2'";
                 if (cmd.Channel is null || TooLong(cmd.Channel, 36) || !layout.HasBindableStrip(cmd.Channel))
                     return "setInputBinding: need channel 'xlr1' or 'xlr2'";
                 return CheckBinding(cmd);

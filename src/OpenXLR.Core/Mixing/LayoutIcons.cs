@@ -34,7 +34,7 @@ public static class LayoutDefaultIcons
     /// <param name="xlrJack">False while the interface's input is a capsule rather than an XLR jack.</param>
     public static string ForChannel(string id, bool hardware, string? captureSource, string? boundSource = null, bool xlrJack = true,
         int? captureMonoChannel = null) =>
-        hardware ? (id == "aux" ? "jack"
+        hardware ? (id is "aux" or "line" ? "jack"
             : boundSource is not null ? (boundSource.StartsWith("bluez_input.", StringComparison.Ordinal) ? "headset" : "microphone")
             : xlrJack ? "mic" : "microphone")
         : captureSource is not null ? (captureSource.StartsWith("bluez_input.", StringComparison.Ordinal) ? "headset"

@@ -30,12 +30,17 @@ public sealed class MixerLayoutSettingsTests
             UserMixes = [new("recording", "Archive")],
         });
         Assert.Equal(["monitor", "monitor2", "recording", "auxout"], config.Mixes.Select(m => m.Id));
-        Assert.Equal(["xlr1", "xlr2", "aux", "podcast", "music"], config.Channels.Select(c => c.Id));
-        Assert.Equal("OpenXLR_ch_podcast", config.Channels[3].SinkName);
-        Assert.Equal("Interview", config.Channels[3].Name);
+        Assert.Equal(["xlr1", "xlr2", "aux", "line", "podcast", "music"], config.Channels.Select(c => c.Id));
+        Assert.Equal("OpenXLR_ch_podcast", config.Channels[4].SinkName);
+        Assert.Equal("Interview", config.Channels[4].Name);
         Assert.All(config.Channels, c => Assert.Equal(config.Mixes.Select(m => m.Id), c.Levels.Keys));
         Assert.Contains("auxout", config.Channels[2].MutedIn);
         Assert.Equal(0, config.Channels[2].Levels["auxout"]);
+        // Line In starts like Aux In, out of the monitors and the Aux mix, on its own pair.
+        Assert.Equal(3, config.Channels[3].InputPair);
+        Assert.Equal(config.Channels[2].MutedIn.Order(), config.Channels[3].MutedIn.Order());
+        Assert.Superset(new HashSet<string> { "monitor", "monitor2", "auxout" }, config.Channels[3].MutedIn.ToHashSet());
+        Assert.Equal(0, config.Channels[3].Levels["auxout"]);
     }
 
     [Fact]
@@ -49,7 +54,7 @@ public sealed class MixerLayoutSettingsTests
              "UserMixes":[{"Id":"monitor2","Name":"Bad"},{"Id":"auxout","Name":"Bad"},null]}
             """)!;
         var config = MixerConfig.FromSettings(settings);
-        Assert.Equal(["xlr1", "xlr2", "aux", "ok"], config.Channels.Select(c => c.Id));
+        Assert.Equal(["xlr1", "xlr2", "aux", "line", "ok"], config.Channels.Select(c => c.Id));
         Assert.Equal(["monitor", "monitor2", "auxout"], config.Mixes.Select(m => m.Id));
         Assert.Equal("Monitor B", config.Mixes[1].Name);
     }
