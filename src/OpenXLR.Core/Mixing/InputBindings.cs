@@ -279,8 +279,8 @@ public sealed partial class Mixer
 
     /// <summary>
     /// Whether a supported unit is attached, driven or not. Before any unit
-    /// has connected in this run, XLR 2 and Aux In are present only while
-    /// one is. True when it changed.
+    /// has connected in this run, XLR 2, Aux In and Line In are present only
+    /// while one is. True when it changed.
     /// </summary>
     public bool SetAttached(bool attached)
     {
@@ -298,13 +298,20 @@ public sealed partial class Mixer
     /// on the interface is present when the connected unit has its jack;
     /// with no unit connected it keeps the last answer of this run, and
     /// before any unit has connected XLR 1 is present and XLR 2 and Aux In
-    /// are present only while a supported unit is attached.
+    /// are present only while a supported unit is attached. Line In also
+    /// needs the interface's capture source in the layout it was measured in,
+    /// the last one wired in this run.
     /// </summary>
     private bool ChannelPresentLocked(ChannelDefinition channel)
     {
         if (channel.InputPair is null || _bindings.ContainsKey(channel.Id)) return true;
         int? jacks = _deviceXlrInputs ?? _lastXlrInputs;
         bool? aux = _deviceXlrInputs is null ? _lastAuxInput : _deviceAuxInput;
+        if (channel.NeedsLineInput)
+        {
+            bool? line = _deviceXlrInputs is null ? _lastLineInput : _deviceLineInput;
+            return (jacks is null ? _attached : line is true) && _inputPorts == ChannelDefinition.LineInputSourcePorts;
+        }
         if (jacks is null) return channel.NeedsXlrInputs is not > 1 && !channel.NeedsAuxInput || _attached;
         if (channel.NeedsXlrInputs is int needed && jacks < needed) return false;
         return !channel.NeedsAuxInput || aux is not false;

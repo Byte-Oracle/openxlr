@@ -118,7 +118,7 @@ public sealed class MixMatrixViewModel : ViewModelBase, IDisposable
     public static IReadOnlyCollection<string> RowPartsOf(InputStripKind kind) => kind switch
     {
         InputStripKind.Xlr1 or InputStripKind.Xlr2 => SkinMatrixParts.RowHead,
-        InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
+        InputStripKind.AuxIn or InputStripKind.LineIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
         // A capture channel's gain part holds its channel volume, under the
         // interface's gain while it carries the interface's microphone, which
         // also brings the interface's mute and switches. Its source and its
@@ -474,6 +474,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
         (InputStripKind.Xlr1 or InputStripKind.Xlr2 or InputStripKind.Capture, SkinMatrixParts.Processing) =>
             Unit is { HasSwitches: true } || ExtraUnit is { HasSwitches: true } || ShowsSoftware,
         (InputStripKind.AuxIn, SkinStripParts.Gain) => Main.CapAuxInput || Channel.HasVolume,
+        (InputStripKind.LineIn, SkinStripParts.Gain) => Main.CapLineInput || Channel.HasVolume,
         (_, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         (InputStripKind.Capture, SkinStripParts.Effects) => Channel.HasInserts && CapturePartOrdered(part),
         _ => true,
@@ -543,10 +544,11 @@ public sealed class MatrixRowViewModel : ViewModelBase
 
     /// <summary>
     /// The head's gain part draws a gain: the interface's while the row
-    /// carries its input, an additional interface's, or Aux In's level where
-    /// the interface has the stage.
+    /// carries its input, an additional interface's, Aux In's level where
+    /// the interface has the stage, or Line In's gain where it has the input.
     /// </summary>
-    public bool HasGainFader => CarriesUnit || CarriesExtraUnit || Kind == InputStripKind.AuxIn && Main.CapAuxInput;
+    public bool HasGainFader => CarriesUnit || CarriesExtraUnit || Kind == InputStripKind.AuxIn && Main.CapAuxInput
+        || Kind == InputStripKind.LineIn && Main.CapLineInput;
 
     /// <summary>The head's gain part draws the channel's own volume: the daemon reports one.</summary>
     public bool ShowsVolume => Channel.HasVolume;
@@ -580,31 +582,32 @@ public sealed class MatrixRowViewModel : ViewModelBase
     public bool Tall => Stacked || ShowsReadout || ShowsEq && Spec.Parts.Contains(SkinStripParts.Effects, StringComparer.Ordinal);
 
     /// <summary>
-    /// The name column draws a readout under the processing button: the row
-    /// carries an interface's input and the head draws its gain. The row is
-    /// then tall, so the button and the readout fit at every control size.
+    /// The name column draws a readout: under the processing button while the
+    /// row carries an interface's input and the head draws its gain, and on
+    /// Aux In and Line In while the head draws the interface's level or gain.
+    /// The row is then tall, so the button and the readout fit at every
+    /// control size.
     /// </summary>
-    public bool ShowsReadout => (CarriesUnit || CarriesExtraUnit) && Spec.Parts.Contains(SkinStripParts.Gain, StringComparer.Ordinal);
+    public bool ShowsReadout => (CarriesUnit || CarriesExtraUnit || Kind is InputStripKind.AuxIn or InputStripKind.LineIn && HasGainFader)
+        && Spec.Parts.Contains(SkinStripParts.Gain, StringComparer.Ordinal);
 
-    private bool _volumeAdjusting;
-    /// <summary>True while the user is moving the row's volume fader; the fader writes it.</summary>
+    /// <summary>
+    /// True while the user is moving the row's volume fader; the fader writes
+    /// it, and the channel holds the readout on the volume for a moment after.
+    /// </summary>
     public bool VolumeAdjusting
     {
-        get => _volumeAdjusting;
-        set
-        {
-            if (!Set(ref _volumeAdjusting, value)) return;
-            Raise(nameof(Readout));
-            Raise(nameof(ReadoutName));
-        }
+        get => Channel.VolumeAdjusting;
+        set => Channel.VolumeAdjusting = value;
     }
 
-    /// <summary>The readout's text: the input's gain, or the channel's volume while its fader moves.</summary>
-    public string Readout => _volumeAdjusting ? Channel.VolumeText : Unit?.GainText ?? ExtraUnit?.GainText ?? "";
+    /// <summary>The readout's text: the input's gain, or the channel's volume while its fader moves and shortly after.</summary>
+    public string Readout => Kind is InputStripKind.AuxIn or InputStripKind.LineIn ? Channel.Readout
+        : Channel.ShowsVolumeReadout ? Channel.VolumeText : Unit?.GainText ?? ExtraUnit?.GainText ?? "";
 
     /// <summary>What the readout shows, for a screen reader and its tooltip.</summary>
-    public string ReadoutName => _volumeAdjusting
-        ? Localizer.Format("ChannelVolumeName", Channel.Name)
+    public string ReadoutName => Kind is InputStripKind.AuxIn or InputStripKind.LineIn ? Channel.ReadoutName
+        : Channel.ShowsVolumeReadout ? Localizer.Format("ChannelVolumeName", Channel.Name)
         : Unit?.GainName ?? ExtraUnit?.GainName ?? "";
 
     /// <summary>The head draws the input's binding under the name, unless the skin hides it.</summary>
@@ -701,10 +704,11 @@ public sealed class MatrixRowViewModel : ViewModelBase
                 Raise(nameof(LeftLevelName));
                 Raise(nameof(RightLevelName));
                 Raise(nameof(ProcessingName));
-                if (_volumeAdjusting) Raise(nameof(ReadoutName));
                 foreach (MatrixCellViewModel cell in Cells) cell.RefreshNames();
                 break;
-            case nameof(ChannelViewModel.VolumeText) when _volumeAdjusting: Raise(nameof(Readout)); break;
+            case nameof(ChannelViewModel.Readout) or nameof(ChannelViewModel.ReadoutName): RaiseReadout(); break;
+            case nameof(ChannelViewModel.VolumeAdjusting): Raise(nameof(VolumeAdjusting)); break;
+            case nameof(ChannelViewModel.VolumeText) when Channel.ShowsVolumeReadout: Raise(nameof(Readout)); break;
             case nameof(ChannelViewModel.HasVolume): RefreshSpec(); break;
             case nameof(ChannelViewModel.Inserts): Raise(nameof(Inserts)); Raise(nameof(InsertsKey)); RefreshSpec(); break;
             case nameof(ChannelViewModel.HasEq): Raise(nameof(ShowsEq)); Raise(nameof(Tall)); break;
@@ -722,6 +726,7 @@ public sealed class MatrixRowViewModel : ViewModelBase
         switch (e.PropertyName)
         {
             case nameof(MainViewModel.CapAuxInput) when Kind == InputStripKind.AuxIn: RefreshSpec(); break;
+            case nameof(MainViewModel.CapLineInput) when Kind == InputStripKind.LineIn: RefreshSpec(); break;
             case nameof(MainViewModel.HasMixer): Raise(nameof(ShowsEq)); Raise(nameof(Tall)); break;
             case nameof(MainViewModel.ShowSoftLowCut) or nameof(MainViewModel.ShowSoftClipGuard) when Kind == InputStripKind.Xlr1:
                 Raise(nameof(ShowsSoftware)); RaiseSwitches(); break;

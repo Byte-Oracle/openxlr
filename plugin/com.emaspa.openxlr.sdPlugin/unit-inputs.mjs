@@ -142,6 +142,7 @@ export function deviceTargetSupported(capabilities, target) {
     crossfade: "crossfade",
     outHp1: "outputRouting", outHp2: "outputRouting",
     outLineOut: "outputRouting", auxLevel: "auxInput", auxLevelLock: "auxInput",
+    lineIn: "lineInput",
   }[target];
   return capability ? c[capability] === true : target === "gainLocked";
 }

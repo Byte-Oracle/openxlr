@@ -46,6 +46,8 @@ the commit block every selector write needs.
 | Mic and PC crossfade | verified | direct monitor inside the device |
 | Physical output routing | verified | HP1, HP2, Line Out, USB Aux; verified by listening on both jacks |
 | USB Aux input level + lock, aux return | verified | return routing latches at stream open; the daemon bounces the stream |
+| Line In on a channel of its own | measured on the capture source | on the desk unit (firmware 1.0.14, 2026-10-25) the raw capture source has 18 channels, and a source playing into the Line In jack arrived on AUX6 and AUX7, apart from USB Aux on AUX4 and AUX5. The Line In channel takes AUX6 and AUX7 and is shown only on that 18-channel layout. Listening to it through OpenXLR's channel is not yet checked on hardware |
+| Line In gain, 0 to 80 dB | beta | block 0x0004 byte 76, which matches the centre pair of the ALSA capture volume (20 dB on the desk unit). A write changes that byte alone, like the XLR gains. Writing it from OpenXLR and hearing the change are not yet checked on hardware |
 | Ducking on the unit, keyed by XLR 1 | verified on the jacks | blocks 0x0008 and 0x0001 as Wave Link 3.5 writes them (captures of 2026-10-21). A desk probe (2026-10-23) found that the unit ducks a pair only when both bits of its field are set; with both set the jacks dipped by the configured depth, on the feed OpenXLR uses, with a test tone as the key. The daemon now writes both bits, and on the desk (2026-10-23) a voice on XLR 1 ducked the music on Headphones 1 at each amount and speed, with no dropout when switching ducking or its side. XLR 2 does not trigger it, and a muted XLR 1 still does. The USB Aux port's mix ducked on its USB stream and was not listened to, so it stays in software |
 | Reset to OpenXLR's baseline | verified | the device keeps its settings, so the reset writes a known set (gain 30 dB, everything off, levels at half, crossfade on PC) instead of recorded firmware defaults |
 | Microphone EQ on the unit, firmware 1.0.14 or later | verified | both inputs, captured from Wave Link 3.5 on firmware 1.0.14; the encoder reproduces the captured writes byte for byte. Used on the maintainer's unit and by other owners. On the desk a +12 dB bell at 5 kHz written from OpenXLR read +12.3 to +12.7 dB on the raw USB capture, and software mode left the capture flat. On older firmware, or when the version or the EQ fields cannot be read, both inputs' EQ runs in software |
@@ -558,7 +560,7 @@ Mic 1 or Mic 2. The strip keeps its sends into every mix, its volume and
 meter, the microphone EQ, its LV2, CLAP and VST3 insert chain and Sound
 Check. XLR 1 also gets the software low cut and ClipGuard; ClipGuard needs
 `swh-plugins`. The EQ and Sound Check run in the native plugin host, which
-the packages include. Aux In cannot be bound.
+the packages include. Aux In and Line In cannot be bound.
 
 As a capture input (Edit layout, **Add capture input**), the source gets a
 channel of its own with sends, a volume, meters and its place in profiles,
@@ -578,14 +580,14 @@ power, mute button, headphone level and onboard effects stay on the device
 or with its own software. These need an Elgato device: every control in
 the device sections above, the gain lock, recall on connect, last settings
 restored on connect, the Wave XLR Pro's output routing, USB Aux mix,
-zero-latency monitor path and Aux In, and the OpenDeck plugin's hardware
+zero-latency monitor path, Aux In and Line In, and the OpenDeck plugin's hardware
 actions.
 
 With no Elgato device attached, the daemon runs and builds the mixer as
 usual. XLR 1 is shown and stays silent until it is bound: the header reads
-"No interface." with a link to choose a microphone for it. XLR 2 and Aux In
-are hidden while no supported device has been attached since the daemon
-started; XLR 2 can still be bound from Options, AUDIO, Input bindings, and
+"No interface." with a link to choose a microphone for it. XLR 2, Aux In
+and Line In are hidden while no supported device has been attached since
+the daemon started; XLR 2 can still be bound from Options, AUDIO, Input bindings, and
 shows once it is. Profiles are saved under `generic` and hold the mixer
 alone.
 

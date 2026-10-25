@@ -75,8 +75,8 @@ public sealed class LiveLayoutEditingTests
     {
         var config = MixerConfig.Default().WithoutChannel("game");
         Assert.DoesNotContain("game", config.Channels.Select(c => c.Id));
-        Assert.Equal(["xlr1", "xlr2", "aux"], config.Channels.Where(c => c.InputPair is not null).Select(c => c.Id));
-        foreach (string id in new[] { "xlr1", "aux", "nope", StreamMatcher.Ignore })
+        Assert.Equal(["xlr1", "xlr2", "aux", "line"], config.Channels.Where(c => c.InputPair is not null).Select(c => c.Id));
+        foreach (string id in new[] { "xlr1", "aux", "line", "nope", StreamMatcher.Ignore })
             Assert.Throws<InvalidOperationException>(() => MixerConfig.Default().WithoutChannel(id));
 
         var single = MixerConfig.FromSettings(new MixerSettings { UserChannels = [new("only", "Only")] });

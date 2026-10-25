@@ -12,11 +12,11 @@ public sealed class LayoutOrderTests
         var original = MixerConfig.Default();
         var apps = original.Channels.Where(c => c.InputPair is null).Reverse().ToArray();
         var ordered = original.WithOrder(apps.Select(c => c.Id).ToArray(), ["chat", "monitor2", "stream", "monitor"]);
-        Assert.Equal(["xlr1", "xlr2", "aux", .. apps.Select(c => c.Id)], ordered.Channels.Select(c => c.Id));
+        Assert.Equal(["xlr1", "xlr2", "aux", "line", .. apps.Select(c => c.Id)], ordered.Channels.Select(c => c.Id));
         Assert.Equal(["chat", "monitor2", "stream", "monitor", "auxout"], ordered.Mixes.Select(m => m.Id));
         foreach (var channel in original.Channels) Assert.Same(channel, ordered.Channels.Single(c => c.Id == channel.Id));
         foreach (var mix in original.Mixes) Assert.Same(mix, ordered.Mixes.Single(m => m.Id == mix.Id));
-        Assert.Equal("game", original.Channels[3].Id); // The original snapshot was not mutated.
+        Assert.Equal("game", original.Channels[4].Id); // The original snapshot was not mutated.
     }
 
     [Theory]

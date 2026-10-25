@@ -587,14 +587,23 @@
           </StackPanel>
         </Grid>
 
-        <!-- USB Aux input stage -->
-        <Grid ColumnDefinitions="90,*,64,20,110" Margin="0,2,0,0" IsVisible="{Binding CapAuxInput}">
+        <!-- USB Aux input stage; its readout shows Aux In's volume while that fader moves and for a second after -->
+        <Grid Name="AuxInRow" ColumnDefinitions="90,*,64,20,110" Margin="0,2,0,0" IsVisible="{Binding CapAuxInput}">
           <TextBlock Text="{loc:Text Key=USBAuxIn}" Classes="h" VerticalAlignment="Center"/>
           <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="-60" Maximum="0"
-                  Value="{Binding AuxLevelDb, Mode=TwoWay}"/>
-          <TextBlock Grid.Column="2" Text="{Binding AuxLevelText}" Classes="val" VerticalAlignment="Center"
-                     HorizontalAlignment="Right"/>
+                  Value="{Binding AuxLevelDb, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=USBAuxIn}"/>
+          <TextBlock Grid.Column="2" Name="AuxInReadout" Text="{Binding AuxReadout}" Classes="val" VerticalAlignment="Center"
+                     HorizontalAlignment="Right" AutomationProperties.Name="{Binding AuxReadoutName}" ToolTip.Tip="{Binding AuxReadoutName}"/>
           <ToggleButton Grid.Column="4" Content="{loc:Text Key=LevelLock}" IsChecked="{Binding AuxLevelLock, Mode=TwoWay}"/>
+        </Grid>
+        <!-- the Wave XLR Pro's analog Line In, an input of its own; its readout shows Line In's
+             volume while that fader moves and for a second after -->
+        <Grid Name="LineInRow" ColumnDefinitions="90,*,64" Margin="0,2,0,0" IsVisible="{Binding ShowLineInRow}">
+          <TextBlock Text="{loc:Text Key=LineIn}" Classes="h" VerticalAlignment="Center"/>
+          <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="{Binding GainMaxDb}"
+                  Value="{Binding LineInGainDb, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=LineInGain}"/>
+          <TextBlock Grid.Column="2" Name="LineInReadout" Text="{Binding LineInReadout}" Classes="val" VerticalAlignment="Center"
+                     HorizontalAlignment="Right" AutomationProperties.Name="{Binding LineInReadoutName}" ToolTip.Tip="{Binding LineInReadoutName}"/>
         </Grid>
         <ItemsControl Name="CaptureInputs" ItemsSource="{Binding CaptureInputs}" IsVisible="{Binding HasMixer}">
           <ItemsControl.ItemTemplate>
@@ -1049,6 +1058,7 @@
                           <TextBlock Grid.Column="2" Text="{Binding VolumeText}" Classes="val" FontSize="11"/>
                         </Grid>
                         <Slider vm:FaderInput.Step="0.01" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}"
+                                vm:FaderInput.IsAdjusting="{Binding VolumeAdjusting, Mode=OneWayToSource}"
                                 AutomationProperties.Name="{Binding Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
                                 ToolTip.Tip="{Binding VolumeTip}"/>
                       </StackPanel>

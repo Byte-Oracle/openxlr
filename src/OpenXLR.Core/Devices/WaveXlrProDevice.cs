@@ -44,7 +44,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
         PhysicalControls = true, Mute = true, LowCut = true, Expander = true, VoiceTune = true,
         HpVolume = true, LowImpedance = true, Crossfade = true,
         Phantom = true, ClipGuard = true, Compressor = true,
-        OutputRouting = true, AuxInput = true,
+        OutputRouting = true, AuxInput = true, LineInput = true,
         XlrInputs = 2, HpOutputs = 2,
         BuiltInDefaults = true,
         Ducking = true,
@@ -70,13 +70,16 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     // Field offsets within the blocks. Block 0x0004 carries one 38-byte
     // structure per XLR input (verified bidirectionally against ALSA: off0
     // tracks the front pair, off38 the rear pair); XLR 2 fields are the same
-    // offsets shifted by Xlr2Base. The 4-byte tail (off76) is a third input
-    // stage, not yet exposed.
+    // offsets shifted by Xlr2Base. The 4-byte tail starts with the Line In
+    // gain at off76, the centre pair of the ALSA capture volume (measured on
+    // the desk unit, firmware 1.0.14); bytes 77 to 79 are left as read except
+    // by the USB Aux level and its lock.
     private const int Xlr2Base = 38;
     private const int GainOffset = 0;      // block 0x0004
     private const int FlagsOffset = 1;     // block 0x0004 / 0x0005
     private const int ClipGuardOffset = 2; // block 0x0004 (per XLR struct; 0x04 set = DISABLED)
     private const int VoiceTuneStrengthOffset = 10; // block 0x0004
+    private const int LineInGainOffset = 76;        // block 0x0004 tail, dB = byte (0..80)
     private const int AuxLevelLockOffset = 77;      // block 0x0004 tail (0x04 = locked)
     private const int AuxLevelOffset = 79;          // block 0x0004 tail, dB = -byte/4 (0..-60)
     private const int HpVolOffset = 0;     // block 0x0005 (headphones 1)
@@ -318,6 +321,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
                                (b1[AuxMixMusicMemberOffset] & AuxMixMusicMemberMask) != 0,
             AuxLevelDb = -b4[AuxLevelOffset] / 4.0,
             AuxLevelLock = (b4[AuxLevelLockOffset] & 0x04) != 0,
+            LineInGainDb = b4[LineInGainOffset],
         };
     }
 
@@ -483,6 +487,27 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
         byte[] b = Read(BlockSettings, SettingsLen);
         b[AuxLevelLockOffset] = (byte)(on ? b[AuxLevelLockOffset] | 0x04 : b[AuxLevelLockOffset] & ~0x04);
         WriteCommitted(BlockSettings, b);
+    }
+
+    // --- Line In (block 0x0004 tail) ---
+
+    /// <summary>
+    /// The analog Line In's gain in dB (0..80), the first byte of the
+    /// settings block's tail, as the XLR gains are written: one read and one
+    /// write of the whole block, no commit, under the lock so no other write
+    /// lands between them. Every other byte goes back as read. Returns the
+    /// value written.
+    /// </summary>
+    public int SetLineInGainDb(int db)
+    {
+        db = Math.Clamp(db, 0, GainMaxDb);
+        lock (_lock)
+        {
+            byte[] b = Read(BlockSettings, SettingsLen);
+            b[LineInGainOffset] = (byte)db;
+            Write(BlockSettings, b);
+        }
+        return db;
     }
 
     public void SetLowImpedance(bool on)

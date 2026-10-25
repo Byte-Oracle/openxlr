@@ -104,19 +104,21 @@ downloads or installs an update.
 <a name="concepts"></a>
 ## 2. Concepts
 
-**Channels** are where audio enters the mixer. Three carry the
-interface's inputs (XLR 1, XLR 2 where the device has one, Aux In for
-the Pro's Line In and USB Aux input). XLR 1 and XLR 2 can take any other
-capture source instead ([input bindings](#input-bindings)). Only the Wave
-XLR Pro has the
-second jack and the aux stage, so on every other model the UI, the
-terminal mixer and the Omarchy bar leave those two strips out rather than
-offering a fader that reaches nothing. The channels keep their levels, so
-plugging a Pro back in brings them back as they were. While no interface is
-connected the strips stay as the last one left them. Until one has
-connected since the daemon started, XLR 2 and Aux In show only while a
-supported interface is attached, so a desk without an Elgato interface
-shows XLR 1 alone. The rest carry
+**Channels** are where audio enters the mixer. Four carry the
+interface's inputs: XLR 1, XLR 2 where the device has one, Aux In for the
+Pro's USB Aux input and Line In for its analog Line In jack. Aux In and
+Line In are separate channels and are never mixed into one. XLR 1 and XLR
+2 can take any other capture source instead ([input
+bindings](#input-bindings)). Only the Wave XLR Pro has the second jack, the
+aux stage and the Line In, so on every other model the UI, the terminal
+mixer and the Omarchy bar leave those strips out rather than offering a
+fader that reaches nothing. Line In also needs the Pro's capture source in
+its 18-channel layout; on a source with fewer channels it stays hidden.
+The channels keep their levels, so plugging a Pro back in brings them back
+as they were. While no interface is connected the strips stay as the last
+one left them. Until one has connected since the daemon started, XLR 2,
+Aux In and Line In show only while a supported interface is attached, so a
+desk without an Elgato interface shows XLR 1 alone. The rest carry
 application
 groups: Game, Music, Browser, System, Voice Chat and SFX by default, and
 whatever you add, rename, hide or remove in the layout editor
@@ -160,21 +162,32 @@ starts at 100%, and so does each one in a profile or settings file saved
 before it had a volume. The channel's meter shows what plays into the
 channel, before its volume.
 
-XLR 1, XLR 2 and Aux In have a volume too. It comes after the interface's
-gain or the Aux In level and after the input's plugins, and leaves them
+XLR 1, XLR 2, Aux In and Line In have a volume too. It comes after the
+interface's gain, the Aux In level or the Line In gain and after the
+input's plugins, and leaves them
 as they are: set the gain for the microphone, then use the volume to set
 how loud the input is in the mixes. A strip bound to a webcam or a USB
 microphone, which has no gain in OpenXLR, keeps its volume, and the volume
 stays as it was when the binding changes.
 
 In the SUBMIXER tiles the Volume row sits above the sends. In an input
-rack it is under the gain or the Aux In level. In a mix matrix row head
-it is a second fader under the gain or the Aux In level, and the row is
-as tall as the two faders need; a row without a gain, such as a bound
-XLR 1, shows only the volume. Against an older daemon that gives
+rack it is under the gain, the Aux In level or the Line In gain. In a mix
+matrix row head it is a second fader under the gain or the level, and the
+row is as tall as the two faders need; a row without a gain, such as a
+bound XLR 1, shows only the volume. Against an older daemon that gives
 application and capture channels a volume and the hardware inputs none,
-XLR 1, XLR 2 and Aux In leave an empty space where the Volume row would
-be, so each send row sits at the same height in every tile.
+the hardware inputs leave an empty space where the Volume row would be, so
+each send row sits at the same height in every tile.
+
+<a name="gain-readout"></a>
+Aux In and Line In each have a readout that shows the input's level or
+gain in dB: on the USB Aux in and Line In rows of the INPUTS card, beside
+the level or gain in an input rack, and in the name column of a mix matrix
+row. While you move the channel's volume fader, by dragging it or with the
+arrow keys, wherever it is drawn, the readout shows the volume as a
+percentage instead, and it goes back to the level or gain one second after
+the fader stops. A screen reader reads the readout under the name of what
+it shows. XLR rows in a mix matrix do the same with the input's gain.
 
 <a name="volume-direct-monitor"></a>
 On a Wave XLR Pro, the [zero-latency path](#input-bindings) to the
@@ -346,7 +359,7 @@ longer want it.
 The interface stays driven while a strip takes another microphone. Its
 headphone outputs, its dial and mute button, the Wave XLR Pro's outputs and
 USB Aux, additional interfaces, recall on connect and the gain lock work as
-before, and a strip still on the interface and Aux In keep its audio. The
+before, and a strip still on the interface, Aux In and Line In keep their audio. The
 interface's gain, mute, phantom power and hardware effects belong to its
 microphone, so they follow it: in an input rack and a mix matrix they are on
 the capture channel that carries it, where they sat on XLR 1 before. In the
@@ -789,7 +802,7 @@ recovery.
    immediately and is remembered for that app. The channels also appear
    as playback devices in your desktop's audio applet (KDE's, for one),
    so you can see there which OpenXLR channel an app is playing into;
-   the hardware inputs (XLR 1, XLR 2, Aux In) are deliberately not
+   the hardware inputs (XLR 1, XLR 2, Aux In, Line In) are deliberately not
    listed, nothing should play into a microphone's channel.
 2. To pre-assign an app that has not played yet, open Manage, pick it
    from the installed-application list, choose a channel and press Add.
@@ -870,6 +883,17 @@ has stopped does not reconnect its outputs.
 The USB Aux *input* (what the second computer sends back) is the Aux In
 channel, with its level and **Level Lock** on the USB Aux in row of the
 INPUTS card.
+
+<a name="line-in"></a>
+The analog **Line In** jack is a channel of its own, Line In, apart from
+Aux In: a console or a player on the jack plays on Line In and nothing of
+it reaches Aux In. Its gain, 0 to 80 dB, is on the Line In row of the
+INPUTS card, under USB Aux in. Like Aux In it starts muted in Monitor A,
+Monitor B and the Aux mix and open in Stream and Chat; unmute its Monitor
+A send to hear it. The jack has no hardware mute, so muting Line In mutes
+the channel's sends. Line In shows only on a Wave XLR Pro whose capture
+source has its 18-channel layout, which is the one it was measured on. A
+Reset to OpenXLR's baseline leaves the Line In gain as it is.
 
 <a name="plugins"></a>
 ### 3.5 Add a plugin to the signal path
@@ -1837,7 +1861,8 @@ take the new sends into it. The same goes for a channel's
 [volume](#channel-volume): a channel the profile does not know keeps its
 volume, and a channel it knows but saved before that channel had a volume
 goes back to 100%. A profile saved before XLR 1, XLR 2 and Aux In had a
-volume recalls them at 100%.
+volume recalls them at 100%, and one saved before Line In existed recalls
+its volume at 100% and leaves its gain as it is.
 
 A profile records which mix feeds each selected output, even an output on the
 default monitor mix, so it plays the same mixes after you delete or add a
@@ -1880,8 +1905,8 @@ clean state to record and whatever is set on Linux is what Wave Link
 finds on Windows, and the other way round. For it the same button
 writes OpenXLR's baseline instead: gain 30 dB on both inputs, every
 processing stage and phantom power off, headphones and aux level at
-half, the crossfade fully on PC. Output routing and saved profiles
-stay. The gain lock has to be off.
+half, the crossfade fully on PC. Output routing, the Line In gain and
+saved profiles stay. The gain lock has to be off.
 
 <a name="default-devices"></a>
 ### 3.7 Hold the system default devices
@@ -2051,7 +2076,7 @@ wherever the skin puts the header, so the way back is always there.
 A skin can also draw INPUTS as a rack, one strip per channel, and the
 SUBMIXER as mix banks ([Templates](skins.md#templates)). The rack holds
 the INPUTS panel's own controls: an XLR input's gain, switches and plugin
-chain, Aux In's level and lock, and the name, meter and
+chain, Aux In's level and lock, Line In's gain, and the name, meter and
 [volume](#channel-volume) of every other channel. What your interface does
 not have stays hidden, as in the panel.
 
@@ -2225,10 +2250,12 @@ switching one here switches it there. **Mic** turns green while one of them
 is on, and its small lamp lights red while phantom power is on, so you can
 see both without opening it. Under **Mic** is the input's gain in dB. While
 you move the row's volume fader it shows the volume instead, as a
-percentage, and goes back to the gain when you let go. A capture channel
-that carries the interface's microphone has **Mic** too, and a strip bound to an additional interface
-has that interface's switches. Aux In has its level and **Lock**. Each of
-them also has its [volume](#channel-volume),
+percentage, and goes back to the gain one second after you let go. A
+capture channel that carries the interface's microphone has **Mic** too,
+and a strip bound to an additional interface has that interface's
+switches. Aux In has its level and **Lock**, Line In its gain, and both
+show the level or gain in the name column the same way
+([readout](#gain-readout)). Each of them also has its [volume](#channel-volume),
 a second fader under the gain or the level, and the row grows to hold
 both. An application or capture channel has its volume, with its meter
 under it.
@@ -2418,8 +2445,8 @@ goes to System; if you deleted System, it goes to the application channel
 whose id comes first alphabetically.
 
 Every channel and mix wears an icon. Until you pick one it wears the
-default for its kind: a microphone for XLR 1 and XLR 2, a jack for Aux In
-and the Aux port, a microphone for a mono capture input, a headset for a
+default for its kind: a microphone for XLR 1 and XLR 2, a jack for Aux In,
+Line In and the Aux port, a microphone for a mono capture input, a headset for a
 Bluetooth capture source, a camera for a stereo capture pair, a gamepad, a note, a
 browser window, a cog, a speech bubble and a burst for Game, Music,
 Browser, System, Voice Chat and SFX, a grid of tiles for any other
@@ -2722,9 +2749,10 @@ their channel. Saved insert targets keep the channel id through a rename.
 Sound Check is not offered on the Deck.
 
 **Dial** (an encoder) changes a level: the monitor output volume, a
-gain, a headphone volume, the aux level, the crossfade, a mix master, a
-channel's send into one mix or into all mixes, a channel's
-[volume](#channel-volume), XLR 1's, XLR 2's and Aux In's included, a
+gain, the Line In gain, a headphone volume, the aux level, the crossfade, a
+mix master, a channel's send into one mix or into all mixes, a channel's
+[volume](#channel-volume), XLR 1's, XLR 2's, Aux In's and Line In's
+included, a
 desktop output's volume
 (the system default or a named output, up to 150%), or one control of an
 insert. The touch strip shows a knob, a level meter, the value and a
@@ -2735,8 +2763,9 @@ configured. A headphone dial uses the output selector as mute only when
 the device supports output routing. On volume-only jacks, such as the XLR
 Dock, it shows the volume and pressing it sends no command.
 Pressing other dials mutes (or, for a gain, mutes the input;
-for the crossfade, recentres; for a channel volume, mutes or unmutes the
-channel in every mix, as a dial on its sends in all mixes does; for an
+for the crossfade, recentres; for a channel volume or the Line In gain,
+whose jack has no hardware mute, mutes or unmutes the channel in every mix,
+as a dial on its sends in all mixes does; for an
 insert control, toggles that insert's bypass; for a named output, toggles
 that output's mute; for the monitor output volume, pauses or resumes
 monitoring, see [output keys](#output-keys)). Pressing an Aux In level
@@ -3318,7 +3347,7 @@ confirmation offers deletion only.
 
 Capture channels host LV2, CLAP and VST3 inserts in the UI and through
 the [HTTP API](http-api.md). In the classic layout, INPUTS shows one block
-per capture input after Aux In, in layout order. Each block has its name, a
+per capture input after Aux In and Line In, in layout order. Each block has its name, a
 source chip with a connection light and any warning, on a mono port the
 **EQ** button right after the chip, its volume,
 and an **Inserts** button with the chain below it. The chip opens the source
@@ -3560,7 +3589,7 @@ stay muted.
 The microphone pause affects audio routed through OpenXLR, including its
 virtual microphones used by Discord or a recording program. It does not mute
 applications capturing a physical microphone directly, stereo capture channels
-or Aux/Line In. It stops Sound Check and discards its take; a new recording is
+or Aux In and Line In. It stops Sound Check and discards its take; a new recording is
 refused until microphones resume. A paused microphone that is the
 [ducking](#ducking) key stops lowering the other channels on this computer.
 Its strip meter keeps moving while you speak, because the meter reads the
@@ -3619,7 +3648,7 @@ key hints names the exact send or master under the cursor, and the
 channel's own [volume](#channel-volume) when the channel has one. Monitor
 masters can reach 150%; other masters, channel volumes and channel sends
 stop at 100%. The Matrix section shows a channel's volume beside its name,
-XLR 1's, XLR 2's and Aux In's included; `<` and `>` move it by five points
+XLR 1's, XLR 2's, Aux In's and Line In's included; `<` and `>` move it by five points
 and `,` and `.` by one, on the Mixer and Matrix tabs alike.
 
 Above the strips, the selected mix has a stereo meter, a large held RMS
@@ -3643,7 +3672,7 @@ Eight sections are reachable with `1` to `8`, Tab and Shift+Tab:
 |---|---|
 | 1 Mixer | channel sends, mix masters, stereo meters and level history; channel and user mix creation, renaming, removal and ordering |
 | 2 Matrix | the whole submixer as one grid: every channel's send into every mix, the mix masters and their meters across the top, a meter beside each channel. With height to spare a channel's meter is stereo: its name and its sends sit on a row of their own, the left bar on the row above and the right bar on the row below, so the name is centred between its two bars and each bar is centred on its letter. Where only two rows a channel fit, the name sits beside the left bar. Either way a blank row follows each channel, so its right bar never touches the next channel's left one. A short terminal keeps one row a channel and one summed bar. A microphone input, including a mono capture input, carries one bar rather than a pair of the same reading. A strip bound to another microphone shows its source, or why it is silent, on the row under its name, and a silent one's name is in the warning colour |
-| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing, [ducking](#terminal-ducking) on any device and USB Aux return |
+| 3 Inputs | hardware controls in grouped cards with gain arcs on a wide terminal, or a scrolling list in a small one; gain, mute, low cut, expander, voice tune and its strength, phantom power, ClipGuard and the compressor for each of the interface's inputs, headed by the channel that carries it; what feeds XLR 1 and XLR 2; each capture microphone's source, connection and carried unit controls; what runs each microphone's EQ and, on a unit that can run it, the choice between the unit and software; software processing, headphones, direct monitor blend, hardware output routing, [ducking](#terminal-ducking) on any device, USB Aux return and, on a Wave XLR Pro, the Line In gain |
 | 4 Outputs | selected monitor sinks and their feeds, shared output volume, the monitoring pause (**Mute monitoring**, microphone sends also pause when enabled in Options), each sink's volume and mute, and the system default sink and source |
 | 5 Apps | every known application and its channel assignment, including the desktop's own routing |
 | 6 Inserts | the chain on each input and mix, its order, bypass and status; add a plugin from the catalogue, narrowed by typing, of those that fit the chain's width; open a plugin's native editor or edit its generated controls when the editor is blocked or refused |

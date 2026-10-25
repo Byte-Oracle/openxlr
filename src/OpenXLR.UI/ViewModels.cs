@@ -170,7 +170,10 @@ public sealed partial class MainViewModel : ViewModelBase
     private bool _capLowImpedance = true;
     public bool CapLowImpedance { get => _capLowImpedance; set => Set(ref _capLowImpedance, value); }
     private bool _capAuxInput = true;
-    public bool CapAuxInput { get => _capAuxInput; set => Set(ref _capAuxInput, value); }
+    public bool CapAuxInput { get => _capAuxInput; set { if (Set(ref _capAuxInput, value)) RefreshGainReadouts(); } }
+    private bool _capLineInput;
+    /// <summary>The interface has an analog Line In with a gain of its own (the Wave XLR Pro).</summary>
+    public bool CapLineInput { get => _capLineInput; set { if (Set(ref _capLineInput, value)) RefreshGainReadouts(); } }
 
     private bool _unitXlrJacks = true;
     /// <summary>The interface's inputs are XLR jacks; false on a Wave:3 or Wave:1, whose input is its built-in capsule.</summary>
@@ -509,6 +512,7 @@ public sealed partial class MainViewModel : ViewModelBase
             if (Set(ref _auxLevelDb, value))
             {
                 Raise(nameof(AuxLevelText));
+                RefreshGainReadouts();
                 if (!_applying)
                 {
                     var v = value;
@@ -882,6 +886,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 CapCrossfade = Cap("crossfade");
                 CapLowImpedance = Cap("lowImpedance");
                 CapAuxInput = Cap("auxInput");
+                CapLineInput = Cap("lineInput");
                 UnitXlrJacks = caps["xlrJacks"]?.GetValue<bool>() ?? true;
                 CapOutputRouting = Cap("outputRouting");
                 CapPhysicalControls = Cap("physicalControls");
@@ -924,6 +929,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 OutLineOut = s["outLineOut"]?.GetValue<bool>() ?? false;
                 if (!SliderSync.RecentlyTouched("aux")) AuxLevelDb = s["auxLevelDb"]?.GetValue<double>() ?? 0;
                 AuxLevelLock = s["auxLevelLock"]?.GetValue<bool>() ?? false;
+                if (!SliderSync.RecentlyTouched("line")) LineInGainDb = s["lineInGainDb"]?.GetValue<int>() ?? 0;
             }
 
             // Read outside the state block, so a unit that left takes its path with it.
@@ -1736,6 +1742,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         {
             if (!Set(ref _name, value)) return;
             Raise(nameof(BindingChipName));
+            if (_showsVolumeReadout) Raise(nameof(ReadoutName));
             if (_eq is not null) _eq.ChannelName = value;
             if (_inserts is not null) _inserts.Title = value;
         }
@@ -1803,7 +1810,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
     }
 
     private bool _isHardware;
-    /// <summary>A hardware input (XLR 1, XLR 2, Aux In): structural, not editable.</summary>
+    /// <summary>A hardware input (XLR 1, XLR 2, Aux In, Line In): structural, not editable.</summary>
     public bool IsHardware
     {
         get => _isHardware;
@@ -1948,15 +1955,97 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
                 SliderSync.Send(key, () => _ = _client.SetChannelVolumeAsync(Id, v));
             }
             Raise(nameof(VolumeText));
+            if (_showsVolumeReadout) Raise(nameof(Readout));
         }
     }
     public string VolumeText => $"{_volume * 100:0}%";
+
+    // --- the gain readout of a strip that has one ---
+
+    /// <summary>How long a strip's readout keeps showing the volume after its fader stops moving.</summary>
+    public static readonly TimeSpan VolumeReadoutHold = TimeSpan.FromSeconds(1);
+
+    /// <summary>Starts the hold and calls back when it ends; tests run it by hand.</summary>
+    internal Func<TimeSpan, Action, IDisposable> StartReadoutHold { get; set; } =
+        (after, elapsed) => DispatcherTimer.RunOnce(elapsed, after);
+
+    private IDisposable? _readoutHold;
+    private bool _volumeAdjusting;
+    /// <summary>
+    /// True while the user moves this channel's volume fader, in whichever
+    /// view draws it; the fader writes it. The readout then shows the volume,
+    /// and keeps it for <see cref="VolumeReadoutHold"/> after the fader stops.
+    /// </summary>
+    public bool VolumeAdjusting
+    {
+        get => _volumeAdjusting;
+        set
+        {
+            if (!Set(ref _volumeAdjusting, value)) return;
+            _readoutHold?.Dispose();
+            _readoutHold = null;
+            if (value) ShowsVolumeReadout = true;
+            else if (_showsVolumeReadout && !_detached)
+            {
+                IDisposable? hold = null;
+                hold = StartReadoutHold(VolumeReadoutHold, () =>
+                {
+                    if (!ReferenceEquals(_readoutHold, hold)) return;
+                    _readoutHold = null;
+                    ShowsVolumeReadout = false;
+                });
+                _readoutHold = hold;
+            }
+            else ShowsVolumeReadout = false;
+        }
+    }
+
+    private bool _showsVolumeReadout;
+    /// <summary>The readout shows the channel's volume: its fader is moving or stopped less than the hold ago.</summary>
+    public bool ShowsVolumeReadout
+    {
+        get => _showsVolumeReadout;
+        private set
+        {
+            if (!Set(ref _showsVolumeReadout, value)) return;
+            Raise(nameof(Readout));
+            Raise(nameof(ReadoutName));
+        }
+    }
+
+    private string? _gainReadout, _gainReadoutName;
+    /// <summary>
+    /// Give the strip a gain readout, its hardware gain or level as text and
+    /// its name for a screen reader, or take it away with nulls. Set by
+    /// <see cref="MainViewModel"/> on Aux In and Line In.
+    /// </summary>
+    internal void SetGainReadout(string? text, string? name)
+    {
+        if (_gainReadout == text && _gainReadoutName == name) return;
+        _gainReadout = text;
+        _gainReadoutName = name;
+        Raise(nameof(HasGainReadout));
+        if (_showsVolumeReadout) return;
+        Raise(nameof(Readout));
+        Raise(nameof(ReadoutName));
+    }
+
+    /// <summary>The strip has a gain readout.</summary>
+    public bool HasGainReadout => _gainReadout is not null;
+
+    /// <summary>The readout's text: the input's gain, or the channel's volume while its fader moves and shortly after.</summary>
+    public string Readout => _showsVolumeReadout ? VolumeText : _gainReadout ?? "";
+
+    /// <summary>What the readout shows, for a screen reader and its tooltip.</summary>
+    public string ReadoutName => _showsVolumeReadout ? Localizer.Format("ChannelVolumeName", Name) : _gainReadoutName ?? "";
 
     private bool _detached;
     /// <summary>The channel left the mixer; its volume fader sends nothing more.</summary>
     internal void Detach()
     {
         _detached = true;
+        _readoutHold?.Dispose();
+        _readoutHold = null;
         SliderSync.Forget($"chvol:{Id}");
         ApplyEq(null, null);
         ApplyChainWidth(null);

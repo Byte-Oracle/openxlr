@@ -586,7 +586,7 @@ public sealed class MixerService : IHostedService, IDisposable
             // unit is handed on below, so the strips it carries are counted
             // by its own jacks, never by the unit before it.
             OpenXLR.Core.Devices.DeviceCapabilities? jacks = _devices.ActiveCapabilities;
-            if (_mixer.SetInputJacks(jacks?.XlrInputs, jacks?.AuxInput)) Changed?.Invoke();
+            if (_mixer.SetInputJacks(jacks?.XlrInputs, jacks?.AuxInput, jacks?.LineInput)) Changed?.Invoke();
             stop.ThrowIfCancellationRequested();
             if (UpdateInputDeviceHint()) Changed?.Invoke();
             stop.ThrowIfCancellationRequested();

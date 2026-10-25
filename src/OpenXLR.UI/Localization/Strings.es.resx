@@ -963,8 +963,14 @@
   <data name="LevelLock" xml:space="preserve">
     <value>Bloqueo de nivel</value>
   </data>
-  <data name="LineInUsbAux" xml:space="preserve">
-    <value>Line In / USB Aux</value>
+  <data name="LineIn" xml:space="preserve">
+    <value>Line In</value>
+  </data>
+  <data name="LineInGain" xml:space="preserve">
+    <value>Gan. Line In</value>
+  </data>
+  <data name="LineInJack" xml:space="preserve">
+    <value>Conector Line In</value>
   </data>
   <data name="LoadPreset" xml:space="preserve">
     <value>Cargar preset</value>

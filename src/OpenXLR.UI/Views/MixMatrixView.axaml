@@ -391,7 +391,7 @@
               <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
               <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
                       Name="MatrixRowName">
-                <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
                   <Button Grid.RowSpan="2" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
                           Content="↕" Tag="{Binding Channel}"
                           AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
@@ -401,6 +401,10 @@
                              IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
                   <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
                              TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <!-- the level, which reads the channel's volume while the volume fader moves and for a second after -->
+                  <TextBlock Grid.Column="3" Grid.RowSpan="2" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowsReadout}"
+                             AutomationProperties.Name="{Binding ReadoutName}" ToolTip.Tip="{Binding ReadoutName}"/>
                 </Grid>
               </Border>
             <Border Width="{DynamicResource Ox.Matrix.CellWidth}" Padding="4,0" Name="MatrixSource">
@@ -421,6 +425,67 @@
                     <ToggleButton Grid.Column="1" Content="{loc:Text Key=Lock}" IsChecked="{Binding Main.AuxLevelLock, Mode=TwoWay}"
                                   Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                                   AutomationProperties.Name="{loc:Text Key=LevelLock}" ToolTip.Tip="{loc:Text Key=LevelLock}"/>
+                  </Grid>
+                  <!-- the channel's own volume, under the gain where the row has one, the meter under it
+                       otherwise; while the Wave XLR Pro's direct path carries this channel to the jacks, a
+                       mark says it reaches the mixes only -->
+                  <Grid Name="MatrixVolumeLine" ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding ShowsVolume}">
+                    <layout:MeterFader ShowsMeter="{Binding VolumeShowsMeter}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                      <Slider Name="MatrixVolume" Classes="matrixFader" vm:FaderInput.Step="0.01" Minimum="0" Maximum="1"
+                              vm:FaderInput.IsAdjusting="{Binding VolumeAdjusting, Mode=OneWayToSource}"
+                              Value="{Binding Channel.Volume, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=ChannelVolumeName}}"
+                              ToolTip.Tip="{Binding Channel.VolumeTip}"/>
+                    </layout:MeterFader>
+                    <TextBlock Grid.Column="1" Name="MatrixVolumeNote" Text="&#x24D8;" Classes="h" FontSize="12" VerticalAlignment="Center"
+                               Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
+                               AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
+                  </Grid>
+                </StackPanel>
+              </layout:StripPanel>
+            </Border>
+          </DockPanel>
+        </Border>
+      </DataTemplate>
+      <!-- Line In: its gain over its meter, where the interface has the input -->
+      <DataTemplate x:Key="line" x:DataType="layout:MatrixRowViewModel">
+        <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Tall}">
+          <DockPanel>
+              <!-- the name column: a grid, not a horizontal stack, so the name gets what the icon and the handle leave and trims -->
+              <Border DockPanel.Dock="{Binding IdentityDock}" Width="{DynamicResource Ox.Matrix.NameWidth}" Padding="6,0"
+                      Name="MatrixRowName">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="4" VerticalAlignment="Center">
+                  <Button Grid.RowSpan="2" Classes="ghost reorderHandle alongY" Classes.fixedPlace="{Binding HandleHidden}"
+                          Content="↕" Tag="{Binding Channel}"
+                          AutomationProperties.Name="{Binding Channel.Name, StringFormat={loc:Text Key=MoveItem}}"
+                          ToolTip.Tip="{loc:Text Key=DragOntoAnotherChannelYouCanEdit}"/>
+                  <vm:LayoutIconBlock Grid.Column="1" Icon="{Binding Channel.Appearance.Icon}" Fallback="{Binding Channel.Appearance.DefaultIcon}" Classes="strip"
+                             Classes.layoutAccent="{Binding Channel.Appearance.HasColour}" VerticalAlignment="Center"
+                             IsVisible="{Binding ShowsIcon}" AutomationProperties.Name="{Binding Channel.Name}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <TextBlock Grid.Column="2" Text="{Binding Channel.Name}" Classes="strip" Classes.layoutAccent="{Binding Channel.Appearance.HasColour}"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding ShowsName}" ToolTip.Tip="{Binding Channel.Name}"/>
+                  <!-- the gain, which reads the channel's volume while the volume fader moves and for a second after -->
+                  <TextBlock Grid.Column="3" Grid.RowSpan="2" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowsReadout}"
+                             AutomationProperties.Name="{Binding ReadoutName}" ToolTip.Tip="{Binding ReadoutName}"/>
+                </Grid>
+              </Border>
+            <Border Width="{DynamicResource Ox.Matrix.CellWidth}" Padding="4,0" Name="MatrixSource">
+              <layout:StripPanel Spec="{Binding Spec}" Spacing="4" VerticalAlignment="Center">
+                <StackPanel layout:StripPanel.Part="meter" Orientation="Vertical" Spacing="1" VerticalAlignment="Center"
+                            ToolTip.Tip="{loc:Text Key=ChannelMeterTip}">
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterL}" AutomationProperties.Name="{Binding LeftLevelName}"/>
+                  <skin:LevelMeter Orientation="Horizontal" Level="{Binding Channel.MeterR}" AutomationProperties.Name="{Binding RightLevelName}"/>
+                </StackPanel>
+                <StackPanel layout:StripPanel.Part="gain" Name="MatrixLevels" Spacing="2" VerticalAlignment="Center">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding HasGainFader}">
+                    <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
+                                       LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
+                      <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
+                              Value="{Binding Main.LineInGainDb, Mode=TwoWay}"
+                              AutomationProperties.Name="{loc:Text Key=LineInGain}"/>
+                    </layout:MeterFader>
                   </Grid>
                   <!-- the channel's own volume, under the gain where the row has one, the meter under it
                        otherwise; while the Wave XLR Pro's direct path carries this channel to the jacks, a

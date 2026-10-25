@@ -102,8 +102,8 @@ maps a hardware strip to the source it is bound to:
 }
 ```
 
-`xlr1` and `xlr2` are the only keys; a strip left out, and Aux In always,
-takes the interface's capture pair. `source` is the exact node name,
+`xlr1` and `xlr2` are the only keys; a strip left out, and Aux In and Line
+In always, takes the interface's capture pair. `source` is the exact node name,
 `pair` is 0 and `monoChannel` is the zero-based port fed to both sides of
 the strip, 0 when absent. `unit` is present only for a source that belonged
 to a supported Elgato interface when it was bound, as that unit's id
@@ -142,7 +142,7 @@ writes `inputBindings` only. `setInputBinding` changes the field live; see
   publishes in the state as `defaultIcon` ([api.md](api.md)). XLR 1 and
   XLR 2 wear `mic` on a real XLR jack, `microphone` on a Wave:3's or
   Wave:1's capsule or another source, and `headset` on a Bluetooth
-  headset's source (`bluez_input.`); Aux In wears `jack`, mono capture inputs `microphone`,
+  headset's source (`bluez_input.`); Aux In and Line In wear `jack`, mono capture inputs `microphone`,
   `bluez_input.` capture sources `headset`, stereo capture pairs `camera`, the
   shipped application channels `game`, `music`, `browser`, `cog` (System),
   `chat` (Voice Chat) and `burst` (SFX), any other application channel

@@ -92,7 +92,7 @@ public sealed class LayoutIconTests
         MixerState state = mixer.Snapshot();
         Assert.Equal(new Dictionary<string, string>
         {
-            ["xlr1"] = "mic", ["xlr2"] = "mic", ["aux"] = "jack", ["game"] = "game", ["music"] = "music",
+            ["xlr1"] = "mic", ["xlr2"] = "mic", ["aux"] = "jack", ["line"] = "jack", ["game"] = "game", ["music"] = "music",
             ["browser"] = "browser", ["system"] = "cog", ["voicechat"] = "chat", ["sfx"] = "burst",
         }, state.Channels.ToDictionary(c => c.Id, c => c.Appearance.DefaultIcon));
         Assert.Equal(new Dictionary<string, string>

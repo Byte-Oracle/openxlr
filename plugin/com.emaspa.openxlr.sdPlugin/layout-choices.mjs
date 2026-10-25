@@ -7,7 +7,7 @@ import fs from "node:fs";
 const ICON_TABLE = JSON.parse(fs.readFileSync(new URL("./icons.json", import.meta.url), "utf8"));
 
 const LEGACY_CHANNELS = {
-  xlr1: "XLR 1", xlr2: "XLR 2", aux: "Aux In", game: "Game",
+  xlr1: "XLR 1", xlr2: "XLR 2", aux: "Aux In", line: "Line In", game: "Game",
   music: "Music", browser: "Browser", system: "System",
   voicechat: "Voice Chat", sfx: "SFX",
 };

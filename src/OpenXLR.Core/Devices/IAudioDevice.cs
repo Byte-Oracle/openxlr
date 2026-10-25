@@ -117,6 +117,14 @@ public interface IAudioDevice : IDisposable
     void SetOutLineOut(bool on) { }
     void SetAuxLevelDb(double db) { }
     void SetAuxLevelLock(bool on) { }
+
+    /// <summary>
+    /// The Wave XLR Pro's analog Line In gain in dB, held to 0 to the
+    /// model's <see cref="DeviceCapabilities.GainMaxDb"/>; returns the value
+    /// written. A device with <see cref="DeviceCapabilities.LineInput"/>
+    /// overrides it.
+    /// </summary>
+    int SetLineInGainDb(int db) => throw new InvalidOperationException("this unit has no Line In gain");
 }
 
 /// <summary>Stable identity of a device model.</summary>
@@ -212,6 +220,13 @@ public sealed record DeviceCapabilities
 
     /// <summary>A controllable auxiliary input stage (level + lock).</summary>
     public bool AuxInput { get; init; }
+
+    /// <summary>
+    /// An analog Line In with a gain of its own, separate from the USB Aux
+    /// input: the Wave XLR Pro, whose capture source carries it on AUX6 and
+    /// AUX7. False on every other model.
+    /// </summary>
+    public bool LineInput { get; init; }
 
     /// <summary>
     /// The highest gain the device takes, in dB; the lowest is 0. Each input

@@ -45,7 +45,7 @@ public sealed class StripNameTests : IDisposable
         Assert.Equal(("Mic 1", "microphone"), Strip(mixer, "xlr1"));
         Assert.Equal(("Mic 2", "headset"), Strip(mixer, "xlr2"));
         Assert.Equal(("Aux In", "jack"), Strip(mixer, "aux"));
-        Assert.Equal(["xlr1", "xlr2", "aux"], mixer.Snapshot().Channels.Where(c => c.Hardware).Select(c => c.Id));
+        Assert.Equal(["xlr1", "xlr2", "aux", "line"], mixer.Snapshot().Channels.Where(c => c.Hardware).Select(c => c.Id));
 
         mixer.SetInputBinding("xlr1", null);
         Assert.Equal(("XLR 1", "mic"), Strip(mixer, "xlr1"));

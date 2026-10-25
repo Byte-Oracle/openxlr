@@ -580,7 +580,13 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 NoteCaptureLocked(ch.Id, _inputFeeds.ContainsKey(ch.Id) ? null
                     : $"{ch.CaptureSource} could not be linked to the channel; retrying.");
         }
-        if (unitTouched) _inputDevice = unitNode;
+        if (unitTouched)
+        {
+            _inputDevice = unitNode;
+            // Line In is reported present only on the layout it was measured
+            // in; the count comes from the same listing, not a helper call.
+            if (unitNode is not null) _inputPorts = sources.FirstOrDefault(d => d.Name == unitNode)?.Channels;
+        }
 
         // With processing or a loop in the path, a direct input-to-channel
         // link this daemon does not track (left by an earlier run, or auto-linked by
@@ -1396,23 +1402,28 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     // is connected, and then every channel is reported present, which is what
     // the window has always shown without one.
     private int? _deviceXlrInputs, _lastXlrInputs;
-    private bool? _deviceAuxInput, _lastAuxInput;
+    private bool? _deviceAuxInput, _lastAuxInput, _deviceLineInput, _lastLineInput;
+    // The port count of the interface's capture source as last wired, kept
+    // while the unit is away like the jacks above.
+    private int? _inputPorts;
 
     /// <summary>
     /// The active device's XLR jack count and whether it has the auxiliary
-    /// input stage. The channels the device cannot feed are still built and
-    /// still hold their levels; they are reported as not present so clients
-    /// leave them out. Returns true when the answer changed.
+    /// input stage and the analog Line In. The channels the device cannot
+    /// feed are still built and still hold their levels; they are reported as
+    /// not present so clients leave them out. Returns true when the answer
+    /// changed.
     /// </summary>
-    public bool SetInputJacks(int? xlrInputs, bool? auxInput)
+    public bool SetInputJacks(int? xlrInputs, bool? auxInput, bool? lineInput = null)
     {
         lock (_gate)
         {
-            if (_deviceXlrInputs == xlrInputs && _deviceAuxInput == auxInput) return false;
+            if (_deviceXlrInputs == xlrInputs && _deviceAuxInput == auxInput && _deviceLineInput == lineInput) return false;
             _deviceXlrInputs = xlrInputs;
             _deviceAuxInput = auxInput;
+            _deviceLineInput = lineInput;
             // The last connected unit's jacks keep the strips through a replug.
-            if (xlrInputs is not null) (_lastXlrInputs, _lastAuxInput) = (xlrInputs, auxInput);
+            if (xlrInputs is not null) (_lastXlrInputs, _lastAuxInput, _lastLineInput) = (xlrInputs, auxInput, lineInput);
             return true;
         }
     }
