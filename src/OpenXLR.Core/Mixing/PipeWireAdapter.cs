@@ -18,8 +18,9 @@ namespace OpenXLR.Core.Mixing;
 public sealed class PipeWireAdapter
 {
     private const string ClipGuardPluginFile = "hard_limiter_1413.so";
-    // Intermediate DSP nodes are not independent desktop volume controls.
-    private const string InternalFilterNodeState = "node.hidden = true state.restore-props = false";
+    // Intermediate DSP ports stay in the graph, not in desktop device lists
+    // or the session manager's automatic microphone and playback routing.
+    private const string InternalFilterProperties = "node.autoconnect = false node.hidden = true state.restore-props = false";
 
     private readonly Func<DspFeatureAvailability>? _clipGuardAvailabilityOverride;
     private readonly Action? _progress;
@@ -1003,12 +1004,12 @@ public sealed class PipeWireAdapter
             $"{{ node.description = \"{SpaString(description)}\" " +
             $"filter.graph = {{ nodes = [ {string.Join(' ', stages.Select(s => s.Node))} ] {links}" +
             $"inputs = [ {inputs} ] outputs = [ {outputs} ] }} " +
-            $"capture.props = {{ node.name = {sinkName} media.class = Audio/Sink " +
+            $"capture.props = {{ node.name = {sinkName} media.class = Stream/Input/Audio " +
             $"audio.channels = {channels} audio.position = {position} node.suspend-on-idle = false " +
-            $"priority.session = 100 {InternalFilterNodeState} }} " +
-            $"playback.props = {{ node.name = {srcName} media.class = Audio/Source " +
+            $"priority.session = 100 {InternalFilterProperties} }} " +
+            $"playback.props = {{ node.name = {srcName} media.class = Stream/Output/Audio " +
             $"audio.channels = {channels} audio.position = {position} node.suspend-on-idle = false " +
-            $"priority.session = 100 {InternalFilterNodeState} }} }}";
+            $"priority.session = 100 {InternalFilterProperties} }} }}";
         try { return StartFilterChain(sinkName, srcName, spa); }
         catch (InvalidOperationException failure) when (NativeFallbackFor(inserts, channels) is { } active)
         {
@@ -1135,8 +1136,8 @@ public sealed class PipeWireAdapter
             $"{{ type = builtin name = left label = delay config = {{ max-delay = {max} }} control = {{ \"Delay (s)\" = 0.0 }} }} " +
             $"{{ type = builtin name = right label = delay config = {{ max-delay = {max} }} control = {{ \"Delay (s)\" = 0.0 }} }} ] " +
             "inputs = [ \"left:In\" \"right:In\" ] outputs = [ \"left:Out\" \"right:Out\" ] } " +
-            $"capture.props = {{ node.name = {sink} media.class = Audio/Sink audio.channels = 2 audio.position = [ FL FR ] node.suspend-on-idle = false {InternalFilterNodeState} }} " +
-            $"playback.props = {{ node.name = {source} media.class = Audio/Source audio.channels = 2 audio.position = [ FL FR ] node.suspend-on-idle = false {InternalFilterNodeState} }} }}";
+            $"capture.props = {{ node.name = {sink} media.class = Stream/Input/Audio audio.channels = 2 audio.position = [ FL FR ] node.suspend-on-idle = false {InternalFilterProperties} }} " +
+            $"playback.props = {{ node.name = {source} media.class = Stream/Output/Audio audio.channels = 2 audio.position = [ FL FR ] node.suspend-on-idle = false {InternalFilterProperties} }} }}";
         return StartFilterChain(sink, source, spa);
     }
 
@@ -1513,6 +1514,15 @@ public sealed class PipeWireAdapter
             string name = line.Trim();
             if (name.StartsWith($"{node}:{prefix}", StringComparison.Ordinal))
                 ports.Add(name);
+        }
+        // Filter-chain streams use input/output ports, while native hosts
+        // keep playback/capture. Prefer the requested ports when present.
+        if (ports.Count == 0 && node.StartsWith("OpenXLR_", StringComparison.Ordinal)
+            && prefix is "playback" or "capture")
+        {
+            string streamPrefix = prefix == "playback" ? "input" : "output";
+            ports.AddRange(listing.Split('\n').Select(line => line.Trim())
+                .Where(name => name.StartsWith($"{node}:{streamPrefix}", StringComparison.Ordinal)));
         }
         return ports;
     }

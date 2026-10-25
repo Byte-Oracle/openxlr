@@ -76,8 +76,8 @@ public sealed partial class MonitorVolumeIntegrationTests
                             sys.stderr.write('simulated post-start port lookup failure\n')
                             sys.exit(1)
                         result = subprocess.run([{{JsonSerializer.Serialize(realLink)}}, *args], capture_output=True)
-                        key, prefix = ('sink', 'playback') if args == ['-i'] else ('source', 'capture')
-                        if candidate[key] + ':' + prefix in result.stdout.decode():
+                        key, prefixes = ('sink', ('playback', 'input')) if args == ['-i'] else ('source', ('capture', 'output'))
+                        if any(candidate[key] + ':' + prefix in result.stdout.decode() for prefix in prefixes):
                             (root / (key + '-ready')).touch()
                         sys.stdout.buffer.write(result.stdout)
                         sys.stderr.buffer.write(result.stderr)
