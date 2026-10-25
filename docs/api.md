@@ -597,6 +597,11 @@ changed, so the next build of the chain tries the filter chain again. When the
 helper is missing, or cannot run the plugin either, the insert's `error` carries
 the filter chain's reason, followed by the helper's when it was tried.
 
+Non-finite samples at a native helper's audio input or output stop that
+helper under the existing chain restart budget. Its last message names the
+input or output in the journal and, if retries are exhausted, in the
+insert's `error`. Finite audio above unity is not rejected.
+
 The OpenDeck plugin in `plugin/`, the terminal mixer
 (`src/OpenXLR.Tui/DaemonLink.cs`) and the Omarchy plugin
 (`packaging/omarchy/openxlr.mixer/DaemonLink.qml`) are clients of this

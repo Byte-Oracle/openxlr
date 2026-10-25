@@ -28,6 +28,8 @@ enum {
   MAX_SYMBOL = 255
 };
 
+enum { AUDIO_INVALID_INPUT = 1, AUDIO_INVALID_OUTPUT };
+
 typedef struct Host Host;
 typedef struct Control Control;
 
@@ -102,6 +104,7 @@ struct Host {
   const float *key;
   float *silence, *scratch;  // for a channel PipeWire gave no buffer this cycle
   _Atomic bool audio_error;
+  _Atomic unsigned invalid_audio;  // input or output, explained by the main loop
   _Atomic bool failure_explained;  // host_fail has written the reason
   _Atomic bool monitor_stop;
   unsigned heartbeat_ticks;

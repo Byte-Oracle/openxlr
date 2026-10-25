@@ -255,6 +255,14 @@ bool host_audio_stuck(uint64_t entered, uint64_t left, uint64_t *last,
   return *outstanding >= window;
 }
 
+static bool finite_audio(float *const *buffers, unsigned channels,
+                          uint32_t frames) {
+  for (unsigned c = 0; c < channels; ++c)
+    for (uint32_t n = 0; n < frames; ++n)
+      if (!isfinite(buffers[c][n])) return false;
+  return true;
+}
+
 static void process_audio(void *data, struct spa_io_position *position) {
   Host *h = data;
   if (!atomic_load(&h->audio_thread_known)) {
@@ -292,12 +300,29 @@ static void process_audio(void *data, struct spa_io_position *position) {
     const float *buffer = pw_filter_get_dsp_buffer(h->key_port, frames);
     h->key = buffer ? buffer : host_fallback(h->silence, frames, true);
   }
-  // Bracket the plugin's callback so the process monitor can tell a stuck
-  // one from an idle node: entered and left differ only while a call is
-  // outstanding, and a stuck call keeps the same entered value.
-  atomic_fetch_add(&h->audio_entered, 1);
-  h->backend->process(h, frames, in, out);
-  atomic_fetch_add(&h->audio_left, 1);
+  // One invalid sample can poison a stateful processor until it is replaced.
+  // Keep it out of the plugin and of downstream nodes. Finite headroom above
+  // unity is left alone. Reporting and replacement happen off this thread.
+  if (!atomic_load(&h->audio_error) && !finite_audio(in, h->channels, frames)) {
+    atomic_store(&h->invalid_audio, AUDIO_INVALID_INPUT);
+    atomic_store(&h->audio_error, true);
+  }
+  if (!atomic_load(&h->audio_error)) {
+    // Bracket the plugin's callback so the process monitor can tell a stuck
+    // one from an idle node: entered and left differ only while a call is
+    // outstanding, and a stuck call keeps the same entered value.
+    atomic_fetch_add(&h->audio_entered, 1);
+    h->backend->process(h, frames, in, out);
+    atomic_fetch_add(&h->audio_left, 1);
+    if (!finite_audio(out, h->channels, frames)) {
+      atomic_store(&h->invalid_audio, AUDIO_INVALID_OUTPUT);
+      atomic_store(&h->audio_error, true);
+    }
+  }
+  // A failed instance stays silent until the next main-loop tick stops it.
+  if (atomic_load(&h->audio_error))
+    for (unsigned c = 0; c < h->channels; ++c)
+      memset(out[c], 0, sizeof(float) * frames);
 }
 
 static void state_changed(void *data, enum pw_filter_state old,
@@ -802,12 +827,17 @@ static void tick(void *data, uint64_t expirations) {
   }
   if (atomic_load(&h->audio_error)) {
     // The supervisor reports the last line written here, so a reason
-    // host_fail already gave must stay the last one. Only the audio
-    // thread's own refusal arrives unexplained: it cannot write.
-    if (!atomic_load(&h->failure_explained))
-      fputs("unsupported audio quantum or sample-rate change; restart the "
-            "chain\n",
-            stderr);
+    // host_fail already gave must stay the last one. The audio thread's
+    // own refusals arrive unexplained: it cannot write.
+    if (!atomic_load(&h->failure_explained)) {
+      unsigned invalid = atomic_load(&h->invalid_audio);
+      const char *reason = invalid == AUDIO_INVALID_INPUT
+          ? "non-finite audio at the plugin input"
+          : invalid == AUDIO_INVALID_OUTPUT
+          ? "non-finite audio from the plugin output"
+          : "unsupported audio quantum or sample-rate change";
+      fprintf(stderr, "%s; restart the chain\n", reason);
+    }
     h->exit_code = 1;
     pw_main_loop_quit(h->loop);
     return;

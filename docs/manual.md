@@ -2598,6 +2598,14 @@ changing or bypassing that chain starts it over. When the plugin host said
 why it stopped, its last message is shown after that reason and written to
 the daemon's log each time the chain stops.
 
+Native LV2, CLAP and VST3 hosts also reject non-finite audio samples (NaN or
+infinity). An invalid input never reaches the processor; an invalid output
+silences the whole block before it reaches another node. The host exits
+with the input or output named in its message, and the affected chain is
+replaced under the same restart limit. This handles a processor whose
+internal state would otherwise stay invalid until a daemon restart. Finite
+levels above unity remain unchanged; this check is not a limiter.
+
 A VST3 scan that says the original Windows plugin is missing usually means
 its yabridge wrapper still exists under `~/.vst3/yabridge`, but the source
 file was moved or deleted. The wrapper is a bridge, not a copy of the
