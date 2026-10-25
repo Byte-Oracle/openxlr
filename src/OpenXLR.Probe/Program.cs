@@ -36,6 +36,7 @@ Console.WriteLine($"  clip-guard      {s0.ClipGuard}");
 Console.WriteLine($"  compressor      {s0.Compressor}");
 Console.WriteLine($"  outputs         hp1={s0.OutHp1} hp2={s0.OutHp2} usbAux={s0.OutUsbAux} lineOut={s0.OutLineOut}");
 Console.WriteLine($"  aux input       {s0.AuxLevelDb:0.0} dB (lock {s0.AuxLevelLock})");
+Console.WriteLine($"  line in gain    {s0.LineInGainDb} dB");
 
 Console.WriteLine("\nGain cross-check (device write -> ALSA read):");
 foreach (int g in new[] { 40, 65 })

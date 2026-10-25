@@ -852,6 +852,7 @@ public sealed class DeviceManager : BackgroundService
             if (_device is null || !_device.Connected) return "no device connected";
             string? unsupported = UnsupportedControlReason(_device.Capabilities, control);
             if (unsupported is not null) return unsupported;
+            int? lineInWritten = null;
             try
             {
                 switch (control)
@@ -880,6 +881,7 @@ public sealed class DeviceManager : BackgroundService
                     case ControlNames.OutLineOut: _device.SetOutLineOut(value.GetBoolean()); break;
                     case ControlNames.AuxLevelDb: _device.SetAuxLevelDb(value.GetDouble()); break;
                     case ControlNames.AuxLevelLock: _device.SetAuxLevelLock(value.GetBoolean()); break;
+                    case ControlNames.LineInGain: lineInWritten = _device.SetLineInGainDb(value.GetInt32()); break;
                     case "hp2VolumeDb": _device.SetHp2VolumeDb(value.GetDouble()); break;
                     case "gain2":
                         if (GainIsLocked) return "gain is locked";
@@ -916,6 +918,10 @@ public sealed class DeviceManager : BackgroundService
             // Reflect immediately; the poll loop will also catch it, but this
             // makes the client's own change feel instant.
             _last = Stamp(_device.ReadState());
+            // Each Line In gain write is logged with what the unit reads back.
+            if (lineInWritten is int written)
+                _log.LogInformation("{dev}: Line In gain written as {db} dB (block 0x0004 byte 76), read back as {readback} dB",
+                    _device.Info.DisplayName, written, _last.LineInGainDb);
             NoteChangedLocked();
             RaiseFromLocked();
             return null;
@@ -946,6 +952,7 @@ public sealed class DeviceManager : BackgroundService
             ControlNames.OutHp1 or ControlNames.OutHp2 or ControlNames.OutUsbAux or
                 ControlNames.OutLineOut => c.OutputRouting,
             ControlNames.AuxLevelDb or ControlNames.AuxLevelLock => c.AuxInput,
+            ControlNames.LineInGain => c.LineInput,
             "gain2" => c.Gain && c.XlrInputs > 1,
             "mute2" => c.Mute && c.XlrInputs > 1,
             "lowCut2" => c.LowCut && c.XlrInputs > 1,
@@ -1016,6 +1023,12 @@ public sealed class DeviceManager : BackgroundService
                 if (c.Crossfade && s.Crossfade != p.Crossfade) _device.SetCrossfade(p.Crossfade);
                 if (c.AuxInput && s.AuxLevelDb != p.AuxLevelDb) _device.SetAuxLevelDb(p.AuxLevelDb);
                 if (c.AuxInput && s.AuxLevelLock != p.AuxLevelLock) _device.SetAuxLevelLock(p.AuxLevelLock);
+                // A snapshot from before the Line In existed holds none and leaves the unit's gain alone.
+                if (c.LineInput && p.LineInGainDb is int lineIn && s.LineInGainDb != lineIn)
+                {
+                    int written = _device.SetLineInGainDb(lineIn);
+                    _log.LogInformation("{dev}: Line In gain written as {db} dB from a saved state", _device.Info.DisplayName, written);
+                }
             }
             catch (Exception ex)
             {

@@ -77,6 +77,14 @@ public sealed record DeviceState
     public bool AuxLevelLock { get; init; }
 
     /// <summary>
+    /// The Wave XLR Pro's analog Line In gain in dB, block 0x0004 byte 76
+    /// (0..80), the centre pair of the ALSA capture volume. Null on every
+    /// other model and in a snapshot saved before the field existed, so a
+    /// recall of one leaves the unit's gain where it is.
+    /// </summary>
+    public int? LineInGainDb { get; init; }
+
+    /// <summary>
     /// Daemon-enforced software gain lock (Wave Link's Gain Lock for devices
     /// that keep it app-side). Not a hardware field: the daemon stamps it
     /// onto every snapshot and rejects gain writes while it is set.
