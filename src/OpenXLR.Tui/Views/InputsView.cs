@@ -5,7 +5,7 @@ namespace OpenXLR.Tui;
 /// <summary>
 /// The hardware: the interface's microphone inputs with their processing,
 /// what feeds XLR 1 and XLR 2, where each microphone's EQ runs, the
-/// headphone outputs, the direct monitor blend, ducking and the USB Aux return. A control the active device does not
+/// headphone outputs, the direct monitor blend, ducking, the USB Aux return and the Line In gain. A control the active device does not
 /// advertise is drawn faded rather than hidden, so the same page describes
 /// every interface.
 ///
@@ -139,6 +139,15 @@ internal sealed class InputsView : View
                 value => Set(link, "auxLevelLock", value)));
             rows.Add(new ToggleRow("Aux port feed", state.Mixer.AuxPortEnabled,
                 value => link.Send("setAuxPortEnabled", body => body["value"] = value)));
+        }
+
+        // The Wave XLR Pro's analog Line In, an input of its own beside USB Aux.
+        if (state.Can("lineInput"))
+        {
+            int lineMax = state.Count("gainMaxDb") is int max and > 0 ? max : 80;
+            rows.Add(new HeadingRow("Line In"));
+            rows.Add(new NumberRow("Gain", state.Number("lineInGainDb"), 0, lineMax, 1,
+                value => $"{value:0} dB", value => Set(link, "lineInGain", (int)Math.Round(value))) { FineStep = 1 });
         }
 
         return rows;
