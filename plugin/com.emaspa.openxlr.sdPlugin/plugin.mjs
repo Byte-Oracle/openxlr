@@ -9,7 +9,7 @@ import { channelName, mixName, mixShortName, defaultMonitorMix, monitorFeed, lay
 import fs from "node:fs";
 import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
-import { channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, duckingToggle, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
+import { captureGainOf, channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, duckingToggle, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
 
 // ---------- launch arguments ----------
 const arg = (name) => {
@@ -609,12 +609,26 @@ function dialTurn(key, value, send) {
   send();
 }
 
+// A capture input's own gain on a gain dial: its source's volume in dB over
+// the range the daemon reports. The source has no mute OpenXLR writes, so the
+// dial shows the channel muted when every one of its sends is, as Line In's does.
+function captureGainDial(id) {
+  const gain = captureGainOf(daemonState, id);
+  if (!gain) return null;
+  const db = dialNow(`capgain:${id}`, gain.value);
+  const ch = chOf(id);
+  const levels = Object.keys(ch?.levels ?? {});
+  const muted = levels.length > 0 && levels.every((m) => ch.mutedIn?.includes(m));
+  return { label: unitDialLabel(daemonState, `chgain:${id}`), pct: Math.round(((db - gain.min) / (gain.max - gain.min)) * 100),
+           text: muted ? "MUTED" : `${Math.round(db * 10) / 10} dB`, muted };
+}
+
 // A dial target as {label, pct, maxPct, text, muted}, or null when unknown.
 function dialValue(target, inst) {
   if (!daemonState || !target) return null;
   if (target.startsWith("chgain:")) {
     const gain = channelUnitControl(daemonState, target.slice(7), "gain");
-    if (!gain) return null;
+    if (!gain) return captureGainDial(target.slice(7));
     const db = dialNow(`unit:${gain.device}:${gain.control}`, gain.value);
     const muted = channelUnitControl(daemonState, target.slice(7), "mute")?.value === true;
     return { label: unitDialLabel(daemonState, target), pct: Math.round(db / gain.max * 100),
@@ -788,7 +802,15 @@ function onDialRotate(context, inst, ticks) {
   const level = (v, lo, hi) => Math.round(clamp(v + ticks * 0.01, lo, hi) * 100) / 100;
   const decibels = (v, size) => Math.round(clamp(v + ticks * size, -60, 0) * 10) / 10;
   let turned = true;
-  if (t.startsWith("chgain:")) {
+  if (t.startsWith("chgain:") && !channelUnitControl(daemonState, t.slice(7), "gain") && captureGainOf(daemonState, t.slice(7))) {
+    // A capture input's own gain, a dB a tick, never past the range the daemon reports.
+    const channel = t.slice(7), gain = captureGainOf(daemonState, channel);
+    const key = `capgain:${channel}`;
+    const value = Math.round(clamp(dialNow(key, gain.value) + ticks, gain.min, gain.max) * 10) / 10;
+    dialTurn(key, value, () => {
+      if (captureGainOf(daemonState, channel)) cmd({ cmd: "setCaptureGain", channel, value });
+    });
+  } else if (t.startsWith("chgain:")) {
     const channel = t.slice(7), gain = channelUnitControl(daemonState, channel, "gain");
     if (!gain) { send({ event: "showAlert", context }); return; }
     const key = `unit:${gain.device}:${gain.control}`;
@@ -872,7 +894,11 @@ function onDialPress(context, inst) {
   const t = activeTarget(inst);
   if (!t) return;
   if (DEVICE_DIALS.has(t) && !supported(t)) { send({ event: "showAlert", context }); return; }
-  if (t.startsWith("chgain:")) {
+  // A capture input's own gain has no mute OpenXLR writes on the source: a
+  // press mutes the channel in every mix, as the Line In dial's does.
+  const ownGain = t.startsWith("chgain:") && !channelUnitControl(daemonState, t.slice(7), "gain")
+    && captureGainOf(daemonState, t.slice(7)) ? t.slice(7) : null;
+  if (t.startsWith("chgain:") && !ownGain) {
     const mute = channelUnitControl(daemonState, t.slice(7), "mute");
     if (!mute) { send({ event: "showAlert", context }); return; }
     cmd({ cmd: "setWaveControl", device: mute.device, control: mute.control, value: !mute.value });
@@ -881,11 +907,12 @@ function onDialPress(context, inst) {
     const [, ch, id] = t.split("|");
     const ins = resolveInsert(ch, id, metaOf(inst, t));
     if (ins) cmd({ cmd: "setInsertBypass", channel: ch, insertId: ins.id, value: !ins.bypass });
-  } else if (t.startsWith("send:") || t.startsWith("chvol:") || t === "lineIn") {
+  } else if (t.startsWith("send:") || t.startsWith("chvol:") || t === "lineIn" || ownGain) {
     // A channel volume dial mutes the channel the way an all-mixes send dial
-    // does, and so does the Line In gain dial, whose input has no hardware mute.
-    const [, ch, sendMix] = t === "lineIn" ? ["", "line", "all"] : t.split(":");
-    const mix = t.startsWith("chvol:") || t === "lineIn" ? "all" : sendMix;
+    // does, and so do the Line In gain dial and a capture input's own gain
+    // dial, whose inputs have no mute OpenXLR writes.
+    const [, ch, sendMix] = t === "lineIn" ? ["", "line", "all"] : ownGain ? ["", ownGain, "all"] : t.split(":");
+    const mix = t.startsWith("chvol:") || t === "lineIn" || ownGain ? "all" : sendMix;
     const c = chOf(ch);
     if (!c) return;
     if (mix === "all") {

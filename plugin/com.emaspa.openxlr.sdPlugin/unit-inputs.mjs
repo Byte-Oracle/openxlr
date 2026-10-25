@@ -44,6 +44,18 @@ export function channelUnitControl(state, channel, control) {
     max: control === "gain" ? Number.isInteger(max) && max > 0 ? max : 80 : null };
 }
 
+// A capture input's own gain, its source's volume, as {value, min, max,
+// hardware}, or null. The daemon reports captureGain only on a capture input
+// whose source no Wave unit drives; a channel that carries a unit's input
+// has the unit's gain instead, through channelUnitControl.
+export function captureGainOf(state, channel) {
+  const c = state?.mixer?.channels?.find(ch => ch.id === channel);
+  const g = c?.captureGain;
+  if (!c || c.unitInput || !g || typeof g !== "object") return null;
+  if (![g.gainDb, g.minDb, g.maxDb].every(Number.isFinite) || g.maxDb <= g.minDb) return null;
+  return { value: g.gainDb, min: g.minDb, max: g.maxDb, hardware: g.hardware === true };
+}
+
 // The input a unit control acts on, 1 or 2, or null for any other target.
 export function unitInputOf(target) {
   if (Object.hasOwn(UNIT_DIALS, target)) return UNIT_DIALS[target];
@@ -102,7 +114,7 @@ export function unitDialLabel(state, target) {
 export function unitMeterKey(mixer, target) {
   const channel = channelUnitTarget(target);
   if (channel?.control === "gain")
-    return mixer?.channels?.some(c => c.id === channel.channel && c.unitInput) ? `ch:${channel.channel}` : null;
+    return mixer?.channels?.some(c => c.id === channel.channel && (c.unitInput || c.captureGain)) ? `ch:${channel.channel}` : null;
   const carrier = Object.hasOwn(UNIT_DIALS, target) ? unitCarrier(mixer, UNIT_DIALS[target]) : null;
   return carrier ? `ch:${carrier.id}` : null;
 }
