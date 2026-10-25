@@ -532,7 +532,16 @@ public sealed class DiagnosticsTests
                     string cmd = command["cmd"]!.GetValue<string>();
                     if (cmd == "auth")
                     {
-                        await SocketTestServer.Send(socket, new { type = "state", note = $"/home/{login}/Music" }, stop);
+                        var initial = new System.Text.Json.Nodes.JsonObject
+                        {
+                            ["type"] = "state", ["note"] = $"/home/{login}/Music"
+                        };
+                        if (commandWarning)
+                        {
+                            initial["daemonBuildVersion"] = "0.2.3+" + new string('a', 40);
+                            initial["daemonBuildId"] = "12345678-1234-1234-1234-123456789012";
+                        }
+                        await SocketTestServer.Send(socket, initial, stop);
                         continue;
                     }
                     object reply = cmd switch
@@ -573,6 +582,23 @@ public sealed class DiagnosticsTests
                 }
             }
             Assert.Contains("plugin-scan-logs/index.txt", entries.Keys);
+            string buildVersion = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(
+                typeof(AppVersion).Assembly)!.InformationalVersion;
+            Assert.Contains($"window build version: {buildVersion}", entries["meta.txt"]);
+            Assert.Contains($"window build id: {typeof(AppVersion).Assembly.ManifestModule.ModuleVersionId:D}", entries["meta.txt"]);
+            Assert.Contains("daemon connected at state collection: True", entries["meta.txt"]);
+            Assert.Contains($"daemon state received at: {client.StateForDiagnostics.ReceivedAt:O}", entries["meta.txt"]);
+            string collected = Assert.Single(entries["meta.txt"].Split('\n'), line => line.StartsWith("state collected at: ", StringComparison.Ordinal));
+            Assert.Equal(TimeSpan.Zero, DateTimeOffset.Parse(collected.Split(": ", 2)[1], System.Globalization.CultureInfo.InvariantCulture).Offset);
+            using (var savedState = System.Text.Json.JsonDocument.Parse(entries["daemon-state.json"]))
+            {
+                if (commandWarning)
+                {
+                    Assert.Equal("0.2.3+" + new string('a', 40), savedState.RootElement.GetProperty("daemonBuildVersion").GetString());
+                    Assert.Equal("12345678-1234-1234-1234-123456789012", savedState.RootElement.GetProperty("daemonBuildId").GetString());
+                }
+                else Assert.False(savedState.RootElement.TryGetProperty("daemonBuildVersion", out _));
+            }
             foreach ((string name, string text) in entries)
             {
                 Assert.False(text.Contains(login, StringComparison.Ordinal), $"{name} still holds the login name");

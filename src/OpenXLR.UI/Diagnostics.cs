@@ -49,9 +49,15 @@ public static class Diagnostics
             => WriteCmd(Clean, CleanJson, work, file, program, args);
         try
         {
+            var observation = client.StateForDiagnostics;
             var meta = new StringBuilder();
             meta.AppendLine($"OpenXLR diagnostics {stamp}");
+            meta.AppendLine($"state collected at: {DateTimeOffset.UtcNow:O}");
             meta.AppendLine($"version: {AppVersion.Current}");
+            meta.AppendLine($"window build version: {Clean(AppVersion.BuildVersion)}");
+            meta.AppendLine($"window build id: {typeof(AppVersion).Assembly.ManifestModule.ModuleVersionId:D}");
+            meta.AppendLine($"daemon connected at state collection: {observation.Connected}");
+            meta.AppendLine($"daemon state received at: {observation.ReceivedAt?.ToString("O") ?? "unavailable"}");
             var (unameOutput, unameErrors) = await RunCommandAsync("uname", ["-a"]);
             meta.AppendLine($"uname: {Clean(unameOutput + unameErrors)}");
             meta.AppendLine($"os-release: {TryReadFile("/etc/os-release")}");
@@ -66,7 +72,8 @@ public static class Diagnostics
                 configuration files, plugin names and paths, the plugin catalogue,
                 Wine/yabridge versions and status, latest scan results, the saved
                 output of plugin scans that failed, and system
-                version information. Collecting it copies files that already
+                version and assembly build information, including source
+                revisions when available. Collecting it copies files that already
                 exist: no plugin, scanner, bridge or Wine process is started.
                 No plugin binaries, presets, Wine registry
                 files or API token are collected. The home
@@ -79,9 +86,10 @@ public static class Diagnostics
                 public issue.
                 """);
 
-            // Daemon views: the newest state push plus a fresh vendor-block dump.
+            // Keep the saved state and its receive time from one observation.
+            // The vendor blocks are a separate fresh query.
             await File.WriteAllTextAsync(Path.Combine(work, "daemon-state.json"),
-                CleanJson(StateForArchive(client.LastStateJson)).Text);
+                CleanJson(StateForArchive(observation.Json)).Text);
             var blocks = await client.RequestDiagnosticsAsync(TimeSpan.FromSeconds(5));
             await File.WriteAllTextAsync(Path.Combine(work, "device-blocks.json"),
                 RedactHex(blocks?.ToJsonString() ?? "unavailable (daemon not running or no device)", secrets));

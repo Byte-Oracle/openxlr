@@ -5,11 +5,75 @@ namespace OpenXLR.Tests;
 public sealed class DaemonClientTests
 {
     [Fact]
+    public async Task ANewConnectionDoesNotPresentThePreviousDaemonsStateAsItsOwn()
+    {
+        int connections = 0, connectedEvents = 0;
+        var drop = Completion();
+        var release = Completion();
+        var firstState = Completion();
+        var reconnected = Completion();
+        var secondState = Completion();
+        var disconnected = new TaskCompletionSource<DaemonClient.StateObservation>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var server = await SocketTestServer.Start(async (socket, stop) =>
+        {
+            await SocketTestServer.Receive(socket, stop);
+            if (Interlocked.Increment(ref connections) == 1)
+            {
+                await SocketTestServer.Send(socket, new { type = "state", daemonBuildVersion = "first" }, stop);
+                await drop.Task.WaitAsync(stop);
+                socket.Abort();
+            }
+            else
+            {
+                await release.Task.WaitAsync(stop);
+                await SocketTestServer.Send(socket, new { type = "state", daemonBuildVersion = "second" }, stop);
+                await Task.Delay(Timeout.Infinite, stop);
+            }
+        });
+        await using var client = new DaemonClient(server.Url);
+        client.ConnectionChanged += up =>
+        {
+            if (up && Interlocked.Increment(ref connectedEvents) == 2) reconnected.TrySetResult();
+            if (!up) disconnected.TrySetResult(client.StateForDiagnostics);
+        };
+        client.StateReceived += state =>
+        {
+            if (state["daemonBuildVersion"]!.GetValue<string>() == "first") firstState.TrySetResult();
+            else secondState.TrySetResult();
+        };
+        client.Start();
+        await firstState.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Contains("first", client.LastStateJson);
+        var initial = client.StateForDiagnostics;
+        Assert.True(initial.Connected);
+        Assert.NotNull(initial.ReceivedAt);
+        Assert.Equal(TimeSpan.Zero, initial.ReceivedAt.Value.Offset);
+        drop.SetResult();
+        var stopped = await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(stopped.Connected);
+        Assert.Equal(initial.Json, stopped.Json);
+        Assert.Equal(initial.ReceivedAt, stopped.ReceivedAt);
+        await reconnected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Null(client.LastStateJson);
+        Assert.Null(client.StateForDiagnostics.ReceivedAt);
+        Assert.True(client.StateForDiagnostics.Connected);
+        release.SetResult();
+        await secondState.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Contains("second", client.LastStateJson);
+        Assert.NotNull(client.StateForDiagnostics.ReceivedAt);
+        Assert.True(initial.Connected);
+        Assert.Contains("first", initial.Json);
+    }
+
+    [Fact]
     public async Task DisconnectedQueriesDoNotRetainUnsentReplySlots()
     {
         await using var client = new DaemonClient();
         for (int i = 0; i < 100; i++)
             Assert.Null(await client.RequestPluginsAsync(TimeSpan.FromSeconds(5)));
+        Assert.False(client.StateForDiagnostics.Connected);
+        Assert.Null(client.StateForDiagnostics.Json);
+        Assert.Null(client.StateForDiagnostics.ReceivedAt);
         // Inspect retention without adding a diagnostics-only API to the client.
         // _queriesById is the map that kept an entry per unsent query; _queries
         // and _lastReply were already released on the way out.

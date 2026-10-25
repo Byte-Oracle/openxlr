@@ -227,6 +227,8 @@ public sealed record StateMessage
     [JsonPropertyName("daemonVersion")] public string? DaemonVersion { get; init; }
     /// <summary>The running assembly's build identity, for installation diagnostics.</summary>
     [JsonPropertyName("daemonBuildId")] public string DaemonBuildId { get; init; } = OpenXLR.Daemon.DaemonVersion.BuildId;
+    /// <summary>The informational version, including the source revision when stamped by the build.</summary>
+    [JsonPropertyName("daemonBuildVersion")] public string DaemonBuildVersion => OpenXLR.Daemon.DaemonVersion.BuildVersion;
     /// <summary>
     /// A condition the user should know about, in one sentence, or null:
     /// today, mixer settings that cannot be written to disk. Clients show
@@ -421,10 +423,11 @@ public sealed record DiagnosticsMessage(IReadOnlyDictionary<string, string> Bloc
 public static class DaemonVersion
 {
     public static readonly string BuildId = typeof(DaemonVersion).Assembly.ManifestModule.ModuleVersionId.ToString("D");
-    public static readonly string Current =
+    public static readonly string BuildVersion =
         typeof(DaemonVersion).Assembly
             .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion.Split('+')[0] ?? "0.0.0";
+            .InformationalVersion ?? "0.0.0";
+    public static readonly string Current = BuildVersion.Split('+')[0];
 }
 
 /// <summary>Read-only plugin discovery evidence, separate from the bounded plugin catalogue.</summary>

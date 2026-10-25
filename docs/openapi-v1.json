@@ -47,7 +47,7 @@
       "get": {
         "responses": {
           "200": {
-            "description": "Combined state message"
+            "description": "Combined state message, including daemonVersion (release number), daemonBuildId (module identity) and daemonBuildVersion (informational version with source commit when stamped by the build). Older daemons may omit build fields."
           },
           "401": {
             "description": "Credential required"

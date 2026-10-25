@@ -73,9 +73,15 @@ headers are vendored.
 
 You may omit the flag for hardware control and LV2 filter-chain inserts
 without native editors. CLAP and VST3 require the helper. Keep the flag
-on every later build once you rely on it: a build without it removes the
-helper and native inserts report that it is missing. See
+on every later build once you rely on it: an existing helper is retained
+without the flag, but it is not rebuilt and may miss native fixes. See
 [plugin editors](manual.md#plugin-editors).
+
+If the build ends with `MSB3073` from the native target, look above that
+line for the compiler or `pkg-config` error. Run `make -C native` from the
+same checkout to see the native failure directly. The missing daemon
+executable after a failed build is a consequence; finish the build before
+trying to launch it.
 
 ## 3. Device access
 
@@ -139,6 +145,17 @@ cmp -s packaging/54-openxlr-owned-state.lua ~/.config/wireplumber/main.lua.d/54-
 
 ## 5. First run
 
+Quit an already running window through its tray menu before testing the
+source window. OpenXLR allows one window per user; a second launch brings
+the existing window forward instead of running the newly built one.
+
+If a packaged daemon is already running, stop it before testing the source
+build with `systemctl --user stop openxlr-daemon`. This interrupts OpenXLR
+audio until the source daemon starts. Opening just the newly built window
+still connects to the installed daemon. Restore the installed service after
+the test with `systemctl --user start openxlr-daemon`, after stopping the
+source daemon.
+
 Run the daemon in a terminal. On a fresh source installation, the mixer graph is opt-in through this
 variable. An existing `daemon.json` submixer preference takes precedence,
 as listed in the environment table below.
@@ -148,6 +165,12 @@ OPENXLR_BUILD_MIXER=1 ./src/OpenXLR.Daemon/bin/Release/net10.0/OpenXLR.Daemon
 ```
 
 The log should show your device connecting and `submix graph built`.
+A source build may show the same release number as an installed package.
+Collect diagnostics to check the window's build in `meta.txt` and the running
+daemon's build in `daemon-state.json`, including source commits when the
+build stamped them. A build without source metadata cannot identify its
+commit from the version alone.
+
 Then, in a second terminal from the same repository root, run the UI:
 
 ```sh
