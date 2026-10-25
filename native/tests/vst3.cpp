@@ -326,14 +326,29 @@ static void processing_failure() {
     std::fill(buffer, buffer + 32, .25f);
   vst3_process(h, 32, buffers, buffers);
   assert(!test_host_audio_failed(h));
+  // One refused block is silenced and the next one tried; half a second of
+  // them in a row asks for a new host, and a good block starts over.
+  const unsigned run = 48000 / 2 / 32;
   processor.process_result = kResultFalse;
+  for (unsigned block = 1; block < run; ++block) {
+    std::fill(left, left + 32, .25f);
+    std::fill(right, right + 32, .25f);
+    vst3_process(h, 32, buffers, buffers);
+    for (float *buffer : buffers)
+      for (unsigned n = 0; n < 32; ++n) assert(buffer[n] == 0);
+  }
+  assert(!test_host_audio_failed(h));
+  processor.process_result = kResultOk;
   vst3_process(h, 32, buffers, buffers);
-  for (float *buffer : buffers)
-    for (unsigned n = 0; n < 32; ++n) assert(buffer[n] == 0);
+  processor.process_result = kResultFalse;
+  for (unsigned block = 1; block < run; ++block)
+    vst3_process(h, 32, buffers, buffers);
+  assert(!test_host_audio_failed(h));
+  vst3_process(h, 32, buffers, buffers);
   assert(test_host_audio_failed(h));
   host_set_impl(h, nullptr);
   test_audio_host_free(h);
-  puts("PASS: a VST3 processing error silences audio and requests host recovery");
+  puts("PASS: VST3 processing errors silence audio, and a run of them requests host recovery");
 }
 
 // The tick asks for the latency every cycle once audio runs. The plugin is

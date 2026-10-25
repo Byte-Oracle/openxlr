@@ -214,7 +214,17 @@ void host_fail(Host *h, const char *why) {
   atomic_store(&h->audio_error, true);
 }
 
-void host_processing_failed(Host *h) {
+// Plugins may refuse a block now and then (CLAP lets start_processing be
+// retried on the next one), and a refused block costs only its own audio.
+// Replacing the instance costs far more, seconds for a bridged plugin, and
+// spends the restart budget, so only a run of refusals counts as failure.
+void host_processing_result(Host *h, bool ok, uint32_t frames) {
+  if (ok) {
+    h->failed_frames = 0;
+    return;
+  }
+  h->failed_frames += frames;
+  if (h->failed_frames < h->rate / 2) return;
   atomic_store(&h->process_failed, true);
   atomic_store(&h->audio_error, true);
 }

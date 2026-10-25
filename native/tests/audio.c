@@ -90,7 +90,7 @@ static void gain_audio(Host *h, uint32_t frames, float *const *in,
     for (uint32_t n = 0; n < frames; n++) out[c][n] = 2 * in[c][n];
   if (fixture->invalid_output)
     out[fixture->channel][frames - 1] = fixture->invalid;
-  if (fixture->process_error) host_processing_failed(h);
+  host_processing_result(h, !fixture->process_error, frames);
 }
 
 static void check_processing_failure(void) {
@@ -106,12 +106,22 @@ static void check_processing_failure(void) {
   struct spa_io_position position = {0};
   position.clock.duration = 32;
   position.clock.rate.denom = h.rate;
-  process_audio(&h, &position);
-  assert(atomic_load(&h.audio_error) && atomic_load(&h.process_failed));
-  assert(!atomic_load(&h.invalid_audio) && fixture.calls == 1);
+  // Refusals shorter than half a second are glitches, and a good block
+  // starts the count again.
+  const unsigned run = h.rate / 2 / 32;
+  for (unsigned i = 1; i < run; ++i) process_audio(&h, &position);
+  assert(!atomic_load(&h.audio_error));
   fixture.process_error = false;
   process_audio(&h, &position);
-  assert(fixture.calls == 1);
+  fixture.process_error = true;
+  for (unsigned i = 1; i < run; ++i) process_audio(&h, &position);
+  assert(!atomic_load(&h.audio_error));
+  process_audio(&h, &position);
+  assert(atomic_load(&h.audio_error) && atomic_load(&h.process_failed));
+  assert(!atomic_load(&h.invalid_audio) && fixture.calls == 2 * run);
+  fixture.process_error = false;
+  process_audio(&h, &position);
+  assert(fixture.calls == 2 * run);
   for (unsigned i = 0; i < MAX_CHANNELS * 2; ++i) {
     if (i >= MAX_CHANNELS)
       for (unsigned n = 0; n < 32; ++n) assert(test_buffers[i][n] == 0);
@@ -126,7 +136,7 @@ static void check_processing_failure(void) {
   assert(h.exit_code == 1);
   pw_main_loop_destroy(h.loop);
   pw_deinit();
-  puts("PASS: a processing error silences every channel, stops callbacks and exits for recovery");
+  puts("PASS: half a second of processing errors silences every channel, stops callbacks and exits for recovery");
 }
 
 static void check_invalid_audio(void) {

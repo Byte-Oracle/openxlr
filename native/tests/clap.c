@@ -331,13 +331,18 @@ static void processing_failure(void) {
     assert(clap_map_ports(c, &h, &ap_ext, false));
     float left[32], right[32];
     float *buffers[] = {left, right};
-    for (unsigned n = 0; n < 32; ++n) left[n] = right[n] = .25f;
-    clap_process_audio(&h, 32, buffers, buffers);
-    for (unsigned n = 0; n < 32; ++n) assert(left[n] == 0 && right[n] == 0);
-    assert(atomic_load(&h.audio_error));
+    // Each refused block is silenced; only half a second of them in a row
+    // asks for a new host.
+    const unsigned run = h.rate / 2 / 32;
+    for (unsigned block = 1; block <= run; ++block) {
+      for (unsigned n = 0; n < 32; ++n) left[n] = right[n] = .25f;
+      clap_process_audio(&h, 32, buffers, buffers);
+      for (unsigned n = 0; n < 32; ++n) assert(left[n] == 0 && right[n] == 0);
+      assert(atomic_load(&h.audio_error) == (block == run));
+    }
     release(c);
   }
-  puts("PASS: CLAP start and processing errors silence audio and request host recovery");
+  puts("PASS: CLAP start and processing errors silence audio, and a run of them requests host recovery");
 }
 
 static void sources_live_through_plugin_destruction(void) {
