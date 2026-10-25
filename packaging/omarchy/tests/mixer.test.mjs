@@ -210,6 +210,7 @@ test('stereo stays apart, XLR is mono, and invalid levels do not poison the othe
   assert.deepEqual(plain(mixer.pair({ x: [Infinity, -1] }, 'x', false)), [0, 0]);
   assert.equal(mixer.mono({id:'xlr2'}), true);
   assert.equal(mixer.mono({id:'aux'}), false);
+  assert.equal(mixer.mono({id:'line'}), false);
 });
 
 test('block glyphs use the TUI fractions and its dBFS scale', () => {
@@ -261,9 +262,13 @@ test('a channel the device cannot feed is left out, and an older daemon keeps th
     { id: 'xlr1', name: 'XLR 1', present: true },
     { id: 'xlr2', name: 'XLR 2', present: false },
     { id: 'aux', name: 'Aux In', present: false },
+    { id: 'line', name: 'Line In', present: false },
     { id: 'game', name: 'Game' },
   ];
   assert.deepEqual(plain(mixer.shownChannels(channels)).map(c => c.id), ['xlr1', 'game']);
+  // The Pro's Line In is its own strip, shown while the daemon says the unit feeds it.
+  channels[3].present = true;
+  assert.deepEqual(plain(mixer.shownChannels(channels)).map(c => c.id), ['xlr1', 'line', 'game']);
   // A daemon that does not send the field says nothing, not absent.
   assert.deepEqual(plain(mixer.shownChannels([{ id: 'xlr2' }])).map(c => c.id), ['xlr2']);
   assert.deepEqual(plain(mixer.shownChannels(null)), []);
