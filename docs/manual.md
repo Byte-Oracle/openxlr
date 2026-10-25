@@ -63,7 +63,7 @@ attached the header reads **No interface.** followed by a link, **Choose a
 microphone for XLR 1**. Pick your microphone and its port there, then Save
 ([Use another microphone on XLR 1 or XLR 2](#input-bindings)). The strip is
 then named Mic 1 and carries that microphone into every mix, with its
-volume, meter, EQ, inserts, Sound Check, software low cut and ClipGuard
+volume, meter, EQ, inserts, Mic check, software low cut and ClipGuard
 (ClipGuard needs `swh-plugins`). XLR 2 stays hidden until you bind it in
 Options, AUDIO, **Input bindings**.
 More sources can join as capture channels ([Additional capture
@@ -329,7 +329,7 @@ new source starts at port 1, which is usually right for a USB microphone; a
 multichannel interface may put the microphone on another port. When
 PipeWire does not report the layout, the ports are plain numbers from 1 to
 64. OpenXLR takes one mono port and feeds both sides of the strip. The
-strip keeps its sends, its insert chain and Sound Check, and XLR 1 keeps
+strip keeps its sends, its insert chain and Mic check, and XLR 1 keeps
 its software low cut and ClipGuard. Set preamp gain and phantom power on the
 microphone or its own interface; OpenXLR does not invent USB controls for
 other brands. A Bluetooth headset is offered too, with one line of warning:
@@ -415,9 +415,9 @@ the other strips keep their mutes. Unmute it in the desired monitor mix
 deliberately when you want to hear it. If the source is unplugged or its
 selected port is missing, the strip stays silent and the chip says why. It
 reconnects to the same source when that source returns, without borrowing
-another microphone. Changing the binding ends Sound Check on that strip and
-discards its sample, and Sound Check on a silent strip says why it cannot
-record. If two sources have the selected name, OpenXLR disconnects the
+another microphone. Changing the binding ends a Mic check session on that
+strip and discards its take, and Mic check on a silent strip says why it
+cannot record. If two sources have the selected name, OpenXLR disconnects the
 strip and reports the ambiguity. Rename or remove the duplicate so the name
 identifies one microphone before its route resumes. Two strips may take the
 same source, even the same port.
@@ -710,7 +710,7 @@ and lower at different points:
   unit from ducking on noise. The unit lowers the finished mix as it plays
   it on its outputs, after everything on this computer.
 - On this computer, the key is the key channel after its EQ, its insert
-  chain and Sound Check's loop, before the channel's volume and sends. The
+  chain and Mic check's loop, before the channel's volume and sends. The
   chosen channels dip inside each ducked mix, before that mix's own insert
   chain and latency delay.
 
@@ -732,7 +732,7 @@ monitoring** lowers nothing either until monitoring resumes. On the Pro the
 unit listens to XLR 1 before USB, so it ducks while XLR 1 is muted in every
 mix; choose **This computer** if muting the microphone should stop ducking.
 The unit reacts to XLR 1 only: talking into XLR 2 does not duck. On this
-computer, [Sound Check](#sound-check)'s loop plays through the key channel, so a looped take ducks the music, which is a quick way to
+computer, [Mic check](#mic-check)'s loop plays through the key channel, so a looped take ducks the music, which is a quick way to
 try a sensitivity. On the Pro the unit hears the live microphone, so the
 loop does not duck.
 
@@ -1024,29 +1024,70 @@ are not aligned against other inputs. Compensation does not cover the device's o
 hardware's direct monitoring. The setting is saved with the mixer and stays
 as it is when a profile is loaded.
 
+<a name="mic-check"></a>
 <a name="sound-check"></a>
-**Sound Check.** In the chain window of XLR 1, XLR 2 or a capture input on
-one mono port, press "Sound Check". Stereo capture inputs have no Sound Check.
-Press **Record** and speak; recording stops by itself after ten seconds.
-**Loop sample** then plays that take into the channel over and over in
-place of your microphone, through every insert and the channel's software
-processing as they are set, so you can change controls, bypass plugins or
-reorder the chain and hear the result on the same words. The loop needs at least a
-tenth of a second recorded. The interface's own gain and processing are
-already in the take; changing those while it loops changes nothing. The
-loop works without any insert. Capture inputs have no low cut or
-ClipGuard of their own; Sound Check does not add them. A capture input's
-EQ already runs on this computer, so its take is the raw microphone and the
-loop goes through the EQ as it is set.
+**Mic check.** In the chain window of XLR 1, XLR 2 or a capture input on
+one mono port, press **Mic check**. Stereo capture inputs have no Mic
+check. The window has two steps, **Level** and **Listen**; press either at
+the top to go to it, in any order.
 
-- **Hear live mic** goes back to the microphone and keeps the take, so
-  **Loop sample** can play it again. **Record** replaces it.
-- **Stop and discard**, or closing the window, returns the microphone and
-  throws the take away. Your effect settings stay as you left them.
-- The loop goes everywhere the channel goes, the virtual microphones
+**Level** shows the microphone before any of OpenXLR's processing: after
+the interface's gain and whatever the unit does itself, before the EQ, the
+software low cut and ClipGuard and your plugins. The big bar is the peak,
+the thin one under it the average level, both on the same -60 to 0 dBFS
+scale as the channel meters. Speak as you will on air and set the gain so
+your voice peaks inside the band drawn under the bar, -18 to -6 dBFS. The
+**Clip** light comes on when a sample reaches -0.1 dBFS and stays on until
+you press it. The interface's gain sits beside the meter when the channel
+carries an input that has one: the primary interface's input, or that of an
+additional interface. For any other microphone, set the gain on the
+microphone or its own interface. The meter runs while the window is open
+and changes nothing in the channel's route.
+
+**Listen** records a take and plays it back through the chain:
+
+- **Record** and speak; recording stops by itself after ten seconds.
+  **Loop take** then plays the take into the channel over and over in
+  place of your microphone, through every insert and the channel's
+  software processing as they are set, so you can change controls, bypass
+  plugins or reorder the chain and hear the result on the same words. The
+  loop needs at least a tenth of a second recorded. **Live mic** goes back
+  to the microphone and keeps the take; **Record** replaces it. The
+  interface's own gain and processing are already in the take, so changing
+  those while it loops changes nothing.
+- The take's waveform appears once it is recorded, with a line that
+  follows the loop.
+- **Processed** and **Raw** switch between the microphone through its EQ,
+  software processing and plugins and the microphone without any of them,
+  on the take or on the live microphone. The plugins keep running and the
+  switch fades across in 20 ms, so it is heard at once and the chain is not
+  rebuilt. A reverb or a delay rings out by itself after a switch to Raw,
+  and a compressor or a gate starts from silence when Processed comes back.
+- **Hear myself** plays the microphone, with its effects, in your monitor
+  mix for as long as the window is open, even where its send is muted. It
+  opens the send into each monitor mix that plays on a selected monitor
+  output, at the send's level, or at full level when the send is all the
+  way down. The window says how late you hear yourself through this
+  computer: two periods of the audio server plus the latency your plugins
+  report. Use headphones, since speakers on the same mix feed back. When
+  the microphone reaches no monitor output, you hear neither the take nor
+  your voice, and the window says so.
+- On a Wave XLR Pro, the interface's zero-latency microphone path is
+  switched off while the channel carrying its first input has a session,
+  including a capture input, so you hear the loop and not your voice, and
+  Hear myself plays your voice with its effects. That path never carries
+  effects.
+
+A session starts with **Record**, **Live mic**, **Raw** or **Hear myself**,
+and ends with **Stop and discard** or when the window closes:
+
+- Closing the window or **Stop and discard** returns the microphone,
+  throws the take away and turns Raw and Hear myself off. Your effect
+  settings stay as you left them, and so do the mutes of your sends.
+- The loop and Raw go everywhere the channel goes, the virtual microphones
   included, so mute the channel in a call or a recording you are not
   testing on.
-- Sound Check runs on one microphone at a time. Stop it on one before
+- A session runs on one microphone at a time. Stop it on one before
   starting it on another, including between XLR and capture inputs. A
   refusal names the channel whose session is running.
 - The take stays in memory and is never written to a file or a profile.
@@ -1055,15 +1096,16 @@ loop goes through the EQ as it is set.
   and after ten minutes. If the channel still exists, the window says why,
   including the helper's last failure message when it supplied one. The same
   failure is written to the daemon's log. **Stop and discard** clears the
-  window's message.
-- On a Wave XLR Pro with the headphone jacks following a monitor mix, the
-  interface's zero-latency microphone path is switched off while the channel
-  carrying its first input is under Sound Check, including a capture input,
-  so you hear the loop and not your voice.
-- With a capture input's microphone unplugged, **Record** is refused with
-  the channel's name and the reason. When the source lacks the port the
-  input takes, the refusal says the capture port is unavailable.
-- Sound Check needs the native plugin host the packages include. A source
+  window's message. The daemon's messages call the session Sound Check, the
+  name the [API](api.md#sound-check) gives it.
+- Capture inputs have no low cut or ClipGuard of their own, and Mic check
+  does not add them. A capture input's EQ already runs on this computer,
+  so its take is the raw microphone and the loop goes through the EQ as it
+  is set.
+- With a capture input's microphone unplugged, starting a session is
+  refused with the channel's name and the reason. When the source lacks the
+  port the input takes, the refusal says the capture port is unavailable.
+- Mic check needs the native plugin host the packages include. A source
   build without `-p:EnableNativeLv2Host=true` refuses it with that reason.
 - A loop can click at the point where it starts over; record with a short
   silence at each end.
@@ -1073,7 +1115,7 @@ loop goes through the EQ as it is set.
 each have a four-band EQ with the same band types, ranges and steps as Wave
 Link's, and the same curves. It comes first on the input, before the low
 cut, ClipGuard and your plugins, so ClipGuard also catches a boost, and
-Sound Check's loop goes through it. A capture input has no low cut or
+Mic check's loop goes through it. A capture input has no low cut or
 ClipGuard, so its EQ comes straight before its plugins.
 
 Open it with **EQ**. In INPUTS it sits on the microphone's input line,
@@ -1192,9 +1234,9 @@ the input's route, and the plugin host is not needed.
   unit's own signal, so every channel and program that takes that unit's
   audio hears it, a capture channel on its node included, as they hear its
   low cut.
-- Sound Check moves the EQ to this computer while it records and loops,
-  so the take is the raw microphone and the loop follows every edit; the
-  unit takes it back when Sound Check stops.
+- A Mic check session moves the EQ to this computer while it runs, so
+  the take is the raw microphone, the loop follows every edit and Raw
+  leaves the EQ out; the unit takes it back when the session ends.
 - When the unit connects, OpenXLR writes its EQ over the one the unit
   holds, Wave Link's from another computer included, and the journal says
   so once. A unit that already holds it is not written, so restarting the
@@ -2777,7 +2819,7 @@ source's mute.
 
 Capture chains also appear in the insert key and dial choices, named by
 their channel. Saved insert targets keep the channel id through a rename.
-Sound Check is not offered on the Deck.
+Mic check is not offered on the Deck.
 
 **Dial** (an encoder) changes a level: the monitor output volume, a
 gain, the Line In gain, a headphone volume, the aux level, the crossfade, a
@@ -3319,7 +3361,7 @@ Open **Edit layout**, then **Add capture input**. Enter a channel name,
 choose an available microphone, capture card or another Wave interface, and
 select one mono port or a stereo pair. The picker names ports when PipeWire
 reports their positions, such as FL and FR. A mono source starts on port 1;
-one port gives the input a mono chain and Sound Check. A stereo pair gives it
+one port gives the input a mono chain and Mic check. A stereo pair gives it
 a stereo chain.
 The new channel starts muted in every mix. Open only the sends you need.
 
@@ -3332,10 +3374,10 @@ insert chain it names, while its source binding stays with the layout. Applicati
 Click the source chip in classic INPUTS or the input rack, or the source line
 under its name in the matrix, to change its source or ports. The dialog keeps
 the channel's name, sends, volume, inserts and group. After a change its
-monitor sends start muted and Sound Check ends. Unmute the monitor sends you
+monitor sends start muted and a Mic check session ends. Unmute the monitor sends you
 want to hear. To switch between mono and stereo, remove the chain's inserts
 first, including bypassed inserts. A failed save leaves the old binding,
-mutes and Sound Check take in place. Rebinding can close a plugin editor as
+mutes and Mic check take in place. Rebinding can close a plugin editor as
 the input's chain restarts. An offline source stays selected and silent until
 it returns. Capture source editing is available in the UI and API; the
 terminal mixer and Stream Deck do not offer this picker.
@@ -3417,7 +3459,7 @@ plugins that fit the input's width. A capture input on one microphone port
 draws one meter bar and a stereo pair draws two; XLR 1 and XLR 2 keep their
 two. An older daemon that does not report a chain width shows no capture
 Inserts button. A capture microphone's chain window also offers
-[Sound Check](#sound-check) and the [microphone EQ](#microphone-eq), which
+[Mic check](#mic-check) and the [microphone EQ](#microphone-eq), which
 runs in software only. The terminal mixer edits capture chains too, using
 the width the daemon reports.
 
@@ -3643,7 +3685,7 @@ stay muted.
 The microphone pause affects audio routed through OpenXLR, including its
 virtual microphones used by Discord or a recording program. It does not mute
 applications capturing a physical microphone directly, stereo capture channels
-or Aux In and Line In. It stops Sound Check and discards its take; a new recording is
+or Aux In and Line In. It stops a Mic check session and discards its take; a new recording is
 refused until microphones resume. A paused microphone that is the
 [ducking](#ducking) key stops lowering the other channels on this computer.
 Its strip meter keeps moving while you speak, because the meter reads the
@@ -3809,7 +3851,7 @@ input stays in the mixer and Inserts tabs. Inserts lists capture chains
 in layout order and filters plugins by `chainWidth`, even while the source
 is unplugged. Microphone meters read `microphone`; an older daemon without
 these fields keeps XLR-only mono meters and XLR and mix insert targets.
-Sound Check remains a UI control.
+Mic check remains a UI control.
 
 The Bindings card chooses what feeds XLR 1 and XLR 2, the choice the UI
 makes in [Use another microphone on XLR 1 or XLR 2](#input-bindings).

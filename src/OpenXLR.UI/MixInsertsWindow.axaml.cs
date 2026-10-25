@@ -12,14 +12,14 @@ public partial class MixInsertsWindow : Window
         InitializeComponent();
     }
 
-    private SoundCheckWindow? _soundCheck;
-    private void OnSoundCheck(object? sender, RoutedEventArgs e)
+    private MicCheckWindow? _micCheck;
+    private void OnMicCheck(object? sender, RoutedEventArgs e)
     {
-        if (Chain is not { CanSoundCheck: true } chain) return;
-        if (_soundCheck is not null) { _soundCheck.Activate(); return; }
-        _soundCheck = new SoundCheckWindow { DataContext = chain.SoundCheck };
-        _soundCheck.Closed += (_, _) => _soundCheck = null;
-        _soundCheck.Show(this);
+        if (Chain is not { CanMicCheck: true } chain) return;
+        if (_micCheck is not null) { _micCheck.Activate(); return; }
+        _micCheck = new MicCheckWindow { DataContext = chain.MicCheck };
+        _micCheck.Closed += (_, _) => _micCheck = null;
+        _micCheck.Show(this);
     }
 
     private InsertsViewModel? Chain => DataContext as InsertsViewModel;

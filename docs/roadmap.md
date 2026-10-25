@@ -103,6 +103,13 @@ them for a while before more is built on top.
   terminal mixer only chooses where each EQ runs, and the Stream Deck has
   no EQ keys or dials. A band editor in the terminal mixer comes first,
   then the OpenDeck plugin.
+- [ ] Mic check, a guided microphone test in the UI in place of the Sound
+  Check window, in three parts. First the window with Level and Listen:
+  the meter before the chain, the take's waveform, Hear myself and an
+  instant Raw and Processed switch. Then Shape (the EQ, the inserts and
+  starting presets inside the window) and Position. Then a suggested gain
+  and a crossfade where the loop starts over. Its order against the
+  terminal mixer's EQ is not decided.
 
 ### Devices
 

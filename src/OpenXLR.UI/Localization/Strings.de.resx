@@ -808,9 +808,6 @@
   <data name="HearingB" xml:space="preserve">
     <value>B wird angehört</value>
   </data>
-  <data name="HearLiveMic" xml:space="preserve">
-    <value>Live-Mikrofon hören</value>
-  </data>
   <data name="HiddenInTheMixer" xml:space="preserve">
     <value>Im Mixer ausgeblendet</value>
   </data>
@@ -987,9 +984,6 @@
   </data>
   <data name="Lock" xml:space="preserve">
     <value>Sperren</value>
-  </data>
-  <data name="LoopSample" xml:space="preserve">
-    <value>Aufnahme in Schleife</value>
   </data>
   <data name="LowCut" xml:space="preserve">
     <value>Hochpass</value>
@@ -1568,9 +1562,6 @@ Speichern ersetzt es durch die aktuelle Szene.</value>
   <data name="Record" xml:space="preserve">
     <value>Aufnehmen</value>
   </data>
-  <data name="RecordUpToTenSecondsOfYour" xml:space="preserve">
-    <value>Nimm bis zu zehn Sekunden deines Mikrofons auf und spiele die Aufnahme in einer Schleife durch die aktuellen Effekte ab. Passe die Effekte an, während du dieselbe Aufnahme hörst.</value>
-  </data>
   <data name="Refresh" xml:space="preserve">
     <value>Aktualisieren</value>
   </data>
@@ -1893,18 +1884,6 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="SoftClipGuardUnavailable" xml:space="preserve">
     <value>Software-ClipGuard ist nicht verfügbar</value>
   </data>
-  <data name="SoundCheck" xml:space="preserve">
-    <value>Sound Check</value>
-  </data>
-  <data name="SoundCheckEmpty" xml:space="preserve">
-    <value>Live-Mikrofon. Keine Aufnahme vorhanden</value>
-  </data>
-  <data name="SoundCheckLooping" xml:space="preserve">
-    <value>{0:0.0} Sekunden laufen in einer Schleife durch die aktive Kette</value>
-  </data>
-  <data name="SoundCheckReady" xml:space="preserve">
-    <value>Live-Mikrofon. {0:0.0} Sekunden bereit für die Schleife</value>
-  </data>
   <data name="SoundCheckRecording" xml:space="preserve">
     <value>Aufnahme: {0:0.0} / 10 Sekunden</value>
   </data>
@@ -1946,9 +1925,6 @@ Von OpenXLR gesteuertes Interface wählen</value>
   </data>
   <data name="StopAndDiscard" xml:space="preserve">
     <value>Stoppen und verwerfen</value>
-  </data>
-  <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
-    <value>Stoppe oder schließe dieses Fenster, um das Live-Mikrofon wiederherzustellen und die Aufnahme zu verwerfen. Die Sitzung endet auch bei einem Quellenwechsel, Geräteverlust, Löschen des Kanals, Daemon-Neustart oder nach zehn Minuten. Deine Effektänderungen bleiben erhalten.</value>
   </data>
   <data name="StoreA" xml:space="preserve">
     <value>A speichern</value>
@@ -2015,9 +1991,6 @@ Von OpenXLR gesteuertes Interface wählen</value>
   </data>
   <data name="ThePluginOperation" xml:space="preserve">
     <value>Plugin-Vorgang</value>
-  </data>
-  <data name="TheRecordingStaysInMemoryItIsCapturedBeforeSoftwareEffectsButAfterTheI" xml:space="preserve">
-    <value>Die Aufnahme bleibt im Arbeitsspeicher. Sie wird vor den Software-Effekten aufgenommen, aber nach der Gain-Stufe und der Hardware-Verarbeitung des Interfaces.</value>
   </data>
   <data name="TheRescan" xml:space="preserve">
     <value>Erneute Suche</value>

@@ -330,6 +330,14 @@ public sealed partial class MainViewModel
                     ? unit.InputOf(extra.Input) : null;
             channel.BindingLabel = BindingLabelOf(channel);
         }
+        // Mic check's Level step shows the gain of the input its channel carries.
+        foreach (MicCheckViewModel check in MicChecks())
+        {
+            ChannelViewModel? carrier = Channels.FirstOrDefault(c => c.Id == check.Channel);
+            check.Unit = carrier?.ShownUnitInput is 1 or 2 ? UnitInputOf(carrier.ShownUnitInput) : null;
+            check.ExtraUnit = carrier?.ExtraUnitInput;
+            check.ProDirect = CapOutputRouting && carrier?.ShownUnitInput == 1;
+        }
         Xlr1InputLabel = Localizer.Format("StripInputLabel", Xlr1Strip?.Name ?? "XLR 1");
         Xlr2InputLabel = Localizer.Format("StripInputLabel", Xlr2Strip?.Name ?? "XLR 2");
         ChooseMicrophoneText = Localizer.Format("ChooseMicrophoneForStrip", Xlr1Strip?.Name ?? "XLR 1");

@@ -633,6 +633,21 @@ nodes. On real units, so far:
 | The unit controls following a capture input bound to an additional interface's input | not yet checked | |
 | Changing a capture input's source in place: the channel keeps its id, sends and inserts, the old source is released | not yet checked | |
 
+<a name="mic-check"></a>
+## Mic check
+
+[Mic check](manual.md#mic-check) runs on any microphone the mixer carries.
+The private PipeWire suite covers the meter before the chain, the take's
+waveform, Raw and Processed on XLR and capture inputs, and Hear myself
+opening a muted send, with simulated nodes. On real units, so far:
+
+| Check | State | Notes |
+|---|---|---|
+| Hear myself on a Wave XLR Pro: the zero-latency path off for the session, the voice with its effects in the headphones, the latency the window says against what is heard | not yet checked | |
+| Raw and Processed by ear, on a looped take and on the live microphone: no click or gap at the switch | not yet checked | |
+| The meter before the chain against the unit's gain, and the clip light at full scale | not yet checked | |
+| The gain beside the meter on a Pro, an XLR Dock, a Wave:3 and an additional interface | not yet checked | |
+
 ## Every device gets
 
 - Capability-driven UI: controls, channels, and mixes the device does

@@ -806,9 +806,6 @@
   <data name="HearingB" xml:space="preserve">
     <value>Pinapakinggan ang B</value>
   </data>
-  <data name="HearLiveMic" xml:space="preserve">
-    <value>Pakinggan ang live mic</value>
-  </data>
   <data name="HiddenInTheMixer" xml:space="preserve">
     <value>nakatago sa mixer</value>
   </data>
@@ -985,9 +982,6 @@
   </data>
   <data name="Lock" xml:space="preserve">
     <value>I-lock</value>
-  </data>
-  <data name="LoopSample" xml:space="preserve">
-    <value>I-loop ang sample</value>
   </data>
   <data name="LowCut" xml:space="preserve">
     <value>Low Cut</value>
@@ -1566,9 +1560,6 @@ Papalitan ito ng kasalukuyang eksena kapag nag-save.</value>
   <data name="Record" xml:space="preserve">
     <value>I-record</value>
   </data>
-  <data name="RecordUpToTenSecondsOfYour" xml:space="preserve">
-    <value>Mag-record ng hanggang sampung segundo ng mikropono, saka i-loop ito sa kasalukuyang mga effect. Ayusin ang mga effect habang pinakikinggan ang parehong take.</value>
-  </data>
   <data name="Refresh" xml:space="preserve">
     <value>I-refresh</value>
   </data>
@@ -1891,18 +1882,6 @@ Piliin ang interface na kinokontrol ng OpenXLR</value>
   <data name="SoftClipGuardUnavailable" xml:space="preserve">
     <value>Hindi available ang software ClipGuard</value>
   </data>
-  <data name="SoundCheck" xml:space="preserve">
-    <value>Sound Check</value>
-  </data>
-  <data name="SoundCheckEmpty" xml:space="preserve">
-    <value>Live na mikropono. Walang na-record na sample</value>
-  </data>
-  <data name="SoundCheckLooping" xml:space="preserve">
-    <value>Naka-loop ang {0:0.0} segundo sa aktibong chain</value>
-  </data>
-  <data name="SoundCheckReady" xml:space="preserve">
-    <value>Live na mikropono. Handa nang i-loop ang {0:0.0} segundo</value>
-  </data>
   <data name="SoundCheckRecording" xml:space="preserve">
     <value>Nagre-record: {0:0.0} / 10 segundo</value>
   </data>
@@ -1944,9 +1923,6 @@ Piliin ang interface na kinokontrol ng OpenXLR</value>
   </data>
   <data name="StopAndDiscard" xml:space="preserve">
     <value>Ihinto at itapon</value>
-  </data>
-  <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
-    <value>Ihinto o isara ang window na ito upang ibalik ang mikropono at itapon ang sample. Nagtatapos din ang session sa pagpalit ng source, pagkawala ng device, pagburang channel, pag-restart ng daemon o matapos ang sampung minuto. Nananatili ang mga pagbabago mo sa effect.</value>
   </data>
   <data name="StoreA" xml:space="preserve">
     <value>Itabi sa A</value>
@@ -2013,9 +1989,6 @@ Piliin ang interface na kinokontrol ng OpenXLR</value>
   </data>
   <data name="ThePluginOperation" xml:space="preserve">
     <value>ang operasyon ng plugin</value>
-  </data>
-  <data name="TheRecordingStaysInMemoryItIsCapturedBeforeSoftwareEffectsButAfterTheI" xml:space="preserve">
-    <value>Nananatili sa memory ang recording. Kinukuha ito bago ang software effect, pero pagkatapos ng gain at hardware processing ng interface.</value>
   </data>
   <data name="TheRescan" xml:space="preserve">
     <value>ang muling paghahanap</value>

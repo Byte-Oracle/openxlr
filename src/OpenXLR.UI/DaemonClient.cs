@@ -368,6 +368,7 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
                 edit?.TrySetResult(node["error"]?.GetValue<string>());
             }
             else if (type == "meters" && node["levels"] is JsonNode levels) MetersReceived?.Invoke(levels);
+            else if (type == "soundCheckTake") SoundCheckTakeReceived?.Invoke(node);
         }
     }
 
@@ -622,6 +623,25 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
     /// <summary>Sound Check on a microphone channel: record, loop, live or stop.</summary>
     public Task<string?> SoundCheckAsync(string channel, string action)
         => EditLayoutAsync(new() { ["cmd"] = "soundCheck", ["channel"] = channel, ["action"] = action });
+
+    /// <summary>Mic check's switch: the raw signal past the chain, or the processed one, on the session's microphone.</summary>
+    public Task<string?> SetSoundCheckRawAsync(string channel, bool raw)
+        => EditLayoutAsync(new() { ["cmd"] = "setSoundCheckRaw", ["channel"] = channel, ["value"] = raw });
+
+    /// <summary>Mic check's Hear myself: the microphone in the monitor mixes for the session only.</summary>
+    public Task<string?> SetSoundCheckHearMyselfAsync(string channel, bool on)
+        => EditLayoutAsync(new() { ["cmd"] = "setSoundCheckHearMyself", ["channel"] = channel, ["value"] = on });
+
+    /// <summary>Keep the meter before a microphone's chain running for the daemon's lease.</summary>
+    public Task WatchInputMeterAsync(string channel)
+        => SendAsync(new Dictionary<string, object> { ["cmd"] = "watchInputMeter", ["channel"] = channel }, reportErrors: false);
+
+    /// <summary>Ask for the running session's take; it arrives through <see cref="SoundCheckTakeReceived"/>.</summary>
+    public Task RequestSoundCheckTakeAsync()
+        => SendAsync(new Dictionary<string, object> { ["cmd"] = "getSoundCheckTake" }, reportErrors: false);
+
+    /// <summary>A take's waveform, broadcast when the daemon finishes one or sent on request.</summary>
+    public event Action<JsonNode>? SoundCheckTakeReceived;
 
     /// <summary>Replace a channel's plugin insert chain (ordered).</summary>
     public Task SetInsertsAsync(string channel, IReadOnlyList<object> inserts)

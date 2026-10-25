@@ -826,6 +826,16 @@ public sealed partial class SkinWindowTests
     /// surface is left with the shipped colour, and no text is left with no
     /// colour at all, which is what a token name typed wrong would look like.
     /// </summary>
+    /// <summary>A Mic check on its Listen step with a session, a take and every note showing, so the skin reaches them all.</summary>
+    private static MicCheckViewModel ListeningCheck(DaemonClient client)
+    {
+        var check = new MicCheckViewModel(client, "xlr1") { Step = MicCheckStep.Listen, ProDirect = true };
+        check.Apply(JsonNode.Parse("""{"channel":"xlr1","mode":"looping","seconds":1.5,"error":"A refusal","raw":true,"take":1,"monitorLatencyMs":42}"""));
+        check.ApplyTake(JsonNode.Parse("""{"type":"soundCheckTake","channel":"xlr1","take":1,"seconds":1.5,"peaks":[0.1,0.5,0.9,0.3]}"""));
+        check.ApplyPosition(new JsonArray(0.4));
+        return check;
+    }
+
     private static void EveryWindowWearsTheSkin(MainWindow main)
     {
         var vm = (MainViewModel)main.DataContext!;
@@ -853,7 +863,8 @@ public sealed partial class SkinWindowTests
             ("effect-workflow", new EffectWorkflowWindow { DataContext = vm.Inserts }),
             ("native-editors", new NativeEditorRulesWindow()),
             ("plugin-folders", new PluginFoldersWindow()),
-            ("sound-check", new SoundCheckWindow { DataContext = vm.Inserts.SoundCheck }),
+            ("mic-check", new MicCheckWindow { DataContext = vm.Inserts.MicCheck }),
+            ("mic-check-listen", new MicCheckWindow { DataContext = ListeningCheck(client) }),
             ("updates", new UpdatesWindow { DataContext = vm.Updates }),
             ("wave-interfaces", new WaveInterfacesWindow(vm)),
         ];

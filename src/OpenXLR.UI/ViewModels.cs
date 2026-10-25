@@ -78,6 +78,10 @@ public sealed partial class MainViewModel : ViewModelBase
         _client.NativeEditorRulesChanged += () => Dispatcher.UIThread.Post(() => InsertsViewModel.ReloadAll?.Invoke());
         var meters = new MeterUpdates(action => Dispatcher.UIThread.Post(action), ApplyMeters);
         _client.MetersReceived += meters.Publish;
+        _client.SoundCheckTakeReceived += take => Dispatcher.UIThread.Post(() =>
+        {
+            foreach (MicCheckViewModel check in MicChecks()) check.ApplyTake(take);
+        });
         InsertsViewModel.ReloadAll = () =>
         {
             InsertsViewModel.ForgetCatalogue();
@@ -1240,8 +1244,23 @@ public sealed partial class MainViewModel : ViewModelBase
                 MixViewModel? m = Mixes.FirstOrDefault(x => x.Id == kv.Key[4..]);
                 if (m is not null) { m.MeterL = l; m.MeterR = r; }
             }
+            else if (kv.Key.StartsWith("in:", StringComparison.Ordinal) && kv.Value is JsonArray level)
+                MicCheckOf(kv.Key[3..])?.ApplyInputLevel(level);
+            else if (kv.Key.StartsWith("take:", StringComparison.Ordinal) && kv.Value is JsonArray position)
+                MicCheckOf(kv.Key[5..])?.ApplyPosition(position);
         }
     }
+
+    /// <summary>Every microphone's Mic check: XLR 1's, XLR 2's and each mono capture input's.</summary>
+    internal IEnumerable<MicCheckViewModel> MicChecks()
+    {
+        yield return Inserts.MicCheck;
+        yield return Inserts2.MicCheck;
+        foreach (ChannelViewModel channel in Channels)
+            if (channel.Inserts?.MicCheck is { } check) yield return check;
+    }
+
+    private MicCheckViewModel? MicCheckOf(string channel) => MicChecks().FirstOrDefault(c => c.Channel == channel);
 
     /// <summary>Applications currently playing, with the channel each landed in.</summary>
     public ObservableCollection<AppStreamViewModel> Apps { get; } = [];
@@ -1321,8 +1340,7 @@ public sealed partial class MainViewModel : ViewModelBase
         MicrophonePausePending = mixer?["microphonePausePending"]?.GetValue<bool>() ?? false;
         if (mixer is null)
         {
-            Inserts.SoundCheck.Apply(null); Inserts2.SoundCheck.Apply(null);
-            foreach (ChannelViewModel channel in Channels) channel.Inserts?.SoundCheck.Apply(null);
+            foreach (MicCheckViewModel check in MicChecks()) check.Apply(null);
             HasMixer = false; RenamedSinceStart = false; LayoutWarning = ""; ExclusiveGroups = []; return;
         }
         HasMixer = true;
@@ -1341,8 +1359,8 @@ public sealed partial class MainViewModel : ViewModelBase
         MixLatencyError = mixer["mixLatencyError"]?.GetValue<string>();
         Inserts.Apply(mixer["inserts"]?["xlr1"]);
         Inserts2.Apply(mixer["inserts"]?["xlr2"]);
-        Inserts.SoundCheck.Apply(mixer["soundCheck"]);
-        Inserts2.SoundCheck.Apply(mixer["soundCheck"]);
+        Inserts.MicCheck.Apply(mixer["soundCheck"]);
+        Inserts2.MicCheck.Apply(mixer["soundCheck"]);
         bool auxAudible = mixer["monitorFeeds"] is JsonObject monitorFeeds && monitorFeeds.Any(
             feed => (feed.Value?.GetValue<string>() ?? "").Split('+').Contains("auxout"));
 
@@ -1384,7 +1402,7 @@ public sealed partial class MainViewModel : ViewModelBase
                     vm.ApplyFromDaemon(c);
                     vm.ApplyEq(c["eq"], mixer["eqLimits"]);
                     vm.Inserts?.Apply(mixer["inserts"]?[vm.Id]);
-                    vm.Inserts?.SoundCheck.Apply(mixer["soundCheck"]);
+                    vm.Inserts?.MicCheck.Apply(mixer["soundCheck"]);
                     vm.Inserts?.EnsurePluginsLoaded();
                 },
                 c => new ChannelViewModel(_client, c["id"]!.GetValue<string>(), c["name"]!.GetValue<string>(), mixIds),
@@ -2205,7 +2223,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         Microphone = n["microphone"]?.GetValue<bool>() ?? Id is "xlr1" or "xlr2";
         ApplyChainWidth(CaptureSource is not null && n["chainWidth"]?.GetValue<int>() is 1 or 2
             ? n["chainWidth"]!.GetValue<int>() : null);
-        if (Inserts is not null) Inserts.CanSoundCheck = Microphone;
+        if (Inserts is not null) Inserts.CanMicCheck = Microphone;
         int capturePair = CapturePair + 1;
         CaptureLabel = CaptureSource is null ? ""
             : n["captureMonoChannel"]?.GetValue<int>() is int port
