@@ -5,7 +5,7 @@ namespace OpenXLR.Tui;
 /// <summary>
 /// The hardware: the interface's microphone inputs with their processing,
 /// what feeds XLR 1 and XLR 2, where each microphone's EQ runs, the
-/// headphone outputs, the direct monitor blend, ducking, the USB Aux return and the Line In gain. A control the active device does not
+/// headphone outputs, the direct monitor blend, ducking, the USB Aux return, the Line In gain and each capture input's gain. A control the active device does not
 /// advertise is drawn faded rather than hidden, so the same page describes
 /// every interface.
 ///
@@ -318,11 +318,18 @@ internal sealed class InputsView : View
                 rows.Add(new TextRow("Source", $"{state.SourceName(source)}, port {(channel.Binding?.MonoChannel ?? 0) + 1}"));
                 rows.Add(new TextRow("Connection", channel.BindingWarning is { Length: > 0 } warning ? warning
                     : channel.CaptureConnected ? "linked" : "not linked"));
+                CaptureGainRow(rows, link, channel);
                 if (channel.UnitInput is { Primary: true } primary)
                 {
                     rows.Add(new HeadingRow($"{state.Device?.Model ?? "Interface"} input {primary.Input} on {channel.Name}") { Dial = state.Can("gain") });
                     PrimaryInput(rows, link, state, primary.Input, primary.Unit);
                 }
+            }
+            else if (channel.CaptureSource is not null && channel.CaptureGain is not null)
+            {
+                // A stereo capture input has no microphone group of its own; its gain does.
+                rows.Add(new HeadingRow(channel.Name));
+                CaptureGainRow(rows, link, channel);
             }
             if (channel.UnitInput is not { Primary: false } carried || state.Additional(carried.Unit) is not { Driven: true } unit)
                 continue;
@@ -343,6 +350,24 @@ internal sealed class InputsView : View
                 if (unit.Can(name))
                     rows.Add(new ToggleRow(label, unit.Flag(name + suffix), value => Snapshot.Send(link, Control(name), value)));
         }
+    }
+
+    /// <summary>
+    /// A capture input's own gain, its source's volume, which setCaptureGain
+    /// sends: the device's capture control where it has one, its software
+    /// level otherwise. A channel that takes a Wave unit's input has none.
+    /// </summary>
+    private static void CaptureGainRow(List<Row> rows, DaemonLink link, ChannelEntry channel)
+    {
+        if (channel.CaptureGain is not { } gain) return;
+        string id = channel.Id;
+        rows.Add(new NumberRow(gain.Hardware ? "Device gain" : "Gain", gain.GainDb, Math.Min(gain.MinDb, gain.MaxDb), Math.Max(gain.MinDb, gain.MaxDb), 1,
+            value => $"{value:0.#} dB", value => link.Send("setCaptureGain", body =>
+            {
+                body["channel"] = id;
+                body["value"] = Math.Round(value, 1);
+            }))
+        { FineStep = 0.5 });
     }
 
     /// <summary>The headphone scale the window shows: -60 dB is 0% and 0 dB is 100%.</summary>

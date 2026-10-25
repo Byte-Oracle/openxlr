@@ -1552,6 +1552,50 @@ public sealed class TuiViewTests
     }
 
     [Fact]
+    public void ACaptureInputsOwnGainIsARowOnTheHardwareTab()
+    {
+        // A webcam on a stereo pair with a hardware capture control, and a USB
+        // microphone on one port with a software level, each with the gain the
+        // daemon reports; a third capture input carries a unit and has none.
+        var root = System.Text.Json.Nodes.JsonNode.Parse(StateJson)!;
+        var channels = (System.Text.Json.Nodes.JsonArray)root["mixer"]!["channels"]!;
+        foreach (string json in new[]
+        {
+            """{"id":"brio","name":"Brio","captureSource":"alsa_input.usb-webcam","captureConnected":true,"microphone":false,"levels":{"monitor":1},"mutedIn":[],"captureGain":{"gainDb":36,"minDb":18,"maxDb":54,"hardware":true}}""",
+            """{"id":"usbmic","name":"USB mic","captureSource":"alsa_input.usb-mic","captureMonoChannel":0,"captureConnected":true,"microphone":true,"levels":{"monitor":1},"mutedIn":[],"captureGain":{"gainDb":-6,"minDb":-60,"maxDb":10,"hardware":false}}""",
+            """{"id":"dock","name":"Dock mic","captureSource":"alsa_input.usb-Elgato_dock","captureMonoChannel":0,"captureConnected":true,"microphone":true,"levels":{"monitor":1},"mutedIn":[],"unitInput":{"unit":"0fd9:0070","input":1,"primary":false}}""",
+        }) channels.Add(System.Text.Json.Nodes.JsonNode.Parse(json));
+        string state = root.ToJsonString();
+
+        // Step down the tab until a turn sends a capture gain, for each input in turn.
+        var found = new Dictionary<string, double>();
+        string frame = "";
+        for (int downs = 0; downs < 80 && found.Count < 2; downs++)
+        {
+            DaemonLink link = new();
+            List<string> sent = [];
+            link.Sent += json => sent.Add(json);
+            link.Receive(state);
+            App app = new(link, Theme.Material);
+            app.ShowTab(2);
+            Screen screen = new(150, 42);
+            app.Draw(screen);
+            for (int i = 0; i < downs; i++) app.Handle(new KeyPress(Key.Down));
+            app.Draw(screen);
+            sent.Clear();
+            app.Handle(new KeyPress(Key.Char, '+'));
+            if (sent.Count != 1) continue;
+            JsonElement command = JsonDocument.Parse(sent[0]).RootElement;
+            if (Text(command, "cmd") != "setCaptureGain") continue;
+            string channel = Text(command, "channel")!;
+            if (found.TryAdd(channel, command.GetProperty("value").GetDouble()) && channel == "brio") frame = Frame(screen);
+        }
+        Assert.Equal(new Dictionary<string, double> { ["brio"] = 37, ["usbmic"] = -5 }, found);
+        Assert.Contains("Device gain", frame, StringComparison.Ordinal);
+        Assert.Contains("36 dB", frame, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FineBracketsAlsoWorkOnHardwareAndOutputFaders()
     {
         (App app, List<string> sent) = Ready(3);

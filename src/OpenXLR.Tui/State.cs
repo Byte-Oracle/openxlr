@@ -99,6 +99,13 @@ internal sealed record ChannelEntry
     /// <summary>The driven unit's microphone input this channel carries, or null.</summary>
     public UnitInputEntry? UnitInput { get; init; }
 
+    /// <summary>
+    /// A capture input's own gain, its source's volume, or null: on every
+    /// other channel, on one that takes a Wave unit's input, while the
+    /// source is missing, and from a daemon that predates it.
+    /// </summary>
+    public CaptureGainEntry? CaptureGain { get; init; }
+
     /// <summary>A microphone's EQ, or null for a channel that has none and from a daemon that predates it.</summary>
     public EqEntry? Eq { get; init; }
 
@@ -338,6 +345,15 @@ internal sealed record DuckingDeviceEntry
 internal sealed record UnitControl(string? Device, string Control);
 
 /// <summary>Which input stage of which driven unit a channel carries.</summary>
+/// <summary>A capture input's gain in dB and its range; with Hardware, the device's own capture control.</summary>
+internal sealed record CaptureGainEntry
+{
+    public double GainDb { get; init; }
+    public double MinDb { get; init; }
+    public double MaxDb { get; init; }
+    public bool Hardware { get; init; }
+}
+
 internal sealed record UnitInputEntry
 {
     public string Unit { get; init; } = string.Empty;
