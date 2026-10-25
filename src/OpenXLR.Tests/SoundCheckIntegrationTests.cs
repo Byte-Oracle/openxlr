@@ -7,9 +7,14 @@ namespace OpenXLR.Tests;
 public sealed partial class SoundCheckIntegrationTests
 {
     [MonitorPipeWireFact]
-    public async Task TheDrySampleLoopsThroughLiveProcessingAndStopRestoresTheMicrophone()
+    public Task TheDrySampleLoopsThroughLiveProcessingAndStopRestoresTheMicrophone()
+        => CheckMicrophoneLoop(clipGuard: false);
+
+    internal static async Task CheckMicrophoneLoop(bool clipGuard)
     {
         const string channel = "xlr1";
+        double take = clipGuard ? .95 : .25;
+        bool limiting = clipGuard;
         var pw = new PipeWireAdapter();
         using var registry = pw.WatchGraph();
         using var mixer = new Mixer(pw);
@@ -24,22 +29,24 @@ public sealed partial class SoundCheckIntegrationTests
                 new("xlr2", "Second microphone") { InputPair = 1 }],
         });
         mixer.SetMonitorOutputs(["soundcheck_output"]);
+        if (clipGuard) mixer.SetSoftClipGuard(true);
         using var firstStop = new CancellationTokenSource();
         using var secondStop = new CancellationTokenSource();
-        Task<ProcessResult> first = Play(.25, firstStop.Token);
+        Task<ProcessResult> first = Play(take, firstStop.Token);
         Task<ProcessResult>? second = null;
         try
         {
             // Observe the generator in the live output before recording. On
             // slower session managers a newly launched stream first carries
             // silence; recording that startup is valid, but not this fixture.
-            AssertSound(.25);
+            AssertSound(take);
             mixer.SoundCheck(channel, "record");
             Assert.True(SpinWait.SpinUntil(() =>
             {
                 mixer.EnsureFilterRoutes(); mixer.EnsureCellLevels();
                 return mixer.Snapshot().SoundCheck.Seconds >= .5;
             }, TimeSpan.FromSeconds(5)), System.Text.Json.JsonSerializer.Serialize(mixer.Snapshot().SoundCheck) + pw.Run("pw-link", "-l") + (first.IsCompleted ? (await first).Stderr : "generator running"));
+            AssertSound(take);
             Assert.Equal(channel, mixer.SoundCheckChannel);
             Assert.Equal("Stop Sound Check on Microphone first.", Assert.Throws<InvalidOperationException>(() => mixer.SoundCheck("xlr2", "record")).Message);
             mixer.SoundCheck(channel, "loop");
@@ -53,17 +60,26 @@ public sealed partial class SoundCheckIntegrationTests
             Assert.False(mixer.SetHardwareMicMonitor(true));
             firstStop.Cancel(); await first;
             second = Play(.75, secondStop.Token);
-            AssertSound(.25);
+            AssertSound(take);
+            if (clipGuard)
+            {
+                mixer.SetSoftClipGuard(false);
+                limiting = false;
+                AssertSound(take);
+                mixer.SetSoftClipGuard(true);
+                limiting = true;
+                AssertSound(take);
+            }
             mixer.SetLowCutHz(120);
             AssertSound(0); // The sample enters before the current software DSP.
             mixer.SetLowCutHz(0);
-            AssertSound(.25);
-            mixer.SetLevel(channel, "monitor", .5); AssertSound(.25 * Math.Pow(.5, 3));
+            AssertSound(take);
+            mixer.SetLevel(channel, "monitor", .5); AssertSound(take, .5);
             mixer.SetLevel(channel, "monitor", 1);
             mixer.SoundCheck(channel, "live");
             AssertSound(.75);
             mixer.SoundCheck(channel, "loop");
-            AssertSound(.25);
+            AssertSound(take);
             mixer.SoundCheck(channel, "stop");
             AssertSound(.75);
             Assert.Null(mixer.Snapshot().SoundCheck.Channel);
@@ -116,9 +132,11 @@ public sealed partial class SoundCheckIntegrationTests
                 p.wait()
             """, value.ToString(System.Globalization.CultureInfo.InvariantCulture)], TimeSpan.FromSeconds(55), cancel: cancel);
 
-        static void AssertSound(double expected)
+        void AssertSound(double expected, double level = 1)
         {
-            var result = CaptureSound(expected);
+            Assert.Equal(limiting, mixer.SoftClipGuard);
+            double limited = limiting ? Math.Min(expected, Math.Pow(10, -3.0 / 20)) : expected;
+            var result = CaptureSound(limited * Math.Pow(level, 3));
             Assert.True(result.Ok, result.StdoutText + result.Stderr);
         }
     }

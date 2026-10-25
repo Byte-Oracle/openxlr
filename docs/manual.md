@@ -990,7 +990,9 @@ loop goes through the EQ as it is set.
   A session ends by itself when its source changes, when its audio path
   is lost, when its capture channel is deleted, when the mixer is rebuilt
   and after ten minutes. If the channel still exists, the window says why,
-  and **Stop and discard** clears the message.
+  including the helper's last failure message when it supplied one. The same
+  failure is written to the daemon's log. **Stop and discard** clears the
+  window's message.
 - On a Wave XLR Pro with the headphone jacks following a monitor mix, the
   interface's zero-latency microphone path is switched off while the channel
   carrying its first input is under Sound Check, including a capture input,
