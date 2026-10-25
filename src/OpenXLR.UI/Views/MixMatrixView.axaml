@@ -58,6 +58,14 @@
     <Style Selector="Border.matrixColumn">
       <Setter Property="Width" Value="{DynamicResource Ox.Matrix.CellWidth}"/>
     </Style>
+    <!-- the readout sits under the processing button, or in the middle of the name column when the
+         row shows none, as Aux In's and Line In's do -->
+    <Style Selector="TextBlock#MatrixReadout.under">
+      <Setter Property="Grid.Row" Value="1"/>
+    </Style>
+    <Style Selector="TextBlock#MatrixReadout.centred">
+      <Setter Property="Grid.RowSpan" Value="2"/>
+    </Style>
   </UserControl.Styles>
 
   <UserControl.Resources>
@@ -177,7 +185,8 @@
                       </Flyout>
                     </Button.Flyout>
                   </Button>
-                  <TextBlock Grid.Column="3" Grid.Row="1" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                  <TextBlock Grid.Column="3" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                             Classes.under="{Binding ShowsProcessing}" Classes.centred="{Binding !ShowsProcessing}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowsReadout}"
                              AutomationProperties.Name="{Binding ReadoutName}" ToolTip.Tip="{Binding ReadoutName}"/>
                 </Grid>
@@ -305,7 +314,8 @@
                       </Flyout>
                     </Button.Flyout>
                   </Button>
-                  <TextBlock Grid.Column="3" Grid.Row="1" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                  <TextBlock Grid.Column="3" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                             Classes.under="{Binding ShowsProcessing}" Classes.centred="{Binding !ShowsProcessing}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowsReadout}"
                              AutomationProperties.Name="{Binding ReadoutName}" ToolTip.Tip="{Binding ReadoutName}"/>
                 </Grid>
@@ -562,7 +572,8 @@
                       </Flyout>
                     </Button.Flyout>
                   </Button>
-                  <TextBlock Grid.Column="3" Grid.Row="1" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                  <TextBlock Grid.Column="3" Name="MatrixReadout" Text="{Binding Readout}" Classes="val" FontSize="11"
+                             Classes.under="{Binding ShowsProcessing}" Classes.centred="{Binding !ShowsProcessing}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowsReadout}"
                              AutomationProperties.Name="{Binding ReadoutName}" ToolTip.Tip="{Binding ReadoutName}"/>
                 </Grid>
