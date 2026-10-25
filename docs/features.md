@@ -319,8 +319,8 @@ Built from PipeWire nodes, no kernel modules or custom drivers:
   of a layout skin, and a copy to start from is in `docs/examples/skins`.
   See [Broadcast](manual.md#broadcast)
 - Compact Desk: a dark matrix skin with a bounded headphone column, a
-  monitor toolbar that grows with the window, smaller matrix cells and
-  application tiles wrapping across the page. Restart, version and About
+  monitor toolbar that grows with the window, wider names and faders, and
+  application tiles wrapping across the page with readable names. Restart, version and About
   stay in the header's overflow menu. See [Skins](skins.md)
 - Nyan Pink: dark plum surfaces, pink faders and cyan details, keeping the
   classic mixer arrangement and the saved section order.

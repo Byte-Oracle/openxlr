@@ -33,8 +33,9 @@ every package has them and there is nothing to install:
   palette. It is the reference for writing a layout skin; see
   [Layout](#layout).
 - **Compact Desk**, a dark matrix layout with a 600 pixel headphone column
-  and a monitor toolbar that takes the remaining width. Smaller matrix cells
-  keep the mixer dense, application tiles wrap across the page, and the
+  and a monitor toolbar that takes the remaining width. Wider name columns
+  and faders use the desk's space, muted faders stay readable, application
+  names have more room in the wrapping tiles, and the
   header keeps Profiles, Flow and Arrange beside an overflow menu for the
   other actions. It uses the existing controls and does not change Broadcast.
 - **Nyan Pink**, a dark plum palette with candy pink faders, cyan details

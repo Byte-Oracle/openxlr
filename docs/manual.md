@@ -2258,7 +2258,9 @@ copy of the skin to start your own from is in
 **Compact Desk** is an optional dark skin for a denser desk. Choose it in
 Options under APPEARANCE. It keeps the headphone card 600 pixels wide and
 lets MONITOR use the rest of the row. Applications wrap across the page
-instead of filling six rows first; the matrix uses smaller cells. Profiles,
+instead of filling six rows first. Longer matrix faders and wider name
+columns keep a three-mix desk from leaving half the card empty; muted
+faders stay visible against the dark blue-grey surfaces. Profiles,
 Flow and Arrange stay in the header, with Restart daemon, the version and
 About in its overflow menu. All the same headphone, input, effect and mix
 controls remain available. A narrow window scrolls the page sideways as

@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.VisualTree;
+using System.Reflection;
+using System.Text.Json.Nodes;
 using OpenXLR.UI;
 using OpenXLR.UI.Layout;
 using OpenXLR.UI.Skinning;
@@ -86,7 +88,9 @@ internal static partial class SkinLayoutWindowTests
                     }
                 }
             }
+            CheckCompactDeskThreeMixes(window, model);
             // Returning to another skin keeps the same section contents and application objects.
+            ShowApps(model, apps, apps.Length);
             Wear(SkinPackage.DefaultId);
             Layout(window, 1280, 900);
             Assert.Null(window.MixMatrix);
@@ -98,6 +102,61 @@ internal static partial class SkinLayoutWindowTests
             SkinService.ApplyControlSizing(false);
             window.Close();
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    private static void CheckCompactDeskThreeMixes(MainWindow window, MainViewModel model)
+    {
+        model.HasHp2 = model.CapCrossfade = false;
+        SkinService.ApplyControlSizing(false);
+        var mixer = JsonNode.Parse("""
+            {"mixes":[{"id":"monitor","name":"Monitor A","kind":"monitor"},
+                       {"id":"monitor2","name":"Monitor B","kind":"monitor"},
+                       {"id":"chat","name":"Chat","kind":"virtualMic"}],
+             "channels":[{"id":"xlr1","name":"XLR 1","hardware":true,"volume":1,
+                          "binding":{"kind":"unit","pair":0},"bindingConnected":true,
+                          "unitInput":{"unit":"0fd9:00a6","input":1,"primary":true},
+                          "levels":{"monitor":1,"monitor2":1,"chat":1},"mutedIn":["monitor","monitor2"]},
+                         {"id":"music","name":"Music","volume":1,"levels":{"monitor":1,"monitor2":1,"chat":1}},
+                         {"id":"game","name":"Game","volume":1,"levels":{"monitor":0.5,"monitor2":0.5,"chat":1}},
+                         {"id":"browser","name":"Browser","volume":1,"levels":{"monitor":1,"monitor2":1,"chat":1}},
+                         {"id":"system","name":"System","volume":1,"levels":{"monitor":0.6,"monitor2":0.6,"chat":1}},
+                         {"id":"voicechat","name":"Voice Chat","volume":1,"levels":{"monitor":1,"monitor2":1,"chat":1}}],
+             "monitorOutputs":["headset"],"outputVolume":0.6,"inserts":{}}
+            """)!;
+        foreach (JsonNode channel in mixer["channels"]!.AsArray().OfType<JsonNode>())
+            channel["appearance"] = new JsonObject { ["defaultIcon"] = LayoutDefaultIcons.ForChannel(
+                channel["id"]!.GetValue<string>(), channel["hardware"]?.GetValue<bool>() == true, null) };
+        foreach (JsonNode mix in mixer["mixes"]!.AsArray().OfType<JsonNode>())
+            mix["appearance"] = new JsonObject { ["defaultIcon"] = LayoutDefaultIcons.ForMix(
+                mix["id"]!.GetValue<string>(), mix["kind"]!.GetValue<string>()) };
+        typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model, [mixer]);
+        typeof(MainViewModel).GetMethod("ApplyDevices", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(model,
+            [JsonNode.Parse("""[{"name":"headset","kind":0,"description":"CORSAIR VIRTUOSO MAX WIRELESS Gaming Receiver + Monitor"}]"""), mixer]);
+        model.Apps.Clear();
+        model.ActiveApps.Clear();
+        ChannelChoice[] choices = [new("browser", "Browser"), new("voicechat", "Voice Chat"), new("system", "System")];
+        foreach (string name in new[] { "ChatGPT", "Discord", "Google Chrome", "Thunderbird Beta" })
+        {
+            var app = new AppStreamViewModel(new DaemonClient("ws://127.0.0.1:1/ws"), name, name, choices);
+            app.ApplyFromDaemon(choices[model.Apps.Count % choices.Length].Id, true, true);
+            model.Apps.Add(app);
+            model.ActiveApps.Add(app);
+        }
+        ApplicationIconWindowTests.Assign(model.Apps);
+        foreach (double width in new[] { 640d, 960, 1280, 1600 })
+        {
+            Layout(window, width, 800);
+            Assert.Equal(3, window.MixMatrix!.Columns.Count);
+            CheckMatrixCells(window, window.MixMatrix, $"Compact Desk, three mixes at {width}");
+            if (width == 1280)
+            {
+                var card = (Border)window.FindControl<Expander>("SubmixerTile")!.Parent!;
+                Border last = ColumnHead(window, "chat");
+                double end = last.TranslatePoint(new Point(last.Bounds.Width, 0), card)!.Value.X;
+                Assert.True(end >= card.Bounds.Width * .8, "Three mixes should use the desk instead of leaving half of it empty.");
+            }
+            Capture(window, $"skin-compact-desk-three-mixes-{width}");
         }
     }
 }
