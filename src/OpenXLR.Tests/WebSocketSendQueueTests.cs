@@ -41,16 +41,12 @@ public sealed class WebSocketSendQueueTests
         Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", directory);
         try
         {
-            ApiToken.Initialize();
             var config = new ConfigurationBuilder().Build();
             using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => []);
             using var mixer = new MixerService(NullLogger<MixerService>.Instance, config, devices);
             using var lifetime = new Lifetime();
             var hub = new WebSocketHub(devices, mixer, NullLogger<WebSocketHub>.Instance, lifetime);
-            using var socket = new PausedSocket
-            {
-                Authentication = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { cmd = "auth", token = ApiToken.Current })),
-            };
+            using var socket = new PausedSocket();
             Task serving = hub.HandleAsync(socket);
             try
             {
@@ -148,7 +144,6 @@ public sealed class WebSocketSendQueueTests
         public TaskCompletionSource Receiving { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Drained { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource RulesChanged { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public byte[]? Authentication { get; set; }
         public ConcurrentQueue<byte[]> Messages { get; } = new();
         public override WebSocketState State => (WebSocketState)Volatile.Read(ref _state);
         public override WebSocketCloseStatus? CloseStatus => _closeStatus;
@@ -191,12 +186,6 @@ public sealed class WebSocketSendQueueTests
         public override async Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer,
             CancellationToken cancellationToken)
         {
-            if (Authentication is { } auth)
-            {
-                Authentication = null;
-                auth.AsSpan().CopyTo(buffer.AsSpan());
-                return new(auth.Length, WebSocketMessageType.Text, true);
-            }
             using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _aborted.Token);
             Task pending = Task.Delay(Timeout.Infinite, stop.Token);
             Receiving.TrySetResult();

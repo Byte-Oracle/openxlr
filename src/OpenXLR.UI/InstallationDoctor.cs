@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text.Json;
@@ -148,11 +147,9 @@ internal static class InstallationDoctor
 
     private static async Task<string> ReadState(CancellationToken cancel)
     {
-        string token = OpenXlrPaths.ReadToken() ?? throw new IOException("daemon token is absent; the daemon may not be running");
-        using var handler = new HttpClientHandler { UseProxy = false, AllowAutoRedirect = false };
+        using var handler = ControlConnection.HttpHandler();
         using var http = new HttpClient(handler);
-        using var request = new HttpRequestMessage(HttpMethod.Get, "http://127.0.0.1:37890/api/v1/state");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/api/v1/state");
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancel);
         response.EnsureSuccessStatusCode();
         await using var body = await response.Content.ReadAsStreamAsync(cancel);

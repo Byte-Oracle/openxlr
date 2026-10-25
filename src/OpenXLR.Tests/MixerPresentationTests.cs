@@ -299,9 +299,7 @@ public sealed class MixerPresentationTests
             while (!stop.IsCancellationRequested)
             {
                 JsonNode command = await SocketTestServer.Receive(socket, stop);
-                // The client's own sign-in is not something the banks sent.
-                if (command["cmd"]?.GetValue<string>() != "auth")
-                    commands.Enqueue($"{command["cmd"]}:{command["channel"]}:{command["mix"]}");
+                commands.Enqueue($"{command["cmd"]}:{command["channel"]}:{command["mix"]}");
                 if (command["requestId"] is { } requestId)
                     await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>() }, stop);
             }

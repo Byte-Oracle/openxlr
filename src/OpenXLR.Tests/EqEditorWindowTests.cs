@@ -246,7 +246,6 @@ public sealed class EqEditorWindowTests
             {
                 JsonNode cmd = await SocketTestServer.Receive(socket, stop);
                 string name = cmd["cmd"]?.GetValue<string>() ?? "";
-                if (name == "auth") continue;
                 // The window reads the plugin catalogue for the mixes' chains; an empty one.
                 if (name == "listPlugins")
                 {

@@ -1,31 +1,36 @@
 # WebSocket API
 
-The [versioned local HTTP API](http-api.md) provides request/response access to
-the same commands and uses the same per-session credential.
+The [versioned local HTTP API](http-api.md) serves the same commands and
+uses the same Unix connection.
 
-The daemon serves `ws://127.0.0.1:37890/ws` on the loopback interface
-only. A handshake that carries a browser `Origin` header from anywhere
-but localhost is refused with 403, so a web page you happen to visit
-cannot drive the hardware; native clients send no Origin. If the port
-is busy at startup (it sits inside the kernel's ephemeral range) the
-daemon waits for it instead of touching PipeWire.
+The daemon serves HTTP and the WebSocket paths `/ws` and `/api/v1/events`
+on `$XDG_RUNTIME_DIR/openxlr/control.sock`. Without a runtime directory it
+uses `$XDG_CONFIG_HOME/openxlr/control.sock`, defaulting to
+`~/.config/openxlr/control.sock`. There is no loopback listener or token
+file. The directory is private (0700) and the socket is 0600. Linux
+`SO_PEERCRED` must identify the daemon's effective user before Kestrel reads
+HTTP; bundled clients also verify the server's user before sending data.
+This trusts processes belonging to that user, not other local accounts.
+Foreign browser Origins are still refused.
 
-Token. The first message on every connection must be
-`{"cmd":"auth","token":"<token>"}`, where the token is the content of
-`$XDG_RUNTIME_DIR/openxlr/token` (or `~/.config/openxlr/token` in a
-session without a runtime directory), a file only your user can read
-that the daemon replaces the moment it is listening (never earlier, so
-a second instance waiting for the port leaves the running daemon's
-clients alone). Nothing is sent before it;
-anything else as a first message, or nothing within 5 s, closes the
-socket with code 1008 and the reason `unauthorized` or `authentication
-timeout`. Another local user cannot read the file, so the loopback
-port alone does not hand them the mixer. The UI and the OpenDeck
-plugin read the file themselves; a script does the same:
+The first server message is state. There is no `auth` command or HTTP
+Authorization header. Upgrade the window, terminal mixer, Deck plugin and
+Omarchy plugin together with the daemon; older clients that dial the TCP
+port cannot connect.
+
+A toolkit without Unix WebSocket support can run
+`openxlr-daemon --control-stdio`. This mode is only a client: it starts no
+services and touches no USB or audio configuration. It writes
+`{"type":"controlReady"}` once connected, then forwards one JSON message
+per line in each direction. Commands are capped at 64 KiB and received
+messages at 8 MiB. EOF closes the sending half and drains replies for up
+to five seconds. Keep stdin open for long-running commands and subscriptions.
+The Deck plugin and Omarchy use this adapter and reconnect after it exits.
+Deck also stops an adapter that does not signal readiness within 15 seconds,
+so a stalled process cannot prevent reconnection.
 
 ```sh
-TOKEN=$(cat "${XDG_RUNTIME_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}}/openxlr/token")
-printf '{"cmd":"auth","token":"%s"}\n{"cmd":"getState"}\n' "$TOKEN" | websocat ws://127.0.0.1:37890/ws
+printf '{"cmd":"getState"}\n' | openxlr-daemon --control-stdio
 ```
 
 Limits. Commands are validated before the mixer sees them: unknown
@@ -1143,8 +1148,8 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
 - `devices/<vid-pid>/defaults.json`: the settings such a device answered
   with after a power cycle, what `resetDevice` writes back
 - `gainlock.json`: which devices have the gain lock set
-- `$XDG_RUNTIME_DIR/openxlr/token` (or `token` here without a runtime
-  directory): the control API token for this daemon run, 0600, see the
+- `$XDG_RUNTIME_DIR/openxlr/control.sock` (or `control.sock` here without a
+  runtime directory): the private control socket, 0600, see the
   top of this page
 - `$XDG_RUNTIME_DIR/openxlr/daemon.lock`: held by the running daemon for
   the life of the process; a second daemon for the same user finds it

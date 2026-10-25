@@ -51,7 +51,7 @@ pipewire-pulse drop-in, desktop entry, binaries, plugin host and other
 payload files. NixOS generates its user unit outside the package output;
 that declarative configuration belongs to NixOS, not to the package's
 receipt. Profiles, mixer settings, plugins installed separately by the
-user, runtime tokens and caches are user data, not installation payload.
+user, runtime sockets and caches are user data, not installation payload.
 
 Nix receipts use the read-only permissions the store applies when a build
 finishes. Package discovery follows profile links to the actual receipt,

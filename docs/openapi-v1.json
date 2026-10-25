@@ -6,12 +6,8 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:37890"
-    }
-  ],
-  "security": [
-    {
-      "localToken": []
+      "url": "http://localhost",
+      "description": "HTTP over the private Unix socket; this is not a TCP listener."
     }
   ],
   "paths": {
@@ -587,7 +583,7 @@
     },
     "/api/v1/events": {
       "get": {
-        "description": "WebSocket upgrade with no Authorization header. The socket is authenticated by its first frame, {\"cmd\":\"auth\",\"token\":\"<token>\"}, within five seconds; then the existing state, meters and command protocol apply. The token is the same one the HTTP routes take as a bearer.",
+        "description": "WebSocket upgrade over the private Unix socket, authenticated by Linux peer credentials before HTTP is read. State is sent immediately; there is no auth frame.",
         "responses": {
           "101": {
             "description": "WebSocket connected"
@@ -604,13 +600,6 @@
     }
   },
   "components": {
-    "securitySchemes": {
-      "localToken": {
-        "type": "http",
-        "scheme": "bearer",
-        "description": "Per-session token read from $XDG_RUNTIME_DIR/openxlr/token, or ~/.config/openxlr/token without a runtime directory; 64 hex characters."
-      }
-    },
     "schemas": {
       "CommandResult": {
         "type": "object",
@@ -639,5 +628,10 @@
         }
       }
     }
+  },
+  "x-unix-socket": {
+    "path": "$XDG_RUNTIME_DIR/openxlr/control.sock",
+    "fallback": "$XDG_CONFIG_HOME/openxlr/control.sock (default ~/.config)",
+    "authentication": "Linux SO_PEERCRED, same effective user as the daemon. No bearer header or auth frame."
   }
 }

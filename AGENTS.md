@@ -101,7 +101,7 @@ and [package checks](packaging/yabridge/README.md).
 - `src/OpenXLR.Core`: device protocols (`Devices/`), the PipeWire
   submixer (`Mixing/`), profiles, shared paths and the process runner.
 - `src/OpenXLR.Daemon`: the hosted service, WebSocket hub, command
-  validation, token, watchdog, and the focused-application query the
+  validation, Unix peer authentication, watchdog, and the focused-application query the
   daemon puts to the UI through `gdbus`.
 - `src/OpenXLR.UI`: the Avalonia UI, and the desktop portal and compositor
   connections behind desktop keys (`DesktopBus.cs`, `DesktopKeys.cs`,

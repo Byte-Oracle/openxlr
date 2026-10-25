@@ -26,9 +26,9 @@ flowchart TD
   mixer service, additional interfaces; under Flatpak a parent-process
   wait takes the watchdog's place. The content root is the install directory, whatever the
   working directory. The WebSocket endpoints and HTTP API share one
-  dispatcher on `127.0.0.1:37890`. Clients authenticate with a private
-  per-run token; browser Origins, command sizes and rates are checked as
-  well.
+  dispatcher over the private Unix socket. The transport verifies Linux
+  peer credentials before it reads HTTP; browser Origins, command sizes
+  and rates are checked as well.
 - `OpenXLR.UI` is an Avalonia client with no Core assembly dependency. It
   parses state and sends commands. It also manages local UI preferences,
   autostart and the daemon service, collects diagnostics, and optionally
@@ -55,7 +55,7 @@ flowchart TD
   host processes plugin audio without passing samples through managed code.
 
 Configuration lives in `$XDG_CONFIG_HOME/openxlr` (default `~/.config/openxlr`).
-The token and instance lock live in `$XDG_RUNTIME_DIR/openxlr`, falling back
+The control socket and instance lock live in `$XDG_RUNTIME_DIR/openxlr`, falling back
 to the configuration directory when unavailable. See [api.md](api.md) for
 file names and [http-api.md](http-api.md) for transport limits.
 

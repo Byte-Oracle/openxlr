@@ -4,10 +4,9 @@
 // and dials stay in sync with the UI (and with the hardware) for free.
 
 import process from "node:process";
+import {ControlSocket} from "./control-socket.mjs";
 import { KeyCommands } from "./key-commands.mjs";
 import { channelName, mixName, mixShortName, defaultMonitorMix, monitorFeed, layoutChoices, controllableOutputs, outputKey, targetAppearance, openGroupMember } from "./layout-choices.mjs";
-import fs from "node:fs";
-import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
 import { captureGainOf, channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, duckingToggle, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
 
@@ -75,24 +74,14 @@ function scheduleDaemonReconnect(generation) {
   reconnectDelayMs = Math.min(reconnectDelayMs * 2, 10000);
 }
 
-// The daemon writes a fresh token at every start; it is the first message
-// on every connection, or the daemon sends nothing.
-function readDaemonToken() {
-  const run = process.env.XDG_RUNTIME_DIR;
-  const cfg = process.env.XDG_CONFIG_HOME || `${os.homedir()}/.config`;
-  const path = run ? `${run}/openxlr/token` : `${cfg}/openxlr/token`;
-  try { return fs.readFileSync(path, "utf8").trim(); } catch { return ""; }
-}
-
 function connectDaemon() {
-  const socket = new WebSocket("ws://127.0.0.1:37890/ws");
+  const socket = new ControlSocket();
   const generation = ++connectionGeneration;
   daemon = socket;
   socket.onopen = () => {
     if (daemon !== socket) return;
     daemonUp = true;
     reconnectDelayMs = 500;
-    cmd({ cmd: "auth", token: readDaemonToken() });
     cmd({ cmd: "listPlugins" });
     refreshAll();
   };
@@ -117,13 +106,11 @@ function connectDaemon() {
     refreshAll();
     scheduleDaemonReconnect(generation);
   };
-  socket.onerror = () => { /* onclose follows */ };
 }
 const cmd = (o) => {
   if (!daemonUp || !daemon || daemon.readyState !== WebSocket.OPEN) return false;
   try {
-    daemon.send(JSON.stringify(o));
-    return true;
+    return daemon.send(JSON.stringify(o)) !== false;
   } catch {
     daemonUp = false;
     try { daemon.close(); } catch { /* onclose/retry handles the rest */ }

@@ -89,7 +89,6 @@ public sealed class BrowserNativeHostTests
         var enabled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
-            await SocketTestServer.Receive(socket, stop);
             await SocketTestServer.Send(socket, State(session), stop);
             while (!stop.IsCancellationRequested)
             {
@@ -143,7 +142,6 @@ public sealed class BrowserNativeHostTests
         var registered = new TaskCompletionSource<JsonArray>(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
-            await SocketTestServer.Receive(socket, stop);
             await SocketTestServer.Send(socket, State(session), stop);
             while (!stop.IsCancellationRequested)
             {
@@ -269,7 +267,6 @@ public sealed class BrowserNativeHostTests
         {
             int connection = Interlocked.Increment(ref connections);
             string session = new(connection == 1 ? 'a' : 'b', 32);
-            Assert.Equal("auth", (await SocketTestServer.Receive(socket, stop))["cmd"]!.GetValue<string>());
             await SocketTestServer.Send(socket, State(session), stop);
             while (!stop.IsCancellationRequested)
             {
@@ -337,7 +334,6 @@ public sealed class BrowserNativeHostTests
         {
             try
             {
-                await SocketTestServer.Receive(socket, stop);
                 await SocketTestServer.Send(socket, State(new string('a', 32)), stop);
                 while (!stop.IsCancellationRequested)
                 {
@@ -383,7 +379,6 @@ public sealed class BrowserNativeHostTests
         {
             if (Interlocked.Increment(ref connections) > 1) { await Task.Delay(Timeout.Infinite, stop); return; }
             string session = new('a', 32);
-            await SocketTestServer.Receive(socket, stop);
             await SocketTestServer.Send(socket, State(session), stop);
             while (!stop.IsCancellationRequested)
             {
@@ -453,7 +448,6 @@ public sealed class BrowserNativeHostTests
         {
             try
             {
-                await SocketTestServer.Receive(socket, stop);
                 await SocketTestServer.Send(socket, State(new string('a', 32)), stop);
                 while (!stop.IsCancellationRequested)
                 {
@@ -501,7 +495,6 @@ public sealed class BrowserNativeHostTests
         string session = new('a', 32);
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
-            await SocketTestServer.Receive(socket, stop);
             connected.TrySetResult(socket);
             while (!stop.IsCancellationRequested)
             {
@@ -603,7 +596,6 @@ public sealed class BrowserNativeHostTests
         {
             int connection = Interlocked.Increment(ref connections);
             string session = new(connection == 1 ? 'a' : 'b', 32);
-            await SocketTestServer.Receive(socket, stop);
             socketReady.TrySetResult(socket);
             await Send(socket, State(session), stop);
             while (!stop.IsCancellationRequested)
@@ -754,7 +746,6 @@ public sealed class BrowserNativeHostTests
         }
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
-            await SocketTestServer.Receive(socket, stop);
             socketReady.TrySetResult(socket);
             await Send(socket, State(session), stop);
             while (!stop.IsCancellationRequested)
@@ -822,7 +813,6 @@ public sealed class BrowserNativeHostTests
         {
             int connection = Interlocked.Increment(ref connections);
             string session = new(connection == 1 ? 'a' : 'b', 32);
-            await SocketTestServer.Receive(socket, stop);
             await SocketTestServer.Send(socket, State(session), stop);
             while (!stop.IsCancellationRequested)
             {
@@ -920,7 +910,6 @@ public sealed class BrowserNativeHostTests
         {
             if (Interlocked.Increment(ref connections) > 1) { await Task.Delay(Timeout.Infinite, stop); return; }
             string session = new('a', 32);
-            await SocketTestServer.Receive(socket, stop);
             await SocketTestServer.Send(socket, State(session), stop);
             while (!stop.IsCancellationRequested)
             {

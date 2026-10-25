@@ -63,7 +63,6 @@ internal static class PluginCatalogueUiTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 Assert.Equal("listPlugins", command["cmd"]!.GetValue<string>());
                 int generation = ++requests;
                 await SocketTestServer.Send(socket, new
@@ -119,7 +118,6 @@ internal static class PluginCatalogueUiTests
                 while (!stop.IsCancellationRequested)
                 {
                     var command = await SocketTestServer.Receive(socket, stop);
-                    if (command["cmd"]!.GetValue<string>() == "auth") continue;
                     Assert.Equal("listPlugins", command["cmd"]!.GetValue<string>());
                     bool first = ++requests == 1;
                     if (first) { received.TrySetResult(); await release.Task.WaitAsync(stop); }

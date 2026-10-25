@@ -21,7 +21,6 @@ public sealed class BrowserSessionSocketTests
         Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", directory);
         try
         {
-            ApiToken.Initialize();
             var config = new ConfigurationBuilder().Build();
             using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => []);
             using var service = new MixerService(NullLogger<MixerService>.Instance, config, devices);
@@ -41,8 +40,6 @@ public sealed class BrowserSessionSocketTests
             {
                 await first.ConnectAsync(new Uri(server.Url), deadline.Token);
                 await second.ConnectAsync(new Uri(server.Url), deadline.Token);
-                await SocketTestServer.Send(first, new { cmd = "auth", token = ApiToken.Current }, deadline.Token);
-                await SocketTestServer.Send(second, new { cmd = "auth", token = ApiToken.Current }, deadline.Token);
                 var one = await Query(first, new { cmd = "getBrowserSession" }, deadline.Token);
                 var two = await Query(second, new { cmd = "getBrowserSession" }, deadline.Token);
                 string session = one.Single(m => m["type"]?.GetValue<string>() == "browserSession")["session"]!.GetValue<string>();
@@ -80,7 +77,6 @@ public sealed class BrowserSessionSocketTests
         Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", directory);
         try
         {
-            ApiToken.Initialize();
             var config = new ConfigurationBuilder().Build();
             using var devices = new DeviceManager(NullLogger<DeviceManager>.Instance, config, () => []);
             using var service = new MixerService(NullLogger<MixerService>.Instance, config, devices);
@@ -95,8 +91,6 @@ public sealed class BrowserSessionSocketTests
             {
                 await companion.ConnectAsync(new Uri(server.Url), deadline.Token);
                 await controller.ConnectAsync(new Uri(server.Url), deadline.Token);
-                await SocketTestServer.Send(companion, new { cmd = "auth", token = ApiToken.Current }, deadline.Token);
-                await SocketTestServer.Send(controller, new { cmd = "auth", token = ApiToken.Current }, deadline.Token);
                 string session = (await Query(companion, new { cmd = "getBrowserSession" }, deadline.Token))
                     .Single(m => m["type"]?.GetValue<string>() == "browserSession")["session"]!.GetValue<string>();
                 await Query(companion, new { cmd = "syncBrowserTabs", session, tabs = new[] { new { id = 1, site = "https://teams.microsoft.com", title = "Call", capturing = false } } }, deadline.Token);

@@ -1,3 +1,4 @@
+import {controlFixture} from "./control-fixture.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -27,10 +28,11 @@ test("hardware keys stay unit controls and are named after the carrying channel"
   }
   globalThis.WebSocket = Socket;
   const svg = (uri) => Buffer.from(uri.split(",")[1], "base64").toString();
+  const control = controlFixture();
   try {
     await import("../com.emaspa.openxlr.sdPlugin/plugin.mjs");
-    const daemon = sockets.find(socket => socket.url.includes(":37890/"));
-    const host = sockets.find(socket => socket !== daemon);
+    const daemon = control.children[0];
+    const host = sockets[0];
     daemon.onopen();
     const unit = "0fd9:00b4@0123456789abcdef";
     const state = {type:"state", connected:true, profiles:[],

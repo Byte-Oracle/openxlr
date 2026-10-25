@@ -6,7 +6,7 @@ using OpenXLR.Core.Mixing;
 namespace OpenXLR.Daemon;
 
 // The OpenXLR daemon control protocol: JSON messages over a WebSocket at
-// ws://127.0.0.1:37890/ws. Clients (Avalonia UI, OpenDeck plugin, CLI) connect,
+// the private Unix socket, using /ws. Clients (Avalonia UI, OpenDeck plugin, CLI) connect,
 // receive a "state" message immediately and on every change, and send commands.
 // One connection carries both the hardware controls and the submixer, so a
 // fader move by one client is broadcast to all. camelCase on the wire.

@@ -121,7 +121,6 @@ public sealed class SoundCheckTests
             for (int i = 0; i < 2;)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 int index = i++;
                 received[index].TrySetResult();
                 replies.Add(Reply());

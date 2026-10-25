@@ -88,7 +88,6 @@ internal static class SoundCheckWindowTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 Assert.Equal("stop", command["action"]!.GetValue<string>());
                 received.TrySetResult();
                 await release.Task.WaitAsync(stop);

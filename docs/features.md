@@ -843,8 +843,8 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   Other desktops keep a range per control.
 
 - The control API validates every command before the mixer sees it and
-  answers with an error instead of ignoring it. A private token is required
-  before any state is sent or command executed; clients are rate-limited
+  answers with an error instead of ignoring it. The Unix socket checks Linux peer credentials
+  before any HTTP or WebSocket data is read; clients are rate-limited
   and browser pages from other origins are refused; see
   [api.md](api.md). The same commands are served over HTTP at `/api/v1`
   with an OpenAPI document ([http-api.md](http-api.md)), next to read
