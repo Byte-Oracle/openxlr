@@ -81,7 +81,7 @@
     <value>Interfacce aggiuntive</value>
   </data>
   <data name="AdditionalInterfacesHint" xml:space="preserve">
-    <value>L'interfaccia principale fornisce il segnale a XLR 1 e alle strisce hardware. Attiva qui fino a quattro unità in più per controllarle insieme a essa, poi aggiungi ogni microfono come canale di acquisizione.</value>
+    <value>L'interfaccia principale fornisce il segnale a XLR 1 e alle strisce hardware. Attiva qui fino a quattro unità in più per controllarle insieme a essa, poi aggiungi ogni microfono come canale.</value>
   </data>
   <data name="AffectsSystemYabridge" xml:space="preserve">
     <value>Questo vale anche per le altre applicazioni che usano yabridge di sistema.</value>
@@ -180,25 +180,25 @@
     <value>La voce di avvio automatico del mixer è stata rimossa al di fuori di OpenXLR, quindi non è stata ricreata. Disattiva e riattiva questa opzione per crearla.</value>
   </data>
   <data name="BridgeAgainEveryFolderYabridgeKnowsForWindows" xml:space="preserve">
-    <value>Ricollega ogni cartella nota a yabridge, per i plugin Windows installati nel frattempo</value>
+    <value>Rifai il bridge di ogni cartella nota a yabridge, per i plugin Windows installati nel frattempo</value>
   </data>
   <data name="BridgeWinePluginFolders" xml:space="preserve">
-    <value>Collega le cartelle dei plugin {0} di Wine</value>
+    <value>Crea il bridge delle cartelle dei plugin {0} di Wine</value>
   </data>
   <data name="BridgeWinePlugins" xml:space="preserve">
-    <value>Collega i plugin di Wine</value>
+    <value>Crea il bridge dei plugin di Wine</value>
   </data>
   <data name="BridgingWindowsPlugins" xml:space="preserve">
-    <value>Collegamento dei plugin Windows…</value>
+    <value>Bridge dei plugin Windows…</value>
   </data>
   <data name="BridgingWinePlugins" xml:space="preserve">
-    <value>Collegamento dei plugin di Wine…</value>
+    <value>Bridge dei plugin di Wine…</value>
   </data>
   <data name="BuyMeACoffee" xml:space="preserve">
     <value>Offrimi un caffè</value>
   </data>
   <data name="SupportMeOnKoFi" xml:space="preserve">
-    <value>Sostienimi su Ko-fi</value>
+    <value>Supportami su Ko-fi</value>
   </data>
   <data name="Bypass" xml:space="preserve">
     <value>Bypass</value>
@@ -243,7 +243,7 @@
     <value>Scollegato · porta {0}</value>
   </data>
   <data name="CaptureSourcePlaceholder" xml:space="preserve">
-    <value>Sorgente di acquisizione</value>
+    <value>Sorgente</value>
   </data>
   <data name="CatalogueNew" xml:space="preserve">
     <value>{0} plugin nuovi nel catalogo.</value>
@@ -310,7 +310,7 @@
     <value>Scegli un preset</value>
   </data>
   <data name="ChooseInterfaceSourceFirst" xml:space="preserve">
-    <value>Scegli prima la sorgente di acquisizione dell'interfaccia.</value>
+    <value>Scegli prima la sorgente dell'interfaccia.</value>
   </data>
   <data name="ChoosePresetForEffect" xml:space="preserve">
     <value>Scegli un preset per questo effetto su un canale attivo.</value>
@@ -472,7 +472,7 @@
     <value>I programmi instradati qui passano a {0}. Il suo dispositivo di riproduzione scompare dal desktop.</value>
   </data>
   <data name="DeleteCaptureChannelDetail" xml:space="preserve">
-    <value>L'ingresso di acquisizione e le sue mandate vengono rimossi. Il dispositivo sorgente resta disponibile per le altre applicazioni.</value>
+    <value>L'ingresso e le sue mandate vengono rimossi. Il dispositivo sorgente resta disponibile per le altre applicazioni.</value>
   </data>
   <data name="DeleteChainPresetDetail" xml:space="preserve">
     <value>Eliminare il preset salvato '{0}'? La catena attiva viene mantenuta.</value>
@@ -682,7 +682,7 @@
     <value>Gruppi esclusivi</value>
   </data>
   <data name="ExclusiveGroupsIntro" xml:space="preserve">
-    <value>Di un gruppo si sente un solo canale. Riattivare l'audio di un membro in un mix silenzia gli altri membri in tutti i mix; i loro livelli restano invariati.</value>
+    <value>Di un gruppo si sente un solo canale. Smutare un membro in un mix silenzia gli altri membri in tutti i mix; i loro livelli restano invariati.</value>
   </data>
   <data name="ExclusiveGroupsInvalid" xml:space="preserve">
     <value>Inserisci un nome e scegli almeno due canali.</value>
@@ -691,7 +691,7 @@
     <value>Su un Wave XLR Pro, XLR 1 in un gruppo raggiunge le uscite cuffie passando dal mixer invece che dal percorso a latenza zero dell'interfaccia.</value>
   </data>
   <data name="ExclusiveGroupsRules" xml:space="preserve">
-    <value>Scegli almeno due canali. Un canale appartiene al massimo a un gruppo. Se al salvataggio più di un membro non è silenziato, tutti i membri vengono silenziati e riattivi tu quello che vuoi. Eliminare un gruppo lascia i muti come sono.</value>
+    <value>Scegli almeno due canali. Un canale appartiene al massimo a un gruppo. Se al salvataggio più di un membro non è silenziato, tutti i membri vengono silenziati e smuti tu quello che vuoi. Eliminare un gruppo lascia i muti come sono.</value>
   </data>
   <data name="Expander" xml:space="preserve">
     <value>Expander</value>
@@ -751,7 +751,7 @@
     <value>Vol {0}</value>
   </data>
   <data name="FoldersBridged" xml:space="preserve">
-    <value>{0} cartelle collegate</value>
+    <value>{0} cartelle con bridge</value>
   </data>
   <data name="FollowMonitorOutput" xml:space="preserve">
     <value>Segui l'uscita MONITOR (controlli del volume di sistema)</value>
@@ -763,7 +763,7 @@
     <value>Dimentica</value>
   </data>
   <data name="ForReproducingABridgedPluginFailureForA" xml:space="preserve">
-    <value>Serve a riprodurre un errore di un plugin collegato per una segnalazione di bug. Le scansioni diventano molto più lente e producono log di grandi dimensioni. Attivala, premi Ripeti scansione in PLUGIN, attendi che finisca, raccogli la diagnostica, poi disattivala. La nuova scansione riprova i bundle non riusciti; i bundle riusciti e invariati restano in cache.</value>
+    <value>Serve a riprodurre un errore di un plugin con bridge per una segnalazione di bug. Le scansioni diventano molto più lente e producono log di grandi dimensioni. Attivala, premi Ripeti scansione in PLUGIN, attendi che finisca, raccogli la diagnostica, poi disattivala. La nuova scansione riprova i bundle non riusciti; i bundle riusciti e invariati restano in cache.</value>
   </data>
   <data name="FrontJack" xml:space="preserve">
     <value>Presa frontale</value>
@@ -892,7 +892,7 @@
     <value>INTERFACCIA</value>
   </data>
   <data name="InterfaceCaptureSource" xml:space="preserve">
-    <value>Sorgente di acquisizione</value>
+    <value>Sorgente</value>
   </data>
   <data name="InterfaceChannelName" xml:space="preserve">
     <value>Nome del canale</value>
@@ -1177,7 +1177,7 @@
     <value>Nessun dispositivo</value>
   </data>
   <data name="NoFolderBridged" xml:space="preserve">
-    <value>nessuna cartella ancora collegata</value>
+    <value>nessuna cartella ancora con bridge</value>
   </data>
   <data name="NoInsertsYet" xml:space="preserve">
     <value>Ancora nessun insert.</value>
@@ -1231,7 +1231,7 @@
     <value>Alla connessione</value>
   </data>
   <data name="OneFolderBridged" xml:space="preserve">
-    <value>1 cartella collegata</value>
+    <value>1 cartella con bridge</value>
   </data>
   <data name="OnePlugin" xml:space="preserve">
     <value>1 plugin</value>
@@ -1622,7 +1622,7 @@ Il salvataggio lo sostituirà con la scena attuale.</value>
     <value>I programmi che riproducono su questo canale continuano a suonare; il dispositivo di riproduzione mostra subito il nuovo nome.</value>
   </data>
   <data name="RenameCaptureChannelHint" xml:space="preserve">
-    <value>La sorgente di acquisizione e l'instradamento del canale restano invariati.</value>
+    <value>La sorgente e l'instradamento del canale restano invariati.</value>
   </data>
   <data name="RenameChannelTitle" xml:space="preserve">
     <value>Rinomina il canale '{0}'</value>
@@ -1998,7 +1998,7 @@ Seleziona l'interfaccia gestita da OpenXLR</value>
     <value>Il canale mostrato da questa vista. Qui si possono scegliere anche i canali nascosti.</value>
   </data>
   <data name="TheDeviceMutesThisInputForAbout13" xml:space="preserve">
-    <value>Il dispositivo silenzia questo ingresso per circa 13 secondi a ogni cambio dei 48V e poi lo riattiva da solo</value>
+    <value>Il dispositivo silenzia questo ingresso per circa 13 secondi a ogni cambio dei 48V e poi lo smuta da solo</value>
   </data>
   <data name="TheMixThisViewShowsItsMaster" xml:space="preserve">
     <value>Il mix mostrato da questa vista: il suo master e la mandata del canale verso di esso</value>
@@ -2349,7 +2349,7 @@ Seleziona l'interfaccia gestita da OpenXLR</value>
     <value>Ingresso per {0}</value>
   </data>
   <data name="InputBindingHint" xml:space="preserve">
-    <value>Scegli da dove arriva il segnale di {0}: la presa dell'interfaccia, o una porta di un'altra sorgente di acquisizione. L'interfaccia resta gestita, e i suoi controlli passano al canale che porta il suo microfono. Dopo una modifica, {0} parte silenziato nei mix monitor. Il segnale può arrivare anche dal microfono di un'altra interfaccia Elgato, con i controlli di quell'interfaccia sulla striscia mentre OpenXLR la gestisce.</value>
+    <value>Scegli da dove arriva il segnale di {0}: la presa dell'interfaccia, o una porta di un'altra sorgente. L'interfaccia resta gestita, e i suoi controlli passano al canale che porta il suo microfono. Dopo una modifica, {0} parte silenziato nei mix monitor. Il segnale può arrivare anche dal microfono di un'altra interfaccia Elgato, con i controlli di quell'interfaccia sulla striscia mentre OpenXLR la gestisce.</value>
   </data>
   <data name="InputBindingInterfaceJack" xml:space="preserve">
     <value>Presa dell'interfaccia (XLR {0})</value>
@@ -2376,7 +2376,7 @@ Seleziona l'interfaccia gestita da OpenXLR</value>
     <value>Una cuffia Bluetooth passa al profilo headset mentre fornisce il segnale a questa striscia, e la sua qualità di riproduzione si abbassa finché la striscia non prende un'altra sorgente.</value>
   </data>
   <data name="InputBindingKeepFailed" xml:space="preserve">
-    <value>{0} è associato, ma non è stato possibile aggiungere il canale di acquisizione per il microfono dell'interfaccia: {1}</value>
+    <value>{0} è associato, ma non è stato possibile aggiungere il canale per il microfono dell'interfaccia: {1}</value>
   </data>
   <data name="AlsoDriveThisInterface" xml:space="preserve">
     <value>Gestisci anche questa interfaccia</value>
@@ -2731,13 +2731,13 @@ Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Inst
     <value>Disattiva interfaccia</value>
   </data>
   <data name="DisableInterfaceCaptureDetail" xml:space="preserve">
-    <value>Smettere di gestire {0}? I suoi ingressi di acquisizione e le loro catene di insert verranno eliminati, a meno che tu non li mantenga. Gli ingressi mantenuti suonano finché la loro sorgente è disponibile.</value>
+    <value>Smettere di gestire {0}? I suoi ingressi e le loro catene di insert verranno eliminati, a meno che tu non li mantenga. Gli ingressi mantenuti suonano finché la loro sorgente è disponibile.</value>
   </data>
   <data name="KeepInterfaceCaptureChannels" xml:space="preserve">
-    <value>Mantieni gli ingressi di acquisizione e le loro catene</value>
+    <value>Mantieni gli ingressi e le loro catene</value>
   </data>
   <data name="DisableInterfaceCaptureDeleteDetail" xml:space="preserve">
-    <value>Smettere di gestire {0}? I suoi ingressi di acquisizione e le loro catene di insert verranno eliminati. Questo demone non dichiara di supportarne il mantenimento.</value>
+    <value>Smettere di gestire {0}? I suoi ingressi e le loro catene di insert verranno eliminati. Questo demone non dichiara di supportarne il mantenimento.</value>
   </data>
   <data name="Ducking" xml:space="preserve">
     <value>Ducking</value>
@@ -2965,7 +2965,7 @@ Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Inst
     <value>Silenzia le mandate del microfono con il monitoraggio</value>
   </data>
   <data name="MuteMicrophoneSendsWithMonitoringHint" xml:space="preserve">
-    <value>Mette in pausa anche le mandate XLR e di acquisizione mono verso tutti i mix OpenXLR, incluse le registrazioni instradate. Riattivare l'audio di un monitor riprende queste mandate. Le app che registrano direttamente la sorgente fisica non ne risentono.</value>
+    <value>Mette in pausa anche le mandate XLR e degli ingressi mono verso tutti i mix OpenXLR, incluse le registrazioni instradate. Smutare un monitor riprende queste mandate. Le app che registrano direttamente la sorgente fisica non ne risentono.</value>
   </data>
   <data name="MicrophonePausePendingNote" xml:space="preserve">
     <value>Lo stato dell'audio del microfono non è ancora confermato. L'audio potrebbe ancora raggiungere i mix OpenXLR. Verifica prima di fare affidamento sul silenziamento del microfono.</value>
