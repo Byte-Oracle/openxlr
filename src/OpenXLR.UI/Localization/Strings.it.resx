@@ -964,13 +964,13 @@
     <value>Blocco livello</value>
   </data>
   <data name="LineIn" xml:space="preserve">
-    <value>Line In</value>
+    <value>Ingresso linea</value>
   </data>
   <data name="LineInGain" xml:space="preserve">
-    <value>Guad. Line In</value>
+    <value>Guad. ingresso linea</value>
   </data>
   <data name="LineInJack" xml:space="preserve">
-    <value>Presa Line In</value>
+    <value>Presa ingresso linea</value>
   </data>
   <data name="LoadPreset" xml:space="preserve">
     <value>Carica preset</value>
