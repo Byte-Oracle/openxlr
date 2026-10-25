@@ -157,8 +157,12 @@ public sealed class MixMatrixTests
         Assert.Contains(nameof(MatrixRowViewModel.Readout), raised);
         Assert.Equal("31 dB", xlr1.Readout);
 
-        // The volume while its fader moves, following it, then the gain again.
+        // The volume while its fader moves, following it, then the gain again
+        // once the hold after the fader stops has run out.
+        var hold = new ManualHold();
+        xlr1.Channel.StartReadoutHold = hold.Start;
         xlr1.VolumeAdjusting = true;
+        Assert.True(xlr1.Channel.VolumeAdjusting);
         Assert.Equal("70%", xlr1.Readout);
         Assert.Equal(Localizer.Format("ChannelVolumeName", "XLR 1"), xlr1.ReadoutName);
         raised.Clear();
@@ -166,6 +170,9 @@ public sealed class MixMatrixTests
         Assert.Contains(nameof(MatrixRowViewModel.Readout), raised);
         Assert.Equal("50%", xlr1.Readout);
         xlr1.VolumeAdjusting = false;
+        Assert.Equal("50%", xlr1.Readout);
+        Assert.Equal(ChannelViewModel.VolumeReadoutHold, Assert.Single(hold.Handles).After);
+        hold.Handles[0].Elapse();
         Assert.Equal("31 dB", xlr1.Readout);
 
         // Rows without the interface's gain have no readout.

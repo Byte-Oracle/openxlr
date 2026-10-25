@@ -38,12 +38,13 @@ internal sealed record FlowGraph(IReadOnlyList<FlowNode> Nodes, IReadOnlyList<Fl
                     channel.BindingWarning ?? (channel.BindingConnected
                         ? Localizer.Format("CaptureConnectedPort", binding.Port + 1) : Localizer.Format("CaptureOfflinePort", binding.Port + 1)),
                     FlowIcon.Microphone, channel.BindingConnected));
-            else if (channel.Id is "xlr1" or "xlr2" or "aux")
+            else if (channel.Id is "xlr1" or "xlr2" or "aux" or "line")
                 sources.Add(($"hw:{channel.Id}", channel.Id switch
                 {
                     // A USB microphone's input is its capsule, not a jack.
                     "xlr1" or "xlr2" when !vm.UnitXlrJacks => Localizer.Text("UnitCapsule"),
-                    "xlr1" => Localizer.Text("Xlr1Jack"), "xlr2" => Localizer.Text("Xlr2Jack"), _ => Localizer.Text("LineInUsbAux"),
+                    "xlr1" => Localizer.Text("Xlr1Jack"), "xlr2" => Localizer.Text("Xlr2Jack"),
+                    "line" => Localizer.Text("LineInJack"), _ => Localizer.Text("USBAuxIn"),
                 }, Localizer.Text("FlowHardware"), FlowIcon.Microphone, true));
             if (channel.CaptureSource is { } capture)
                 sources.Add(($"capture:{channel.Id}", capture, channel.CaptureLabel,

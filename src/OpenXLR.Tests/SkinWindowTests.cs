@@ -59,6 +59,7 @@ public sealed partial class SkinWindowTests
             TheOptionsColumnsCarryABalancedShareOfTheCards(options);
             TheWindowActuallyRepaintsWhenTheSkinChanges(main);
             ASkinCanLeaveTheBindingOut();
+            TheInputReadoutsWearTheSkin();
             CaptureChainsUseTheRackAndMatrixParts();
             AnAdditionalUnitsControlsFollowTheStripsOwnParts();
             AppearanceModeWindowTests.Check(main, options, flow);

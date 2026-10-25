@@ -343,6 +343,7 @@ public sealed partial class MainViewModel
             : UnitInput1.Carrier is { } elsewhere ? Localizer.Format("CrossfadeMicPlaysOn", elsewhere.Name)
             : Localizer.Text("CrossfadeMicNotInMixer");
         Raise(nameof(ShowDeviceStatus));
+        RefreshInputStrips();
     }
 
     /// <summary>The channel that carries the primary unit's input, by the daemon's word or, failing it, the strip on the interface.</summary>

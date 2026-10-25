@@ -44,6 +44,7 @@ public sealed class StripTemplateSelector : IDataTemplate
         InputStripKind.Xlr1 => "xlr1",
         InputStripKind.Xlr2 => "xlr2",
         InputStripKind.AuxIn => "aux",
+        InputStripKind.LineIn => "line",
         _ => "channel",
     };
 }

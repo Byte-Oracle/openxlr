@@ -17,8 +17,10 @@ public enum InputStripKind
     Xlr1,
     /// <summary>The second XLR input, on an interface with two or bound to a source.</summary>
     Xlr2,
-    /// <summary>The USB Aux and Line In stage: its level and level lock.</summary>
+    /// <summary>The USB Aux input stage: its level and level lock.</summary>
     AuxIn,
+    /// <summary>The Wave XLR Pro's analog Line In: its gain.</summary>
+    LineIn,
     /// <summary>A channel applications play into: its name and meter.</summary>
     Application,
     /// <summary>A channel bound to another capture device: its name and meter, and the interface's controls when it carries the interface's microphone.</summary>
@@ -27,7 +29,7 @@ public enum InputStripKind
 
 /// <summary>
 /// INPUTS as a rack: one strip per channel, in the mixer's channel order. A
-/// strip for an XLR input or the Aux In stage stands for the hardware
+/// strip for an XLR input, the Aux In stage or the Line In stands for the hardware
 /// controls the INPUTS panel has always shown for it, bound to the same
 /// <see cref="MainViewModel"/> properties, so every capability, lock and
 /// phantom settling rule there applies here unchanged. The interface's
@@ -79,6 +81,7 @@ public sealed class InputRackViewModel : IDisposable
     {
         InputStripKind.Xlr1 or InputStripKind.Xlr2 => SkinStripParts.InputRow,
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
+        InputStripKind.LineIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
         // A capture channel has its source chip and its chain, and the interface's
         // gain and switches while it carries the interface's microphone.
         InputStripKind.Capture => SkinStripParts.InputRow,
@@ -92,6 +95,7 @@ public sealed class InputRackViewModel : IDisposable
         { IsHardware: true, Id: "xlr1" } => InputStripKind.Xlr1,
         { IsHardware: true, Id: "xlr2" } => InputStripKind.Xlr2,
         { IsHardware: true, Id: "aux" } => InputStripKind.AuxIn,
+        { IsHardware: true, Id: "line" } => InputStripKind.LineIn,
         { CaptureSource: not null } => InputStripKind.Capture,
         _ => InputStripKind.Application,
     };
@@ -185,6 +189,7 @@ public sealed class InputStripViewModel : ViewModelBase
         (InputStripKind.Xlr1 or InputStripKind.Xlr2, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
         (InputStripKind.Xlr2 or InputStripKind.Capture, SkinStripParts.HardwareControls) => CarriesUnit || CarriesExtraUnit,
         (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume,
+        (InputStripKind.LineIn, SkinStripParts.Gain) => Main.CapLineInput || Channel.HasVolume,
         (InputStripKind.Capture, SkinStripParts.Binding) => CapturePartOrdered(part),
         (InputStripKind.Capture, SkinStripParts.Effects) => Channel.HasInserts && CapturePartOrdered(part),
         _ => true,
@@ -204,7 +209,7 @@ public sealed class InputStripViewModel : ViewModelBase
     /// <summary>The strip draws an additional interface's gain and switches.</summary>
     public bool CarriesExtraUnit => Channel.CarriesExtraUnit;
 
-    /// <summary>The strip draws the channel's own volume, under the interface's gain or Aux In level where it has one.</summary>
+    /// <summary>The strip draws the channel's own volume, under the interface's gain, Aux In's level or Line In's gain where it has one.</summary>
     public bool ShowsVolume => Channel.HasVolume;
 
     internal void RefreshSpec()
@@ -281,6 +286,7 @@ public sealed class InputStripViewModel : ViewModelBase
     private void OnMainChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MainViewModel.HasXlr2) && Kind == InputStripKind.Xlr2) Raise(nameof(Shown));
+        if (e.PropertyName is nameof(MainViewModel.CapLineInput) && Kind == InputStripKind.LineIn) RefreshSpec();
     }
 
     private void OnAppearanceChanged(object? sender, PropertyChangedEventArgs e)

@@ -45,10 +45,15 @@ internal static partial class SkinLayoutWindowTests
         Assert.True(readout.IsEffectivelyVisible);
         Assert.Equal(model.GainText, readout.Text);
         Slider volume = RowHead(window, "xlr1").GetVisualDescendants().OfType<Slider>().Single(s => s.Name == "MatrixVolume");
+        var hold = new ManualHold();
+        xlr1.Channel.StartReadoutHold = hold.Start;
         FaderInput.SetIsAdjusting(volume, true);
         Assert.True(xlr1.VolumeAdjusting);
         Assert.Equal(xlr1.Channel.VolumeText, readout.Text);
+        // It keeps the volume for the hold after the fader stops, then reads the gain again.
         FaderInput.SetIsAdjusting(volume, false);
+        Assert.Equal(xlr1.Channel.VolumeText, readout.Text);
+        Assert.Single(hold.Handles).Elapse();
         Assert.Equal(model.GainText, readout.Text);
         // The interface has phantom power, so its lamp is there, dark.
         Assert.True(Phantom(button).IsEffectivelyVisible);
