@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.2.3
+Version: 0.2.4
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
 License:        GPL-3.0-only
@@ -187,6 +187,13 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Sun Oct 25 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.4-1
+- Mixer: internal effect stages are no longer offered as microphones or outputs, and the sweep holds them at full volume.
+- Devices: the Wave XLR Pro's headphone jacks play the Monitor mix at 0 dB even when Wave Link left that level lower on the unit.
+- Plugins: a native plugin host that sees NaN or infinite samples silences the block and is restarted under the chain's restart limit.
+- Sound Check: a session the plugin host ends says the host's last message, in the UI and in the daemon log.
+- Diagnostics: the archive records the UI's and the daemon's full build versions, with the source commit when the build has one.
+
 * Sat Oct 24 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.3-1
 - Devices: the Wave XLR keeps its ALSA mute and headphone controls in step with the unit, and its capture volume at the unit's gain, as the Wave:3 does; a missing amixer no longer stops polling.
 - UI: Restart daemon recovers a service stopped by systemd's start limit, and the software mixer switch restarts in the background.

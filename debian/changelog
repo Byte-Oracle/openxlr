@@ -1,3 +1,13 @@
+openxlr (0.2.4) resolute; urgency=medium
+
+  * Mixer: internal effect stages are no longer offered as microphones or outputs, and the sweep holds them at full volume.
+  * Devices: the Wave XLR Pro's headphone jacks play the Monitor mix at 0 dB even when Wave Link left that level lower on the unit.
+  * Plugins: a native plugin host that sees NaN or infinite samples silences the block and is restarted under the chain's restart limit.
+  * Sound Check: a session the plugin host ends says the host's last message, in the UI and in the daemon log.
+  * Diagnostics: the archive records the UI's and the daemon's full build versions, with the source commit when the build has one.
+
+ -- Emanuele Sparvoli <sparvoli@gmail.com>  Sun, 25 Oct 2026 06:52:52 +0000
+
 openxlr (0.2.3) resolute; urgency=medium
 
   * Devices: the Wave XLR keeps its ALSA mute and headphone controls in step with the unit, and its capture volume at the unit's gain, as the Wave:3 does; a missing amixer no longer stops polling.
