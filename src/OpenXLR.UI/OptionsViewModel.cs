@@ -593,6 +593,15 @@ public sealed class OptionsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>The main window can change its view while Options stays open.</summary>
+    internal void RefreshMixerView()
+    {
+        bool applying = _applying;
+        _applying = true;
+        try { SelectedMixerView = MixerViewChoices.First(c => c.Id == _main.MixerView); }
+        finally { _applying = applying; }
+    }
+
     /// <summary>Follow the desktop, then every language the window ships, each named in itself.</summary>
     public System.Collections.Generic.IReadOnlyList<LanguageChoice> LanguageChoices { get; } =
     [

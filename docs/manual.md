@@ -24,6 +24,11 @@ The UI
 (`openxlr`) shows and changes what the daemon holds; closing it changes
 nothing.
 
+The gear in the header opens Options in its own window, so you can keep
+using the mixer while adjusting settings. Pressing the gear again brings
+the same Options window forward, restoring it if minimized. Closing
+Options leaves the mixer running; quitting OpenXLR closes both windows.
+
 When the daemon starts with the submixer on (the default), these things
 happen on your system:
 
