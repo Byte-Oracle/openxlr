@@ -3165,12 +3165,19 @@ For audio glitches, collect while the problem is present and before restarting
 the daemon, if possible. Collection reads the current state without changing
 audio, recording samples or starting plugins. The extra reports are:
 
+- `usb-topology.txt`: `lsusb -t`, showing USB port and hub relationships,
+  drivers and connection speeds. Match bus and device numbers with
+  `lsusb.txt` to locate the interface; the tree's indentation shows which
+  port or hub it is attached to.
 - `pw-top.txt`: three batches of node statistics, including rate, quantum and
   error counters.
 - `sink-inputs.json` and `source-outputs.json`: current playback and recording
   streams, their formats, volume, mute state and buffering as Pulse reports
   them. The archive masks process identity fields and keeps numeric audio
   values as numbers.
+
+Compare the same OpenXLR release and plugin configuration across systems to
+separate application changes from differences in the audio stack.
 
 Each helper has a 15-second deadline, an 8 MiB stdout limit and a 64 KiB
 stderr limit, and runs in the C locale. A helper that fails, times out or

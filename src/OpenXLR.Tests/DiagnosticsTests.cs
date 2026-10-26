@@ -475,7 +475,17 @@ public sealed class DiagnosticsTests
         try
         {
             ExecutableScript.Write(Path.Combine(bin, "uname"), $"echo 'Linux {machine} 6.18.0 #1 SMP x86_64 GNU/Linux'\n");
-            ExecutableScript.Write(Path.Combine(bin, "lsusb"), "echo 'Bus 001 Device 002: ID 0fd9:0070 Elgato Systems GmbH Wave:3'\n");
+            ExecutableScript.Write(Path.Combine(bin, "lsusb"), $$"""
+                case "$*" in
+                  '') echo 'Bus 001 Device 002: ID 0fd9:0070 Elgato Systems GmbH Wave:3' ;;
+                  -t)
+                    printf '%s\n' '/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/8p, 480M' \
+                      '    |__ Port 005: Dev 002, If 0, Class=Audio, Driver=snd-usb-audio, 12M'
+                    {{(commandWarning ? $"echo 'tree warning for {login}@{machine}: access incomplete' >&2\nexit 7" : "")}}
+                    ;;
+                  *) echo 'unexpected USB request' >&2; exit 91 ;;
+                esac
+                """);
             ExecutableScript.Write(Path.Combine(bin, "pactl"), $$"""
                 if [ "$1" = info ]; then
                   printf '%s\n' 'Server String: /run/user/1000/pulse/native' 'User Name: {{login}}' \
@@ -610,6 +620,16 @@ public sealed class DiagnosticsTests
             // Only the names went; everything around them is still there to read.
             Assert.Contains("User Name: <redacted>", entries["pactl-info.txt"]);
             Assert.Contains("Server Name: PulseAudio (on PipeWire 1.6.9)", entries["pactl-info.txt"]);
+            Assert.Contains("ID 0fd9:0070", entries["lsusb.txt"]);
+            Assert.Contains("Class=root_hub, Driver=xhci_hcd/8p, 480M", entries["usb-topology.txt"]);
+            Assert.Contains("    |__ Port 005: Dev 002, If 0, Class=Audio, Driver=snd-usb-audio, 12M", entries["usb-topology.txt"]);
+            Assert.DoesNotContain("unexpected USB request", entries["usb-topology.txt"]);
+            if (commandWarning)
+            {
+                Assert.Contains("tree warning for <redacted>@<redacted>: access incomplete", entries["usb-topology.txt"]);
+                Assert.Contains("lsusb exited with status 7", entries["usb-topology.txt"]);
+            }
+            else Assert.DoesNotContain("exited with status", entries["usb-topology.txt"]);
             Assert.Contains("WirePlumber                         [1.6.9, <redacted>@<redacted>, pid:1585]", entries["wpctl-status.txt"]);
             Assert.Contains("loaded /mnt/<redacted>/lv2/eq.lv2 for <redacted>@<redacted>", entries["journal.txt"]);
             Assert.Contains("pipewire[2220]: xrun for <redacted>@<redacted>", entries["audio-journal.txt"]);
@@ -640,6 +660,7 @@ public sealed class DiagnosticsTests
             }
             Assert.Contains("login name", entries["PRIVACY.txt"]);
             Assert.Contains("audio-server", entries["PRIVACY.txt"]);
+            Assert.Contains("USB control blocks and topology", entries["PRIVACY.txt"]);
         }
         finally
         {
