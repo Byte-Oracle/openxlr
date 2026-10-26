@@ -162,7 +162,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.402  # 10.0.403 links answer 409 upstream; back to 10.0.x once fixed
+          dotnet-version: 10.0.x
 
       - name: Restore (locked to packages.lock.json)
         run: dotnet restore src/OpenXLR.slnx --locked-mode
@@ -190,7 +190,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.402  # 10.0.403 links answer 409 upstream; back to 10.0.x once fixed
+          dotnet-version: 10.0.x
 
       - name: Optional native LV2 host compiles
         run: |
@@ -231,7 +231,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.402  # 10.0.403 links answer 409 upstream; back to 10.0.x once fixed
+          dotnet-version: 10.0.x
 
       - name: Build with the native host
         run: |
@@ -271,7 +271,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.402  # 10.0.403 links answer 409 upstream; back to 10.0.x once fixed
+          dotnet-version: 10.0.x
 
       - name: Build
         run: |
