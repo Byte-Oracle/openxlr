@@ -89,6 +89,15 @@ public sealed record DeviceState
     public int? LineInGainDb { get; init; }
 
     /// <summary>
+    /// The Wave XLR Pro's Line In level lock, block 0x0004 byte 77 bit 3.
+    /// While it is on the unit ignores Line In gain writes through its ALSA
+    /// control (the desktop mixer, other applications); OpenXLR's own writes
+    /// still apply. Null on every other model and in a snapshot saved before
+    /// the field existed, so a recall of one leaves the lock where it is.
+    /// </summary>
+    public bool? LineInLevelLock { get; init; }
+
+    /// <summary>
     /// Daemon-enforced software gain lock (Wave Link's Gain Lock for devices
     /// that keep it app-side). Not a hardware field: the daemon stamps it
     /// onto every snapshot and rejects gain writes while it is set.

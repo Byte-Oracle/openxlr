@@ -73,7 +73,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     // offsets shifted by Xlr2Base. The 4-byte tail starts with the Line In
     // gain at off76, the centre pair of the ALSA capture volume (measured on
     // the desk unit, firmware 1.0.14); bytes 77 to 79 are left as read except
-    // by the USB Aux level and its lock.
+    // by the USB Aux level and the two level locks in byte 77.
     private const int Xlr2Base = 38;
     private const int GainOffset = 0;      // block 0x0004
     private const int FlagsOffset = 1;     // block 0x0004 / 0x0005
@@ -81,6 +81,12 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     private const int VoiceTuneStrengthOffset = 10; // block 0x0004
     private const int LineInGainOffset = 76;        // block 0x0004 tail, dB = byte (unit takes 0..80, written 0..40)
     private const int AuxLevelLockOffset = 77;      // block 0x0004 tail (0x04 = locked)
+    private const byte AuxLevelLockMask = 0x04;
+    // Line In's level lock, in the same byte (desk measurement, 2026-10-26):
+    // while it is set the unit ignores Line In gain writes through its ALSA
+    // control, and still takes the ones through this block.
+    private const int LineInLevelLockOffset = 77;
+    private const byte LineInLevelLockMask = 0x08;
     private const int AuxLevelOffset = 79;          // block 0x0004 tail, dB = -byte/4 (0..-60)
     private const int HpVolOffset = 0;     // block 0x0005 (headphones 1)
     private const int Hp2VolOffset = 2;    // block 0x0005 (headphones 2)
@@ -328,8 +334,9 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
             AuxReturnEnabled = b1[AuxMixMusicLevelOffset] == 0x00 &&
                                (b1[AuxMixMusicMemberOffset] & AuxMixMusicMemberMask) != 0,
             AuxLevelDb = -b4[AuxLevelOffset] / 4.0,
-            AuxLevelLock = (b4[AuxLevelLockOffset] & 0x04) != 0,
+            AuxLevelLock = (b4[AuxLevelLockOffset] & AuxLevelLockMask) != 0,
             LineInGainDb = b4[LineInGainOffset],
+            LineInLevelLock = (b4[LineInLevelLockOffset] & LineInLevelLockMask) != 0,
         };
     }
 
@@ -496,7 +503,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     public void SetAuxLevelLock(bool on)
     {
         byte[] b = Read(BlockSettings, SettingsLen);
-        b[AuxLevelLockOffset] = (byte)(on ? b[AuxLevelLockOffset] | 0x04 : b[AuxLevelLockOffset] & ~0x04);
+        b[AuxLevelLockOffset] = (byte)(on ? b[AuxLevelLockOffset] | AuxLevelLockMask : b[AuxLevelLockOffset] & ~AuxLevelLockMask);
         WriteCommitted(BlockSettings, b);
     }
 
@@ -520,6 +527,26 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
             Write(BlockSettings, b);
         }
         return db;
+    }
+
+    /// <summary>
+    /// Line In's level lock, block 0x0004 byte 77 bit 3. While it is set the
+    /// unit ignores Line In gain writes through its ALSA control, so the
+    /// desktop mixer and other applications cannot move the gain;
+    /// <see cref="SetLineInGainDb"/> writes this block and still applies. It
+    /// is written as the gain is: one read and one write of the whole block,
+    /// no commit, under the lock, every other byte as read, the USB Aux lock
+    /// beside it included.
+    /// </summary>
+    public void SetLineInLevelLock(bool on)
+    {
+        lock (_lock)
+        {
+            byte[] b = Read(BlockSettings, SettingsLen);
+            b[LineInLevelLockOffset] = (byte)(on ? b[LineInLevelLockOffset] | LineInLevelLockMask
+                                                 : b[LineInLevelLockOffset] & ~LineInLevelLockMask);
+            Write(BlockSettings, b);
+        }
     }
 
     public void SetLowImpedance(bool on)

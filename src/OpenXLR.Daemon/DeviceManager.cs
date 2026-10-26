@@ -882,6 +882,7 @@ public sealed class DeviceManager : BackgroundService
                     case ControlNames.AuxLevelDb: _device.SetAuxLevelDb(value.GetDouble()); break;
                     case ControlNames.AuxLevelLock: _device.SetAuxLevelLock(value.GetBoolean()); break;
                     case ControlNames.LineInGain: lineInWritten = _device.SetLineInGainDb(value.GetInt32()); break;
+                    case ControlNames.LineInLevelLock: _device.SetLineInLevelLock(value.GetBoolean()); break;
                     case "hp2VolumeDb": _device.SetHp2VolumeDb(value.GetDouble()); break;
                     case "gain2":
                         if (GainIsLocked) return "gain is locked";
@@ -952,7 +953,7 @@ public sealed class DeviceManager : BackgroundService
             ControlNames.OutHp1 or ControlNames.OutHp2 or ControlNames.OutUsbAux or
                 ControlNames.OutLineOut => c.OutputRouting,
             ControlNames.AuxLevelDb or ControlNames.AuxLevelLock => c.AuxInput,
-            ControlNames.LineInGain => c.LineInput,
+            ControlNames.LineInGain or ControlNames.LineInLevelLock => c.LineInput,
             "gain2" => c.Gain && c.XlrInputs > 1,
             "mute2" => c.Mute && c.XlrInputs > 1,
             "lowCut2" => c.LowCut && c.XlrInputs > 1,
@@ -1031,6 +1032,9 @@ public sealed class DeviceManager : BackgroundService
                     int written = _device.SetLineInGainDb(lineIn);
                     _log.LogInformation("{dev}: Line In gain written as {db} dB from a saved state", _device.Info.DisplayName, written);
                 }
+                // Likewise the Line In lock: a snapshot without it leaves the unit's lock as it is.
+                if (c.LineInput && p.LineInLevelLock is bool lineLock && s.LineInLevelLock != lineLock)
+                    _device.SetLineInLevelLock(lineLock);
             }
             catch (Exception ex)
             {

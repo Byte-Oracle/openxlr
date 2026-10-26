@@ -125,6 +125,13 @@ public interface IAudioDevice : IDisposable
     /// overrides it.
     /// </summary>
     int SetLineInGainDb(int db) => throw new InvalidOperationException("this unit has no Line In gain");
+
+    /// <summary>
+    /// The Wave XLR Pro's Line In level lock: while on, the unit ignores Line
+    /// In gain writes through its ALSA control. A device with
+    /// <see cref="DeviceCapabilities.LineInput"/> overrides it.
+    /// </summary>
+    void SetLineInLevelLock(bool on) => throw new InvalidOperationException("this unit has no Line In level lock");
 }
 
 /// <summary>Stable identity of a device model.</summary>

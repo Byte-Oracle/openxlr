@@ -15,6 +15,7 @@ public sealed class DeviceDefaultsTests
             HpVolumeDb = 0, Hp2VolumeDb = -60, LowImpedance = true, Crossfade = 0, AuxLevelDb = 0, AuxLevelLock = true,
             OutHp1 = true, OutHp2 = false, OutUsbAux = true, OutLineOut = false,
             HpMixMonitorReturn = true, HpMixMicDirect = false, AuxReturnEnabled = true,
+            LineInGainDb = 12, LineInLevelLock = true,
         };
         DeviceState b = DeviceDefaults.Baseline(info, current)!;
         Assert.Equal((30, 30), (b.GainDb, b.Gain2Db));
@@ -23,6 +24,8 @@ public sealed class DeviceDefaultsTests
         // Routing and mix membership are the mixer's business and stay.
         Assert.Equal((true, false, true, false), (b.OutHp1, b.OutHp2, b.OutUsbAux, b.OutLineOut));
         Assert.Equal((true, false, true), (b.HpMixMonitorReturn, b.HpMixMicDirect, b.AuxReturnEnabled));
+        // The Line In's gain and lock are left as they are.
+        Assert.Equal(((int?)12, (bool?)true), (b.LineInGainDb, b.LineInLevelLock));
     }
 
     [Fact]

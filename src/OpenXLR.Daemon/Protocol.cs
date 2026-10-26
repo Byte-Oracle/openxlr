@@ -412,6 +412,7 @@ public static class ControlNames
     public const string AuxLevelDb = "auxLevelDb";           // number dB (-60..0)
     public const string AuxLevelLock = "auxLevelLock";       // bool
     public const string LineInGain = "lineInGain";           // int dB (0..lineInGainMaxDb)
+    public const string LineInLevelLock = "lineInLevelLock"; // bool
 }
 
 /// <summary>Reply to "getDiagnostics": raw vendor blocks for bug reports.</summary>
