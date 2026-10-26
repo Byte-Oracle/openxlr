@@ -3,8 +3,9 @@ import test from "node:test";
 
 // The Wave XLR Pro's Line In: a dial turns its gain, which is the unit's own
 // control, presses mute the channel in every mix since the input has no
-// hardware mute, and meters the Line In channel. A unit without the input
-// answers the dial with an alert.
+// hardware mute, and meters the Line In channel. A key toggles its level
+// lock, apart from Aux In's. A unit without the input answers the dial with
+// an alert and greys the key.
 test("the Line In dial turns the Pro's Line In gain and mutes its channel", async () => {
   const oldSkin = process.env.OPENXLR_SKIN;
   process.env.OPENXLR_SKIN = "default";
@@ -34,7 +35,7 @@ test("the Line In dial turns the Pro's Line In gain and mutes its channel", asyn
     daemon.onopen();
     const state = {type:"state", connected:true, profiles:[],
       capabilities:{gain:true, mute:true, auxInput:true, lineInput:true, xlrInputs:2, gainMaxDb:80},
-      state:{gainDb:52, mute:false, auxLevelDb:-30, lineInGainDb:20},
+      state:{gainDb:52, mute:false, auxLevelDb:-30, auxLevelLock:true, lineInGainDb:20, lineInLevelLock:false},
       devices:[],
       mixer:{
         channels:[
@@ -75,13 +76,29 @@ test("the Line In dial turns the Pro's Line In gain and mutes its channel", asyn
     daemon.receive({type:"meters", levels:{"ch:aux":[0,0], "ch:line":[0.8,0.8]}});
     assert.match(svg(meter("line-dial")), /<rect width="104" height="6"/);
 
-    // A unit without the input: the dial says so and sends nothing.
+    // The level lock key reads and writes Line In's lock, not Aux In's.
+    const keyImage = (context) =>
+      svg(host.messages.filter(m => m.event === "setImage" && m.context === context).at(-1).payload.image);
+    host.receive({event:"willAppear",context:"line-lock",action:"com.emaspa.openxlr.toggle",payload:{settings:{target:"lineInLevelLock"}}});
+    host.receive({event:"titleParametersDidChange",context:"line-lock",payload:{title:""}});
+    assert.ok(keyImage("line-lock").includes(">Line In</text>"));
+    assert.ok(keyImage("line-lock").includes(">Lock</text>"));
+    host.receive({event:"keyDown",context:"line-lock"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"set",control:"lineInLevelLock",value:true});
+    state.state.lineInLevelLock = true;
+    daemon.receive(state);
+    host.receive({event:"keyDown",context:"line-lock"});
+    assert.deepEqual(daemon.messages.at(-1), {cmd:"set",control:"lineInLevelLock",value:false});
+
+    // A unit without the input: the dial says so and sends nothing, and so does the key.
     state.capabilities.lineInput = false;
     daemon.receive(state);
     const sent = daemon.messages.length;
     host.receive({event:"dialRotate",context:"line-dial",payload:{ticks:1}});
     assert.equal(daemon.messages.length, sent);
     assert.equal(alerted("line-dial"), 1);
+    host.receive({event:"keyDown",context:"line-lock"});
+    assert.equal(daemon.messages.length, sent);
   } finally {
     for (const interval of intervals) clearInterval(interval);
     globalThis.setInterval = previousInterval;

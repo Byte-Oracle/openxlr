@@ -32,7 +32,7 @@ const DEVICE_TOGGLES = {
   voiceTune: "XLR 1\nVoice Tune", voiceTune2: "XLR 2\nVoice Tune",
   clipGuard: "XLR 1\nClipGuard", clipGuard2: "XLR 2\nClipGuard",
   compressor: "XLR 1\nComp", compressor2: "XLR 2\nComp",
-  lowImpedance: "Low Z", auxLevelLock: "Aux In\nLock",
+  lowImpedance: "Low Z", auxLevelLock: "Aux In\nLock", lineInLevelLock: "Line In\nLock",
   outHp1: "HP 1\nOut", outHp2: "HP 2\nOut", outLineOut: "Line\nOut",
   gainLocked: "Gain\nLock",
   softClipGuard: "Clip\nGuard",
