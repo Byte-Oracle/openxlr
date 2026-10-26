@@ -241,6 +241,11 @@ test('output labels use the documented device description and tolerate state tra
   assert.equal(mixer.outputName(null, node), node);
   assert.equal(mixer.outputName({}, node), node);
   assert.equal(mixer.outputName({ devices: [{ name: node, description: ' ' }] }, node), node);
+  // A selected output that is away is named by what the daemon remembers.
+  const away = { devices: [], mixer: { monitorOutputLabels: { [node]: 'Elgato XLR Dock' } } };
+  assert.equal(mixer.outputName(away, node), 'Elgato XLR Dock');
+  assert.equal(mixer.outputName({ devices: [], mixer: { monitorOutputLabels: { [node]: ' ' } } }, node), node);
+  assert.equal(mixer.outputName({ devices: [], mixer: { monitorOutputLabels: null } }, node), node);
 });
 
 test('send edits address the selected mix and monitor masters alone reach 150 percent', () => {
