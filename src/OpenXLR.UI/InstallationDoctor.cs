@@ -41,8 +41,12 @@ internal static class InstallationDoctor
     }
 
     internal static async Task<DoctorReport> Inspect(IEnumerable<string> paths, string? root, bool runtime,
-        Func<CancellationToken, Task<string>>? readState = null, bool removed = false, IEnumerable<string>? prefixes = null)
+        Func<CancellationToken, Task<string>>? readState = null, bool removed = false, IEnumerable<string>? prefixes = null,
+        Func<CancellationToken, Task<DaemonPresence>>? probe = null)
     {
+        // A supplied state reader stands in for this user's daemon, so only
+        // the real one is probed by default.
+        probe ??= readState is null ? token => DaemonProbe.ProbeAsync(cancel: token) : null;
         // A leftover gets a move command only under a prefix this build looks
         // in for packages. The content hash in an archive's name proves its
         // integrity, not who wrote it, so any other path is left to inspection.
@@ -127,12 +131,32 @@ internal static class InstallationDoctor
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException or OperationCanceledException or JsonException or BadImageFormatException or InvalidOperationException or FormatException)
                 {
-                    daemon = new("not verified: " + ex.Message);
-                    findings.Add(new("daemon", daemon.Status, "systemctl --user restart openxlr-daemon.service"));
+                    DaemonPresence presence = ex is HttpRequestException or IOException or OperationCanceledException && probe is not null
+                        ? await Probe(probe) : DaemonPresence.Reachable;
+                    daemon = new(presence switch
+                    {
+                        DaemonPresence.OlderDaemon => "a daemon from before the update is still running and does not serve the control socket",
+                        DaemonPresence.NotRunning => "not running",
+                        DaemonPresence.OtherUser => "the control socket belongs to another user",
+                        _ => "not verified: " + ex.Message,
+                    });
+                    findings.Add(new("daemon", daemon.Status, presence switch
+                    {
+                        DaemonPresence.NotRunning => "systemctl --user start openxlr-daemon.service",
+                        DaemonPresence.OtherUser => "namei -l -- " + Quote(OpenXlrPaths.ControlSocketPath),
+                        _ => "systemctl --user restart openxlr-daemon.service",
+                    }));
                 }
             }
         }
         return new(receipts, findings, daemon, []);
+    }
+
+    private static async Task<DaemonPresence> Probe(Func<CancellationToken, Task<DaemonPresence>> probe)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        try { return await probe(timeout.Token); }
+        catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or OperationCanceledException) { return DaemonPresence.Reachable; }
     }
 
     internal static string ModuleId(string assembly)

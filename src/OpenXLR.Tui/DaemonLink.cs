@@ -19,7 +19,16 @@ internal sealed class DaemonLink : IAsyncDisposable
     private const int MaxMessageBytes = 8 * 1024 * 1024;
     private readonly Uri? _uri;
 
-    public DaemonLink(string? url = null) => _uri = url is null ? null : new Uri(url);
+    private readonly Func<CancellationToken, Task<DaemonPresence>>? _probe;
+
+    public DaemonLink(string? url = null) : this(url, null) { }
+
+    /// <summary>A link to an explicit endpoint probes no daemon unless it is given a probe.</summary>
+    internal DaemonLink(string? url, Func<CancellationToken, Task<DaemonPresence>>? probe)
+    {
+        _uri = url is null ? null : new Uri(url);
+        _probe = probe ?? (url is null ? token => DaemonProbe.ProbeAsync(cancel: token) : null);
+    }
 
     private readonly CancellationTokenSource _stopping = new();
     private readonly Lock _meterGate = new();
@@ -49,6 +58,13 @@ internal sealed class DaemonLink : IAsyncDisposable
 
     /// <summary>What the connection is doing, for the status line.</summary>
     public string Status { get; private set; } = "connecting";
+
+    /// <summary>
+    /// A sentence for the header while no daemon can be reached and the reason
+    /// needs the user: a daemon from before the update, or another user's
+    /// socket. Null otherwise.
+    /// </summary>
+    public string? Notice { get; private set; }
 
     /// <summary>True between a successful authentication and the socket closing.</summary>
     public bool Connected { get; private set; }
@@ -209,6 +225,21 @@ internal sealed class DaemonLink : IAsyncDisposable
             catch (Exception error) when (error is WebSocketException or IOException or HttpRequestException)
             {
                 Status = "daemon not reachable";
+                // A failed connect, not a dropped session: say why if a reason is known.
+                if (!Connected && _probe is not null)
+                {
+                    DaemonPresence presence;
+                    try { presence = await _probe(_stopping.Token).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { return; }
+                    catch (Exception probeError) when (probeError is IOException or System.Net.Sockets.SocketException) { presence = DaemonPresence.Reachable; }
+                    (Status, Notice) = presence switch
+                    {
+                        DaemonPresence.OlderDaemon => ("restart the daemon", DaemonProbe.Describe(presence)),
+                        DaemonPresence.OtherUser => ("socket refused", DaemonProbe.Describe(presence)),
+                        DaemonPresence.NotRunning => ("daemon not running", null),
+                        _ => ("daemon not reachable", null),
+                    };
+                }
             }
 
             EndSession();
@@ -246,6 +277,7 @@ internal sealed class DaemonLink : IAsyncDisposable
 
         Connected = true;
         Status = "connected";
+        Notice = null;
         await SendAsync("{\"cmd\":\"getState\"}").ConfigureAwait(false);
 
         byte[] buffer = new byte[64 * 1024];

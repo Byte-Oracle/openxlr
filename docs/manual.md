@@ -2422,27 +2422,61 @@ actions in Options wrap to another row when they do not fit.
 <a name="upgrade"></a>
 ### 3.11 Upgrade
 
-Packages do not restart a running daemon. After an upgrade the UI
-shows a banner naming the daemon's version and its own, with a Restart
-daemon button; press it, or run
+Packages do not restart a running daemon, so the daemon from the previous
+release keeps running after an upgrade. If the UI was open before the
+upgrade, quit it from the tray and open it again first. The old UI keeps
+talking to the old daemon and cannot reach the new one.
+
+When the UI can connect but the daemon is another version, it shows a
+banner naming the daemon's version and its own, with a Restart daemon
+button, and offers only the controls the old daemon reports.
+
+Releases before this one served their clients on a loopback port with a
+token. This release uses a private Unix socket instead, authenticated by
+Linux peer credentials ([section 6](#files)), so the new UI cannot talk to
+the old daemon at all. It still recognises one, because the old daemon
+holds the same single-instance lock and answers on its old port. The header then reads
+"Older daemon running" instead of "Daemon not running", and the banner says
+that a daemon from before the update is still running and this UI cannot
+connect to it.
+
+Restart daemon in the banner does the same as the header's button. It
+restarts the `openxlr-daemon` user service; in the Flatpak it restarts the
+UI's own daemon, or asks the `openxlr-flatpak` user service's daemon to exit
+so the service starts the updated one. The UI connects as soon as the new
+daemon opens its socket, and the banner goes away. A daemon you started by
+hand is not a service, so stop it and start it again yourself. To restart
+the service from a terminal, run
 
 ```sh
 systemctl --user restart openxlr-daemon
 ```
 
-Until then the UI offers only the controls the old daemon reports.
-Changing "Enable software mixer" in Options, AUDIO also restarts the daemon.
+and for the Flatpak's service, on the host,
+`systemctl --user restart openxlr-flatpak`.
 
-Clients use a private Unix socket, authenticated by Linux peer credentials
-([section 6](#files)). Update the window, terminal mixer, OpenDeck plugin
-and Omarchy plugin together with the daemon. Older clients that use the
-loopback port no longer connect. No API token file is required.
+The terminal mixer, the OpenDeck plugin, the Omarchy bar and the browser
+companion cannot restart the daemon. While the old one runs, the terminal
+mixer shows the same sentence with the command above its tabs, OpenDeck keys
+and dials read "restart" where they would read "offline", the Omarchy popout
+shows the sentence in place of its offline line, and the browser companion
+reports it as its error. `openxlr doctor` lists it as a finding with the
+restart command. Each of them connects on its own once the daemon has been
+restarted. Upgrade the UI, the terminal mixer, the OpenDeck plugin and the
+Omarchy plugin together with the daemon; older clients that use the loopback
+port cannot connect to the new daemon. No API token file is required, and
+the daemon removes the one an older release left behind.
+
+Changing "Enable software mixer" in Options, AUDIO also restarts the daemon.
 
 OpenDeck and the Omarchy bar use the client-only `openxlr-control` launcher.
 Upgrade it together with the clients; older installs do not have this entry
 point. Source builds must [link it onto PATH](install-from-source.md#6-make-it-permanent).
 It exits when the daemon disconnects, even with stdin open, so clients clear
-their state and reconnect. OpenDeck stops an adapter that has not signalled
+their state and reconnect. When it cannot connect it writes one
+`controlError` line saying why in place of its ready line, which is how
+OpenDeck and the bar learn about a daemon from before the update
+([api.md](api.md)). OpenDeck stops an adapter that has not signalled
 readiness within 15 seconds. A runtime-directory or socket-path error is a
 startup failure with a specific diagnostic. Only actual lock contention
 reports another daemon; Flatpak treats only that case as an existing session.
