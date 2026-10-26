@@ -65,7 +65,7 @@ public static class Diagnostics
             await File.WriteAllTextAsync(Path.Combine(work, "meta.txt"), meta.ToString());
             await File.WriteAllTextAsync(Path.Combine(work, "PRIVACY.txt"), """
                 This archive is created locally and is never uploaded automatically.
-                It contains OpenXLR state, USB control blocks, PipeWire topology,
+                It contains OpenXLR state, USB control blocks and topology, PipeWire topology,
                 recent openxlr-daemon journal entries or Flatpak logs,
                 native audio-server and session-manager journal entries,
                 short PipeWire node statistics, application audio metadata,
@@ -104,6 +104,7 @@ public static class Diagnostics
             await Capture("sources.txt", "pactl", "list", "short", "sources");
             await Capture("modules.txt", "pactl", "list", "short", "modules");
             await Capture("lsusb.txt", "lsusb");
+            await Capture("usb-topology.txt", "lsusb", "-t");
             await Capture("pw-top.txt", "pw-top", "--batch-mode", "--iterations", "3");
             await Capture("sink-inputs.json", "pactl", "--format=json", "list", "sink-inputs");
             await Capture("source-outputs.json", "pactl", "--format=json", "list", "source-outputs");
