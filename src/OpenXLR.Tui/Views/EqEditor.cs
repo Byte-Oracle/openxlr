@@ -13,6 +13,7 @@ internal sealed class EqEditor(string channel, long session, TimeProvider? time 
     // There are at most 21 entries; every edit is already sent, not queued.
     private readonly Dictionary<(int Band, string Field), (object Value, long Since)> _edits = [];
     private long _session = session;
+    private long _channelRevision;
 
     internal string Keys => "Esc back  Up/Down control  -/+ value  [/] fine  Enter exact value  Home/End limits";
 
@@ -33,6 +34,12 @@ internal sealed class EqEditor(string channel, long session, TimeProvider? time 
             _edits.Clear();
         }
         if (app.Link.LastError is not null) _edits.Clear();
+        long revision = app.Link.ChannelRevision(channel);
+        if (_channelRevision != revision)
+        {
+            _channelRevision = revision;
+            _edits.Clear();
+        }
         if (!app.Link.Connected) return null;
         ChannelEntry? input = app.Link.State?.Mixer.Channels.FirstOrDefault(c => c.Id == channel);
         if (Settings(input) is not { } reported) return null;
@@ -110,9 +117,10 @@ internal sealed class EqEditor(string channel, long session, TimeProvider? time 
     private void Ask(App app, int band, string field, double value, double minimum, double maximum)
     {
         long revision = app.Link.SessionRevision;
+        long channelRevision = app.Link.ChannelRevision(channel);
         app.Ask($"Band {band} {field}: {value:0.####} now, {minimum} to {maximum} (decimal point)", "", text =>
         {
-            if (app.Link.SessionRevision != revision || Read(app) is null)
+            if (app.Link.SessionRevision != revision || app.Link.ChannelRevision(channel) != channelRevision || Read(app) is null)
             { app.Say("The microphone changed or disconnected. Enter the value again."); return; }
             if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double number)
                 || !double.IsFinite(number) || number < minimum || number > maximum)

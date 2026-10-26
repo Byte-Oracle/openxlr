@@ -203,6 +203,20 @@ public sealed class TuiEqBandTests
         Assert.Contains(Frame(app), line => line.Contains("Waiting for the daemon", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ADeletedAndRecreatedChannelCannotReceiveAnOldExactValue(bool drawWhileMissing)
+    {
+        var (app, sent) = Ready(); Open(app); Select(app, "Band 2 gain");
+        app.Handle(new KeyPress(Key.Enter)); app.Handle(new KeyPress(Key.Char, '2'));
+        app.Link.Receive(State(root => root["mixer"]!["channels"] = new JsonArray()));
+        if (drawWhileMissing) Frame(app);
+        app.Link.Receive(State());
+        app.Handle(new KeyPress(Key.Enter));
+        Assert.Empty(sent);
+    }
+
     [Fact]
     public void ResetIsOneWholeEqAndKeepsItsSwitchWithoutTouchingOtherMicrophones()
     {

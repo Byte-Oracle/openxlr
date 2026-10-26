@@ -3673,7 +3673,8 @@ range, then snap to the same steps as the graphical editor.
 switch. Changing a frequency leaves another client's gain or Q alone,
 and short bursts keep each step. A removed microphone
 closes the editor, and a value being typed before disconnection or removal
-cannot be applied afterwards. Settings are saved by the daemon in the
+cannot be applied afterwards, even if a new microphone reuses the same
+channel id before the next screen redraw. Settings are saved by the daemon in the
 same mixer and profile state as edits made in the graphical UI.
 
 The mixer opens as a desk of vertical channel strips; the Matrix section
