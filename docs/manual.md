@@ -2330,8 +2330,21 @@ channel, or change the view, the skin or Touch sizing. It never goes below
 the skin sets them. A window too small for the panel at 100% scrolls. For a
 smaller mixer, use the compact or mini view, or Standard sizing.
 
+**Custom** shows a percentage box beside the picker, or under it in a narrow
+window. The box starts at the size the panel has now, so picking Custom after
+Fit to window keeps the size Fit found. Type any whole size from 100% to
+300%, or step it by 5% with the arrows, the arrow keys or the mouse wheel.
+Each step applies at once. A typed size applies once it reads as a size from
+100 to 300, so the panel does not jump while you type the first digits.
+Enter, or leaving the box, settles what you typed. A size past either end
+becomes 100% or 300%, a fraction is rounded, and the box shows the size
+drawn. The tiles wrap and scroll as they do at the listed sizes. Picking Fit
+to window or a listed size hides the box.
+
 The size is saved in `ui.json` as `mixerScale` and applies each time the
-mixer pops out. The panel goes back to the UI at its usual size. If
+mixer pops out, Custom with its percentage. A custom size equal to a listed
+one, such as 150, comes back as that listed size. The panel goes back to the
+UI at its usual size. If
 `ui.json` cannot be written, a note under the picker says so, and the size
 applies until the window closes.
 

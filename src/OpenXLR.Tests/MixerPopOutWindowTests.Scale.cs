@@ -51,8 +51,10 @@ internal static partial class MixerPopOutWindowTests
             double pickerTop = picker.TranslatePoint(default, popped)!.Value.Y;
             Assert.True(pickerTop >= dock.TranslatePoint(default, popped)!.Value.Y + dock.Bounds.Height, "the size picker sits under Return");
             Assert.True(scroll.TranslatePoint(default, popped)!.Value.Y >= pickerTop + picker.Bounds.Height, "the size picker sits above the panel");
-            Assert.Equal([Localizer.Text("MixerScaleFit"), .. new[] { 100, 125, 150, 175, 200 }.Select(p => Localizer.Format("MixerScalePercent", p))],
-                picker.Items.Cast<string>());
+            Assert.Equal([Localizer.Text("MixerScaleFit"), .. new[] { 100, 125, 150, 175, 200 }.Select(p => Localizer.Format("MixerScalePercent", p)),
+                Localizer.Text("MixerScaleCustom")], picker.Items.Cast<string>());
+            Assert.False(popped.CustomScale);
+            Assert.False(popped.FindControl<Control>("MixerScaleCustomRow")!.IsVisible);
             Assert.Equal(MixerScale.Default, popped.ScaleChoice);
             Assert.Equal(1, picker.SelectedIndex);
             Assert.Null(scaler.LayoutTransform);
@@ -163,6 +165,8 @@ internal static partial class MixerPopOutWindowTests
             Assert.Null(scaler.LayoutTransform);
             Assert.Equal(1, popped.Scale);
             Assert.Equal(scroll.Viewport.Width, panel.Width, 0.5);
+
+            CheckCustomScale(main, vm, ref popped, panel);
         }
         finally
         {
@@ -176,6 +180,154 @@ internal static partial class MixerPopOutWindowTests
         Assert.Null(vm.ChooseMixerView(view));
         Layout(main, 1040, 900);
     }
+
+    /// <summary>
+    /// Custom, from 100%: the box shows beside or under the picker, starting
+    /// at the size drawn; a size typed digit by digit draws once the text
+    /// reads as it, and one past either end is held to the range when it is
+    /// settled; the arrows draw at once; the panel wraps and scrolls at that
+    /// size as at a fixed one; it comes back with the next pop out; and Fit
+    /// or a fixed size hides the box again. Leaves the window at 100%.
+    /// </summary>
+    private static void CheckCustomScale(MainWindow main, MainViewModel vm, ref MixerWindow popped, MixerPanel panel)
+    {
+        var picker = popped.FindControl<ComboBox>("MixerScalePicker")!;
+        var scroll = popped.FindControl<ScrollViewer>("MixerScroll")!;
+        var scaler = popped.FindControl<LayoutTransformControl>("PanelScale")!;
+        var row = popped.FindControl<Control>("MixerScaleCustomRow")!;
+        var box = popped.FindControl<NumericUpDown>("MixerScaleCustom")!;
+        Assert.Equal(1, popped.Scale);
+        Assert.False(row.IsVisible);
+
+        picker.SelectedIndex = MixerScale.Choices.Count;
+        Layout(popped, 800, 600);
+        Assert.True(popped.CustomScale);
+        Assert.True(box.IsEffectivelyVisible);
+        Assert.Equal(MixerScale.MinimumPercent, box.Minimum);
+        Assert.Equal(MixerScale.MaximumPercent, box.Maximum);
+        Assert.Equal(MixerScale.FitStepPercent, box.Increment);
+        Assert.Equal(100m, box.Value);
+        Assert.Equal(1, popped.Scale);
+        Assert.Equal(MixerScale.Default, UiSettings.Load().MixerScale);
+        Assert.True(scroll.TranslatePoint(default, popped)!.Value.Y >= box.TranslatePoint(default, popped)!.Value.Y + box.Bounds.Height,
+            "the size box sits above the panel");
+
+        // Typed digit by digit: the first ones read as less than the smallest
+        // size, and nothing is drawn until the text reads as a size.
+        TextBox text = box.GetVisualDescendants().OfType<TextBox>().Single();
+        foreach (string partial in new[] { "1", "13" })
+        {
+            text.Text = partial;
+            Layout(popped, 800, 600);
+            Assert.Equal(1, popped.Scale);
+            Assert.Equal(MixerScale.Default, popped.ScaleChoice);
+            Assert.Equal(partial, text.Text);
+        }
+        text.Text = "137";
+        Layout(popped, 800, 600);
+        Assert.Equal("137", popped.ScaleChoice);
+        Assert.Equal(1.37, popped.Scale, 10);
+        Assert.Equal("137", UiSettings.Load().MixerScale);
+        Assert.Equal(Math.Floor(scroll.Viewport.Width / 1.37) - 1, panel.Width, 0.5);
+        Assert.True(scroll.Extent.Width <= scroll.Viewport.Width, $"{scroll.Extent.Width} wide in a {scroll.Viewport.Width} viewport");
+        Slider master = Master(popped, vm);
+        master.BringIntoView();
+        Settle(popped);
+        Assert.Equal(1.37 * master.Bounds.Width, Drawn(master, popped).Width, 0.5);
+        Capture(popped, "popout-scale-custom-137");
+
+        // Past the largest size: drawn only once settled, and then held to it, the box showing what is drawn.
+        text.Text = "1370";
+        Layout(popped, 800, 600);
+        Assert.Equal(1.37, popped.Scale, 10);
+        PressEnter(text);
+        Layout(popped, 800, 600);
+        Assert.Equal(MixerScale.MaximumPercent, box.Value);
+        Assert.Equal("300", text.Text);
+        Assert.Equal(3, popped.Scale, 10);
+        Assert.Equal("300", UiSettings.Load().MixerScale);
+        // Under the smallest, and a fraction: held to the range and rounded to a whole percent.
+        text.Text = "50";
+        PressEnter(text);
+        Layout(popped, 800, 600);
+        Assert.Equal("100", text.Text);
+        Assert.Equal(1, popped.Scale);
+        Assert.Null(scaler.LayoutTransform);
+        text.Text = "142.6";
+        PressEnter(text);
+        Layout(popped, 800, 600);
+        Assert.Equal(143m, box.Value);
+        Assert.Equal("143", text.Text);
+        Assert.Equal(1.43, popped.Scale, 10);
+        Assert.Equal("143", UiSettings.Load().MixerScale);
+        // An emptied box goes back to the size drawn.
+        text.Text = "";
+        PressEnter(text);
+        Assert.Equal("143", text.Text);
+        Assert.Equal(1.43, popped.Scale, 10);
+
+        // The arrows draw at once, a step each.
+        ButtonSpinner spinner = box.GetVisualDescendants().OfType<ButtonSpinner>().Single();
+        spinner.RaiseEvent(new SpinEventArgs(Spinner.SpinEvent, SpinDirection.Increase));
+        Layout(popped, 800, 600);
+        Assert.Equal(148m, box.Value);
+        Assert.Equal(1.48, popped.Scale, 10);
+        Assert.Equal("148", UiSettings.Load().MixerScale);
+
+        // Narrower than the enlarged panel: it scrolls sideways and clips nothing.
+        Layout(popped, 360, 600);
+        Assert.True(panel.Width >= panel.MinimumWidth() + 8 - 0.5, $"the panel is {panel.Width} wide");
+        Assert.True(scroll.Extent.Width > scroll.Viewport.Width, "a narrow window scrolls the enlarged panel sideways");
+        AssertInside(scroll, popped);
+
+        // Docked and popped out again: Custom comes back with its size.
+        popped.Close();
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(panel.IsSet(Layoutable.WidthProperty));
+        popped = main.PopOutMixer();
+        Layout(popped, 800, 600);
+        picker = popped.FindControl<ComboBox>("MixerScalePicker")!;
+        scroll = popped.FindControl<ScrollViewer>("MixerScroll")!;
+        scaler = popped.FindControl<LayoutTransformControl>("PanelScale")!;
+        row = popped.FindControl<Control>("MixerScaleCustomRow")!;
+        box = popped.FindControl<NumericUpDown>("MixerScaleCustom")!;
+        Assert.True(popped.CustomScale);
+        Assert.Equal(MixerScale.Choices.Count, picker.SelectedIndex);
+        Assert.True(box.IsEffectivelyVisible);
+        Assert.Equal(148m, box.Value);
+        Assert.Equal(1.48, popped.Scale, 10);
+        Assert.Equal(Math.Floor(scroll.Viewport.Width / 1.48) - 1, panel.Width, 0.5);
+
+        // Fit hides the box; Custom again starts at the size Fit drew.
+        picker.SelectedIndex = 0;
+        Layout(popped, 1600, 1200);
+        Settle(popped);
+        Assert.False(popped.CustomScale);
+        Assert.False(row.IsVisible);
+        Assert.Equal(MixerScale.Fit, UiSettings.Load().MixerScale);
+        double fitted = popped.Scale;
+        picker.SelectedIndex = MixerScale.Choices.Count;
+        Settle(popped);
+        Assert.True(row.IsVisible);
+        Assert.Equal((decimal)Math.Round(fitted * 100), box.Value);
+        Assert.Equal(fitted, popped.Scale, 10);
+        Assert.Equal(MixerScale.Known(((int)Math.Round(fitted * 100)).ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            UiSettings.Load().MixerScale);
+
+        // A fixed size hides it too, and is what is kept.
+        picker.SelectedIndex = 1;
+        Layout(popped, 800, 600);
+        Assert.False(popped.CustomScale);
+        Assert.False(row.IsVisible);
+        Assert.Equal(MixerScale.Default, UiSettings.Load().MixerScale);
+        Assert.Null(scaler.LayoutTransform);
+        Assert.Equal(1, popped.Scale);
+        Assert.Equal(scroll.Viewport.Width, panel.Width, 0.5);
+    }
+
+    /// <summary>Enter in the size box's text, as the keyboard sends it.</summary>
+    private static void PressEnter(TextBox text) =>
+        text.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter, Source = text });
 
     /// <summary>A control's box as the window draws it, enlargement and all.</summary>
     private static Rect Drawn(Visual control, Visual window) =>

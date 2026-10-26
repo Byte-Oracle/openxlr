@@ -633,6 +633,18 @@
   <data name="MixerScaleNotSaved" xml:space="preserve">
     <value>The mixer size applies until this window closes, but could not be saved: {0}</value>
   </data>
+  <data name="MixerScaleCustom" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="MixerScaleCustomName" xml:space="preserve">
+    <value>Custom mixer size in percent</value>
+  </data>
+  <data name="MixerScaleCustomHint" xml:space="preserve">
+    <value>Any size from 100% to 300%. Type a size and press Enter, or step by 5% with the arrows.</value>
+  </data>
+  <data name="MixerScaleCustomUnit" xml:space="preserve">
+    <value>%</value>
+  </data>
   <data name="DoNotLeaveThisOnTheSwitchIs" xml:space="preserve">
     <value>Do not leave this on. The switch is not saved across daemon restarts; a trace enabled in the daemon's startup environment still applies. An explicit WINEDEBUG keeps its own channels.</value>
   </data>

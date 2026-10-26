@@ -1216,8 +1216,10 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
   (`compact`, `mini`, or absent for the full mixer), `compactChannel`
   and `compactMix`, and `showHiddenItems`, true while the submixer's Show
   hidden draws hidden channels and mixes faded; `mixerScale`, the size of
-  the submixer in its own window: `fit`, or `100`, `125`, `150`, `175` or
-  `200` percent, and absent or anything else for 100)
+  the submixer in its own window: `fit`, or a whole percentage from `100`
+  to `300` as a string, the picker's `125`, `150`, `175` and `200` or a
+  custom size such as `137`; absent, out of range or anything else reads as
+  100)
 - `wave-interfaces.json`: the additional interfaces the user enabled, at
   most four instance ids. Written by the daemon.
 - `desktop-keys.json`: the UI's desktop key settings. Written by the

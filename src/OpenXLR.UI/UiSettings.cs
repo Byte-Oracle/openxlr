@@ -95,11 +95,11 @@ public sealed record UiSettings
     public IReadOnlyList<SkinLayoutKey> SkinPopOutsApplied { get; init; } = [];
 
     /// <summary>
-    /// The size the submixer is drawn at in its own window, one of
-    /// <see cref="UI.MixerScale.Choices"/>: <c>fit</c> for the largest that
-    /// shows it whole, or a percentage. Null, or anything else, is 100. Only
-    /// the picker in the mixer's window writes it; the main window always
-    /// draws the panel at the skin's own size.
+    /// The size the submixer is drawn at in its own window: <c>fit</c> for
+    /// the largest that shows it whole, or a whole percentage from 100 to
+    /// 300, one of <see cref="UI.MixerScale.Choices"/> or a custom size. Null,
+    /// or anything else, is 100. Only the picker in the mixer's window writes
+    /// it; the main window always draws the panel at the skin's own size.
     /// </summary>
     [JsonConverter(typeof(LocalMixerScaleConverter))]
     public string? MixerScale { get; init; }

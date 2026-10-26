@@ -14,7 +14,15 @@
       <WrapPanel>
         <TextBlock Text="{loc:Text Key=MixerScale}" VerticalAlignment="Center" Margin="0,0,8,0"/>
         <ComboBox Name="MixerScalePicker" AutomationProperties.Name="{loc:Text Key=MixerScale}"
-                  ToolTip.Tip="{loc:Text Key=MixerScaleHint}"/>
+                  ToolTip.Tip="{loc:Text Key=MixerScaleHint}" Margin="0,0,8,0"/>
+        <!-- shown for Custom: any whole percent in the range, held to it when typed past either end -->
+        <StackPanel Name="MixerScaleCustomRow" Orientation="Horizontal" Spacing="4" IsVisible="False">
+          <NumericUpDown Name="MixerScaleCustom" FormatString="0" ClipValueToMinMax="True" VerticalAlignment="Center"
+                         VerticalContentAlignment="Center"
+                         AutomationProperties.Name="{loc:Text Key=MixerScaleCustomName}"
+                         ToolTip.Tip="{loc:Text Key=MixerScaleCustomHint}"/>
+          <TextBlock Text="{loc:Text Key=MixerScaleCustomUnit}" VerticalAlignment="Center"/>
+        </StackPanel>
       </WrapPanel>
       <TextBlock Name="MixerScaleNote" Classes="note" TextWrapping="Wrap" IsVisible="False"/>
     </StackPanel>

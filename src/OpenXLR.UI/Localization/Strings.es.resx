@@ -633,6 +633,18 @@
   <data name="MixerScaleNotSaved" xml:space="preserve">
     <value>El tamaño del mezclador se aplica hasta que se cierre esta ventana, pero no se ha podido guardar: {0}</value>
   </data>
+  <data name="MixerScaleCustom" xml:space="preserve">
+    <value>Personalizado</value>
+  </data>
+  <data name="MixerScaleCustomName" xml:space="preserve">
+    <value>Tamaño del mezclador personalizado en porcentaje</value>
+  </data>
+  <data name="MixerScaleCustomHint" xml:space="preserve">
+    <value>Cualquier tamaño del 100 % al 300 %. Escribe un tamaño y pulsa Intro, o usa las flechas para cambiarlo de 5 % en 5 %.</value>
+  </data>
+  <data name="MixerScaleCustomUnit" xml:space="preserve">
+    <value>%</value>
+  </data>
   <data name="DoNotLeaveThisOnTheSwitchIs" xml:space="preserve">
     <value>No dejes esto activado. El interruptor no se guarda al reiniciar el demonio; una traza activada en el entorno de inicio del demonio sigue vigente. Un WINEDEBUG explícito conserva sus propios canales.</value>
   </data>
