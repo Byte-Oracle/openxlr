@@ -17,14 +17,26 @@ public partial class MicCheckWindow : Window
     internal static readonly TimeSpan MeterRenewal = TimeSpan.FromSeconds(5);
 
     private readonly DispatcherTimer _meter = new() { Interval = MeterRenewal };
+    // Suggest gain's countdown, and its end when the meter sends nothing.
+    private readonly DispatcherTimer _measure = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private bool _closing, _closed;
 
     public MicCheckWindow()
     {
         InitializeComponent();
         _meter.Tick += (_, _) => KeepMeter();
+        _measure.Tick += (_, _) =>
+        {
+            Check?.MeasureTick();
+            if (Check is not { Measuring: true }) _measure.Stop();
+        };
         Opened += (_, _) => { KeepMeter(); _meter.Start(); };
-        Closed += (_, _) => _meter.Stop();
+        Closed += (_, _) =>
+        {
+            _meter.Stop();
+            _measure.Stop();
+            Check?.CancelGainMeasure();
+        };
         Closing += async (_, e) =>
         {
             if (_closed || DataContext is not MicCheckViewModel vm) return;
@@ -54,6 +66,16 @@ public partial class MicCheckWindow : Window
     }
 
     private void OnClearClip(object? sender, RoutedEventArgs e) => Check?.ClearClip();
+
+    private void OnSuggestGain(object? sender, RoutedEventArgs e)
+    {
+        if (Check is not { } vm) return;
+        vm.StartGainMeasure();
+        _measure.Start();
+    }
+
+    private void OnAcceptGain(object? sender, RoutedEventArgs e) => Check?.AcceptGain();
+    private void OnDiscardGain(object? sender, RoutedEventArgs e) => Check?.DiscardGain();
     private async void OnRecord(object? sender, RoutedEventArgs e) { if (Check is { } vm) await vm.RunAsync("record"); }
     private async void OnLoop(object? sender, RoutedEventArgs e) { if (Check is { } vm) await vm.RunAsync("loop"); }
     private async void OnLive(object? sender, RoutedEventArgs e) { if (Check is { } vm) await vm.RunAsync("live"); }

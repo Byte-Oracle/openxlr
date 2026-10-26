@@ -48,6 +48,26 @@ internal static class MicCheckWindowTests
             Assert.True(window.FindControl<TextBlock>("MicCheckNoGain")!.IsEffectivelyVisible);
             window.FindControl<Button>("MicCheckClip")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.False(model.Clipped);
+            // Suggest gain on a microphone OpenXLR sets no gain for: it
+            // listens, says the change on the device, and offers no Accept.
+            var time = new ManualTime();
+            model.Time = time;
+            Click(window, "MicCheckSuggestGain");
+            Assert.True(model.Measuring);
+            Assert.False(window.FindControl<Button>("MicCheckSuggestGain")!.IsEnabled);
+            await Until(() => window.FindControl<TextBlock>("MicCheckSuggestAdvice")!.IsEffectivelyVisible);
+            for (int i = 0; i < 100 && model.Measuring; i++)
+            {
+                time.Advance(TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 15 + 1));
+                model.ApplyInputLevel(new JsonArray(.5, .7, 0));
+            }
+            Assert.Equal(GainOutcome.Elsewhere, model.Suggestion!.Outcome);
+            await Until(() => window.FindControl<Button>("MicCheckSuggestGain")!.IsEnabled
+                && window.FindControl<TextBlock>("MicCheckSuggestMeasured")!.IsEffectivelyVisible);
+            Assert.False(window.FindControl<Button>("MicCheckAcceptGain")!.IsVisible);
+            Assert.True(window.FindControl<Button>("MicCheckDiscardGain")!.IsEffectivelyVisible);
+            Click(window, "MicCheckDiscardGain");
+            await Until(() => !window.FindControl<TextBlock>("MicCheckSuggestAdvice")!.IsVisible);
             Assert.False(window.FindControl<Control>("MicCheckListen")!.IsVisible);
 
             // Then Listen, from the step bar.

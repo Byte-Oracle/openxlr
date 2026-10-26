@@ -220,4 +220,263 @@ public sealed class MicCheckModelTests
         Assert.False(first.NoFilters);
         Assert.Null(first.Eq);
     }
+
+    // --- Suggest gain ---
+
+    /// <summary>Five seconds of the 15 Hz meter: the same RMS and peak in every reading.</summary>
+    private static List<LevelReading> Steady(double rmsDb, double peakDb, int count = 75)
+        => [.. Enumerable.Repeat(new LevelReading(rmsDb, peakDb, false), count)];
+
+    [Fact]
+    public void SuggestGainBringsSpeechToTheTargetWithThePeakInTheBand()
+    {
+        // Speech 10 dB under the target, the highest peak 12 dB under the
+        // band's top: the speech level decides, 10 dB up.
+        GainSuggestion s = GainSuggestion.From(Steady(-30, -18), 40, 80);
+        Assert.Equal(GainOutcome.Change, s.Outcome);
+        Assert.Equal(10, s.ChangeDb, 6);
+        Assert.Equal((40, 50), (s.FromDb, s.ToDb));
+        Assert.True(s.ChangesGain);
+        Assert.False(s.Clipped);
+
+        // A peaky voice: the peak decides, and stays at the band's top.
+        s = GainSuggestion.From(Steady(-30, -12), 40, 80);
+        Assert.Equal((40, 46), (s.FromDb, s.ToDb));
+        Assert.True(s.PeakDb + (s.ToDb - s.FromDb) <= MicCheckLevels.BandHighDb);
+
+        // Whole dB rounded down where rounding up would lift the peak over the top.
+        s = GainSuggestion.From(Steady(-30, -15.5), 40, 80);
+        Assert.Equal(9.5, s.ChangeDb, 6);
+        Assert.Equal(49, s.ToDb);
+        // Elsewhere it rounds to the nearest.
+        s = GainSuggestion.From(Steady(-29.4, -25), 40, 80);
+        Assert.Equal(49, s.ToDb);
+
+        // Downwards too, and on a unit with a smaller range.
+        s = GainSuggestion.From(Steady(-12, -3), 30, 40);
+        Assert.Equal((30, 22), (s.FromDb, s.ToDb));
+    }
+
+    [Fact]
+    public void SpeechIsTheNinetyFifthPercentileSoAFewLoudMomentsDoNotDecide()
+    {
+        // Ten loud readings in a hundred: the top five percent are among them.
+        List<LevelReading> readings = [.. Steady(-40, -30, 90), .. Steady(-25, -15, 10)];
+        Assert.Equal(-25, GainSuggestion.From(readings, 40, 80).SpeechDb);
+        // Four are not: the speech level is the rest of the voice, and the
+        // loud moments still count through the peak.
+        readings = [.. Steady(-40, -30, 96), .. Steady(-25, -9, 4)];
+        GainSuggestion s = GainSuggestion.From(readings, 40, 80);
+        Assert.Equal(-40, s.SpeechDb);
+        Assert.Equal(-9, s.PeakDb);
+        Assert.Equal(3, s.ChangeDb, 6);
+    }
+
+    [Fact]
+    public void SuggestGainKeepsAGainThatIsCloseAndStaysInsideTheRange()
+    {
+        GainSuggestion s = GainSuggestion.From(Steady(-21, -10), 40, 80);
+        Assert.Equal(GainOutcome.Keep, s.Outcome);
+        Assert.Equal(40, s.ToDb);
+        Assert.False(s.ChangesGain);
+
+        // At the top already: nothing to change, and how far short it is.
+        s = GainSuggestion.From(Steady(-40, -30), 75, 75);
+        Assert.Equal(GainOutcome.AtMaximum, s.Outcome);
+        Assert.False(s.ChangesGain);
+        Assert.Equal(20, s.ShortfallDb, 6);
+        // Short of the top: up to it.
+        s = GainSuggestion.From(Steady(-40, -30), 70, 75);
+        Assert.Equal((GainOutcome.AtMaximum, 75), (s.Outcome, s.ToDb));
+        Assert.Equal(15, s.ShortfallDb, 6);
+        // Within half a dB of the top is an ordinary change to it.
+        s = GainSuggestion.From(Steady(-30.3, -25), 70, 80);
+        Assert.Equal((GainOutcome.Change, 80), (s.Outcome, s.ToDb));
+
+        s = GainSuggestion.From(Steady(-8, -1), 3, 80);
+        Assert.Equal((GainOutcome.AtMinimum, 0), (s.Outcome, s.ToDb));
+        Assert.Equal(9, s.ShortfallDb, 6);
+    }
+
+    [Fact]
+    public void AClipLowersTheGainAndAnOldClipFlagDoesNotCount()
+    {
+        GainSuggestion s = GainSuggestion.From(Steady(-14, -0.1), 50, 80);
+        Assert.True(s.Clipped);
+        Assert.True(s.ChangeDb <= -5.9);
+        Assert.Equal(44, s.ToDb);
+
+        // The daemon holds the flag for a second: set when listening starts
+        // and falling, it is an older clip.
+        List<LevelReading> readings = Steady(-21, -10);
+        for (int i = 0; i < 10; i++) readings[i] = readings[i] with { Clip = true };
+        s = GainSuggestion.From(readings, 40, 80);
+        Assert.False(s.Clipped);
+        Assert.Equal(GainOutcome.Keep, s.Outcome);
+        // Rising while listening, it is a clip even when no reading caught the peak.
+        readings[40] = readings[40] with { Clip = true };
+        s = GainSuggestion.From(readings, 40, 80);
+        Assert.True(s.Clipped);
+        Assert.NotEqual(GainOutcome.Keep, s.Outcome);
+    }
+
+    [Fact]
+    public void SuggestGainDoesNotGuessFromSilenceOrTooFewReadings()
+    {
+        GainSuggestion s = GainSuggestion.From(Steady(-60, -60), 40, 80);
+        Assert.Equal(GainOutcome.NoVoice, s.Outcome);
+        Assert.False(s.ChangesGain);
+        s = GainSuggestion.From(Steady(-30, -18, MicCheckLevels.MinReadings - 1), 40, 80);
+        Assert.Equal(GainOutcome.TooFewReadings, s.Outcome);
+        Assert.False(s.ChangesGain);
+
+        // No gain OpenXLR sets: the change is said, never made.
+        s = GainSuggestion.From(Steady(-30, -18), null, 0);
+        Assert.Equal(GainOutcome.Elsewhere, s.Outcome);
+        Assert.Equal(10, s.ChangeDb, 6);
+        Assert.Null(s.ToDb);
+        Assert.False(s.ChangesGain);
+        Assert.Equal(GainOutcome.Keep, GainSuggestion.From(Steady(-21, -10), null, 0).Outcome);
+    }
+
+    /// <summary>The band Suggest gain aims for is the one the Level step draws and names.</summary>
+    [Fact]
+    public void SuggestGainAimsForTheBandTheLevelStepDraws()
+    {
+        string window = File.ReadAllText(Path.Combine(MicEqTests.RepoRoot, "src", "OpenXLR.UI", "MicCheckWindow.axaml"));
+        static double Share(double from, double to) => (to - from) / 6;
+        string columns = $"ColumnDefinitions=\"{Share(MicCheckLevels.MeterFloorDb, MicCheckLevels.BandLowDb)}*,"
+            + $"{Share(MicCheckLevels.BandLowDb, MicCheckLevels.BandHighDb)}*,{Share(MicCheckLevels.BandHighDb, 0)}*\"";
+        int target = window.IndexOf("Name=\"MicCheckTarget\"", StringComparison.Ordinal);
+        Assert.True(target > 0);
+        Assert.Equal(window.LastIndexOf("ColumnDefinitions=", target, StringComparison.Ordinal),
+            window.LastIndexOf(columns, target, StringComparison.Ordinal));
+        Assert.Contains(string.Format(CultureInfo.InvariantCulture, "{0} and {1} dBFS", MicCheckLevels.BandLowDb, MicCheckLevels.BandHighDb),
+            Localizer.Text("MicCheckTargetTip"));
+        // Speech at the target leaves room for its peaks inside the band.
+        Assert.InRange(MicCheckLevels.TargetSpeechDb, MicCheckLevels.BandLowDb - 6, MicCheckLevels.BandLowDb);
+    }
+
+}
+
+/// <summary>
+/// Suggest gain through the main window's model. An accepted gain goes out
+/// through the gain slider's shared debounce: its dispatcher timer and its
+/// touch guard are static, so this class runs in the collection of the other
+/// tests that write a gain that way, and clears the guard before and after.
+/// </summary>
+[Collection("xdg-config")]
+public sealed class MicCheckGainModelTests : IDisposable
+{
+    public MicCheckGainModelTests() => SliderSync.ReleaseTouchGuards();
+
+    public void Dispose() => SliderSync.ReleaseTouchGuards();
+
+    private static void Meter(MicCheckViewModel check, ManualTime time, double rmsDb, double peakDb)
+    {
+        time.Advance(TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 15 + 1));
+        check.ApplyInputLevel(new JsonArray((rmsDb + 60) / 60, (peakDb + 60) / 60, 0));
+    }
+
+    [Fact]
+    public async Task SuggestGainWritesNothingUntilAcceptedAndThenThroughTheInputsOwnGain()
+    {
+        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        var main = new MainViewModel(client);
+        string Xlr1 = InputBindingModelTests.Xlr("xlr1", 0, InputBindingModelTests.Input(1));
+        JsonNode state = JsonNode.Parse(InputBindingModelTests.ProState(Xlr1))!;
+        state["capabilities"]!["gainMaxDb"] = 80;
+        state["state"] = new JsonObject { ["gainDb"] = 40, ["gainLocked"] = false };
+        CaptureInputWindowTests.Apply(main, state);
+        MicCheckViewModel check = main.Inserts.MicCheck;
+        var time = new ManualTime();
+        check.Time = time;
+        Assert.NotNull(check.Unit);
+        Assert.Equal(40, main.GainDb);
+
+        check.StartGainMeasure();
+        Assert.True(check.Measuring);
+        Assert.False(check.CanSuggestGain);
+        Assert.Equal(Localizer.Format("MicCheckSuggestListening", 5.0), check.SuggestAdvice);
+        for (int i = 0; i < 74; i++) Meter(check, time, -30, -18);
+        Assert.True(check.Measuring);
+        Meter(check, time, -30, -18);
+        Assert.False(check.Measuring);
+        Assert.Equal(GainOutcome.Change, check.Suggestion!.Outcome);
+        Assert.Equal(50, check.Suggestion.ToDb);
+        Assert.Equal(Localizer.Format("MicCheckSuggestChange", 40, 50), check.SuggestAdvice);
+        Assert.Equal(Localizer.Format("MicCheckSuggestMeasured", -30.0, -18.0), check.SuggestMeasured);
+        // Measured, not written.
+        Assert.Equal(40, main.GainDb);
+        Assert.True(check.CanAcceptGain);
+        Assert.Null(check.SuggestBlocked);
+
+        // The gain lock holds it back, and says so.
+        state["state"]!["gainLocked"] = true;
+        CaptureInputWindowTests.Apply(main, state);
+        Assert.False(check.CanAcceptGain);
+        Assert.Equal(Localizer.Text("MicCheckSuggestLocked"), check.SuggestBlocked);
+        check.AcceptGain();
+        Assert.Equal(40, main.GainDb);
+        state["state"]!["gainLocked"] = false;
+        CaptureInputWindowTests.Apply(main, state);
+
+        check.AcceptGain();
+        Assert.Equal(50, main.GainDb);
+        Assert.Null(check.Suggestion);
+        Assert.Equal(Localizer.Format("MicCheckSuggestSet", 50), check.SuggestAdvice);
+        Assert.True(check.CanDiscardGain);
+        check.DiscardGain();
+        Assert.Null(check.SuggestAdvice);
+
+        // A gain moved after the measurement is not overwritten.
+        check.StartGainMeasure();
+        for (int i = 0; i < 75; i++) Meter(check, time, -35, -25);
+        Assert.Equal(65, check.Suggestion!.ToDb);
+        main.GainDb = 45;
+        check.AcceptGain();
+        Assert.Equal(45, main.GainDb);
+        Assert.Equal(Localizer.Text("MicCheckSuggestStale"), check.SuggestAdvice);
+
+        // Or while listening.
+        check.StartGainMeasure();
+        Meter(check, time, -35, -25);
+        main.GainDb = 47;
+        for (int i = 0; i < 75; i++) Meter(check, time, -35, -25);
+        Assert.Null(check.Suggestion);
+        Assert.Equal(Localizer.Text("MicCheckSuggestStale"), check.SuggestAdvice);
+
+        // With no reading at all, the window's clock ends it.
+        check.StartGainMeasure();
+        time.Advance(TimeSpan.FromSeconds(4));
+        check.MeasureTick();
+        Assert.Equal(Localizer.Format("MicCheckSuggestListening", 1.0), check.SuggestAdvice);
+        time.Advance(TimeSpan.FromSeconds(1));
+        check.MeasureTick();
+        Assert.False(check.Measuring);
+        Assert.Equal(GainOutcome.TooFewReadings, check.Suggestion!.Outcome);
+        Assert.Null(check.SuggestMeasured);
+        Assert.Equal(Localizer.Text("MicCheckSuggestTooFew"), check.SuggestAdvice);
+
+        // A closed window drops the measurement, and a lost connection the suggestion.
+        check.StartGainMeasure();
+        check.CancelGainMeasure();
+        Assert.False(check.Measuring);
+        check.StartGainMeasure();
+        for (int i = 0; i < 75; i++) Meter(check, time, -35, -25);
+        Assert.NotNull(check.Suggestion);
+        check.Reset();
+        Assert.Null(check.Suggestion);
+        Assert.Null(check.SuggestAdvice);
+
+        // A microphone OpenXLR sets no gain for: the change is said, with no Accept.
+        CaptureInputWindowTests.Apply(main, JsonNode.Parse(InputBindingModelTests.ProState(InputBindingModelTests.BoundXlr1(true)))!);
+        Assert.Null(check.Unit);
+        check.StartGainMeasure();
+        for (int i = 0; i < 75; i++) Meter(check, time, -30, -18);
+        Assert.Equal(GainOutcome.Elsewhere, check.Suggestion!.Outcome);
+        Assert.Equal(Localizer.Format("MicCheckSuggestElsewhere", 10.0), check.SuggestAdvice);
+        Assert.False(check.CanAcceptGain);
+        Assert.Null(check.SuggestBlocked);
+    }
 }

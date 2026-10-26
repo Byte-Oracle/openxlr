@@ -1070,6 +1070,37 @@ additional interface. For any other microphone, set the gain on the
 microphone or its own interface. The meter runs while the window is open
 and changes nothing in the channel's route.
 
+**Suggest gain** works out a gain for you. Press it and talk for five seconds
+as you will on air. OpenXLR measures two figures from the meter. One is
+your speech level, the level the average bar stays under for 95 percent
+of the five seconds, so pauses and a single loud word do not decide it.
+The other is the highest peak. OpenXLR proposes the gain that brings your
+speech level to -20 dBFS, which puts your peaks in the band, unless that
+would lift the highest peak over -6 dBFS, the top of the band. Then it
+stops where that peak reaches the top. The
+suggestion is in whole dB inside the interface's range, and nothing is
+written to the interface until you press **Accept**. **Discard** forgets
+it.
+
+- A change under 2 dB is not worth making, so the window says to keep the
+  gain you have.
+- When the interface's highest gain is still too low, or 0 dB still too
+  high, the window says how far your voice stays from the target and what
+  to try, such as moving closer or further away.
+- When your voice clipped during the five seconds, its real level is
+  higher than measured. Accept the lower gain and measure again.
+- When the level stays near the bottom of the meter, the window does not
+  suggest anything. Check the microphone, its mute and phantom power
+  first.
+- With the gain lock on, the suggestion shows but cannot be accepted until
+  you release the lock. The same goes for an additional interface that
+  OpenXLR cannot reach at that moment.
+- For a microphone whose gain OpenXLR does not set, such as a USB
+  microphone or another make of interface, the window says how many dB to
+  change on the device.
+- If the gain moves while OpenXLR listens or before you accept, the window
+  asks you to measure again rather than overwrite it.
+
 **Listen** records a take and plays it back through the chain:
 
 - **Record** and speak; recording stops by itself after ten seconds.
@@ -1077,7 +1108,10 @@ and changes nothing in the channel's route.
   place of your microphone, through every insert and the channel's
   software processing as they are set, so you can change controls, bypass
   plugins or reorder the chain and hear the result on the same words. The
-  loop needs at least a tenth of a second recorded. **Live mic** goes back
+  last 50 ms of the take fade into its first 50 ms, so the loop does not
+  click where it starts over. The loop needs at least a tenth of a second
+  recorded; a take shorter than 0.2 seconds fades over a quarter of its
+  length. **Live mic** goes back
   to the microphone and keeps the take; **Record** replaces it. The
   interface's own gain and processing are already in the take, so changing
   those while it loops changes nothing.
@@ -1170,8 +1204,6 @@ and ends with **Stop and discard** or when the window closes:
   port the input takes, the refusal says the capture port is unavailable.
 - Mic check needs the native plugin host the packages include. A source
   build without `-p:EnableNativeLv2Host=true` refuses it with that reason.
-- A loop can click at the point where it starts over; record with a short
-  silence at each end.
 
 <a name="microphone-eq"></a>
 **Microphone EQ.** XLR 1, XLR 2 and every capture input on one mono port

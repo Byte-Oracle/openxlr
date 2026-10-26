@@ -14,6 +14,12 @@
 // other with a short linear crossfade, so the same words can be heard with
 // and without the processing at once, with no chain rebuilt.
 //
+// Where the loop starts over. The last `fade` samples of the take fade out
+// linearly while the first `fade` fade in under them, and the next pass
+// carries on from sample `fade`, so the wrap has no step to click. The first
+// pass starts at the true start of the take; every pass after it is `fade`
+// samples shorter than the take.
+//
 // The take's waveform. While recording, the audio thread keeps the peak of
 // each of PEAK_BINS stretches of the buffer. When a recording ends with
 // samples in it, it freezes the bins into PEAK_POINTS peaks, publishes the
@@ -38,10 +44,15 @@ enum {
 };
 // The crossfade between the processed and the raw path, in seconds.
 #define RAW_CROSSFADE 0.02
+// The crossfade where the loop starts over, in seconds. A take shorter than
+// four of these fades over a quarter of its length.
+#define LOOP_CROSSFADE 0.05
 
 typedef struct {
   float *samples;
   uint32_t capacity, length, cursor;  // audio thread only
+  uint32_t fade;                      // audio thread only: the crossfade of the take that loops
+  uint32_t fade_frames;               // set at load: the longest crossfade
   int previous;                       // audio thread only
   float raw_gain, raw_step;           // audio thread only: 0 processed, 1 raw
   float bins[PEAK_BINS];             // audio thread only
@@ -65,6 +76,7 @@ static bool sound_check_load(Host *h, char **arguments) {
   s->capacity = h->rate * SOUND_CHECK_SECONDS;
   s->samples = calloc(s->capacity, sizeof(float));
   s->raw_step = (float)(1.0 / (RAW_CROSSFADE * h->rate));
+  s->fade_frames = (uint32_t)(LOOP_CROSSFADE * h->rate);
   s->command = host_add_control(h, "command", LIVE, LOOP, LIVE, false, NULL);
   s->raw = host_add_control(h, "raw", 0, 1, 0, false, NULL);
   s->frames = host_add_control(h, "frames", 0, (float)s->capacity, 0, true, NULL);
@@ -121,7 +133,10 @@ static void sound_check_process(Host *h, uint32_t frames, float *const *in, floa
       s->length = 0;
       memset(s->bins, 0, sizeof(s->bins));
     }
-    if (mode == LOOP) s->cursor = 0;
+    if (mode == LOOP) {
+      s->cursor = 0;
+      s->fade = s->length / 4 < s->fade_frames ? s->length / 4 : s->fade_frames;
+    }
     s->previous = mode;
   }
   if (mode == LOOP && s->length == 0) mode = LIVE;
@@ -141,8 +156,16 @@ static void sound_check_process(Host *h, uint32_t frames, float *const *in, floa
         host_control_moved_rt(h, s->command, LIVE);
       }
     } else if (mode == LOOP) {
-      x = s->samples[s->cursor++];
-      if (s->cursor == s->length) s->cursor = 0;
+      x = s->samples[s->cursor];
+      uint32_t tail = s->length - s->fade;
+      if (s->cursor >= tail) {
+        // The end fading out, the start fading in: a + (b - a) * t keeps a
+        // signal both ends share, such as a hum or an offset, at its level.
+        uint32_t k = s->cursor - tail;
+        float t = (float)(k + 1) / (float)(s->fade + 1);
+        x += (s->samples[k] - x) * t;
+      }
+      if (++s->cursor == s->length) s->cursor = s->fade;
     }
     if (s->raw_gain < target) s->raw_gain = fminf(target, s->raw_gain + s->raw_step);
     else if (s->raw_gain > target) s->raw_gain = fmaxf(target, s->raw_gain - s->raw_step);

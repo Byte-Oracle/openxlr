@@ -572,11 +572,16 @@ the kind of unit the microphone is on (a Wave:3's or Wave:1's capsule, an
 XLR jack, or a device OpenXLR does not drive) and the unit's phantom power
 switch where it has one. **Level** shows the microphone before any processing on a large
 meter, with a band for speech, a clip light that holds until cleared and
-the interface's gain beside it where the input has one. **Listen** records
+the interface's gain beside it where the input has one. **Suggest gain**
+listens to five seconds of speech and proposes a gain for the interface
+that brings the voice into the band without clipping, and writes it only
+when you accept; for a microphone whose gain OpenXLR does not set, it says
+how much to change it on the device. **Listen** records
 up to ten seconds and loops that dry take through the channel's software
 processing and insert chain in place of the live input, so the effects can
 be tuned while the same words repeat, with the take's waveform and a
-playhead. **Processed** and **Raw** flip between the microphone with and
+playhead; the end of the take crossfades into its start, so the loop does
+not click where it starts over. **Processed** and **Raw** flip between the microphone with and
 without its processing on the same take, in the loop helper with a 20 ms
 crossfade and no chain rebuilt, and **Hear myself** puts the processed
 microphone in the monitor mix for the session only, and the window says
