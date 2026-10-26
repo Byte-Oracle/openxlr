@@ -5,7 +5,7 @@
 %global _build_id_links none
 
 Name:           openxlr
-Version: 0.2.5
+Version: 0.2.6
 Release:        1%{?dist}
 Summary:        Linux Wave Link replacement for Elgato XLR interfaces and Wave microphones
 License:        GPL-3.0-only
@@ -187,6 +187,12 @@ MSG
 %{_datadir}/openxlr/
 
 %changelog
+* Mon Oct 26 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.6-1
+- Devices: the Wave XLR Pro no longer plays Line In straight to the headphone jacks beside its channel.
+- Devices: a Level Lock for the Wave XLR Pro's Line In, in the UI, the Deck and the terminal mixer.
+- Devices: the Wave XLR Pro's Line In gain is capped at 40 dB.
+- UI: a selected output that is unplugged keeps its name instead of its device id.
+
 * Sun Oct 25 2026 Emanuele Sparvoli <sparvoli@gmail.com> - 0.2.5-1
 - Mixer: Line In on the Wave XLR Pro is its own channel with the jack's hardware gain, separate from Aux In.
 - Mixer: capture inputs on sources OpenXLR does not drive have a gain control, the device's own gain when it has one.
