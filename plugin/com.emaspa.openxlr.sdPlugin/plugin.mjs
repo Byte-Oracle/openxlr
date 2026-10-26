@@ -57,6 +57,10 @@ function publishLayout() {
 }
 let daemonState = null;   // last full {"type":"state"} message
 let daemonUp = false;
+// A short word keys and dials show instead of "offline" when the adapter
+// said why it could not connect: a daemon from before the update.
+let daemonNotice = null;
+let daemonNoticeMessage = "";
 let meterLevels = null;   // last {"type":"meters"} levels, keyed ch:/mix:
 let catalog = new Map();  // LV2 plugin URI -> PluginInfo (names and ranges of the params)
 let reconnectTimer = null;
@@ -81,6 +85,7 @@ function connectDaemon() {
   socket.onopen = () => {
     if (daemon !== socket) return;
     daemonUp = true;
+    daemonNotice = null; daemonNoticeMessage = "";
     reconnectDelayMs = 500;
     cmd({ cmd: "listPlugins" });
     refreshAll();
@@ -101,6 +106,13 @@ function connectDaemon() {
   socket.onclose = (e) => {
     if (daemon !== socket) return;
     if (e && e.code === 1008) console.error("OpenXLR daemon refused the plugin:", e.reason);
+    if (socket.error) {
+      daemonNotice = socket.error.reason === "olderDaemon" ? "restart" : null;
+      if (socket.error.message !== daemonNoticeMessage) {
+        daemonNoticeMessage = socket.error.message;
+        console.error("OpenXLR:", daemonNoticeMessage);
+      }
+    } else daemonNotice = null;
     daemonUp = false; daemonState = null;
     keyCommands.disconnect();
     refreshAll();
@@ -1271,7 +1283,7 @@ function refresh(context) {
     const v = toggleValue(t, inst);
     const badge = t === "softLowCut" ? (mixer()?.lowCutHz ? String(mixer().lowCutHz) : "OFF") : "";
     const label = emptyTitle.has(context)
-      ? (!daemonUp ? "offline"
+      ? (!daemonUp ? daemonNotice ?? "offline"
         : isInsertTarget(t) || isProfileTarget(t) ? toggleLabel(t, inst) : defaultTitle(t)) : "";
     // The user can pick a glyph per key (a monitor output may be headphones
     // rather than speakers); "auto" or unset keeps the target's default.
@@ -1293,7 +1305,7 @@ function refresh(context) {
           icon: dialIcon(t),
           needle: needleSvg(d.pct, d.maxPct),
           muteOverlay: { enabled: d.muted } }
-      : { title: marqueeTitle(context, "", "OpenXLR"), value: daemonUp ? "set up" : "offline",
+      : { title: marqueeTitle(context, "", "OpenXLR"), value: daemonUp ? "set up" : daemonNotice ?? "offline",
           unit: { enabled: false }, icon: dialIcon(null),
           needle: needleSvg(0), muteOverlay: { enabled: false } } });
   }

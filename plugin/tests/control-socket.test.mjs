@@ -166,3 +166,32 @@ test("an older native and Flatpak installation cannot launch a daemon through th
     rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test("an adapter error line closes with its reason instead of opening", () => {
+  const fixture = controlFixture();
+  try {
+    const socket = new ControlSocket();
+    let opens = 0, closes = 0, seen = null;
+    socket.onopen = () => opens++;
+    socket.onclose = () => { closes++; seen = socket.error; };
+    const child = fixture.children[0];
+    child.receive({type: "controlError", reason: "olderDaemon", message: "Restart it: systemctl --user restart openxlr-daemon"});
+    assert.equal(socket.readyState, 3);
+    assert.equal(opens, 0);
+    assert.equal(closes, 1);
+    assert.deepEqual(seen, {reason: "olderDaemon", message: "Restart it: systemctl --user restart openxlr-daemon"});
+  } finally { fixture.restore(); }
+});
+
+test("close ends the adapter's input as well as signalling it", () => {
+  const fixture = controlFixture();
+  try {
+    const socket = new ControlSocket();
+    const child = fixture.children[0];
+    child.onopen();
+    socket.close();
+    assert.ok(child.stdin.writableEnded);
+    assert.ok(child.killed);
+    assert.equal(socket.error, null);
+  } finally { fixture.restore(); }
+});

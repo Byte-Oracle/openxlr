@@ -4,6 +4,9 @@ import {spawn} from "node:child_process";
 // dedicated launcher supplies a client-only, bounded JSON-line adapter.
 export class ControlSocket {
   readyState = 0;
+  // Why the adapter could not connect, from its controlError line:
+  // {reason, message}, or null. Set before onclose runs.
+  error = null;
   #child;
   #chunks = [];
   #bytes = 0;
@@ -43,8 +46,13 @@ export class ControlSocket {
       const text = Buffer.concat(this.#chunks, this.#bytes).toString("utf8");
       this.#chunks = []; this.#bytes = 0;
       if (this.readyState === 0) {
-        try { if (JSON.parse(text).type !== "controlReady") { this.close(); return; } }
-        catch { this.close(); return; }
+        let first;
+        try { first = JSON.parse(text); } catch { this.close(); return; }
+        if (first?.type === "controlError") {
+          this.error = {reason: String(first.reason ?? ""), message: String(first.message ?? "")};
+          this.close(); return;
+        }
+        if (first?.type !== "controlReady") { this.close(); return; }
         clearTimeout(this.#openingDeadline);
         this.readyState = 1;
         this.onopen?.();
@@ -69,6 +77,9 @@ export class ControlSocket {
     this.readyState = 3;
     clearTimeout(this.#openingDeadline);
     this.#chunks = []; this.#bytes = 0;
+    // Under flatpak run a signal may stop at the launcher and never reach the
+    // sandboxed adapter. End of input ends the adapter on its own.
+    try { this.#child.stdin.end(); } catch { /* already closed */ }
     this.#child.kill();
     this.onclose?.();
   }
