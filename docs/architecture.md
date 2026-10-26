@@ -48,8 +48,9 @@ flowchart TD
   skins from the same folders and the same saved choice. Like the UI
   it has no reference to Core, and it has no NuGet dependency.
 - The Omarchy plugin, `packaging/omarchy/openxlr.mixer/`, is QML for
-  Omarchy 4's bar. It connects to `/api/v1/events` with the same token and
-  uses the documented commands; [omarchy.md](omarchy.md) has its limits.
+  Omarchy 4's bar. Like OpenDeck it uses the client-only `openxlr-control`
+  adapter for the Unix WebSocket and the documented commands;
+  [omarchy.md](omarchy.md) has its limits.
 - `OpenXLR.Core` contains device backends, the PipeWire adapter, mixer,
   application matching, plugin catalogues and profile storage. The native
   host processes plugin audio without passing samples through managed code.

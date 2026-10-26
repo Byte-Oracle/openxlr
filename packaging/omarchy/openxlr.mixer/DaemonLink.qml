@@ -38,7 +38,7 @@ QtObject {
     property Component bridgeFactory: Component {
         Process {
             id: process
-            command: ["openxlr-daemon", "--control-stdio"]
+            command: ["openxlr-control"]
             stdinEnabled: true
             stdout: SplitParser {
                 onRead: data => {

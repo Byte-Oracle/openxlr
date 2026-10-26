@@ -1,7 +1,7 @@
 import {spawn} from "node:child_process";
 
 // Node's browser-compatible WebSocket cannot dial a Unix socket. The
-// installed daemon binary supplies a client-only, bounded JSON-line adapter.
+// dedicated launcher supplies a client-only, bounded JSON-line adapter.
 export class ControlSocket {
   readyState = 0;
   #child;
@@ -12,7 +12,7 @@ export class ControlSocket {
   constructor() {
     this.#openingDeadline = setTimeout(() => this.close(), 15000);
     this.#openingDeadline.unref?.();
-    this.#start("openxlr-daemon", ["--control-stdio"], true);
+    this.#start("openxlr-control", [], true);
   }
 
   #start(command, args, fallback = false) {
@@ -21,7 +21,7 @@ export class ControlSocket {
     child.on("error", error => {
       if (this.#child !== child || this.readyState === 3) return;
       if (fallback && error.code === "ENOENT")
-        this.#start("flatpak", ["run", "--command=/app/lib/openxlr/daemon/OpenXLR.Daemon", "io.github.emaspa.openxlr", "--control-stdio"]);
+        this.#start("flatpak", ["run", "--command=/app/bin/openxlr-control", "io.github.emaspa.openxlr"]);
       else this.close();
     });
     child.on("close", () => { if (this.#child === child) this.close(); });

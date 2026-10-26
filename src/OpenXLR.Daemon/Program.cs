@@ -14,7 +14,14 @@ if (args.Contains("--control-stdio"))
     return await ControlStdio.RunAsync(Console.OpenStandardInput(), Console.OpenStandardOutput());
 }
 
-using FileStream? instanceLock = DaemonLock.TryAcquire();
+FileStream? acquiredLock;
+try { acquiredLock = DaemonLock.TryAcquire(); }
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+{
+    Console.Error.WriteLine("daemon lock unavailable: " + ex.Message);
+    return 1;
+}
+using FileStream? instanceLock = acquiredLock;
 if (instanceLock is null)
 {
     Console.Error.WriteLine($"another OpenXLR daemon is already running (it holds {DaemonLock.Path})");
@@ -25,7 +32,7 @@ try { control = OpenXLR.Core.ControlSocketListener.Bind(); }
 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SocketException or TimeoutException)
 {
     Console.Error.WriteLine("control socket unavailable: " + ex.Message);
-    return OpenXLR.Core.FlatpakEnvironment.IsFlatpak ? 73 : 75;
+    return 1;
 }
 using var controlLease = control;
 
@@ -39,7 +46,7 @@ StartupDefaults startupDefaults = StartupDefaults.Capture();
 // The content root is where the host looks for appsettings.json, and it
 // defaults to the working directory: the home directory under the user
 // unit. A Kestrel endpoint section in a file there would replace the
-// loopback address below, so the root is pinned to the install directory.
+// listener below, so the root is pinned to the install directory.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,

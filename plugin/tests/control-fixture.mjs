@@ -7,8 +7,8 @@ export function controlFixture() {
   const previous = childProcess.spawn;
   const children = [];
   childProcess.spawn = (file, args) => {
-    if (!(file === "openxlr-daemon" && args.join(" ") === "--control-stdio") &&
-        !(file === "flatpak" && args.join(" ") === "run --command=/app/lib/openxlr/daemon/OpenXLR.Daemon io.github.emaspa.openxlr --control-stdio"))
+    if (!(file === "openxlr-control" && args.length === 0) &&
+        !(file === "flatpak" && args.join(" ") === "run --command=/app/bin/openxlr-control io.github.emaspa.openxlr"))
       throw new Error("Unexpected helper");
     const child = new EventEmitter();
     child.command = file; child.args = args;

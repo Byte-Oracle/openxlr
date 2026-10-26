@@ -34,7 +34,10 @@ internal static class ControlStdio
             {
                 lifetime.Cancel();
                 link.Socket.Abort();
-                try { await Task.WhenAll(outgoing, incoming); } catch (Exception) { /* both tasks observed */ }
+                // Console stdin can remain blocked in a native pipe read even
+                // after cancellation. Observe its eventual result without
+                // keeping this client process alive after the daemon closes.
+                _ = ObserveAsync(Task.WhenAll(outgoing, incoming));
             }
             return 0;
         }
@@ -43,6 +46,11 @@ internal static class ControlStdio
             Console.Error.WriteLine("Control connection: " + ex.Message);
             return 1;
         }
+    }
+
+    private static async Task ObserveAsync(Task task)
+    {
+        try { await task; } catch (Exception) { /* both tasks observed */ }
     }
 
     private static async Task ReceiveAsync(WebSocket socket, Stream output, CancellationToken cancel)

@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {existsSync, mkdtempSync, rmSync, writeFileSync} from "node:fs";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
 import {controlFixture} from "./control-fixture.mjs";
 import {ControlSocket} from "../com.emaspa.openxlr.sdPlugin/control-socket.mjs";
 
@@ -40,6 +43,8 @@ test("the adapter opens only on its ready line and preserves fragmented Unicode"
   try {
     const socket = new ControlSocket();
     const child = fixture.children[0];
+    assert.equal(child.command, "openxlr-control");
+    assert.deepEqual(child.args, []);
     let opened = 0;
     const messages = [];
     socket.onopen = () => opened++;
@@ -117,6 +122,7 @@ test("a missing native adapter falls back to Flatpak without accepting late sign
     first.emit("error", {code: "ENOENT"});
     const second = fixture.children[1];
     assert.equal(second.command, "flatpak");
+    assert.deepEqual(second.args, ["run", "--command=/app/bin/openxlr-control", "io.github.emaspa.openxlr"]);
     first.emit("close"); first.onopen();
     assert.equal(opens, 0); assert.equal(closes, 0);
     second.onopen();
@@ -135,4 +141,28 @@ test("a native adapter error other than ENOENT closes instead of launching a sec
     assert.equal(socket.readyState, 3);
     assert.equal(fixture.children.length, 1);
   } finally { fixture.restore(); }
+});
+
+test("an older native and Flatpak installation cannot launch a daemon through the adapter", {timeout: 3000}, async () => {
+  const directory = mkdtempSync(join(tmpdir(), "openxlr-old-install-"));
+  const previousPath = process.env.PATH;
+  const previousMarker = process.env.OPENXLR_OLD_DAEMON_MARKER;
+  const marker = join(directory, "daemon-started");
+  let socket;
+  try {
+    writeFileSync(join(directory, "openxlr-daemon"), '#!/bin/sh\nprintf started > "$OPENXLR_OLD_DAEMON_MARKER"\n', {mode: 0o755});
+    // An older Flatpak lacks /app/bin/openxlr-control. Never select its daemon.
+    writeFileSync(join(directory, "flatpak"), '#!/bin/sh\n[ "$2" = "--command=/app/bin/openxlr-control" ] && exit 1\nprintf started > "$OPENXLR_OLD_DAEMON_MARKER"\n', {mode: 0o755});
+    process.env.PATH = directory;
+    process.env.OPENXLR_OLD_DAEMON_MARKER = marker;
+    socket = new ControlSocket();
+    await new Promise(resolve => { socket.onclose = resolve; });
+    assert.equal(socket.readyState, 3);
+    assert.equal(existsSync(marker), false);
+  } finally {
+    socket?.close();
+    if (previousPath === undefined) delete process.env.PATH; else process.env.PATH = previousPath;
+    if (previousMarker === undefined) delete process.env.OPENXLR_OLD_DAEMON_MARKER; else process.env.OPENXLR_OLD_DAEMON_MARKER = previousMarker;
+    rmSync(directory, {recursive: true, force: true});
+  }
 });

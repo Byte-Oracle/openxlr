@@ -2438,6 +2438,15 @@ Clients use a private Unix socket, authenticated by Linux peer credentials
 and Omarchy plugin together with the daemon. Older clients that use the
 loopback port no longer connect. No API token file is required.
 
+OpenDeck and the Omarchy bar use the client-only `openxlr-control` launcher.
+Upgrade it together with the clients; older installs do not have this entry
+point. Source builds must [link it onto PATH](install-from-source.md#6-make-it-permanent).
+It exits when the daemon disconnects, even with stdin open, so clients clear
+their state and reconnect. OpenDeck stops an adapter that has not signalled
+readiness within 15 seconds. A runtime-directory or socket-path error is a
+startup failure with a specific diagnostic. Only actual lock contention
+reports another daemon; Flatpak treats only that case as an existing session.
+
 <a name="layout"></a>
 ### 3.12 Edit the mixer layout
 
@@ -3204,7 +3213,7 @@ Scan evidence is bounded and marks omitted entries. It is collected from
 scans performed by the updated daemon; restart an older daemon after updating
 when convenient, then let discovery finish. An older, disconnected or busy
 daemon produces an explicit unavailable entry instead of stopping the archive.
-Plugin binaries, presets, Wine registry files and the API token are not copied.
+Plugin binaries, presets and Wine registry files are not copied.
 Review plugin names, paths and scanner output before sharing the archive.
 
 <a name="files"></a>

@@ -180,6 +180,8 @@ Add these lines inside `package()`, after it changes into the OpenXLR
 source root:
 
 ```bash
+chmod 755 "$pkgdir/usr/lib/openxlr/daemon/openxlr-control"
+ln -s ../lib/openxlr/daemon/openxlr-control "$pkgdir/usr/bin/openxlr-control"
 if (( _openxlr_omarchy )); then
     install -d "$pkgdir/usr/share/openxlr/omarchy/openxlr.mixer"
     install -m644 packaging/omarchy/openxlr.mixer/{manifest.json,*.qml,*.js} \
@@ -197,13 +199,16 @@ plugin's own and is not tied to the application version.
 
 ## Connection and limits
 
-The plugin runs `openxlr-daemon --control-stdio` from the installed native
+The plugin runs `openxlr-control` from the installed native
 package. This client-only adapter connects to the private Unix socket,
 checks the server's user and forwards JSON lines. It does not start an
 audio service. The plugin sends `getState` after the adapter is connected;
 state changes and 15 Hz meter frames arrive without a subscription command.
 Commands are documented in [api.md](api.md). There is no token file, HTTP
 polling or meter polling loop.
+
+Older packages lack this launcher and must be upgraded with the plugin.
+For a source build, [link it onto PATH](install-from-source.md#6-make-it-permanent).
 
 An unavailable daemon leaves a dim `XLR off` indicator, empty meters and
 disabled controls. Connection attempts wait 1, 2, 4, 8, then at most 10

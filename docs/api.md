@@ -19,18 +19,24 @@ Omarchy plugin together with the daemon; older clients that dial the TCP
 port cannot connect.
 
 A toolkit without Unix WebSocket support can run
-`openxlr-daemon --control-stdio`. This mode is only a client: it starts no
+`openxlr-control`. This launcher is only a client: it starts no
 services and touches no USB or audio configuration. It writes
 `{"type":"controlReady"}` once connected, then forwards one JSON message
 per line in each direction. Commands are capped at 64 KiB and received
 messages at 8 MiB. EOF closes the sending half and drains replies for up
-to five seconds. Keep stdin open for long-running commands and subscriptions.
+to five seconds. A daemon disconnect exits immediately even while stdin
+remains open. Keep stdin open for long-running commands and subscriptions.
 The Deck plugin and Omarchy use this adapter and reconnect after it exits.
 Deck also stops an adapter that does not signal readiness within 15 seconds,
 so a stalled process cannot prevent reconnection.
 
+The dedicated launcher is absent from older releases, so a new client
+cannot accidentally start an older daemon that ignores `--control-stdio`.
+Deck's Flatpak fallback also selects this launcher. Source installations
+must [put it on PATH](install-from-source.md#6-make-it-permanent).
+
 ```sh
-printf '{"cmd":"getState"}\n' | openxlr-daemon --control-stdio
+printf '{"cmd":"getState"}\n' | openxlr-control
 ```
 
 Limits. Commands are validated before the mixer sees them: unknown
@@ -70,7 +76,7 @@ from the list, which is the only place its absence shows.
 Each connection has a bounded outgoing queue. A client that falls behind
 may miss transient `meters` frames. If a state update, rule notification or
 command reply cannot be queued, the daemon disconnects that client so it
-cannot silently retain stale state. Reconnect and authenticate again to
+cannot silently retain stale state. Reconnect to
 receive a fresh snapshot; reload any cached plugin catalogue and editor rules.
 The UI, terminal mixer and OpenDeck plugin reconnect automatically.
 

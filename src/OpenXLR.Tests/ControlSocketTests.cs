@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Http;
@@ -235,14 +236,121 @@ public sealed class ControlSocketTests
             using var listener = ControlSocketListener.Bind();
             await using var app = Echo(listener, state: true);
             await app.StartAsync();
+            string launcher = Path.Combine(Path.GetDirectoryName(typeof(WebSocketHub).Assembly.Location)!, "openxlr-control");
+            // Source installations put a symlink on PATH. Spaces must survive
+            // resolution to the daemon installed beside the real launcher.
+            string link = Path.Combine(directory, "source client");
+            File.CreateSymbolicLink(link, launcher);
             string helper = Path.Combine(directory, "client");
-            ExecutableScript.Write(helper, "#!/bin/sh\nexec dotnet \"$1\" --control-stdio </dev/null\n");
-            var result = await ProcessRunner.RunAsync(helper, [typeof(WebSocketHub).Assembly.Location], TimeSpan.FromSeconds(8));
+            ExecutableScript.Write(helper, "#!/bin/sh\nexec \"$1\" </dev/null\n");
+            var result = await ProcessRunner.RunAsync(helper, [link], TimeSpan.FromSeconds(8));
             Assert.True(result.Ok, result.Stderr);
             Assert.Contains("\"type\":\"controlReady\"", result.StdoutText);
             Assert.Contains("\"type\":\"state\"", result.StdoutText);
             Assert.False(File.Exists(DaemonLock.Path));
         }
         finally { Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", previous); Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TheAdapterExitsWhenTheServerClosesWithItsRealStdinPipeStillOpen(bool abort)
+    {
+        string directory = Directory.CreateTempSubdirectory("ox-unix-").FullName;
+        string? previous = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
+        Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", directory);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            using var listener = ControlSocketListener.Bind();
+            var builder = WebApplication.CreateBuilder();
+            builder.Logging.ClearProviders();
+            ControlApi.Configure(builder, listener);
+            await using var app = builder.Build();
+            app.UseWebSockets();
+            app.Map("/ws", async (HttpContext context) =>
+            {
+                using var socket = await context.WebSockets.AcceptWebSocketAsync();
+                // Receiving a command proves the adapter has entered its stdin loop.
+                await SocketTestServer.Receive(socket, timeout.Token);
+                if (abort) socket.Abort();
+                else await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "restart", timeout.Token);
+            });
+            await app.StartAsync(timeout.Token);
+            var start = new ProcessStartInfo("dotnet")
+            {
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            start.ArgumentList.Add(typeof(WebSocketHub).Assembly.Location);
+            start.ArgumentList.Add("--control-stdio");
+            using var child = Process.Start(start)!;
+            try
+            {
+                Assert.Equal("{\"type\":\"controlReady\"}", await child.StandardOutput.ReadLineAsync(timeout.Token));
+                await child.StandardInput.WriteLineAsync("{\"cmd\":\"getState\"}");
+                await child.StandardInput.FlushAsync(timeout.Token);
+                // Do not close StandardInput. Console's pipe read ignores cancellation.
+                await child.WaitForExitAsync(timeout.Token);
+                Assert.False(File.Exists(DaemonLock.Path));
+            }
+            finally
+            {
+                if (!child.HasExited) child.Kill(entireProcessTree: true);
+                await child.WaitForExitAsync();
+            }
+        }
+        finally { Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", previous); Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task InvalidRuntimeDirectoriesAreStartupErrorsRatherThanExistingDaemons(bool flatpak, bool socketPath)
+    {
+        string directory = Directory.CreateTempSubdirectory("ox-unix-").FullName;
+        try
+        {
+            string blocked = socketPath ? Path.Combine(directory, "openxlr", "control.sock") : Path.Combine(directory, "openxlr");
+            OpenXlrPaths.WriteAtomic(blocked, "keep this file");
+            var result = await ProcessRunner.RunAsync("dotnet", [typeof(WebSocketHub).Assembly.Location],
+                TimeSpan.FromSeconds(8), environment: new Dictionary<string, string>
+                {
+                    ["XDG_RUNTIME_DIR"] = directory,
+                    ["FLATPAK_ID"] = flatpak ? "io.github.emaspa.openxlr" : "",
+                });
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains(socketPath ? "control socket unavailable:" : "daemon lock unavailable:", result.Stderr);
+            Assert.DoesNotContain("already running", result.Stderr);
+            Assert.Equal("keep this file", File.ReadAllText(blocked));
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RealLockContentionKeepsItsExistingDaemonExitCode(bool flatpak)
+    {
+        string directory = Directory.CreateTempSubdirectory("ox-unix-").FullName;
+        try
+        {
+            using var held = DaemonLock.TryAcquire(Path.Combine(directory, "openxlr", "daemon.lock"));
+            Assert.NotNull(held);
+            var result = await ProcessRunner.RunAsync("dotnet", [typeof(WebSocketHub).Assembly.Location],
+                TimeSpan.FromSeconds(8), environment: new Dictionary<string, string>
+                {
+                    ["XDG_RUNTIME_DIR"] = directory,
+                    ["FLATPAK_ID"] = flatpak ? "io.github.emaspa.openxlr" : "",
+                });
+            Assert.Equal(flatpak ? 73 : 75, result.ExitCode);
+            Assert.Contains("already running", result.Stderr);
+        }
+        finally { Directory.Delete(directory, true); }
     }
 }

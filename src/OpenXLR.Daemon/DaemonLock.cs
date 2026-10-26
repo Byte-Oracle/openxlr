@@ -17,14 +17,16 @@ public static class DaemonLock
     public static FileStream? TryAcquire(string? path = null)
     {
         path ??= Path;
+        ControlSocketListener.PrepareDirectory(System.IO.Path.GetDirectoryName(path)!);
         try
         {
-            ControlSocketListener.PrepareDirectory(System.IO.Path.GetDirectoryName(path)!);
             // FileShare.None is an exclusive advisory lock on Unix; the
             // stream is never written, only held.
             return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
+        // Unix EWOULDBLOCK or the runtime's mapped sharing violation means
+        // contention. Directory, permission and other I/O failures must reach
+        // the caller rather than claim that a healthy daemon already exists.
+        catch (IOException ex) when ((ex.HResult & 0xffff) is 11 or 32) { return null; }
     }
 }
