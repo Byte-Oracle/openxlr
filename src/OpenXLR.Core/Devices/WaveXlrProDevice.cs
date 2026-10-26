@@ -44,7 +44,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
         PhysicalControls = true, Mute = true, LowCut = true, Expander = true, VoiceTune = true,
         HpVolume = true, LowImpedance = true, Crossfade = true,
         Phantom = true, ClipGuard = true, Compressor = true,
-        OutputRouting = true, AuxInput = true, LineInput = true,
+        OutputRouting = true, AuxInput = true, LineInput = true, LineInGainMaxDb = WaveXlrProDevice.LineInGainMaxDb,
         XlrInputs = 2, HpOutputs = 2,
         BuiltInDefaults = true,
         Ducking = true,
@@ -79,7 +79,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     private const int FlagsOffset = 1;     // block 0x0004 / 0x0005
     private const int ClipGuardOffset = 2; // block 0x0004 (per XLR struct; 0x04 set = DISABLED)
     private const int VoiceTuneStrengthOffset = 10; // block 0x0004
-    private const int LineInGainOffset = 76;        // block 0x0004 tail, dB = byte (0..80)
+    private const int LineInGainOffset = 76;        // block 0x0004 tail, dB = byte (unit takes 0..80, written 0..40)
     private const int AuxLevelLockOffset = 77;      // block 0x0004 tail (0x04 = locked)
     private const int AuxLevelOffset = 79;          // block 0x0004 tail, dB = -byte/4 (0..-60)
     private const int HpVolOffset = 0;     // block 0x0005 (headphones 1)
@@ -147,6 +147,9 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     private const byte LowZMask = 0x02;      // bit1
 
     public const int GainMaxDb = 80;
+    // The Line In takes 0 to 80 dB like the XLR inputs, but it hisses above
+    // about 20 dB on an owner's unit, so OpenXLR writes no more than 40.
+    public const int LineInGainMaxDb = 40;
     public const int VoiceTuneStrengthMax = 100;
     public const int CrossfadeMax = 200;
 
@@ -500,15 +503,16 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     // --- Line In (block 0x0004 tail) ---
 
     /// <summary>
-    /// The analog Line In's gain in dB (0..80), the first byte of the
-    /// settings block's tail, as the XLR gains are written: one read and one
-    /// write of the whole block, no commit, under the lock so no other write
-    /// lands between them. Every other byte goes back as read. Returns the
-    /// value written.
+    /// The analog Line In's gain in dB, held to 0 to
+    /// <see cref="LineInGainMaxDb"/>, the first byte of the settings block's
+    /// tail, as the XLR gains are written: one read and one write of the
+    /// whole block, no commit, under the lock so no other write lands
+    /// between them. Every other byte goes back as read. Returns the value
+    /// written.
     /// </summary>
     public int SetLineInGainDb(int db)
     {
-        db = Math.Clamp(db, 0, GainMaxDb);
+        db = Math.Clamp(db, 0, LineInGainMaxDb);
         lock (_lock)
         {
             byte[] b = Read(BlockSettings, SettingsLen);

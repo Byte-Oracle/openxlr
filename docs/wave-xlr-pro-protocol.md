@@ -611,7 +611,9 @@ layout; on a source with fewer channels it stays silent.
 ### The Line In gain
 
 Block 0x0004 byte 76 holds the Line In gain in dB, 0 to 80 (`14`, 20 dB,
-on the desk unit). The same value is the third pair (center and woofer) of
+on the desk unit). OpenXLR writes no more than 40: an owner reports hiss
+from the Line In above about 20 dB, and that Wave Link limits the gain to
+20 dB. A unit set higher elsewhere reads back its own value. The same value is the third pair (center and woofer) of
 the six-value ALSA control `Elgato Wave XLR Pro Capture Volume` (numid=3),
 whose front pair is XLR 1's gain and rear pair XLR 2's. OpenXLR writes it
 as it writes the XLR gains: one read of block 0x0004 and one write of the
@@ -652,4 +654,7 @@ they are checked by ear. Turning the return off leaves bit 3 as read.
 - Writing byte 76 from OpenXLR and hearing the gain change on the Line In
   channel.
 - Hearing the Line In path on the jacks come and go with byte 12 bit 3.
-- Bytes 77 to 79 beyond the USB Aux level and lock of section 6.
+- Bytes 77 to 79 beyond the USB Aux level and lock of section 6. The
+  owner's unit reads byte 77 `0c` where the desk unit reads `00`: bit 2
+  is the USB Aux lock, and bit 3 may be a lock for Line In. It is not
+  written until that is checked on a unit.

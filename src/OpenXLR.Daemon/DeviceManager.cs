@@ -1024,7 +1024,9 @@ public sealed class DeviceManager : BackgroundService
                 if (c.AuxInput && s.AuxLevelDb != p.AuxLevelDb) _device.SetAuxLevelDb(p.AuxLevelDb);
                 if (c.AuxInput && s.AuxLevelLock != p.AuxLevelLock) _device.SetAuxLevelLock(p.AuxLevelLock);
                 // A snapshot from before the Line In existed holds none and leaves the unit's gain alone.
-                if (c.LineInput && p.LineInGainDb is int lineIn && s.LineInGainDb != lineIn)
+                // One saved above the cap is written as the cap, once: the unit then reads it back.
+                if (c.LineInput && p.LineInGainDb is int saved && Math.Clamp(saved, 0, c.LineInGainMaxDb) is int lineIn
+                    && s.LineInGainDb != lineIn)
                 {
                     int written = _device.SetLineInGainDb(lineIn);
                     _log.LogInformation("{dev}: Line In gain written as {db} dB from a saved state", _device.Info.DisplayName, written);

@@ -11,11 +11,13 @@ namespace OpenXLR.Tests;
 /// The Wave XLR Pro's analog Line In gain, against a unit modelled as its
 /// blocks: block 0x0004 byte 76 holds it in dB, as measured on the desk unit
 /// (20 dB there, the centre pair of the ALSA capture volume). A write is one
-/// read and one whole-block write with no commit, held to 0 to 80 dB, and
-/// leaves every other byte as read, bytes 77 to 79 included. The daemon
-/// offers the control on a unit that has the input only, logs each write
-/// with what the unit reads back, and a saved state from before the field
-/// existed leaves the gain alone.
+/// read and one whole-block write with no commit, held to 0 to 40 dB (the
+/// unit takes 80 but hisses above about 20 dB on an owner's unit), and
+/// leaves every other byte as read, bytes 77 to 79 included. A unit set
+/// higher elsewhere reads back its own value. The daemon offers the control
+/// on a unit that has the input only, logs each write with what the unit
+/// reads back, and a saved state from before the field existed leaves the
+/// gain alone.
 /// </summary>
 [Collection("xdg-config")]
 public sealed class ProLineInGainTests
@@ -35,6 +37,17 @@ public sealed class ProLineInGainTests
         Assert.True(pro.Capabilities.LineInput);
         Assert.Equal(0x14, unit.Blocks[0x0004][76]);
         Assert.Equal(20, pro.ReadState().LineInGainDb);
+        Assert.Equal(40, pro.Capabilities.LineInGainMaxDb);
+        Assert.Equal(80, pro.Capabilities.GainMaxDb);
+    }
+
+    [Fact]
+    public void AUnitSetAboveTheCapReadsBackItsOwnGain()
+    {
+        var unit = new ProHardwareEqTests.Unit();
+        unit.Blocks[0x0004][76] = 52;
+        using WaveXlrProDevice pro = Connected(unit);
+        Assert.Equal(52, pro.ReadState().LineInGainDb);
     }
 
     [Fact]
@@ -49,22 +62,24 @@ public sealed class ProLineInGainTests
         byte[] before = (byte[])unit.Blocks[0x0004].Clone();
         unit.Calls.Clear();
 
-        Assert.Equal(43, pro.SetLineInGainDb(43));
+        Assert.Equal(33, pro.SetLineInGainDb(33));
 
         byte[] written = Assert.Single(unit.SettingsWrites);
         Assert.Empty(unit.Commits);
         Assert.Equal(80, written.Length);
         for (int i = 0; i < written.Length; i++)
-            Assert.True(i == 76 ? written[i] == 43 : written[i] == before[i], $"byte {i}: {written[i]:x2}, read {before[i]:x2}");
+            Assert.True(i == 76 ? written[i] == 33 : written[i] == before[i], $"byte {i}: {written[i]:x2}, read {before[i]:x2}");
         // One read of the block, then the write, nothing else.
         Assert.Equal([(byte)0xC1, (byte)0x41], unit.Calls.Select(c => c.Type));
-        Assert.Equal(43, pro.ReadState().LineInGainDb);
+        Assert.Equal(33, pro.ReadState().LineInGainDb);
     }
 
     [Theory]
-    [InlineData(95, 80)]
+    [InlineData(95, 40)]
+    [InlineData(80, 40)]
+    [InlineData(41, 40)]
+    [InlineData(40, 40)]
     [InlineData(-3, 0)]
-    [InlineData(80, 80)]
     [InlineData(0, 0)]
     public void AWriteIsHeldToTheGainRange(int asked, int stored)
     {
@@ -122,8 +137,30 @@ public sealed class ProLineInGainTests
             Assert.Empty(unit.SettingsWrites);
             Assert.Equal(0x14, unit.Blocks[0x0004][76]);
 
+            Assert.Null(manager.ApplyProfile(live with { LineInGainDb = 32 }));
+            Assert.Equal(32, Assert.Single(unit.SettingsWrites)[76]);
+        });
+    }
+
+    [Fact]
+    public void ASavedGainAboveTheCapIsWrittenAsTheCapOnce()
+    {
+        WithConfigDir(() =>
+        {
+            var unit = new ProHardwareEqTests.Unit();
+            using var pro = new WaveXlrProDevice(unit);
+            using var manager = new DeviceManager(new Lines(), new ConfigurationBuilder().Build(), () => [pro]);
+            manager.SweepOnce();
+            Assert.Equal(40, manager.Snapshot().Capabilities!.LineInGainMaxDb);
+            DeviceState live = manager.Snapshot().State!;
+            unit.Calls.Clear();
+
             Assert.Null(manager.ApplyProfile(live with { LineInGainDb = 52 }));
-            Assert.Equal(52, Assert.Single(unit.SettingsWrites)[76]);
+            Assert.Equal(40, Assert.Single(unit.SettingsWrites)[76]);
+
+            // The unit now reads the cap, so the same saved state writes nothing again.
+            Assert.Null(manager.ApplyProfile(manager.Snapshot().State! with { LineInGainDb = 52 }));
+            Assert.Single(unit.SettingsWrites);
         });
     }
 

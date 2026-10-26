@@ -120,7 +120,7 @@ public interface IAudioDevice : IDisposable
 
     /// <summary>
     /// The Wave XLR Pro's analog Line In gain in dB, held to 0 to the
-    /// model's <see cref="DeviceCapabilities.GainMaxDb"/>; returns the value
+    /// model's <see cref="DeviceCapabilities.LineInGainMaxDb"/>; returns the value
     /// written. A device with <see cref="DeviceCapabilities.LineInput"/>
     /// overrides it.
     /// </summary>
@@ -227,6 +227,14 @@ public sealed record DeviceCapabilities
     /// AUX7. False on every other model.
     /// </summary>
     public bool LineInput { get; init; }
+
+    /// <summary>
+    /// The highest Line In gain the driver writes, in dB; the lowest is 0.
+    /// 40 on the Wave XLR Pro, whose unit takes 80 but hisses above about
+    /// 20 dB; 0 on a model without <see cref="LineInput"/>. A unit set
+    /// higher elsewhere still reads back its own value.
+    /// </summary>
+    public int LineInGainMaxDb { get; init; }
 
     /// <summary>
     /// The highest gain the device takes, in dB; the lowest is 0. Each input

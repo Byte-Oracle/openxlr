@@ -80,7 +80,9 @@ public sealed record DeviceState
 
     /// <summary>
     /// The Wave XLR Pro's analog Line In gain in dB, block 0x0004 byte 76
-    /// (0..80), the centre pair of the ALSA capture volume. Null on every
+    /// (0..80), the centre pair of the ALSA capture volume. OpenXLR writes
+    /// it up to <see cref="DeviceCapabilities.LineInGainMaxDb"/>, and a unit
+    /// set higher elsewhere reads back its own value. Null on every
     /// other model and in a snapshot saved before the field existed, so a
     /// recall of one leaves the unit's gain where it is.
     /// </summary>
