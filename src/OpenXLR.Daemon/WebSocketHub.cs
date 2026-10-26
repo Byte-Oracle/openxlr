@@ -71,6 +71,9 @@ public sealed class WebSocketHub
             if (_clients.IsEmpty) return;                    // nobody watching
             IReadOnlyDictionary<string, double[]>? levels = _mixer.Meters();
             if (levels is { Count: > 0 }) Broadcast(new MetersMessage(levels));
+            // A finished take's waveform goes out once; a client that missed
+            // it asks with getSoundCheckTake.
+            if (_mixer.NewSoundCheckTake() is { } take) Broadcast(SoundCheckTakeMessage.From(take));
         };
     }
 
@@ -239,6 +242,9 @@ public sealed class WebSocketHub
             case "getDiagnostics":
                 await reply(new DiagnosticsMessage(_devices.DumpBlocks()));
                 break;
+            case "getSoundCheckTake":
+                await reply(SoundCheckTakeMessage.From(_mixer.CurrentSoundCheckTake()));
+                break;
             case "listPlugins":
                 // The first call may block on lilv's scan; keep it off the socket loop's thread.
                 // The chains' own plugins go with it, so the list a client
@@ -396,6 +402,9 @@ public sealed class WebSocketHub
             case "setSoftClipGuard":
             case "setMixLatencyCompensation":
             case "soundCheck":
+            case "setSoundCheckRaw":
+            case "setSoundCheckHearMyself":
+            case "watchInputMeter":
             case "setInsertBypass":
             case "setInsertParam":
             case "renameInsert":

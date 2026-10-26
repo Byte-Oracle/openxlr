@@ -810,9 +810,6 @@
   <data name="HearingB" xml:space="preserve">
     <value>Escuchando B</value>
   </data>
-  <data name="HearLiveMic" xml:space="preserve">
-    <value>Escuchar micrófono en directo</value>
-  </data>
   <data name="HiddenInTheMixer" xml:space="preserve">
     <value>oculto en el mezclador</value>
   </data>
@@ -989,9 +986,6 @@
   </data>
   <data name="Lock" xml:space="preserve">
     <value>Bloquear</value>
-  </data>
-  <data name="LoopSample" xml:space="preserve">
-    <value>Reproducir en bucle</value>
   </data>
   <data name="LowCut" xml:space="preserve">
     <value>Corte de graves</value>
@@ -1570,9 +1564,6 @@ Al guardar, se sustituirá por la escena actual.</value>
   <data name="Record" xml:space="preserve">
     <value>Grabar</value>
   </data>
-  <data name="RecordUpToTenSecondsOfYour" xml:space="preserve">
-    <value>Graba hasta diez segundos de tu micrófono y reproduce la grabación en bucle a través de los efectos actuales. Ajústalos mientras escuchas la misma toma.</value>
-  </data>
   <data name="Refresh" xml:space="preserve">
     <value>Actualizar</value>
   </data>
@@ -1895,18 +1886,6 @@ Selecciona la interfaz que controla OpenXLR</value>
   <data name="SoftClipGuardUnavailable" xml:space="preserve">
     <value>ClipGuard por software no está disponible</value>
   </data>
-  <data name="SoundCheck" xml:space="preserve">
-    <value>Sound Check</value>
-  </data>
-  <data name="SoundCheckEmpty" xml:space="preserve">
-    <value>Micrófono en directo. No hay ninguna muestra grabada</value>
-  </data>
-  <data name="SoundCheckLooping" xml:space="preserve">
-    <value>Reproduciendo {0:0.0} segundos en bucle por la cadena en uso</value>
-  </data>
-  <data name="SoundCheckReady" xml:space="preserve">
-    <value>Micrófono en directo. {0:0.0} segundos listos para reproducir en bucle</value>
-  </data>
   <data name="SoundCheckRecording" xml:space="preserve">
     <value>Grabando: {0:0.0} / 10 segundos</value>
   </data>
@@ -1948,9 +1927,6 @@ Selecciona la interfaz que controla OpenXLR</value>
   </data>
   <data name="StopAndDiscard" xml:space="preserve">
     <value>Detener y descartar</value>
-  </data>
-  <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
-    <value>Detén la sesión o cierra esta ventana para recuperar el micrófono y descartar la muestra. La sesión también termina si se cambia la fuente, se pierde el dispositivo, se elimina el canal, se reinicia el demonio o pasan diez minutos. Los cambios en los efectos se conservan.</value>
   </data>
   <data name="StoreA" xml:space="preserve">
     <value>Guardar A</value>
@@ -2017,9 +1993,6 @@ Selecciona la interfaz que controla OpenXLR</value>
   </data>
   <data name="ThePluginOperation" xml:space="preserve">
     <value>la operación del plugin</value>
-  </data>
-  <data name="TheRecordingStaysInMemoryItIsCapturedBeforeSoftwareEffectsButAfterTheI" xml:space="preserve">
-    <value>La grabación permanece en memoria. Se captura antes de los efectos por software, pero después de la ganancia y del procesamiento de hardware de la interfaz.</value>
   </data>
   <data name="TheRescan" xml:space="preserve">
     <value>la nueva búsqueda</value>

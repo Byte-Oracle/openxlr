@@ -105,7 +105,7 @@ UI shows gain, mute, low cut, ClipGuard and phantom power for each input
 the model has; the API reaches every control the model exposes. The software
 low cut and ClipGuard stay on the primary's XLR 1 and the XLR inserts on its
 XLR channels; an additional unit's capture channel has an insert chain of its
-own and, when mono, Sound Check, and the inserts on the mixes it feeds process
+own and, when mono, Mic check, and the inserts on the mixes it feeds process
 it too.
 
 Two Wave XLR Pros that the node name cannot tell apart cannot be made
@@ -141,7 +141,7 @@ channel. Bind the strip to the unit's source from the strip's chip
 ([input bindings](api.md#input-bindings)). The binding dialog lists every
 attached unit's sources except the primary's own and, for a unit not driven
 yet, offers **Also drive this interface**, which enables it as above. A
-strip on an additional unit has the strip's inserts and Sound Check, and,
+strip on an additional unit has the strip's inserts and Mic check, and,
 while the unit is driven, the unit's gain and switches, the same controls as
 in this window drawn by the same view, on the strip in the input rack, the
 mix matrix and the classic INPUTS panel. In the state the strip's

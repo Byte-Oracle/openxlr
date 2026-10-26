@@ -139,7 +139,7 @@ public sealed class CaptureInputWindowTests
     }
 
     [CaptureWindowFact]
-    public void CaptureButtonsAndSoundCheckSendTheirIdsAndOlderStatesRemoveTheButtons()
+    public void CaptureButtonsAndMicCheckSendTheirIdsAndOlderStatesRemoveTheButtons()
     {
         string root = Path.Combine(Path.GetTempPath(), "openxlr-capture-window-" + Guid.NewGuid());
         string[] names = ["XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_DATA_DIRS", "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS"];
@@ -180,6 +180,7 @@ public sealed class CaptureInputWindowTests
     {
         var commands = new ConcurrentQueue<JsonNode>();
         var soundCommands = new ConcurrentQueue<JsonNode>();
+        var meterWatches = new ConcurrentQueue<JsonNode>();
         var eqCommands = new ConcurrentQueue<JsonNode>();
         var gate = new object();
         JsonNode state = State();
@@ -244,8 +245,39 @@ public sealed class CaptureInputWindowTests
                                 ["channel"] = action == "stop" ? null : cmd["channel"]!.GetValue<string>(),
                                 ["mode"] = action switch { "record" => "recording", "loop" => "looping", "live" => "live", _ => "idle" },
                                 ["seconds"] = action == "stop" ? 0 : 1.5,
+                                // A take exists once something was recorded, as the helper counts it.
+                                ["take"] = action is "loop" or "live" ? 1 : 0,
+                                ["monitorLatencyMs"] = 42.7,
                             };
                         await Send(Snapshot());
+                    }
+                    else if (name is "setSoundCheckRaw" or "setSoundCheckHearMyself")
+                    {
+                        soundCommands.Enqueue(cmd);
+                        lock (gate)
+                        {
+                            var session = state["mixer"]!["soundCheck"]!.AsObject();
+                            session[name == "setSoundCheckRaw" ? "raw" : "hearMyself"] = cmd["value"]!.GetValue<bool>();
+                            if (name == "setSoundCheckHearMyself") session["heard"] = cmd["value"]!.GetValue<bool>();
+                        }
+                        await Send(Snapshot());
+                    }
+                    else if (name == "watchInputMeter")
+                    {
+                        // The meter before the chain, with a clip in it.
+                        meterWatches.Enqueue(cmd);
+                        await Send(new { type = "meters", levels = new Dictionary<string, double[]>
+                        {
+                            [$"in:{cmd["channel"]!.GetValue<string>()}"] = [.5, .8, 1],
+                            [$"take:{cmd["channel"]!.GetValue<string>()}"] = [.25],
+                        } });
+                    }
+                    else if (name == "getSoundCheckTake")
+                    {
+                        string? owner;
+                        lock (gate) owner = state["mixer"]!["soundCheck"]?["channel"]?.GetValue<string>();
+                        await Send(new { type = "soundCheckTake", channel = owner, take = owner is null ? 0 : 1, seconds = 1.5,
+                            peaks = Enumerable.Range(0, 200).Select(i => i / 200.0).ToArray() });
                     }
                     // Like the daemon: a reply, then the commandResult that says which request it answers.
                     if (cmd["requestId"] is { } requestId)
@@ -277,10 +309,10 @@ public sealed class CaptureInputWindowTests
                 Layout(chain, 560, 360);
                 InsertsViewModel model = main.CaptureInputs.Single(c => c.Id == id).Inserts!;
                 Assert.Same(model, chain.DataContext);
-                Assert.Equal(id == "guest", model.CanSoundCheck);
-                Button soundCheck = chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("SoundCheck")));
-                Assert.Equal(id == "guest", soundCheck.IsEffectivelyVisible);
-                if (id == "guest") await SoundCheckWindowTests.CheckCaptureChain(main, chain, soundCommands);
+                Assert.Equal(id == "guest", model.CanMicCheck);
+                Button micCheck = chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("MicCheck")));
+                Assert.Equal(id == "guest", micCheck.IsEffectivelyVisible);
+                if (id == "guest") await MicCheckWindowTests.CheckCaptureChain(main, chain, soundCommands, meterWatches);
                 chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("AddPlugin")))
                     .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 await Until(() => chain.OwnedWindows.OfType<PluginPickerWindow>().Any(w => w.IsVisible));

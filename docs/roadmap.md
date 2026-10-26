@@ -101,6 +101,13 @@ them for a while before more is built on top.
 - [ ] The microphone EQ in every client: a band editor in the terminal
   mixer, followed by EQ keys and dials in the OpenDeck plugin. The
   graphical UI already has the full editor.
+- [ ] Mic check, a guided microphone test in the UI in place of the Sound
+  Check window, in three parts. First the window with Level and Listen:
+  the meter before the chain, the take's waveform, Hear myself and an
+  instant Raw and Processed switch. Then Shape (the EQ, the inserts and
+  starting presets inside the window) and Position. Then a suggested gain
+  and a crossfade where the loop starts over. Its order against the
+  terminal mixer's EQ is not decided.
 
 ### Devices
 

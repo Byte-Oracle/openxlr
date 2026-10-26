@@ -261,6 +261,12 @@ public sealed class MixerService : IHostedService, IDisposable
     /// <summary>Live stereo levels, or null when the mixer is off.</summary>
     public IReadOnlyDictionary<string, double[]>? Meters() => _mixer.Built ? _mixer.ReadMeters() : null;
 
+    /// <summary>A Sound Check take finished since the last call, once each, or null.</summary>
+    public SoundCheckTake? NewSoundCheckTake() => _mixer.Built ? _mixer.NewSoundCheckTake() : null;
+
+    /// <summary>The take the running session holds, or null.</summary>
+    public SoundCheckTake? CurrentSoundCheckTake() => _mixer.Built ? _mixer.CurrentSoundCheckTake() : null;
+
     /// <summary>
     /// Every plugin the saved chains name, for the catalogue a client is sent.
     /// The socket accepts clients before this service has restored the chains,
@@ -989,6 +995,19 @@ public sealed class MixerService : IHostedService, IDisposable
                     SyncOutputSelectors();   // a loop on the input 1 channel takes the Pro's hardware mic path off
                     Changed?.Invoke();
                     return null;   // a session is never saved
+                case "setSoundCheckRaw":
+                    _mixer.SetSoundCheckRaw(cmd.Channel!, cmd.Value.GetBoolean());   // both checked by CommandValidation
+                    SyncOutputSelectors();   // a session it starts takes the Pro's hardware mic path off
+                    Changed?.Invoke();
+                    return null;
+                case "setSoundCheckHearMyself":
+                    _mixer.SetSoundCheckHearMyself(cmd.Channel!, cmd.Value.GetBoolean());
+                    SyncOutputSelectors();
+                    Changed?.Invoke();
+                    return null;
+                case "watchInputMeter":
+                    _mixer.WatchInputMeter(cmd.Channel!);
+                    return null;   // nothing clients see in state changes
                 case "setInserts":
                     _mixer.SetInserts(cmd.Channel!, cmd.Inserts!);   // both checked by CommandValidation
                     break;

@@ -298,10 +298,10 @@ public sealed class WindowLayoutTests
                     }
                 }
                 AssertInside(chain.FindControl<Button>("EffectWorkflow")!, chain);
-                var soundCheckButton = chain.GetVisualDescendants().OfType<Button>()
-                    .Single(b => b.Content as string == Localizer.Text("SoundCheck"));
-                Assert.True(soundCheckButton.IsVisible);
-                AssertInside(soundCheckButton, chain);
+                var micCheckButton = chain.GetVisualDescendants().OfType<Button>()
+                    .Single(b => b.Content as string == Localizer.Text("MicCheck"));
+                Assert.True(micCheckButton.IsVisible);
+                AssertInside(micCheckButton, chain);
                 Capture(chain, "chain-440");
 
                 var workflow = new EffectWorkflowWindow { DataContext = vm.Inserts };
@@ -316,15 +316,29 @@ public sealed class WindowLayoutTests
                 Assert.True(((ScrollViewer)workflow.Content!).Bounds.Height > 50);
                 Capture(workflow, "effect-workflow-minimum");
 
-                var soundCheck = new SoundCheckWindow { DataContext = vm.Inserts.SoundCheck };
-                windows.Add(soundCheck);
-                soundCheck.Show();
-                Layout(soundCheck, soundCheck.MinWidth, soundCheck.MinHeight);
-                var soundActions = soundCheck.GetVisualDescendants().OfType<WrapPanel>().Single();
-                AssertNoOverlap(soundActions.Children.ToArray());
-                foreach (var action in soundActions.Children) AssertInside(action, soundActions);
-                Assert.True(soundCheck.GetVisualDescendants().OfType<ScrollViewer>().Single().Bounds.Height > 50);
-                Capture(soundCheck, "sound-check-minimum");
+                // Mic check at its smallest, on each step: the step bar, the
+                // actions and the switches wrap inside the window, and the
+                // scrolled part keeps room to read.
+                var micCheckModel = vm.Inserts.MicCheck;
+                var micCheck = new MicCheckWindow { DataContext = micCheckModel };
+                windows.Add(micCheck);
+                micCheck.Show();
+                foreach (MicCheckStep step in Enum.GetValues<MicCheckStep>())
+                {
+                    micCheckModel.Step = step;
+                    Layout(micCheck, micCheck.MinWidth, micCheck.MinHeight);
+                    foreach (var panel in micCheck.GetVisualDescendants().OfType<WrapPanel>().Where(p => p.IsEffectivelyVisible))
+                    {
+                        Control[] children = [.. panel.Children.Where(c => c.IsVisible)];
+                        AssertNoOverlap(children);
+                        foreach (var child in children) { AssertInside(child, panel); AssertInside(child, micCheck); }
+                    }
+                    foreach (string name in new[] { "MicCheckSteps", "MicCheckClose" })
+                        AssertInside(micCheck.FindControl<Control>(name)!, micCheck);
+                    Assert.True(micCheck.GetVisualDescendants().OfType<ScrollViewer>().Single().Bounds.Height > 50);
+                    Capture(micCheck, $"mic-check-{step.ToString().ToLowerInvariant()}-minimum");
+                }
+                micCheckModel.Step = MicCheckStep.Level;
 
                 vm.Inputs.Add(new AudioDeviceItem("test_source", "Second microphone", false));
                 vm.Inputs.Add(new AudioDeviceItem("OpenXLR_stream", "Own mix", true));
@@ -608,7 +622,7 @@ public sealed class WindowLayoutTests
                 EffectWorkflowWindowTests.CheckControlOwnership(main, vm.Inserts.Client);
                 PluginCatalogueUiTests.CheckStaleReplies();
                 FaderInputWindowTests.Check(main);
-                SoundCheckWindowTests.CheckPendingClose();
+                MicCheckWindowTests.CheckPendingClose();
                 AssertLayoutAppearance(main, vm);
                 SkinLayoutWindowTests.Check();
                 MixerViewWindowTests.Check();

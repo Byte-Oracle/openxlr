@@ -806,9 +806,6 @@
   <data name="HearingB" xml:space="preserve">
     <value>Слуша се B</value>
   </data>
-  <data name="HearLiveMic" xml:space="preserve">
-    <value>Слушај микрофон уживо</value>
-  </data>
   <data name="HiddenInTheMixer" xml:space="preserve">
     <value>скривено у миксеру</value>
   </data>
@@ -985,9 +982,6 @@
   </data>
   <data name="Lock" xml:space="preserve">
     <value>Закљ.</value>
-  </data>
-  <data name="LoopSample" xml:space="preserve">
-    <value>Понављај узорак</value>
   </data>
   <data name="LowCut" xml:space="preserve">
     <value>Одсецање ниских</value>
@@ -1566,9 +1560,6 @@
   <data name="Record" xml:space="preserve">
     <value>Сними</value>
   </data>
-  <data name="RecordUpToTenSecondsOfYour" xml:space="preserve">
-    <value>Сними до десет секунди микрофона, па понављај снимак кроз тренутне ефекте. Подешавај их док слушаш исти снимак.</value>
-  </data>
   <data name="Refresh" xml:space="preserve">
     <value>Освежи</value>
   </data>
@@ -1891,18 +1882,6 @@
   <data name="SoftClipGuardUnavailable" xml:space="preserve">
     <value>Софтверски ClipGuard није доступан</value>
   </data>
-  <data name="SoundCheck" xml:space="preserve">
-    <value>Sound Check</value>
-  </data>
-  <data name="SoundCheckEmpty" xml:space="preserve">
-    <value>Микрофон уживо. Нема снимљеног узорка</value>
-  </data>
-  <data name="SoundCheckLooping" xml:space="preserve">
-    <value>Понављање {0:0.0} секунди кроз активни ланац</value>
-  </data>
-  <data name="SoundCheckReady" xml:space="preserve">
-    <value>Микрофон уживо. {0:0.0} секунди спремно за понављање</value>
-  </data>
   <data name="SoundCheckRecording" xml:space="preserve">
     <value>Снимање: {0:0.0} / 10 секунди</value>
   </data>
@@ -1944,9 +1923,6 @@
   </data>
   <data name="StopAndDiscard" xml:space="preserve">
     <value>Заустави и одбаци</value>
-  </data>
-  <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
-    <value>Заустави или затвори овај прозор да вратиш микрофон и одбациш узорак. Сесија се завршава и при промени извора, губитку уређаја, брисању канала, поновном покретању сервиса или после десет минута. Измене ефеката остају.</value>
   </data>
   <data name="StoreA" xml:space="preserve">
     <value>Сачувај A</value>
@@ -2013,9 +1989,6 @@
   </data>
   <data name="ThePluginOperation" xml:space="preserve">
     <value>радња додатка</value>
-  </data>
-  <data name="TheRecordingStaysInMemoryItIsCapturedBeforeSoftwareEffectsButAfterTheI" xml:space="preserve">
-    <value>Снимак остаје у меморији. Снима се пре софтверских ефеката, али после појачања и хардверске обраде интерфејса.</value>
   </data>
   <data name="TheRescan" xml:space="preserve">
     <value>поновна претрага</value>

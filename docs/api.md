@@ -117,7 +117,8 @@ Messages from the daemon, each a JSON object with a `type` field:
 |---|---|---|
 | `state` | on connect and on every change | `daemonVersion`, device state, capabilities, mixer state, the device list, the app registry, profile names, `activeProfile` (the profile last recalled or saved for the active device; not cleared by later manual changes), `recallOnConnect` (the profile recalled when the device connects, or null), `warning` (one sentence the user should see, or null: the mixer waiting for the audio server, which did not answer when the daemon built the graph (see `mixerWaiting`), mixer settings that cannot be written to disk, which the daemon keeps retrying with backoff, a device set aside after three hung USB transfers in one run, a device that does not answer USB reads (named, with the error, until a read succeeds or the unit leaves the bus), hardware input strips left silent because the capture node's name matches two units or because several interfaces are attached and none is driven, a hardware strip bound to a source that is missing, named twice, lacks the selected port or is not linked yet, one sentence per strip with the strip's name in front, or additional interface choices that could not be read or saved). In the mixer state, each channel carries `hardware` (true for the fixed input channels), `captureSource` (exact external source name or null), `capturePair` (zero-based pair), `captureMonoChannel` (the one zero-based source port fed to both sides, or null for a pair), `captureConnected` (its direct or chained capture route exists), `microphone` (true for `xlr1`, `xlr2` and a capture input with `captureMonoChannel` set), `chainWidth` (1 for those microphone inputs, 2 for a capture pair, null for Aux In, Line In and application channels; the binding decides this while unplugged too), `binding`, `bindingConnected`, `bindingWarning` and `unitInput` (see [input bindings](#input-bindings)), `present` (whether a client should draw the strip, see [input bindings](#input-bindings); `xlr2`, `aux` and `line` are absent on every model but the Wave XLR Pro, and `line` also needs the Pro's capture source in its 18-channel layout), `exclusiveGroup` (the id of the exclusive group the channel is in, or null), `volume` (the channel's own volume, 0 to 1, which `setChannelVolume` sets; every channel has one, `xlr1`, `xlr2`, `aux` and `line` included; an older daemon reports null for a hardware input), `captureGain` (on a capture input whose source OpenXLR does not drive, `{gainDb, minDb, maxDb, hardware}`, which `setCaptureGain` sets; absent on every other channel, on a capture input that takes a Wave unit's input, while the source is missing, and from an older daemon; see [capture input gain](#capture-input-gain)), and on a microphone channel, `xlr1`, `xlr2` and a capture input whose `microphone` is true, `eq` (see [microphone EQ](#microphone-eq); absent on every other channel, a capture input on a stereo pair included, and from an older daemon). An absent channel stays in the list and keeps its levels, so a client leaves it out of its strips rather than forgetting it. A capture channel is editable but cannot receive application assignments; `renamedSinceStart` says a user mix was renamed since the daemon started (its PipeWire device keeps the old name until a restart), and `layoutWarning` is a sentence for the layout editor when pipewire-pulse nears its open-file limit, or null. Every channel and mix also carries `appearance {icon, colour, hidden, defaultIcon}`: the first three as `setLayoutAppearance` set them (`icon` empty, `colour` null and `hidden` false by default), and `defaultIcon`, read-only, the built-in icon name the daemon chose for the item's kind, never empty (see [mixer-layout.md](mixer-layout.md#appearance) for the rule). A client draws `icon` when it is a text glyph or a name it can draw, nothing when it is `none`, and `defaultIcon` otherwise, which covers an empty `icon` and a name only a skin defines. The built-in names, their text characters and their path data are in `plugin/com.emaspa.openxlr.sdPlugin/icons.json`, generated from `src/OpenXLR.Core/Mixing/LayoutIcons.cs`. A client draws a hidden channel's sends and applications as usual and only leaves out its strip; for a hidden mix it leaves out the mix's master and the sends into it from its full mixer, and keeps the mix in output and monitor feed choices. The mixer state's `outputAppearance` maps the headphone outputs `phones1` and `phones2` to `{icon, colour, hidden, defaultIcon}` in the same form, `hidden` always false and `defaultIcon` `headset`; a model with one headphone output still carries both entries. Each mix carries `id`, `name`, `volume`, `muted`, `editable` (true for every monitor mix and virtual microphone, including Monitor A/B; false for Aux), `deletable` (editable and not the last remaining monitor) and `kind` (`monitor`, `virtualMic` or `auxPort`; a monitor mix the user added is `monitor` and editable), which gives a client the mix's volume ceiling. `defaultMonitorMix` names the implicit feed for outputs without an entry in `monitorFeeds`, independent of display order; `outputVolume` is the first selected output's volume, 0 to 1.5, or null with no output selected. In `devices`, every entry that is a sink carries `volume` (desktop scale, 1.0 = 100%) and `muted`; sources and the Wave XLR Pro pseudo-outputs omit both. A source carries `channels` and `positions` when PipeWire reports them, and any entry can carry `drivenUnit` (see below). A state is pushed whenever a sink's volume or mute changes |
 | `diagnostics` | in answer to `getDiagnostics` | `blocks`, mapping vendor block names to hex strings or read errors. An XLR Dock adds `paths`, the card number and the path each of its gain, mute and headphone controls takes (`Alsa` through the card's mixer, `Block` through the dock's config block when the card lacks the control, `None` when the USB handle is closed too, so the control is unavailable), and `alsa`, the values read through the card. `usbFault` carries the last USB fault of this run and `error` a dump that failed |
-| `meters` | 15 Hz while the mixer is built | live stereo levels per channel (`ch:<id>`) and mix (`mix:<id>`), and `duck:<id>` for each mix with a running software [ducking](#ducking) stage: one value, the reduction in dB now (0 while the key is quiet) |
+| `meters` | 15 Hz while the mixer is built | live stereo levels per channel (`ch:<id>`) and mix (`mix:<id>`), and `duck:<id>` for each mix with a running software [ducking](#ducking) stage: one value, the reduction in dB now (0 while the key is quiet). While a client keeps a [meter before the chain](#meter-before-the-chain) running, `in:<id>` carries that microphone's `[rms, peak, clip]`, and while a [Sound Check](#sound-check) take loops, `take:<id>` carries one value, where the loop is across the take from 0 to 1 |
+| `soundCheckTake` | once, when the Sound Check helper finishes a take, and in answer to `getSoundCheckTake` | `channel`, `take` (the take's number in the session, from 1), `seconds` (its length) and `peaks` (200 values from 0 to 1, the peak of each stretch of the take in order); without a take `channel` is null, `take` 0 and `peaks` empty. See [Sound Check](#sound-check) |
 | `plugins` | in answer to `listPlugins` | the installed LV2, CLAP and VST3 plugins with their controls, within the message size limit above and always including the plugins the saved chains use; `supported` is false, with `unsupportedFeatures` listed, for a plugin that needs a host feature the PipeWire chain lacks. `audioIns` and `audioOuts` are the plugin's own port counts, or for VST3 its main buses' default width; a VST3 entry also carries `widths`, the chain widths in channels (1 and 2 are the ones the host carries) its main buses accepted when the helper asked the way the host asks at load, so a plugin that reports 2 and lists 1 in `widths` can be inserted on a mono input. An entry without `widths` (LV2, CLAP, or a description an older helper wrote) fits a mono input with one port each way and a stereo input or mix with two or more |
 | `pluginSetup` | in answer to `getPluginSetup` or `setPluginWineTrace` | where installs go (`lv2Directory`, `clapDirectory`, `vst3Directory`), `hostInstalled`, `wineTrace` (deep tracing enabled in the running daemon), `yabridge` (its version, or null when not installed), `wine`, `windowsDirectories` (the folders yabridge bridges) and `wineFolders` (Wine's own plugin folders that hold a plugin and are not bridged yet, offered as one press since a file dialog hides them), `memoryLockLimitBytes` (the running daemon's soft limit in bytes; -1 means unlimited, null means unknown) and `memoryLockNote` (recovery advice when Windows plugin support is available and the limit is below 256 MiB, otherwise null), `searchDirectories` (every folder searched, see [Plugin search paths](#plugin-search-paths)) and `searchPathWarning` |
 | `windowsPluginFiles` | in answer to `getWindowsPluginFiles` | `ok`, `message` and `plugins`; each plugin file carries `path`, `name`, `format`, `enabled`, `canDelete`, `winePrefix` and `inUse`. Excluded files remain listed |
@@ -297,7 +298,11 @@ that final acknowledgement (or an `error` without a request id):
 | `getNativeEditorRules` | none | read release defaults and explicit user overrides for native editor compatibility |
 | `setNativeEditorRule` | `kind`, `plugin`, `name?`, `blocked?` | set `blocked:true` to use OpenXLR controls, `false` to allow the native editor, or null/absent to remove the override and follow release defaults. Saved atomically before success; answered with `nativeEditorRules` |
 | `showInsertUi` | `channel`, `insertId` | open an enabled insert's native editor when the optional host is installed and the editor policy allows it; a blocked editor is refused without changing the audio instance |
-| `soundCheck` | `channel`, `action` | Sound Check on any channel whose `microphone` is true: `xlr1`, `xlr2` or a mono capture input. Stereo capture inputs, Aux In, Line In, application channels and mixes are refused. `record` starts a session if none runs and records up to ten seconds, replacing an earlier sample; `loop` plays the sample into the channel in place of the microphone and needs at least a tenth of a second recorded; `live` goes back to the microphone and keeps the sample; `stop` ends the session and discards the sample. One session at a time across all microphones: `record`, `loop` and `live` for another channel are refused with the active channel's name, and its `stop` does nothing. Every action but `stop` is refused at once when the native plugin host is not installed. Never saved. See [Sound Check](#sound-check) |
+| `soundCheck` | `channel`, `action` | Sound Check on any channel whose `microphone` is true: `xlr1`, `xlr2` or a mono capture input. Stereo capture inputs, Aux In, Line In, application channels and mixes are refused. `record` starts a session if none runs and records up to ten seconds, replacing an earlier sample; `loop` plays the sample into the channel in place of the microphone and needs at least a tenth of a second recorded; `live` goes back to the microphone and keeps the sample, and starts a session with no sample when none runs; `stop` ends the session and discards the sample. One session at a time across all microphones: `record`, `loop` and `live` for another channel are refused with the active channel's name, and its `stop` does nothing. Every action but `stop` is refused at once when the native plugin host is not installed. Never saved. See [Sound Check](#sound-check) |
+| `setSoundCheckRaw` | `channel`, `value` | `true` plays the session's signal, the sample or the live microphone, straight into the channel past its EQ, software processing and inserts; `false` plays it through them again. The helper crossfades between its two outputs in 20 ms and no chain is built again. Starts a session on the live microphone when none runs. The channel and the host rules are those of `soundCheck`. Never saved; the session's end turns it off |
+| `setSoundCheckHearMyself` | `channel`, `value` | `true` opens the channel's send into every monitor mix that plays on a selected monitor output, whatever its mute, for the rest of the session; `false` lets the sends' own mutes decide again. Starts a session on the live microphone when none runs. The channel and the host rules are those of `soundCheck`. Never saved; the session's end turns it off |
+| `watchInputMeter` | `channel` | run the [meter before the chain](#meter-before-the-chain) of a channel whose `microphone` is true for the next 15 seconds, starting it when none runs. Send it again to keep the meter running. Refused at once when the native plugin host is not installed. Nothing in the channel's route changes, and nothing is saved |
+| `getSoundCheckTake` | none | answered with `soundCheckTake`: the waveform of the take the running session holds |
 | `setEq` | `channel`, `eq` | replace a microphone's whole EQ: `eq` is `{enabled, bands}` with exactly four bands, each `{enabled, type, frequency, gain, q}` with every field. `channel` is `xlr1`, `xlr2` or a capture input whose `microphone` is true; any other channel is refused. See [microphone EQ](#microphone-eq) |
 | `setEqEnabled` | `channel`, `value` | the EQ's own switch, a boolean. Off bypasses inside the running stage, so on and off compare at once |
 | `setEqBand` | `channel`, `band`, at least one of `enabled`, `type`, `frequency`, `gain`, `q` | change part of one band, 1 to 4; an absent field keeps its value. Values outside the ranges are refused, not clamped, and what is taken is snapped onto the EQ's steps. Switching the EQ on, here or through `setEq`, is refused at once when the native plugin host is not installed and no unit runs the channel's EQ |
@@ -1378,14 +1383,59 @@ query.
 
 ### Sound Check
 
-`mixer.soundCheck` is `{channel, mode, seconds, error}`. `channel` is the
+`mixer.soundCheck` is `{channel, mode, seconds, error, raw, hearMyself,
+heard, monitorLatencyMs, take}`. `channel` is the
 microphone channel of the session, including a mono capture input id, null
 when there is none. `mode` is what
 the helper last did: `recording`, `looping` or `live`, and `idle` without a
 session. `seconds` is the length recorded, 0 to 10, and the daemon pushes
 state as it grows. `error` says why a session ended by itself. If its native
 helper failed with a message, that last message is included in `error` and
-written to the daemon's log before the session is discarded.
+written to the daemon's log before the session is discarded. The other
+fields describe the running session and are false, null or 0 without one:
+
+- `raw` is true while the session plays the signal past the channel's
+  processing (`setSoundCheckRaw`).
+- `hearMyself` is true while the session holds the channel's monitor sends
+  open (`setSoundCheckHearMyself`).
+- `heard` is true while the channel reaches a selected monitor output
+  through an open send, with or without Hear myself. It is false while
+  monitoring is paused or no monitor output is selected.
+- `monitorLatencyMs` is an estimate of what hearing the channel through
+  this computer adds over the Wave XLR Pro's direct path: two quanta of
+  the audio server at the session's start, the forced quantum when one is
+  set and the default one otherwise, plus the latency the channel's inserts
+  report, an insert without a figure counted as zero. A client that asks
+  for a smaller quantum makes the real figure smaller. Null when the
+  settings name no quantum.
+- `take` counts the takes the helper has finished in this session, from 1;
+  0 before the first. The waveform of the last one comes once in a
+  `soundCheckTake` message when the helper finishes it, about 70 ms after
+  the recording stops, and again on `getSoundCheckTake`. A client that
+  sees a `take` it has no waveform for asks for it.
+  Its peaks and duration describe the completed take even if another
+  recording starts before the message is published. While the next take's
+  meter batch arrives, requests still return the previous completed take;
+  the new waveform, duration and take number become visible together.
+
+The helper has two outputs. The main one feeds the channel's route as
+before, through the EQ, the software processing and the inserts. The tap
+goes straight into the channel's sink, past all of them. Processed plays
+the signal on the main output and silence on the tap; raw does the
+opposite, and a switch moves the signal across in a 20 ms linear
+crossfade, so the chain keeps running and nothing is built again. While
+raw plays, the chain is fed silence, so a reverb or a delay rings out by
+itself, and a compressor or gate starts from silence when processed comes
+back. The raw path is not delayed to match the inserts' own latency, so
+the two paths are that far apart.
+
+Hear myself opens the send at its own level, or at unity when its level is
+0, scaled by the channel's volume. Only the monitor mixes that play on a
+selected monitor output are opened, or the default monitor mix while no
+output is selected; an exclusive group still holds a send that is waiting
+for it. On the Wave XLR Pro the hardware path stays off for the channel
+carrying its first input while the session runs, as for any session, so
+the jacks hear the channel through the software send, with its processing.
 
 The sample is taken from the channel's route source and selected mono port,
 after any hardware gain and processing. It enters ahead of the channel's
@@ -1411,11 +1461,36 @@ that channel clears it or a new `record` replaces it. After deletion only
 a new recording can replace the notice, since the old id is no longer valid.
 
 An invalid channel or action is refused with "soundCheck: need a microphone
-channel and action 'record', 'loop', 'live' or 'stop'". A missing capture
-source refuses `record` with "The microphone is not connected.", the channel's
+channel and action 'record', 'loop', 'live' or 'stop'", and an invalid
+channel or value for the two switches with "setSoundCheckRaw: need a
+microphone channel and a boolean value" or its `setSoundCheckHearMyself`
+form. A missing capture
+source refuses an action that starts a session with "The microphone is not connected.", the channel's
 name and its `bindingWarning`. A source missing the selected port refuses
-with "The microphone's capture port is unavailable." An older UI has
+with "The microphone's capture port is unavailable." `loop` with no session
+is refused with "Record a sample first." An older UI has
 only its XLR Sound Check views and does not show a capture session.
+
+### Meter before the chain
+
+The UI's Mic check reads a microphone's level before any processing, which
+the channel meter cannot show: `ch:<id>` reads the channel's sink, after
+its EQ, software processing and inserts. `watchInputMeter` starts a small
+native helper linked from the channel's own capture port, the one its
+route and Sound Check take, beside the route, which it leaves untouched.
+The helper measures and passes nothing on. Its level comes with every
+`meters` frame as `in:<id>` and `[rms, peak, clip]`: the RMS over about
+300 ms and the sample peak, falling back 20 dB a second, both on the
+channel meters' scale (0 at -60 dBFS and below, 1 at 0 dBFS), and `clip`,
+1 for a second after a sample reached -0.1 dBFS, else 0. The level is after
+the interface's gain and any processing the unit runs itself.
+
+The meter runs for 15 seconds after the last `watchInputMeter` for its
+channel, so a client renews it while it shows it and a client that goes
+away leaves nothing running. The sweep follows the channel's source, so a
+binding or a replug moves the meter with it, and retires a meter whose
+helper died; the next request starts a new one. Each microphone has at most
+one meter, shared by every client. A rebuilt graph ends every meter.
 
 ### Microphone EQ
 

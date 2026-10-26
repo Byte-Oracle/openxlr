@@ -810,9 +810,6 @@
   <data name="HearingB" xml:space="preserve">
     <value>Hearing B</value>
   </data>
-  <data name="HearLiveMic" xml:space="preserve">
-    <value>Hear live mic</value>
-  </data>
   <data name="HiddenInTheMixer" xml:space="preserve">
     <value>hidden in the mixer</value>
   </data>
@@ -989,9 +986,6 @@
   </data>
   <data name="Lock" xml:space="preserve">
     <value>Lock</value>
-  </data>
-  <data name="LoopSample" xml:space="preserve">
-    <value>Loop sample</value>
   </data>
   <data name="LowCut" xml:space="preserve">
     <value>Low Cut</value>
@@ -1570,9 +1564,6 @@ Saving will replace it with the current scene.</value>
   <data name="Record" xml:space="preserve">
     <value>Record</value>
   </data>
-  <data name="RecordUpToTenSecondsOfYour" xml:space="preserve">
-    <value>Record up to ten seconds of your microphone, then loop it through the current effects. Adjust them while listening to the same take.</value>
-  </data>
   <data name="Refresh" xml:space="preserve">
     <value>Refresh</value>
   </data>
@@ -1895,18 +1886,6 @@ Select the interface OpenXLR drives</value>
   <data name="SoftClipGuardUnavailable" xml:space="preserve">
     <value>Software ClipGuard is unavailable</value>
   </data>
-  <data name="SoundCheck" xml:space="preserve">
-    <value>Sound Check</value>
-  </data>
-  <data name="SoundCheckEmpty" xml:space="preserve">
-    <value>Live microphone. No sample recorded</value>
-  </data>
-  <data name="SoundCheckLooping" xml:space="preserve">
-    <value>Looping {0:0.0} seconds through the live chain</value>
-  </data>
-  <data name="SoundCheckReady" xml:space="preserve">
-    <value>Live microphone. {0:0.0} seconds ready to loop</value>
-  </data>
   <data name="SoundCheckRecording" xml:space="preserve">
     <value>Recording: {0:0.0} / 10 seconds</value>
   </data>
@@ -1954,9 +1933,6 @@ Select the interface OpenXLR drives</value>
   </data>
   <data name="StopAndDiscard" xml:space="preserve">
     <value>Stop and discard</value>
-  </data>
-  <data name="StopOrCloseThisWindowToRestoreTheMicrophoneAndDiscardTheSampleTheSessi" xml:space="preserve">
-    <value>Stop or close this window to restore the microphone and discard the sample. The session also ends on a source change, device loss, channel deletion, daemon restart or after ten minutes. Your effect edits are kept.</value>
   </data>
   <data name="StoreA" xml:space="preserve">
     <value>Store A</value>
@@ -2023,9 +1999,6 @@ Select the interface OpenXLR drives</value>
   </data>
   <data name="ThePluginOperation" xml:space="preserve">
     <value>the plugin operation</value>
-  </data>
-  <data name="TheRecordingStaysInMemoryItIsCapturedBeforeSoftwareEffectsButAfterTheI" xml:space="preserve">
-    <value>The recording stays in memory. It is captured before software effects, but after the interface's gain and hardware processing.</value>
   </data>
   <data name="TheRescan" xml:space="preserve">
     <value>the rescan</value>
@@ -2994,5 +2967,104 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   </data>
   <data name="DesktopKeysShortcutsUnavailable" xml:space="preserve">
     <value>This desktop does not offer global shortcuts through the portal. OpenDeck focus routing remains available.</value>
+  </data>
+  <data name="MicCheck" xml:space="preserve">
+    <value>Mic check</value>
+  </data>
+  <data name="MicCheckStepLevel" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="MicCheckStepListen" xml:space="preserve">
+    <value>Listen</value>
+  </data>
+  <data name="MicCheckIdle" xml:space="preserve">
+    <value>Live microphone. No take recorded</value>
+  </data>
+  <data name="MicCheckReady" xml:space="preserve">
+    <value>Live microphone. {0:0.0} seconds ready to loop</value>
+  </data>
+  <data name="MicCheckLooping" xml:space="preserve">
+    <value>Looping {0:0.0} seconds</value>
+  </data>
+  <data name="MicCheckLevelHint" xml:space="preserve">
+    <value>Speak as you will on air, at your usual distance from the microphone. Set the gain so your voice peaks inside the band and the clip light stays dark.</value>
+  </data>
+  <data name="MicCheckBeforeEffects" xml:space="preserve">
+    <value>Microphone before effects</value>
+  </data>
+  <data name="MicCheckPeak" xml:space="preserve">
+    <value>Peak {0:0} dBFS</value>
+  </data>
+  <data name="MicCheckPeakSilent" xml:space="preserve">
+    <value>No signal</value>
+  </data>
+  <data name="MicCheckTargetTip" xml:space="preserve">
+    <value>Speech should peak in the band, between -18 and -6 dBFS.</value>
+  </data>
+  <data name="MicCheckAverage" xml:space="preserve">
+    <value>Average level</value>
+  </data>
+  <data name="MicCheckClip" xml:space="preserve">
+    <value>Clip</value>
+  </data>
+  <data name="MicCheckClipTip" xml:space="preserve">
+    <value>Lights when the microphone reaches full scale, and stays lit until you press it.</value>
+  </data>
+  <data name="MicCheckClipLit" xml:space="preserve">
+    <value>Clip light, lit: the microphone reached full scale. Press to clear it.</value>
+  </data>
+  <data name="MicCheckClipDark" xml:space="preserve">
+    <value>Clip light, dark</value>
+  </data>
+  <data name="MicCheckGain" xml:space="preserve">
+    <value>Interface gain</value>
+  </data>
+  <data name="MicCheckNoGain" xml:space="preserve">
+    <value>OpenXLR has no gain control for this microphone. Set the gain on the microphone or on its own interface.</value>
+  </data>
+  <data name="MicCheckListenHint" xml:space="preserve">
+    <value>Record up to ten seconds, then loop the take and change the effects while you hear the same words. The take stays in memory and is never saved.</value>
+  </data>
+  <data name="MicCheckLoopTake" xml:space="preserve">
+    <value>Loop take</value>
+  </data>
+  <data name="MicCheckLiveMic" xml:space="preserve">
+    <value>Live mic</value>
+  </data>
+  <data name="MicCheckWaveform" xml:space="preserve">
+    <value>Take waveform</value>
+  </data>
+  <data name="MicCheckNoTake" xml:space="preserve">
+    <value>No take yet. Record one to see its waveform.</value>
+  </data>
+  <data name="MicCheckCompare" xml:space="preserve">
+    <value>Hear</value>
+  </data>
+  <data name="MicCheckProcessed" xml:space="preserve">
+    <value>Processed</value>
+  </data>
+  <data name="MicCheckRaw" xml:space="preserve">
+    <value>Raw</value>
+  </data>
+  <data name="MicCheckCompareHint" xml:space="preserve">
+    <value>Raw plays the microphone without its EQ, software processing and plugins. The plugins keep running, so the switch is heard at once. Everything this channel feeds hears the switch, the virtual microphones included.</value>
+  </data>
+  <data name="MicCheckHearMyself" xml:space="preserve">
+    <value>Hear myself in the monitor mix while this window is open</value>
+  </data>
+  <data name="MicCheckHearMyselfLatency" xml:space="preserve">
+    <value>Through this computer you hear yourself about {0:0} ms late: the audio server's buffers plus the latency the plugins report.</value>
+  </data>
+  <data name="MicCheckHearMyselfLatencyUnknown" xml:space="preserve">
+    <value>Through this computer you hear yourself a little late: the audio server's buffers plus the latency the plugins report.</value>
+  </data>
+  <data name="MicCheckProDirect" xml:space="preserve">
+    <value>The Wave XLR Pro's zero-latency path to the headphones is off during the session, because it cannot carry effects.</value>
+  </data>
+  <data name="MicCheckNotHeard" xml:space="preserve">
+    <value>This microphone does not reach your monitor outputs now. Turn on Hear myself, or unmute it in the monitor mix.</value>
+  </data>
+  <data name="MicCheckClosingDiscards" xml:space="preserve">
+    <value>Closing this window ends the session and discards the take. Hear myself and Raw end with it; your effect settings stay as they are.</value>
   </data>
 </root>

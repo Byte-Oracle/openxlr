@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using OpenXLR.Core.Mixing;
 using OpenXLR.Daemon;
 using OpenXLR.UI;
+using OpenXLR.UI.Localization;
 
 namespace OpenXLR.Tests;
 
@@ -12,7 +13,7 @@ public sealed class SoundCheckTests
     {
         string missing = Path.Combine(Path.GetTempPath(), $"openxlr-no-host-{Guid.NewGuid():N}", "openxlr-lv2-host");
         var started = System.Diagnostics.Stopwatch.StartNew();
-        var error = Assert.Throws<InvalidOperationException>(() => new PipeWireAdapter().CreateSoundCheck("xlr1", out _, missing));
+        var error = Assert.Throws<InvalidOperationException>(() => new PipeWireAdapter().CreateSoundCheck("xlr1", out _, out _, missing));
         Assert.Equal(Mixer.SoundCheckNeedsHost, error.Message);
         Assert.Contains("EnableNativeLv2Host", error.Message);
         Assert.True(started.Elapsed < TimeSpan.FromSeconds(2));
@@ -138,7 +139,7 @@ public sealed class SoundCheckTests
         client.ConnectionChanged += up => { if (up) connected.TrySetResult(); };
         client.Start();
         await connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        var view = new SoundCheckViewModel(client, "xlr1");
+        var view = new MicCheckViewModel(client, "xlr1");
         Task old = closing ? view.StopOnCloseAsync() : view.RunAsync("record");
         await received[0].Task.WaitAsync(TimeSpan.FromSeconds(5));
         view.Reset();
@@ -159,8 +160,8 @@ public sealed class SoundCheckTests
     public async Task AStoppedSessionsErrorBelongsOnlyToItsMicrophoneAndCanBeDismissed()
     {
         await using var client = new DaemonClient();
-        var first = new SoundCheckViewModel(client, "xlr1");
-        var second = new SoundCheckViewModel(client, "xlr2");
+        var first = new MicCheckViewModel(client, "xlr1");
+        var second = new MicCheckViewModel(client, "xlr2");
         var state = JsonNode.Parse("""{"channel":"xlr1","mode":"idle","seconds":0,"error":"Sound Check ended after ten minutes."}""");
         first.Apply(state); second.Apply(state);
         Assert.NotNull(first.Error);
@@ -177,7 +178,7 @@ public sealed class SoundCheckTests
     public async Task TheViewUsesServerProgressAndNeverLoopsAnEmptySample()
     {
         await using var client = new DaemonClient();
-        var view = new SoundCheckViewModel(client, "xlr1");
+        var view = new MicCheckViewModel(client, "xlr1");
         Assert.True(view.CanRecord);
         Assert.False(view.CanLoop);
         view.Apply(JsonNode.Parse("""{"channel":"xlr1","mode":"recording","seconds":0.05}"""));
@@ -196,8 +197,143 @@ public sealed class SoundCheckTests
         view.Apply(null);
         Assert.False(view.CanLoop);
         Assert.False(view.CanStop);
-        Assert.Contains("No sample", view.Status);
+        Assert.Equal(Localizer.Text("MicCheckIdle"), view.Status);
         await view.RunAsync("record");
         Assert.NotNull(view.Error);
+    }
+
+    [Theory]
+    [InlineData("setSoundCheckRaw", "xlr1", "true", true)]
+    [InlineData("setSoundCheckHearMyself", "xlr2", "false", true)]
+    [InlineData("setSoundCheckRaw", "mono", "true", true)]
+    [InlineData("setSoundCheckRaw", "stereo", "true", false)]
+    [InlineData("setSoundCheckHearMyself", "system", "true", false)]
+    [InlineData("setSoundCheckRaw", "xlr1", "1", false)]
+    [InlineData("setSoundCheckHearMyself", "xlr1", null, false)]
+    [InlineData("setSoundCheckRaw", null, "true", false)]
+    [InlineData("watchInputMeter", "xlr1", null, true)]
+    [InlineData("watchInputMeter", "mono", null, true)]
+    [InlineData("watchInputMeter", "aux", null, false)]
+    [InlineData("watchInputMeter", null, null, false)]
+    public void MicCheckCommandsTakeAMicrophoneAndTheHelper(string name, string? channel, string? value, bool valid)
+    {
+        using var mixer = new Mixer();
+        typeof(Mixer).GetField("_config", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(mixer, MixerConfig.Default() with { Channels = [.. MixerConfig.Default().Channels,
+                new("mono", "Mono microphone") { CaptureSource = "absent_mic", CaptureMonoChannel = 2 },
+                new("stereo", "Stereo input") { CaptureSource = "absent_pair", CapturePair = 1 }] });
+        var command = new Command { Cmd = name, Channel = channel,
+            Value = value is null ? default : System.Text.Json.JsonDocument.Parse(value).RootElement.Clone() };
+        string? error = CommandValidation.Check(command, mixer, _ => null, nativeHostInstalled: true);
+        Assert.Equal(valid, error is null);
+        if (!valid) Assert.StartsWith(name + ": need a microphone channel", error);
+        else Assert.Equal(Mixer.SoundCheckNeedsHost, CommandValidation.Check(command, mixer, _ => null, nativeHostInstalled: false));
+    }
+
+    [Fact]
+    public void MicCheckCommandsNeedARunningMixerAndAMicrophone()
+    {
+        using var mixer = new Mixer();
+        Assert.Throws<InvalidOperationException>(() => mixer.WatchInputMeter("xlr1"));
+        Assert.Throws<ArgumentException>(() => mixer.WatchInputMeter("system"));
+        Assert.Throws<InvalidOperationException>(() => mixer.SetSoundCheckRaw("xlr1", true));
+        Assert.Throws<ArgumentException>(() => mixer.SetSoundCheckHearMyself("system", true));
+        Assert.Empty(mixer.InputMeterChannels);
+        Assert.Null(mixer.CurrentSoundCheckTake());
+        Assert.Null(mixer.NewSoundCheckTake());
+        SoundCheckState idle = mixer.Snapshot().SoundCheck;
+        Assert.False(idle.Raw || idle.HearMyself || idle.Heard);
+        Assert.Null(idle.MonitorLatencyMs);
+        Assert.Equal(0, idle.Take);
+        Assert.DoesNotContain("in:", string.Join(",", mixer.ReadMeters().Keys));
+    }
+
+    [Theory]
+    [InlineData("update: id:0 key:'clock.rate' value:'48000' type:''\nupdate: id:0 key:'clock.quantum' value:'1024' type:''\nupdate: id:0 key:'clock.force-quantum' value:'0' type:''", 1024)]
+    [InlineData("update: id:0 key:'clock.quantum' value:'1024' type:''\nupdate: id:0 key:'clock.force-quantum' value:'256' type:''", 256)]
+    [InlineData("update: id:0 key:'clock.rate' value:'48000' type:''", null)]
+    [InlineData("update: id:0 key:'clock.quantum' value:'4' type:''", null)]
+    public void TheQuantumIsTheForcedOneOrTheDefault(string metadata, int? expected)
+        => Assert.Equal(expected, PipeWireAdapter.ParseGraphQuantum(metadata.Replace("\\n", "\n")));
+
+    [Fact]
+    public void ATakeComesFromTheHelpersMetersOnlyOnceItIsCounted()
+    {
+        var meters = new Dictionary<string, double> { ["frames"] = 72000, ["take"] = 0, ["p0"] = .5 };
+        Assert.Null(Mixer.TakeFrom("xlr1", meters, 48000));
+        meters["take"] = 2;
+        meters["p199"] = 1.7;
+        meters["p3"] = .12345;
+        SoundCheckTake take = Mixer.TakeFrom("xlr1", meters, 48000)!;
+        Assert.Equal(("xlr1", 2, 1.5), (take.Channel, take.Take, take.Seconds));
+        Assert.Equal(200, take.Peaks.Count);
+        Assert.Equal([.5, 0, 0, .123], take.Peaks.Take(4));
+        Assert.Equal(1, take.Peaks[199]);
+        // A new recording can already have a different live length before
+        // the completed take is first requested.
+        meters["takeFrames"] = 48000;
+        meters["frames"] = 100;
+        Assert.Equal(1, Mixer.TakeFrom("xlr1", meters, 48000)!.Seconds);
+        Assert.Null(Mixer.TakeFrom("xlr1", meters, 0));
+        var message = System.Text.Json.JsonSerializer.Serialize(SoundCheckTakeMessage.From(null));
+        Assert.Equal("""{"channel":null,"take":0,"seconds":0,"peaks":[],"type":"soundCheckTake"}""", message);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-12, .8)]
+    [InlineData(-60, 0)]
+    [InlineData(-120, 0)]
+    [InlineData(6, 1)]
+    [InlineData(double.NaN, 0)]
+    public void InputLevelsUseTheChannelMetersScale(double dbfs, double scale)
+        => Assert.Equal(scale, Mixer.MeterScale(dbfs));
+
+    [Fact]
+    public async Task TheCheckRoutesItsOwnTakeLevelAndPlayheadAndHoldsTheClip()
+    {
+        await using var client = new DaemonClient();
+        var view = new MicCheckViewModel(client, "guest");
+        Assert.True(view.ShowsLevel);
+        Assert.Equal([MicCheckStep.Level, MicCheckStep.Listen], view.Steps.Select(s => s.Step));
+        view.Steps[1].IsSelected = true;
+        Assert.True(view.ShowsListen && view.Steps[1].IsSelected && !view.Steps[0].IsSelected);
+        view.Steps[1].IsSelected = false;   // the step shown stays chosen
+        Assert.True(view.ShowsListen);
+
+        view.ApplyInputLevel(new System.Text.Json.Nodes.JsonArray(.4, .7, 1));
+        Assert.Equal((.4, .7, true), (view.InputLevel, view.InputPeak, view.Clipped));
+        Assert.Equal(Localizer.Format("MicCheckPeak", .7 * 60 - 60), view.PeakText);
+        view.ApplyInputLevel(new System.Text.Json.Nodes.JsonArray(.1, .2, 0));
+        Assert.True(view.Clipped);   // held until cleared
+        view.ClearClip();
+        Assert.False(view.Clipped);
+        view.ApplyInputLevel(new System.Text.Json.Nodes.JsonArray(0, 0, 0));
+        Assert.Equal(Localizer.Text("MicCheckPeakSilent"), view.PeakText);
+
+        string Take(string channel) => $$"""{"type":"soundCheckTake","channel":"{{channel}}","take":1,"seconds":1,"peaks":[0.5,2,-1]}""";
+        view.ApplyTake(JsonNode.Parse(Take("guest")));
+        Assert.False(view.HasTake);   // no session yet
+        view.Apply(JsonNode.Parse("""{"channel":"guest","mode":"looping","seconds":1,"take":1,"raw":true,"hearMyself":true,"heard":true,"monitorLatencyMs":21.3}"""));
+        view.ApplyTake(JsonNode.Parse(Take("xlr1")));
+        Assert.False(view.HasTake);
+        view.ApplyTake(JsonNode.Parse(Take("guest")));
+        Assert.Equal([.5, 1, 0], view.Peaks!);
+        Assert.True(view.Raw && view.ListenRaw && !view.ListenProcessed && view.HearMyself && !view.NotHeard);
+        Assert.Equal(Localizer.Format("MicCheckHearMyselfLatency", 21.3), view.LatencyText);
+        view.ApplyPosition(new System.Text.Json.Nodes.JsonArray(.25));
+        Assert.Equal(.25, view.Position);
+        view.Apply(JsonNode.Parse("""{"channel":"guest","mode":"live","seconds":1,"take":1,"heard":false}"""));
+        Assert.Equal(-1, view.Position);
+        view.ApplyPosition(new System.Text.Json.Nodes.JsonArray(.5));
+        Assert.Equal(-1, view.Position);   // the playhead moves only while the take loops
+        Assert.True(view.NotHeard && !view.Raw && !view.HearMyself);
+        Assert.Equal(Localizer.Text("MicCheckHearMyselfLatencyUnknown"), view.LatencyText);
+        Assert.True(view.HasTake);
+        view.Apply(JsonNode.Parse("""{"channel":"xlr1","mode":"looping","seconds":1,"take":1}"""));
+        Assert.False(view.Active || view.HasTake || view.NotHeard);
+        view.ApplyInputLevel(new System.Text.Json.Nodes.JsonArray(.4, .7, 1));
+        view.Reset();
+        Assert.Equal((0.0, 0.0, false), (view.InputLevel, view.InputPeak, view.Clipped));
     }
 }

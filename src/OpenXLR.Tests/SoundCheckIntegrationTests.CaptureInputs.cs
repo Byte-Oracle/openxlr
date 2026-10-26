@@ -103,6 +103,12 @@ public sealed partial class SoundCheckIntegrationTests
                 AssertCapture(.25);
                 mixer.SetInsertBypass("capture", "gain", false);
                 AssertCapture(.125);
+                // Raw goes past the insert to both sides of the channel, and
+                // processed brings the insert back on the same take.
+                mixer.SetSoundCheckRaw("capture", true);
+                AssertCapture(.25);
+                mixer.SetSoundCheckRaw("capture", false);
+                AssertCapture(.125);
             }
             double gain = withInsert ? .5 : 1;
             mixer.SoundCheck("capture", "live");

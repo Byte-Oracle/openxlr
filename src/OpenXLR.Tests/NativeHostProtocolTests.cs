@@ -6,10 +6,54 @@ namespace OpenXLR.Tests;
 public sealed class NativeHostProtocolTests
 {
     private static NativePluginHost Start(string script, TimeSpan? startupTimeout = null,
-        TimeSpan? patience = null, IReadOnlySet<string>? meters = null)
-        => new(new InsertDefinition { Id = "test", Kind = "lv2", Plugin = "urn:test" },
+        TimeSpan? patience = null, IReadOnlySet<string>? meters = null, string kind = "lv2")
+        => new(new InsertDefinition { Id = "test", Kind = kind, Plugin = "urn:test" },
             "test", 2, 48000, "/usr/bin/python3", ["-u", "-c", script], startupTimeout, patience,
             meterSymbols: meters);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ACompletedTakeStaysWholeWhileTheNextTakesMetersArrive(bool unchangedTail)
+    {
+        using var host = Start($$"""
+            import sys
+            print('ready')
+            for i in range(200): print('meter', 'p' + str(i), 0.25)
+            print('meter takeFrames 48000')
+            print('meter take 1')
+            print('meter checkpoint 1')
+            for line in sys.stdin:
+                if line.startswith('set next '):
+                    for i in range(100): print('meter', 'p' + str(i), 0.75)
+                    print('meter takeFrames 96000')
+                    print('meter checkpoint 2')
+                elif line.startswith('set finish '):
+                    if {{(unchangedTail ? "False" : "True")}}:
+                        for i in range(100, 200): print('meter', 'p' + str(i), 0.75)
+                    print('meter take 2')
+                    print('meter checkpoint 3')
+            """, kind: "soundcheck");
+
+        void WaitFor(int checkpoint) => Assert.True(SpinWait.SpinUntil(
+            () => host.Meters.GetValueOrDefault("checkpoint") == checkpoint, TimeSpan.FromSeconds(5)));
+        void Check(int number, double seconds, double peak, double tail)
+        {
+            SoundCheckTake take = Assert.IsType<SoundCheckTake>(Mixer.TakeFrom("xlr1", host.Meters, 48000));
+            Assert.Equal(number, take.Take);
+            Assert.Equal(seconds, take.Seconds);
+            for (int i = 0; i < take.Peaks.Count; i++) Assert.Equal(i < 100 ? peak : tail, take.Peaks[i]);
+        }
+
+        WaitFor(1);
+        Check(1, 1, .25, .25);
+        host.SetControl("next", 1);
+        WaitFor(2);
+        Check(1, 1, .25, .25);
+        host.SetControl("finish", 1);
+        WaitFor(3);
+        Check(2, 2, .75, unchangedTail ? .25 : .75);
+    }
 
     [Theory]
     [InlineData("\n\n")]

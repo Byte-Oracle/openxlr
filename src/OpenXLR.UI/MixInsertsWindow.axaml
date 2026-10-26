@@ -27,7 +27,7 @@
     <TextBlock DockPanel.Dock="Top" Text="{Binding WorkflowError}" TextWrapping="Wrap" Margin="0,0,0,8"
                Foreground="{DynamicResource Ox.Text.Warning}"
                IsVisible="{Binding WorkflowError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-    <Button DockPanel.Dock="Top" Content="{loc:Text Key=SoundCheck}" IsVisible="{Binding CanSoundCheck}" HorizontalAlignment="Left" Margin="0,0,0,8" Click="OnSoundCheck"/>
+    <Button DockPanel.Dock="Top" Name="MicCheck" Content="{loc:Text Key=MicCheck}" IsVisible="{Binding CanMicCheck}" HorizontalAlignment="Left" Margin="0,0,0,8" Click="OnMicCheck"/>
     <TextBlock DockPanel.Dock="Top" Text="{loc:Text Key=NoInsertsYet}" Classes="h" IsVisible="{Binding !HasItems}"/>
     <ScrollViewer VerticalScrollBarVisibility="Auto" AllowAutoHide="False">
       <ItemsControl ItemsSource="{Binding Items}" Margin="0,0,10,0">

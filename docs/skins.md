@@ -558,7 +558,7 @@ The rest of an indicator's appearance is shape and size:
 | `Ox.Led.Glow` | number | 0 | 0 to 1 | the halo while the lamp is lit, 0 for none, `led: lamp` only |
 | `Ox.Led.CoreScale` | number | 1 | 0.1 to 1 | how much of the box the lit core fills, `led: lamp` only |
 | `Ox.Meter.Track` | brush | #14161b |  | the groove a meter sits in, and an unlit cell |
-| `Ox.Meter.CornerRadius` | radius | 2 | 0 to 48 | the meter's corners, and each cell's |
+| `Ox.Meter.CornerRadius` | radius | 2 | 0 to 48 | the meter's corners, each cell's, and Mic check's target band's |
 | `Ox.Meter.Height` | number | 4 | 2 to 24 | how tall a meter is |
 | `Ox.Meter.VerticalWidth` | number | 4 | 2 to 24 | how thick an upright meter is, where a strip template stands its meter up; it is as long as what it stands beside |
 | `Ox.Meter.Segments` | number | 16 | 2 to 64 | how many cells, `meter: segmented` only |
@@ -737,18 +737,20 @@ curve thin in its colour, the sum of the four thick over a light fill to
 0 dB, and a numbered handle per band, hollow while the band is off. The
 graph draws in code, so its colours are flat, like the indicators. The
 window's switches, type pickers, number fields and buttons are the
-ordinary controls in the skin's appearance for them.
+ordinary controls in the skin's appearance for them. Mic check's take
+waveform and the target band under its level meter draw with the same
+tokens, so a skin that tints the graph tints them too.
 
 | Token | Kind | Default | Range | What it paints |
 |---|---|---|---|---|
-| `Ox.Eq.Background` | colour | #14161b |  | the EQ graph's ground, and the number on a band's handle |
-| `Ox.Eq.Grid` | colour | #2d313c |  | the graph's lines every 6 dB and at the region edges, and the readout's outline |
+| `Ox.Eq.Background` | colour | #14161b |  | the EQ graph's ground, the number on a band's handle, and Mic check's waveform ground |
+| `Ox.Eq.Grid` | colour | #2d313c |  | the graph's lines every 6 dB and at the region edges, the readout's outline, and the waveform's centre line |
 | `Ox.Eq.GridLabel` | colour | #8b93a7 |  | the axis labels, the readout and the 0 dB line |
 | `Ox.Eq.ZoneA` | colour | #00000000 |  | the first, third and fifth regions, over the ground |
 | `Ox.Eq.ZoneB` | colour | #0affffff |  | the second, fourth and sixth regions, over the ground |
 | `Ox.Eq.ZoneLabel` | colour | #6b7285 |  | the regions' names along the top |
-| `Ox.Eq.Curve` | colour | #e6e9f0 |  | the sum of the four bands while the EQ is on |
-| `Ox.Eq.CurveFill` | colour | #335ba8f5 |  | the fill between that sum and 0 dB |
+| `Ox.Eq.Curve` | colour | #e6e9f0 |  | the sum of the four bands while the EQ is on, and in Mic check the waveform's edges, its playhead and the target band's outline |
+| `Ox.Eq.CurveFill` | colour | #335ba8f5 |  | the fill between that sum and 0 dB, and in Mic check the waveform's bars and the target band |
 | `Ox.Eq.Band1` | colour | #5ba8f5 |  | band 1: its handle, its own curve and its number in the rows |
 | `Ox.Eq.Band2` | colour | #3ecf7a |  | band 2, likewise |
 | `Ox.Eq.Band3` | colour | #e0a05a |  | band 3, likewise |
@@ -759,7 +761,7 @@ ordinary controls in the skin's appearance for them.
 | `Ox.Eq.BandCurveThickness` | number | 1.25 | 0.5 to 6 | the width of each band's own curve |
 | `Ox.Eq.HandleSize` | number | 18 | 12 to 48 | the diameter of a band's handle; the pointer takes it within 20 units of its centre, or the compact control minimum under Touch sizing |
 | `Ox.Eq.LabelFontSize` | number | 10 | 8 to 24 | the size of the axis labels, the region names and the readout, and of the hardware badge's text in the EQ editor and the Ducking window |
-| `Ox.Eq.CornerRadius` | radius | 6 | 0 to 48 | the graph's corners, and the hardware badge's in the EQ editor and the Ducking window |
+| `Ox.Eq.CornerRadius` | radius | 6 | 0 to 48 | the graph's corners, Mic check's waveform's, and the hardware badge's in the EQ editor and the Ducking window |
 
 ### Mixer control sizing
 

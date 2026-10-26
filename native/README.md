@@ -81,8 +81,12 @@ display or installed plugin. The normal host build still uses C++17.
 
 `make -C native test-sound-check` drives the Sound Check backend with fixed
 samples: live passthrough, recording, replay, a new recording replacing the
-old one, the ten-second bound in samples and in time, and that only the audio
-thread reports the mode. It needs no PipeWire, display or plugin.
+old one, the ten-second bound in samples and in time, that only the audio
+thread reports the mode, the raw switch's crossfade onto the tap and back,
+and the take's peaks over its recorded length, counted once per take. It
+drives the level backend the same way: peak and RMS of a steady signal, the
+peak falling back, silence reaching the floor and a block at full scale
+counting a clip. It needs no PipeWire, display or plugin.
 
 `make -C native test-eq` drives the microphone EQ backend the same way. It
 measures the spectrum of an impulse at 48 kHz and 44.1 kHz against the table
@@ -204,8 +208,9 @@ release, all three depths and speeds, Low and High sensitivity, key gating,
 ignored infinite and NaN key samples, threshold equality, disabling without a gain jump, zero depth, the
 per-sample step bound and a minute of silence without nonfinite or
 subnormal state. `make -C native test-audio` checks port creation on an
-unconnected filter, including no key port for existing backends and a
-silent fallback for a missing key buffer.
+unconnected filter, including no key or tap port for existing backends, a
+silent fallback for a missing key buffer and a spare of its own for a
+missing tap buffer.
 
 ## Editor failures and audio recovery
 
@@ -336,13 +341,44 @@ of a plugin, with the same ports, pipe and supervision as an insert. It is
 mono only and allocates ten seconds of samples at the graph rate when it
 starts; the audio callback does not allocate, lock or touch files. The
 `command` control selects live (0), record (1) or loop (2), and the output
-meters `frames` (samples recorded) and `mode` (what the last cycle did)
-report back. The audio thread is the only writer of the samples and of both
-meters. It sets `command` back to live when the buffer is full; the main
+meters `frames` (samples recorded), `mode` (what the last cycle did) and
+`cursor` (where the loop is, 0 unless it loops) report back. The audio
+thread is the only writer of the samples and of these meters. It sets
+`command` back to live when the buffer is full; the main
 thread does the same when a recording request has gone ten seconds without
 a cycle serving it, so a suspended input cannot start recording long after
-the request. The test programs that compile `host.c` into themselves do not
+the request.
+
+Beside `capture_0` the backend has a second mono output, `tap_0`, which
+the daemon links straight to the channel past its chain. The `raw` control
+(0 or 1) moves the signal from `capture_0` to `tap_0` and back with a
+linear crossfade of 20 ms; the two outputs always sum to the signal, and
+each settles exactly on the signal or on silence. While recording, the
+audio thread keeps the peak of each of 2000 stretches of the buffer. When a
+recording ends with samples in it, the audio thread freezes its 200 peaks
+and completed length in a bounded snapshot, separate from the next recording's
+bins. The main thread copies a consistent snapshot to `p0` to `p199` and
+`takeFrames`, then sets `take` to the count. A completion overlapping that
+copy is retried at the next tick; the audio thread never waits for it.
+Meters are printed in the order they were added, so the peaks and completed
+length come before the count. The managed reader stages changed take meters
+and publishes their snapshot only when that trailing count arrives. Readers
+keep the previous completed take while the next one's lines are still in
+transit; unchanged peaks retain their previous values. A later recording
+cannot erase an unpublished waveform or change its duration. The test programs that compile `host.c` into themselves do not
 link `sound-check.o`; to them `soundcheck` is an unknown backend.
+
+## Level
+
+`openxlr-lv2-host level NODE 1 RATE` measures a microphone before its
+chain, for Mic check. The daemon links it from the channel's capture port
+beside the channel's own route; its output carries silence and is left
+unlinked. Once per block the audio thread writes three meters: `peak`, the
+sample peak in dBFS, falling back 20 dB a second, `rms`, the RMS in dBFS
+with a 300 ms time constant, both floored at -120, and `clips`, a count of
+the blocks that held a sample at or above -0.1 dBFS. A decaying value
+below the floor goes to zero rather than into subnormals. Like the other
+built-in stages, it lives in its own object, `level.o`.
 
 ## Microphone EQ
 
