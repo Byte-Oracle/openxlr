@@ -3013,6 +3013,63 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="MicCheckNoGain" xml:space="preserve">
     <value>OpenXLR has no gain control for this microphone. Set the gain on the microphone or on its own interface.</value>
   </data>
+  <data name="MicCheckSuggestGain" xml:space="preserve">
+    <value>Suggest gain</value>
+  </data>
+  <data name="MicCheckSuggestHint" xml:space="preserve">
+    <value>Press Suggest gain and talk for five seconds as you will on air. OpenXLR measures your voice and suggests a gain that puts it in the band without clipping. Nothing changes on the interface until you accept.</value>
+  </data>
+  <data name="MicCheckSuggestListening" xml:space="preserve">
+    <value>Listening. Keep talking, {0:0} s left.</value>
+  </data>
+  <data name="MicCheckSuggestMeasured" xml:space="preserve">
+    <value>Your voice reached {0:0.0} dBFS in its loud stretches, with its highest peak at {1:0.0} dBFS.</value>
+  </data>
+  <data name="MicCheckSuggestTooFew" xml:space="preserve">
+    <value>The meter sent too few readings to judge. Keep this window open and measure again.</value>
+  </data>
+  <data name="MicCheckSuggestNoVoice" xml:space="preserve">
+    <value>Heard almost nothing. Check that the microphone is connected and not muted, and that phantom power is on if it needs it, then measure again.</value>
+  </data>
+  <data name="MicCheckSuggestKeep" xml:space="preserve">
+    <value>The gain of {0} dB already puts your voice in the band. Keep it.</value>
+  </data>
+  <data name="MicCheckSuggestKeepElsewhere" xml:space="preserve">
+    <value>Your voice is already in the band.</value>
+  </data>
+  <data name="MicCheckSuggestChange" xml:space="preserve">
+    <value>Suggested gain: {1} dB, now {0} dB.</value>
+  </data>
+  <data name="MicCheckSuggestAtMaximum" xml:space="preserve">
+    <value>Even at the interface's highest gain, {0} dB, your voice stays about {1:0} dB under the target. Move closer to the microphone, or use one with more output.</value>
+  </data>
+  <data name="MicCheckSuggestAtMinimum" xml:space="preserve">
+    <value>Even at 0 dB your voice is about {0:0} dB over the target. Move back from the microphone or speak more softly.</value>
+  </data>
+  <data name="MicCheckSuggestClipped" xml:space="preserve">
+    <value>Your voice clipped, so it is louder than this measured. Lower the gain, then measure again.</value>
+  </data>
+  <data name="MicCheckSuggestElsewhere" xml:space="preserve">
+    <value>OpenXLR does not set this microphone's gain. Change it by about {0:+0;-0} dB on the microphone or its interface, then measure again.</value>
+  </data>
+  <data name="MicCheckSuggestLocked" xml:space="preserve">
+    <value>The gain lock is on. Release it to accept.</value>
+  </data>
+  <data name="MicCheckSuggestUnreachable" xml:space="preserve">
+    <value>OpenXLR cannot change this interface's gain right now.</value>
+  </data>
+  <data name="MicCheckSuggestStale" xml:space="preserve">
+    <value>The gain changed after the measurement. Measure again.</value>
+  </data>
+  <data name="MicCheckSuggestSet" xml:space="preserve">
+    <value>Gain set to {0} dB. Measure again to check.</value>
+  </data>
+  <data name="MicCheckAcceptGain" xml:space="preserve">
+    <value>Accept</value>
+  </data>
+  <data name="MicCheckDiscardGain" xml:space="preserve">
+    <value>Discard</value>
+  </data>
   <data name="MicCheckListenHint" xml:space="preserve">
     <value>Record up to ten seconds, then loop the take and change the effects while you hear the same words. The take stays in memory and is never saved.</value>
   </data>

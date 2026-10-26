@@ -1070,6 +1070,37 @@ additional interface. For any other microphone, set the gain on the
 microphone or its own interface. The meter runs while the window is open
 and changes nothing in the channel's route.
 
+**Suggest gain** works out a gain for you. Press it and talk for five seconds
+as you will on air. OpenXLR measures two figures from the meter. One is
+your speech level, the level the average bar stays under for 95 percent
+of the five seconds, so pauses and a single loud word do not decide it.
+The other is the highest peak. OpenXLR proposes the gain that brings your
+speech level to -20 dBFS, which puts your peaks in the band, unless that
+would lift the highest peak over -6 dBFS, the top of the band. Then it
+stops where that peak reaches the top. The
+suggestion is in whole dB inside the interface's range, and nothing is
+written to the interface until you press **Accept**. **Discard** forgets
+it.
+
+- A change under 2 dB is not worth making, so the window says to keep the
+  gain you have.
+- When the interface's highest gain is still too low, or 0 dB still too
+  high, the window says how far your voice stays from the target and what
+  to try, such as moving closer or further away.
+- When your voice clipped during the five seconds, its real level is
+  higher than measured. Accept the lower gain and measure again.
+- When the level stays near the bottom of the meter, the window does not
+  suggest anything. Check the microphone, its mute and phantom power
+  first.
+- With the gain lock on, the suggestion shows but cannot be accepted until
+  you release the lock. The same goes for an additional interface that
+  OpenXLR cannot reach at that moment.
+- For a microphone whose gain OpenXLR does not set, such as a USB
+  microphone or another make of interface, the window says how many dB to
+  change on the device.
+- If the gain moves while OpenXLR listens or before you accept, the window
+  asks you to measure again rather than overwrite it.
+
 **Listen** records a take and plays it back through the chain:
 
 - **Record** and speak; recording stops by itself after ten seconds.

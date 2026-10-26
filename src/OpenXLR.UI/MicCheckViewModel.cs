@@ -311,6 +311,158 @@ public sealed class MicCheckViewModel : ViewModelBase
     {
         Raise(nameof(HasPhantom)); Raise(nameof(ShowsPhantom)); Raise(nameof(PhantomElsewhere));
         Raise(nameof(HasUnitFilters)); Raise(nameof(HasSoftwareFilters)); Raise(nameof(NoFilters));
+        Raise(nameof(CanAcceptGain)); Raise(nameof(SuggestBlocked));
+    }
+
+    // --- Suggest gain ---
+
+    /// <summary>The clock a measurement runs on; tests replace it.</summary>
+    internal TimeProvider Time { get; set; } = TimeProvider.System;
+
+    /// <summary>The gain a measurement is judged against: the input's own control, its range and whether OpenXLR may write it now.</summary>
+    private readonly record struct GainControl(object Owner, int GainDb, int MaxDb, bool Writable, bool Locked);
+
+    private GainControl? CurrentGain => _unit is { } unit
+            ? new GainControl(unit, unit.GainDb, unit.GainMaxDb, !unit.GainLocked, unit.GainLocked)
+        : _extraUnit is { HasGain: true } extra
+            ? new GainControl(extra, extra.GainDb, extra.GainMaxDb, extra.CanAdjustGain, extra.Unit.GainLocked)
+        : null;
+
+    private List<LevelReading>? _measure;
+    private long _measureStarted;
+    private GainControl? _measuredGain;
+    private GainSuggestion? _suggestion;
+    private string? _gainNote;
+
+    /// <summary>Suggest gain is listening to the microphone.</summary>
+    public bool Measuring => _measure is not null;
+    public bool CanSuggestGain => _measure is null;
+
+    /// <summary>The last measurement's suggestion, until it is accepted, discarded or measured again.</summary>
+    public GainSuggestion? Suggestion => _suggestion;
+
+    /// <summary>The suggestion changes a gain OpenXLR may write now.</summary>
+    public bool CanAcceptGain => _suggestion is { ChangesGain: true } && CurrentGain is { Writable: true };
+
+    /// <summary>A suggestion or a note to clear.</summary>
+    public bool CanDiscardGain => _suggestion is not null || _gainNote is not null;
+
+    /// <summary>What the measurement read, or null before one.</summary>
+    public string? SuggestMeasured => _suggestion is { Outcome: not GainOutcome.TooFewReadings } s
+        ? Localizer.Format("MicCheckSuggestMeasured", s.SpeechDb, s.PeakDb) : null;
+
+    /// <summary>The countdown while listening, then what to do with the gain, or a note after an accept.</summary>
+    public string? SuggestAdvice
+    {
+        get
+        {
+            if (_measure is not null)
+            {
+                double left = Math.Max(0, (MicCheckLevels.MeasureTime - Time.GetElapsedTime(_measureStarted)).TotalSeconds);
+                return Localizer.Format("MicCheckSuggestListening", Math.Ceiling(left));
+            }
+            if (_suggestion is not { } s) return _gainNote;
+            string advice = s.Outcome switch
+            {
+                GainOutcome.TooFewReadings => Localizer.Text("MicCheckSuggestTooFew"),
+                GainOutcome.NoVoice => Localizer.Text("MicCheckSuggestNoVoice"),
+                GainOutcome.Keep when s.FromDb is int from => Localizer.Format("MicCheckSuggestKeep", from),
+                GainOutcome.Keep => Localizer.Text("MicCheckSuggestKeepElsewhere"),
+                GainOutcome.Elsewhere => Localizer.Format("MicCheckSuggestElsewhere", s.ChangeDb),
+                GainOutcome.AtMaximum => Localizer.Format("MicCheckSuggestAtMaximum", s.ToDb ?? 0, s.ShortfallDb),
+                GainOutcome.AtMinimum => Localizer.Format("MicCheckSuggestAtMinimum", s.ShortfallDb),
+                _ => Localizer.Format("MicCheckSuggestChange", s.FromDb ?? 0, s.ToDb ?? 0),
+            };
+            if (s.ChangesGain && s.Outcome != GainOutcome.Change) advice += " " + Localizer.Format("MicCheckSuggestChange", s.FromDb ?? 0, s.ToDb ?? 0);
+            return s.Clipped ? Localizer.Text("MicCheckSuggestClipped") + " " + advice : advice;
+        }
+    }
+
+    /// <summary>Why a suggested change cannot be accepted now, or null.</summary>
+    public string? SuggestBlocked => _suggestion is { ChangesGain: true } && CurrentGain is { Writable: false } gain
+        ? gain.Locked ? Localizer.Text("MicCheckSuggestLocked") : Localizer.Text("MicCheckSuggestUnreachable") : null;
+
+    /// <summary>
+    /// Listen for <see cref="MicCheckLevels.MeasureTime"/> to the meter
+    /// before the chain. Nothing is written to the unit; the suggestion waits
+    /// for <see cref="AcceptGain"/>.
+    /// </summary>
+    public void StartGainMeasure()
+    {
+        if (_measure is not null) return;
+        _measure = [];
+        _measureStarted = Time.GetTimestamp();
+        _measuredGain = CurrentGain;
+        _suggestion = null;
+        _gainNote = null;
+        RaiseSuggestion();
+    }
+
+    /// <summary>The window's clock while listening: the countdown, and the end when no reading brings it.</summary>
+    public void MeasureTick()
+    {
+        if (_measure is null) return;
+        if (Time.GetElapsedTime(_measureStarted) >= MicCheckLevels.MeasureTime) FinishGainMeasure();
+        else Raise(nameof(SuggestAdvice));
+    }
+
+    private void FinishGainMeasure()
+    {
+        if (_measure is not { } readings) return;
+        _measure = null;
+        GainControl? gain = CurrentGain;
+        if (!SameGain(_measuredGain, gain))
+        {
+            // The gain or the input it belongs to moved while listening.
+            _gainNote = Localizer.Text("MicCheckSuggestStale");
+            _suggestion = null;
+        }
+        else _suggestion = GainSuggestion.From(readings, gain?.GainDb, gain?.MaxDb ?? 0);
+        RaiseSuggestion();
+    }
+
+    private static bool SameGain(GainControl? a, GainControl? b)
+        => a is null ? b is null : b is { } other && ReferenceEquals(a.Value.Owner, other.Owner) && a.Value.GainDb == other.GainDb;
+
+    /// <summary>
+    /// Write the suggested gain through the input's own control, the one the
+    /// Level step's slider moves, so the gain lock and the unit's range
+    /// apply. A gain that moved since the measurement is not overwritten.
+    /// </summary>
+    public void AcceptGain()
+    {
+        if (_suggestion is not { ChangesGain: true, ToDb: int to } s || CurrentGain is not { Writable: true } gain) return;
+        _suggestion = null;
+        if (!SameGain(_measuredGain, gain) || gain.GainDb != s.FromDb) _gainNote = Localizer.Text("MicCheckSuggestStale");
+        else
+        {
+            if (gain.Owner is UnitInputViewModel unit) unit.GainDb = to;
+            else if (gain.Owner is WaveUnitInputViewModel extra) extra.GainDb = to;
+            _gainNote = Localizer.Format("MicCheckSuggestSet", to);
+        }
+        RaiseSuggestion();
+    }
+
+    /// <summary>The window closed while listening: the measurement is dropped, since its meter stops with the window.</summary>
+    public void CancelGainMeasure()
+    {
+        if (_measure is null) return;
+        _measure = null;
+        RaiseSuggestion();
+    }
+
+    /// <summary>Forget the suggestion; the unit's gain stays as it is.</summary>
+    public void DiscardGain()
+    {
+        _suggestion = null;
+        _gainNote = null;
+        RaiseSuggestion();
+    }
+
+    private void RaiseSuggestion()
+    {
+        Raise(nameof(Measuring)); Raise(nameof(CanSuggestGain)); Raise(nameof(Suggestion)); Raise(nameof(CanAcceptGain));
+        Raise(nameof(CanDiscardGain)); Raise(nameof(SuggestMeasured)); Raise(nameof(SuggestAdvice)); Raise(nameof(SuggestBlocked));
     }
 
     private MicEqViewModel? _eq;
@@ -419,6 +571,11 @@ public sealed class MicCheckViewModel : ViewModelBase
         InputLevel = Read(0);
         InputPeak = Read(1);
         if (Read(2) >= 1) Clipped = true;
+        if (_measure is { } readings)
+        {
+            readings.Add(new LevelReading(MicCheckLevels.FromMeter(Read(0)), MicCheckLevels.FromMeter(Read(1)), Read(2) >= 1));
+            MeasureTick();
+        }
     }
 
     /// <summary>The meters' <c>take:</c> entry for this channel, while the take loops.</summary>
@@ -443,6 +600,11 @@ public sealed class MicCheckViewModel : ViewModelBase
         Apply(null);
         InputLevel = InputPeak = 0;
         Clipped = false;
+        // A measurement or a suggestion belongs to the connection it was made on.
+        _measure = null;
+        _suggestion = null;
+        _gainNote = null;
+        RaiseSuggestion();
         // The daemon may hold another EQ by the time it is back.
         _beforePreset = null;
         _presetStatus = null;

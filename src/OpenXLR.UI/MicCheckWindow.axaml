@@ -135,6 +135,24 @@
               <TextBlock Name="MicCheckNoGain" Text="{loc:Text Key=MicCheckNoGain}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding NoGain}"/>
             </StackPanel>
           </Border>
+          <!-- Suggest gain: five seconds of speech measured, a gain proposed, nothing written until accepted -->
+          <Border Classes="tile" Padding="12">
+            <StackPanel Spacing="8">
+              <TextBlock Text="{loc:Text Key=MicCheckSuggestGain}" Classes="h"/>
+              <TextBlock Text="{loc:Text Key=MicCheckSuggestHint}" Classes="hint" TextWrapping="Wrap"/>
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <Button Name="MicCheckSuggestGain" Content="{loc:Text Key=MicCheckSuggestGain}" IsEnabled="{Binding CanSuggestGain}" Click="OnSuggestGain"/>
+                <Button Name="MicCheckAcceptGain" Content="{loc:Text Key=MicCheckAcceptGain}" IsVisible="{Binding CanAcceptGain}" Click="OnAcceptGain"/>
+                <Button Name="MicCheckDiscardGain" Content="{loc:Text Key=MicCheckDiscardGain}" IsVisible="{Binding CanDiscardGain}" Click="OnDiscardGain"/>
+              </WrapPanel>
+              <TextBlock Name="MicCheckSuggestMeasured" Text="{Binding SuggestMeasured}" Classes="body" TextWrapping="Wrap"
+                         IsVisible="{Binding SuggestMeasured, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              <TextBlock Name="MicCheckSuggestAdvice" Text="{Binding SuggestAdvice}" Classes="body" TextWrapping="Wrap"
+                         IsVisible="{Binding SuggestAdvice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              <TextBlock Name="MicCheckSuggestBlocked" Text="{Binding SuggestBlocked}" Classes="warn" TextWrapping="Wrap"
+                         IsVisible="{Binding SuggestBlocked, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+          </Border>
         </StackPanel>
 
         <!-- Listen: a take, its waveform, raw and processed, and hearing yourself -->
