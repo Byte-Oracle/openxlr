@@ -150,6 +150,9 @@ internal sealed class InputsView : View
             rows.Add(new HeadingRow("Line In"));
             rows.Add(new NumberRow("Gain", state.Number("lineInGainDb"), 0, lineMax, 1,
                 value => $"{value:0} dB", value => Set(link, "lineInGain", (int)Math.Round(value))) { FineStep = 1 });
+            // Holds the gain against the desktop mixer; this row's own writes still apply.
+            rows.Add(new ToggleRow("Level lock", state.Flag("lineInLevelLock"),
+                value => Set(link, "lineInLevelLock", value)));
         }
 
         return rows;
