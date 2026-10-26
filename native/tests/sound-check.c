@@ -108,6 +108,35 @@ static void check_peaks(void) {
   puts("PASS: take peaks over the recorded length, one count per take");
 }
 
+// Starting another recording before the main-thread tick must leave the
+// previous take's waveform intact, with the length that take finished at.
+static void check_finished_take_survives_recording(void) {
+  Host h = {.rate = 8000, .channels = 1};
+  assert(sound_check_load(&h, NULL));
+  SoundCheck *s = h.impl;
+  float input[400], output[400];
+  float *in[] = {input}, *out[] = {output};
+  for (unsigned i = 0; i < 400; i++) input[i] = 0.25f;
+  atomic_store(&s->command->desired, RECORD);
+  sound_check_process(&h, 400, in, out);
+  atomic_store(&s->command->desired, LIVE);
+  sound_check_process(&h, 0, in, out);
+  assert(atomic_load(&s->takes) == 1);
+  // The next take has a different signal and length before the tick sees
+  // the completed one. Only a snapshot of that completion can publish it.
+  memset(input, 0, sizeof(input));
+  atomic_store(&s->command->desired, RECORD);
+  sound_check_process(&h, 100, in, out);
+  sound_check_tick(&h);
+  assert(atomic_load(&s->take->observed) == 1);
+  for (unsigned j = 0; j < PEAK_POINTS; j++)
+    assert(near(atomic_load(&s->peaks[j]->observed), 0.25f));
+  assert(atomic_load(&s->take_frames->observed) == 400);
+  assert(atomic_load(&s->frames->observed) == 100);
+  sound_check_unload(&h);
+  puts("PASS: a completed waveform survives the next recording before publication");
+}
+
 // The level meter: silence passes nothing, a steady signal reads its peak and
 // RMS, the peak falls back slowly, and a block at full scale counts a clip.
 static void check_level(void) {
@@ -199,6 +228,7 @@ int main(void) {
        "ten-second bound and one writer for the reported mode");
   check_raw_switch();
   check_peaks();
+  check_finished_take_survives_recording();
   check_level();
   return 0;
 }

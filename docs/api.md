@@ -1371,6 +1371,8 @@ fields describe the running session and are false, null or 0 without one:
   `soundCheckTake` message when the helper finishes it, about 70 ms after
   the recording stops, and again on `getSoundCheckTake`. A client that
   sees a `take` it has no waveform for asks for it.
+  Its peaks and duration describe the completed take even if another
+  recording starts before the message is published.
 
 The helper has two outputs. The main one feeds the channel's route as
 before, through the EQ, the software processing and the inserts. The tap

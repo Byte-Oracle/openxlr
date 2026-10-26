@@ -304,7 +304,7 @@ public sealed partial class Mixer
         var peaks = new double[PipeWireAdapter.TakePeakCount];
         for (int i = 0; i < peaks.Length; i++)
             peaks[i] = Math.Round(Math.Clamp(meters.GetValueOrDefault($"p{i}"), 0, 1), 3);
-        return new SoundCheckTake(channel, take, Math.Clamp(meters.GetValueOrDefault("frames") / rate, 0, 10), peaks);
+        return new SoundCheckTake(channel, take, Math.Clamp(meters.GetValueOrDefault("takeFrames", meters.GetValueOrDefault("frames")) / rate, 0, 10), peaks);
     }
 
     /// <summary>

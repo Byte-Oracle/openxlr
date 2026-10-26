@@ -355,12 +355,14 @@ the daemon links straight to the channel past its chain. The `raw` control
 linear crossfade of 20 ms; the two outputs always sum to the signal, and
 each settles exactly on the signal or on silence. While recording, the
 audio thread keeps the peak of each of 2000 stretches of the buffer. When a
-recording ends with samples in it, the audio thread publishes the length
-and counts the take; the main thread then folds the stretches the take
-covers into 200 peaks, the meters `p0` to `p199`, and sets the meter
-`take` to the count. Meters are printed in the order they were added, so
-the peaks come before the count and a reader that sees a new count already
-holds its peaks. The test programs that compile `host.c` into themselves do not
+recording ends with samples in it, the audio thread freezes its 200 peaks
+and completed length in a bounded snapshot, separate from the next recording's
+bins. The main thread copies a consistent snapshot to `p0` to `p199` and
+`takeFrames`, then sets `take` to the count. A completion overlapping that
+copy is retried at the next tick; the audio thread never waits for it.
+Meters are printed in the order they were added, so the peaks and completed
+length come before the count. A later recording cannot erase an unpublished
+waveform or change its duration. The test programs that compile `host.c` into themselves do not
 link `sound-check.o`; to them `soundcheck` is an unknown backend.
 
 ## Level

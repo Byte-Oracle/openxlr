@@ -16,10 +16,11 @@
 //
 // The take's waveform. While recording, the audio thread keeps the peak of
 // each of PEAK_BINS stretches of the buffer. When a recording ends with
-// samples in it, it publishes the length and counts the take; the tick then
-// folds the bins that hold the take into PEAK_POINTS peaks and sets the
-// meters p0 to p199, then `take`. The meters are printed in that order, so a
-// reader that sees the new `take` already holds its peaks.
+// samples in it, it freezes the bins into PEAK_POINTS peaks, publishes the
+// length and counts the take. The tick sets the meters p0 to p199, the
+// completed length and then `take`. They are printed in that order, so a
+// reader that sees the new `take` already holds its peaks. The next recording
+// reuses only the active bins, leaving the completed snapshot untouched.
 #include "host.h"
 #include <math.h>
 #include <stdio.h>
@@ -43,13 +44,15 @@ typedef struct {
   uint32_t capacity, length, cursor;  // audio thread only
   int previous;                       // audio thread only
   float raw_gain, raw_step;           // audio thread only: 0 processed, 1 raw
-  _Atomic float bins[PEAK_BINS];      // audio thread writes, tick reads
+  float bins[PEAK_BINS];             // audio thread only
+  _Atomic float finished_peaks[PEAK_POINTS]; // completed take, independent of the next recording
+  _Atomic uint32_t waveform_version;  // odd while the audio thread replaces the snapshot
   _Atomic uint32_t take_length;       // the last finished take, then...
   _Atomic uint32_t takes;             // ...counted, by the audio thread
   uint32_t published;                 // tick only: the take now in p0..p199
   bool timed_record;                  // tick only
   struct timespec record_started;     // tick only
-  Control *command, *raw, *frames, *mode, *playhead, *take;
+  Control *command, *raw, *frames, *mode, *playhead, *take_frames, *take;
   Control *peaks[PEAK_POINTS];
   char names[PEAK_POINTS][8];
 } SoundCheck;
@@ -73,8 +76,9 @@ static bool sound_check_load(Host *h, char **arguments) {
     s->peaks[i] = host_add_control(h, s->names[i], 0, 1, 0, true, NULL);
     ok = s->peaks[i] != NULL;
   }
+  s->take_frames = ok ? host_add_control(h, "takeFrames", 0, (float)s->capacity, 0, true, NULL) : NULL;
   // After the peaks, so it is printed after them.
-  s->take = ok ? host_add_control(h, "take", 0, 1e9f, 0, true, NULL) : NULL;
+  s->take = s->take_frames ? host_add_control(h, "take", 0, 1e9f, 0, true, NULL) : NULL;
   return ok && s->take;
 }
 static bool sound_check_activate(Host *h) { return true; }
@@ -90,8 +94,21 @@ static void sound_check_unload(Host *h) {
 // A recording ended: publish its length, then count it.
 static void finish_take(SoundCheck *s) {
   if (s->length == 0) return;
+  atomic_fetch_add(&s->waveform_version, 1);
+  unsigned used = (unsigned)(((uint64_t)s->length * PEAK_BINS + s->capacity - 1) / s->capacity);
+  if (used == 0) used = 1;
+  if (used > PEAK_BINS) used = PEAK_BINS;
+  for (unsigned j = 0; j < PEAK_POINTS; j++) {
+    unsigned from = j * used / PEAK_POINTS, to = (j + 1) * used / PEAK_POINTS;
+    if (to <= from) to = from + 1;
+    float peak = 0;
+    for (unsigned b = from; b < to; b++)
+      peak = fmaxf(peak, s->bins[b]);
+    atomic_store_explicit(&s->finished_peaks[j], fminf(peak, 1), memory_order_relaxed);
+  }
   atomic_store(&s->take_length, s->length);
   atomic_fetch_add(&s->takes, 1);
+  atomic_fetch_add(&s->waveform_version, 1);
 }
 
 static void sound_check_process(Host *h, uint32_t frames, float *const *in, float *const *out) {
@@ -102,7 +119,7 @@ static void sound_check_process(Host *h, uint32_t frames, float *const *in, floa
     if (s->previous == RECORD) finish_take(s);
     if (mode == RECORD) {
       s->length = 0;
-      for (unsigned b = 0; b < PEAK_BINS; b++) atomic_store_explicit(&s->bins[b], 0, memory_order_relaxed);
+      memset(s->bins, 0, sizeof(s->bins));
     }
     if (mode == LOOP) s->cursor = 0;
     s->previous = mode;
@@ -115,8 +132,7 @@ static void sound_check_process(Host *h, uint32_t frames, float *const *in, floa
     if (mode == RECORD) {
       unsigned bin = (unsigned)((uint64_t)s->length * PEAK_BINS / s->capacity);
       float level = fabsf(x);
-      if (level > atomic_load_explicit(&s->bins[bin], memory_order_relaxed))
-        atomic_store_explicit(&s->bins[bin], level, memory_order_relaxed);
+      if (level > s->bins[bin]) s->bins[bin] = level;
       s->samples[s->length++] = x;
       if (s->length == s->capacity) {
         mode = LIVE;
@@ -138,28 +154,23 @@ static void sound_check_process(Host *h, uint32_t frames, float *const *in, floa
   atomic_store(&s->playhead->observed, mode == LOOP ? (float)s->cursor : 0);
 }
 
-// Fold the bins a take of `length` samples covers into the peak meters.
-static void publish_peaks(SoundCheck *s, uint32_t length) {
-  unsigned used = (unsigned)(((uint64_t)length * PEAK_BINS + s->capacity - 1) / s->capacity);
-  if (used == 0) used = 1;
-  if (used > PEAK_BINS) used = PEAK_BINS;
-  for (unsigned j = 0; j < PEAK_POINTS; j++) {
-    unsigned from = j * used / PEAK_POINTS, to = (j + 1) * used / PEAK_POINTS;
-    if (to <= from) to = from + 1;
-    float peak = 0;
-    for (unsigned b = from; b < to; b++)
-      peak = fmaxf(peak, atomic_load_explicit(&s->bins[b], memory_order_relaxed));
-    atomic_store(&s->peaks[j]->observed, fminf(peak, 1));
-  }
-}
-
 static void sound_check_tick(Host *h) {
   SoundCheck *s = h->impl;
+  uint32_t version = atomic_load(&s->waveform_version);
   uint32_t takes = atomic_load(&s->takes);
-  if (takes != s->published) {
-    publish_peaks(s, atomic_load(&s->take_length));
-    s->published = takes;
-    atomic_store(&s->take->observed, (float)takes);
+  if (takes != s->published && !(version & 1)) {
+    float peaks[PEAK_POINTS];
+    uint32_t length = atomic_load(&s->take_length);
+    for (unsigned j = 0; j < PEAK_POINTS; j++)
+      peaks[j] = atomic_load_explicit(&s->finished_peaks[j], memory_order_relaxed);
+    // A completion overlapping this read is retried on the next tick. The
+    // audio thread never waits for the reader and never allocates here.
+    if (version == atomic_load(&s->waveform_version)) {
+      for (unsigned j = 0; j < PEAK_POINTS; j++) atomic_store(&s->peaks[j]->observed, peaks[j]);
+      atomic_store(&s->take_frames->observed, (float)length);
+      s->published = takes;
+      atomic_store(&s->take->observed, (float)takes);
+    }
   }
   if (atomic_load(&s->command->desired) != RECORD) {
     s->timed_record = false;

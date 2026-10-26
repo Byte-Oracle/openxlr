@@ -981,7 +981,7 @@ public sealed class PipeWireAdapter
 
     /// <summary>The meters the Sound Check helper reports: progress, the playhead, and the take's peaks with their count.</summary>
     private static readonly IReadOnlySet<string> SoundCheckMeters = new HashSet<string>(
-        ["frames", "mode", "cursor", "take", .. Enumerable.Range(0, TakePeakCount).Select(i => $"p{i}")], StringComparer.Ordinal);
+        ["frames", "mode", "cursor", "takeFrames", "take", .. Enumerable.Range(0, TakePeakCount).Select(i => $"p{i}")], StringComparer.Ordinal);
 
     /// <summary>
     /// The level meter Mic check reads ahead of a microphone's chain: the

@@ -270,6 +270,11 @@ public sealed class SoundCheckTests
         Assert.Equal(200, take.Peaks.Count);
         Assert.Equal([.5, 0, 0, .123], take.Peaks.Take(4));
         Assert.Equal(1, take.Peaks[199]);
+        // A new recording can already have a different live length before
+        // the completed take is first requested.
+        meters["takeFrames"] = 48000;
+        meters["frames"] = 100;
+        Assert.Equal(1, Mixer.TakeFrom("xlr1", meters, 48000)!.Seconds);
         Assert.Null(Mixer.TakeFrom("xlr1", meters, 0));
         var message = System.Text.Json.JsonSerializer.Serialize(SoundCheckTakeMessage.From(null));
         Assert.Equal("""{"channel":null,"take":0,"seconds":0,"peaks":[],"type":"soundCheckTake"}""", message);
