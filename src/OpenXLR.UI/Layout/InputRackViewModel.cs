@@ -81,7 +81,7 @@ public sealed class InputRackViewModel : IDisposable
     {
         InputStripKind.Xlr1 or InputStripKind.Xlr2 => SkinStripParts.InputRow,
         InputStripKind.AuxIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
-        InputStripKind.LineIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain],
+        InputStripKind.LineIn => [SkinStripParts.Identity, SkinStripParts.Meter, SkinStripParts.Gain, SkinStripParts.HardwareControls],
         // A capture channel has its source chip and its chain, and the interface's
         // gain and switches while it carries the interface's microphone.
         InputStripKind.Capture => SkinStripParts.InputRow,
@@ -191,6 +191,7 @@ public sealed class InputStripViewModel : ViewModelBase
         (InputStripKind.Capture or InputStripKind.Application, SkinStripParts.Gain) => CarriesUnit || CarriesExtraUnit || Channel.HasVolume
             || ShowsCaptureGain,
         (InputStripKind.LineIn, SkinStripParts.Gain) => Main.CapLineInput || Channel.HasVolume,
+        (InputStripKind.LineIn, SkinStripParts.HardwareControls) => Main.CapLineInput,
         (InputStripKind.Capture, SkinStripParts.Binding) => CapturePartOrdered(part),
         (InputStripKind.Capture, SkinStripParts.Effects) => Channel.HasInserts && CapturePartOrdered(part),
         _ => true,

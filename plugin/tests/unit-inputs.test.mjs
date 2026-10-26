@@ -148,6 +148,9 @@ test("hardware targets follow the unit's capabilities whatever XLR 1 takes", () 
   // The Line In gain is the Pro's own input, not the Aux In stage.
   assert.equal(deviceTargetSupported({...state.capabilities, lineInput:true}, "lineIn"), true);
   assert.equal(deviceTargetSupported({...state.capabilities, lineInput:false}, "lineIn"), false);
+  // So is its level lock, apart from Aux In's.
+  assert.equal(deviceTargetSupported({...state.capabilities, lineInput:true}, "lineInLevelLock"), true);
+  assert.equal(deviceTargetSupported({...state.capabilities, lineInput:false}, "lineInLevelLock"), false);
   assert.equal(deviceTargetSupported(wave, "lineIn"), false);
   // No unit connected: the daemon sends no capabilities and nothing is there.
   for (const capabilities of [undefined, null, "nonsense"])

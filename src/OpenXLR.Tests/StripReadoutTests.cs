@@ -58,9 +58,10 @@ public sealed class StripReadoutTests
         Assert.Equal(InputStripKind.AuxIn, rack.Strips.Single(s => s.Channel.Id == "aux").Kind);
         Assert.Equal("line", StripTemplateSelector.Key(strip));
         Assert.Equal("line", StripTemplateSelector.Key(row));
-        // A gain and no lock: the level lock is Aux In's.
-        Assert.DoesNotContain(SkinStripParts.HardwareControls, InputRackViewModel.PartsOf(InputStripKind.LineIn));
+        // A gain and a level lock of its own, like Aux In's.
+        Assert.Contains(SkinStripParts.HardwareControls, InputRackViewModel.PartsOf(InputStripKind.LineIn));
         Assert.Contains(SkinStripParts.Gain, strip.Spec.Parts);
+        Assert.Contains(SkinStripParts.HardwareControls, strip.Spec.Parts);
         Assert.True(row.HasGainFader);
         Assert.True(row.Stacked);
         Assert.True(row.ShowsReadout);
@@ -72,6 +73,7 @@ public sealed class StripReadoutTests
         Assert.False(row.ShowsReadout);
         Assert.True(row.VolumeShowsMeter);
         Assert.Contains(SkinStripParts.Gain, strip.Spec.Parts);
+        Assert.DoesNotContain(SkinStripParts.HardwareControls, strip.Spec.Parts);
         Assert.False(model.LineStrip!.HasGainReadout);
         Assert.Equal("", model.LineStrip.Readout);
         Assert.False(model.ShowLineInRow);
@@ -184,6 +186,32 @@ public sealed class StripReadoutTests
         // The INPUTS panel's rows read their own strips only.
         Assert.Equal("-12 dB", model.AuxReadout);
         Assert.Equal("20 dB", model.LineInReadout);
+    }
+
+    [Fact]
+    public void TheLineInSlidersStopAtTheCapAndTheReadoutShowsTheUnitsOwnGain()
+    {
+        var model = new MainViewModel(new DaemonClient());
+        SliderSync.Forget("line");
+        typeof(MainViewModel).GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic, [typeof(JsonNode)])!
+            .Invoke(model, [JsonNode.Parse("""
+                {"connected":true,"capabilities":{"lineInput":true,"auxInput":true,"gainMaxDb":80,"lineInGainMaxDb":40},
+                 "state":{"gainDb":30,"lineInGainDb":52}}
+                """)!]);
+        Assert.Equal(40, model.LineInGainMaxDb);
+        Assert.Equal(80, model.GainMaxDb);
+        // A unit set higher elsewhere: the readout says so, the slider sits at its top.
+        Assert.Equal(52, model.LineInGainDb);
+        Assert.Equal(40, model.LineInGainSliderDb);
+        Assert.Equal("52 dB", model.LineInReadout);
+
+        // Moving the slider writes the gain; putting it where it already sits writes nothing.
+        model.LineInGainSliderDb = 40;
+        Assert.Equal(52, model.LineInGainDb);
+        model.LineInGainSliderDb = 30;
+        Assert.Equal((30, 30), (model.LineInGainDb, model.LineInGainSliderDb));
+        Assert.Equal("30 dB", model.LineInReadout);
+        SliderSync.Forget("line");
     }
 }
 

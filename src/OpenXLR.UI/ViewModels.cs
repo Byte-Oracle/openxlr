@@ -877,6 +877,8 @@ public sealed partial class MainViewModel : ViewModelBase
                 // Before the state below, so a slider the new range shortens
                 // is coerced while the state is being applied and sends nothing.
                 GainMaxDb = caps["gainMaxDb"]?.GetValue<int>() ?? 80;
+                // A daemon from before the Line In cap held it to the unit's gain range.
+                LineInGainMaxDb = caps["lineInGainMaxDb"]?.GetValue<int>() is int lineMax and > 0 ? lineMax : GainMaxDb;
                 CapLowCut = Cap("lowCut");
                 CapExpander = Cap("expander");
                 CapVoiceTune = Cap("voiceTune");
@@ -930,6 +932,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 if (!SliderSync.RecentlyTouched("aux")) AuxLevelDb = s["auxLevelDb"]?.GetValue<double>() ?? 0;
                 AuxLevelLock = s["auxLevelLock"]?.GetValue<bool>() ?? false;
                 if (!SliderSync.RecentlyTouched("line")) LineInGainDb = s["lineInGainDb"]?.GetValue<int>() ?? 0;
+                LineInLevelLock = s["lineInLevelLock"]?.GetValue<bool>() ?? false;
             }
 
             // Read outside the state block, so a unit that left takes its path with it.

@@ -32,7 +32,7 @@ const DEVICE_TOGGLES = {
   voiceTune: "XLR 1\nVoice Tune", voiceTune2: "XLR 2\nVoice Tune",
   clipGuard: "XLR 1\nClipGuard", clipGuard2: "XLR 2\nClipGuard",
   compressor: "XLR 1\nComp", compressor2: "XLR 2\nComp",
-  lowImpedance: "Low Z", auxLevelLock: "Aux In\nLock",
+  lowImpedance: "Low Z", auxLevelLock: "Aux In\nLock", lineInLevelLock: "Line In\nLock",
   outHp1: "HP 1\nOut", outHp2: "HP 2\nOut", outLineOut: "Line\nOut",
   gainLocked: "Gain\nLock",
   softClipGuard: "Clip\nGuard",
@@ -378,6 +378,12 @@ const chOf = (id) => mixer()?.channels?.find((x) => x.id === id);
 const gainMaxDb = () => {
   const max = daemonState?.capabilities?.gainMaxDb;
   return Number.isInteger(max) && max > 0 ? max : 80;
+};
+// The highest Line In gain the daemon writes (40 dB on the Wave XLR Pro); a
+// daemon that does not say held it to the unit's gain range.
+const lineInGainMaxDb = () => {
+  const max = daemonState?.capabilities?.lineInGainMaxDb;
+  return Number.isInteger(max) && max > 0 ? max : gainMaxDb();
 };
 
 // The connected interface has the target. A binding never changes this.
@@ -726,8 +732,9 @@ function dialValue(target, inst) {
       const ch = chOf("line");
       const levels = Object.keys(ch?.levels ?? {});
       const muted = levels.length > 0 && levels.every((m) => ch.mutedIn?.includes(m));
+      // A unit set above the cap elsewhere shows its own gain on a full bar.
       return { label: `${channelName(mixer(), "line")} gain`,
-               pct: Math.round((db / gainMaxDb()) * 100), text: muted ? "MUTED" : `${db} dB`, muted };
+               pct: Math.min(100, Math.round((db / lineInGainMaxDb()) * 100)), text: muted ? "MUTED" : `${db} dB`, muted };
     }
     case "crossfade": {
       if (!supported(target)) return null;
@@ -873,7 +880,7 @@ function onDialRotate(context, inst, ticks) {
   } else if (t === "lineIn") {
     const db = dev()?.lineInGainDb;
     if (db == null) return;
-    const value = clamp(dialNow(t, db) + ticks, 0, gainMaxDb());
+    const value = clamp(dialNow(t, db) + ticks, 0, lineInGainMaxDb());
     dialTurn(t, value, () => cmd({ cmd: "set", control: "lineInGain", value }));
   } else if (t === "auxLevel") {
     const db = dev()?.auxLevelDb;

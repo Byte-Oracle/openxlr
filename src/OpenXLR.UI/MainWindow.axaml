@@ -598,12 +598,13 @@
         </Grid>
         <!-- the Wave XLR Pro's analog Line In, an input of its own; its readout shows Line In's
              volume while that fader moves and for a second after -->
-        <Grid Name="LineInRow" ColumnDefinitions="90,*,64" Margin="0,2,0,0" IsVisible="{Binding ShowLineInRow}">
+        <Grid Name="LineInRow" ColumnDefinitions="90,*,64,20,110" Margin="0,2,0,0" IsVisible="{Binding ShowLineInRow}">
           <TextBlock Text="{loc:Text Key=LineIn}" Classes="h" VerticalAlignment="Center"/>
-          <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="{Binding GainMaxDb}"
-                  Value="{Binding LineInGainDb, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=LineInGain}"/>
+          <Slider vm:FaderInput.Step="1" Grid.Column="1" Minimum="0" Maximum="{Binding LineInGainMaxDb}"
+                  Value="{Binding LineInGainSliderDb, Mode=TwoWay}" AutomationProperties.Name="{loc:Text Key=LineInGain}"/>
           <TextBlock Grid.Column="2" Name="LineInReadout" Text="{Binding LineInReadout}" Classes="val" VerticalAlignment="Center"
                      HorizontalAlignment="Right" AutomationProperties.Name="{Binding LineInReadoutName}" ToolTip.Tip="{Binding LineInReadoutName}"/>
+          <ToggleButton Grid.Column="4" Name="LineInLock" Content="{loc:Text Key=LevelLock}" IsChecked="{Binding LineInLevelLock, Mode=TwoWay}"/>
         </Grid>
         <ItemsControl Name="CaptureInputs" ItemsSource="{Binding CaptureInputs}" IsVisible="{Binding HasMixer}">
           <ItemsControl.ItemTemplate>

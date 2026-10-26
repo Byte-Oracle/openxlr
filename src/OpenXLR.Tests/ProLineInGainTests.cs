@@ -11,11 +11,15 @@ namespace OpenXLR.Tests;
 /// The Wave XLR Pro's analog Line In gain, against a unit modelled as its
 /// blocks: block 0x0004 byte 76 holds it in dB, as measured on the desk unit
 /// (20 dB there, the centre pair of the ALSA capture volume). A write is one
-/// read and one whole-block write with no commit, held to 0 to 80 dB, and
-/// leaves every other byte as read, bytes 77 to 79 included. The daemon
-/// offers the control on a unit that has the input only, logs each write
-/// with what the unit reads back, and a saved state from before the field
-/// existed leaves the gain alone.
+/// read and one whole-block write with no commit, held to 0 to 40 dB (the
+/// unit takes 80 but hisses above about 20 dB on an owner's unit), and
+/// leaves every other byte as read, bytes 77 to 79 included. A unit set
+/// higher elsewhere reads back its own value. The daemon offers the control
+/// on a unit that has the input only, logs each write with what the unit
+/// reads back, and a saved state from before the field existed leaves the
+/// gain alone. Line In's level lock is byte 77 bit 3, beside the USB Aux
+/// lock at bit 2 (desk measurement, 2026-10-26), written the way the gain
+/// is.
 /// </summary>
 [Collection("xdg-config")]
 public sealed class ProLineInGainTests
@@ -35,6 +39,17 @@ public sealed class ProLineInGainTests
         Assert.True(pro.Capabilities.LineInput);
         Assert.Equal(0x14, unit.Blocks[0x0004][76]);
         Assert.Equal(20, pro.ReadState().LineInGainDb);
+        Assert.Equal(40, pro.Capabilities.LineInGainMaxDb);
+        Assert.Equal(80, pro.Capabilities.GainMaxDb);
+    }
+
+    [Fact]
+    public void AUnitSetAboveTheCapReadsBackItsOwnGain()
+    {
+        var unit = new ProHardwareEqTests.Unit();
+        unit.Blocks[0x0004][76] = 52;
+        using WaveXlrProDevice pro = Connected(unit);
+        Assert.Equal(52, pro.ReadState().LineInGainDb);
     }
 
     [Fact]
@@ -49,22 +64,24 @@ public sealed class ProLineInGainTests
         byte[] before = (byte[])unit.Blocks[0x0004].Clone();
         unit.Calls.Clear();
 
-        Assert.Equal(43, pro.SetLineInGainDb(43));
+        Assert.Equal(33, pro.SetLineInGainDb(33));
 
         byte[] written = Assert.Single(unit.SettingsWrites);
         Assert.Empty(unit.Commits);
         Assert.Equal(80, written.Length);
         for (int i = 0; i < written.Length; i++)
-            Assert.True(i == 76 ? written[i] == 43 : written[i] == before[i], $"byte {i}: {written[i]:x2}, read {before[i]:x2}");
+            Assert.True(i == 76 ? written[i] == 33 : written[i] == before[i], $"byte {i}: {written[i]:x2}, read {before[i]:x2}");
         // One read of the block, then the write, nothing else.
         Assert.Equal([(byte)0xC1, (byte)0x41], unit.Calls.Select(c => c.Type));
-        Assert.Equal(43, pro.ReadState().LineInGainDb);
+        Assert.Equal(33, pro.ReadState().LineInGainDb);
     }
 
     [Theory]
-    [InlineData(95, 80)]
+    [InlineData(95, 40)]
+    [InlineData(80, 40)]
+    [InlineData(41, 40)]
+    [InlineData(40, 40)]
     [InlineData(-3, 0)]
-    [InlineData(80, 80)]
     [InlineData(0, 0)]
     public void AWriteIsHeldToTheGainRange(int asked, int stored)
     {
@@ -122,8 +139,30 @@ public sealed class ProLineInGainTests
             Assert.Empty(unit.SettingsWrites);
             Assert.Equal(0x14, unit.Blocks[0x0004][76]);
 
+            Assert.Null(manager.ApplyProfile(live with { LineInGainDb = 32 }));
+            Assert.Equal(32, Assert.Single(unit.SettingsWrites)[76]);
+        });
+    }
+
+    [Fact]
+    public void ASavedGainAboveTheCapIsWrittenAsTheCapOnce()
+    {
+        WithConfigDir(() =>
+        {
+            var unit = new ProHardwareEqTests.Unit();
+            using var pro = new WaveXlrProDevice(unit);
+            using var manager = new DeviceManager(new Lines(), new ConfigurationBuilder().Build(), () => [pro]);
+            manager.SweepOnce();
+            Assert.Equal(40, manager.Snapshot().Capabilities!.LineInGainMaxDb);
+            DeviceState live = manager.Snapshot().State!;
+            unit.Calls.Clear();
+
             Assert.Null(manager.ApplyProfile(live with { LineInGainDb = 52 }));
-            Assert.Equal(52, Assert.Single(unit.SettingsWrites)[76]);
+            Assert.Equal(40, Assert.Single(unit.SettingsWrites)[76]);
+
+            // The unit now reads the cap, so the same saved state writes nothing again.
+            Assert.Null(manager.ApplyProfile(manager.Snapshot().State! with { LineInGainDb = 52 }));
+            Assert.Single(unit.SettingsWrites);
         });
     }
 
@@ -133,6 +172,108 @@ public sealed class ProLineInGainTests
         DeviceState old = JsonSerializer.Deserialize<DeviceState>("""{"gainDb":30,"auxLevelDb":-30}""",
             new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
         Assert.Null(old.LineInGainDb);
+    }
+
+    [Theory]
+    [InlineData(0x00, false, false)]
+    [InlineData(0x04, true, false)]
+    [InlineData(0x08, false, true)]
+    [InlineData(0x0c, true, true)]
+    public void TheTwoLevelLocksAreBitsOfByte77(byte b77, bool aux, bool line)
+    {
+        var unit = new ProHardwareEqTests.Unit();
+        unit.Blocks[0x0004][77] = b77;
+        using WaveXlrProDevice pro = Connected(unit);
+        DeviceState state = pro.ReadState();
+        Assert.Equal((aux, (bool?)line), (state.AuxLevelLock, state.LineInLevelLock));
+    }
+
+    [Theory]
+    [InlineData(0x04, true, 0x0c)]
+    [InlineData(0x00, true, 0x08)]
+    [InlineData(0x0c, false, 0x04)]
+    [InlineData(0x08, false, 0x00)]
+    public void TheLineInLockChangesBit3AloneWithNoCommit(byte b77, bool on, byte expected)
+    {
+        var unit = new ProHardwareEqTests.Unit();
+        using WaveXlrProDevice pro = Connected(unit);
+        unit.Blocks[0x0004][76] = 0x28;
+        unit.Blocks[0x0004][77] = b77;
+        unit.Blocks[0x0004][78] = 0x02;
+        unit.Blocks[0x0004][79] = 0x51;
+        byte[] before = (byte[])unit.Blocks[0x0004].Clone();
+        unit.Calls.Clear();
+
+        pro.SetLineInLevelLock(on);
+
+        byte[] written = Assert.Single(unit.SettingsWrites);
+        Assert.Empty(unit.Commits);
+        Assert.Equal(80, written.Length);
+        for (int i = 0; i < written.Length; i++)
+            Assert.True(i == 77 ? written[i] == expected : written[i] == before[i], $"byte {i}: {written[i]:x2}, read {before[i]:x2}");
+        // One read of the block, then the write, nothing else.
+        Assert.Equal([(byte)0xC1, (byte)0x41], unit.Calls.Select(c => c.Type));
+        Assert.Equal(on, pro.ReadState().LineInLevelLock);
+    }
+
+    [Fact]
+    public void TheGainIsWrittenWhileTheLockIsOn()
+    {
+        // The lock holds the gain against the unit's ALSA control only; the
+        // block write OpenXLR uses still applies and keeps both locks set.
+        var unit = new ProHardwareEqTests.Unit();
+        unit.Blocks[0x0004][77] = 0x0c;
+        using WaveXlrProDevice pro = Connected(unit);
+        Assert.Equal(8, pro.SetLineInGainDb(8));
+        Assert.Equal(8, unit.Blocks[0x0004][76]);
+        Assert.Equal(0x0c, unit.Blocks[0x0004][77]);
+    }
+
+    [Fact]
+    public void OnlyAUnitWithTheInputOffersTheLock()
+    {
+        Assert.Null(DeviceManager.UnsupportedControlReason(new DeviceCapabilities { LineInput = true }, ControlNames.LineInLevelLock));
+        Assert.Equal("control 'lineInLevelLock' is not supported by the active device",
+            DeviceManager.UnsupportedControlReason(new DeviceCapabilities { Gain = true, AuxInput = true, XlrInputs = 2 }, ControlNames.LineInLevelLock));
+    }
+
+    [Fact]
+    public void TheDaemonSetsTheLockAndASavedStateRecallsIt()
+    {
+        WithConfigDir(() =>
+        {
+            var unit = new ProHardwareEqTests.Unit();
+            using var pro = new WaveXlrProDevice(unit);
+            using var manager = new DeviceManager(new Lines(), new ConfigurationBuilder().Build(), () => [pro]);
+            manager.SweepOnce();
+            Assert.False(manager.Snapshot().State!.LineInLevelLock);
+            unit.Calls.Clear();
+
+            using var on = JsonDocument.Parse("true");
+            Assert.Null(manager.Apply(ControlNames.LineInLevelLock, on.RootElement));
+            Assert.Equal(0x08, unit.Blocks[0x0004][77]);
+            Assert.True(manager.Snapshot().State!.LineInLevelLock);
+            Assert.Empty(unit.Commits);
+
+            // A snapshot without the field leaves the lock; one with it writes it once.
+            DeviceState live = manager.Snapshot().State!;
+            unit.Calls.Clear();
+            Assert.Null(manager.ApplyProfile(live with { LineInLevelLock = null }));
+            Assert.Empty(unit.SettingsWrites);
+            Assert.Null(manager.ApplyProfile(live with { LineInLevelLock = false }));
+            Assert.Equal(0x00, Assert.Single(unit.SettingsWrites)[77]);
+            Assert.Null(manager.ApplyProfile(manager.Snapshot().State! with { LineInLevelLock = false }));
+            Assert.Single(unit.SettingsWrites);
+        });
+    }
+
+    [Fact]
+    public void ASnapshotSavedBeforeTheLockExistedReadsAsNoLock()
+    {
+        DeviceState old = JsonSerializer.Deserialize<DeviceState>("""{"gainDb":30,"auxLevelLock":true,"lineInGainDb":20}""",
+            new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        Assert.Null(old.LineInLevelLock);
+        Assert.True(old.AuxLevelLock);
     }
 
     private static void WithConfigDir(Action body)

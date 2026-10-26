@@ -21,9 +21,12 @@ Wave XLR Pro:
 - Per XLR input: gain (0 to 80 dB), mute, low cut, expander, voice tune
   with strength, phantom power, ClipGuard, compressor
 - USB Aux input stage: level (0 to -60 dB) and level lock
-- Analog Line In: its own channel and its own gain (0 to 80 dB), separate
-  from the USB Aux input (the Line In gain write is in beta, see
+- Analog Line In: its own channel and its own gain (0 to 40 dB), separate
+  from the USB Aux input, and kept out of the headphone jacks' hardware mix
+  so the jacks hear it only through Monitor A (both in beta, see
   [hardware-support.md](hardware-support.md))
+- Line In level lock, which keeps the desktop mixer and other
+  applications from changing the Line In gain
 - Both headphone outputs: independent volumes, low-impedance mode
 - Mic/PC direct-monitor crossfade (inside the device, no host latency)
 - Physical output routing: Headphones 1, Headphones 2, Line Out and USB

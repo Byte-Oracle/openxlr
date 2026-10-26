@@ -61,6 +61,8 @@ public sealed record DeviceState
     // of byte 12 sums USB return pair 2/3 (where the Monitor mix streams)
     // into the jacks; bit 1 of byte 13 is the mic's direct, zero-latency
     // path into them. Wave Link on Windows may leave either state behind.
+    // The return reads as on only at unity and with byte 12 bit 3, the Line
+    // In jack's own path into the jacks, clear, which is how OpenXLR sets it.
     public bool HpMixMonitorReturn { get; init; }
     public bool HpMixMicDirect { get; init; }
 
@@ -78,11 +80,22 @@ public sealed record DeviceState
 
     /// <summary>
     /// The Wave XLR Pro's analog Line In gain in dB, block 0x0004 byte 76
-    /// (0..80), the centre pair of the ALSA capture volume. Null on every
+    /// (0..80), the centre pair of the ALSA capture volume. OpenXLR writes
+    /// it up to <see cref="DeviceCapabilities.LineInGainMaxDb"/>, and a unit
+    /// set higher elsewhere reads back its own value. Null on every
     /// other model and in a snapshot saved before the field existed, so a
     /// recall of one leaves the unit's gain where it is.
     /// </summary>
     public int? LineInGainDb { get; init; }
+
+    /// <summary>
+    /// The Wave XLR Pro's Line In level lock, block 0x0004 byte 77 bit 3.
+    /// While it is on the unit ignores Line In gain writes through its ALSA
+    /// control (the desktop mixer, other applications); OpenXLR's own writes
+    /// still apply. Null on every other model and in a snapshot saved before
+    /// the field existed, so a recall of one leaves the lock where it is.
+    /// </summary>
+    public bool? LineInLevelLock { get; init; }
 
     /// <summary>
     /// Daemon-enforced software gain lock (Wave Link's Gain Lock for devices

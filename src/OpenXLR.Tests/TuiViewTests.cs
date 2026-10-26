@@ -1526,7 +1526,7 @@ public sealed class TuiViewTests
         List<string> sent = [];
         link.Sent += json => sent.Add(json);
         link.Receive(StateJson.Replace("\"auxInput\": true,", "\"auxInput\": true, \"lineInput\": true,", StringComparison.Ordinal)
-            .Replace("\"auxLevelLock\": false,", "\"auxLevelLock\": false, \"lineInGainDb\": 20,", StringComparison.Ordinal));
+            .Replace("\"auxLevelLock\": false,", "\"auxLevelLock\": false, \"lineInGainDb\": 20, \"lineInLevelLock\": false,", StringComparison.Ordinal));
         App app = new(link, Theme.Material);
         app.ShowTab(2);
         Screen screen = new(150, 42);
@@ -1536,9 +1536,17 @@ public sealed class TuiViewTests
         string frame = Frame(screen);
         Assert.Contains("Line In", frame, StringComparison.Ordinal);
         Assert.Contains("20 dB", frame, StringComparison.Ordinal);
-        // The last row is the gain: a step up writes one dB more as the Line In's own control.
-        app.Handle(new KeyPress(Key.Char, '+'));
+        // The last row is the level lock: a press turns on the Line In's own lock.
+        app.Handle(new KeyPress(Key.Char, ' '));
         JsonElement command = Command(sent);
+        Assert.Equal("set", Text(command, "cmd"));
+        Assert.Equal("lineInLevelLock", Text(command, "control"));
+        Assert.True(command.GetProperty("value").GetBoolean());
+        // The row above it is the gain: a step up writes one dB more as the Line In's own control.
+        sent.Clear();
+        app.Handle(new KeyPress(Key.Up));
+        app.Handle(new KeyPress(Key.Char, '+'));
+        command = Command(sent);
         Assert.Equal("set", Text(command, "cmd"));
         Assert.Equal("lineInGain", Text(command, "control"));
         Assert.Equal(21, command.GetProperty("value").GetInt32());
@@ -1549,6 +1557,32 @@ public sealed class TuiViewTests
         for (int i = 0; i < 60; i++) plain.Handle(new KeyPress(Key.Down));
         plain.Draw(other);
         Assert.DoesNotContain("Line In", Frame(other), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheLineInGainStopsAtTheCapTheDaemonReports()
+    {
+        // A unit set to 52 dB elsewhere shows its own gain; a step either way
+        // writes the cap, the highest gain the daemon writes.
+        DaemonLink link = new();
+        List<string> sent = [];
+        link.Sent += json => sent.Add(json);
+        link.Receive(StateJson.Replace("\"auxInput\": true,", "\"auxInput\": true, \"lineInput\": true, \"lineInGainMaxDb\": 40,", StringComparison.Ordinal)
+            .Replace("\"auxLevelLock\": false,", "\"auxLevelLock\": false, \"lineInGainDb\": 52,", StringComparison.Ordinal));
+        App app = new(link, Theme.Material);
+        app.ShowTab(2);
+        Screen screen = new(150, 42);
+        for (int i = 0; i < 60; i++) app.Handle(new KeyPress(Key.Down));
+        app.Handle(new KeyPress(Key.Up));
+        app.Draw(screen);
+        Assert.Contains("52 dB", Frame(screen), StringComparison.Ordinal);
+        app.Handle(new KeyPress(Key.Char, '+'));
+        JsonElement command = Command(sent);
+        Assert.Equal("lineInGain", Text(command, "control"));
+        Assert.Equal(40, command.GetProperty("value").GetInt32());
+        sent.Clear();
+        app.Handle(new KeyPress(Key.End));
+        Assert.Equal(40, Command(sent).GetProperty("value").GetInt32());
     }
 
     [Fact]

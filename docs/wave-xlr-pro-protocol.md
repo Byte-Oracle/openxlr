@@ -262,7 +262,8 @@ bus -> Headphones 1) confirmed by ear.
 
 - off79 = input level, quarter-dB attenuation: dB = -byte/4, range 0..240 = 0..-60 dB (same
   encoding as the phones volumes).
-- off77 = level lock, 0x04 = locked.
+- off77 = level lock, 0x04 = locked. Bit 3 (0x08) of the same byte is Line In's own level
+  lock (section 13).
 - off76 = a further gain-stage byte (memory: third input stage), still unexposed. Section 13
   identifies it as the Line In gain; the USB Aux level and lock above are unchanged.
 
@@ -525,7 +526,7 @@ one capture pair:
 
 | Section | Selector | Capture | Notes |
 |---|---|---|---|
-| 0 | `1e` | AUX8, AUX9 | the jacks' mix today; byte 12 bit 5 is pair 1's membership, the "monitor return" |
+| 0 | `1e` | AUX8, AUX9 | the jacks' mix today; byte 12 bit 5 is pair 1's membership, the "monitor return", and bit 3 Line In's (section 13) |
 | 18 | `1f` | AUX10, AUX11 | on this unit XLR 1 and XLR 2 are members (byte 30 `13`) |
 | 36 | `20` | AUX12, AUX13 | the aux mix |
 | 54 | `21` | AUX14, AUX15 | |
@@ -611,7 +612,9 @@ layout; on a source with fewer channels it stays silent.
 ### The Line In gain
 
 Block 0x0004 byte 76 holds the Line In gain in dB, 0 to 80 (`14`, 20 dB,
-on the desk unit). The same value is the third pair (center and woofer) of
+on the desk unit). OpenXLR writes no more than 40: an owner reports hiss
+from the Line In above about 20 dB, and that Wave Link limits the gain to
+20 dB. A unit set higher elsewhere reads back its own value. The same value is the third pair (center and woofer) of
 the six-value ALSA control `Elgato Wave XLR Pro Capture Volume` (numid=3),
 whose front pair is XLR 1's gain and rear pair XLR 2's. OpenXLR writes it
 as it writes the XLR gains: one read of block 0x0004 and one write of the
@@ -619,8 +622,71 @@ whole block, with no 0x0003 commit, every other byte as read. Bytes 77 to
 79 are not written by this control. There is no hardware Line In mute;
 the channel's mute in OpenXLR is the software one.
 
+The firmware holds a Line In gain written through that ALSA control to 20
+dB (desk measurement of 2026-10-26, below): ALSA writes of 22, 25 and 35
+each left byte 76 at 20, while 10 and 12 were taken as written. A write
+through block 0x0004 takes values above 20; the desk unit sits at 40.
+
+### Line In's level lock (desk measurement of 2026-10-26)
+
+Firmware 1.0.14, the desk unit, the daemon stopped, `tools/proprobe.py`
+for every block read and write, the block restored afterwards. Block
+0x0004 byte 77 bit 3 (0x08) is Line In's level lock, beside the USB Aux
+lock at bit 2 (0x04, section 6):
+
+| Byte 77 | Write | Byte 76 after |
+|---|---|---|
+| bit 3 set | ALSA, 5 | 12, unchanged |
+| bit 3 set | ALSA, 17 | 12, unchanged |
+| bit 3 set | block 0x0004, 8 | 8 |
+| bit 3 clear | ALSA, 5 | 5 |
+| bit 2 set, bit 3 clear | ALSA, 14 | 14 |
+
+The ALSA writes went to the centre pair of `Elgato Wave XLR Pro Capture
+Volume` (numid=3). So the lock stops the desktop mixer and other
+applications from changing the Line In gain through ALSA, and leaves
+writes of the block, which is how OpenXLR writes the gain, in effect. The
+USB Aux lock does not hold Line In. An owner's unit on which Line In's
+Level Lock had been turned on read byte 77 `0c`, both locks set (the
+table in the next section).
+
+OpenXLR writes the lock as it writes the gain: one read of block 0x0004
+and one write of the whole block, with no 0x0003 commit, every other byte
+as read, the USB Aux lock included. The daemon's control is
+`lineInLevelLock`.
+
+### Line In in the jacks' mix
+
+By the layout of section 12, block 0x0001 byte 12 bit 3 is Line In's
+membership in section 0, the mix the jacks play on selector `1e`, and byte
+3 its level there. The desk unit holds the bit clear. An owner's
+diagnostics archive (0.2.4) read:
+
+| Bytes | Owner's unit | Desk unit |
+|---|---|---|
+| block 0x0001, 0 to 13 | `c8 00 00 c2 00 00 c9 c9 c9 00 a6 c9 e8 0d` | `c8 00 00 00 00 00 00 00 00 00 00 00 25 0c` |
+| block 0x0001, 90 to 93 | `1e 23 20 23` | `23 23 20 23` |
+| block 0x0004, 76 to 79 | `14 0c 04 00` | `28 00 00 00` |
+
+Byte 12 `e8` has bit 3 set, and Headphones 1 plays section 0. That owner,
+with a console on the Line In, reported that raising Line In's Monitor A
+send doubled it and that the console stayed audible on the headphones
+with the send muted: the jack reached the jacks in hardware beside the
+Line In channel in the Monitor mix.
+
+When the daemon turns the Monitor return on (byte 12 bit 5, while a
+headphone jack or Line Out is a monitor output), it clears bit 3 in the
+same write, with the 0x0003 commit, and the return reads as on only while
+bit 3 is clear, so a unit that connects with the return set and Line In
+in the mix is written once. The change latches when the host playback
+stream restarts, as the return does, and the daemon bounces it. Bit 2
+(USB Aux, set on the desk unit as `25`) and bit 0 are left as read until
+they are checked by ear. Turning the return off leaves bit 3 as read.
+
 ### Open
 
 - Writing byte 76 from OpenXLR and hearing the gain change on the Line In
   channel.
-- Bytes 77 to 79 beyond the USB Aux level and lock of section 6.
+- Hearing the Line In path on the jacks come and go with byte 12 bit 3.
+- Byte 78, and byte 77 beyond its two level locks. Line In's lock at bit
+  3, open until 2026-10-26, is now measured above.
