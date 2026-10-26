@@ -618,6 +618,21 @@
   <data name="DockMixer" xml:space="preserve">
     <value>Return mixer to main window</value>
   </data>
+  <data name="MixerScale" xml:space="preserve">
+    <value>Mixer size</value>
+  </data>
+  <data name="MixerScaleFit" xml:space="preserve">
+    <value>Fit to window</value>
+  </data>
+  <data name="MixerScalePercent" xml:space="preserve">
+    <value>{0}%</value>
+  </data>
+  <data name="MixerScaleHint" xml:space="preserve">
+    <value>Draws the mixer larger in this window. Fit to window picks the largest size that shows every control without scrolling.</value>
+  </data>
+  <data name="MixerScaleNotSaved" xml:space="preserve">
+    <value>The mixer size applies until this window closes, but could not be saved: {0}</value>
+  </data>
   <data name="DoNotLeaveThisOnTheSwitchIs" xml:space="preserve">
     <value>Do not leave this on. The switch is not saved across daemon restarts; a trace enabled in the daemon's startup environment still applies. An explicit WINEDEBUG keeps its own channels.</value>
   </data>

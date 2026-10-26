@@ -1210,7 +1210,9 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
   order of the five sections, and the submixer view: `mixerView`
   (`compact`, `mini`, or absent for the full mixer), `compactChannel`
   and `compactMix`, and `showHiddenItems`, true while the submixer's Show
-  hidden draws hidden channels and mixes faded)
+  hidden draws hidden channels and mixes faded; `mixerScale`, the size of
+  the submixer in its own window: `fit`, or `100`, `125`, `150`, `175` or
+  `200` percent, and absent or anything else for 100)
 - `wave-interfaces.json`: the additional interfaces the user enabled, at
   most four instance ids. Written by the daemon.
 - `desktop-keys.json`: the UI's desktop key settings. Written by the

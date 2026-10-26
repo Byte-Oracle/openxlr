@@ -627,6 +627,21 @@
   <data name="DockMixer" xml:space="preserve">
     <value>Riporta il mixer nella finestra principale</value>
   </data>
+  <data name="MixerScale" xml:space="preserve">
+    <value>Dimensione del mixer</value>
+  </data>
+  <data name="MixerScaleFit" xml:space="preserve">
+    <value>Adatta alla finestra</value>
+  </data>
+  <data name="MixerScalePercent" xml:space="preserve">
+    <value>{0}%</value>
+  </data>
+  <data name="MixerScaleHint" xml:space="preserve">
+    <value>Disegna il mixer più grande in questa finestra. Adatta alla finestra sceglie la dimensione più grande che mostra ogni controllo senza scorrere.</value>
+  </data>
+  <data name="MixerScaleNotSaved" xml:space="preserve">
+    <value>La dimensione del mixer vale finché questa finestra non si chiude, ma non è stato possibile salvarla: {0}</value>
+  </data>
   <data name="DoNotLeaveThisOnTheSwitchIs" xml:space="preserve">
     <value>Non lasciarla attiva. L'opzione non viene conservata tra i riavvii del demone; una traccia attivata nell'ambiente di avvio del demone resta comunque valida. Un WINEDEBUG esplicito mantiene i propri canali.</value>
   </data>

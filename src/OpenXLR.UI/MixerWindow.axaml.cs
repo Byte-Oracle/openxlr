@@ -1,8 +1,12 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform;
+using Avalonia.Threading;
+using OpenXLR.UI.Localization;
 using OpenXLR.UI.Skinning;
 
 namespace OpenXLR.UI;
@@ -14,15 +18,46 @@ public partial class MixerWindow : Window
     private double _minimum;
     private Size _decoration;
     private Screen? _screen;
+    /// <summary>The size chosen in the picker, one of <see cref="MixerScale.Choices"/>.</summary>
+    private string _scaleChoice;
+    /// <summary>The factor the panel is drawn at now; for Fit, the one it found last.</summary>
+    private double _scale = 1;
+    /// <summary>True while the panel is being sized, so the sizes it tries do not start another round.</summary>
+    private bool _sizing;
+    private bool _fitPending;
+    /// <summary>The panel's height, before enlarging, when Fit last sized it.</summary>
+    private double _fittedHeight = double.NaN;
 
     public MixerWindow()
     {
         InitializeComponent();
+        _scaleChoice = UiSettings.Load().MixerScale ?? MixerScale.Default;
+        MixerScalePicker.ItemsSource = MixerScale.Choices.Select(c => c == MixerScale.Fit
+            ? Localizer.Text("MixerScaleFit")
+            : Localizer.Format("MixerScalePercent", int.Parse(c, System.Globalization.CultureInfo.InvariantCulture))).ToArray();
+        MixerScalePicker.SelectedIndex = IndexOf(_scaleChoice);
+        MixerScalePicker.SelectionChanged += OnScaleChosen;
         UpdateControlSizing();
         SkinService.Changed += UpdateControlSizing;
         MixerScroll.PropertyChanged += (_, e) =>
         {
             if (e.Property == ScrollViewer.ViewportProperty) UpdatePanelWidth();
+        };
+        // Fit follows the panel too: a channel added or removed, or a view or a
+        // skin that draws it taller or shorter. The scroll viewer's extent
+        // cannot say so, since it never shrinks below the viewport, so this
+        // compares the panel's own height with the one Fit last sized it at.
+        PanelScale.LayoutUpdated += (_, _) =>
+        {
+            if (_scaleChoice != MixerScale.Fit || _sizing || _fitPending || _panel is not { IsMeasureValid: true } panel
+                || Math.Abs(panel.DesiredSize.Height - _fittedHeight) <= 0.5) return;
+            // Once the layout has settled, so the sizes it tries see the panel as it now is.
+            _fitPending = true;
+            Dispatcher.UIThread.Post(() =>
+            {
+                _fitPending = false;
+                UpdatePanelWidth();
+            }, DispatcherPriority.Background);
         };
         Closed += (_, _) => SkinService.Changed -= UpdateControlSizing;
     }
@@ -31,7 +66,7 @@ public partial class MixerWindow : Window
     {
         DataContext = model;
         _panel = panel;
-        MixerScroll.Content = panel;
+        PanelScale.Child = panel;
         _minimum = Minimum();
         UpdatePanelWidth();
         // Start on the originating screen, with enough room for its frame.
@@ -52,15 +87,33 @@ public partial class MixerWindow : Window
         }
     }
 
+    /// <summary>
+    /// Give the panel back as it came: no width, no scale and none of the
+    /// transform the scaling put on it, so the main window draws it at the
+    /// skin's own size.
+    /// </summary>
     internal Control Detach()
     {
-        var panel = (Control)MixerScroll.Content!;
-        MixerScroll.Content = null;
+        var panel = PanelScale.Child!;
+        PanelScale.Child = null;
+        PanelScale.LayoutTransform = null;
+        _scale = 1;
         _panel = null;
         panel.ClearValue(WidthProperty);
+        panel.ClearValue(RenderTransformProperty);
+        panel.ClearValue(RenderTransformOriginProperty);
         DataContext = null;
         return panel;
     }
+
+    /// <summary>The panel while it is in this window, for the tests.</summary>
+    internal Control? Panel => _panel;
+
+    /// <summary>The size chosen in the picker, for the tests.</summary>
+    internal string ScaleChoice => _scaleChoice;
+
+    /// <summary>The factor the panel is drawn at now, for the tests.</summary>
+    internal double Scale => _scale;
 
     private void UpdateControlSizing()
     {
@@ -69,15 +122,81 @@ public partial class MixerWindow : Window
     }
 
     /// <summary>
-    /// Keep wrapping at the viewport width. A panel that needs more than the
+    /// Keep wrapping at the viewport width, which at a scale is the width the
+    /// panel has before it is enlarged. A panel that needs more than the
     /// window has, wide tiles or banks side by side, scrolls sideways instead
     /// of clipping a control. How much it needs is the active presentation's
     /// to say: the wider tile for the channel tiles, or what the banks need.
     /// </summary>
     internal void UpdatePanelWidth()
     {
-        if (_panel is null) return;
-        _panel.Width = Math.Max(MixerScroll.Viewport.Width, Minimum() + 8);
+        if (_panel is null || _sizing) return;
+        _sizing = true;
+        try
+        {
+            double minimum = Minimum() + 8;
+            bool fit = _scaleChoice == MixerScale.Fit;
+            double scale = fit ? FitScale(_panel, minimum) : MixerScale.Factor(_scaleChoice);
+            _panel.Width = Math.Max(WrapWidth(scale), minimum);
+            ApplyScale(scale);
+            if (fit)
+            {
+                _panel.Measure(new Size(_panel.Width, double.PositiveInfinity));
+                _fittedHeight = _panel.DesiredSize.Height;
+            }
+        }
+        finally { _sizing = false; }
+    }
+
+    /// <summary>
+    /// The width the panel wraps at for a scale. Enlarged, it stays a unit
+    /// short of the viewport, so rounding to the screen's pixels after the
+    /// enlargement never leaves a sliver to scroll sideways.
+    /// </summary>
+    private double WrapWidth(double scale) => scale == 1 ? MixerScroll.Viewport.Width
+        : Math.Floor(MixerScroll.Viewport.Width / scale) - 1;
+
+    /// <summary>
+    /// The largest scale at which the panel shows whole: as wide as its
+    /// presentation needs and, wrapped at that scale's width, no taller than
+    /// the viewport. Never under 1, where a window too small for the panel
+    /// scrolls as it always has. Before the window has a size it keeps the
+    /// scale it has.
+    /// </summary>
+    private double FitScale(Control panel, double minimum)
+    {
+        Size viewport = MixerScroll.Viewport;
+        if (viewport.Width <= 0 || viewport.Height <= 0) return _scale;
+        return MixerScale.LargestFit(scale =>
+        {
+            double width = WrapWidth(scale);
+            if (width < minimum) return false;
+            panel.Width = width;
+            panel.Measure(new Size(width, double.PositiveInfinity));
+            return panel.DesiredSize.Height * scale <= viewport.Height - 1;
+        });
+    }
+
+    private void ApplyScale(double scale)
+    {
+        if (scale == _scale && (PanelScale.LayoutTransform is null) == (scale == 1)) return;
+        _scale = scale;
+        // At 1 there is no transform at all, so the panel lays out as it did before sizes existed.
+        PanelScale.LayoutTransform = scale == 1 ? null : new ScaleTransform(scale, scale);
+    }
+
+    private static int IndexOf(string choice) => Math.Max(0, MixerScale.Choices.ToList().IndexOf(choice));
+
+    /// <summary>The user picked a size: draw it and keep it for the next time the mixer pops out.</summary>
+    private void OnScaleChosen(object? sender, SelectionChangedEventArgs e)
+    {
+        int index = MixerScalePicker.SelectedIndex;
+        if (index < 0 || index >= MixerScale.Choices.Count || MixerScale.Choices[index] == _scaleChoice) return;
+        _scaleChoice = MixerScale.Choices[index];
+        UpdatePanelWidth();
+        string? error = (UiSettings.Load() with { MixerScale = _scaleChoice }).Save();
+        MixerScaleNote.Text = error is null ? null : Localizer.Format("MixerScaleNotSaved", error);
+        MixerScaleNote.IsVisible = error is not null;
     }
 
     private double Minimum() => _panel is Views.MixerPanel mixer ? mixer.MinimumWidth()
@@ -90,7 +209,9 @@ public partial class MixerWindow : Window
     /// on. A presentation that needs less leaves the window as the user
     /// sized it, and so does one that needs more than a window the user made
     /// narrower on purpose, until the need grows again; the panel scrolls
-    /// sideways meanwhile.
+    /// sideways meanwhile. At a fixed size the need is the enlarged one; Fit
+    /// needs what the skin's own size does, and shrinks to the window from
+    /// there.
     /// </summary>
     internal void FitPresentation()
     {
@@ -99,8 +220,10 @@ public partial class MixerWindow : Window
         bool grew = minimum > _minimum + 0.5;
         _minimum = minimum;
         UpdatePanelWidth();
-        // The panel, its own gap, and the window's margin on both sides.
-        double need = minimum + 8 + 16;
+        // The panel, its own gap, and the window's margin on both sides;
+        // enlarged, also the unit WrapWidth leaves free.
+        double scale = MixerScale.Factor(_scaleChoice);
+        double need = scale == 1 ? minimum + 8 + 16 : Math.Ceiling((Math.Ceiling(minimum + 8) + 1) * scale) + 16;
         if (!grew || ClientSize.Width >= need) return;
         double most = _screen is { } screen
             ? FlowWindow.FitClientSize(new(need, Height), screen.WorkingArea.Size, screen.Scaling, _decoration).Width

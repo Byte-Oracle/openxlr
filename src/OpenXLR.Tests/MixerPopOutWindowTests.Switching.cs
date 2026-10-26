@@ -110,7 +110,7 @@ internal static partial class MixerPopOutWindowTests
                     Assert.Same(popped, main.DetachedMixer);
                     Assert.True(popped.IsVisible, where);
                     Assert.Null(host.Content);
-                    Assert.Same(panel, popped.FindControl<ScrollViewer>("MixerScroll")!.Content);
+                    Assert.Same(panel, popped.Panel);
                     AssertOnePanel(main, panel);
                     Assert.Equal(id == "switch-banks", panel.Banks is not null);
                     Assert.Equal(id == "switch-matrix", panel.Matrix is not null);
@@ -179,7 +179,7 @@ internal static partial class MixerPopOutWindowTests
             Wear("switch-grid");
             Wear("switch-banks");
             Assert.True(tray.IsVisible);
-            Assert.Same(panel, tray.FindControl<ScrollViewer>("MixerScroll")!.Content);
+            Assert.Same(panel, tray.Panel);
             Assert.NotNull(panel.Banks);
             Layout(tray, 800, 600);
             Assert.Equal(3, SkinLayoutWindowTests.Banks(tray).Length);

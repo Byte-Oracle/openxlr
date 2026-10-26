@@ -2180,6 +2180,24 @@ the same live mixer, skin, control sizing and compact or mini view selected in
 Options. It scrolls when the controls do not fit, without changing any audio
 routing.
 
+<a name="mixer-size"></a>
+**Mixer size**, under the return button at the top of the separate window,
+enlarges the whole panel there: text, faders and buttons together. The skin
+and the UI stay as they are. **100%** is the skin's own size and the default. **125%**
+to **200%** enlarge it by that much; the tiles wrap to the window's width and
+the window scrolls when the enlarged panel does not fit. **Fit to window**
+picks the largest size, up to 300%, at which every control shows without
+scrolling. It picks again when you resize the window, add or remove a
+channel, or change the view, the skin or Touch sizing. It never goes below
+100%, because a smaller panel would draw text and fader targets smaller than
+the skin sets them. A window too small for the panel at 100% scrolls. For a
+smaller mixer, use the compact or mini view, or Standard sizing.
+
+The size is saved in `ui.json` as `mixerScale` and applies each time the
+mixer pops out. The panel goes back to the UI at its usual size. If
+`ui.json` cannot be written, a note under the picker says so, and the size
+applies until the window closes.
+
 **Return mixer to main window**, or closing the separate window, returns the
 panel and shows the UI. Quitting OpenXLR closes both. The separate
 window opens when you ask for it, or once when you put on a skin that opens
