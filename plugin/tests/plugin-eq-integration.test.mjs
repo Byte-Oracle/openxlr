@@ -32,7 +32,7 @@ test("EQ keys and dial stacks preserve turns without replaying stale sessions or
   // The same protocol test works with TCP today and the proposed Unix
   // stdio adapter. Neither transport opens a real connection in this test.
   childProcess.spawn = (file, args) => {
-    assert.equal(file, "openxlr-daemon"); assert.deepEqual(args, ["--control-stdio"]);
+    assert.equal(file, "openxlr-control"); assert.deepEqual(args, []);
     const child = new EventEmitter();
     child.messages = [];
     child.stdout = new PassThrough();
