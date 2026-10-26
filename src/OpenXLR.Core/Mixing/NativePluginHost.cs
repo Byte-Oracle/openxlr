@@ -22,6 +22,11 @@ internal sealed class NativePluginHost : IDisposable
     // host reports is refused for the life of the process, and the junk is
     // copied into every state snapshot sent to every client.
     private readonly IReadOnlySet<string>? _meterSymbols;
+    // The reader assembles changed take meters privately. Publish them together
+    // when the helper's trailing take counter arrives, keeping the previous
+    // waveform and length intact while the next batch is still in the pipe.
+    private readonly Dictionary<string, double>? _pendingTake;
+    private volatile Dictionary<string, double>? _completedTake;
     private readonly SemaphoreSlim _writes = new(1, 1);
     private readonly CancellationTokenSource _stop = new();
     private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -88,7 +93,19 @@ internal sealed class NativePluginHost : IDisposable
 
     /// <summary>How long either beat may go quiet before it means something.</summary>
     private readonly TimeSpan _patience = TimeSpan.FromSeconds(10);
-    public IReadOnlyDictionary<string, double> Meters => new Dictionary<string, double>(_meters);
+    public IReadOnlyDictionary<string, double> Meters
+    {
+        get
+        {
+            var meters = new Dictionary<string, double>(_meters);
+            if (_completedTake is { } take)
+            {
+                meters.EnsureCapacity(meters.Count + take.Count);
+                foreach ((string symbol, double value) in take) meters[symbol] = value;
+            }
+            return meters;
+        }
+    }
     public static string Executable => Path.Combine(AppContext.BaseDirectory, "openxlr-lv2-host");
 
     /// <summary>
@@ -171,6 +188,7 @@ internal sealed class NativePluginHost : IDisposable
         _note = note;
         _node = node;
         _meterSymbols = meterSymbols;
+        if (insert.Kind == "soundcheck") _pendingTake = new(StringComparer.Ordinal);
         _sampleRate = sampleRate;
         Bridged = WineSession.Bridged(bundle);
         if (!File.Exists(executable))
@@ -285,7 +303,7 @@ internal sealed class NativePluginHost : IDisposable
                 || !double.IsFinite(value)) return;
             if (parts[0] == "control") StoreValue(_changes, parts[1], value);
             else if (parts[0] == "meter" && (_meterSymbols is null || _meterSymbols.Contains(parts[1])))
-                StoreValue(_meters, parts[1], value);
+                StoreMeter(parts[1], value);
         }
     }
 
@@ -308,6 +326,19 @@ internal sealed class NativePluginHost : IDisposable
         // Only the output reader adds keys; the mixer can only remove them.
         // Existing controls must still update after the table reaches its cap.
         if (values.ContainsKey(symbol) || values.Count < MaxProtocolControls) values[symbol] = value;
+    }
+
+    private void StoreMeter(string symbol, double value)
+    {
+        if (_pendingTake is { } pending && (symbol is "take" or "takeFrames"
+            || symbol[0] == 'p' && PipeWireAdapter.SoundCheckMeters.Contains(symbol)))
+        {
+            // Unchanged peaks are omitted by the native meter writer, so keep
+            // their previous values. Only the fixed take symbols enter here.
+            pending[symbol] = value;
+            if (symbol == "take") _completedTake = new(pending, StringComparer.Ordinal);
+        }
+        else StoreValue(_meters, symbol, value);
     }
 
     /// <summary>How much of a line the helper writes to stderr is kept, and all that is ever held.</summary>

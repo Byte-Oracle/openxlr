@@ -980,7 +980,7 @@ public sealed class PipeWireAdapter
     internal const int TakePeakCount = 200;
 
     /// <summary>The meters the Sound Check helper reports: progress, the playhead, and the take's peaks with their count.</summary>
-    private static readonly IReadOnlySet<string> SoundCheckMeters = new HashSet<string>(
+    internal static readonly IReadOnlySet<string> SoundCheckMeters = new HashSet<string>(
         ["frames", "mode", "cursor", "takeFrames", "take", .. Enumerable.Range(0, TakePeakCount).Select(i => $"p{i}")], StringComparer.Ordinal);
 
     /// <summary>

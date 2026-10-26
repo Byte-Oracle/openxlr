@@ -361,8 +361,11 @@ bins. The main thread copies a consistent snapshot to `p0` to `p199` and
 `takeFrames`, then sets `take` to the count. A completion overlapping that
 copy is retried at the next tick; the audio thread never waits for it.
 Meters are printed in the order they were added, so the peaks and completed
-length come before the count. A later recording cannot erase an unpublished
-waveform or change its duration. The test programs that compile `host.c` into themselves do not
+length come before the count. The managed reader stages changed take meters
+and publishes their snapshot only when that trailing count arrives. Readers
+keep the previous completed take while the next one's lines are still in
+transit; unchanged peaks retain their previous values. A later recording
+cannot erase an unpublished waveform or change its duration. The test programs that compile `host.c` into themselves do not
 link `sound-check.o`; to them `soundcheck` is an unknown backend.
 
 ## Level

@@ -1372,7 +1372,9 @@ fields describe the running session and are false, null or 0 without one:
   the recording stops, and again on `getSoundCheckTake`. A client that
   sees a `take` it has no waveform for asks for it.
   Its peaks and duration describe the completed take even if another
-  recording starts before the message is published.
+  recording starts before the message is published. While the next take's
+  meter batch arrives, requests still return the previous completed take;
+  the new waveform, duration and take number become visible together.
 
 The helper has two outputs. The main one feeds the channel's route as
 before, through the EQ, the software processing and the inserts. The tap
