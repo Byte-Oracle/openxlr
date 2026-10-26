@@ -237,6 +237,8 @@ function Session(io) {
     this.snapshot = null;
     this.levels = {};
     this.error = "";
+    // Why the adapter could not connect, shown while offline; empty when unknown.
+    this.offline = "";
     this.pending = "";
     this.serial = 0;
     this.backoff = 1000;
@@ -244,6 +246,7 @@ function Session(io) {
 }
 Session.prototype.start = function () {
     if (this.phase !== "idle" && this.phase !== "waiting") return;
+    this.offline = "";
     this.phase = "connecting";
     this.io.deadline(5000);
     this.io.connect();
@@ -252,6 +255,12 @@ Session.prototype.opened = function () {
     if (this.phase !== "connecting") return;
     this.phase = "state";
     this.io.send({ cmd: "getState" });
+};
+// The adapter's controlError line: a daemon from before the update, or none.
+Session.prototype.refused = function (message) {
+    if (this.phase !== "connecting") return;
+    this.offline = String(message || "");
+    this.lost();
 };
 Session.prototype.lost = function () {
     if (this.phase === "waiting" || this.phase === "stopped") return;

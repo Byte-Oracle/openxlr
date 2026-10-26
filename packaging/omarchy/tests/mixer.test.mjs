@@ -420,3 +420,22 @@ test('saved monitor feeds discard deleted ids and whitespace like the daemon', (
     assert.deepEqual(plain(mixer.monitorFeeds({...source,monitorFeeds:{headset:saved}}))[0].ids, ids);
   }
 });
+
+test('an adapter refusal is shown while offline and cleared by the next attempt', () => {
+  const f = setup();
+  f.session.start();
+  f.session.refused('An OpenXLR daemon from before the update is still running and cannot accept this client.');
+  assert.equal(f.session.ready, false);
+  assert.match(f.session.offline, /before the update/);
+  assert.equal(f.timers.retry, 1000);
+  assert.equal(f.events.filter(e => e[0] === 'close').length, 1);
+  // The adapter's exit after its error line is the same failure, not a second one.
+  f.session.lost();
+  assert.equal(f.timers.retry, 1000);
+  // A refusal outside a connection attempt is ignored.
+  f.session.refused('late');
+  assert.match(f.session.offline, /before the update/);
+  f.session.start(); f.session.opened(); f.receive(state);
+  assert.equal(f.session.offline, '');
+  assert.equal(f.session.ready, true);
+});

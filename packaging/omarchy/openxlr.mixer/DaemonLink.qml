@@ -10,6 +10,7 @@ QtObject {
     property var snapshot: null
     property var levels: ({})
     property string error: ""
+    property string offline: ""
     property bool pending: false
     property var session: null
 
@@ -23,6 +24,7 @@ QtObject {
         snapshot = session.snapshot;
         levels = session.levels;
         error = session.error;
+        offline = session.offline;
         pending = session.pending !== "";
     }
 
@@ -48,6 +50,8 @@ QtObject {
                     try { message = JSON.parse(data); } catch (_) { root.session.lost(); return; }
                     if (message.type === "controlReady")
                         root.session.opened();
+                    else if (message.type === "controlError")
+                        root.session.refused(message.message);
                     else
                         root.session.receive(data);
                 }
