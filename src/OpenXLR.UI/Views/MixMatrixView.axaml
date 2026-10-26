@@ -492,8 +492,8 @@
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4" IsVisible="{Binding HasGainFader}">
                     <layout:MeterFader ShowsMeter="{Binding MeterUnderFader}" LeftLevel="{Binding Channel.MeterL}" RightLevel="{Binding Channel.MeterR}"
                                        LeftName="{Binding LeftLevelName}" RightName="{Binding RightLevelName}" VerticalAlignment="Center">
-                      <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}"
-                              Value="{Binding Main.LineInGainDb, Mode=TwoWay}"
+                      <Slider Classes="matrixFader" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.LineInGainMaxDb}"
+                              Value="{Binding Main.LineInGainSliderDb, Mode=TwoWay}"
                               AutomationProperties.Name="{loc:Text Key=LineInGain}"/>
                     </layout:MeterFader>
                   </Grid>

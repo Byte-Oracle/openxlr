@@ -877,6 +877,8 @@ public sealed partial class MainViewModel : ViewModelBase
                 // Before the state below, so a slider the new range shortens
                 // is coerced while the state is being applied and sends nothing.
                 GainMaxDb = caps["gainMaxDb"]?.GetValue<int>() ?? 80;
+                // A daemon from before the Line In cap held it to the unit's gain range.
+                LineInGainMaxDb = caps["lineInGainMaxDb"]?.GetValue<int>() is int lineMax and > 0 ? lineMax : GainMaxDb;
                 CapLowCut = Cap("lowCut");
                 CapExpander = Cap("expander");
                 CapVoiceTune = Cap("voiceTune");

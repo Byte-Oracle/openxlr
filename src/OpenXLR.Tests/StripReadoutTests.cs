@@ -185,6 +185,32 @@ public sealed class StripReadoutTests
         Assert.Equal("-12 dB", model.AuxReadout);
         Assert.Equal("20 dB", model.LineInReadout);
     }
+
+    [Fact]
+    public void TheLineInSlidersStopAtTheCapAndTheReadoutShowsTheUnitsOwnGain()
+    {
+        var model = new MainViewModel(new DaemonClient());
+        SliderSync.Forget("line");
+        typeof(MainViewModel).GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic, [typeof(JsonNode)])!
+            .Invoke(model, [JsonNode.Parse("""
+                {"connected":true,"capabilities":{"lineInput":true,"auxInput":true,"gainMaxDb":80,"lineInGainMaxDb":40},
+                 "state":{"gainDb":30,"lineInGainDb":52}}
+                """)!]);
+        Assert.Equal(40, model.LineInGainMaxDb);
+        Assert.Equal(80, model.GainMaxDb);
+        // A unit set higher elsewhere: the readout says so, the slider sits at its top.
+        Assert.Equal(52, model.LineInGainDb);
+        Assert.Equal(40, model.LineInGainSliderDb);
+        Assert.Equal("52 dB", model.LineInReadout);
+
+        // Moving the slider writes the gain; putting it where it already sits writes nothing.
+        model.LineInGainSliderDb = 40;
+        Assert.Equal(52, model.LineInGainDb);
+        model.LineInGainSliderDb = 30;
+        Assert.Equal((30, 30), (model.LineInGainDb, model.LineInGainSliderDb));
+        Assert.Equal("30 dB", model.LineInReadout);
+        SliderSync.Forget("line");
+    }
 }
 
 /// <summary>A readout hold run by hand: each start is kept, and ends only when the test says so.</summary>

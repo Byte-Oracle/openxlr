@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Linq;
 using OpenXLR.UI.Localization;
@@ -15,7 +16,10 @@ namespace OpenXLR.UI;
 public sealed partial class MainViewModel
 {
     private int _lineInGainDb;
-    /// <summary>The Line In's gain in dB, 0 to the unit's highest gain.</summary>
+    /// <summary>
+    /// The Line In's gain in dB as the unit reads it back, which a unit set
+    /// elsewhere can hold above <see cref="LineInGainMaxDb"/>.
+    /// </summary>
     public int LineInGainDb
     {
         get => _lineInGainDb;
@@ -23,6 +27,7 @@ public sealed partial class MainViewModel
         {
             if (!Set(ref _lineInGainDb, value)) return;
             Raise(nameof(LineInGainText));
+            Raise(nameof(LineInGainSliderDb));
             RefreshGainReadouts();
             if (_applying) return;
             int v = value;
@@ -31,6 +36,25 @@ public sealed partial class MainViewModel
         }
     }
     public string LineInGainText => $"{_lineInGainDb} dB";
+
+    private int _lineInGainMaxDb = 80;
+    /// <summary>The highest Line In gain the daemon writes, in dB.</summary>
+    public int LineInGainMaxDb
+    {
+        get => _lineInGainMaxDb;
+        private set { if (Set(ref _lineInGainMaxDb, value)) Raise(nameof(LineInGainSliderDb)); }
+    }
+
+    /// <summary>
+    /// The Line In sliders' value: the gain, or the top of the range while
+    /// the unit holds more, so a slider never coerces the gain the readout
+    /// shows. Moving it writes the gain.
+    /// </summary>
+    public int LineInGainSliderDb
+    {
+        get => Math.Min(_lineInGainDb, _lineInGainMaxDb);
+        set { if (value != LineInGainSliderDb) LineInGainDb = value; }
+    }
 
     private ChannelViewModel? _auxStrip, _lineStrip;
     /// <summary>Aux In's channel while the mixer has one.</summary>

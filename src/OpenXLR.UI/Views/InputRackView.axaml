@@ -329,7 +329,7 @@
               </StackPanel>
               <StackPanel layout:StripPanel.Part="gain" Classes="dev" Spacing="4">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding Main.CapLineInput}">
-                  <Slider vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.GainMaxDb}" Value="{Binding Main.LineInGainDb, Mode=TwoWay}"
+                  <Slider vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Main.LineInGainMaxDb}" Value="{Binding Main.LineInGainSliderDb, Mode=TwoWay}"
                           AutomationProperties.Name="{loc:Text Key=LineInGain}"/>
                   <!-- the gain, or the channel's volume while its fader moves and for a second after -->
                   <TextBlock Grid.Column="1" Name="RackGainReadout" Text="{Binding Channel.Readout}" Classes="val" VerticalAlignment="Center"
