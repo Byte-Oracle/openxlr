@@ -347,8 +347,11 @@ host.onmessage = (e) => {
     case "sendToPlugin":
       if (m.payload?.request === "layout") {
         layoutInspectors.add(m.context);
-        send({ event: "sendToPropertyInspector", context: m.context,
-               payload: layoutChoices(daemonState?.mixer, daemonState?.devices) });
+        // Record what this inspector now shows, so the next state that
+        // differs from it is published even if it matches an older one.
+        const choices = layoutChoices(daemonState?.mixer, daemonState?.devices);
+        lastLayout = JSON.stringify(choices);
+        send({ event: "sendToPropertyInspector", context: m.context, payload: choices });
       }
       else if (m.payload?.request === "outputs")
         send({ event: "sendToPropertyInspector", context: m.context,
