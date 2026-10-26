@@ -148,11 +148,16 @@ public sealed class TuiEqBandTests
     {
         var (app, sent) = Ready(); Open(app); Select(app, "Band 2 frequency");
         app.Handle(new KeyPress(Key.Char, ']'));
-        Assert.Equal(311, sent[^1]["frequency"]!.GetValue<double>());
+        Assert.Equal(319, sent[^1]["frequency"]!.GetValue<double>());
+        app.Handle(new KeyPress(Key.Right));
+        Assert.Equal(Math.Round(319 * Math.Pow(2, 1.0 / 6)), sent[^1]["frequency"]!.GetValue<double>());
         app.Handle(new KeyPress(Key.End));
         Assert.Equal(MicEq.MaxFrequency, sent[^1]["frequency"]!.GetValue<double>());
         app.Handle(new KeyPress(Key.Home));
         Assert.Equal(MicEq.MinFrequency, sent[^1]["frequency"]!.GetValue<double>());
+        // A twenty-fourth of an octave still moves a whole hertz at the bottom of the range.
+        app.Handle(new KeyPress(Key.Char, ']'));
+        Assert.Equal(MicEq.MinFrequency + 1, sent[^1]["frequency"]!.GetValue<double>());
         Select(app, "Band 2 Q");
         app.Handle(new KeyPress(Key.Home));
         Assert.Equal(MicEq.MinQ, sent[^1]["q"]!.GetValue<double>(), 10);

@@ -3661,8 +3661,8 @@ openxlr-tui
 In Inputs, **Microphone EQ** lists each microphone, including mono capture
 inputs. Open its **bands** row for the four-band editor. Up and Down select
 a control, Space toggles a switch, Left and Right change the type or value,
-and Escape returns to Inputs. Frequency moves by 100 Hz, with `[` and `]`
-or Ctrl+Left/Right moving one hertz. Gain moves by 0.25 dB; Q moves one
+and Escape returns to Inputs. Frequency moves by a sixth of an octave, with `[`
+and `]` or Ctrl+Left/Right moving a twenty-fourth, as a Deck dial does. Gain moves by 0.25 dB; Q moves one
 step on the EQ's logarithmic grid. Home and End choose the range limits.
 Gain is retained but cannot be edited for a cut or notch, which does not
 use it. Enter on a number opens an exact-value prompt; use a decimal point.

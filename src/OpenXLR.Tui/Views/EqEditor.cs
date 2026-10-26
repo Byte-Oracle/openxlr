@@ -85,9 +85,9 @@ internal sealed class EqEditor(string channel, long session, TimeProvider? time 
             rows.Add(new ToggleRow($"{label} enabled", band.Enabled, value => Set(app, number, "enabled", value)));
             rows.Add(new ChoiceRow($"{label} type", MicEq.Types, MicEq.TypeIndex(band.Type),
                 selected => Set(app, number, "type", MicEq.Types[selected])));
-            rows.Add(new NumberRow($"{label} frequency", band.Frequency, MicEq.MinFrequency, MicEq.MaxFrequency, 100,
+            rows.Add(new NumberRow($"{label} frequency", band.Frequency, MicEq.MinFrequency, MicEq.MaxFrequency, Octaves(1.0 / 6),
                 value => $"{value:0} Hz", value => Set(app, number, "frequency", MicEq.SnapFrequency(value)))
-            { FineStep = MicEq.FrequencyStep, Integer = true, Edit = () => Ask(app, number, "frequency", band.Frequency, MicEq.MinFrequency, MicEq.MaxFrequency) });
+            { FineStep = Octaves(1.0 / 24), Logarithmic = true, Integer = true, Edit = () => Ask(app, number, "frequency", band.Frequency, MicEq.MinFrequency, MicEq.MaxFrequency) });
             rows.Add(new NumberRow($"{label} gain", band.Gain, MicEq.MinGain, MicEq.MaxGain, MicEq.GainStep,
                 value => $"{value:+0.##;-0.##;0} dB", value => Set(app, number, "gain", MicEq.SnapGain(value)))
             {
@@ -152,4 +152,8 @@ internal sealed class EqEditor(string channel, long session, TimeProvider? time 
         : eq.WithBand(band, new EqBandChange(Enabled: field == "enabled" ? (bool)value : null,
             Type: field == "type" ? (string)value : null, Frequency: field == "frequency" ? (double)value : null,
             Gain: field == "gain" ? (double)value : null, Q: field == "q" ? (double)value : null).ApplyTo(eq.Bands[band - 1]));
+
+    /// <summary>A frequency step of the given fraction of an octave, in the units a logarithmic row moves by.</summary>
+    private static double Octaves(double fraction) =>
+        (MicEq.MaxFrequency - MicEq.MinFrequency) * fraction / Math.Log2(MicEq.MaxFrequency / MicEq.MinFrequency);
 }
