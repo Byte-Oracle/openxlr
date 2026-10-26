@@ -640,6 +640,18 @@
   <data name="MixerScaleNotSaved" xml:space="preserve">
     <value>Die Mixergröße gilt, bis dieses Fenster geschlossen wird, konnte aber nicht gespeichert werden: {0}</value>
   </data>
+  <data name="MixerScaleCustom" xml:space="preserve">
+    <value>Benutzerdefiniert</value>
+  </data>
+  <data name="MixerScaleCustomName" xml:space="preserve">
+    <value>Benutzerdefinierte Mixergröße in Prozent</value>
+  </data>
+  <data name="MixerScaleCustomHint" xml:space="preserve">
+    <value>Jede Größe von 100 % bis 300 %. Größe eingeben und Enter drücken oder mit den Pfeilen in 5-%-Schritten ändern.</value>
+  </data>
+  <data name="MixerScaleCustomUnit" xml:space="preserve">
+    <value>%</value>
+  </data>
   <data name="DoNotLeaveThisOnTheSwitchIs" xml:space="preserve">
     <value>Nicht dauerhaft eingeschaltet lassen. Der Schalter wird bei Daemon-Neustarts nicht gespeichert. Eine in der Startumgebung aktivierte Protokollierung gilt weiterhin. Ein explizites WINEDEBUG behält seine eigenen Kanäle.</value>
   </data>

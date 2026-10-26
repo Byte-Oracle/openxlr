@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform;
@@ -18,8 +20,10 @@ public partial class MixerWindow : Window
     private double _minimum;
     private Size _decoration;
     private Screen? _screen;
-    /// <summary>The size chosen in the picker, one of <see cref="MixerScale.Choices"/>.</summary>
+    /// <summary>The size chosen: <see cref="MixerScale.Fit"/> or a whole percentage, as <see cref="MixerScale.Known"/> writes it.</summary>
     private string _scaleChoice;
+    /// <summary>True while the picker shows Custom and the percentage box under it.</summary>
+    private bool _custom;
     /// <summary>The factor the panel is drawn at now; for Fit, the one it found last.</summary>
     private double _scale = 1;
     /// <summary>True while the panel is being sized, so the sizes it tries do not start another round.</summary>
@@ -31,12 +35,27 @@ public partial class MixerWindow : Window
     public MixerWindow()
     {
         InitializeComponent();
-        _scaleChoice = UiSettings.Load().MixerScale ?? MixerScale.Default;
+        _scaleChoice = MixerScale.Known(UiSettings.Load().MixerScale) ?? MixerScale.Default;
+        // A saved size the picker does not list is a custom one.
+        _custom = !MixerScale.Listed(_scaleChoice);
         MixerScalePicker.ItemsSource = MixerScale.Choices.Select(c => c == MixerScale.Fit
-            ? Localizer.Text("MixerScaleFit")
-            : Localizer.Format("MixerScalePercent", int.Parse(c, System.Globalization.CultureInfo.InvariantCulture))).ToArray();
-        MixerScalePicker.SelectedIndex = IndexOf(_scaleChoice);
+                ? Localizer.Text("MixerScaleFit")
+                : Localizer.Format("MixerScalePercent", int.Parse(c, CultureInfo.InvariantCulture)))
+            .Append(Localizer.Text("MixerScaleCustom")).ToArray();
+        MixerScalePicker.SelectedIndex = _custom ? CustomIndex : IndexOf(_scaleChoice);
         MixerScalePicker.SelectionChanged += OnScaleChosen;
+        MixerScaleCustom.Minimum = MixerScale.MinimumPercent;
+        MixerScaleCustom.Maximum = MixerScale.MaximumPercent;
+        MixerScaleCustom.Increment = MixerScale.FitStepPercent;
+        MixerScaleCustom.Value = MixerScale.Percent(_scaleChoice) ?? MixerScale.MinimumPercent;
+        MixerScaleCustomRow.IsVisible = _custom;
+        MixerScaleCustom.ValueChanged += OnCustomValueChanged;
+        // Enter and leaving the box settle what was typed, whether or not the box handled the key.
+        MixerScaleCustom.AddHandler(KeyDownEvent, (_, e) =>
+        {
+            if (e.Key == Key.Enter) CommitCustom();
+        }, RoutingStrategies.Bubble, handledEventsToo: true);
+        MixerScaleCustom.LostFocus += (_, _) => CommitCustom();
         UpdateControlSizing();
         SkinService.Changed += UpdateControlSizing;
         MixerScroll.PropertyChanged += (_, e) =>
@@ -109,8 +128,11 @@ public partial class MixerWindow : Window
     /// <summary>The panel while it is in this window, for the tests.</summary>
     internal Control? Panel => _panel;
 
-    /// <summary>The size chosen in the picker, for the tests.</summary>
+    /// <summary>The size chosen, for the tests.</summary>
     internal string ScaleChoice => _scaleChoice;
+
+    /// <summary>True while the picker shows Custom, for the tests.</summary>
+    internal bool CustomScale => _custom;
 
     /// <summary>The factor the panel is drawn at now, for the tests.</summary>
     internal double Scale => _scale;
@@ -187,12 +209,70 @@ public partial class MixerWindow : Window
 
     private static int IndexOf(string choice) => Math.Max(0, MixerScale.Choices.ToList().IndexOf(choice));
 
-    /// <summary>The user picked a size: draw it and keep it for the next time the mixer pops out.</summary>
+    /// <summary>Custom, which follows the fixed choices in the picker.</summary>
+    private static int CustomIndex => MixerScale.Choices.Count;
+
+    /// <summary>
+    /// The user picked a size: draw it and keep it for the next time the
+    /// mixer pops out. Custom starts at the size drawn now, Fit's included,
+    /// and shows the box to type another.
+    /// </summary>
     private void OnScaleChosen(object? sender, SelectionChangedEventArgs e)
     {
         int index = MixerScalePicker.SelectedIndex;
-        if (index < 0 || index >= MixerScale.Choices.Count || MixerScale.Choices[index] == _scaleChoice) return;
-        _scaleChoice = MixerScale.Choices[index];
+        if (index < 0 || index > CustomIndex) return;
+        if (index == CustomIndex)
+        {
+            if (_custom) return;
+            _custom = true;
+            int percent = MixerScale.Clamp((decimal)Math.Round(_scale * 100));
+            MixerScaleCustom.Value = percent;
+            MixerScaleCustomRow.IsVisible = true;
+            Choose(percent.ToString(CultureInfo.InvariantCulture));
+            return;
+        }
+        _custom = false;
+        MixerScaleCustomRow.IsVisible = false;
+        Choose(MixerScale.Choices[index]);
+    }
+
+    /// <summary>
+    /// The box's value changed: from its arrows, the arrow keys or the wheel
+    /// at once, and from typing once the text reads as that value. While a
+    /// size is typed its first digits read as less than the smallest size
+    /// and the box holds them to it, and digits past the largest are held
+    /// too; drawing those would make the panel jump about under the typing,
+    /// so they wait for Enter or for leaving the box.
+    /// </summary>
+    private void OnCustomValueChanged(object? sender, NumericUpDownValueChangedEventArgs e)
+    {
+        if (!_custom || e.NewValue is not decimal value) return;
+        if (!decimal.TryParse(MixerScaleCustom.Text, NumberStyles.Number, MixerScaleCustom.NumberFormat, out decimal typed)
+            || typed != value) return;
+        Choose(MixerScale.Clamp(value).ToString(CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// Settle the box: what was typed, rounded to a whole percent and held to
+    /// the range, shows as the size drawn. An empty box goes back to the
+    /// size drawn.
+    /// </summary>
+    private void CommitCustom()
+    {
+        if (!_custom) return;
+        int percent = MixerScaleCustom.Value is decimal value ? MixerScale.Clamp(value)
+            : MixerScale.Percent(_scaleChoice) ?? MixerScale.MinimumPercent;
+        string text = percent.ToString(CultureInfo.InvariantCulture);
+        if (MixerScaleCustom.Value != percent) MixerScaleCustom.Value = percent;
+        else if (MixerScaleCustom.Text != text) MixerScaleCustom.Text = text;
+        Choose(text);
+    }
+
+    /// <summary>Draw a size, and keep it for the next time the mixer pops out.</summary>
+    private void Choose(string choice)
+    {
+        if (choice == _scaleChoice) return;
+        _scaleChoice = choice;
         UpdatePanelWidth();
         string? error = (UiSettings.Load() with { MixerScale = _scaleChoice }).Save();
         MixerScaleNote.Text = error is null ? null : Localizer.Format("MixerScaleNotSaved", error);

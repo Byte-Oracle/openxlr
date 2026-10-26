@@ -492,9 +492,9 @@ run on mono capture inputs.
 
 The submixer can be moved into its own resizable window for a second or small
 display. It keeps the live controls, compact and mini views, skins and touch
-sizing. Its mixer size picker draws the panel at 125% to 200%, or fits it to
-the window: the largest size, never under 100%, at which the whole panel
-shows without scrolling. Closing it returns the panel to the UI at its usual
+sizing. Its mixer size picker draws the panel at 125% to 200%, at a custom
+size typed from 100% to 300%, or fits it to the window: the largest size,
+never under 100%, at which the whole panel shows without scrolling. Closing it returns the panel to the UI at its usual
 size. See [Separate mixer window](manual.md#mixer-size)
 
 ### Exclusive channel groups

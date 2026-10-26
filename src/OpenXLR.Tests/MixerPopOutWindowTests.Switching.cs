@@ -173,6 +173,32 @@ internal static partial class MixerPopOutWindowTests
             Dispatcher.UIThread.RunJobs();
             Wear(SkinPackage.DefaultId);
 
+            // At a custom size the window widens to what the enlarged presentation needs.
+            string? savedScale = UiSettings.Load().MixerScale;
+            Assert.Null((UiSettings.Load() with { MixerScale = "137" }).Save());
+            MixerWindow enlarged = main.PopOutMixer();
+            try
+            {
+                Layout(enlarged, 320, 600);
+                Assert.True(enlarged.CustomScale);
+                Assert.Equal(1.37, enlarged.Scale, 10);
+                Wear("switch-banks");
+                Layout(enlarged, enlarged.ClientSize.Width, 600);
+                double enlargedNeed = Math.Ceiling((Math.Ceiling(panel.MinimumWidth() + 8) + 1) * 1.37) + 16;
+                Assert.True(enlargedNeed > banksNeed, $"the enlarged banks need {enlargedNeed}, at 100% {banksNeed}");
+                Assert.Equal(enlargedNeed, enlarged.ClientSize.Width, 0.5);
+                ScrollViewer enlargedScroll = enlarged.FindControl<ScrollViewer>("MixerScroll")!;
+                Assert.True(enlargedScroll.Extent.Width <= enlargedScroll.Viewport.Width,
+                    $"the enlarged banks are {enlargedScroll.Extent.Width} wide in {enlargedScroll.Viewport.Width}");
+            }
+            finally
+            {
+                enlarged.Close();
+                Dispatcher.UIThread.RunJobs();
+                Wear(SkinPackage.DefaultId);
+                Assert.Null((UiSettings.Load() with { MixerScale = savedScale }).Save());
+            }
+
             // A switch while the main window is hidden in the tray, with the mixer detached.
             MixerWindow tray = main.PopOutMixer();
             main.Hide();

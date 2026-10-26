@@ -49,10 +49,11 @@ public sealed class LocalMixerDockedConverter : JsonConverter<bool?>
 }
 
 /// <summary>
-/// Reads the saved size of the mixer's own window. Anything but one of
-/// <see cref="MixerScale.Choices"/>, a missing key included, reads as no
-/// choice, which draws the panel at the skin's own size, instead of failing
-/// the whole of ui.json. No choice is written as null.
+/// Reads the saved size of the mixer's own window. Anything but a string
+/// <see cref="MixerScale.Known"/> accepts, <c>fit</c> or a whole percentage
+/// in range, a missing key included, reads as no choice, which draws the
+/// panel at the skin's own size, instead of failing the whole of ui.json.
+/// No choice is written as null.
 /// </summary>
 public sealed class LocalMixerScaleConverter : JsonConverter<string?>
 {
