@@ -3255,7 +3255,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
             muted = true;   // the hardware direct path carries it to the jacks
         else if (monitor && HearsMyselfLocked(channelId, mixId))
         {
-            // Mic check's Hear myself, for the session only: the send opens
+            // Mic setup's Hear myself, for the session only: the send opens
             // at its own level, or at unity when it was pulled all the way
             // down, and an exclusive group still holds it while it waits.
             muted = waiting;

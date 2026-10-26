@@ -633,10 +633,10 @@ nodes. On real units, so far:
 | The unit controls following a capture input bound to an additional interface's input | not yet checked | |
 | Changing a capture input's source in place: the channel keeps its id, sends and inserts, the old source is released | not yet checked | |
 
-<a name="mic-check"></a>
-## Mic check
+<a name="mic-setup"></a>
+## Mic setup
 
-[Mic check](manual.md#mic-check) runs on any microphone the mixer carries.
+[Mic setup](manual.md#mic-setup) runs on any microphone the mixer carries.
 The private PipeWire suite covers the meter before the chain, the take's
 waveform, Raw and Processed on XLR and capture inputs, and Hear myself
 opening a muted send, with simulated nodes. On real units, so far:

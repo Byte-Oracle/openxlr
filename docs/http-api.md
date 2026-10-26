@@ -146,7 +146,7 @@ EQ to this computer and `"value":"device"` back to the unit (see
 lowers Music and Game in Monitor A by 24 dB while XLR 1 is loud. The fields
 it leaves out keep their values. `GET /api/v1/state` reads the setup back as
 `ducking`, with `backend` saying whether the unit or this computer runs it.
-[Sound Check](api.md#sound-check), which the UI's Mic check drives, takes
+[Sound Check](api.md#sound-check), which the UI's Mic setup drives, takes
 its commands the same way: `{"cmd":"setSoundCheckRaw","channel":"xlr1","value":true}`
 plays XLR 1 past its processing, starting a session on the live microphone
 when none runs, and `{"cmd":"getSoundCheckTake"}` returns the take's

@@ -298,10 +298,10 @@ public sealed class WindowLayoutTests
                     }
                 }
                 AssertInside(chain.FindControl<Button>("EffectWorkflow")!, chain);
-                var micCheckButton = chain.GetVisualDescendants().OfType<Button>()
-                    .Single(b => b.Content as string == Localizer.Text("MicCheck"));
-                Assert.True(micCheckButton.IsVisible);
-                AssertInside(micCheckButton, chain);
+                var micSetupButton = chain.GetVisualDescendants().OfType<Button>()
+                    .Single(b => b.Content as string == Localizer.Text("MicSetup"));
+                Assert.True(micSetupButton.IsVisible);
+                AssertInside(micSetupButton, chain);
                 Capture(chain, "chain-440");
 
                 var workflow = new EffectWorkflowWindow { DataContext = vm.Inserts };
@@ -316,34 +316,37 @@ public sealed class WindowLayoutTests
                 Assert.True(((ScrollViewer)workflow.Content!).Bounds.Height > 50);
                 Capture(workflow, "effect-workflow-minimum");
 
-                // Mic check at its smallest, on each step: the step bar, the
+                // Mic setup at its smallest, on each step: the step bar, the
                 // actions and the switches wrap inside the window, and the
-                // scrolled part keeps room to read.
-                var micCheckModel = vm.Inserts.MicCheck;
-                var micCheck = new MicCheckWindow { DataContext = micCheckModel };
-                windows.Add(micCheck);
-                micCheck.Show();
-                foreach (MicCheckStep step in Enum.GetValues<MicCheckStep>())
+                // scrolled part keeps room to read. The step is shown first,
+                // so the window has grown for it before the user shrinks it.
+                var micSetupModel = vm.Inserts.MicSetup;
+                var micSetup = new MicSetupWindow { DataContext = micSetupModel };
+                windows.Add(micSetup);
+                micSetup.Show();
+                foreach (MicSetupStep step in Enum.GetValues<MicSetupStep>())
                 {
-                    micCheckModel.Step = step;
-                    Layout(micCheck, micCheck.MinWidth, micCheck.MinHeight);
-                    foreach (var panel in micCheck.GetVisualDescendants().OfType<WrapPanel>().Where(p => p.IsEffectivelyVisible))
+                    micSetupModel.Step = step;
+                    Settle(micSetup);
+                    Layout(micSetup, micSetup.MinWidth, micSetup.MinHeight);
+                    Assert.Equal(micSetup.MinHeight, micSetup.ClientSize.Height, 0.5);
+                    foreach (var panel in micSetup.GetVisualDescendants().OfType<WrapPanel>().Where(p => p.IsEffectivelyVisible))
                     {
                         Control[] children = [.. panel.Children.Where(c => c.IsVisible)];
                         AssertNoOverlap(children);
-                        foreach (var child in children) { AssertInside(child, panel); AssertInside(child, micCheck); }
+                        foreach (var child in children) { AssertInside(child, panel); AssertInside(child, micSetup); }
                     }
-                    foreach (string name in new[] { "MicCheckSteps", "MicCheckClose" })
-                        AssertInside(micCheck.FindControl<Control>(name)!, micCheck);
+                    foreach (string name in new[] { "MicSetupSteps", "MicSetupClose" })
+                        AssertInside(micSetup.FindControl<Control>(name)!, micSetup);
                     // Shape's preset undo, add effect and each plugin's bypass and editor keep to the window's width.
-                    if (step == MicCheckStep.Shape)
-                        foreach (Control control in micCheck.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible
-                                     && c.Name is "MicCheckUndoPreset" or "MicCheckAddEffect" or "MicCheckBypass" or "MicCheckInsertEditor"))
-                            AssertInside(control, micCheck);
-                    Assert.True(micCheck.GetVisualDescendants().OfType<ScrollViewer>().Single().Bounds.Height > 50);
-                    Capture(micCheck, $"mic-check-{step.ToString().ToLowerInvariant()}-minimum");
+                    if (step == MicSetupStep.Shape)
+                        foreach (Control control in micSetup.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible
+                                     && c.Name is "MicSetupUndoPreset" or "MicSetupAddEffect" or "MicSetupBypass" or "MicSetupInsertEditor"))
+                            AssertInside(control, micSetup);
+                    Assert.True(micSetup.GetVisualDescendants().OfType<ScrollViewer>().Single().Bounds.Height > 50);
+                    Capture(micSetup, $"mic-setup-{step.ToString().ToLowerInvariant()}-minimum");
                 }
-                micCheckModel.Step = MicCheckStep.Level;
+                micSetupModel.Step = MicSetupStep.Level;
 
                 vm.Inputs.Add(new AudioDeviceItem("test_source", "Second microphone", false));
                 vm.Inputs.Add(new AudioDeviceItem("OpenXLR_stream", "Own mix", true));
@@ -627,7 +630,8 @@ public sealed class WindowLayoutTests
                 EffectWorkflowWindowTests.CheckControlOwnership(main, vm.Inserts.Client);
                 PluginCatalogueUiTests.CheckStaleReplies();
                 FaderInputWindowTests.Check(main);
-                MicCheckWindowTests.CheckPendingClose();
+                MicSetupWindowTests.CheckPendingClose();
+                MicSetupWindowTests.CheckFits();
                 AssertLayoutAppearance(main, vm);
                 SkinLayoutWindowTests.Check();
                 MixerViewWindowTests.Check();
@@ -834,7 +838,7 @@ public sealed class WindowLayoutTests
         }
     }
 
-    private static void AddInsert(InsertsViewModel owner)
+    internal static void AddInsert(InsertsViewModel owner)
     {
         const string uri = "http://lsp-plug.in/plugins/lv2/graphic_equalizer_x16_mono";
         owner.PluginChoices.Add(new(uri, "LSP Graphic Equalizer x16 Mono", "EQ",
@@ -868,9 +872,19 @@ public sealed class WindowLayoutTests
     internal static void Layout(Window window, double width, double height)
     {
         var asked = new Size(width, height);
-        IntPtr display = XServer.DisplayOf(window);
         window.PlatformImpl!.GetType().GetMethod("Resize", [typeof(Size), typeof(WindowResizeReason)])!
             .Invoke(window.PlatformImpl, [asked, WindowResizeReason.User]);
+        Settle(window, $"after asking for {asked}");
+    }
+
+    /// <summary>
+    /// Lay the window out at the size it takes for itself, as <see cref="Layout"/>
+    /// does after a resize: until the server has answered every request and
+    /// the window asks for nothing more.
+    /// </summary>
+    internal static void Settle(Window window, string? why = null)
+    {
+        IntPtr display = XServer.DisplayOf(window);
         using var stop = new CancellationTokenSource();
         bool waiting = true, settled = false;
         // A round trip brings every answer the server owes into the client's
@@ -894,7 +908,7 @@ public sealed class WindowLayoutTests
             Dispatcher.UIThread.MainLoop(stop.Token);
         }
         finally { waiting = false; }
-        Assert.True(settled, $"{window.GetType().Name} is {window.ClientSize} and wants {window.DesiredSize} after asking for {asked}.");
+        Assert.True(settled, $"{window.GetType().Name} is {window.ClientSize} and wants {window.DesiredSize} {why}.");
         window.UpdateLayout();
     }
 

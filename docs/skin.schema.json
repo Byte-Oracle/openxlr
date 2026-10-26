@@ -257,7 +257,7 @@
         },
         "Ox.Meter.CornerRadius": {
           "$ref": "#/$defs/radius",
-          "description": "the meter's corners, each cell's, and Mic check's target band's"
+          "description": "the meter's corners, each cell's, and Mic setup's target band's"
         },
         "Ox.Meter.Height": {
           "type": "number",
@@ -597,7 +597,7 @@
         },
         "Ox.Eq.Background": {
           "$ref": "#/$defs/flatColour",
-          "description": "the EQ graph's ground, the number on a band's handle, and Mic check's waveform ground"
+          "description": "the EQ graph's ground, the number on a band's handle, and Mic setup's waveform ground"
         },
         "Ox.Eq.Grid": {
           "$ref": "#/$defs/flatColour",
@@ -621,11 +621,11 @@
         },
         "Ox.Eq.Curve": {
           "$ref": "#/$defs/flatColour",
-          "description": "the sum of the four bands while the EQ is on, and in Mic check the waveform's edges, its playhead and the target band's outline"
+          "description": "the sum of the four bands while the EQ is on, and in Mic setup the waveform's edges, its playhead and the target band's outline"
         },
         "Ox.Eq.CurveFill": {
           "$ref": "#/$defs/flatColour",
-          "description": "the fill between that sum and 0 dB, and in Mic check the waveform's bars and the target band"
+          "description": "the fill between that sum and 0 dB, and in Mic setup the waveform's bars and the target band"
         },
         "Ox.Eq.Band1": {
           "$ref": "#/$defs/flatColour",
@@ -677,7 +677,7 @@
         },
         "Ox.Eq.CornerRadius": {
           "$ref": "#/$defs/radius",
-          "description": "the graph's corners, Mic check's waveform's, and the hardware badge's in the EQ editor and the Ducking window"
+          "description": "the graph's corners, Mic setup's waveform's, and the hardware badge's in the EQ editor and the Ducking window"
         },
         "Ox.Mixer.ControlMinSize": {
           "type": "number",

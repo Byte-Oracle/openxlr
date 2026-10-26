@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace OpenXLR.Core.Mixing;
 
 /// <summary>
-/// The level of a microphone before its chain, for Mic check. A client asks
+/// The level of a microphone before its chain, for Mic setup. A client asks
 /// for one and keeps asking while it shows it; the meter is a native level
 /// helper linked from the channel's own capture port beside the channel's
 /// route, which it leaves untouched, and it goes away a lease after the last

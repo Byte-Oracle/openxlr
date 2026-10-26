@@ -210,6 +210,8 @@ public sealed class WindowAutostartTests : IDisposable
         finally { Environment.SetEnvironmentVariable("FLATPAK_ID", previous); }
     }
 
+    // The controls are bound on the test UI thread, where a binding's
+    // updates run (TestUi).
     private static ComboBox BindSelector(OptionsViewModel options, string property, params string[] items)
     {
         var box = new ComboBox { DataContext = options, ItemsSource = items };
@@ -224,6 +226,9 @@ public sealed class WindowAutostartTests : IDisposable
     [InlineData(true, false)]
     [InlineData(true, true)]
     public void WindowSelectorsLoadAndPersistIndependently(bool startMinimized, bool minimizeToTray)
+        => TestUi.Run(() => SelectorsLoadAndPersist(startMinimized, minimizeToTray));
+
+    private void SelectorsLoadAndPersist(bool startMinimized, bool minimizeToTray)
     {
         var saved = new UiSettings
         {
@@ -296,6 +301,9 @@ public sealed class WindowAutostartTests : IDisposable
     [InlineData(false)]
     [InlineData(true)]
     public void BooleanChangesNotifyAndUpdateBoundWindowSelectors(bool initial)
+        => TestUi.Run(() => BooleanChangesUpdateSelectors(initial));
+
+    private void BooleanChangesUpdateSelectors(bool initial)
     {
         new UiSettings { StartMinimized = initial, MinimizeToTray = initial }.Save();
         var client = new DaemonClient();
@@ -486,7 +494,9 @@ public sealed class WindowAutostartTests : IDisposable
     /// control does when it is clicked.
     /// </summary>
     [Fact]
-    public void ARejectedToggleSnapsTheCheckBoxBack()
+    public void ARejectedToggleSnapsTheCheckBoxBack() => TestUi.Run(RejectedToggleSnapsBack);
+
+    private void RejectedToggleSnapsBack()
     {
         new UiSettings { OpenWindowAtLogin = true }.Save();
         Directory.CreateDirectory(Entry); // Disabling cannot remove a directory.

@@ -6,13 +6,13 @@ namespace OpenXLR.Tests;
 public sealed partial class SoundCheckIntegrationTests
 {
     /// <summary>
-    /// What Mic check adds to a session, on a real graph: the meter before
+    /// What Mic setup adds to a session, on a real graph: the meter before
     /// the chain beside the untouched route, the take's waveform once, the
     /// raw path past the chain on the same take without a chain rebuild, and
     /// Hear myself opening a muted monitor send for the session only.
     /// </summary>
     [MonitorPipeWireFact]
-    public async Task MicCheckMetersTheInputSwitchesRawAndProcessedAndHearsItselfForTheSessionOnly()
+    public async Task MicSetupMetersTheInputSwitchesRawAndProcessedAndHearsItselfForTheSessionOnly()
     {
         const string channel = "xlr1";
         var pw = new PipeWireAdapter();

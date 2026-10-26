@@ -1475,7 +1475,7 @@ only its XLR Sound Check views and does not show a capture session.
 
 ### Meter before the chain
 
-The UI's Mic check reads a microphone's level before any processing, which
+The UI's Mic setup reads a microphone's level before any processing, which
 the channel meter cannot show: `ch:<id>` reads the channel's sink, after
 its EQ, software processing and inserts. `watchInputMeter` starts a small
 native helper linked from the channel's own capture port, the one its

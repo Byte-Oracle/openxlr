@@ -347,6 +347,12 @@ public partial class MainWindow : Window
     private void OnEditLayout(object? sender, RoutedEventArgs e)
         => new MixerSetupWindow { DataContext = _vm }.ShowDialog(this);
 
+    /// <summary>Mic setup on the primary microphone, or the open window moved to it.</summary>
+    private void OnMicSetup(object? sender, RoutedEventArgs e)
+    {
+        if (_vm.MicSetupInputs.Primary is { } primary) MicSetupWindow.Open(this, primary.Setup);
+    }
+
     private void OnDucking(object? sender, RoutedEventArgs e)
         => DuckingWindow.Open(this, _vm.Ducking);
 

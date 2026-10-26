@@ -139,7 +139,7 @@ public sealed class CaptureInputWindowTests
     }
 
     [CaptureWindowFact]
-    public void CaptureButtonsAndMicCheckSendTheirIdsAndOlderStatesRemoveTheButtons()
+    public void CaptureButtonsAndMicSetupSendTheirIdsAndOlderStatesRemoveTheButtons()
     {
         string root = Path.Combine(Path.GetTempPath(), "openxlr-capture-window-" + Guid.NewGuid());
         string[] names = ["XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_DATA_DIRS", "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS"];
@@ -237,7 +237,7 @@ public sealed class CaptureInputWindowTests
                         else if (name == "setEq")
                             lock (gate)
                             {
-                                // The whole EQ, as the daemon keeps it: Mic check's presets and their undo.
+                                // The whole EQ, as the daemon keeps it: Mic setup's presets and their undo.
                                 JsonNode eq = CaptureEq(cmd["eq"]!["enabled"]!.GetValue<bool>());
                                 eq["bands"] = cmd["eq"]!["bands"]!.DeepClone();
                                 state["mixer"]!["channels"]!.AsArray().Single(c => c!["id"]!.GetValue<string>() == cmd["channel"]!.GetValue<string>())!["eq"] = eq;
@@ -327,10 +327,10 @@ public sealed class CaptureInputWindowTests
                 Layout(chain, 560, 360);
                 InsertsViewModel model = main.CaptureInputs.Single(c => c.Id == id).Inserts!;
                 Assert.Same(model, chain.DataContext);
-                Assert.Equal(id == "guest", model.CanMicCheck);
-                Button micCheck = chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("MicCheck")));
-                Assert.Equal(id == "guest", micCheck.IsEffectivelyVisible);
-                if (id == "guest") await MicCheckWindowTests.CheckCaptureChain(main, chain, soundCommands, meterWatches, eqCommands, bypassCommands);
+                Assert.Equal(id == "guest", model.CanMicSetup);
+                Button micSetup = chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("MicSetup")));
+                Assert.Equal(id == "guest", micSetup.IsEffectivelyVisible);
+                if (id == "guest") await MicSetupWindowTests.CheckCaptureChain(main, chain, soundCommands, meterWatches, eqCommands, bypassCommands);
                 chain.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text("AddPlugin")))
                     .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 await Until(() => chain.OwnedWindows.OfType<PluginPickerWindow>().Any(w => w.IsVisible));

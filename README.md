@@ -42,7 +42,7 @@ tests on the author's own hardware.
 Any microphone, headset, webcam or audio interface that PipeWire lists as
 a capture source works in the mixer. Bound to XLR 1 or XLR 2
 ([manual](docs/manual.md#input-bindings)) it gets that strip's sends,
-volume, meter, EQ, insert chain and Mic check. OpenXLR sends nothing to
+volume, meter, EQ, insert chain and Mic setup. OpenXLR sends nothing to
 another brand's device, so set its preamp gain and phantom power on the
 device itself.
 
@@ -80,7 +80,7 @@ If you own an untested device, open an issue with a diagnostics archive
   own processor when the setup fits what the unit can do.
 - **Microphone processing**: a four-band EQ with Wave Link's band types
   and steps on XLR 1, XLR 2 and mono capture inputs, run on the unit
-  where the hardware has one, and Mic check, which meters the microphone
+  where the hardware has one, and Mic setup, which meters the microphone
   before any processing and loops a recorded take through the EQ and
   plugins while you tune them in the same window, raw or processed at a
   click, with placement tips and three starting EQ presets.

@@ -42,18 +42,18 @@ public sealed partial class InsertsViewModel : ViewModelBase
         _channel = channel;
         _channels = channels;
         _title = title ?? channel;
-        MicCheck = new MicCheckViewModel(client, channel, this);
-        _canMicCheck = channel is "xlr1" or "xlr2";
+        MicSetup = new MicSetupViewModel(client, channel, this);
+        _canMicSetup = channel is "xlr1" or "xlr2";
     }
 
     private string _title;
     /// <summary>What the chain belongs to, for window titles ("XLR 1", "Stream mix").</summary>
     public string Title { get => _title; internal set => Set(ref _title, value); }
 
-    private bool _canMicCheck;
-    /// <summary>Mic check runs on channels the daemon reports as microphones.</summary>
-    public bool CanMicCheck { get => _canMicCheck; internal set => Set(ref _canMicCheck, value); }
-    public MicCheckViewModel MicCheck { get; }
+    private bool _canMicSetup;
+    /// <summary>Mic setup runs on channels the daemon reports as microphones.</summary>
+    public bool CanMicSetup { get => _canMicSetup; internal set => Set(ref _canMicSetup, value); }
+    public MicSetupViewModel MicSetup { get; }
 
     public Task ShowNativeEditorAsync(InsertViewModel insert)
         => insert.IsDetached ? Task.CompletedTask : _client.ShowInsertUiAsync(_channel, insert.Id);
@@ -184,7 +184,7 @@ public sealed partial class InsertsViewModel : ViewModelBase
 
     public void ResetForNewConnection()
     {
-        MicCheck.Reset();
+        MicSetup.Reset();
         _catalogGeneration++;
         _pluginsRequested = false;
         _catalogTask = null;
@@ -214,7 +214,7 @@ public sealed partial class InsertsViewModel : ViewModelBase
     {
         if (IsDetached) return;
         IsDetached = true;
-        MicCheck.Reset();
+        MicSetup.Reset();
         _catalogGeneration++;
         ResetEffectWorkflow();
         Apply(null);

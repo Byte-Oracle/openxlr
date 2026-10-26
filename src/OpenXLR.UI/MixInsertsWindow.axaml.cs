@@ -12,14 +12,9 @@ public partial class MixInsertsWindow : Window
         InitializeComponent();
     }
 
-    private MicCheckWindow? _micCheck;
-    private void OnMicCheck(object? sender, RoutedEventArgs e)
+    private void OnMicSetup(object? sender, RoutedEventArgs e)
     {
-        if (Chain is not { CanMicCheck: true } chain) return;
-        if (_micCheck is not null) { _micCheck.Activate(); return; }
-        _micCheck = new MicCheckWindow { DataContext = chain.MicCheck };
-        _micCheck.Closed += (_, _) => _micCheck = null;
-        _micCheck.Show(this);
+        if (Chain is { CanMicSetup: true } chain) MicSetupWindow.Open(this, chain.MicSetup);
     }
 
     private InsertsViewModel? Chain => DataContext as InsertsViewModel;

@@ -18,8 +18,8 @@ public sealed class CaptureInputModelTests
         InsertsViewModel first = Assert.IsType<InsertsViewModel>(channel.Inserts);
         Assert.True(channel.Microphone);
         Assert.True(channel.MonoMeter);
-        Assert.True(first.CanMicCheck);
-        MicCheckViewModel soundCheck = first.MicCheck;
+        Assert.True(first.CanMicSetup);
+        MicSetupViewModel soundCheck = first.MicSetup;
         soundCheck.Apply(JsonNode.Parse("""{"channel":"guest","mode":"looping","seconds":1.5}"""));
         Assert.False(channel.HasEq);
         Assert.Equal(Localizer.Text("InputChainHint"), first.ChainHint);
@@ -27,7 +27,7 @@ public sealed class CaptureInputModelTests
         state["name"] = "Guest renamed";
         channel.ApplyFromDaemon(state);
         Assert.Same(first, channel.Inserts);
-        Assert.Same(soundCheck, channel.Inserts!.MicCheck);
+        Assert.Same(soundCheck, channel.Inserts!.MicSetup);
         Assert.True(soundCheck.Active);
         Assert.Equal("Guest renamed", first.Title);
         first.ResetForNewConnection();
@@ -43,7 +43,7 @@ public sealed class CaptureInputModelTests
         Assert.NotSame(first, second);
         Assert.False(channel.Microphone);
         Assert.False(channel.MonoMeter);
-        Assert.False(second.CanMicCheck);
+        Assert.False(second.CanMicSetup);
         Assert.False(soundCheck.Active);
         Assert.Equal(Localizer.Text("InputChainHint"), second.ChainHint);
         Assert.Equal(Localizer.Text("StereoInputPickerHint"), second.PickerHint);
@@ -57,7 +57,7 @@ public sealed class CaptureInputModelTests
         state["chainWidth"] = 1;
         channel.ApplyFromDaemon(state);
         InsertsViewModel last = channel.Inserts!;
-        Assert.False(last.CanMicCheck);
+        Assert.False(last.CanMicSetup);
         channel.Detach();
         Assert.True(last.IsDetached);
         Assert.Null(channel.Inserts);

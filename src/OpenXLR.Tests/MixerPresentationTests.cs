@@ -299,6 +299,10 @@ public sealed class MixerPresentationTests
             while (!stop.IsCancellationRequested)
             {
                 JsonNode command = await SocketTestServer.Receive(socket, stop);
+                // The mixes' chains ask for the plugin catalogue when the state
+                // arrives; that request is theirs, not the banks'. Whether an
+                // earlier test's request was still cached decided it before.
+                if (command["cmd"]?.GetValue<string>() == "listPlugins") continue;
                 commands.Enqueue($"{command["cmd"]}:{command["channel"]}:{command["mix"]}");
                 if (command["requestId"] is { } requestId)
                     await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>() }, stop);

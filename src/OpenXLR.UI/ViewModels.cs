@@ -83,7 +83,7 @@ public sealed partial class MainViewModel : ViewModelBase
         _client.MetersReceived += meters.Publish;
         _client.SoundCheckTakeReceived += take => Dispatcher.UIThread.Post(() =>
         {
-            foreach (MicCheckViewModel check in MicChecks()) check.ApplyTake(take);
+            foreach (MicSetupViewModel setup in MicSetups()) setup.ApplyTake(take);
         });
         InsertsViewModel.ReloadAll = () =>
         {
@@ -1264,22 +1264,53 @@ public sealed partial class MainViewModel : ViewModelBase
                 if (m is not null) { m.MeterL = l; m.MeterR = r; }
             }
             else if (kv.Key.StartsWith("in:", StringComparison.Ordinal) && kv.Value is JsonArray level)
-                MicCheckOf(kv.Key[3..])?.ApplyInputLevel(level);
+                MicSetupOf(kv.Key[3..])?.ApplyInputLevel(level);
             else if (kv.Key.StartsWith("take:", StringComparison.Ordinal) && kv.Value is JsonArray position)
-                MicCheckOf(kv.Key[5..])?.ApplyPosition(position);
+                MicSetupOf(kv.Key[5..])?.ApplyPosition(position);
         }
     }
 
-    /// <summary>Every microphone's Mic check: XLR 1's, XLR 2's and each mono capture input's.</summary>
-    internal IEnumerable<MicCheckViewModel> MicChecks()
+    /// <summary>Every microphone's Mic setup: XLR 1's, XLR 2's and each mono capture input's.</summary>
+    internal IEnumerable<MicSetupViewModel> MicSetups()
     {
-        yield return Inserts.MicCheck;
-        yield return Inserts2.MicCheck;
+        yield return Inserts.MicSetup;
+        yield return Inserts2.MicSetup;
         foreach (ChannelViewModel channel in Channels)
-            if (channel.Inserts?.MicCheck is { } check) yield return check;
+            if (channel.Inserts?.MicSetup is { } setup) yield return setup;
     }
 
-    private MicCheckViewModel? MicCheckOf(string channel) => MicChecks().FirstOrDefault(c => c.Channel == channel);
+    private MicSetupViewModel? MicSetupOf(string channel) => MicSetups().FirstOrDefault(c => c.Channel == channel);
+
+    /// <summary>The microphones Mic setup can test now, for the window's picker and the mixer header's button.</summary>
+    public MicSetupInputs MicSetupInputs { get; } = new();
+
+    /// <summary>
+    /// List the microphones in the mixer, in its order: a channel the device
+    /// has and the daemon calls a microphone, with a Mic setup of its own.
+    /// That is XLR 1, XLR 2 on a device with two inputs, and every mono
+    /// capture input, an additional interface's among them.
+    /// </summary>
+    private void RefreshMicSetupInputs(IEnumerable<ChannelViewModel> channels)
+    {
+        List<MicSetupInput> inputs = [];
+        foreach (ChannelViewModel channel in channels)
+        {
+            if (!channel.Present || !channel.Microphone) continue;
+            MicSetupViewModel? setup = channel.Id switch
+            {
+                "xlr1" => Inserts.MicSetup,
+                "xlr2" => Inserts2.MicSetup,
+                _ => channel.Inserts is { CanMicSetup: true } chain ? chain.MicSetup : null,
+            };
+            if (setup is not null) inputs.Add(new MicSetupInput(channel.Name, setup));
+        }
+        bool changed = MicSetupInputs.Update(inputs);
+        foreach (MicSetupViewModel setup in MicSetups())
+        {
+            setup.Inputs = MicSetupInputs;
+            if (changed) setup.RaiseInputs();
+        }
+    }
 
     /// <summary>Applications currently playing, with the channel each landed in.</summary>
     public ObservableCollection<AppStreamViewModel> Apps { get; } = [];
@@ -1359,7 +1390,7 @@ public sealed partial class MainViewModel : ViewModelBase
         MicrophonePausePending = mixer?["microphonePausePending"]?.GetValue<bool>() ?? false;
         if (mixer is null)
         {
-            foreach (MicCheckViewModel check in MicChecks()) check.Apply(null);
+            foreach (MicSetupViewModel setup in MicSetups()) setup.Apply(null);
             HasMixer = false; RenamedSinceStart = false; LayoutWarning = ""; ExclusiveGroups = []; return;
         }
         HasMixer = true;
@@ -1378,8 +1409,8 @@ public sealed partial class MainViewModel : ViewModelBase
         MixLatencyError = mixer["mixLatencyError"]?.GetValue<string>();
         Inserts.Apply(mixer["inserts"]?["xlr1"]);
         Inserts2.Apply(mixer["inserts"]?["xlr2"]);
-        Inserts.MicCheck.Apply(mixer["soundCheck"]);
-        Inserts2.MicCheck.Apply(mixer["soundCheck"]);
+        Inserts.MicSetup.Apply(mixer["soundCheck"]);
+        Inserts2.MicSetup.Apply(mixer["soundCheck"]);
         bool auxAudible = mixer["monitorFeeds"] is JsonObject monitorFeeds && monitorFeeds.Any(
             feed => (feed.Value?.GetValue<string>() ?? "").Split('+').Contains("auxout"));
 
@@ -1421,7 +1452,7 @@ public sealed partial class MainViewModel : ViewModelBase
                     vm.ApplyFromDaemon(c);
                     vm.ApplyEq(c["eq"], mixer["eqLimits"]);
                     vm.Inserts?.Apply(mixer["inserts"]?[vm.Id]);
-                    vm.Inserts?.MicCheck.Apply(mixer["soundCheck"]);
+                    vm.Inserts?.MicSetup.Apply(mixer["soundCheck"]);
                     vm.Inserts?.EnsurePluginsLoaded();
                 },
                 c => new ChannelViewModel(_client, c["id"]!.GetValue<string>(), c["name"]!.GetValue<string>(), mixIds),
@@ -2242,7 +2273,7 @@ public sealed class ChannelViewModel : ViewModelBase, IHasId
         Microphone = n["microphone"]?.GetValue<bool>() ?? Id is "xlr1" or "xlr2";
         ApplyChainWidth(CaptureSource is not null && n["chainWidth"]?.GetValue<int>() is 1 or 2
             ? n["chainWidth"]!.GetValue<int>() : null);
-        if (Inserts is not null) Inserts.CanMicCheck = Microphone;
+        if (Inserts is not null) Inserts.CanMicSetup = Microphone;
         int capturePair = CapturePair + 1;
         CaptureLabel = CaptureSource is null ? ""
             : n["captureMonoChannel"]?.GetValue<int>() is int port

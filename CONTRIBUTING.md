@@ -288,6 +288,10 @@ brief an agent should read before working on the tree.
   cannot be run while other test classes start helpers: the write handle
   reaches their forked children and Linux answers exec with "Text file
   busy".
+- The unit test process gives Avalonia's UI dispatcher to a thread of its
+  own before any test runs (`TestUi` in `src/OpenXLR.Tests`), as the UI's
+  main thread has it. A test outside the X11 window fixtures that binds or
+  drives controls does that work through `TestUi.Run`.
 - The UI holds no colour, font size or corner radius of its own. A
   new surface reads an `Ox.*` resource with `DynamicResource`, and a new
   value is added to `src/OpenXLR.UI/Skinning/SkinTokens.cs`, then to its
