@@ -99,10 +99,9 @@ them for a while before more is built on top.
 
 ### The mixer and its clients
 
-- [ ] The microphone EQ in every client. The UI has the full editor; the
-  terminal mixer only chooses where each EQ runs, and the Stream Deck has
-  no EQ keys or dials. A band editor in the terminal mixer comes first,
-  then the OpenDeck plugin.
+- [ ] The microphone EQ in every client: a band editor in the terminal
+  mixer, followed by EQ keys and dials in the OpenDeck plugin. The
+  graphical UI already has the full editor.
 
 ### Devices
 

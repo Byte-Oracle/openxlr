@@ -29,6 +29,8 @@ internal sealed class DaemonLink : IAsyncDisposable
     private ClientWebSocket? _socket;
     private Task? _pump;
     private long _sessionRevision;
+    private long _nextChannelRevision;
+    private readonly ConcurrentDictionary<string, long> _channelRevisions = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _sendGate = new(1);
     private readonly ConcurrentDictionary<string, TaskCompletionSource<string?>> _requests = new();
     private readonly Lock _pluginGate = new();
@@ -55,6 +57,9 @@ internal sealed class DaemonLink : IAsyncDisposable
 
     /// <summary>Changes when a connection ends, even if it reconnects before the next frame.</summary>
     internal long SessionRevision => Interlocked.Read(ref _sessionRevision);
+
+    /// <summary>A local lifetime for a channel id, changed if that id is removed and later reused.</summary>
+    internal long ChannelRevision(string channel) => _channelRevisions.GetValueOrDefault(channel);
 
     /// <summary>The last error the daemon sent back, shown once and then cleared.</summary>
     public string? LastError { get; private set; }
@@ -223,6 +228,7 @@ internal sealed class DaemonLink : IAsyncDisposable
     internal void EndSession()
     {
         Interlocked.Increment(ref _sessionRevision);
+        _channelRevisions.Clear();
         Connected = false;
         foreach (var request in _requests.Values) request.TrySetResult("Disconnected from the daemon");
         lock (_pluginGate)
@@ -302,6 +308,11 @@ internal sealed class DaemonLink : IAsyncDisposable
             case "state":
                 if (Snapshot.Parse(json) is { } snapshot)
                 {
+                    var channels = snapshot.Mixer.Channels.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
+                    foreach (string removed in _channelRevisions.Keys)
+                        if (!channels.Contains(removed)) _channelRevisions.TryRemove(removed, out _);
+                    foreach (string channel in channels)
+                        _channelRevisions.GetOrAdd(channel, _ => Interlocked.Increment(ref _nextChannelRevision));
                     Connected = true;
                     State = snapshot;
                     UpdateChains(snapshot);

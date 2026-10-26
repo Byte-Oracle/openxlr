@@ -55,6 +55,8 @@ internal sealed class NumberRow(
     string label, double value, double minimum, double maximum, double step,
     Func<double, string> format, Action<double> set) : Row(label)
 {
+    /// <summary>An optional exact-value prompt, opened with Enter.</summary>
+    public Action? Edit { get; init; }
     /// <summary>The finer step, taken with ctrl and an arrow.</summary>
     public double FineStep { get; init; } = step / 5;
 
@@ -94,6 +96,7 @@ internal sealed class NumberRow(
         double by = key.Ctrl ? FineStep : step;
         switch (key.Key)
         {
+            case Key.Enter when Edit is not null: Edit(); return true;
             case Key.Left: Apply(-by); return true;
             case Key.Right: Apply(by); return true;
             case Key.Char when key.Char is '-' or '_': Apply(-by); return true;
@@ -289,6 +292,9 @@ internal sealed class RowList
             bottoms[column] += height;
             start = end;
         }
+        // A large microphone group must still scroll when its whole card
+        // cannot fit. Otherwise every row in that selected card disappears.
+        if (groups.Any(group => group.Box.Height > area.Height)) { Draw(screen, area, theme, rows); return; }
         var selected = groups.First(group => _index >= group.Start && _index < group.End);
         int offset = Math.Max(0, selected.Box.Bottom - area.Bottom);
         foreach (var group in groups)

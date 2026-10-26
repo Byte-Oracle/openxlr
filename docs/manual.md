@@ -3690,6 +3690,25 @@ Start it with the daemon running:
 openxlr-tui
 ```
 
+In Inputs, **Microphone EQ** lists each microphone, including mono capture
+inputs. Open its **bands** row for the four-band editor. Up and Down select
+a control, Space toggles a switch, Left and Right change the type or value,
+and Escape returns to Inputs. Frequency moves by a sixth of an octave, with `[`
+and `]` or Ctrl+Left/Right moving a twenty-fourth, as a Deck dial does. Gain moves by 0.25 dB; Q moves one
+step on the EQ's logarithmic grid. Home and End choose the range limits.
+Gain is retained but cannot be edited for a cut or notch, which does not
+use it. Enter on a number opens an exact-value prompt; use a decimal point.
+An empty prompt or Escape changes nothing. Values must be finite and in
+range, then snap to the same steps as the graphical editor.
+
+**Reset bands** restores the four defaults while keeping the EQ's on/off
+switch. Changing a frequency leaves another client's gain or Q alone,
+and short bursts keep each step. A removed microphone
+closes the editor, and a value being typed before disconnection or removal
+cannot be applied afterwards, even if a new microphone reuses the same
+channel id before the next screen redraw. Settings are saved by the daemon in the
+same mixer and profile state as edits made in the graphical UI.
+
 The mixer opens as a desk of vertical channel strips; the Matrix section
 shows the same sends as one grid, every channel against every mix. The left bank shows
 sends into the selected mix; the right bank holds the mix masters. Each
