@@ -1,31 +1,73 @@
 # WebSocket API
 
-The [versioned local HTTP API](http-api.md) provides request/response access to
-the same commands and uses the same per-session credential.
+The [versioned local HTTP API](http-api.md) serves the same commands and
+uses the same Unix connection.
 
-The daemon serves `ws://127.0.0.1:37890/ws` on the loopback interface
-only. A handshake that carries a browser `Origin` header from anywhere
-but localhost is refused with 403, so a web page you happen to visit
-cannot drive the hardware; native clients send no Origin. If the port
-is busy at startup (it sits inside the kernel's ephemeral range) the
-daemon waits for it instead of touching PipeWire.
+The daemon serves HTTP and the WebSocket paths `/ws` and `/api/v1/events`
+on `$XDG_RUNTIME_DIR/openxlr/control.sock`. Without a runtime directory it
+uses `$XDG_CONFIG_HOME/openxlr/control.sock`, defaulting to
+`~/.config/openxlr/control.sock`. There is no loopback listener or token
+file. The directory is private (0700) and the socket is 0600. Linux
+`SO_PEERCRED` must identify the daemon's effective user before Kestrel reads
+HTTP; bundled clients also verify the server's user before sending data.
+This trusts processes belonging to that user, not other local accounts.
+Foreign browser Origins are still refused.
 
-Token. The first message on every connection must be
-`{"cmd":"auth","token":"<token>"}`, where the token is the content of
-`$XDG_RUNTIME_DIR/openxlr/token` (or `~/.config/openxlr/token` in a
-session without a runtime directory), a file only your user can read
-that the daemon replaces the moment it is listening (never earlier, so
-a second instance waiting for the port leaves the running daemon's
-clients alone). Nothing is sent before it;
-anything else as a first message, or nothing within 5 s, closes the
-socket with code 1008 and the reason `unauthorized` or `authentication
-timeout`. Another local user cannot read the file, so the loopback
-port alone does not hand them the mixer. The UI and the OpenDeck
-plugin read the file themselves; a script does the same:
+The first server message is state. There is no `auth` command or HTTP
+Authorization header. Upgrade the UI, terminal mixer, Deck plugin and
+Omarchy plugin together with the daemon; older clients that dial the TCP
+port cannot connect.
+
+A client that cannot reach the socket can tell why. A daemon from before
+the socket keeps running after an upgrade and serves only
+`127.0.0.1:37890`. It still holds `daemon.lock` in the same directory, an
+exclusive `flock`. The bundled clients test the lock with a shared,
+non-blocking `flock` that they release at once, and the daemon retries its
+own lock for 200 ms so a probe never turns a starting daemon away. A held
+lock with no socket is checked again after 250 ms, time enough for a
+starting daemon to bind its socket. If the lock is free they make a bare TCP connect to the old port and send nothing.
+Either sign means a daemon from before the update that must be restarted;
+neither means no daemon is running.
+
+A toolkit without Unix WebSocket support can run
+`openxlr-control`. This launcher is only a client: it starts no
+services and touches no USB or audio configuration. It writes
+`{"type":"controlReady"}` once connected, then forwards one JSON message
+per line in each direction. Commands are capped at 64 KiB and received
+messages at 8 MiB. EOF closes the sending half and drains replies for up
+to five seconds. A daemon disconnect exits immediately even while stdin
+remains open. Keep stdin open for long-running commands and subscriptions.
+When it cannot connect it writes one line in place of `controlReady` and
+exits with status 1:
+
+```json
+{"type":"controlError","reason":"olderDaemon","message":"An OpenXLR daemon from before the update is still running and cannot accept this client. Restart it: systemctl --user restart openxlr-daemon"}
+```
+
+`reason` is `olderDaemon`, `notRunning`, `otherUser` (the socket answered
+for another user) or `unavailable` (no reason found). `message` is one
+English sentence; under Flatpak it names `openxlr-flatpak` instead. The same
+sentence goes to stderr. The Deck plugin shows "restart" on its keys and
+dials for `olderDaemon`, and the Omarchy bar shows the sentence while it is
+offline.
+
+An installation from before the control socket has no `openxlr-control`.
+When the Deck plugin cannot start one, natively or through Flatpak, it makes a
+bare connection to the old loopback port 37890 and sends nothing. If a daemon
+answers there, OpenXLR is older than the plugin: keys and dials show "update"
+and the plugin logs that OpenXLR must be updated to the plugin's release.
+
+The Deck plugin and Omarchy use this adapter and reconnect after it exits.
+Deck also stops an adapter that does not signal readiness within 15 seconds,
+so a stalled process cannot prevent reconnection.
+
+The dedicated launcher is absent from older releases, so a new client
+cannot accidentally start an older daemon that ignores `--control-stdio`.
+Deck's Flatpak fallback also selects this launcher. Source installations
+must [put it on PATH](install-from-source.md#6-make-it-permanent).
 
 ```sh
-TOKEN=$(cat "${XDG_RUNTIME_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}}/openxlr/token")
-printf '{"cmd":"auth","token":"%s"}\n{"cmd":"getState"}\n' "$TOKEN" | websocat ws://127.0.0.1:37890/ws
+printf '{"cmd":"getState"}\n' | openxlr-control
 ```
 
 Limits. Commands are validated before the mixer sees them: unknown
@@ -65,7 +107,7 @@ from the list, which is the only place its absence shows.
 Each connection has a bounded outgoing queue. A client that falls behind
 may miss transient `meters` frames. If a state update, rule notification or
 command reply cannot be queued, the daemon disconnects that client so it
-cannot silently retain stale state. Reconnect and authenticate again to
+cannot silently retain stale state. Reconnect to
 receive a fresh snapshot; reload any cached plugin catalogue and editor rules.
 The UI, terminal mixer and OpenDeck plugin reconnect automatically.
 
@@ -1143,8 +1185,8 @@ All under `~/.config/openxlr/` (or `$XDG_CONFIG_HOME/openxlr/`):
 - `devices/<vid-pid>/defaults.json`: the settings such a device answered
   with after a power cycle, what `resetDevice` writes back
 - `gainlock.json`: which devices have the gain lock set
-- `$XDG_RUNTIME_DIR/openxlr/token` (or `token` here without a runtime
-  directory): the control API token for this daemon run, 0600, see the
+- `$XDG_RUNTIME_DIR/openxlr/control.sock` (or `control.sock` here without a
+  runtime directory): the private control socket, 0600, see the
   top of this page
 - `$XDG_RUNTIME_DIR/openxlr/daemon.lock`: held by the running daemon for
   the life of the process; a second daemon for the same user finds it

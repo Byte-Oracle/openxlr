@@ -97,7 +97,6 @@ internal static class VolumeRangeWindowTests
             while (!stop.IsCancellationRequested)
             {
                 JsonNode command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 commands.Enqueue(command);
                 if (command["cmd"]!.GetValue<string>() == "setMonitorMuted")
                 {

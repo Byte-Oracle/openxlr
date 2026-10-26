@@ -5,13 +5,11 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { access, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
-import { createServer } from 'node:http';
-import { createServer as createNetServer } from 'node:net';
+import { createServer, request } from 'node:http';
 import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-const endpoint = 'http://127.0.0.1:37890/api/v1/';
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const exists = path => access(path).then(() => true, () => false);
 const quote = value => `'${value.replaceAll("'", "'\\''")}'`;
@@ -25,20 +23,6 @@ async function until(operation, description, timeout = 15000) {
     await delay(100);
   }
   throw new Error(`Timed out: ${description}`, { cause: last });
-}
-
-async function unusedPort() {
-  const probe = createNetServer();
-  try {
-    await new Promise((resolve, reject) => {
-      probe.once('error', reject);
-      probe.listen(37890, '127.0.0.1', resolve);
-    });
-  } catch (error) {
-    throw new Error('127.0.0.1:37890 must be unused. Use a private container or network namespace.', { cause: error });
-  } finally {
-    if (probe.listening) await new Promise(resolve => probe.close(resolve));
-  }
 }
 
 async function privateEnvironment() {
@@ -60,7 +44,6 @@ async function privateEnvironment() {
   assert.ok(!await exists('/dev/snd') && !await exists('/dev/bus/usb')
     && !(await readdir('/dev')).some(name => name.startsWith('hidraw')),
   'Hardware devices must not be exposed. Use a container without sound, USB or hidraw device mounts.');
-  await unusedPort();
   return runtime;
 }
 
@@ -99,25 +82,35 @@ for (const key of ['DISPLAY', 'XAUTHORITY', 'DBUS_SESSION_BUS_ADDRESS', 'DOTNET_
 
 let daemon;
 let context;
-let token;
 let daemonLog = '';
 const servers = [];
 const readers = new Set();
 
-async function api(method, path, body) {
-  const response = await fetch(endpoint + path, {
-    method,
-    signal: AbortSignal.timeout(5000),
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
+async function apiResponse(method, path, body) {
+  const response = await new Promise((resolve, reject) => {
+    const outgoing = request({socketPath: join(runtime, 'openxlr/control.sock'), method,
+      path: '/api/v1/' + path, signal: AbortSignal.timeout(5000),
+      headers: {'Content-Type': 'application/json'}}, resolve);
+    outgoing.on('error', reject);
+    outgoing.end(body === undefined ? undefined : JSON.stringify(body));
   });
-  const value = await response.json();
-  assert.ok(response.ok, `Daemon request failed: ${method} ${path}: ${JSON.stringify(value)}`);
-  return value;
+  const chunks = []; let bytes = 0;
+  for await (const chunk of response) {
+    bytes += chunk.length;
+    if (bytes > 8 * 1024 * 1024) { response.destroy(); throw new Error('Control reply exceeds 8 MiB'); }
+    chunks.push(chunk);
+  }
+  return {ok: response.statusCode >= 200 && response.statusCode < 300,
+    value: JSON.parse(Buffer.concat(chunks).toString('utf8'))};
+}
+
+async function api(method, path, body) {
+  const response = await apiResponse(method, path, body);
+  assert.ok(response.ok, `Daemon request failed: ${method} ${path}: ${JSON.stringify(response.value)}`);
+  return response.value;
 }
 
 async function startDaemon() {
-  await unusedPort();
   daemon = spawn('dotnet', [daemonDll], { cwd: root, env: environment, stdio: ['ignore', 'pipe', 'pipe'] });
   const output = chunk => { daemonLog = (daemonLog + chunk).slice(-65536); };
   daemon.stdout.on('data', output);
@@ -125,7 +118,6 @@ async function startDaemon() {
   daemon.on('error', error => { daemonLog += error.message; });
   return until(async () => {
     assert.equal(daemon.exitCode, null, 'The private daemon exited before startup.');
-    token = (await readFile(join(runtime, 'openxlr/token'), 'utf8')).trim();
     const state = await api('GET', 'state');
     return state.mixer && state;
   }, 'private daemon and mixer startup', 30000);
@@ -331,11 +323,8 @@ try {
     return navigated?.site === chatTab.site && !navigated.capturing && navigated.channelId === 'voicechat'
       && tabs.find(tab => tab.id === chatId)?.capturing;
   }, 'cross-origin navigation ends only its own capture and takes the new website preference');
-  const stale = await fetch(endpoint + 'commands', {
-    method: 'POST', signal: AbortSignal.timeout(5000),
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cmd: 'assignBrowserTab', session, tabId: musicId, site: musicTab.site, channel: 'game', remember: true }),
-  });
+  const stale = await apiResponse('POST', 'commands',
+    { cmd: 'assignBrowserTab', session, tabId: musicId, site: musicTab.site, channel: 'game', remember: true });
   assert.equal(stale.ok, false, 'An assignment from the previous page must be refused.');
   assert.equal((await api('GET', 'state')).mixer.browserTabs.find(tab => tab.id === musicId).channelId, 'voicechat');
   console.log('PASS live channel change, cross-origin navigation and independent capture lifetime');

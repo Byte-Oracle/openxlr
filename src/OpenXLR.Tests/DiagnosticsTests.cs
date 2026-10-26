@@ -112,7 +112,6 @@ public sealed class DiagnosticsTests
             {
                 var command = await SocketTestServer.Receive(socket, stop);
                 string cmd = command["cmd"]!.GetValue<string>();
-                if (cmd == "auth") continue;
                 Assert.DoesNotContain(cmd, new[] { "rescanPlugins", "syncWindowsPlugins", "setInserts" });
                 object reply = cmd switch
                 {
@@ -224,7 +223,6 @@ public sealed class DiagnosticsTests
                 {
                     var command = await SocketTestServer.Receive(socket, stop);
                     string cmd = command["cmd"]!.GetValue<string>();
-                    if (cmd == "auth") continue;
                     Assert.DoesNotContain(cmd, new[] { "rescanPlugins", "syncWindowsPlugins", "setInserts" });
                     object reply = cmd == "getPluginDiagnostics"
                         ? new
@@ -536,24 +534,20 @@ public sealed class DiagnosticsTests
 
             await using var server = await SocketTestServer.Start(async (socket, stop) =>
             {
+                var initial = new System.Text.Json.Nodes.JsonObject
+                {
+                    ["type"] = "state", ["note"] = $"/home/{login}/Music"
+                };
+                if (commandWarning)
+                {
+                    initial["daemonBuildVersion"] = "0.2.3+" + new string('a', 40);
+                    initial["daemonBuildId"] = "12345678-1234-1234-1234-123456789012";
+                }
+                await SocketTestServer.Send(socket, initial, stop);
                 while (!stop.IsCancellationRequested)
                 {
                     var command = await SocketTestServer.Receive(socket, stop);
                     string cmd = command["cmd"]!.GetValue<string>();
-                    if (cmd == "auth")
-                    {
-                        var initial = new System.Text.Json.Nodes.JsonObject
-                        {
-                            ["type"] = "state", ["note"] = $"/home/{login}/Music"
-                        };
-                        if (commandWarning)
-                        {
-                            initial["daemonBuildVersion"] = "0.2.3+" + new string('a', 40);
-                            initial["daemonBuildId"] = "12345678-1234-1234-1234-123456789012";
-                        }
-                        await SocketTestServer.Send(socket, initial, stop);
-                        continue;
-                    }
                     object reply = cmd switch
                     {
                         "listPlugins" => new { type = "plugins", plugins = Array.Empty<object>() },

@@ -7,8 +7,8 @@ using System.Text.Json.Nodes;
 namespace OpenXLR.Tui;
 
 /// <summary>
-/// The connection to the daemon: the documented WebSocket, the token from the
-/// runtime directory, and a reconnect loop so the terminal survives a daemon
+/// The connection to the daemon: the documented WebSocket over the private
+/// Unix socket, and a reconnect loop so the terminal survives a daemon
 /// restart the way the window does.
 ///
 /// Everything arrives on the receive task and is handed to the drawing loop as
@@ -17,9 +17,18 @@ namespace OpenXLR.Tui;
 internal sealed class DaemonLink : IAsyncDisposable
 {
     private const int MaxMessageBytes = 8 * 1024 * 1024;
-    private readonly Uri _uri;
+    private readonly Uri? _uri;
 
-    public DaemonLink(string url = "ws://127.0.0.1:37890/ws") => _uri = new Uri(url);
+    private readonly Func<CancellationToken, Task<DaemonPresence>>? _probe;
+
+    public DaemonLink(string? url = null) : this(url, null) { }
+
+    /// <summary>A link to an explicit endpoint probes no daemon unless it is given a probe.</summary>
+    internal DaemonLink(string? url, Func<CancellationToken, Task<DaemonPresence>>? probe)
+    {
+        _uri = url is null ? null : new Uri(url);
+        _probe = probe ?? (url is null ? token => DaemonProbe.ProbeAsync(cancel: token) : null);
+    }
 
     private readonly CancellationTokenSource _stopping = new();
     private readonly Lock _meterGate = new();
@@ -51,6 +60,13 @@ internal sealed class DaemonLink : IAsyncDisposable
 
     /// <summary>What the connection is doing, for the status line.</summary>
     public string Status { get; private set; } = "connecting";
+
+    /// <summary>
+    /// A sentence for the header while no daemon can be reached and the reason
+    /// needs the user: a daemon from before the update, or another user's
+    /// socket. Null otherwise.
+    /// </summary>
+    public string? Notice { get; private set; }
 
     /// <summary>True between a successful authentication and the socket closing.</summary>
     public bool Connected { get; private set; }
@@ -214,6 +230,21 @@ internal sealed class DaemonLink : IAsyncDisposable
             catch (Exception error) when (error is WebSocketException or IOException or HttpRequestException)
             {
                 Status = "daemon not reachable";
+                // A failed connect, not a dropped session: say why if a reason is known.
+                if (!Connected && _probe is not null)
+                {
+                    DaemonPresence presence;
+                    try { presence = await _probe(_stopping.Token).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { return; }
+                    catch (Exception probeError) when (probeError is IOException or System.Net.Sockets.SocketException) { presence = DaemonPresence.Reachable; }
+                    (Status, Notice) = presence switch
+                    {
+                        DaemonPresence.OlderDaemon => ("restart the daemon", DaemonProbe.Describe(presence)),
+                        DaemonPresence.OtherUser => ("socket refused", DaemonProbe.Describe(presence)),
+                        DaemonPresence.NotRunning => ("daemon not running", null),
+                        _ => ("daemon not reachable", null),
+                    };
+                }
             }
 
             EndSession();
@@ -243,27 +274,16 @@ internal sealed class DaemonLink : IAsyncDisposable
 
     private async Task SessionAsync()
     {
-        string? token = OpenXlrPaths.ReadToken();
-        if (string.IsNullOrEmpty(token))
-        {
-            Status = "no token, is the daemon running";
-            await Task.Delay(TimeSpan.FromSeconds(2), _stopping.Token).ConfigureAwait(false);
-            return;
-        }
-
-        using ClientWebSocket socket = new();
+        using var link = new ControlConnection(_uri);
+        ClientWebSocket socket = link.Socket;
         _socket = socket;
         Status = "connecting";
         Changed?.Invoke();
-        await socket.ConnectAsync(_uri, _stopping.Token).ConfigureAwait(false);
-
-        // The token is the first thing on the socket; anything else closes it.
-        JsonObject auth = new() { ["cmd"] = "auth", ["token"] = token };
-        await socket.SendAsync(Encoding.UTF8.GetBytes(auth.ToJsonString()), WebSocketMessageType.Text, true,
-            _stopping.Token).ConfigureAwait(false);
+        await link.ConnectAsync(_stopping.Token).ConfigureAwait(false);
 
         Connected = true;
         Status = "connected";
+        Notice = null;
         await SendAsync("{\"cmd\":\"getState\"}").ConfigureAwait(false);
 
         byte[] buffer = new byte[64 * 1024];

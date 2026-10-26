@@ -104,8 +104,11 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
             }
             _outgoing.Writer.TryWrite(new(new JsonObject { ["type"] = "activate", ["tabId"] = tabId, ["site"] = site }, generation));
         }
+        // Only the reason for being disconnected changes what is published.
+        void Presence(DaemonPresence found) { if (found != DaemonPresence.Reachable) _updates.Writer.TryWrite(true); }
         client.StateReceived += State;
         client.ConnectionChanged += Connection;
+        client.PresenceChanged += Presence;
         client.BrowserTabActivationReceived += Activate;
         var incoming = Channel.CreateBounded<QueuedMessage>(new BoundedChannelOptions(8)
             { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = true });
@@ -126,6 +129,7 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
         {
             client.StateReceived -= State;
             client.ConnectionChanged -= Connection;
+            client.PresenceChanged -= Presence;
             client.BrowserTabActivationReceived -= Activate;
             await lifetime.CancelAsync();
             _updates.Writer.TryComplete();
@@ -161,7 +165,9 @@ internal sealed class BrowserNativeHost(DaemonClient client, Stream input, Strea
             lock (_gate) { state = _state; session = _session; generation = _generation; }
             if (state is null)
             {
-                await UnavailableAsync("The OpenXLR daemon connection was lost. Browser audio uses its normal output.", generation, cancel);
+                await UnavailableAsync(client.Presence == DaemonPresence.OlderDaemon
+                    ? DaemonProbe.Describe(DaemonPresence.OlderDaemon) + " Browser audio uses its normal output."
+                    : "The OpenXLR daemon connection was lost. Browser audio uses its normal output.", generation, cancel);
                 continue;
             }
             if (state["mixer"] is not JsonObject mixer)

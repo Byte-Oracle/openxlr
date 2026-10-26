@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="OpenXLR.Tests" />
+    <Content Include="../../packaging/openxlr-control" Link="openxlr-control"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

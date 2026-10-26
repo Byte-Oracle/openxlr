@@ -204,6 +204,29 @@ public sealed class InstallationReceiptTests : IDisposable
         else Assert.Equal("systemctl --user restart openxlr-daemon.service", Assert.Single(report.Findings).Repair);
     }
 
+    [Theory]
+    [InlineData("older", "a daemon from before the update is still running and does not serve the control socket", "systemctl --user restart openxlr-daemon.service")]
+    [InlineData("none", "not running", "systemctl --user start openxlr-daemon.service")]
+    [InlineData("unknown", "not verified: connection refused", "systemctl --user restart openxlr-daemon.service")]
+    public async Task DoctorSaysWhyTheDaemonCouldNotBeRead(string found, string status, string repair)
+    {
+        DaemonPresence presence = found switch
+        {
+            "older" => DaemonPresence.OlderDaemon,
+            "none" => DaemonPresence.NotRunning,
+            _ => DaemonPresence.Reachable,
+        };
+        string assembly = Path.Combine(_home, "lib/OpenXLR.Daemon.dll");
+        Directory.CreateDirectory(Path.GetDirectoryName(assembly)!);
+        File.Copy(typeof(OpenXLR.Daemon.StateMessage).Assembly.Location, assembly);
+        DoctorReport report = await InstallationDoctor.Inspect([WriteReceipt(Package(new Owned { Path = assembly, Sha256 = Receipt.Digest(assembly) }))], null, true,
+            _ => Task.FromException<string>(new HttpRequestException("connection refused")), probe: _ => Task.FromResult(presence));
+        Assert.Equal(status, report.Daemon!.Status);
+        DoctorFinding finding = Assert.Single(report.Findings);
+        Assert.Equal(status, finding.Problem);
+        Assert.Equal(repair, finding.Repair);
+    }
+
     [Fact]
     public void AnUnreadablePackageReceiptDoesNotAbortDiscoveryOfOtherInstallations()
     {

@@ -13,7 +13,7 @@ public sealed class TuiLinkTests : IDisposable
     public TuiLinkTests()
     {
         Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", _runtime);
-        OpenXLR.Core.OpenXlrPaths.WriteAtomic(OpenXLR.Core.OpenXlrPaths.TokenPath, "test-token");
+        Directory.CreateDirectory(_runtime);
     }
 
     public void Dispose()
@@ -46,7 +46,6 @@ public sealed class TuiLinkTests : IDisposable
         var restored = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
-            await SocketTestServer.Receive(socket, stop); // auth
             await SocketTestServer.Receive(socket, stop); // state request
             if (Interlocked.Increment(ref connections) == 1)
             {
@@ -79,7 +78,6 @@ public sealed class TuiLinkTests : IDisposable
         var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
-            await SocketTestServer.Receive(socket, stop); // auth
             await SocketTestServer.Receive(socket, stop); // state request
             await SocketTestServer.Send(socket, new { type = "state", mixer = new { monitorOutputs = new[] { "old" } } }, stop);
             var command = await SocketTestServer.Receive(socket, stop);
@@ -110,7 +108,6 @@ public sealed class TuiLinkTests : IDisposable
         var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
-            await SocketTestServer.Receive(socket, stop);
             await SocketTestServer.Receive(socket, stop);
             byte[] json = Encoding.UTF8.GetBytes("{\"type\":\"error\",\"message\":\"" + label + "\"}");
             int split = Array.IndexOf(json, (byte)0xc3) + 1;

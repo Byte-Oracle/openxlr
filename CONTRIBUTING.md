@@ -102,7 +102,7 @@ routes no audio and is not part of CI.
 The optional Chromium acceptance run needs Playwright and Chrome for Testing
 151 or newer. Set `OPENXLR_PLAYWRIGHT_MODULE` to its `playwright/index.mjs`
 and `OPENXLR_TEST_CHROMIUM` to the Chrome executable, then run in a container
-without sound, USB or hidraw devices and with port 37890 free:
+without sound, USB or hidraw devices and with a private runtime directory:
 
 ```sh
 python3 tools/test-monitor-volume.py --command node browser/tests/chromium-integration.mjs

@@ -4,10 +4,9 @@
 // and dials stay in sync with the UI (and with the hardware) for free.
 
 import process from "node:process";
+import {ControlSocket} from "./control-socket.mjs";
 import { KeyCommands } from "./key-commands.mjs";
 import { channelName, mixName, mixShortName, defaultMonitorMix, monitorFeed, layoutChoices, controllableOutputs, outputKey, targetAppearance, openGroupMember } from "./layout-choices.mjs";
-import fs from "node:fs";
-import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
 import { captureGainOf, channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, duckingToggle, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
 import { isEqTarget, eqTarget, eqStep, eqCommand, eqLabel, eqDial } from "./microphone-eq.mjs";
@@ -60,6 +59,11 @@ function publishLayout() {
 }
 let daemonState = null;   // last full {"type":"state"} message
 let daemonUp = false;
+// A short word keys and dials show instead of "offline" when the adapter
+// said why it could not connect: a daemon from before the update, or an
+// OpenXLR installation older than this plugin.
+let daemonNotice = null;
+let daemonNoticeMessage = "";
 let meterLevels = null;   // last {"type":"meters"} levels, keyed ch:/mix:
 let catalog = new Map();  // LV2 plugin URI -> PluginInfo (names and ranges of the params)
 let reconnectTimer = null;
@@ -77,24 +81,15 @@ function scheduleDaemonReconnect(generation) {
   reconnectDelayMs = Math.min(reconnectDelayMs * 2, 10000);
 }
 
-// The daemon writes a fresh token at every start; it is the first message
-// on every connection, or the daemon sends nothing.
-function readDaemonToken() {
-  const run = process.env.XDG_RUNTIME_DIR;
-  const cfg = process.env.XDG_CONFIG_HOME || `${os.homedir()}/.config`;
-  const path = run ? `${run}/openxlr/token` : `${cfg}/openxlr/token`;
-  try { return fs.readFileSync(path, "utf8").trim(); } catch { return ""; }
-}
-
 function connectDaemon() {
-  const socket = new WebSocket("ws://127.0.0.1:37890/ws");
+  const socket = new ControlSocket();
   const generation = ++connectionGeneration;
   daemon = socket;
   socket.onopen = () => {
     if (daemon !== socket) return;
     daemonUp = true;
+    daemonNotice = null; daemonNoticeMessage = "";
     reconnectDelayMs = 500;
-    cmd({ cmd: "auth", token: readDaemonToken() });
     cmd({ cmd: "listPlugins" });
     refreshAll();
   };
@@ -114,6 +109,13 @@ function connectDaemon() {
   socket.onclose = (e) => {
     if (daemon !== socket) return;
     if (e && e.code === 1008) console.error("OpenXLR daemon refused the plugin:", e.reason);
+    if (socket.error) {
+      daemonNotice = {olderDaemon: "restart", olderOpenXLR: "update"}[socket.error.reason] ?? null;
+      if (socket.error.message !== daemonNoticeMessage) {
+        daemonNoticeMessage = socket.error.message;
+        console.error("OpenXLR:", daemonNoticeMessage);
+      }
+    } else daemonNotice = null;
     daemonUp = false; daemonState = null;
     clearEqTurns();
     meterLevels = {};
@@ -122,13 +124,11 @@ function connectDaemon() {
     refreshMeters();
     scheduleDaemonReconnect(generation);
   };
-  socket.onerror = () => { /* onclose follows */ };
 }
 const cmd = (o) => {
   if (!daemonUp || !daemon || daemon.readyState !== WebSocket.OPEN) return false;
   try {
-    daemon.send(JSON.stringify(o));
-    return true;
+    return daemon.send(JSON.stringify(o)) !== false;
   } catch {
     daemonUp = false;
     try { daemon.close(); } catch { /* onclose/retry handles the rest */ }
@@ -1385,7 +1385,7 @@ function refresh(context) {
     const v = toggleValue(t, inst);
     const badge = t === "softLowCut" ? (mixer()?.lowCutHz ? String(mixer().lowCutHz) : "OFF") : "";
     const label = emptyTitle.has(context)
-      ? (!daemonUp ? "offline"
+      ? (!daemonUp ? daemonNotice ?? "offline"
         : isInsertTarget(t) || isProfileTarget(t) ? toggleLabel(t, inst) : defaultTitle(t)) : "";
     // The user can pick a glyph per key (a monitor output may be headphones
     // rather than speakers); "auto" or unset keeps the target's default.
@@ -1407,7 +1407,7 @@ function refresh(context) {
           icon: dialIcon(t),
           needle: needleSvg(d.pct, d.maxPct),
           muteOverlay: { enabled: d.muted } }
-      : { title: marqueeTitle(context, "", "OpenXLR"), value: daemonUp ? "set up" : "offline",
+      : { title: marqueeTitle(context, "", "OpenXLR"), value: daemonUp ? "set up" : daemonNotice ?? "offline",
           unit: { enabled: false }, icon: dialIcon(null),
           needle: needleSvg(0), muteOverlay: { enabled: false } } });
   }

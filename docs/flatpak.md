@@ -12,7 +12,7 @@ The Flatpak UI owns its daemon unless the daemon runs as a user service
 keeps audio running; Quit stops both. For that reason the close button
 keeps the Flatpak in the tray unless "When closing" in Options says
 "Quit app". Stop the packaged daemon before launching the Flatpak, since
-they use the same control port. Disable the native installation's login
+they use the same private control socket. Disable the native installation's login
 options before enabling Flatpak login startup.
 
 ## Install on SteamOS and Bazzite
@@ -110,8 +110,11 @@ the login choice is saved with a warning so the entry can still be disabled.
 Desktop settings can revoke permission later.
 
 Restart daemon restarts the child without touching host services, or
-asks the user service's daemon to restart when one serves the UI. Failed
-children are retried with a delay; a busy API port or owned daemon lock
+asks the user service's daemon to restart when one serves the UI. When an
+update leaves a service daemon from before the control socket running, the
+UI asks it over its old loopback port, with the token that daemon wrote.
+That is the only request the UI still sends there. Failed
+children are retried with a delay; an unavailable control socket or owned daemon lock
 ends the attempt. Restart interrupts a pending retry delay. A parent-process wait also stops the daemon if the
 UI crashes. The tray uses the app's D-Bus namespace, including when
 the desktop tray host restarts. There is no systemd watchdog. Private `daemon.log`

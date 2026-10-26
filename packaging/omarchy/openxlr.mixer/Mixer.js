@@ -3,10 +3,6 @@ function clamp(value, ceiling) {
     return typeof value === "number" && isFinite(value) ? Math.max(0, Math.min(ceiling, value)) : 0;
 }
 
-function tokenPath(runtime, config, home) {
-    return (runtime || config || home + "/.config") + "/openxlr/token";
-}
-
 function mono(channel) {
     return typeof channel.microphone === "boolean" ? channel.microphone : channel.id === "xlr1" || channel.id === "xlr2";
 }
@@ -241,6 +237,8 @@ function Session(io) {
     this.snapshot = null;
     this.levels = {};
     this.error = "";
+    // Why the adapter could not connect, shown while offline; empty when unknown.
+    this.offline = "";
     this.pending = "";
     this.serial = 0;
     this.backoff = 1000;
@@ -248,22 +246,21 @@ function Session(io) {
 }
 Session.prototype.start = function () {
     if (this.phase !== "idle" && this.phase !== "waiting") return;
-    this.phase = "token";
-    this.io.deadline(5000);
-    this.io.readToken();
-};
-Session.prototype.token = function (text) {
-    if (this.phase !== "token") return;
-    var token = String(text || "").trim();
-    if (!token) { this.lost(); return; }
+    this.offline = "";
     this.phase = "connecting";
-    this.io.connect(token);
+    this.io.deadline(5000);
+    this.io.connect();
 };
-Session.prototype.opened = function (token) {
+Session.prototype.opened = function () {
     if (this.phase !== "connecting") return;
-    this.phase = "auth";
-    this.io.send({ cmd: "auth", token: token });
+    this.phase = "state";
     this.io.send({ cmd: "getState" });
+};
+// The adapter's controlError line: a daemon from before the update, or none.
+Session.prototype.refused = function (message) {
+    if (this.phase !== "connecting") return;
+    this.offline = String(message || "");
+    this.lost();
 };
 Session.prototype.lost = function () {
     if (this.phase === "waiting" || this.phase === "stopped") return;
@@ -279,7 +276,7 @@ Session.prototype.lost = function () {
     this.backoff = Math.min(this.backoff * 2, 10000);
 };
 Session.prototype.receive = function (raw) {
-    if (this.phase !== "auth" && this.phase !== "ready") return;
+    if (this.phase !== "state" && this.phase !== "ready") return;
     var message;
     try { message = JSON.parse(raw); } catch (_) { return; }
     if (!message || typeof message !== "object") return;

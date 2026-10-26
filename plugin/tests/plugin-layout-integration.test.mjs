@@ -1,3 +1,4 @@
+import {controlFixture} from "./control-fixture.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -22,10 +23,11 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     receive(message) { this.onmessage({data: JSON.stringify(message)}); }
   }
   globalThis.WebSocket = Socket;
+  const control = controlFixture();
   try {
     await import("../com.emaspa.openxlr.sdPlugin/plugin.mjs");
-    const daemon = sockets.find(socket => socket.url.includes(":37890/"));
-    const host = sockets.find(socket => socket !== daemon);
+    const daemon = control.children[0];
+    const host = sockets[0];
     daemon.onopen();
     const state = {type:"state", profiles:[], devices:[{kind:0,name:"qa-output",description:"QA speakers"}], mixer:{
       channels:[{id:"system",name:"Desktop",levels:{monitor:1,monitor2:1}}],

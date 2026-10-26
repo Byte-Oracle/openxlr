@@ -2422,21 +2422,66 @@ actions in Options wrap to another row when they do not fit.
 <a name="upgrade"></a>
 ### 3.11 Upgrade
 
-Packages do not restart a running daemon. After an upgrade the UI
-shows a banner naming the daemon's version and its own, with a Restart
-daemon button; press it, or run
+Packages do not restart a running daemon, so the daemon from the previous
+release keeps running after an upgrade. If the UI was open before the
+upgrade, quit it from the tray and open it again first. The old UI keeps
+talking to the old daemon and cannot reach the new one.
+
+When the UI can connect but the daemon is another version, it shows a
+banner naming the daemon's version and its own, with a Restart daemon
+button, and offers only the controls the old daemon reports.
+
+Releases before this one served their clients on a loopback port with a
+token. This release uses a private Unix socket instead, authenticated by
+Linux peer credentials ([section 6](#files)), so the new UI cannot talk to
+the old daemon at all. It still recognises one, because the old daemon
+holds the same single-instance lock and answers on its old port. The header then reads
+"Older daemon running" instead of "Daemon not running", and the banner says
+that a daemon from before the update is still running and this UI cannot
+connect to it.
+
+Restart daemon in the banner does the same as the header's button. It
+restarts the `openxlr-daemon` user service; in the Flatpak it restarts the
+UI's own daemon, or asks the `openxlr-flatpak` user service's daemon to exit
+so the service starts the updated one. The UI connects as soon as the new
+daemon opens its socket, and the banner goes away. A daemon you started by
+hand is not a service, so stop it and start it again yourself. To restart
+the service from a terminal, run
 
 ```sh
 systemctl --user restart openxlr-daemon
 ```
 
-Until then the UI offers only the controls the old daemon reports.
+and for the Flatpak's service, on the host,
+`systemctl --user restart openxlr-flatpak`.
+
+The terminal mixer, the OpenDeck plugin, the Omarchy bar and the browser
+companion cannot restart the daemon. While the old one runs, the terminal
+mixer shows the same sentence with the command above its tabs, OpenDeck keys
+and dials read "restart" where they would read "offline", the Omarchy popout
+shows the sentence in place of its offline line, and the browser companion
+reports it as its error. `openxlr doctor` lists it as a finding with the
+restart command. Each of them connects on its own once the daemon has been
+restarted. Upgrade the UI, the terminal mixer, the OpenDeck plugin and the
+Omarchy plugin together with the daemon; older clients that use the loopback
+port cannot connect to the new daemon. No API token file is required, and
+the daemon removes the one an older release left behind.
+
 Changing "Enable software mixer" in Options, AUDIO also restarts the daemon.
 
-Every client presents a token the daemon writes at start
-([section 6](#files)). A UI or OpenDeck plugin older than the daemon is
-refused with "unauthorized" until it is updated too; the plugin zip on
-the release page matches the daemon of that release.
+OpenDeck and the Omarchy bar use the client-only `openxlr-control` launcher.
+Upgrade it together with the clients; older installs do not have this entry
+point. An OpenDeck plugin installed ahead of OpenXLR shows "update" on its
+keys and dials while the older OpenXLR runs: update OpenXLR to the plugin's
+release. Source builds must [link it onto PATH](install-from-source.md#6-make-it-permanent).
+It exits when the daemon disconnects, even with stdin open, so clients clear
+their state and reconnect. When it cannot connect it writes one
+`controlError` line saying why in place of its ready line, which is how
+OpenDeck and the bar learn about a daemon from before the update
+([api.md](api.md)). OpenDeck stops an adapter that has not signalled
+readiness within 15 seconds. A runtime-directory or socket-path error is a
+startup failure with a specific diagnostic. Only actual lock contention
+reports another daemon; Flatpak treats only that case as an existing session.
 
 <a name="layout"></a>
 ### 3.12 Edit the mixer layout
@@ -2929,11 +2974,11 @@ diagnostics** in Options and open an issue with the archive.
 - "another OpenXLR daemon is already running for this user": a second
   daemon was started by hand while the service runs. It stops at once;
   stop the service first if you meant to run the daemon by hand.
-- "port 37890 is in use by another local socket; waiting for it": another
-  program holds the daemon's API port, which sits inside the kernel's
-  ephemeral range. The daemon waits up to a minute for it and otherwise
-  exits for systemd to retry, which gives up after three starts in five
-  minutes; nothing needs to be configured.
+- "control socket unavailable": OpenXLR cannot bind its private control
+  socket. The log names the reason. Check that the runtime directory is
+  writable by your user and that `openxlr/control.sock` is not a regular
+  file or symbolic link. OpenXLR refuses to delete those. An unused socket
+  left by an unclean exit is repaired automatically before audio starts.
 - "The mixer is waiting for the audio server": the daemon started, but
   pipewire-pulse did not answer when the daemon built the mixer. A USB
   device that stops responding can hold pipewire-pulse up for minutes.
@@ -3234,7 +3279,7 @@ Scan evidence is bounded and marks omitted entries. It is collected from
 scans performed by the updated daemon; restart an older daemon after updating
 when convenient, then let discovery finish. An older, disconnected or busy
 daemon produces an explicit unavailable entry instead of stopping the archive.
-Plugin binaries, presets, Wine registry files and the API token are not copied.
+Plugin binaries, presets and Wine registry files are not copied.
 Review plugin names, paths and scanner output before sharing the archive.
 
 <a name="files"></a>
@@ -3256,7 +3301,7 @@ settings. See
 | `~/.config/openxlr/mixer.json` | every mixer decision, the layout included (`userChannels`, `mixes`, see [mixer-layout.md](mixer-layout.md)), written by the daemon |
 | `~/.config/openxlr/profiles/<vid-pid>/<name>.json` | saved profiles, one file each |
 | `~/.config/openxlr/profiles/<vid-pid>/recall-on-connect` | the profile recalled when that interface connects, when one is chosen |
-| `$XDG_RUNTIME_DIR/openxlr/token` (or `~/.config/openxlr/token` without a runtime directory) | the control API token for this daemon run, readable by your user only; the UI and the OpenDeck plugin read it, a daemon older than the UI will not have it ([section 3.11](#upgrade)) |
+| `$XDG_RUNTIME_DIR/openxlr/control.sock` (or `~/.config/openxlr/control.sock` without a runtime directory) | private control API socket, authenticated by Linux peer credentials ([api.md](api.md)) |
 | `$XDG_RUNTIME_DIR/openxlr/daemon.lock` | held by the running daemon; a second daemon started for the same user stops at once instead of waiting for the port |
 | `~/.config/openxlr/devices/<vid-pid>/last-state.json` | the settings restored on connect when `retainsSettings` is false |
 | `~/.config/openxlr/devices/<vid-pid>/defaults.json` | the firmware defaults of such an interface, recorded after a power cycle, written back by "Reset device to defaults" (the Pro has no such file: its reset writes OpenXLR's baseline) |
@@ -3279,7 +3324,7 @@ settings. See
 | `/usr/lib/systemd/user/pipewire-pulse.service.d/openxlr.conf` | installed by the packages: raises pipewire-pulse's open-file limit ([section 5.8](#open-files)) |
 | `/usr/share/wireplumber/wireplumber.conf.d/50-xlr-dock-capture-hold.conf`, `52-openxlr-mk1-capture-hold.conf`, `53-openxlr-wave3-capture-hold.conf` | installed by the packages: keep the capture of the XLR Dock, the original Wave XLR and the Wave:3 running ([section 5.2](#dock-silent)) |
 | `openxlr-tui` | the mixer in a terminal, the same daemon and the same skins ([The terminal mixer](#terminal)) |
-| `ws://127.0.0.1:37890/ws` | the daemon's API, documented in [api.md](api.md); the same commands over HTTP at `/api/v1` ([http-api.md](http-api.md)) |
+| `$XDG_RUNTIME_DIR/openxlr/control.sock` | the daemon's API, documented in [api.md](api.md); the same commands over HTTP at `/api/v1` ([http-api.md](http-api.md)) |
 
 The daemon makes a final attempt to save pending mixer settings when it
 shuts down, including when startup fails after the mixer changed. If that

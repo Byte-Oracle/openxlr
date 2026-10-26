@@ -195,6 +195,15 @@
   <data name="BuyMeACoffee" xml:space="preserve">
     <value>Spendiere einen Kaffee</value>
   </data>
+  <data name="OlderDaemonCannotConnectNote" xml:space="preserve">
+    <value>Ein Daemon von vor dem Update läuft noch, und diese Oberfläche (v{0}) kann sich nicht mit ihm verbinden. Starte den Daemon neu, um die Verbindung herzustellen.</value>
+  </data>
+  <data name="OlderDaemonRunning" xml:space="preserve">
+    <value>Älterer Daemon läuft</value>
+  </data>
+  <data name="OlderDaemonRunningSentence" xml:space="preserve">
+    <value>Ein Daemon von vor dem Update läuft noch.</value>
+  </data>
   <data name="SupportMeOnKoFi" xml:space="preserve">
     <value>Unterstütze mich auf Ko-fi</value>
   </data>

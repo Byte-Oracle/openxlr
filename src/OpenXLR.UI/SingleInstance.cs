@@ -8,7 +8,7 @@ namespace OpenXLR.UI;
 
 /// <summary>
 /// One window per user. The first instance listens on a Unix socket next
-/// to the daemon's token; a later launch (the application menu, a second
+/// to the daemon's control socket; a later launch (the application menu, a second
 /// autostart, a shell) finds it, asks it to show its window and exits at
 /// once, so nothing ever opens twice. A socket file whose owner is gone is
 /// replaced, so a crash never blocks the next start.
@@ -53,7 +53,7 @@ internal sealed class SingleInstance : IDisposable
 
     private SingleInstance(Socket listener, string path) { _listener = listener; _path = path; }
 
-    public static string DefaultPath => Path.Combine(Path.GetDirectoryName(OpenXlrPaths.TokenPath)!,
+    public static string DefaultPath => Path.Combine(OpenXlrPaths.RuntimeDir,
         FlatpakEnvironment.IsFlatpak ? "flatpak-ui.sock" : "ui.sock");
 
     /// <summary>

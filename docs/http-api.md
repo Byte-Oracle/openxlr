@@ -1,20 +1,20 @@
 # Local HTTP API v1
 
-The daemon listens on `127.0.0.1:37890`. HTTP requests use the same per-session
-token as the existing WebSocket clients, presented as `Authorization: Bearer
-<token>`. Read it from `$XDG_RUNTIME_DIR/openxlr/token`, or from
-`$XDG_CONFIG_HOME/openxlr/token` (`~/.config/openxlr/token`) when the runtime
-directory is unset. The daemon writes the private token file once it is
-listening, and not before.
-There is no second credential or change to the existing UI/OpenDeck login.
+The daemon serves HTTP over the private Unix socket described in
+[api.md](api.md). Its path is `$XDG_RUNTIME_DIR/openxlr/control.sock`, or
+`$XDG_CONFIG_HOME/openxlr/control.sock` with `~/.config` as the default
+without a runtime directory. Linux peer credentials authenticate the user
+before any HTTP request is read. No token, bearer header or network port
+is used. `http://localhost` in examples is the HTTP Host name on that
+socket, not a TCP destination.
 
-Foreign browser Origins are refused even with a valid token. JSON commands
-require `Content-Type: application/json` with UTF-8 encoding. Credentials in
-query strings are not accepted. Keep the token out of logs and bug reports.
+Foreign browser Origins are refused. JSON commands require
+`Content-Type: application/json` with UTF-8 encoding. Command validation,
+rate limits and reply envelopes are unchanged.
 
 | Endpoint | Response |
 |---|---|
-| `GET /healthz` | Unauthenticated process liveness only, not hardware readiness |
+| `GET /healthz` | Process liveness only, not hardware readiness |
 | `GET /api/v1` | Version and endpoint discovery |
 | `GET /api/v1/state` | Combined state message |
 | `GET /api/v1/devices` | `connected`, `device`, `capabilities`, `detected` and `devices` from the state |
@@ -93,10 +93,9 @@ For example, selecting a Teams tab on Voice Chat while remembering that website:
 {"cmd":"assignBrowserTab","session":"e3b0c44298fc4c14b9afbf4c8996fb92","tabId":42,"site":"https://teams.microsoft.com","channel":"voicechat","remember":true}
 ```
 
-Both WebSocket paths require the existing first-message authentication:
-`{"cmd":"auth","token":"..."}`. They send no state before authentication.
-HTTP's Bearer header does not replace that WebSocket exchange. Ping, close,
-message deadlines and command budgets remain the same on both socket paths.
+Both WebSocket paths use the Unix connection's peer credentials and send
+state immediately after upgrade. No authentication frame is sent. Ping,
+close, message deadlines and command budgets are the same on both paths.
 
 Commands use the names and fields in [the WebSocket API](api.md), including
 mix-to-output feed commands, which accept any existing mix or a sum of distinct
@@ -165,7 +164,7 @@ unavailable profile metadata uses the empty/null values documented in
 [the state contract](api.md).
 
 Error status codes: 400 a body that is not valid UTF-8, or a plain request
-on the events route without a WebSocket upgrade; 401 missing/wrong token;
+on the events route without a WebSocket upgrade; 401 a request without an authenticated transport;
 403 foreign Origin; 404 unknown resource id; 408 body-read deadline; 413
 body over 64 KiB; 415 wrong Content-Type; 429 budget exhausted, or another
 HTTP command or command-backed read in flight; 503 mixer resource while the
@@ -180,10 +179,9 @@ All authenticated HTTP responses use `Cache-Control: no-store`.
 For a read-only check from a shell in the daemon's user session:
 
 ```sh
-TOKEN=$(cat "${XDG_RUNTIME_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}}/openxlr/token")
-curl --fail --silent --show-error -H "Authorization: Bearer $TOKEN" \
-  http://127.0.0.1:37890/api/v1/state
-unset TOKEN
+SOCKET="${XDG_RUNTIME_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}}/openxlr/control.sock"
+curl --fail --silent --show-error --unix-socket "$SOCKET" \
+  http://localhost/api/v1/state
 ```
 
 `getPluginSetup` is available through `POST /api/v1/commands` and reports
@@ -245,8 +243,8 @@ editor availability, not audio processing or insert chains. `showInsertUi`
 rejects blocked editors over HTTP as it does over WebSocket.
 
 The [OpenAPI document](openapi-v1.json) describes the HTTP endpoints. Restarting
-the daemon rotates its per-session token once the new instance listens;
-clients must reread it.
+the daemon closes current connections; clients reconnect to the same socket
+path. Their next connection is authenticated again by peer credentials.
 
 For `setEnforcedDefaults`, `sink: "@monitor"` follows the first selected
 monitor output as the system playback device. The response state retains
