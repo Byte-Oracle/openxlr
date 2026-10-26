@@ -348,6 +348,7 @@ public sealed partial class MainViewModel
             else setup.Place(MicSetupUnitKind.None, null, 1);
             setup.RaiseCarrier();
         }
+        RefreshMicSetupInputs(channels);
         Xlr1InputLabel = Localizer.Format("StripInputLabel", Xlr1Strip?.Name ?? "XLR 1");
         Xlr2InputLabel = Localizer.Format("StripInputLabel", Xlr2Strip?.Name ?? "XLR 2");
         ChooseMicrophoneText = Localizer.Format("ChooseMicrophoneForStrip", Xlr1Strip?.Name ?? "XLR 1");

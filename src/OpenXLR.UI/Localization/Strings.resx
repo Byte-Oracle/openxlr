@@ -2971,6 +2971,18 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="MicSetup" xml:space="preserve">
     <value>Mic setup</value>
   </data>
+  <data name="MicSetupButtonTip" xml:space="preserve">
+    <value>Set up a microphone step by step: where it goes, its level, a take heard raw and processed, and its EQ and plugins. Opens on XLR 1, or the first microphone in the mixer.</value>
+  </data>
+  <data name="MicSetupMicrophone" xml:space="preserve">
+    <value>Microphone</value>
+  </data>
+  <data name="MicSetupMicrophoneName" xml:space="preserve">
+    <value>Microphone to set up</value>
+  </data>
+  <data name="MicSetupMicrophoneTip" xml:space="preserve">
+    <value>Choose the microphone to set up. A take or Hear myself running on the one shown stops first.</value>
+  </data>
   <data name="MicSetupStepLevel" xml:space="preserve">
     <value>Level</value>
   </data>

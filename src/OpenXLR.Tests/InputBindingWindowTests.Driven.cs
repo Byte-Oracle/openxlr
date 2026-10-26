@@ -102,8 +102,8 @@ internal static partial class InputBindingWindowTests
     }
 
     /// <summary>The state with XLR 2 bound to the Wave:3, driven as an additional interface.</summary>
-    internal static string DrivenState(bool enabled = true, bool withMix = true)
-        => new DrivenDaemon { Bound = true, Kept = true, Enabled = enabled, WithMix = withMix }.State().ToJsonString();
+    internal static string DrivenState(bool enabled = true, bool withMix = true, bool captureCarried = false)
+        => new DrivenDaemon { Bound = true, Kept = true, Enabled = enabled, WithMix = withMix, CaptureCarried = captureCarried }.State().ToJsonString();
 
     internal static void CheckDrivenUnit()
     {

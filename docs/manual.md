@@ -642,7 +642,7 @@ The setup has four parts:
   30 ms and 0.2 s.
 
 Ducking is off until you switch it on. In the UI, open **Ducking**
-from the SUBMIXER header beside **Edit layout**, from the bottom row of the
+from the SUBMIXER header beside **Mic setup**, from the bottom row of the
 **Mixer layout** window beside **Exclusive groups**, or from **Options**,
 card AUDIO, under the software mixer switch. All three open the same
 Ducking window, on any device; the header button shows only while the software
@@ -1026,12 +1026,31 @@ as it is when a profile is loaded.
 
 <a name="mic-setup"></a>
 <a name="sound-check"></a>
-**Mic setup.** In the chain window of XLR 1, XLR 2 or a capture input on
-one mono port, press **Mic setup**. Stereo capture inputs have no Mic
-setup. The window has four steps, **Position**, **Level**, **Listen** and
-**Shape**; press any of them at the top to go to it, in any order. It opens
-on Position the first time and on the step you left it on after that, until
-the UI quits.
+**Mic setup.** Press **Mic setup** in the SUBMIXER header, beside
+**Ducking**, to set up XLR 1, or the first microphone in the mixer when
+XLR 1 is not one. To start on another microphone, press **Mic setup** in
+the chain window of XLR 1, XLR 2 or a capture input on one mono port. The
+header button shows while the software mixer runs and has at least one
+microphone to set up. Stereo capture inputs have no Mic setup. The window
+has four steps, **Position**, **Level**, **Listen** and **Shape**; press
+any of them at the top to go to it, in any order. Each microphone opens
+on Position the first time and on the step you left it on after that,
+until the UI quits.
+
+One Mic setup window is open at a time. When the mixer has more than one
+microphone to set up, such as XLR 1 and XLR 2 on a Wave XLR Pro, a
+microphone on an additional interface or a mono capture input,
+**Microphone** at the top of Position lists them by their channel names.
+Choosing another one moves the window to it on the same step. A take, Raw
+or Hear myself running on the one shown stops first, as when the window
+closes. The meter, the gain, the tips, the EQ and the plugins are then the
+new microphone's. Pressing Mic setup in the header or in a
+chain window while the window is open moves it the same way.
+
+The window takes the height its step needs, up to the screen's height, so
+nothing is cut off or needs scrolling until the screen is too short. If
+you resize it, it keeps your size and only grows when a step needs more
+room.
 
 **Position** says which unit the microphone is on and gives tips for
 placing it:
@@ -1144,7 +1163,11 @@ take or on the live microphone:
 
 - **Starting presets** put one of three EQs on the microphone and switch
   the EQ on, as one change. They are OpenXLR's own starting points for a
-  speaking voice; adjust them on the curve. **Undo preset** puts
+  speaking voice; adjust them on the curve. The preset the EQ holds is lit
+  like any chosen option. Its light goes out when you move a band off the
+  preset's values, switch the EQ off or undo it, and comes back if the EQ
+  returns to those values. Pressing the lit preset changes nothing.
+  **Undo preset** puts
   back the EQ as it was before the last preset, switch included; changes
   made to the EQ since that preset go with it. The UI forgets the undo
   when it loses the daemon.
@@ -2298,8 +2321,8 @@ the view, above the strips for the channel and the mix. None of this
 changes a level, a mute or a route.
 
 <a name="show-hidden"></a>
-**Show hidden** sits in the SUBMIXER header beside Pop out, Edit layout
-and Ducking, and appears only while a channel or a mix is hidden in the layout
+**Show hidden** sits in the SUBMIXER header beside Pop out, Edit layout,
+[Mic setup](#mic-setup) and Ducking, and appears only while a channel or a mix is hidden in the layout
 editor. Switched on, it draws the hidden channels and mixes in their
 places in every layout, faded so you can tell them apart, and they work
 as usual. This applies in the separate mixer window too. It is a UI

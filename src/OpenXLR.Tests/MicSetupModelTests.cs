@@ -357,6 +357,219 @@ public sealed class MicSetupModelTests
         Assert.InRange(MicSetupLevels.TargetSpeechDb, MicSetupLevels.BandLowDb - 6, MicSetupLevels.BandLowDb);
     }
 
+
+    // --- the chosen preset ---
+
+    /// <summary>A channel's <c>eq</c> as the daemon reports it, with these bands.</summary>
+    private static JsonNode Reported(MicEq eq) => new JsonObject
+    {
+        ["enabled"] = eq.Enabled,
+        ["bands"] = new JsonArray([.. eq.Bands.Select(b => (JsonNode)new JsonObject
+        {
+            ["enabled"] = b.Enabled, ["type"] = b.Type, ["frequency"] = b.Frequency, ["gain"] = b.Gain, ["q"] = b.Q,
+        })]),
+        ["backend"] = "software",
+        ["available"] = true,
+    };
+
+    [Fact]
+    public async Task ThePresetTheEqHoldsIsLitUntilAnEditUndoOrTheSwitchLeavesIt()
+    {
+        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        var sent = new Recorder();
+        using var eq = new MicEqViewModel(sent, "xlr1", "XLR 1", TimeSpan.Zero, new ManualTime());
+        var setup = new MicSetupViewModel(client, "xlr1") { Eq = eq };
+        MicSetupPresetItem Item(MicSetupPreset preset) => setup.Presets.Single(p => p.Preset == preset);
+        Assert.Equal(MicSetupPresets.All, setup.Presets.Select(p => p.Preset));
+        Assert.Null(setup.ActivePreset);
+        Assert.All(setup.Presets, p => Assert.False(p.IsActive));
+
+        var raised = new List<string>();
+        Item(MicSetupPresets.Warm).PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
+        setup.ChoosePreset(Item(MicSetupPresets.Warm));
+        sent.Eq();
+        Assert.Same(MicSetupPresets.Warm, setup.ActivePreset);
+        Assert.True(Item(MicSetupPresets.Warm).IsActive);
+        Assert.False(Item(MicSetupPresets.Clear).IsActive);
+        Assert.Contains(nameof(MicSetupPresetItem.IsActive), raised);
+
+        // Pressing the lit preset again sends nothing and keeps the undo.
+        setup.ChoosePreset(Item(MicSetupPresets.Warm));
+        Assert.Empty(sent.Sent);
+        Assert.True(setup.CanUndoPreset);
+        Assert.True(Item(MicSetupPresets.Warm).IsActive);
+
+        // The daemon reports the preset back: still lit.
+        eq.Apply(Reported(MicSetupPresets.Warm.Eq), null);
+        Assert.Same(MicSetupPresets.Warm, setup.ActivePreset);
+
+        // A band moved off the preset's value clears it, and moving it back lights it again.
+        eq.Bands[1].SetGain(eq.Bands[1].Gain + 1);
+        Assert.Null(setup.ActivePreset);
+        Assert.False(Item(MicSetupPresets.Warm).IsActive);
+        eq.Bands[1].SetGain(eq.Bands[1].Gain - 1);
+        Assert.Same(MicSetupPresets.Warm, setup.ActivePreset);
+
+        // The EQ switched off is not the preset.
+        eq.Enabled = false;
+        Assert.Null(setup.ActivePreset);
+        eq.Enabled = true;
+        Assert.Same(MicSetupPresets.Warm, setup.ActivePreset);
+        sent.Sent.Clear();
+
+        // Another preset moves the light; the undo puts back Warm, lit again.
+        setup.ChoosePreset(Item(MicSetupPresets.Broadcast));
+        sent.Eq();
+        Assert.True(Item(MicSetupPresets.Broadcast).IsActive);
+        Assert.False(Item(MicSetupPresets.Warm).IsActive);
+        setup.UndoPreset();
+        sent.Eq();
+        Assert.Same(MicSetupPresets.Warm, setup.ActivePreset);
+
+        // An undo to an EQ that is no preset leaves none lit, and so does losing the EQ.
+        eq.Replace(MicEq.Default);
+        sent.Eq();
+        setup.ChoosePreset(Item(MicSetupPresets.Clear));
+        sent.Eq();
+        setup.UndoPreset();
+        sent.Eq();
+        Assert.Null(setup.ActivePreset);
+        setup.ChoosePreset(Item(MicSetupPresets.Clear));
+        sent.Eq();
+        Assert.True(Item(MicSetupPresets.Clear).IsActive);
+        setup.Eq = null;
+        Assert.Null(setup.ActivePreset);
+        Assert.False(Item(MicSetupPresets.Clear).IsActive);
+    }
+
+    // --- the microphone picker ---
+
+    [Fact]
+    public async Task OneMicrophoneShowsNoPicker()
+    {
+        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        var main = new MainViewModel(client);
+        Assert.False(main.MicSetupInputs.Any);
+        Assert.Null(main.MicSetupInputs.Primary);
+        // A Pro whose second input the device does not have: XLR 1 alone.
+        string xlr2 = InputBindingModelTests.Xlr("xlr2", 1, null).Replace("\"present\":true", "\"present\":false", StringComparison.Ordinal);
+        CaptureInputWindowTests.Apply(main, JsonNode.Parse(InputBindingModelTests.ProState(
+            $"{InputBindingModelTests.Xlr("xlr1", 0, InputBindingModelTests.Input(1))},{xlr2}"))!);
+        MicSetupInput only = Assert.Single(main.MicSetupInputs.Items);
+        Assert.Equal(("XLR 1", "xlr1"), (only.Name, only.Setup.Channel));
+        Assert.Same(main.Inserts.MicSetup, only.Setup);
+        Assert.Same(only, main.MicSetupInputs.Primary);
+        Assert.True(main.MicSetupInputs.Any);
+        Assert.False(main.MicSetupInputs.Many);
+        Assert.False(main.Inserts.MicSetup.ShowsPicker);
+        Assert.Same(only, main.Inserts.MicSetup.Picked);
+        // A setup made outside the main window's model has no list at all.
+        Assert.False(new MicSetupViewModel(client, "xlr1").ShowsPicker);
+    }
+
+    [Fact]
+    public async Task AProListsBothXlrInputsAndOnlyMicrophones()
+    {
+        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        var main = new MainViewModel(client);
+        string xlr1 = InputBindingModelTests.Xlr("xlr1", 0, InputBindingModelTests.Input(1));
+        string xlr2 = InputBindingModelTests.Xlr("xlr2", 1, InputBindingModelTests.Input(2));
+        // A stereo capture input is no microphone, so Mic setup does not offer it.
+        const string Stereo = """
+            {"id":"camera","name":"Camera","captureSource":"cam","capturePair":0,"captureConnected":true,
+             "microphone":false,"chainWidth":2,"levels":{"monitor":1}}
+            """;
+        string State(string second) => InputBindingModelTests.ProState($"{xlr1},{second},{Stereo}");
+        CaptureInputWindowTests.Apply(main, JsonNode.Parse(State(xlr2))!);
+        Assert.Equal([("XLR 1", "xlr1"), ("XLR 2", "xlr2")], main.MicSetupInputs.Items.Select(i => (i.Name, i.Setup.Channel)));
+        Assert.True(main.MicSetupInputs.Many);
+        MicSetupViewModel first = main.Inserts.MicSetup, second = main.Inserts2.MicSetup;
+        Assert.True(first.ShowsPicker && second.ShowsPicker);
+        Assert.Same(main.MicSetupInputs.Items[0], first.Picked);
+        Assert.Same(main.MicSetupInputs.Items[1], second.Picked);
+        Assert.Same(first, main.MicSetupInputs.Primary!.Setup);
+        // Each one's Position names its own XLR input.
+        Assert.Equal(Localizer.Format("MicSetupPositionXlr", "Elgato Wave XLR Pro", 2), second.PositionIntro);
+
+        // A state that changes nothing keeps the same entries; a rename shows.
+        MicSetupInput kept = main.MicSetupInputs.Items[1];
+        CaptureInputWindowTests.Apply(main, JsonNode.Parse(State(xlr2))!);
+        Assert.Same(kept, main.MicSetupInputs.Items[1]);
+        CaptureInputWindowTests.Apply(main, JsonNode.Parse(State(xlr2.Replace("XLR 2", "Guest", StringComparison.Ordinal)))!);
+        Assert.Equal(["XLR 1", "Guest"], main.MicSetupInputs.Items.Select(i => i.Name));
+    }
+
+    [Fact]
+    public async Task AnAdditionalInterfacesMicrophonesAreListedWithTheirOwnUnit()
+    {
+        await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        var main = new MainViewModel(client);
+        // XLR 2 bound to the Wave:3 driven beside the Pro; the Pro's second
+        // input kept on a capture channel the daemon does not call a microphone.
+        CaptureInputWindowTests.Apply(main, JsonNode.Parse(InputBindingWindowTests.DrivenState(withMix: false))!);
+        Assert.Equal([("XLR 1", "xlr1"), ("Mic 2", "xlr2")], main.MicSetupInputs.Items.Select(i => (i.Name, i.Setup.Channel)));
+        MicSetupViewModel xlr2 = main.MicSetupInputs.Items[1].Setup;
+        Assert.Same(main.Channels.Single(c => c.Id == "xlr2").ExtraUnitInput, xlr2.ExtraUnit);
+        Assert.Equal(MicSetupUnitKind.Capsule, xlr2.UnitKind);
+
+        // The Wave:3 on a capture input of its own: listed by the channel's name, with its own Mic setup.
+        CaptureInputWindowTests.Apply(main, JsonNode.Parse(InputBindingWindowTests.DrivenState(withMix: false, captureCarried: true))!);
+        Assert.Equal(["XLR 1", "Mic 2", "Wave:3 microphone"], main.MicSetupInputs.Items.Select(i => i.Name));
+        MicSetupInput wave3 = main.MicSetupInputs.Items[2];
+        Assert.Same(main.Channels.Single(c => c.Id == "wave3mic").Inserts!.MicSetup, wave3.Setup);
+        Assert.NotNull(wave3.Setup.ExtraUnit);
+        Assert.Equal(MicSetupUnitKind.Capsule, wave3.Setup.UnitKind);
+        Assert.True(wave3.Setup.ShowsPicker);
+        Assert.Same(wave3, wave3.Setup.Picked);
+        Assert.Same(main.Inserts.MicSetup, main.MicSetupInputs.Primary!.Setup);
+    }
+
+    [Fact]
+    public async Task MovingToAnotherMicrophoneStopsTheSessionHereAndKeepsTheStep()
+    {
+        var commands = new ConcurrentQueue<JsonNode>();
+        await using var server = await SocketTestServer.Start(async (socket, stop) =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                JsonNode command = await SocketTestServer.Receive(socket, stop);
+                if (command["cmd"]!.GetValue<string>() == "watchInputMeter") continue;
+                commands.Enqueue(command);
+                await SocketTestServer.Send(socket, new { type = "commandResult", requestId = command["requestId"]!.GetValue<string>() }, stop);
+            }
+        });
+        await using var client = new DaemonClient(server.Url);
+        var connected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        client.ConnectionChanged += up => { if (up) connected.TrySetResult(); };
+        client.Start();
+        await connected.Task.WaitAsync(TimeSpan.FromSeconds(3));
+
+        var first = new MicSetupViewModel(client, "xlr1") { Step = MicSetupStep.Level };
+        var second = new MicSetupViewModel(client, "guest");
+        Assert.Equal(MicSetupStep.Position, second.Step);
+        first.Apply(JsonNode.Parse("""{"channel":"xlr1","mode":"live","seconds":0,"hearMyself":true}"""));
+        Assert.True(first.Active && first.HearMyself);
+        first.StartGainMeasure();
+        Assert.True(first.Measuring);
+
+        // A session runs here: it stops first, the measurement ends, and the
+        // next microphone opens on the same step with nothing of its own started.
+        await first.HandOverAsync(second);
+        Assert.False(first.Measuring);
+        Assert.Equal(MicSetupStep.Level, second.Step);
+        JsonNode stopped = Assert.Single(commands);
+        Assert.Equal(("soundCheck", "xlr1", "stop"),
+            (stopped["cmd"]!.GetValue<string>(), stopped["channel"]!.GetValue<string>(), stopped["action"]!.GetValue<string>()));
+
+        // Nothing runs on the second: moving back sends nothing, and neither does moving to itself.
+        second.Step = MicSetupStep.Shape;
+        await second.HandOverAsync(first);
+        Assert.Equal(MicSetupStep.Shape, first.Step);
+        await first.HandOverAsync(first);
+        // A request made after them arrives next, so nothing was sent in between.
+        await first.RunAsync("live");
+        Assert.Equal(["xlr1:stop", "xlr1:live"], commands.Select(c => $"{c["channel"]}:{c["action"]}"));
+    }
 }
 
 /// <summary>

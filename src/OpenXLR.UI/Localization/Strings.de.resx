@@ -2952,4 +2952,16 @@ Von OpenXLR gesteuertes Interface wählen</value>
   <data name="MicSetup" xml:space="preserve">
     <value>Mikrofon-Setup</value>
   </data>
+  <data name="MicSetupButtonTip" xml:space="preserve">
+    <value>Ein Mikrofon Schritt für Schritt einrichten: Position, Pegel, eine Aufnahme roh und bearbeitet anhören, EQ und Plugins. Öffnet sich auf XLR 1 oder dem ersten Mikrofon im Mixer.</value>
+  </data>
+  <data name="MicSetupMicrophone" xml:space="preserve">
+    <value>Mikrofon</value>
+  </data>
+  <data name="MicSetupMicrophoneName" xml:space="preserve">
+    <value>Einzurichtendes Mikrofon</value>
+  </data>
+  <data name="MicSetupMicrophoneTip" xml:space="preserve">
+    <value>Wähle das Mikrofon, das du einrichten willst. Eine laufende Aufnahme oder Mithören am angezeigten Mikrofon endet zuerst.</value>
+  </data>
 </root>

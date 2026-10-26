@@ -48,6 +48,55 @@ public sealed class MicSetupStepItem(MicSetupViewModel owner, MicSetupStep step,
     internal void Refresh() => Raise(nameof(IsSelected));
 }
 
+/// <summary>One starting preset on the Shape step: lit while the microphone's EQ holds it.</summary>
+public sealed class MicSetupPresetItem(MicSetupViewModel owner, MicSetupPreset preset) : ViewModelBase
+{
+    public MicSetupPreset Preset { get; } = preset;
+    public string Name => Preset.Name;
+    public string Hint => Preset.Hint;
+
+    /// <summary>The EQ is this preset now: applied and not edited, undone or switched off since.</summary>
+    public bool IsActive => ReferenceEquals(owner.ActivePreset, Preset);
+
+    internal void Refresh() => Raise(nameof(IsActive));
+}
+
+/// <summary>A microphone the picker offers: its channel's name and that channel's Mic setup.</summary>
+public sealed record MicSetupInput(string Name, MicSetupViewModel Setup)
+{
+    public override string ToString() => Name;
+}
+
+/// <summary>
+/// Every microphone in the mixer that Mic setup can test, in the mixer's
+/// order: XLR 1 and XLR 2 where the device has them, and each mono capture
+/// input, including one on an additional interface. One list for the whole
+/// UI; the window's picker shows it when it holds more than one.
+/// </summary>
+public sealed class MicSetupInputs : ViewModelBase
+{
+    public ObservableCollection<MicSetupInput> Items { get; } = [];
+
+    /// <summary>At least one microphone can be tested.</summary>
+    public bool Any => Items.Count > 0;
+
+    /// <summary>More than one, so the window offers the choice.</summary>
+    public bool Many => Items.Count > 1;
+
+    /// <summary>The microphone Mic setup opens on from the mixer's header: XLR 1 when it is listed, else the first.</summary>
+    public MicSetupInput? Primary => Items.FirstOrDefault(i => i.Setup.Channel == "xlr1") ?? Items.FirstOrDefault();
+
+    /// <summary>Take the list a state push gives; returns true when it changed.</summary>
+    internal bool Update(IReadOnlyList<MicSetupInput> inputs)
+    {
+        if (inputs.SequenceEqual(Items)) return false;
+        Items.Clear();
+        foreach (MicSetupInput input in inputs) Items.Add(input);
+        Raise(nameof(Any)); Raise(nameof(Many)); Raise(nameof(Primary));
+        return true;
+    }
+}
+
 /// <summary>
 /// One microphone's Mic setup. The daemon owns the session, the take and
 /// the meters; this view sends the actions and shows what the daemon
@@ -77,10 +126,43 @@ public sealed class MicSetupViewModel : ViewModelBase
             new(this, MicSetupStep.Level, Localizer.Text("MicSetupStepLevel")),
             new(this, MicSetupStep.Listen, Localizer.Text("MicSetupStepListen")),
             new(this, MicSetupStep.Shape, Localizer.Text("MicSetupStepShape"))];
+        Presets = [.. MicSetupPresets.All.Select(p => new MicSetupPresetItem(this, p))];
     }
 
     /// <summary>The microphone channel this setup belongs to.</summary>
     public string Channel { get; }
+
+    // --- the microphone picker ---
+
+    private MicSetupInputs? _inputs;
+    /// <summary>The microphones the window can switch between, or null outside the main window's model.</summary>
+    public MicSetupInputs? Inputs
+    {
+        get => _inputs;
+        internal set { if (Set(ref _inputs, value)) RaiseInputs(); }
+    }
+
+    /// <summary>The picker is shown: the mixer has more than one microphone to test.</summary>
+    public bool ShowsPicker => _inputs is { Many: true };
+
+    /// <summary>This microphone's entry in the picker.</summary>
+    public MicSetupInput? Picked => _inputs?.Items.FirstOrDefault(i => ReferenceEquals(i.Setup, this));
+
+    internal void RaiseInputs() { Raise(nameof(ShowsPicker)); Raise(nameof(Picked)); }
+
+    /// <summary>
+    /// The window moves to another microphone: a session running here stops
+    /// first, as closing the window stops it, and a measurement ends, so
+    /// nothing of this microphone carries on unseen. The next one opens on the
+    /// step shown here.
+    /// </summary>
+    public async Task HandOverAsync(MicSetupViewModel next)
+    {
+        if (ReferenceEquals(next, this)) return;
+        CancelGainMeasure();
+        if (_active || _busy) await StopOnCloseAsync();
+        next.Step = Step;
+    }
 
     // --- steps ---
 
@@ -475,7 +557,10 @@ public sealed class MicSetupViewModel : ViewModelBase
         get => _eq;
         internal set
         {
+            MicEqViewModel? old = _eq;
             if (!Set(ref _eq, value)) return;
+            if (old is not null) old.Changed -= RefreshActivePreset;
+            if (value is not null) value.Changed += RefreshActivePreset;
             // An undo belongs to the EQ it was taken from.
             _beforePreset = null;
             _presetStatus = null;
@@ -486,7 +571,24 @@ public sealed class MicSetupViewModel : ViewModelBase
     public bool NoEq => _eq is null;
 
     /// <summary>The starting presets, in order.</summary>
-    public IReadOnlyList<MicSetupPreset> Presets => MicSetupPresets.All;
+    public IReadOnlyList<MicSetupPresetItem> Presets { get; }
+
+    private MicSetupPreset? _activePreset;
+    /// <summary>
+    /// The preset the EQ holds now, whoever put it there, or null. It follows
+    /// the EQ as shown: a band edit, the switch, an undo or another client's
+    /// change that leaves the preset's values clears it.
+    /// </summary>
+    public MicSetupPreset? ActivePreset => _activePreset;
+
+    private void RefreshActivePreset()
+    {
+        MicSetupPreset? active = _eq is { } eq ? MicSetupPresets.All.FirstOrDefault(p => p.Holds(eq.Current, eq.Limits)) : null;
+        if (ReferenceEquals(active, _activePreset)) return;
+        _activePreset = active;
+        Raise(nameof(ActivePreset));
+        foreach (MicSetupPresetItem item in Presets) item.Refresh();
+    }
 
     public bool CanApplyPreset => _eq is not null;
 
@@ -510,6 +612,17 @@ public sealed class MicSetupViewModel : ViewModelBase
         RaisePresets();
     }
 
+    /// <summary>
+    /// A preset's button was pressed. The preset the EQ already holds sends
+    /// nothing and keeps the undo, and every button is told again, since a
+    /// press flips a toggle that only the EQ may light.
+    /// </summary>
+    public void ChoosePreset(MicSetupPresetItem item)
+    {
+        if (!item.IsActive) ApplyPreset(item.Preset);
+        foreach (MicSetupPresetItem preset in Presets) preset.Refresh();
+    }
+
     /// <summary>Put back the EQ the last preset replaced, again as one <c>setEq</c>.</summary>
     public void UndoPreset()
     {
@@ -523,6 +636,7 @@ public sealed class MicSetupViewModel : ViewModelBase
     private void RaisePresets()
     {
         Raise(nameof(CanApplyPreset)); Raise(nameof(CanUndoPreset)); Raise(nameof(PresetStatus));
+        RefreshActivePreset();
     }
 
     /// <summary>The daemon's <c>mixer.soundCheck</c>; null or another channel's session reads as idle.</summary>

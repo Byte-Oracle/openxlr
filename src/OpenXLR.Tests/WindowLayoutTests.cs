@@ -318,7 +318,8 @@ public sealed class WindowLayoutTests
 
                 // Mic setup at its smallest, on each step: the step bar, the
                 // actions and the switches wrap inside the window, and the
-                // scrolled part keeps room to read.
+                // scrolled part keeps room to read. The step is shown first,
+                // so the window has grown for it before the user shrinks it.
                 var micSetupModel = vm.Inserts.MicSetup;
                 var micSetup = new MicSetupWindow { DataContext = micSetupModel };
                 windows.Add(micSetup);
@@ -326,7 +327,9 @@ public sealed class WindowLayoutTests
                 foreach (MicSetupStep step in Enum.GetValues<MicSetupStep>())
                 {
                     micSetupModel.Step = step;
+                    Settle(micSetup);
                     Layout(micSetup, micSetup.MinWidth, micSetup.MinHeight);
+                    Assert.Equal(micSetup.MinHeight, micSetup.ClientSize.Height, 0.5);
                     foreach (var panel in micSetup.GetVisualDescendants().OfType<WrapPanel>().Where(p => p.IsEffectivelyVisible))
                     {
                         Control[] children = [.. panel.Children.Where(c => c.IsVisible)];
@@ -628,6 +631,7 @@ public sealed class WindowLayoutTests
                 PluginCatalogueUiTests.CheckStaleReplies();
                 FaderInputWindowTests.Check(main);
                 MicSetupWindowTests.CheckPendingClose();
+                MicSetupWindowTests.CheckFits();
                 AssertLayoutAppearance(main, vm);
                 SkinLayoutWindowTests.Check();
                 MixerViewWindowTests.Check();
@@ -834,7 +838,7 @@ public sealed class WindowLayoutTests
         }
     }
 
-    private static void AddInsert(InsertsViewModel owner)
+    internal static void AddInsert(InsertsViewModel owner)
     {
         const string uri = "http://lsp-plug.in/plugins/lv2/graphic_equalizer_x16_mono";
         owner.PluginChoices.Add(new(uri, "LSP Graphic Equalizer x16 Mono", "EQ",
@@ -868,9 +872,19 @@ public sealed class WindowLayoutTests
     internal static void Layout(Window window, double width, double height)
     {
         var asked = new Size(width, height);
-        IntPtr display = XServer.DisplayOf(window);
         window.PlatformImpl!.GetType().GetMethod("Resize", [typeof(Size), typeof(WindowResizeReason)])!
             .Invoke(window.PlatformImpl, [asked, WindowResizeReason.User]);
+        Settle(window, $"after asking for {asked}");
+    }
+
+    /// <summary>
+    /// Lay the window out at the size it takes for itself, as <see cref="Layout"/>
+    /// does after a resize: until the server has answered every request and
+    /// the window asks for nothing more.
+    /// </summary>
+    internal static void Settle(Window window, string? why = null)
+    {
+        IntPtr display = XServer.DisplayOf(window);
         using var stop = new CancellationTokenSource();
         bool waiting = true, settled = false;
         // A round trip brings every answer the server owes into the client's
@@ -894,7 +908,7 @@ public sealed class WindowLayoutTests
             Dispatcher.UIThread.MainLoop(stop.Token);
         }
         finally { waiting = false; }
-        Assert.True(settled, $"{window.GetType().Name} is {window.ClientSize} and wants {window.DesiredSize} after asking for {asked}.");
+        Assert.True(settled, $"{window.GetType().Name} is {window.ClientSize} and wants {window.DesiredSize} {why}.");
         window.UpdateLayout();
     }
 

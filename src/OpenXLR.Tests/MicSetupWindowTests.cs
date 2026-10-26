@@ -1,12 +1,17 @@
 using System.Collections.Concurrent;
+using System.Globalization;
+using System.Reflection;
 using System.Text.Json.Nodes;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Platform;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using OpenXLR.UI;
 using OpenXLR.UI.Localization;
+using OpenXLR.UI.Skinning;
 
 namespace OpenXLR.Tests;
 
@@ -127,10 +132,57 @@ internal static class MicSetupWindowTests
             WindowLayoutTests.Layout(window, 600, 560);
             Assert.Same(model, window.DataContext);
             Assert.True(model.CanRecord);
+            await CheckPicker(main, chain, window, model, commands, meterWatches);
             window.Close();
             await Until(() => !window.IsVisible);
         }
         finally { window.Close(); }
+    }
+
+    /// <summary>
+    /// The picker on Position lists every microphone the mixer can test by
+    /// its channel's name, the guest's chosen. Choosing XLR 1 stops the
+    /// guest's session and moves the same window to XLR 1 on the same step,
+    /// its meter running; the mixer header's button moves it back to XLR 1
+    /// from another microphone rather than opening a second window.
+    /// </summary>
+    private static async Task CheckPicker(MainViewModel main, MixInsertsWindow chain, MicSetupWindow window, MicSetupViewModel guest,
+        ConcurrentQueue<JsonNode> commands, ConcurrentQueue<JsonNode> meterWatches)
+    {
+        Step(window, "MicSetupStepPosition");
+        ComboBox picker = window.FindControl<ComboBox>("MicSetupInput")!;
+        await Until(() => picker.IsEffectivelyVisible && ReferenceEquals((picker.SelectedItem as MicSetupInput)?.Setup, guest));
+        Assert.Equal(["XLR 1", "XLR 2", "Guest microphone with a long name", "Disconnected microphone"],
+            picker.Items.Cast<MicSetupInput>().Select(i => i.Name));
+        WindowLayoutTests.Settle(window);
+        WindowLayoutTests.AssertInside(picker, window);
+
+        Click(window, "MicSetupLiveMic");
+        await Until(() => guest.Active);
+        commands.Clear();
+        meterWatches.Clear();
+        MicSetupViewModel xlr1 = main.Inserts.MicSetup;
+        picker.SelectedItem = picker.Items.Cast<MicSetupInput>().Single(i => i.Setup == xlr1);
+        await Until(() => ReferenceEquals(window.DataContext, xlr1) && window.IsEnabled && !guest.Active);
+        JsonNode stopped = Assert.Single(commands);
+        Assert.Equal(("guest", "stop"), (stopped["channel"]!.GetValue<string>(), stopped["action"]!.GetValue<string>()));
+        Assert.Equal(MicSetupStep.Position, xlr1.Step);
+        Assert.Same(xlr1, (picker.SelectedItem as MicSetupInput)?.Setup);
+        await Until(() => meterWatches.Any(c => c["channel"]?.GetValue<string>() == "xlr1"));
+        Assert.Equal(Localizer.Format("MicSetupPositionXlr", "Elgato Wave XLR Pro", 1),
+            window.FindControl<TextBlock>("MicSetupPositionIntro")!.Text);
+
+        // Back to the guest from the picker, then the header's button: the one window moves to XLR 1.
+        picker.SelectedItem = picker.Items.Cast<MicSetupInput>().Single(i => i.Setup == guest);
+        await Until(() => ReferenceEquals(window.DataContext, guest) && window.IsEnabled);
+        var mainWindow = (MainWindow)chain.Owner!;
+        Button header = mainWindow.FindControl<Button>("MicSetupButton")!;
+        Assert.True(header.IsEffectivelyVisible);
+        Assert.Equal(Localizer.Text("MicSetup"), header.Content);
+        header.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        await Until(() => ReferenceEquals(window.DataContext, xlr1) && window.IsEnabled);
+        Assert.Single(chain.OwnedWindows.OfType<MicSetupWindow>().Concat(mainWindow.OwnedWindows.OfType<MicSetupWindow>()), w => w.IsVisible);
+        Assert.Single(commands);
     }
 
     /// <summary>
@@ -158,7 +210,11 @@ internal static class MicSetupWindowTests
         eqCommands.Clear();
         MicEq before = eq.Current;
         Assert.False(model.CanUndoPreset);
-        Click(window, "MicSetupPresetWarm");
+        ToggleButton[] presets = [.. window.GetVisualDescendants().OfType<ToggleButton>().Where(b => b.Name == "MicSetupPreset")];
+        Assert.Equal(MicSetupPresets.All.Select(p => p.Name), presets.Select(b => b.Content));
+        Assert.All(presets, b => Assert.False(b.IsChecked));
+        ToggleButton warm = Preset(window, "MicSetupPresetWarm");
+        warm.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await Until(() => eqCommands.Count == 1);
         JsonNode applied = eqCommands.Single();
         Assert.Equal("setEq", applied["cmd"]!.GetValue<string>());
@@ -169,10 +225,30 @@ internal static class MicSetupWindowTests
         Assert.Equal(MicSetupPresets.Warm.Eq, eq.Current);
         Assert.Equal(Localizer.Format("MicSetupPresetApplied", MicSetupPresets.Warm.Name),
             window.FindControl<TextBlock>("MicSetupPresetStatus")!.Text);
+        // The chosen preset is lit as the step bar's chosen step is, with the
+        // same toggle and the same checked colour, and it stays lit once the
+        // daemon has reported the preset back.
+        await Until(() => warm.IsChecked == true);
+        Assert.All(presets.Where(b => b != warm), b => Assert.False(b.IsChecked));
+        ToggleButton step = window.GetVisualDescendants().OfType<ToggleButton>().Single(b => Equals(b.Content, Localizer.Text("MicSetupStepShape")));
+        Assert.True(step.IsChecked);
+        Assert.Same(step.Theme, warm.Theme);
+        // The theme paints the checked state on the template's presenter, not on the control.
+        static Avalonia.Controls.Presenters.ContentPresenter Face(ToggleButton b)
+            => b.GetVisualDescendants().OfType<Avalonia.Controls.Presenters.ContentPresenter>().First(p => p.Name == "PART_ContentPresenter");
+        window.UpdateLayout();
+        Assert.Equal(Face(step).Background, Face(warm).Background);
+        Assert.Equal(Face(step).Foreground, Face(warm).Foreground);
+        Assert.NotEqual(Face(warm).Background, Face(presets[0]).Background);
+        // Pressed again it sends nothing and stays lit.
+        warm.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.Single(eqCommands);
+        Assert.True(warm.IsChecked);
         Assert.True(window.FindControl<Button>("MicSetupUndoPreset")!.IsEffectivelyEnabled);
         window.FindControl<Button>("MicSetupUndoPreset")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await Until(() => eqCommands.Count == 2);
         Assert.Equal(before, eq.Current);
+        await Until(() => presets.All(b => b.IsChecked == false));
         Assert.Equal(before.Bands.Select(b => b.Type), eqCommands.Last()["eq"]!["bands"]!.AsArray().Select(b => b!["type"]!.GetValue<string>()));
         Assert.False(model.CanUndoPreset);
         Assert.Equal(Localizer.Text("MicSetupPresetUndone"), window.FindControl<TextBlock>("MicSetupPresetStatus")!.Text);
@@ -204,6 +280,9 @@ internal static class MicSetupWindowTests
         => window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Localizer.Text(key)) && b is not ToggleButton)
             .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
+    private static ToggleButton Preset(Window window, string key)
+        => window.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "MicSetupPreset" && Equals(b.Content, Localizer.Text(key)));
+
     private static void Step(Window window, string key)
         => window.GetVisualDescendants().OfType<ToggleButton>().Single(b => Equals(b.Content, Localizer.Text(key)))
             .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -213,6 +292,118 @@ internal static class MicSetupWindowTests
         DateTime deadline = DateTime.UtcNow.AddSeconds(5);
         while (!ready() && DateTime.UtcNow < deadline) await Task.Delay(15);
         Assert.True(ready(), "The capture Mic setup window did not settle.");
+    }
+
+    /// <summary>
+    /// Every step fits the window it opens in, in English and German, at
+    /// standard and touch sizing: nothing scrolls, nothing reaches past the
+    /// window's edges, and the window stays inside the screen. The steps
+    /// carry everything they can show at once: the picker, the unit's gain
+    /// with a gain suggestion, a session with a take and an error, the EQ,
+    /// both kinds of filter and a plugin. A size the user chose then stays
+    /// on a shorter step, and a window the user shrank grows again for the
+    /// next step.
+    /// </summary>
+    internal static void CheckFits()
+    {
+        FieldInfo culture = typeof(Localizer).GetField("_culture", BindingFlags.Static | BindingFlags.NonPublic)!;
+        object? previous = culture.GetValue(null);
+        try
+        {
+            foreach (string language in new[] { "en", "de" })
+            foreach (bool touch in new[] { false, true })
+            {
+                culture.SetValue(null, CultureInfo.GetCultureInfo(language));
+                SkinService.ApplyControlSizing(touch);
+                CheckFitsAt($"{language}-{(touch ? "touch" : "standard")}");
+            }
+        }
+        finally
+        {
+            culture.SetValue(null, previous);
+            SkinService.ApplyControlSizing(false);
+        }
+    }
+
+    private static void CheckFitsAt(string suffix)
+    {
+        var client = new DaemonClient("ws://127.0.0.1:1/ws");
+        var main = new MainViewModel(client);
+        JsonNode state = CaptureInputWindowTests.State();
+        state["mixer"]!["channels"]![0]!["eq"] = CaptureInputWindowTests.CaptureEq(enabled: true);
+        state["mixer"]!["softLowCutApplicable"] = true;
+        state["mixer"]!["softClipGuardApplicable"] = true;
+        state["capabilities"]!["gainMaxDb"] = 80;
+        state["state"] = new JsonObject { ["gainDb"] = 40, ["gainLocked"] = false };
+        CaptureInputWindowTests.Apply(main, state);
+        WindowLayoutTests.AddInsert(main.Inserts);
+        MicSetupViewModel setup = main.Inserts.MicSetup;
+        Assert.True(setup.ShowsPicker && setup.CarriesUnit && setup.HasEq && setup.HasUnitFilters && setup.HasSoftwareFilters);
+        setup.Apply(JsonNode.Parse("""{"channel":"xlr1","mode":"looping","seconds":1.5,"error":"The session could not start because the capture port went away.","take":1,"monitorLatencyMs":42}"""));
+        setup.ApplyTake(JsonNode.Parse("""{"type":"soundCheckTake","channel":"xlr1","take":1,"seconds":1.5,"peaks":[0.1,0.5,0.9,0.3]}"""));
+        // A suggestion with every line of it showing: what was measured, a clip, and the change.
+        var time = new ManualTime();
+        setup.Time = time;
+        setup.StartGainMeasure();
+        for (int i = 0; i < 100 && setup.Measuring; i++)
+        {
+            time.Advance(TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 15 + 1));
+            setup.ApplyInputLevel(new JsonArray(.5, 1, i == 0 ? 1 : 0));
+        }
+        Assert.True(setup.CanAcceptGain && setup.SuggestMeasured is not null && setup.SuggestAdvice is not null, suffix);
+        setup.ChoosePreset(setup.Presets[1]);
+
+        var window = new MicSetupWindow { DataContext = setup };
+        try
+        {
+            window.Show();
+            foreach (MicSetupStep step in Enum.GetValues<MicSetupStep>())
+            {
+                setup.Step = step;
+                WindowLayoutTests.Settle(window, $"on {step}, {suffix}");
+                AssertFits(window, $"{step}, {suffix}");
+                WindowLayoutTests.Capture(window, $"mic-setup-fit-{step.ToString().ToLowerInvariant()}-{suffix}");
+            }
+
+            // The user makes it larger: a shorter step keeps that size.
+            setup.Step = MicSetupStep.Shape;
+            WindowLayoutTests.Settle(window);
+            double width = window.ClientSize.Width + 60, height = window.ClientSize.Height + 80;
+            WindowLayoutTests.Layout(window, width, height);
+            setup.Step = MicSetupStep.Position;
+            WindowLayoutTests.Settle(window);
+            Assert.Equal((width, height), (window.ClientSize.Width, window.ClientSize.Height));
+            // The user makes it smaller: the next step grows it to its content again, at the user's width.
+            WindowLayoutTests.Layout(window, width, window.MinHeight);
+            setup.Step = MicSetupStep.Shape;
+            WindowLayoutTests.Settle(window);
+            Assert.Equal(width, window.ClientSize.Width);
+            AssertFits(window, $"Shape after a shrink, {suffix}");
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+            client.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+    }
+
+    /// <summary>The step shown needs no scrolling, and every control of it is inside the window and the window inside the screen.</summary>
+    private static void AssertFits(MicSetupWindow window, string what)
+    {
+        ScrollViewer scroll = window.FindControl<ScrollViewer>("MicSetupScroll")!;
+        Assert.True(scroll.Extent.Height <= scroll.Viewport.Height + 0.5,
+            $"{what}: the step is {scroll.Extent.Height:0.#} tall in a {scroll.Viewport.Height:0.#} view of a {window.ClientSize.Height:0.#} window.");
+        Screen screen = window.Screens.ScreenFromWindow(window)!;
+        Assert.True(window.ClientSize.Height <= screen.WorkingArea.Height / screen.Scaling + 0.5, $"{what}: {window.ClientSize} past the screen.");
+        foreach (Control control in window.GetVisualDescendants().OfType<Control>()
+                     .Where(c => c.IsEffectivelyVisible && c.Bounds.Width > 0 && c.Name?.StartsWith("MicSetup", StringComparison.Ordinal) == true))
+        {
+            WindowLayoutTests.AssertInside(control, window);
+            double bottom = control.TranslatePoint(new Point(0, control.Bounds.Height), window)!.Value.Y;
+            Assert.True(bottom <= window.ClientSize.Height + 0.5,
+                $"{what}: {WindowLayoutTests.Describe(control)} ends at y={bottom:0.#}, below the {window.ClientSize.Height:0.#} window.");
+        }
     }
 
     // Use the existing layout test's real X11 application and dispatcher.

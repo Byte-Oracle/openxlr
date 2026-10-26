@@ -1281,6 +1281,37 @@ public sealed partial class MainViewModel : ViewModelBase
 
     private MicSetupViewModel? MicSetupOf(string channel) => MicSetups().FirstOrDefault(c => c.Channel == channel);
 
+    /// <summary>The microphones Mic setup can test now, for the window's picker and the mixer header's button.</summary>
+    public MicSetupInputs MicSetupInputs { get; } = new();
+
+    /// <summary>
+    /// List the microphones in the mixer, in its order: a channel the device
+    /// has and the daemon calls a microphone, with a Mic setup of its own.
+    /// That is XLR 1, XLR 2 on a device with two inputs, and every mono
+    /// capture input, an additional interface's among them.
+    /// </summary>
+    private void RefreshMicSetupInputs(IEnumerable<ChannelViewModel> channels)
+    {
+        List<MicSetupInput> inputs = [];
+        foreach (ChannelViewModel channel in channels)
+        {
+            if (!channel.Present || !channel.Microphone) continue;
+            MicSetupViewModel? setup = channel.Id switch
+            {
+                "xlr1" => Inserts.MicSetup,
+                "xlr2" => Inserts2.MicSetup,
+                _ => channel.Inserts is { CanMicSetup: true } chain ? chain.MicSetup : null,
+            };
+            if (setup is not null) inputs.Add(new MicSetupInput(channel.Name, setup));
+        }
+        bool changed = MicSetupInputs.Update(inputs);
+        foreach (MicSetupViewModel setup in MicSetups())
+        {
+            setup.Inputs = MicSetupInputs;
+            if (changed) setup.RaiseInputs();
+        }
+    }
+
     /// <summary>Applications currently playing, with the channel each landed in.</summary>
     public ObservableCollection<AppStreamViewModel> Apps { get; } = [];
 

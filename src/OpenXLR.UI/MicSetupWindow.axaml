@@ -4,13 +4,15 @@
         xmlns:vm="using:OpenXLR.UI"
         xmlns:skin="using:OpenXLR.UI.Skinning"
         x:Class="OpenXLR.UI.MicSetupWindow" x:DataType="vm:MicSetupViewModel"
-        Title="{loc:Text Key=MicSetup}" Width="640" Height="640" MinWidth="420" MinHeight="400"
+        Title="{loc:Text Key=MicSetup}" Width="640" SizeToContent="Height" MinWidth="420" MinHeight="400"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource Ox.Window.Background}">
   <!-- Mic setup for one microphone, one step at a time: where the microphone
        goes, the level before any processing, a take heard raw and processed,
        then the EQ, filters, plugins and presets that shape it. Every colour,
        size and radius is an Ox.* token or a control theme; the waveform and
-       the embedded EQ graph draw with the EQ editor's colours. -->
+       the embedded EQ graph draw with the EQ editor's colours. The window
+       sizes itself to the step shown, up to the screen's height; see the
+       code behind. -->
   <DockPanel Margin="16">
     <TextBlock DockPanel.Dock="Top" Text="{loc:Text Key=MicSetup}" Classes="title" Margin="0,0,0,8"/>
 
@@ -38,10 +40,23 @@
       </Grid>
     </StackPanel>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-      <Panel Margin="0,0,16,0">
+    <ScrollViewer Name="MicSetupScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <Panel Name="MicSetupContent" Margin="0,0,16,0">
         <!-- Position: tips for the unit the microphone is on, and its phantom power -->
         <StackPanel Name="MicSetupPosition" Spacing="12" IsVisible="{Binding ShowsPosition}">
+          <!-- the microphone to set up, while the mixer has more than one: a change moves the whole window to it -->
+          <Grid Name="MicSetupPicker" ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding ShowsPicker}">
+            <TextBlock Text="{loc:Text Key=MicSetupMicrophone}" Classes="h" VerticalAlignment="Center"/>
+            <ComboBox Grid.Column="1" Name="MicSetupInput" ItemsSource="{Binding Inputs.Items, FallbackValue={x:Null}}"
+                      SelectedItem="{Binding Picked, Mode=OneWay}" SelectionChanged="OnPickInput" HorizontalAlignment="Stretch"
+                      AutomationProperties.Name="{loc:Text Key=MicSetupMicrophoneName}" ToolTip.Tip="{loc:Text Key=MicSetupMicrophoneTip}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MicSetupInput">
+                  <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
           <TextBlock Name="MicSetupPositionIntro" Text="{Binding PositionIntro}" Classes="body" TextWrapping="Wrap"/>
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
@@ -199,7 +214,8 @@
         <StackPanel Name="MicSetupShape" Spacing="12" IsVisible="{Binding ShowsShape}">
           <TextBlock Text="{loc:Text Key=MicSetupShapeHint}" Classes="hint" TextWrapping="Wrap"/>
 
-          <!-- starting presets: each one is one EQ change, and the last can be undone -->
+          <!-- starting presets: each one is one EQ change, and the last can be undone;
+               the one the EQ holds is lit, as a chosen toggle is everywhere -->
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
               <TextBlock Text="{loc:Text Key=MicSetupPresets}" Classes="h"/>
@@ -208,9 +224,10 @@
                   <ItemsPanelTemplate><WrapPanel ItemSpacing="6" LineSpacing="4"/></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:MicSetupPreset">
-                    <Button Content="{Binding Name}" Click="OnPreset" Padding="14,5" ToolTip.Tip="{Binding Hint}"
-                            AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding Hint}"/>
+                  <DataTemplate x:DataType="vm:MicSetupPresetItem">
+                    <ToggleButton Name="MicSetupPreset" Content="{Binding Name}" IsChecked="{Binding IsActive, Mode=OneWay}" Click="OnPreset"
+                                  Padding="14,5" ToolTip.Tip="{Binding Hint}"
+                                  AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding Hint}"/>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

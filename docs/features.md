@@ -567,7 +567,12 @@ See [effect presets](effect-presets.md) and the
 [manual](manual.md#effect-presets).
 
 Mic setup, on XLR 1, XLR 2 and mono capture inputs, is a window in four
-steps, free to take in any order. **Position** gives placement tips for
+steps, free to take in any order. It opens from the SUBMIXER header on the
+primary microphone or from a chain window on that input, and a
+**Microphone** picker moves it between every microphone the mixer can set
+up, an additional interface's included, stopping a session on the one it
+leaves. The window sizes itself to the step it shows, up to the screen's
+height. **Position** gives placement tips for
 the kind of unit the microphone is on (a Wave:3's or Wave:1's capsule, an
 XLR jack, or a device OpenXLR does not drive) and the unit's phantom power
 switch where it has one. **Level** shows the microphone before any processing on a large
@@ -589,7 +594,8 @@ how much latency that adds. **Shape** holds the microphone EQ's graph,
 edited in place, the unit's and XLR 1's software low cut and ClipGuard, the
 insert chain with bypass, editor and add effect, and three starting
 presets of OpenXLR's own (Clear, Warm and Broadcast), each applied as one
-EQ change with a one-step undo, all heard live while the take loops. On
+EQ change with a one-step undo and lit while the EQ holds it, all heard
+live while the take loops. On
 the Wave XLR Pro the session turns the zero-latency
 path off, since it cannot carry effects. The take stays in the native
 helper's memory and is discarded on stop; a session ends by itself on a

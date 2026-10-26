@@ -2985,4 +2985,16 @@ Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Inst
   <data name="MicSetup" xml:space="preserve">
     <value>Configurazione microfono</value>
   </data>
+  <data name="MicSetupButtonTip" xml:space="preserve">
+    <value>Configura un microfono passo per passo: dove metterlo, il livello, una ripresa ascoltata grezza ed elaborata, l'EQ e i plugin. Si apre su XLR 1 o sul primo microfono del mixer.</value>
+  </data>
+  <data name="MicSetupMicrophone" xml:space="preserve">
+    <value>Microfono</value>
+  </data>
+  <data name="MicSetupMicrophoneName" xml:space="preserve">
+    <value>Microfono da configurare</value>
+  </data>
+  <data name="MicSetupMicrophoneTip" xml:space="preserve">
+    <value>Scegli il microfono da configurare. Una ripresa o l'ascolto di te stesso in corso sul microfono mostrato si ferma prima.</value>
+  </data>
 </root>
