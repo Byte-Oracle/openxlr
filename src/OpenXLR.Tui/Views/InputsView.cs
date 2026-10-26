@@ -144,7 +144,9 @@ internal sealed class InputsView : View
         // The Wave XLR Pro's analog Line In, an input of its own beside USB Aux.
         if (state.Can("lineInput"))
         {
-            int lineMax = state.Count("gainMaxDb") is int max and > 0 ? max : 80;
+            // The highest gain the daemon writes; one from before the cap held it to the unit's gain range.
+            int lineMax = state.Count("lineInGainMaxDb") is int max and > 0 ? max
+                : state.Count("gainMaxDb") is int gainMax and > 0 ? gainMax : 80;
             rows.Add(new HeadingRow("Line In"));
             rows.Add(new NumberRow("Gain", state.Number("lineInGainDb"), 0, lineMax, 1,
                 value => $"{value:0} dB", value => Set(link, "lineInGain", (int)Math.Round(value))) { FineStep = 1 });

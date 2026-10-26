@@ -1552,6 +1552,31 @@ public sealed class TuiViewTests
     }
 
     [Fact]
+    public void TheLineInGainStopsAtTheCapTheDaemonReports()
+    {
+        // A unit set to 52 dB elsewhere shows its own gain; a step either way
+        // writes the cap, the highest gain the daemon writes.
+        DaemonLink link = new();
+        List<string> sent = [];
+        link.Sent += json => sent.Add(json);
+        link.Receive(StateJson.Replace("\"auxInput\": true,", "\"auxInput\": true, \"lineInput\": true, \"lineInGainMaxDb\": 40,", StringComparison.Ordinal)
+            .Replace("\"auxLevelLock\": false,", "\"auxLevelLock\": false, \"lineInGainDb\": 52,", StringComparison.Ordinal));
+        App app = new(link, Theme.Material);
+        app.ShowTab(2);
+        Screen screen = new(150, 42);
+        for (int i = 0; i < 60; i++) app.Handle(new KeyPress(Key.Down));
+        app.Draw(screen);
+        Assert.Contains("52 dB", Frame(screen), StringComparison.Ordinal);
+        app.Handle(new KeyPress(Key.Char, '+'));
+        JsonElement command = Command(sent);
+        Assert.Equal("lineInGain", Text(command, "control"));
+        Assert.Equal(40, command.GetProperty("value").GetInt32());
+        sent.Clear();
+        app.Handle(new KeyPress(Key.End));
+        Assert.Equal(40, Command(sent).GetProperty("value").GetInt32());
+    }
+
+    [Fact]
     public void ACaptureInputsOwnGainIsARowOnTheHardwareTab()
     {
         // A webcam on a stereo pair with a hardware capture control, and a USB
