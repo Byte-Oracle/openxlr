@@ -152,6 +152,11 @@ the session manager publishes the new link. Check both the tracked channel
 and the real stream destination instead of assuming they change together.
 The capture, output-route and key-control audio tests enable the registry
 subscription so they exercise the daemon's normal discovery path.
+The ducking fixture also sweeps monitor routes while awaiting its initial
+audio: a selected output may appear in the registry after selection. Later
+recovery checks run only the sweeps their assertions explicitly request.
+Run the general suite and private audio suite separately when they share a
+build output: environment-policy fixtures temporarily replace its native helper.
 
 The window layout test runs in its own process using X11 and isolated
 configuration, runtime and session-bus settings. It checks narrow plugin

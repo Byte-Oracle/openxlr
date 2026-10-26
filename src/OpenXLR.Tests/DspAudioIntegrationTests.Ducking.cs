@@ -110,6 +110,13 @@ public sealed partial class DspAudioIntegrationTests
     }
 
     [DspPipeWireFact]
+    public void ADuckAudioOutputDiscoveredAfterSelectionGetsItsInitialMonitorRoute()
+    {
+        using var f = new DuckAudio(outputAppearsLate: true);
+        f.Level("monitor", .15);
+    }
+
+    [DspPipeWireFact]
     public void ADeadDuckStageBypassesOnOneSweepAndRestartsWithoutTouchingOtherMixes()
     {
         using var f = new DuckAudio();
@@ -356,7 +363,7 @@ public sealed partial class DspAudioIntegrationTests
         private readonly Task<ProcessResult>? _signal;
         private readonly uint? _sourceModule;
 
-        public DuckAudio(bool probes = true)
+        public DuckAudio(bool probes = true, bool outputAppearsLate = false)
         {
             Pw = new(() => Interlocked.Increment(ref _helpers));
             Mixer = new(Pw);
@@ -364,7 +371,7 @@ public sealed partial class DspAudioIntegrationTests
             {
                 Assert.True(NativePluginHost.HostInstalled, "Build with -p:EnableNativeLv2Host=true.");
                 _registry = Pw.WatchGraph();
-                _outputs.CreateNullSink(Output, "Duck test output");
+                if (!outputAppearsLate) _outputs.CreateNullSink(Output, "Duck test output");
                 ProcessResult source = ProcessRunner.Run("pactl", ["load-module", "module-null-sink", "sink_name=" + Source,
                     "channels=6", "channel_map=aux0,aux1,aux2,aux3,aux4,aux5",
                     "sink_properties=\"node.description='Duck test source' node.suspend-on-idle=false\""]);
@@ -375,6 +382,7 @@ public sealed partial class DspAudioIntegrationTests
                 Assert.Empty(DuckNodes("OpenXLR_duck_"));
                 Assert.DoesNotContain(Pw.OwnSinkLevels(), s => s.Name.EndsWith(".duck", StringComparison.Ordinal));
                 Mixer.SetMonitorOutputs([Output]);
+                if (outputAppearsLate) _outputs.CreateNullSink(Output, "Duck test output");
                 LinkSignals();
                 Signal(.5, .1, .05);
                 _signal = ProcessRunner.RunAsync("python3", ["-c", """
@@ -411,7 +419,7 @@ public sealed partial class DspAudioIntegrationTests
                         for capture in files: capture.close()
                     """, _dir, probes ? "1" : "0"], TimeSpan.FromSeconds(180), cancel: _stop.Token);
                 Legs(null);   // every send on its fader before the first reading, as the daemon's sweep does
-                Level("monitor", .15);
+                Level("monitor", .15, maintainMonitorRoute: true);
             }
             catch { Dispose(); throw; }
         }
@@ -448,11 +456,15 @@ public sealed partial class DspAudioIntegrationTests
             return samples;
         }
 
-        public void Level(string name, double left, double? right = null, TimeSpan? timeout = null)
+        public void Level(string name, double left, double? right = null, TimeSpan? timeout = null, bool maintainMonitorRoute = false)
         {
             double last = double.NaN;
             bool matched = SpinWait.SpinUntil(() =>
             {
+                // The registry may publish the selected output after its
+                // selection. Bootstrap runs the daemon's monitor sweep; later
+                // recovery checks retain control over their explicit sweeps.
+                if (maintainMonitorRoute) Mixer.EnsureMonitorRoutes();
                 Assert.False(_signal?.IsCompleted == true, _signal?.IsCompleted == true ? _signal.Result.Stderr : "");
                 long frames = Frames(name);
                 if (frames < 512) return false;
