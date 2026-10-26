@@ -238,7 +238,7 @@ internal static class MicCheckWindowTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() is "auth" or "watchInputMeter") continue;
+                if (command["cmd"]!.GetValue<string>() == "watchInputMeter") continue;
                 Assert.Equal("stop", command["action"]!.GetValue<string>());
                 received.TrySetResult();
                 await release.Task.WaitAsync(stop);

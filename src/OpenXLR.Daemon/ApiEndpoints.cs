@@ -9,13 +9,6 @@ namespace OpenXLR.Daemon;
 internal static class ApiEndpoints
 {
     internal const int MaxCommandBytes = 64 * 1024;
-    internal static bool Authorized(HttpRequest request, string? secret)
-        => request.Headers.Authorization.Count == 1 &&
-           AuthenticationHeaderValue.TryParse(request.Headers.Authorization, out var header) &&
-           header.Scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase) &&
-           header.Parameter is { Length: 64 } token &&
-           ApiToken.Matches(secret, JsonSerializer.SerializeToUtf8Bytes(new { cmd = "auth", token }));
-
     internal static bool IsJson(string? contentType)
         => MediaTypeHeaderValue.TryParse(contentType, out var value) &&
            value.MediaType?.Equals("application/json", StringComparison.OrdinalIgnoreCase) == true &&
@@ -45,15 +38,10 @@ internal static class ApiEndpoints
         return select(mixer) is { } value ? Results.Json(value) : Results.NotFound();
     }
 
-    /// <summary>
-    /// The token is read per request: the daemon publishes it only once the
-    /// port is bound (see ApiToken), which is after these endpoints are
-    /// mapped, and a restart rotates it.
-    /// </summary>
     internal static void Map(WebApplication app)
     {
         // Bind access control to the resolved endpoints, not a request-path
-        // exception. Events use first-frame authentication in WebSocketHub.
+        // exception. Identity comes from the Unix connection, including events.
         // One budget covers every authenticated request, reads included.
         var budget = new CommandBudget();
         // One command at a time, shared by the command-backed reads.
@@ -64,9 +52,8 @@ internal static class ApiEndpoints
             context.Response.Headers.CacheControl = "no-store";
             if (!LoopbackOrigin.IsAllowed(context.Request.Headers.Origin))
                 return Results.StatusCode(403);
-            if (!Authorized(context.Request, ApiToken.Current))
+            if (!ControlApi.Authorized(context))
             {
-                context.Response.Headers.WWWAuthenticate = "Bearer";
                 return Results.StatusCode(401);
             }
             lock (budget) if (!budget.TryTake()) return Results.StatusCode(429);
@@ -145,6 +132,7 @@ internal static class ApiEndpoints
             context.Response.Headers.CacheControl = "no-store";
             if (!LoopbackOrigin.IsAllowed(context.Request.Headers.Origin))
             { context.Response.StatusCode = 403; return; }
+            if (!ControlApi.Authorized(context)) { context.Response.StatusCode = 403; return; }
             if (!context.WebSockets.IsWebSocketRequest) { context.Response.StatusCode = 400; return; }
             using var socket = await context.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
             {

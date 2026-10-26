@@ -204,7 +204,6 @@ internal sealed class PluginWineTraceFixture : IAsyncDisposable
         {
             var command = await SocketTestServer.Receive(socket, stop);
             string cmd = command["cmd"]!.GetValue<string>();
-            if (cmd == "auth") continue;
             if (cmd == "listPlugins")
             {
                 // Collecting evidence must not scan the user's installed plugins.

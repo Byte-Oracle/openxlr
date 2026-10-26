@@ -22,7 +22,9 @@ public sealed partial class MonitorVolumeIntegrationTests
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        string socketPath = Path.Combine(Path.GetTempPath(), "ox-http-" + Guid.NewGuid().ToString("N"), "control.sock");
+        using var listener = ControlSocketListener.Bind(socketPath);
+        ControlApi.Configure(builder, listener);
         builder.Services.AddSingleton<DeviceManager>();
         builder.Services.AddSingleton<MixerService>();
         builder.Services.AddSingleton<WebSocketHub>();
@@ -35,17 +37,11 @@ public sealed partial class MonitorVolumeIntegrationTests
             Channels = [new("software", "Software"), new("other", "Other")],
             Mixes = [new("monitor", "Monitor A", MixKind.Monitor), new("monitor2", "Monitor B", MixKind.Monitor)],
         });
-        ApiToken.Initialize();
         ApiEndpoints.Map(app);
         await app.StartAsync();
         try
         {
-            using var http = new HttpClient
-            {
-                BaseAddress = new Uri(app.Services.GetRequiredService<IServer>().Features
-                    .Get<IServerAddressesFeature>()!.Addresses.Single()),
-            };
-            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiToken.Current);
+            using var http = new HttpClient(ControlConnection.HttpHandler(listener.Path)) { BaseAddress = new Uri("http://localhost") };
 
             var channels = (await Read("channels")).AsArray();
             Assert.Equal(["software", "other"], channels.Select(c => c!["id"]!.GetValue<string>()));

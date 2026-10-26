@@ -197,6 +197,15 @@
   <data name="BuyMeACoffee" xml:space="preserve">
     <value>Offrimi un caffè</value>
   </data>
+  <data name="OlderDaemonCannotConnectNote" xml:space="preserve">
+    <value>È ancora in esecuzione un demone di prima dell'aggiornamento e questa interfaccia (v{0}) non può connettersi. Riavvia il demone per connetterti.</value>
+  </data>
+  <data name="OlderDaemonRunning" xml:space="preserve">
+    <value>Demone precedente in esecuzione</value>
+  </data>
+  <data name="OlderDaemonRunningSentence" xml:space="preserve">
+    <value>È ancora in esecuzione un demone di prima dell'aggiornamento.</value>
+  </data>
   <data name="SupportMeOnKoFi" xml:space="preserve">
     <value>Supportami su Ko-fi</value>
   </data>

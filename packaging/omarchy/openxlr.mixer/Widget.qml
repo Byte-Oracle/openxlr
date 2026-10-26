@@ -212,7 +212,7 @@ Item {
                     // Assigning ready wakes this binding before the snapshot
                     // assignment on the next line has landed, so there is a
                     // moment where ready is true and the snapshot is still null.
-                    text: !daemon.ready ? "Daemon offline. Waiting for the local session token and socket." : daemon.error || (daemon.snapshot && daemon.snapshot.warning) || (root.feeds.length ? root.feeds.map(function (feed) {
+                    text: !daemon.ready ? daemon.offline || "Daemon offline. Waiting for the local control socket." : daemon.error || (daemon.snapshot && daemon.snapshot.warning) || (root.feeds.length ? root.feeds.map(function (feed) {
                             return Mixer.outputName(daemon.snapshot, feed.output) + ": " + feed.name;
                         }).join("; ") : "No monitor output selected")
                     textFormat: Text.PlainText

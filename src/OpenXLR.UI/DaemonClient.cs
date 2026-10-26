@@ -20,7 +20,7 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    private readonly Uri _uri;
+    private readonly Uri? _uri;
     private readonly CancellationTokenSource _cts = new();
     private ClientWebSocket? _socket;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
@@ -47,7 +47,32 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
         public int Callers;
     }
 
-    public DaemonClient(string url = "ws://127.0.0.1:37890/ws") => _uri = new Uri(url);
+    private readonly Func<CancellationToken, Task<DaemonPresence>>? _probe;
+
+    public DaemonClient(string? url = null) : this(url, null) { }
+
+    /// <summary>
+    /// A client of an explicit endpoint looks for no daemon of its own unless
+    /// a probe is supplied; the default client probes this user's daemon.
+    /// </summary>
+    internal DaemonClient(string? url, Func<CancellationToken, Task<DaemonPresence>>? probe)
+    {
+        _uri = url is null ? null : new Uri(url);
+        _probe = probe ?? (url is null ? token => DaemonProbe.ProbeAsync(cancel: token) : null);
+    }
+
+    private volatile int _presence = (int)DaemonPresence.NotRunning;
+
+    /// <summary>What the last connection attempt found; Reachable while connected.</summary>
+    internal DaemonPresence Presence => (DaemonPresence)_presence;
+
+    /// <summary>Raised when <see cref="Presence"/> changes (on a background thread).</summary>
+    internal event Action<DaemonPresence>? PresenceChanged;
+
+    private void SetPresence(DaemonPresence presence)
+    {
+        if (Interlocked.Exchange(ref _presence, (int)presence) != (int)presence) PresenceChanged?.Invoke(presence);
+    }
 
     /// <summary>Raised on every state push (already on a background thread).</summary>
     public event Action<JsonNode>? StateReceived;
@@ -265,21 +290,19 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
     {
         while (!_cts.IsCancellationRequested)
         {
+            bool reached = false;
             try
             {
-                var socket = new ClientWebSocket();
+                using var link = new ControlConnection(_uri);
+                var socket = link.Socket;
                 _socket = socket;
                 socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
                 socket.Options.KeepAliveTimeout = TimeSpan.FromSeconds(10);
                 using var connect = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
                 connect.CancelAfter(TimeSpan.FromSeconds(5));
-                await socket.ConnectAsync(_uri, connect.Token);
-                // First message: the token the daemon wrote for this session
-                // (read fresh at every connect, since each daemon start makes
-                // a new one). Without it the daemon sends nothing.
-                string auth = JsonSerializer.Serialize(new Dictionary<string, object>
-                    { ["cmd"] = "auth", ["token"] = OpenXlrPaths.ReadToken() ?? "" });
-                await socket.SendAsync(Encoding.UTF8.GetBytes(auth), WebSocketMessageType.Text, true, connect.Token);
+                await link.ConnectAsync(connect.Token);
+                reached = true;
+                SetPresence(DaemonPresence.Reachable);
                 // Do not attribute the previous daemon's cached state to this
                 // connection while waiting for its first state message.
                 _lastState = new(null, null, true);
@@ -310,6 +333,14 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
                     _edits.Clear();
                 }
                 ConnectionChanged?.Invoke(false);
+            }
+            // Only a failed connect says something about the daemon; a dropped
+            // connection is retried first, and the next failure is probed.
+            if (!reached && _probe is not null)
+            {
+                try { SetPresence(await _probe(_cts.Token)); }
+                catch (OperationCanceledException) when (_cts.IsCancellationRequested) { return; }
+                catch (Exception) { /* unknown: keep the last answer */ }
             }
             try { await Task.Delay(1000, _cts.Token); }
             catch (OperationCanceledException) { return; }

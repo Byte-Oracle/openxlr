@@ -234,7 +234,7 @@ The host accepts only tab registration, channel assignment and the browser
 output preference. Towards the browser it passes the daemon's state and
 OpenXLR's requests to activate a tab, each for a tab id and origin the
 companion itself registered. It authenticates using the existing local daemon client
-and does not expose the API token or unrelated daemon state to the browser.
+and does not expose unrelated daemon state to the browser.
 Web pages cannot call this host through the extension.
 
 To remove the companion, stop its active tabs, remove it in the browser's
