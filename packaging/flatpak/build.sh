@@ -14,6 +14,8 @@ for project in OpenXLR.UI OpenXLR.Daemon OpenXLR.Tui; do
     dotnet publish "src/$project/$project.csproj" -c Release -r linux-x64 \
         --no-self-contained --no-restore -warnaserror -p:RuntimeFrameworkVersion="$runtime" -p:TargetLatestRuntimePatch=false -p:EnableNativeLv2Host=true -o "/app/lib/openxlr/$folder"
 done
+chmod 755 /app/lib/openxlr/daemon/openxlr-control
+ln -s ../lib/openxlr/daemon/openxlr-control /app/bin/openxlr-control
 install -Dm755 packaging/flatpak/openxlr /app/bin/openxlr
 install -Dm644 packaging/flatpak/io.github.emaspa.openxlr.metainfo.xml /app/share/metainfo/io.github.emaspa.openxlr.metainfo.xml
 install -Dm644 packaging/openxlr.desktop /app/share/applications/io.github.emaspa.openxlr.desktop

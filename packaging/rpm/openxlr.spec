@@ -92,14 +92,16 @@ install -dm755 %{buildroot}%{_prefix}/lib/openxlr
 cp -r out/daemon %{buildroot}%{_prefix}/lib/openxlr/daemon
 cp -r out/ui %{buildroot}%{_prefix}/lib/openxlr/ui
 cp -r out/tui %{buildroot}%{_prefix}/lib/openxlr/tui
-# dotnet publish marks assemblies executable; only the apphosts are.
+# Assemblies are data; apphosts and the control launcher are executable.
 find %{buildroot}%{_prefix}/lib/openxlr -type f -exec chmod 644 {} +
 chmod 755 %{buildroot}%{_prefix}/lib/openxlr/daemon/OpenXLR.Daemon \
+    %{buildroot}%{_prefix}/lib/openxlr/daemon/openxlr-control \
     %{buildroot}%{_prefix}/lib/openxlr/daemon/openxlr-lv2-host \
     %{buildroot}%{_prefix}/lib/openxlr/ui/OpenXLR.UI \
     %{buildroot}%{_prefix}/lib/openxlr/tui/openxlr-tui
 
 install -dm755 %{buildroot}%{_bindir}
+ln -s ../lib/openxlr/daemon/openxlr-control %{buildroot}%{_bindir}/openxlr-control
 printf '#!/bin/sh\nexec %{_prefix}/lib/openxlr/daemon/OpenXLR.Daemon "$@"\n' \
     > %{buildroot}%{_bindir}/openxlr-daemon
 printf '#!/bin/sh\nexec %{_prefix}/lib/openxlr/ui/OpenXLR.UI "$@"\n' \
@@ -172,6 +174,7 @@ MSG
 %{_prefix}/lib/openxlr/
 %{_bindir}/openxlr
 %{_bindir}/openxlr-daemon
+%{_bindir}/openxlr-control
 %{_bindir}/openxlr-tui
 %config(noreplace) %{_sysconfdir}/chromium/native-messaging-hosts/com.emaspa.openxlr.browser.json
 %config(noreplace) %{_sysconfdir}/opt/chrome/native-messaging-hosts/com.emaspa.openxlr.browser.json

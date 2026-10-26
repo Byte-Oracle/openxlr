@@ -43,25 +43,41 @@ internal static class RegularFile
     internal static void Require(string path)
     {
         if (!OperatingSystem.IsLinux()) return;
-        const uint type = 1; // STATX_TYPE
+        LinuxFileStatus status = Inspect(path) ?? throw new IOException($"Could not inspect the regular file {path}: file not found.");
+        if ((status.Mask & 1) == 0 || (status.Mode & 0xf000) != 0x8000)
+            throw new IOException($"{path} is not a regular file.");
+    }
+
+    /// <summary>Linux's fixed metadata layout, also used to own a control socket without following links.</summary>
+    internal static LinuxFileStatus? Inspect(string path, bool noFollow = false)
+    {
+        const uint fields = 1 | 2 | 8 | 256; // type, mode, uid, inode
         LinuxFileStatus status;
         try
         {
-            if (Statx(-100, path, 0, type, out status) != 0)
-                throw new IOException($"Could not inspect the regular file {path}: {new Win32Exception(Marshal.GetLastPInvokeError()).Message}");
+            if (Statx(-100, path, noFollow ? 0x100 : 0, fields, out status) != 0)
+            {
+                int error = Marshal.GetLastPInvokeError();
+                if (error == 2) return null;
+                throw new IOException($"Could not inspect {path}: {new Win32Exception(error).Message}");
+            }
         }
         catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException)
         { throw new IOException($"Could not inspect the regular file {path}: statx is unavailable.", ex); }
-        if ((status.Mask & type) == 0 || (status.Mode & 0xf000) != 0x8000)
-            throw new IOException($"{path} is not a regular file.");
+        if ((status.Mask & fields) != fields) throw new IOException($"Incomplete metadata for {path}.");
+        return status;
     }
 
     // Linux's fixed statx UAPI layout is the same on every supported architecture.
     [StructLayout(LayoutKind.Explicit, Size = 256)]
-    private struct LinuxFileStatus
+    internal struct LinuxFileStatus
     {
         [FieldOffset(0)] public uint Mask;
+        [FieldOffset(20)] public uint User;
         [FieldOffset(28)] public ushort Mode;
+        [FieldOffset(32)] public ulong Inode;
+        [FieldOffset(136)] public uint DeviceMajor;
+        [FieldOffset(140)] public uint DeviceMinor;
     }
 
     [DllImport("libc", EntryPoint = "statx", SetLastError = true)]

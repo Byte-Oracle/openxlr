@@ -102,7 +102,7 @@ routes no audio and is not part of CI.
 The optional Chromium acceptance run needs Playwright and Chrome for Testing
 151 or newer. Set `OPENXLR_PLAYWRIGHT_MODULE` to its `playwright/index.mjs`
 and `OPENXLR_TEST_CHROMIUM` to the Chrome executable, then run in a container
-without sound, USB or hidraw devices and with port 37890 free:
+without sound, USB or hidraw devices and with a private runtime directory:
 
 ```sh
 python3 tools/test-monitor-volume.py --command node browser/tests/chromium-integration.mjs
@@ -152,6 +152,11 @@ the session manager publishes the new link. Check both the tracked channel
 and the real stream destination instead of assuming they change together.
 The capture, output-route and key-control audio tests enable the registry
 subscription so they exercise the daemon's normal discovery path.
+The ducking fixture also sweeps monitor routes while awaiting its initial
+audio: a selected output may appear in the registry after selection. Later
+recovery checks run only the sweeps their assertions explicitly request.
+Run the general suite and private audio suite separately when they share a
+build output: environment-policy fixtures temporarily replace its native helper.
 
 The window layout test runs in its own process using X11 and isolated
 configuration, runtime and session-bus settings. It checks narrow plugin

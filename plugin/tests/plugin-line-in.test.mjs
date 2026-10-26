@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {controlFixture} from "./control-fixture.mjs";
 
 // The Wave XLR Pro's Line In: a dial turns its gain, which is the unit's own
 // control, presses mute the channel in every mix since the input has no
@@ -28,10 +29,11 @@ test("the Line In dial turns the Pro's Line In gain and mutes its channel", asyn
   }
   globalThis.WebSocket = Socket;
   const svg = (uri) => Buffer.from(uri.split(",")[1], "base64").toString();
+  const control = controlFixture();
   try {
     await import("../com.emaspa.openxlr.sdPlugin/plugin.mjs");
-    const daemon = sockets.find(socket => socket.url.includes(":37890/"));
-    const host = sockets.find(socket => socket !== daemon);
+    const daemon = control.children[0];
+    const host = sockets[0];
     daemon.onopen();
     const state = {type:"state", connected:true, profiles:[],
       capabilities:{gain:true, mute:true, auxInput:true, lineInput:true, xlrInputs:2, gainMaxDb:80},
@@ -100,6 +102,7 @@ test("the Line In dial turns the Pro's Line In gain and mutes its channel", asyn
     host.receive({event:"keyDown",context:"line-lock"});
     assert.equal(daemon.messages.length, sent);
   } finally {
+    control.restore();
     for (const interval of intervals) clearInterval(interval);
     globalThis.setInterval = previousInterval;
     globalThis.WebSocket = previous;

@@ -1,3 +1,4 @@
+import {controlFixture} from "./control-fixture.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -22,10 +23,11 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     receive(message) { this.onmessage({data: JSON.stringify(message)}); }
   }
   globalThis.WebSocket = Socket;
+  const control = controlFixture();
   try {
     await import("../com.emaspa.openxlr.sdPlugin/plugin.mjs");
-    const daemon = sockets.find(socket => socket.url.includes(":37890/"));
-    const host = sockets.find(socket => socket !== daemon);
+    const daemon = control.children[0];
+    const host = sockets[0];
     daemon.onopen();
     const state = {type:"state", profiles:[], devices:[{kind:0,name:"qa-output",description:"QA speakers"}], mixer:{
       channels:[{id:"system",name:"Desktop",levels:{monitor:1,monitor2:1}}],
@@ -95,6 +97,16 @@ test("plugin publishes layout updates and keeps monitor feed commands intact", a
     state.mixer.channels[0].name = "Another name";
     daemon.receive(state);
     assert.equal(host.messages.filter(m => m.event === "sendToPropertyInspector").length, count);
+    // Reopened, the inspector shows the new name; going back to the name it
+    // last saw while closed must still reach it.
+    host.receive({event:"sendToPlugin",context:"qa",payload:{request:"layout"}});
+    const qaLabels = () => host.messages.filter(m => m.event === "sendToPropertyInspector" && m.context === "qa").at(-1)
+      .payload.levelGroups.flatMap(g => g.items).map(item => item.label);
+    assert.ok(qaLabels().some(label => label.startsWith("Another name")));
+    state.mixer.channels[0].name = "Renamed Desktop";
+    daemon.receive(state);
+    assert.ok(qaLabels().some(label => label.startsWith("Renamed Desktop")));
+    host.receive({event:"propertyInspectorDidDisappear",context:"qa"});
 
     for (const [target, expected] of [
       ["outputup:", {cmd:"adjustOutputVolume",device:null,value:.05}],

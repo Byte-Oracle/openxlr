@@ -10,8 +10,11 @@ command before running it, particularly if a file was edited on purpose.
 The daemon check compares the installed daemon assembly's build identity
 with the running daemon's authenticated state. It detects an old daemon
 left running after an upgrade even when both builds have the same version.
-A stopped, unreachable or older daemon is reported as unverified, with
-`systemctl --user restart openxlr-daemon.service` as the repair. An absent
+Doctor names a daemon from before the control socket, still running after
+an upgrade, and gives `systemctl --user restart openxlr-daemon.service` as
+the repair. A daemon that is not running gets
+`systemctl --user start openxlr-daemon.service`. Any other unreachable
+daemon is reported as unverified, with the restart as the repair. An absent
 receipt is reported as unknown ownership, not as a healthy installation.
 
 ```sh
@@ -51,7 +54,7 @@ pipewire-pulse drop-in, desktop entry, binaries, plugin host and other
 payload files. NixOS generates its user unit outside the package output;
 that declarative configuration belongs to NixOS, not to the package's
 receipt. Profiles, mixer settings, plugins installed separately by the
-user, runtime tokens and caches are user data, not installation payload.
+user, runtime sockets and caches are user data, not installation payload.
 
 Nix receipts use the read-only permissions the store applies when a build
 finishes. Package discovery follows profile links to the actual receipt,

@@ -37,7 +37,6 @@ internal static class EditorRulesReconnectWindowTests
             {
                 var command = await SocketTestServer.Receive(socket, stop);
                 string cmd = command["cmd"]!.GetValue<string>();
-                if (cmd == "auth") continue;
                 if (cmd == "getNativeEditorRules")
                 {
                     int request = Interlocked.Increment(ref requests);

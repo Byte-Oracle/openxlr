@@ -18,10 +18,13 @@
          the same reason the window has none: it speaks to the daemon over the
          documented socket and needs nothing else from it. -->
     <Compile Include="../OpenXLR.Core/OpenXlrPaths.cs" Link="OpenXlrPaths.cs" />
+    <Compile Include="../OpenXLR.Core/ControlConnection.cs" Link="ControlConnection.cs" />
+    <Compile Include="../OpenXLR.Core/DaemonProbe.cs" Link="DaemonProbe.cs" />
     <Compile Include="../OpenXLR.Core/RegularFile.cs" Link="RegularFile.cs" />
     <Compile Include="../OpenXLR.Core/ProcessRunner.cs" Link="ProcessRunner.cs" />
     <Compile Include="../OpenXLR.Core/AppearanceModes.cs" Link="AppearanceModes.cs" />
     <Compile Include="../OpenXLR.Core/Mixing/LayoutIcons.cs" Link="LayoutIcons.cs" />
+    <Compile Include="../OpenXLR.Core/Mixing/MicEq.cs" Link="MicEq.cs" />
   </ItemGroup>
 
   <ItemGroup>

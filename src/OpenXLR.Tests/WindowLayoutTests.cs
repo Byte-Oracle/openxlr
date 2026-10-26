@@ -61,6 +61,7 @@ public sealed class WindowLayoutTests
                 VolumeRangeWindowTests.Check();
                 LocalizationRenderingTests.Check();
                 BrowserTabsWindowTests.Check();
+                OlderDaemonWindowTests.Check();
                 var vm = new MainViewModel(new DaemonClient());
                 main.DataContext = vm;
                 typeof(MainViewModel).GetMethod("ApplyMixer", BindingFlags.Instance | BindingFlags.NonPublic)!

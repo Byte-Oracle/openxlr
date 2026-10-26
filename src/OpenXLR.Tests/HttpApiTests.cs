@@ -15,7 +15,7 @@ using OpenXLR.Daemon;
 
 namespace OpenXLR.Tests;
 
-// Publishes a token file under a redirected runtime directory, like the other store tests.
+// Control endpoints are exercised over a private Unix socket.
 [Collection("xdg-config")]
 public sealed class HttpApiTests
 {
@@ -82,13 +82,14 @@ public sealed class HttpApiTests
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
         // Deliberately do not register hosted services: no USB/audio graph starts.
         builder.Services.AddSingleton<DeviceManager>();
         builder.Services.AddSingleton<MixerService>();
         builder.Services.AddSingleton<WebSocketHub>();
         string policyDirectory = Path.Combine(Path.GetTempPath(), "openxlr-editor-policy-api-" + Guid.NewGuid());
         builder.Services.AddSingleton(new OpenXLR.Core.Mixing.NativeEditorPolicy(Path.Combine(policyDirectory, "rules.json")));
+        using var listener = ControlSocketListener.Bind(Path.Combine(policyDirectory, "control.sock"));
+        ControlApi.Configure(builder, listener);
         await using var app = builder.Build();
         app.UseWebSockets();
         TaskCompletionSource? commandReading = null;
@@ -98,32 +99,11 @@ public sealed class HttpApiTests
                 context.Request.Body = new ObservedReadStream(context.Request.Body, reading);
             await next(context);
         });
-        // The endpoints read the daemon's live token per request; publish one
-        // into a scratch runtime directory the way the daemon does at start.
-        string runtimeDir = Path.Combine(Path.GetTempPath(), "openxlr-test-" + Guid.NewGuid().ToString("N"));
-        string? previousRuntime = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
-        Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", runtimeDir);
-        string token;
-        try { ApiToken.Initialize(); token = ApiToken.Current!; }
-        finally { Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", previousRuntime); try { Directory.Delete(runtimeDir, recursive: true); } catch (IOException) { } }
         ApiEndpoints.Map(app);
         await app.StartAsync();
         try
         {
-            var address = app.Services.GetRequiredService<IServer>().Features
-                .Get<IServerAddressesFeature>()!.Addresses.Single();
-            using var http = new HttpClient { BaseAddress = new Uri(address) };
-            using var denied = await http.GetAsync("/api/v1");
-            Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
-            foreach (string path in new[] { "/api/v1/state", "/API/V1/state", "/api/v1/state/", "/api/v1/plugins",
-                "/api/v1/devices", "/api/v1/mixer", "/api/v1/channels/music", "/api/v1/plugin-setup" })
-            {
-                using var protectedRequest = await http.GetAsync(path);
-                Assert.Equal(HttpStatusCode.Unauthorized, protectedRequest.StatusCode);
-            }
-            using var deniedCommand = await http.PostAsync("/API/V1/commands/",
-                new StringContent("{\"cmd\":\"getDiagnostics\"}", Encoding.UTF8, "application/json"));
-            Assert.Equal(HttpStatusCode.Unauthorized, deniedCommand.StatusCode);
+            using var http = new HttpClient(ControlConnection.HttpHandler(listener.Path)) { BaseAddress = new Uri("http://localhost") };
             using var health = await http.GetAsync("/healthz");
             Assert.Equal(HttpStatusCode.OK, health.StatusCode);
             using var noUpgrade = await http.GetAsync("/api/v1/events");
@@ -132,7 +112,6 @@ public sealed class HttpApiTests
             using var foreignEvents = await http.GetAsync("/api/v1/events");
             Assert.Equal(HttpStatusCode.Forbidden, foreignEvents.StatusCode);
             http.DefaultRequestHeaders.Remove("Origin");
-            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using (var state = System.Text.Json.JsonDocument.Parse(await http.GetStringAsync("/api/v1/state")))
             {
                 Assert.Equal(DaemonVersion.BuildId, state.RootElement.GetProperty("daemonBuildId").GetString());

@@ -56,26 +56,25 @@ public static class OpenXlrPaths
     public static string ConfigFile(string name) => Path.Combine(ConfigDir, name);
 
     /// <summary>
-    /// The control API token: written by the daemon at every start, read by
-    /// each client before it connects. Under the runtime directory (tmpfs,
-    /// per login session, gone at logout) when the session has one, else
-    /// under the configuration directory; private either way.
+    /// The private runtime directory, or the configuration directory on a
+    /// headless session without XDG_RUNTIME_DIR.
     /// </summary>
-    public static string TokenPath =>
+    public static string RuntimeDir =>
         Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR") is { Length: > 0 } run
-            ? Path.Combine(run, "openxlr", "token")
-            : ConfigFile("token");
+            ? Path.Combine(run, "openxlr") : ConfigDir;
 
-    /// <summary>The current token, or null when the daemon has not written one.</summary>
-    public static string? ReadToken()
-    {
-        try
-        {
-            string t = File.ReadAllText(TokenPath).Trim();
-            return t.Length == 0 ? null : t;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
-    }
+    /// <summary>The control API, authenticated by Linux peer credentials.</summary>
+    public static string ControlSocketPath => Path.Combine(RuntimeDir, "control.sock");
+
+    /// <summary>
+    /// The daemon's single-instance lock. Every release since the lock was
+    /// added keeps it at this path, so a client can tell that a daemon from
+    /// before the control socket is still running.
+    /// </summary>
+    public static string DaemonLockPath => Path.Combine(RuntimeDir, "daemon.lock");
+
+    /// <summary>The API token that releases before the control socket wrote; only removed now.</summary>
+    public static string LegacyTokenPath => Path.Combine(RuntimeDir, "token");
 
     /// <summary>
     /// Create a directory under the configuration directory, private to the

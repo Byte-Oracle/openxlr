@@ -62,7 +62,6 @@ internal static class EffectWorkflowWindowTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 commands.Enqueue(command);
                 if (command["cmd"]!.GetValue<string>() == "setInsertParam" && command["channel"]!.GetValue<string>() == "xlr1")
                     liveGain = command["value"]!.GetValue<double>();
@@ -115,7 +114,6 @@ internal static class EffectWorkflowWindowTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 Assert.Equal("setInsertParam", command["cmd"]!.GetValue<string>());
                 commands.Enqueue(command);
             }

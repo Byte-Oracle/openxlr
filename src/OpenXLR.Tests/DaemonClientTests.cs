@@ -16,7 +16,6 @@ public sealed class DaemonClientTests
         var disconnected = new TaskCompletionSource<DaemonClient.StateObservation>(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var server = await SocketTestServer.Start(async (socket, stop) =>
         {
-            await SocketTestServer.Receive(socket, stop);
             if (Interlocked.Increment(ref connections) == 1)
             {
                 await SocketTestServer.Send(socket, new { type = "state", daemonBuildVersion = "first" }, stop);
@@ -93,7 +92,6 @@ public sealed class DaemonClientTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;   // every connection opens with the token
                 // Like the daemon: the reply, then the commandResult for the requestId.
                 string requestId = command["requestId"]!.GetValue<string>();
                 if (command["cmd"]!.GetValue<string>() == "listPlugins")
@@ -139,7 +137,6 @@ public sealed class DaemonClientTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 answers.Enqueue((command["requestId"]!.GetValue<string>(), answers.Count == 0 ? "OLD" : "NEW"));
                 if (answers.Count < 2) { await release.Task.WaitAsync(stop); continue; }
                 while (answers.TryDequeue(out var a))
@@ -169,7 +166,6 @@ public sealed class DaemonClientTests
         {
             if (Interlocked.Increment(ref connections) == 1)
             {
-                Assert.Equal("auth", (await SocketTestServer.Receive(socket, stop))["cmd"]!.GetValue<string>());
                 await SocketTestServer.Receive(socket, stop);
                 Interlocked.Increment(ref requests);
                 socket.Abort();
@@ -201,7 +197,6 @@ public sealed class DaemonClientTests
         {
             if (Interlocked.Increment(ref connections) == 1)
             {
-                await SocketTestServer.Receive(socket, stop); // authentication frame
                 Assert.Equal("setMonitorFeed", (await SocketTestServer.Receive(socket, stop))["cmd"]!.GetValue<string>());
                 socket.Abort();
             }
@@ -268,7 +263,6 @@ public sealed class DaemonClientTests
             {
                 var command = await SocketTestServer.Receive(socket, stop);
                 string name = command["cmd"]!.GetValue<string>();
-                if (name == "auth") continue;
                 commands.Add((name, command["path"]?.GetValue<string>()));
                 if (commands.Count == 1)
                 {
@@ -314,7 +308,6 @@ public sealed class DaemonClientTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 if (++requests == 1) { received.SetResult(); await release.Task.WaitAsync(stop); }
                 await SocketTestServer.Send(socket, new
                 {
@@ -346,7 +339,6 @@ public sealed class DaemonClientTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 Assert.Equal("setNativeEditorRule", command["cmd"]!.GetValue<string>());
                 bool blocked = command["blocked"]?.GetValue<bool>() ?? true;
                 await SocketTestServer.Send(socket, new { type = "nativeEditorRulesChanged" }, stop);
@@ -379,7 +371,6 @@ public sealed class DaemonClientTests
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 if (step == 0)
                 {
                     Assert.Equal("getPluginSetup", command["cmd"]!.GetValue<string>());

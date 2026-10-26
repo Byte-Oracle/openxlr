@@ -17,7 +17,7 @@ function setup() {
   const events = [];
   const timers = {};
   const io = {};
-  for (const method of ['readToken', 'connect', 'send', 'close', 'changed'])
+  for (const method of ['connect', 'send', 'close', 'changed'])
     io[method] = value => events.push([method, value === undefined ? null : plain(value)]);
   for (const method of ['retry', 'deadline', 'meterDeadline', 'commandDeadline'])
     io[method] = value => { timers[method] = value; };
@@ -25,16 +25,10 @@ function setup() {
   const session = new mixer.Session(io);
   const receive = message => session.receive(JSON.stringify(message));
   function ready() {
-    session.start(); session.token('first-token\n'); session.opened('first-token'); receive(state);
+    session.start(); session.opened(); receive(state);
   }
   return { session, events, timers, receive, ready };
 }
-
-test('token paths match the daemon, including a separate config home', () => {
-  assert.equal(mixer.tokenPath('/run/user/123', '/config', '/home/me'), '/run/user/123/openxlr/token');
-  assert.equal(mixer.tokenPath('', '/config', '/home/me'), '/config/openxlr/token');
-  assert.equal(mixer.tokenPath('', '', '/home/me'), '/home/me/.config/openxlr/token');
-});
 
 test('bar names shorten only the leading Monitor label', () => {
   assert.equal(mixer.barName('Monitor A'), 'Mon A');
@@ -124,14 +118,13 @@ test('theme slugs select a shipped palette and unknown or unreadable themes fall
   assert.equal(skins.palettes.gruvbox.hotLevel, 0.9);
 });
 
-test('auth is first, getState follows, and only state enables commands', () => {
+test('the adapter must connect before getState and only state enables commands', () => {
   const f = setup();
   f.session.start();
   assert.equal(f.timers.deadline, 5000);
-  f.session.token(' secret\n');
-  f.session.opened('secret');
+  f.session.opened();
   assert.deepEqual(f.events.filter(e => e[0] === 'send').map(e => e[1]), [
-    { cmd: 'auth', token: 'secret' }, { cmd: 'getState' }
+    { cmd: 'getState' }
   ]);
   assert.equal(f.session.send({ cmd: 'setMixMuted', mix: 'monitor', value: true }), false);
   f.receive(state);
@@ -139,17 +132,16 @@ test('auth is first, getState follows, and only state enables commands', () => {
   assert.equal(f.timers.deadline, 0);
 });
 
-test('an absent token backs off once, even when close also signals failure', () => {
+test('an unavailable adapter backs off once, even when close also signals failure', () => {
   const f = setup();
   for (const delay of [1000, 2000, 4000, 8000, 10000, 10000]) {
-    f.session.start(); f.session.token(''); f.session.lost();
+    f.session.start(); f.session.lost(); f.session.lost();
     assert.equal(f.timers.retry, delay);
   }
-  assert.equal(f.events.filter(e => e[0] === 'connect').length, 0);
-  assert.equal(f.events.filter(e => e[0] === 'readToken').length, 6);
+  assert.equal(f.events.filter(e => e[0] === 'connect').length, 6);
 });
 
-test('reconnect rereads the rotated token and never replays an uncertain edit', () => {
+test('reconnect opens a new adapter and never replays an uncertain edit', () => {
   const f = setup(); f.ready();
   f.session.send({ cmd: 'setLevel', channel: 'xlr1', mix: 'monitor', value: 0.6 });
   f.session.lost();
@@ -158,10 +150,10 @@ test('reconnect rereads the rotated token and never replays an uncertain edit', 
   assert.equal(f.session.pending, '');
   f.receive(state);
   assert.equal(f.session.snapshot, null);
-  f.session.start(); f.session.token('rotated'); f.session.opened('rotated'); f.receive(state);
+  f.session.start(); f.session.opened(); f.receive(state);
   const sent = f.events.filter(e => e[0] === 'send').map(e => e[1]);
   assert.equal(sent.filter(e => e.cmd === 'setLevel').length, 1);
-  assert.deepEqual(sent.at(-2), { cmd: 'auth', token: 'rotated' });
+  assert.deepEqual(sent.at(-1), { cmd: 'getState' });
   assert.equal(f.session.backoff, 1000);
 });
 
@@ -427,4 +419,23 @@ test('saved monitor feeds discard deleted ids and whitespace like the daemon', (
     [' chat + monitor2 + chat ', ['monitor2','chat']]]) {
     assert.deepEqual(plain(mixer.monitorFeeds({...source,monitorFeeds:{headset:saved}}))[0].ids, ids);
   }
+});
+
+test('an adapter refusal is shown while offline and cleared by the next attempt', () => {
+  const f = setup();
+  f.session.start();
+  f.session.refused('An OpenXLR daemon from before the update is still running and cannot accept this client.');
+  assert.equal(f.session.ready, false);
+  assert.match(f.session.offline, /before the update/);
+  assert.equal(f.timers.retry, 1000);
+  assert.equal(f.events.filter(e => e[0] === 'close').length, 1);
+  // The adapter's exit after its error line is the same failure, not a second one.
+  f.session.lost();
+  assert.equal(f.timers.retry, 1000);
+  // A refusal outside a connection attempt is ignored.
+  f.session.refused('late');
+  assert.match(f.session.offline, /before the update/);
+  f.session.start(); f.session.opened(); f.receive(state);
+  assert.equal(f.session.offline, '');
+  assert.equal(f.session.ready, true);
 });

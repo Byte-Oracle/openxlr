@@ -3,11 +3,41 @@ using System.Net.Sockets;
 using Microsoft.AspNetCore.Connections;
 using OpenXLR.Daemon;
 
-const int ApiPort = 37890;
-
 // The same binary is its own USB helper (see UsbHelperMain): nothing of the
 // host below runs in that mode.
 if (args.Length == 1 && args[0] == "--usb-helper") return UsbHelperMain.Run();
+
+// The stdio adapter is a client only, before any device or audio work.
+if (args.Contains("--control-stdio"))
+{
+    if (args.Length != 1) { Console.Error.WriteLine("--control-stdio takes no other arguments."); return 2; }
+    return await ControlStdio.RunAsync(Console.OpenStandardInput(), Console.OpenStandardOutput());
+}
+
+FileStream? acquiredLock;
+try { acquiredLock = DaemonLock.TryAcquire(); }
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+{
+    Console.Error.WriteLine("daemon lock unavailable: " + ex.Message);
+    return 1;
+}
+using FileStream? instanceLock = acquiredLock;
+if (instanceLock is null)
+{
+    Console.Error.WriteLine($"another OpenXLR daemon is already running (it holds {DaemonLock.Path})");
+    return OpenXLR.Core.FlatpakEnvironment.IsFlatpak ? 73 : 75;
+}
+OpenXLR.Core.ControlSocketListener control;
+try { control = OpenXLR.Core.ControlSocketListener.Bind(); }
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SocketException or TimeoutException)
+{
+    Console.Error.WriteLine("control socket unavailable: " + ex.Message);
+    return 1;
+}
+using var controlLease = control;
+// The token file of a release before the control socket, wherever it was
+// written: the runtime directory, or the configuration directory without one.
+DaemonLock.RemoveLegacyToken();
 
 // Snapshot the system default sink and source before any hosted service
 // runs. Once DeviceManager connects the interface it parks the card in the
@@ -19,7 +49,7 @@ StartupDefaults startupDefaults = StartupDefaults.Capture();
 // The content root is where the host looks for appsettings.json, and it
 // defaults to the working directory: the home directory under the user
 // unit. A Kestrel endpoint section in a file there would replace the
-// loopback address below, so the root is pinned to the install directory.
+// listener below, so the root is pinned to the install directory.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
@@ -57,30 +87,17 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<WaveInterfaces>())
 
 builder.Services.AddSingleton<WebSocketHub>();
 
-// Local-only control API. 127.0.0.1 keeps the device off the network.
-builder.WebHost.UseUrls($"http://127.0.0.1:{ApiPort}");
-// A handful of local clients (the window, the deck plugin, a script or
-// two); anything beyond that is a runaway client, not a use case.
-builder.WebHost.ConfigureKestrel(k =>
-{
-    k.Limits.MaxConcurrentUpgradedConnections = 32;
-    k.Limits.MaxConcurrentConnections = 64;
-});
+ControlApi.Configure(builder, control);
 
 var app = builder.Build();
 app.Services.GetRequiredService<WebSocketHub>();   // construct so it subscribes to StateChanged
-
-// The token every client presents as its first message (see ApiToken) is
-// published only after Kestrel owns the port. Written earlier, a process
-// squatting the port would receive it from our own clients and could use
-// it here once it let go of the port.
-ApiToken.PublishWhenListening(app.Lifetime, app.Logger);
 
 app.UseWebSockets();
 ApiEndpoints.Map(app);
 
 app.Map("/ws", async (HttpContext ctx, WebSocketHub hub) =>
 {
+    if (!ControlApi.Authorized(ctx)) { ctx.Response.StatusCode = 403; return; }
     if (!ctx.WebSockets.IsWebSocketRequest) { ctx.Response.StatusCode = 400; return; }
     // Browser pages from other origins do not get to drive the hardware.
     if (!OpenXLR.Core.LoopbackOrigin.IsAllowed(ctx.Request.Headers.Origin))
@@ -99,53 +116,15 @@ app.Map("/ws", async (HttpContext ctx, WebSocketHub hub) =>
     await hub.HandleAsync(socket);
 });
 
-app.MapGet("/", () => Results.Text($"OpenXLR daemon. Control API: ws://127.0.0.1:{ApiPort}/ws"));
-
-// One daemon per user, before anything else is touched.
-using FileStream? instanceLock = DaemonLock.TryAcquire();
-if (instanceLock is null)
-{
-    app.Logger.LogError("another OpenXLR daemon is already running for this user (it holds {Lock}); exiting", DaemonLock.Path);
-    return OpenXLR.Core.FlatpakEnvironment.IsFlatpak ? 73 : 75;
-}
+app.MapGet("/", () => Results.Text("OpenXLR control API on the private Unix socket."));
 
 // Preserve the installed payload inventory before an upgrade or removal can
-// replace it. A failed inventory must never keep the user's microphone off.
+// replace it. A failed inventory must never keep the microphone off.
 foreach (string receipt in OpenXLR.Core.InstallationHistory.PackageReceipts(AppContext.BaseDirectory))
 {
     try { OpenXLR.Core.InstallationHistory.Remember(receipt); }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
     { app.Logger.LogWarning("Could not record installation receipt {Path}: {Error}", receipt, ex.Message); }
-}
-
-// The hosted services (device connect, PipeWire graph build) start before
-// Kestrel binds, so a busy port used to mean: build the whole submix graph,
-// fail to bind, abort with a core dump, get restarted by systemd, repeat.
-// Every cycle tore the user's sinks down and back up. 37890 sits inside the
-// kernel's ephemeral range, so any local program's outgoing connection can
-// hold it for a while. Wait for the port first, before anything touches
-// PipeWire.
-long deadline = Environment.TickCount64 + 60_000;
-for (int attempt = 0; ; attempt++)
-{
-    try
-    {
-        var probe = new TcpListener(IPAddress.Loopback, ApiPort);
-        probe.Start();
-        probe.Stop();
-        break;
-    }
-    catch (SocketException) when (Environment.TickCount64 < deadline)
-    {
-        if (attempt % 10 == 0)
-            app.Logger.LogWarning("port {Port} is in use by another local socket; waiting for it", ApiPort);
-        await Task.Delay(1000);
-    }
-    catch (SocketException ex)
-    {
-        app.Logger.LogError("port {Port} still busy after 60 s ({Error}); exiting for systemd to retry", ApiPort, ex.Message);
-        return OpenXLR.Core.FlatpakEnvironment.IsFlatpak ? 73 : 75;
-    }
 }
 
 try
@@ -155,7 +134,7 @@ try
 catch (IOException ex) when (ex.InnerException is AddressInUseException)
 {
     // Lost the race between the probe and Kestrel's own bind.
-    app.Logger.LogError("port {Port} was taken between probe and bind; exiting for systemd to retry", ApiPort);
+    app.Logger.LogError("control socket could not be bound; exiting for systemd to retry");
     return 75;
 }
 return RestartRequest.ExitCode;   // 0, or a service asked to be started afresh

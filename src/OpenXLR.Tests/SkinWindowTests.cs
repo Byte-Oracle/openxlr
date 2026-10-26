@@ -337,7 +337,7 @@ public sealed partial class SkinWindowTests
             while (!stop.IsCancellationRequested)
             {
                 JsonNode command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]?.GetValue<string>() != "auth") commands.Enqueue(command["cmd"]!.GetValue<string>());
+                commands.Enqueue(command["cmd"]!.GetValue<string>());
                 if (command["requestId"] is { } requestId)
                     await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>() }, stop);
             }

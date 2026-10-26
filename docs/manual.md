@@ -2464,21 +2464,66 @@ actions in Options wrap to another row when they do not fit.
 <a name="upgrade"></a>
 ### 3.11 Upgrade
 
-Packages do not restart a running daemon. After an upgrade the UI
-shows a banner naming the daemon's version and its own, with a Restart
-daemon button; press it, or run
+Packages do not restart a running daemon, so the daemon from the previous
+release keeps running after an upgrade. If the UI was open before the
+upgrade, quit it from the tray and open it again first. The old UI keeps
+talking to the old daemon and cannot reach the new one.
+
+When the UI can connect but the daemon is another version, it shows a
+banner naming the daemon's version and its own, with a Restart daemon
+button, and offers only the controls the old daemon reports.
+
+Releases before this one served their clients on a loopback port with a
+token. This release uses a private Unix socket instead, authenticated by
+Linux peer credentials ([section 6](#files)), so the new UI cannot talk to
+the old daemon at all. It still recognises one, because the old daemon
+holds the same single-instance lock and answers on its old port. The header then reads
+"Older daemon running" instead of "Daemon not running", and the banner says
+that a daemon from before the update is still running and this UI cannot
+connect to it.
+
+Restart daemon in the banner does the same as the header's button. It
+restarts the `openxlr-daemon` user service; in the Flatpak it restarts the
+UI's own daemon, or asks the `openxlr-flatpak` user service's daemon to exit
+so the service starts the updated one. The UI connects as soon as the new
+daemon opens its socket, and the banner goes away. A daemon you started by
+hand is not a service, so stop it and start it again yourself. To restart
+the service from a terminal, run
 
 ```sh
 systemctl --user restart openxlr-daemon
 ```
 
-Until then the UI offers only the controls the old daemon reports.
+and for the Flatpak's service, on the host,
+`systemctl --user restart openxlr-flatpak`.
+
+The terminal mixer, the OpenDeck plugin, the Omarchy bar and the browser
+companion cannot restart the daemon. While the old one runs, the terminal
+mixer shows the same sentence with the command above its tabs, OpenDeck keys
+and dials read "restart" where they would read "offline", the Omarchy popout
+shows the sentence in place of its offline line, and the browser companion
+reports it as its error. `openxlr doctor` lists it as a finding with the
+restart command. Each of them connects on its own once the daemon has been
+restarted. Upgrade the UI, the terminal mixer, the OpenDeck plugin and the
+Omarchy plugin together with the daemon; older clients that use the loopback
+port cannot connect to the new daemon. No API token file is required, and
+the daemon removes the one an older release left behind.
+
 Changing "Enable software mixer" in Options, AUDIO also restarts the daemon.
 
-Every client presents a token the daemon writes at start
-([section 6](#files)). A UI or OpenDeck plugin older than the daemon is
-refused with "unauthorized" until it is updated too; the plugin zip on
-the release page matches the daemon of that release.
+OpenDeck and the Omarchy bar use the client-only `openxlr-control` launcher.
+Upgrade it together with the clients; older installs do not have this entry
+point. An OpenDeck plugin installed ahead of OpenXLR shows "update" on its
+keys and dials while the older OpenXLR runs: update OpenXLR to the plugin's
+release. Source builds must [link it onto PATH](install-from-source.md#6-make-it-permanent).
+It exits when the daemon disconnects, even with stdin open, so clients clear
+their state and reconnect. When it cannot connect it writes one
+`controlError` line saying why in place of its ready line, which is how
+OpenDeck and the bar learn about a daemon from before the update
+([api.md](api.md)). OpenDeck stops an adapter that has not signalled
+readiness within 15 seconds. A runtime-directory or socket-path error is a
+startup failure with a specific diagnostic. Only actual lock contention
+reports another daemon; Flatpak treats only that case as an existing session.
 
 <a name="layout"></a>
 ### 3.12 Edit the mixer layout
@@ -2817,6 +2862,29 @@ the source's range with `setCaptureGain`, meters the channel, and on press
 mutes or unmutes the channel in every mix, since OpenXLR does not write the
 source's mute.
 
+Each microphone with a complete EQ report has a **Microphone EQ** group,
+including mono capture microphones. Keys switch the whole EQ or one band
+on/off, or cycle one band's filter type. Dials adjust a band's frequency,
+gain, Q or type. Turning a frequency dial moves in 24 steps per octave,
+rounded to whole hertz; gain moves by the reported step, normally 0.25 dB,
+and Q moves one step on its logarithmic grid. A numeric dial keeps showing
+its value while its title says **EQ off** or **band off**. Gain reads
+**n/a** for a cut or notch, which keeps its stored gain but does not use it.
+Pressing an EQ dial switches that band, leaving the whole EQ switch alone.
+Use the EQ on/off key to enable the whole EQ. Dial stacks use the same
+tap/press cycling as other controls.
+
+The saved targets use channel ids: `eq:<channel>` for the EQ switch,
+`eqband:<channel>:<band>` for a band switch, and `eqtype:`, `eqfreq:`,
+`eqgain:` or `eqq:` followed by the same channel and band for type,
+frequency, gain or Q. Bands are numbered from 1. Renaming a microphone
+keeps its controls, icon and colour. A removed or unsupported target stays
+selected as unavailable in the inspector and sends nothing. Restoring the
+microphone restores the target. Changing an action's target or reconnecting
+discards its unsent EQ turns; cycling an unchanged stack keeps its last
+turn. EQ changes use the existing microphone EQ and its normal mixer and
+profile persistence.
+
 Capture chains also appear in the insert key and dial choices, named by
 their channel. Saved insert targets keep the channel id through a rename.
 Mic check is not offered on the Deck.
@@ -2828,7 +2896,7 @@ mix master, a channel's send into one mix or into all mixes, a channel's
 included, a
 desktop output's volume
 (the system default or a named output, up to 150%), or one control of an
-insert. The touch strip shows a knob, a level meter, the value and a
+insert, or a microphone EQ band. The touch strip shows a knob, a level meter, the value and a
 mute overlay. The title sits beside the icon without overlapping it, and a
 title too long for its space scrolls. A dial without a usable target shows
 OpenXLR as its title, with "set up" or "offline" as the value, until it is
@@ -2948,11 +3016,11 @@ diagnostics** in Options and open an issue with the archive.
 - "another OpenXLR daemon is already running for this user": a second
   daemon was started by hand while the service runs. It stops at once;
   stop the service first if you meant to run the daemon by hand.
-- "port 37890 is in use by another local socket; waiting for it": another
-  program holds the daemon's API port, which sits inside the kernel's
-  ephemeral range. The daemon waits up to a minute for it and otherwise
-  exits for systemd to retry, which gives up after three starts in five
-  minutes; nothing needs to be configured.
+- "control socket unavailable": OpenXLR cannot bind its private control
+  socket. The log names the reason. Check that the runtime directory is
+  writable by your user and that `openxlr/control.sock` is not a regular
+  file or symbolic link. OpenXLR refuses to delete those. An unused socket
+  left by an unclean exit is repaired automatically before audio starts.
 - "The mixer is waiting for the audio server": the daemon started, but
   pipewire-pulse did not answer when the daemon built the mixer. A USB
   device that stops responding can hold pipewire-pulse up for minutes.
@@ -3207,12 +3275,19 @@ For audio glitches, collect while the problem is present and before restarting
 the daemon, if possible. Collection reads the current state without changing
 audio, recording samples or starting plugins. The extra reports are:
 
+- `usb-topology.txt`: `lsusb -t`, showing USB port and hub relationships,
+  drivers and connection speeds. Match bus and device numbers with
+  `lsusb.txt` to locate the interface; the tree's indentation shows which
+  port or hub it is attached to.
 - `pw-top.txt`: three batches of node statistics, including rate, quantum and
   error counters.
 - `sink-inputs.json` and `source-outputs.json`: current playback and recording
   streams, their formats, volume, mute state and buffering as Pulse reports
   them. The archive masks process identity fields and keeps numeric audio
   values as numbers.
+
+Compare the same OpenXLR release and plugin configuration across systems to
+separate application changes from differences in the audio stack.
 
 Each helper has a 15-second deadline, an 8 MiB stdout limit and a 64 KiB
 stderr limit, and runs in the C locale. A helper that fails, times out or
@@ -3246,7 +3321,7 @@ Scan evidence is bounded and marks omitted entries. It is collected from
 scans performed by the updated daemon; restart an older daemon after updating
 when convenient, then let discovery finish. An older, disconnected or busy
 daemon produces an explicit unavailable entry instead of stopping the archive.
-Plugin binaries, presets, Wine registry files and the API token are not copied.
+Plugin binaries, presets and Wine registry files are not copied.
 Review plugin names, paths and scanner output before sharing the archive.
 
 <a name="files"></a>
@@ -3268,7 +3343,7 @@ settings. See
 | `~/.config/openxlr/mixer.json` | every mixer decision, the layout included (`userChannels`, `mixes`, see [mixer-layout.md](mixer-layout.md)), written by the daemon |
 | `~/.config/openxlr/profiles/<vid-pid>/<name>.json` | saved profiles, one file each |
 | `~/.config/openxlr/profiles/<vid-pid>/recall-on-connect` | the profile recalled when that interface connects, when one is chosen |
-| `$XDG_RUNTIME_DIR/openxlr/token` (or `~/.config/openxlr/token` without a runtime directory) | the control API token for this daemon run, readable by your user only; the UI and the OpenDeck plugin read it, a daemon older than the UI will not have it ([section 3.11](#upgrade)) |
+| `$XDG_RUNTIME_DIR/openxlr/control.sock` (or `~/.config/openxlr/control.sock` without a runtime directory) | private control API socket, authenticated by Linux peer credentials ([api.md](api.md)) |
 | `$XDG_RUNTIME_DIR/openxlr/daemon.lock` | held by the running daemon; a second daemon started for the same user stops at once instead of waiting for the port |
 | `~/.config/openxlr/devices/<vid-pid>/last-state.json` | the settings restored on connect when `retainsSettings` is false |
 | `~/.config/openxlr/devices/<vid-pid>/defaults.json` | the firmware defaults of such an interface, recorded after a power cycle, written back by "Reset device to defaults" (the Pro has no such file: its reset writes OpenXLR's baseline) |
@@ -3291,7 +3366,7 @@ settings. See
 | `/usr/lib/systemd/user/pipewire-pulse.service.d/openxlr.conf` | installed by the packages: raises pipewire-pulse's open-file limit ([section 5.8](#open-files)) |
 | `/usr/share/wireplumber/wireplumber.conf.d/50-xlr-dock-capture-hold.conf`, `52-openxlr-mk1-capture-hold.conf`, `53-openxlr-wave3-capture-hold.conf` | installed by the packages: keep the capture of the XLR Dock, the original Wave XLR and the Wave:3 running ([section 5.2](#dock-silent)) |
 | `openxlr-tui` | the mixer in a terminal, the same daemon and the same skins ([The terminal mixer](#terminal)) |
-| `ws://127.0.0.1:37890/ws` | the daemon's API, documented in [api.md](api.md); the same commands over HTTP at `/api/v1` ([http-api.md](http-api.md)) |
+| `$XDG_RUNTIME_DIR/openxlr/control.sock` | the daemon's API, documented in [api.md](api.md); the same commands over HTTP at `/api/v1` ([http-api.md](http-api.md)) |
 
 The daemon makes a final attempt to save pending mixer settings when it
 shuts down, including when startup fails after the mixer changed. If that
@@ -3724,6 +3799,25 @@ Start it with the daemon running:
 ```sh
 openxlr-tui
 ```
+
+In Inputs, **Microphone EQ** lists each microphone, including mono capture
+inputs. Open its **bands** row for the four-band editor. Up and Down select
+a control, Space toggles a switch, Left and Right change the type or value,
+and Escape returns to Inputs. Frequency moves by a sixth of an octave, with `[`
+and `]` or Ctrl+Left/Right moving a twenty-fourth, as a Deck dial does. Gain moves by 0.25 dB; Q moves one
+step on the EQ's logarithmic grid. Home and End choose the range limits.
+Gain is retained but cannot be edited for a cut or notch, which does not
+use it. Enter on a number opens an exact-value prompt; use a decimal point.
+An empty prompt or Escape changes nothing. Values must be finite and in
+range, then snap to the same steps as the graphical editor.
+
+**Reset bands** restores the four defaults while keeping the EQ's on/off
+switch. Changing a frequency leaves another client's gain or Q alone,
+and short bursts keep each step. A removed microphone
+closes the editor, and a value being typed before disconnection or removal
+cannot be applied afterwards, even if a new microphone reuses the same
+channel id before the next screen redraw. Settings are saved by the daemon in the
+same mixer and profile state as edits made in the graphical UI.
 
 The mixer opens as a desk of vertical channel strips; the Matrix section
 shows the same sends as one grid, every channel against every mix. The left bank shows

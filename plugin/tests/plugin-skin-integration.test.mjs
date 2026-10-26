@@ -1,3 +1,4 @@
+import {controlFixture} from "./control-fixture.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -31,9 +32,10 @@ test('live palettes repaint key art, dial text, needles and stationary meters wi
     while (!condition() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
     assert.ok(condition());
   }
+  const control = controlFixture();
   try {
     await import('../com.emaspa.openxlr.sdPlugin/plugin.mjs');
-    const daemon = sockets.find(s => s.url.includes(':37890/')), host = sockets.find(s => s !== daemon);
+    const daemon = control.children[0], host = sockets[0];
     daemon.onopen();
     daemon.receive({type:'state', profiles:[], devices:[], mixer:{channels:[], mixes:[{id:'monitor',name:'Monitor A',kind:'monitor',volume:.5,muted:false}],monitorOutputs:[],
       inserts:{'mix:monitor':[{id:'eq',name:'Equalizer',bypass:true}]}}});
@@ -89,7 +91,8 @@ test('live palettes repaint key art, dial text, needles and stationary meters wi
     const settledMeters = meterImages().length;
     try {
       for (let i = 0; i < 100; i++) daemon.receive({type:'meters',levels:{'mix:monitor':[.906,.906]}});
-    } finally { fs.openSync = previousOpen; }
+    } finally {
+    control.restore(); fs.openSync = previousOpen; }
     assert.equal(opens, 0, 'meter ticks must not open files');
     assert.equal(meterImages().length, settledMeters, 'unchanged meters must not redraw');
     assert.equal(daemon.messages.length, commandCount);
@@ -107,6 +110,7 @@ test('live palettes repaint key art, dial text, needles and stationary meters wi
     assert.ok(svg(fallback.title).includes(`width="${width}" height="${height}"`));
     assert.ok(svg(feedback.title).includes(`width="${width}" height="${height}"`));
   } finally {
+    control.restore();
     for (const i of intervals) clearInterval(i);
     for (const w of watchers) w.close();
     fs.watch = previousWatch; globalThis.setInterval = previousInterval; globalThis.WebSocket = previous;

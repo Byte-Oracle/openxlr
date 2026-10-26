@@ -740,6 +740,14 @@ unit inputs. A target resolves the channel's current unit at each press or
 turn, keeps its id through a rename, and becomes unavailable when the unit
 or control is unavailable. Legacy interface targets remain unchanged.
 
+Microphone EQ groups offer EQ and band on/off keys, filter-type keys and
+dials for a band's frequency, gain, Q and type. The dial press switches
+that band. They follow the daemon's reported bands, types, ranges and
+steps, retain stable channel ids through renames, and use the channel's
+icon and colour. Quick turns lead locally and coalesce through the
+existing dial sender; removal, rebinding and reconnection discard stale
+unsent EQ edits. Changes use the same EQ and saved state as the UI.
+
 ![Keys](plugin-keys.png)
 
 Profiles: a key can recall one of the active device's saved profiles,
@@ -791,6 +799,11 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
 - Capture microphones in Inputs show their source, connection and carried
   unit controls. Inserts includes mono and stereo capture chains, using the
   width the daemon reports; an older daemon keeps XLR and mix chains only
+- Microphone EQ in Inputs: open a microphone's bands to edit its four
+  switches, types, frequencies, gains and Q values, plus the EQ's own
+  switch. Enter on a number asks for an exact value. The shared EQ model
+  supplies the ranges, steps and defaults; reset keeps the EQ's on/off
+  state and changes only that microphone
 - Insert editing opens the plugin's native editor. A blocked or refused
   editor falls back to terminal controls with the reason shown. Controls
   follow the catalogue's order, defaults, switches, named scale points and
@@ -853,8 +866,8 @@ taps on the Stream Deck + XL need OpenDeck newer than 2.14.0
   Other desktops keep a range per control.
 
 - The control API validates every command before the mixer sees it and
-  answers with an error instead of ignoring it. A private token is required
-  before any state is sent or command executed; clients are rate-limited
+  answers with an error instead of ignoring it. The Unix socket checks Linux peer credentials
+  before any HTTP or WebSocket data is read; clients are rate-limited
   and browser pages from other origins are refused; see
   [api.md](api.md). The same commands are served over HTTP at `/api/v1`
   with an OpenAPI document ([http-api.md](http-api.md)), next to read
