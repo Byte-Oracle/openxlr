@@ -458,7 +458,7 @@
           </DockPanel>
         </Border>
       </DataTemplate>
-      <!-- Line In: its gain over its meter, where the interface has the input -->
+      <!-- Line In: its gain over its meter and its level lock, where the interface has the input -->
       <DataTemplate x:Key="line" x:DataType="layout:MatrixRowViewModel">
         <Border Classes="tile matrixHead" Name="MatrixRowHead" Classes.stacked="{Binding Tall}">
           <DockPanel>
@@ -496,6 +496,9 @@
                               Value="{Binding Main.LineInGainSliderDb, Mode=TwoWay}"
                               AutomationProperties.Name="{loc:Text Key=LineInGain}"/>
                     </layout:MeterFader>
+                    <ToggleButton Grid.Column="1" Name="MatrixLineInLock" Content="{loc:Text Key=Lock}" IsChecked="{Binding Main.LineInLevelLock, Mode=TwoWay}"
+                                  Padding="5,2" FontSize="11" VerticalAlignment="Center" MinWidth="{DynamicResource Ox.Mixer.SmallControlMinSize}"
+                                  AutomationProperties.Name="{loc:Text Key=LevelLock}" ToolTip.Tip="{loc:Text Key=LevelLock}"/>
                   </Grid>
                   <!-- the channel's own volume, under the gain where the row has one, the meter under it
                        otherwise; while the Wave XLR Pro's direct path carries this channel to the jacks, a

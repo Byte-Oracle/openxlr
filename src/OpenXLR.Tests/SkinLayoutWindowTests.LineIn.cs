@@ -15,9 +15,10 @@ namespace OpenXLR.Tests;
 
 /// <summary>
 /// Line In beside Aux In on a real window, at every width the layout test
-/// draws: in the classic INPUTS panel a row of its own with its gain, in the
-/// input rack a strip with its gain over its volume and no lock, and in the
-/// mix matrix a row head with the gain over the volume. A capture input with
+/// draws: in the classic INPUTS panel a row of its own with its gain and its
+/// level lock, in the input rack a strip with its gain over its volume and
+/// its lock under them, and in the mix matrix a row head with the gain and
+/// the lock over the volume. A capture input with
 /// a gain of its own is drawn the same way in the rack and the matrix. Each
 /// strip's readout sits inside its strip or name column, reads the gain, and
 /// reads the volume while that fader moves, back to the gain after the hold.
@@ -113,7 +114,7 @@ internal static partial class SkinLayoutWindowTests
                 """)]);
             model.RefreshBindings();
 
-            // The input rack: Line In's strip has its gain over its volume and no lock.
+            // The input rack: Line In's strip has its gain over its volume and its own lock.
             Wear("banks");
             var rack = window.FindControl<InputRackView>("InputRack")!;
             foreach (double width in new[] { 640d, 1040, 2560 })
@@ -137,8 +138,11 @@ internal static partial class SkinLayoutWindowTests
                     Assert.Equal(Localizer.Format("ChannelVolumeName", id switch { "aux" => "Aux In", "line" => "Line In", _ => "Brio" }),
                         AutomationProperties.GetName(faders[1]));
                 }
-                Assert.DoesNotContain(RackStrip(rack, "line").GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible);
-                Assert.Single(RackStrip(rack, "aux").GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible);
+                foreach (string id in new[] { "aux", "line" })
+                {
+                    ToggleButton lockButton = Assert.Single(RackStrip(rack, id).GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible);
+                    AssertInside(lockButton, Part(RackStrip(rack, id), OpenXLR.UI.Skinning.SkinStripParts.HardwareControls));
+                }
             }
             Slider rackVolume = RackStrip(rack, "line").GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "RackVolume")
                 .GetVisualDescendants().OfType<Slider>().Single();
@@ -177,6 +181,10 @@ internal static partial class SkinLayoutWindowTests
                     CheckLevels(head, row, where);
                     CheckProcessingPlace(head, row, where);
                 }
+                // Line In's lock sits at the end of its gain's line, inside the head.
+                ToggleButton lineLock = RowHead(window, "line").GetVisualDescendants().OfType<ToggleButton>().Single(t => t.Name == "MatrixLineInLock");
+                Assert.True(lineLock.IsEffectivelyVisible, where);
+                AssertInside(lineLock, RowHead(window, "line"));
             }
             Border lineHead = RowHead(window, "line");
             Slider matrixVolume = lineHead.GetVisualDescendants().OfType<Slider>().Single(s => s.Name == "MatrixVolume");

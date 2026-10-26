@@ -58,9 +58,10 @@ public sealed class StripReadoutTests
         Assert.Equal(InputStripKind.AuxIn, rack.Strips.Single(s => s.Channel.Id == "aux").Kind);
         Assert.Equal("line", StripTemplateSelector.Key(strip));
         Assert.Equal("line", StripTemplateSelector.Key(row));
-        // A gain and no lock: the level lock is Aux In's.
-        Assert.DoesNotContain(SkinStripParts.HardwareControls, InputRackViewModel.PartsOf(InputStripKind.LineIn));
+        // A gain and a level lock of its own, like Aux In's.
+        Assert.Contains(SkinStripParts.HardwareControls, InputRackViewModel.PartsOf(InputStripKind.LineIn));
         Assert.Contains(SkinStripParts.Gain, strip.Spec.Parts);
+        Assert.Contains(SkinStripParts.HardwareControls, strip.Spec.Parts);
         Assert.True(row.HasGainFader);
         Assert.True(row.Stacked);
         Assert.True(row.ShowsReadout);
@@ -72,6 +73,7 @@ public sealed class StripReadoutTests
         Assert.False(row.ShowsReadout);
         Assert.True(row.VolumeShowsMeter);
         Assert.Contains(SkinStripParts.Gain, strip.Spec.Parts);
+        Assert.DoesNotContain(SkinStripParts.HardwareControls, strip.Spec.Parts);
         Assert.False(model.LineStrip!.HasGainReadout);
         Assert.Equal("", model.LineStrip.Readout);
         Assert.False(model.ShowLineInRow);

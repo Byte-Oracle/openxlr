@@ -932,6 +932,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 if (!SliderSync.RecentlyTouched("aux")) AuxLevelDb = s["auxLevelDb"]?.GetValue<double>() ?? 0;
                 AuxLevelLock = s["auxLevelLock"]?.GetValue<bool>() ?? false;
                 if (!SliderSync.RecentlyTouched("line")) LineInGainDb = s["lineInGainDb"]?.GetValue<int>() ?? 0;
+                LineInLevelLock = s["lineInLevelLock"]?.GetValue<bool>() ?? false;
             }
 
             // Read outside the state block, so a unit that left takes its path with it.

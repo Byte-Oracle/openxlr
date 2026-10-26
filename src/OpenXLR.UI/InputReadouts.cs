@@ -37,6 +37,17 @@ public sealed partial class MainViewModel
     }
     public string LineInGainText => $"{_lineInGainDb} dB";
 
+    private bool _lineInLevelLock;
+    /// <summary>
+    /// Line In's level lock: while on, the unit ignores gain writes through
+    /// its ALSA control. OpenXLR's own gain control still works.
+    /// </summary>
+    public bool LineInLevelLock
+    {
+        get => _lineInLevelLock;
+        set { if (Set(ref _lineInLevelLock, value) && !_applying) _ = _client.SetControlAsync("lineInLevelLock", value); }
+    }
+
     private int _lineInGainMaxDb = 80;
     /// <summary>The highest Line In gain the daemon writes, in dB.</summary>
     public int LineInGainMaxDb

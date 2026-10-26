@@ -111,10 +111,20 @@ public sealed partial class SkinWindowTests
                 Pump(window);
                 Assert.Equal(gain, readouts[1].Text);
             }
-            // Line In draws its gain and no lock; Aux In keeps its lock.
+            // Line In draws its gain and its own level lock, beside Aux In's.
             Border line = rack.GetVisualDescendants().OfType<Border>()
                 .Single(b => b.Name == "InputStrip" && b.DataContext is InputStripViewModel s && s.Channel.Id == "line");
-            Assert.DoesNotContain(line.GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible);
+            ToggleButton lineLock = Assert.Single(line.GetVisualDescendants().OfType<ToggleButton>(), t => t.IsEffectivelyVisible);
+            Assert.Equal("RackLineInLock", lineLock.Name);
+            Assert.False(lineLock.IsChecked);
+            model.LineInLevelLock = true;
+            Pump(window);
+            Assert.True(lineLock.IsChecked);
+            ToggleButton matrixLock = SkinLayoutWindowTests.RowHead(window, "line").GetVisualDescendants().OfType<ToggleButton>()
+                .Single(t => t.Name == "MatrixLineInLock");
+            Assert.True(matrixLock.IsEffectivelyVisible);
+            Assert.True(matrixLock.IsChecked);
+            Assert.Equal(Localizer.Text("LevelLock"), AutomationProperties.GetName(matrixLock));
             Assert.Contains(line.GetVisualDescendants().OfType<Slider>(),
                 s => s.IsEffectivelyVisible && AutomationProperties.GetName(s) == Localizer.Text("LineInGain"));
 
@@ -142,6 +152,9 @@ public sealed partial class SkinWindowTests
             Assert.Null(window.InputRackModel);
             Layout(window, 1040, 1200);
             Assert.True(window.FindControl<Grid>("LineInRow")!.IsEffectivelyVisible);
+            ToggleButton classicLock = window.FindControl<ToggleButton>("LineInLock")!;
+            Assert.True(classicLock.IsEffectivelyVisible);
+            Assert.True(classicLock.IsChecked);
             Wears(window.FindControl<TextBlock>("AuxInReadout")!, "-12 dB", Localizer.Text("USBAuxIn"), "classic aux");
             Wears(window.FindControl<TextBlock>("LineInReadout")!, "20 dB", Localizer.Text("LineInGain"), "classic line");
             Grid captureRow = window.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "CaptureGainRow");

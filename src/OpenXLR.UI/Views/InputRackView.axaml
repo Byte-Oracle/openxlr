@@ -307,7 +307,7 @@
         </Border>
       </DataTemplate>
 
-      <!-- Line In: the Wave XLR Pro's analog Line In and its gain, where the interface has the input -->
+      <!-- Line In: the Wave XLR Pro's analog Line In, its gain and its level lock, where the interface has the input -->
       <DataTemplate x:Key="line" x:DataType="layout:InputStripViewModel">
         <Border Classes="tile strip" Name="InputStrip" IsVisible="{Binding Shown}" Classes.revealed="{Binding Channel.Revealed}">
           <DockPanel>
@@ -346,6 +346,9 @@
                              Cursor="Help" IsVisible="{Binding Channel.DirectMonitored}" ToolTip.Tip="{Binding Channel.VolumeTip}"
                              AutomationProperties.Name="{loc:Text Key=ChannelVolumeMixesOnly}"/>
                 </Grid>
+              </StackPanel>
+              <StackPanel layout:StripPanel.Part="hardware-controls" Classes="dev" IsVisible="{Binding Main.CapLineInput}">
+                <ToggleButton Name="RackLineInLock" Content="{loc:Text Key=LevelLock}" IsChecked="{Binding Main.LineInLevelLock, Mode=TwoWay}" HorizontalAlignment="Left"/>
               </StackPanel>
             </layout:StripPanel>
           </DockPanel>
