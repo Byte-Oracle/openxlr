@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 
 namespace OpenXLR.UI;
 
-/// <summary>The steps of Mic check, in the order the window offers them.</summary>
-public enum MicCheckStep
+/// <summary>The steps of Mic setup, in the order the window offers them.</summary>
+public enum MicSetupStep
 {
     /// <summary>Where the microphone goes for the unit it is on, and phantom power when it needs it.</summary>
     Position,
@@ -21,8 +21,8 @@ public enum MicCheckStep
     Shape,
 }
 
-/// <summary>What the microphone of a Mic check is, as far as the Position step's tips go.</summary>
-public enum MicCheckUnitKind
+/// <summary>What the microphone of a Mic setup is, as far as the Position step's tips go.</summary>
+public enum MicSetupUnitKind
 {
     /// <summary>On no unit OpenXLR drives: a USB microphone, a headset or an interface of another make.</summary>
     None,
@@ -33,9 +33,9 @@ public enum MicCheckUnitKind
 }
 
 /// <summary>One entry of the step bar: its name and whether it is the step shown.</summary>
-public sealed class MicCheckStepItem(MicCheckViewModel owner, MicCheckStep step, string name) : ViewModelBase
+public sealed class MicSetupStepItem(MicSetupViewModel owner, MicSetupStep step, string name) : ViewModelBase
 {
-    public MicCheckStep Step { get; } = step;
+    public MicSetupStep Step { get; } = step;
     public string Name { get; } = name;
 
     /// <summary>The step shown; choosing one shows it, and the step shown cannot be unchosen.</summary>
@@ -49,16 +49,16 @@ public sealed class MicCheckStepItem(MicCheckViewModel owner, MicCheckStep step,
 }
 
 /// <summary>
-/// One microphone's Mic check. The daemon owns the session, the take and
+/// One microphone's Mic setup. The daemon owns the session, the take and
 /// the meters; this view sends the actions and shows what the daemon
 /// reports: the Sound Check state, the meter before the chain, the take's
 /// waveform and the loop's playhead. The interface's gain, phantom power,
 /// low cut and ClipGuard are the main window's own controls for the input
 /// this channel carries, and the EQ is the channel's own editor model, all
 /// set from outside as the carrier changes; the insert chain is the one this
-/// check belongs to.
+/// setup belongs to.
 /// </summary>
-public sealed class MicCheckViewModel : ViewModelBase
+public sealed class MicSetupViewModel : ViewModelBase
 {
     private readonly DaemonClient _client;
     private bool _busy, _active;
@@ -68,42 +68,42 @@ public sealed class MicCheckViewModel : ViewModelBase
     private string? _error;
 
     /// <param name="chain">The channel's insert chain, which the Shape step lists and edits; null shows no chain.</param>
-    public MicCheckViewModel(DaemonClient client, string channel, InsertsViewModel? chain = null)
+    public MicSetupViewModel(DaemonClient client, string channel, InsertsViewModel? chain = null)
     {
         _client = client;
         Channel = channel;
         Chain = chain;
-        Steps = [new(this, MicCheckStep.Position, Localizer.Text("MicCheckStepPosition")),
-            new(this, MicCheckStep.Level, Localizer.Text("MicCheckStepLevel")),
-            new(this, MicCheckStep.Listen, Localizer.Text("MicCheckStepListen")),
-            new(this, MicCheckStep.Shape, Localizer.Text("MicCheckStepShape"))];
+        Steps = [new(this, MicSetupStep.Position, Localizer.Text("MicSetupStepPosition")),
+            new(this, MicSetupStep.Level, Localizer.Text("MicSetupStepLevel")),
+            new(this, MicSetupStep.Listen, Localizer.Text("MicSetupStepListen")),
+            new(this, MicSetupStep.Shape, Localizer.Text("MicSetupStepShape"))];
     }
 
-    /// <summary>The microphone channel this check belongs to.</summary>
+    /// <summary>The microphone channel this setup belongs to.</summary>
     public string Channel { get; }
 
     // --- steps ---
 
-    public ObservableCollection<MicCheckStepItem> Steps { get; }
+    public ObservableCollection<MicSetupStepItem> Steps { get; }
 
-    private MicCheckStep _step = MicCheckStep.Position;
-    /// <summary>The step shown. A check starts on Position and keeps its last step while the UI runs.</summary>
-    public MicCheckStep Step
+    private MicSetupStep _step = MicSetupStep.Position;
+    /// <summary>The step shown. A setup starts on Position and keeps its last step while the UI runs.</summary>
+    public MicSetupStep Step
     {
         get => _step;
         set
         {
             if (!Set(ref _step, value)) return;
-            foreach (MicCheckStepItem item in Steps) item.Refresh();
+            foreach (MicSetupStepItem item in Steps) item.Refresh();
             Raise(nameof(ShowsPosition)); Raise(nameof(ShowsLevel)); Raise(nameof(ShowsListen)); Raise(nameof(ShowsShape));
             // The editor button needs the catalogue to know which plugins have an editor of their own.
-            if (value == MicCheckStep.Shape) Chain?.EnsurePluginsLoaded();
+            if (value == MicSetupStep.Shape) Chain?.EnsurePluginsLoaded();
         }
     }
-    public bool ShowsPosition => _step == MicCheckStep.Position;
-    public bool ShowsLevel => _step == MicCheckStep.Level;
-    public bool ShowsListen => _step == MicCheckStep.Listen;
-    public bool ShowsShape => _step == MicCheckStep.Shape;
+    public bool ShowsPosition => _step == MicSetupStep.Position;
+    public bool ShowsLevel => _step == MicSetupStep.Level;
+    public bool ShowsListen => _step == MicSetupStep.Listen;
+    public bool ShowsShape => _step == MicSetupStep.Shape;
 
     // --- the session ---
 
@@ -116,9 +116,9 @@ public sealed class MicCheckViewModel : ViewModelBase
     public string Status => _mode switch
     {
         "recording" => Localizer.Format("SoundCheckRecording", _seconds),
-        "looping" => Localizer.Format("MicCheckLooping", _seconds),
-        "live" when _active && _seconds >= 0.1 => Localizer.Format("MicCheckReady", _seconds),
-        _ => Localizer.Text("MicCheckIdle"),
+        "looping" => Localizer.Format("MicSetupLooping", _seconds),
+        "live" when _active && _seconds >= 0.1 => Localizer.Format("MicSetupReady", _seconds),
+        _ => Localizer.Text("MicSetupIdle"),
     };
     public string? Error { get => _error; private set => Set(ref _error, value); }
 
@@ -145,7 +145,7 @@ public sealed class MicCheckViewModel : ViewModelBase
     private double? _latencyMs;
     /// <summary>What hearing yourself through this computer adds, said in the window; empty while the daemon has no figure.</summary>
     public string LatencyText => _latencyMs is double ms
-        ? Localizer.Format("MicCheckHearMyselfLatency", ms) : Localizer.Text("MicCheckHearMyselfLatencyUnknown");
+        ? Localizer.Format("MicSetupHearMyselfLatency", ms) : Localizer.Text("MicSetupHearMyselfLatencyUnknown");
 
     private bool _proDirect;
     /// <summary>This channel carries the Wave XLR Pro's first input, whose zero-latency path is off during a session.</summary>
@@ -174,12 +174,12 @@ public sealed class MicCheckViewModel : ViewModelBase
         get => _inputPeak;
         private set { if (Set(ref _inputPeak, value)) Raise(nameof(PeakText)); }
     }
-    public string PeakText => _inputPeak <= 0 ? Localizer.Text("MicCheckPeakSilent") : Localizer.Format("MicCheckPeak", _inputPeak * 60 - 60);
+    public string PeakText => _inputPeak <= 0 ? Localizer.Text("MicSetupPeakSilent") : Localizer.Format("MicSetupPeak", _inputPeak * 60 - 60);
 
     private bool _clipped;
     /// <summary>A sample reached the clip level since the light was last cleared.</summary>
     public bool Clipped { get => _clipped; private set { if (Set(ref _clipped, value)) Raise(nameof(ClipName)); } }
-    public string ClipName => _clipped ? Localizer.Text("MicCheckClipLit") : Localizer.Text("MicCheckClipDark");
+    public string ClipName => _clipped ? Localizer.Text("MicSetupClipLit") : Localizer.Text("MicSetupClipDark");
 
     public void ClearClip() => Clipped = false;
 
@@ -208,18 +208,18 @@ public sealed class MicCheckViewModel : ViewModelBase
 
     // --- Position: the unit the microphone is on, tips for it, phantom power ---
 
-    private MicCheckUnitKind _unitKind;
+    private MicSetupUnitKind _unitKind;
     private string _unitName = "";
     private int _unitInput = 1;
 
     /// <summary>What the microphone is, for the tips: a unit's capsule, on a unit's XLR jack, or on no unit OpenXLR drives.</summary>
-    public MicCheckUnitKind UnitKind => _unitKind;
+    public MicSetupUnitKind UnitKind => _unitKind;
 
     /// <summary>
     /// The unit this channel's microphone is on, its name and the input; set
     /// after every state from the same carrier as the gain.
     /// </summary>
-    internal void Place(MicCheckUnitKind kind, string? name, int input)
+    internal void Place(MicSetupUnitKind kind, string? name, int input)
     {
         name ??= "";
         if (kind == _unitKind && name == _unitName && input == _unitInput) return;
@@ -230,12 +230,12 @@ public sealed class MicCheckViewModel : ViewModelBase
     /// <summary>The Position step's first line: which unit the microphone is on, or that OpenXLR drives none.</summary>
     public string PositionIntro => _unitKind switch
     {
-        MicCheckUnitKind.Capsule => Localizer.Format("MicCheckPositionCapsule", UnitLabel),
-        MicCheckUnitKind.XlrJack => Localizer.Format("MicCheckPositionXlr", UnitLabel, _unitInput),
-        _ => Localizer.Text("MicCheckPositionNone"),
+        MicSetupUnitKind.Capsule => Localizer.Format("MicSetupPositionCapsule", UnitLabel),
+        MicSetupUnitKind.XlrJack => Localizer.Format("MicSetupPositionXlr", UnitLabel, _unitInput),
+        _ => Localizer.Text("MicSetupPositionNone"),
     };
 
-    private string UnitLabel => _unitName.Length > 0 ? _unitName : Localizer.Text("MicCheckYourInterface");
+    private string UnitLabel => _unitName.Length > 0 ? _unitName : Localizer.Text("MicSetupYourInterface");
 
     /// <summary>
     /// Distance and angle tips for this microphone: first what its kind of
@@ -249,21 +249,21 @@ public sealed class MicCheckViewModel : ViewModelBase
             var tips = new List<string>();
             switch (_unitKind)
             {
-                case MicCheckUnitKind.Capsule:
-                    tips.Add(Localizer.Text("MicCheckTipCapsuleFront"));
-                    tips.Add(Localizer.Text("MicCheckTipCapsuleRoom"));
+                case MicSetupUnitKind.Capsule:
+                    tips.Add(Localizer.Text("MicSetupTipCapsuleFront"));
+                    tips.Add(Localizer.Text("MicSetupTipCapsuleRoom"));
                     break;
-                case MicCheckUnitKind.XlrJack:
-                    tips.Add(Localizer.Text("MicCheckTipXlrAddress"));
-                    tips.Add(Localizer.Text("MicCheckTipXlrDistance"));
+                case MicSetupUnitKind.XlrJack:
+                    tips.Add(Localizer.Text("MicSetupTipXlrAddress"));
+                    tips.Add(Localizer.Text("MicSetupTipXlrDistance"));
                     break;
                 default:
-                    tips.Add(Localizer.Text("MicCheckTipOtherDevice"));
+                    tips.Add(Localizer.Text("MicSetupTipOtherDevice"));
                     break;
             }
-            tips.Add(Localizer.Text("MicCheckTipDistance"));
-            tips.Add(Localizer.Text("MicCheckTipAngle"));
-            tips.Add(Localizer.Text("MicCheckTipNoise"));
+            tips.Add(Localizer.Text("MicSetupTipDistance"));
+            tips.Add(Localizer.Text("MicSetupTipAngle"));
+            tips.Add(Localizer.Text("MicSetupTipNoise"));
             return tips;
         }
     }
@@ -272,7 +272,7 @@ public sealed class MicCheckViewModel : ViewModelBase
     public bool HasPhantom => _unit is { CapPhantom: true } || _extraUnit is { HasPhantom: true };
 
     /// <summary>A built-in capsule needs no phantom power, so the step leaves it out; any other microphone may need it.</summary>
-    public bool ShowsPhantom => _unitKind != MicCheckUnitKind.Capsule;
+    public bool ShowsPhantom => _unitKind != MicSetupUnitKind.Capsule;
 
     /// <summary>Phantom power is said, but OpenXLR cannot switch it: set it on the microphone's own interface.</summary>
     public bool PhantomElsewhere => ShowsPhantom && !HasPhantom;
@@ -284,7 +284,7 @@ public sealed class MicCheckViewModel : ViewModelBase
 
     private MainViewModel? _software;
     /// <summary>
-    /// The main window's model while this is XLR 1's check, whose software
+    /// The main window's model while this is XLR 1's setup, whose software
     /// low cut and ClipGuard sit after the EQ; null on every other channel.
     /// </summary>
     public MainViewModel? Software
@@ -349,7 +349,7 @@ public sealed class MicCheckViewModel : ViewModelBase
 
     /// <summary>What the measurement read, or null before one.</summary>
     public string? SuggestMeasured => _suggestion is { Outcome: not GainOutcome.TooFewReadings } s
-        ? Localizer.Format("MicCheckSuggestMeasured", s.SpeechDb, s.PeakDb) : null;
+        ? Localizer.Format("MicSetupSuggestMeasured", s.SpeechDb, s.PeakDb) : null;
 
     /// <summary>The countdown while listening, then what to do with the gain, or a note after an accept.</summary>
     public string? SuggestAdvice
@@ -358,32 +358,32 @@ public sealed class MicCheckViewModel : ViewModelBase
         {
             if (_measure is not null)
             {
-                double left = Math.Max(0, (MicCheckLevels.MeasureTime - Time.GetElapsedTime(_measureStarted)).TotalSeconds);
-                return Localizer.Format("MicCheckSuggestListening", Math.Ceiling(left));
+                double left = Math.Max(0, (MicSetupLevels.MeasureTime - Time.GetElapsedTime(_measureStarted)).TotalSeconds);
+                return Localizer.Format("MicSetupSuggestListening", Math.Ceiling(left));
             }
             if (_suggestion is not { } s) return _gainNote;
             string advice = s.Outcome switch
             {
-                GainOutcome.TooFewReadings => Localizer.Text("MicCheckSuggestTooFew"),
-                GainOutcome.NoVoice => Localizer.Text("MicCheckSuggestNoVoice"),
-                GainOutcome.Keep when s.FromDb is int from => Localizer.Format("MicCheckSuggestKeep", from),
-                GainOutcome.Keep => Localizer.Text("MicCheckSuggestKeepElsewhere"),
-                GainOutcome.Elsewhere => Localizer.Format("MicCheckSuggestElsewhere", s.ChangeDb),
-                GainOutcome.AtMaximum => Localizer.Format("MicCheckSuggestAtMaximum", s.ToDb ?? 0, s.ShortfallDb),
-                GainOutcome.AtMinimum => Localizer.Format("MicCheckSuggestAtMinimum", s.ShortfallDb),
-                _ => Localizer.Format("MicCheckSuggestChange", s.FromDb ?? 0, s.ToDb ?? 0),
+                GainOutcome.TooFewReadings => Localizer.Text("MicSetupSuggestTooFew"),
+                GainOutcome.NoVoice => Localizer.Text("MicSetupSuggestNoVoice"),
+                GainOutcome.Keep when s.FromDb is int from => Localizer.Format("MicSetupSuggestKeep", from),
+                GainOutcome.Keep => Localizer.Text("MicSetupSuggestKeepElsewhere"),
+                GainOutcome.Elsewhere => Localizer.Format("MicSetupSuggestElsewhere", s.ChangeDb),
+                GainOutcome.AtMaximum => Localizer.Format("MicSetupSuggestAtMaximum", s.ToDb ?? 0, s.ShortfallDb),
+                GainOutcome.AtMinimum => Localizer.Format("MicSetupSuggestAtMinimum", s.ShortfallDb),
+                _ => Localizer.Format("MicSetupSuggestChange", s.FromDb ?? 0, s.ToDb ?? 0),
             };
-            if (s.ChangesGain && s.Outcome != GainOutcome.Change) advice += " " + Localizer.Format("MicCheckSuggestChange", s.FromDb ?? 0, s.ToDb ?? 0);
-            return s.Clipped ? Localizer.Text("MicCheckSuggestClipped") + " " + advice : advice;
+            if (s.ChangesGain && s.Outcome != GainOutcome.Change) advice += " " + Localizer.Format("MicSetupSuggestChange", s.FromDb ?? 0, s.ToDb ?? 0);
+            return s.Clipped ? Localizer.Text("MicSetupSuggestClipped") + " " + advice : advice;
         }
     }
 
     /// <summary>Why a suggested change cannot be accepted now, or null.</summary>
     public string? SuggestBlocked => _suggestion is { ChangesGain: true } && CurrentGain is { Writable: false } gain
-        ? gain.Locked ? Localizer.Text("MicCheckSuggestLocked") : Localizer.Text("MicCheckSuggestUnreachable") : null;
+        ? gain.Locked ? Localizer.Text("MicSetupSuggestLocked") : Localizer.Text("MicSetupSuggestUnreachable") : null;
 
     /// <summary>
-    /// Listen for <see cref="MicCheckLevels.MeasureTime"/> to the meter
+    /// Listen for <see cref="MicSetupLevels.MeasureTime"/> to the meter
     /// before the chain. Nothing is written to the unit; the suggestion waits
     /// for <see cref="AcceptGain"/>.
     /// </summary>
@@ -402,7 +402,7 @@ public sealed class MicCheckViewModel : ViewModelBase
     public void MeasureTick()
     {
         if (_measure is null) return;
-        if (Time.GetElapsedTime(_measureStarted) >= MicCheckLevels.MeasureTime) FinishGainMeasure();
+        if (Time.GetElapsedTime(_measureStarted) >= MicSetupLevels.MeasureTime) FinishGainMeasure();
         else Raise(nameof(SuggestAdvice));
     }
 
@@ -414,7 +414,7 @@ public sealed class MicCheckViewModel : ViewModelBase
         if (!SameGain(_measuredGain, gain))
         {
             // The gain or the input it belongs to moved while listening.
-            _gainNote = Localizer.Text("MicCheckSuggestStale");
+            _gainNote = Localizer.Text("MicSetupSuggestStale");
             _suggestion = null;
         }
         else _suggestion = GainSuggestion.From(readings, gain?.GainDb, gain?.MaxDb ?? 0);
@@ -433,12 +433,12 @@ public sealed class MicCheckViewModel : ViewModelBase
     {
         if (_suggestion is not { ChangesGain: true, ToDb: int to } s || CurrentGain is not { Writable: true } gain) return;
         _suggestion = null;
-        if (!SameGain(_measuredGain, gain) || gain.GainDb != s.FromDb) _gainNote = Localizer.Text("MicCheckSuggestStale");
+        if (!SameGain(_measuredGain, gain) || gain.GainDb != s.FromDb) _gainNote = Localizer.Text("MicSetupSuggestStale");
         else
         {
             if (gain.Owner is UnitInputViewModel unit) unit.GainDb = to;
             else if (gain.Owner is WaveUnitInputViewModel extra) extra.GainDb = to;
-            _gainNote = Localizer.Format("MicCheckSuggestSet", to);
+            _gainNote = Localizer.Format("MicSetupSuggestSet", to);
         }
         RaiseSuggestion();
     }
@@ -486,7 +486,7 @@ public sealed class MicCheckViewModel : ViewModelBase
     public bool NoEq => _eq is null;
 
     /// <summary>The starting presets, in order.</summary>
-    public IReadOnlyList<MicCheckPreset> Presets => MicCheckPresets.All;
+    public IReadOnlyList<MicSetupPreset> Presets => MicSetupPresets.All;
 
     public bool CanApplyPreset => _eq is not null;
 
@@ -494,19 +494,19 @@ public sealed class MicCheckViewModel : ViewModelBase
     public bool CanUndoPreset => _eq is not null && _beforePreset is not null;
 
     /// <summary>What the last preset press did, or how the presets work before one.</summary>
-    public string PresetStatus => _presetStatus ?? Localizer.Text("MicCheckPresetHint");
+    public string PresetStatus => _presetStatus ?? Localizer.Text("MicSetupPresetHint");
 
     /// <summary>
     /// Put a preset on the EQ as one <c>setEq</c>, so it is heard at once,
     /// on the live microphone or the looped take, and keep the EQ it
     /// replaces for one undo. Edits made after it are not kept by the undo.
     /// </summary>
-    public void ApplyPreset(MicCheckPreset preset)
+    public void ApplyPreset(MicSetupPreset preset)
     {
         if (_eq is not { } eq) return;
         _beforePreset = eq.Current;
         eq.Replace(preset.For(eq.Limits));
-        _presetStatus = Localizer.Format("MicCheckPresetApplied", preset.Name);
+        _presetStatus = Localizer.Format("MicSetupPresetApplied", preset.Name);
         RaisePresets();
     }
 
@@ -516,7 +516,7 @@ public sealed class MicCheckViewModel : ViewModelBase
         if (_eq is not { } eq || _beforePreset is not { } before) return;
         _beforePreset = null;
         eq.Replace(before);
-        _presetStatus = Localizer.Text("MicCheckPresetUndone");
+        _presetStatus = Localizer.Text("MicSetupPresetUndone");
         RaisePresets();
     }
 
@@ -573,7 +573,7 @@ public sealed class MicCheckViewModel : ViewModelBase
         if (Read(2) >= 1) Clipped = true;
         if (_measure is { } readings)
         {
-            readings.Add(new LevelReading(MicCheckLevels.FromMeter(Read(0)), MicCheckLevels.FromMeter(Read(1)), Read(2) >= 1));
+            readings.Add(new LevelReading(MicSetupLevels.FromMeter(Read(0)), MicSetupLevels.FromMeter(Read(1)), Read(2) >= 1));
             MeasureTick();
         }
     }

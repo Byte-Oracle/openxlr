@@ -7,13 +7,13 @@ using OpenXLR.UI.Localization;
 namespace OpenXLR.Tests;
 
 /// <summary>
-/// Mic check's Shape and Position steps with no window: the four steps in
+/// Mic setup's Shape and Position steps with no window: the four steps in
 /// order, starting on Position; the presets are valid gentle EQs that the
 /// manual lists as they are; a preset goes out as one setEq and its undo as
 /// another; and the Position tips, phantom power and filters follow the unit
 /// the channel carries.
 /// </summary>
-public sealed class MicCheckModelTests
+public sealed class MicSetupModelTests
 {
     private sealed class Recorder : IEqCommands
     {
@@ -37,13 +37,13 @@ public sealed class MicCheckModelTests
     }
 
     [Fact]
-    public async Task TheStepsAreFourAndACheckStartsOnPosition()
+    public async Task TheStepsAreFourAndASetupStartsOnPosition()
     {
         await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
-        var check = new MicCheckViewModel(client, "xlr1");
-        Assert.Equal([MicCheckStep.Position, MicCheckStep.Level, MicCheckStep.Listen, MicCheckStep.Shape], check.Steps.Select(s => s.Step));
-        Assert.Equal([Localizer.Text("MicCheckStepPosition"), Localizer.Text("MicCheckStepLevel"), Localizer.Text("MicCheckStepListen"),
-            Localizer.Text("MicCheckStepShape")], check.Steps.Select(s => s.Name));
+        var check = new MicSetupViewModel(client, "xlr1");
+        Assert.Equal([MicSetupStep.Position, MicSetupStep.Level, MicSetupStep.Listen, MicSetupStep.Shape], check.Steps.Select(s => s.Step));
+        Assert.Equal([Localizer.Text("MicSetupStepPosition"), Localizer.Text("MicSetupStepLevel"), Localizer.Text("MicSetupStepListen"),
+            Localizer.Text("MicSetupStepShape")], check.Steps.Select(s => s.Name));
         Assert.True(check.ShowsPosition);
         check.Steps[3].IsSelected = true;
         Assert.True(check.ShowsShape);
@@ -56,9 +56,9 @@ public sealed class MicCheckModelTests
     [Fact]
     public void ThePresetsAreGentleValidEqsWithALowCutFirst()
     {
-        Assert.Equal(["clear", "warm", "broadcast"], MicCheckPresets.All.Select(p => p.Id));
-        Assert.Equal(3, MicCheckPresets.All.Select(p => p.Name).Distinct().Count());
-        foreach (MicCheckPreset preset in MicCheckPresets.All)
+        Assert.Equal(["clear", "warm", "broadcast"], MicSetupPresets.All.Select(p => p.Id));
+        Assert.Equal(3, MicSetupPresets.All.Select(p => p.Name).Distinct().Count());
+        foreach (MicSetupPreset preset in MicSetupPresets.All)
         {
             Assert.Null(MicEq.Check(preset.Eq));
             Assert.True(preset.Eq.Enabled);
@@ -70,11 +70,11 @@ public sealed class MicCheckModelTests
             // Already on the daemon's grid, so what is sent is what is kept.
             Assert.Equal(preset.Eq, MicEq.Snap(preset.Eq));
             Assert.Equal(preset.Eq, preset.For(EqLimits.Instance));
-            Assert.NotEqual(Localizer.Text("MicCheckPresetHint"), preset.Hint);
+            Assert.NotEqual(Localizer.Text("MicSetupPresetHint"), preset.Hint);
         }
         // A daemon with a narrower range gets the preset held inside it.
         EqLimits narrow = EqLimits.Instance with { Gain = new(-2, 2, 0.25), Frequency = new(100, 10000, 1) };
-        MicEq held = MicCheckPresets.Broadcast.For(narrow);
+        MicEq held = MicSetupPresets.Broadcast.For(narrow);
         Assert.All(held.Bands, b => Assert.InRange(b.Gain, -2, 2));
         Assert.All(held.Bands, b => Assert.InRange(b.Frequency, 100, 10000));
     }
@@ -84,7 +84,7 @@ public sealed class MicCheckModelTests
     public void TheManualListsThePresetsAsTheyAre()
     {
         string manual = File.ReadAllText(Path.Combine(MicEqTests.RepoRoot, "docs", "manual.md"));
-        foreach (MicCheckPreset preset in MicCheckPresets.All)
+        foreach (MicSetupPreset preset in MicSetupPresets.All)
         {
             string row = $"| {preset.Name} | " + string.Join(" | ", preset.Eq.Bands.Select(Describe)) + " |";
             Assert.Contains(row, manual);
@@ -112,9 +112,9 @@ public sealed class MicCheckModelTests
         await using var client = new DaemonClient("ws://127.0.0.1:1/ws");
         var sent = new Recorder();
         using var eq = new MicEqViewModel(sent, "xlr1", "XLR 1", TimeSpan.Zero, new ManualTime());
-        var check = new MicCheckViewModel(client, "xlr1");
+        var check = new MicSetupViewModel(client, "xlr1");
         Assert.False(check.CanApplyPreset);
-        check.ApplyPreset(MicCheckPresets.Clear);
+        check.ApplyPreset(MicSetupPresets.Clear);
         Assert.Empty(sent.Sent);
 
         check.Eq = eq;
@@ -122,33 +122,33 @@ public sealed class MicCheckModelTests
         Assert.False(before.Enabled);
         Assert.True(check.CanApplyPreset);
         Assert.False(check.CanUndoPreset);
-        Assert.Equal(Localizer.Text("MicCheckPresetHint"), check.PresetStatus);
+        Assert.Equal(Localizer.Text("MicSetupPresetHint"), check.PresetStatus);
 
-        check.ApplyPreset(MicCheckPresets.Clear);
-        Assert.Equal(MicCheckPresets.Clear.Eq, sent.Eq());
-        Assert.Equal(MicCheckPresets.Clear.Eq, eq.Current);
+        check.ApplyPreset(MicSetupPresets.Clear);
+        Assert.Equal(MicSetupPresets.Clear.Eq, sent.Eq());
+        Assert.Equal(MicSetupPresets.Clear.Eq, eq.Current);
         Assert.True(eq.Enabled);
         Assert.True(check.CanUndoPreset);
-        Assert.Equal(Localizer.Format("MicCheckPresetApplied", MicCheckPresets.Clear.Name), check.PresetStatus);
+        Assert.Equal(Localizer.Format("MicSetupPresetApplied", MicSetupPresets.Clear.Name), check.PresetStatus);
 
         // A second preset replaces the first; the undo goes back one step.
-        check.ApplyPreset(MicCheckPresets.Broadcast);
-        Assert.Equal(MicCheckPresets.Broadcast.Eq, sent.Eq());
+        check.ApplyPreset(MicSetupPresets.Broadcast);
+        Assert.Equal(MicSetupPresets.Broadcast.Eq, sent.Eq());
         check.UndoPreset();
-        Assert.Equal(MicCheckPresets.Clear.Eq, sent.Eq());
-        Assert.Equal(MicCheckPresets.Clear.Eq, eq.Current);
+        Assert.Equal(MicSetupPresets.Clear.Eq, sent.Eq());
+        Assert.Equal(MicSetupPresets.Clear.Eq, eq.Current);
         Assert.False(check.CanUndoPreset);
-        Assert.Equal(Localizer.Text("MicCheckPresetUndone"), check.PresetStatus);
+        Assert.Equal(Localizer.Text("MicSetupPresetUndone"), check.PresetStatus);
         check.UndoPreset();
         Assert.Empty(sent.Sent);
 
         // The EQ from before the first preset, switch included, comes back whole.
-        check.ApplyPreset(MicCheckPresets.Warm);
+        check.ApplyPreset(MicSetupPresets.Warm);
         sent.Eq();
         check.Eq = null;
         check.Eq = eq;
         Assert.False(check.CanUndoPreset);
-        check.ApplyPreset(MicCheckPresets.Warm);
+        check.ApplyPreset(MicSetupPresets.Warm);
         sent.Eq();
         check.Reset();
         Assert.False(check.CanUndoPreset);
@@ -156,7 +156,7 @@ public sealed class MicCheckModelTests
         Assert.Empty(sent.Sent);
         eq.Replace(before);
         sent.Eq();
-        check.ApplyPreset(MicCheckPresets.Warm);
+        check.ApplyPreset(MicSetupPresets.Warm);
         sent.Eq();
         check.UndoPreset();
         Assert.Equal(before, sent.Eq());
@@ -173,16 +173,16 @@ public sealed class MicCheckModelTests
         JsonNode state = JsonNode.Parse(InputBindingModelTests.ProState($"{Xlr1},{Xlr2}"))!;
         state["mixer"]!["channels"]![0]!["eq"] = CaptureInputWindowTests.CaptureEq(enabled: true);
         CaptureInputWindowTests.Apply(main, state);
-        MicCheckViewModel first = main.Inserts.MicCheck, second = main.Inserts2.MicCheck;
+        MicSetupViewModel first = main.Inserts.MicSetup, second = main.Inserts2.MicSetup;
         ChannelViewModel xlr1 = main.Channels.Single(c => c.Id == "xlr1");
 
         // The Pro's XLR inputs: the unit by name and input, its phantom power,
         // its own low cut and ClipGuard, and XLR 1's EQ and software stage.
-        Assert.Equal(MicCheckUnitKind.XlrJack, first.UnitKind);
-        Assert.Equal(Localizer.Format("MicCheckPositionXlr", "Elgato Wave XLR Pro", 1), first.PositionIntro);
-        Assert.Equal(Localizer.Format("MicCheckPositionXlr", "Elgato Wave XLR Pro", 2), second.PositionIntro);
-        Assert.Equal(Localizer.Text("MicCheckTipXlrAddress"), first.PositionTips[0]);
-        Assert.Contains(Localizer.Text("MicCheckTipAngle"), first.PositionTips);
+        Assert.Equal(MicSetupUnitKind.XlrJack, first.UnitKind);
+        Assert.Equal(Localizer.Format("MicSetupPositionXlr", "Elgato Wave XLR Pro", 1), first.PositionIntro);
+        Assert.Equal(Localizer.Format("MicSetupPositionXlr", "Elgato Wave XLR Pro", 2), second.PositionIntro);
+        Assert.Equal(Localizer.Text("MicSetupTipXlrAddress"), first.PositionTips[0]);
+        Assert.Contains(Localizer.Text("MicSetupTipAngle"), first.PositionTips);
         Assert.True(first.ShowsPhantom && first.HasPhantom && !first.PhantomElsewhere);
         Assert.True(first.HasUnitFilters);
         Assert.Same(main, first.Software);
@@ -199,9 +199,9 @@ public sealed class MicCheckModelTests
         state["capabilities"]!["clipGuard"] = false;
         state["device"]!["model"] = "Wave:3";
         CaptureInputWindowTests.Apply(main, state);
-        Assert.Equal(MicCheckUnitKind.Capsule, first.UnitKind);
-        Assert.Equal(Localizer.Format("MicCheckPositionCapsule", "Elgato Wave:3"), first.PositionIntro);
-        Assert.Equal([Localizer.Text("MicCheckTipCapsuleFront"), Localizer.Text("MicCheckTipCapsuleRoom")], first.PositionTips.Take(2));
+        Assert.Equal(MicSetupUnitKind.Capsule, first.UnitKind);
+        Assert.Equal(Localizer.Format("MicSetupPositionCapsule", "Elgato Wave:3"), first.PositionIntro);
+        Assert.Equal([Localizer.Text("MicSetupTipCapsuleFront"), Localizer.Text("MicSetupTipCapsuleRoom")], first.PositionTips.Take(2));
         Assert.False(first.ShowsPhantom);
         Assert.False(first.HasUnitFilters);
 
@@ -210,9 +210,9 @@ public sealed class MicCheckModelTests
         CaptureInputWindowTests.Apply(main, JsonNode.Parse(InputBindingModelTests.ProState(
             $"{InputBindingModelTests.BoundXlr1(true)},{Xlr2},{InputBindingModelTests.ProMic(InputBindingModelTests.Input(1))}",
             mixerExtra: ",\"softLowCutApplicable\":true,\"softClipGuardApplicable\":true"))!);
-        Assert.Equal(MicCheckUnitKind.None, first.UnitKind);
-        Assert.Equal(Localizer.Text("MicCheckPositionNone"), first.PositionIntro);
-        Assert.Equal(Localizer.Text("MicCheckTipOtherDevice"), first.PositionTips[0]);
+        Assert.Equal(MicSetupUnitKind.None, first.UnitKind);
+        Assert.Equal(Localizer.Text("MicSetupPositionNone"), first.PositionIntro);
+        Assert.Equal(Localizer.Text("MicSetupTipOtherDevice"), first.PositionTips[0]);
         Assert.True(first.ShowsPhantom && !first.HasPhantom && first.PhantomElsewhere);
         Assert.False(first.HasUnitFilters);
         // XLR 1's software low cut and ClipGuard stay with XLR 1 whatever feeds it.
@@ -242,7 +242,7 @@ public sealed class MicCheckModelTests
         // A peaky voice: the peak decides, and stays at the band's top.
         s = GainSuggestion.From(Steady(-30, -12), 40, 80);
         Assert.Equal((40, 46), (s.FromDb, s.ToDb));
-        Assert.True(s.PeakDb + (s.ToDb - s.FromDb) <= MicCheckLevels.BandHighDb);
+        Assert.True(s.PeakDb + (s.ToDb - s.FromDb) <= MicSetupLevels.BandHighDb);
 
         // Whole dB rounded down where rounding up would lift the peak over the top.
         s = GainSuggestion.From(Steady(-30, -15.5), 40, 80);
@@ -326,7 +326,7 @@ public sealed class MicCheckModelTests
         GainSuggestion s = GainSuggestion.From(Steady(-60, -60), 40, 80);
         Assert.Equal(GainOutcome.NoVoice, s.Outcome);
         Assert.False(s.ChangesGain);
-        s = GainSuggestion.From(Steady(-30, -18, MicCheckLevels.MinReadings - 1), 40, 80);
+        s = GainSuggestion.From(Steady(-30, -18, MicSetupLevels.MinReadings - 1), 40, 80);
         Assert.Equal(GainOutcome.TooFewReadings, s.Outcome);
         Assert.False(s.ChangesGain);
 
@@ -343,18 +343,18 @@ public sealed class MicCheckModelTests
     [Fact]
     public void SuggestGainAimsForTheBandTheLevelStepDraws()
     {
-        string window = File.ReadAllText(Path.Combine(MicEqTests.RepoRoot, "src", "OpenXLR.UI", "MicCheckWindow.axaml"));
+        string window = File.ReadAllText(Path.Combine(MicEqTests.RepoRoot, "src", "OpenXLR.UI", "MicSetupWindow.axaml"));
         static double Share(double from, double to) => (to - from) / 6;
-        string columns = $"ColumnDefinitions=\"{Share(MicCheckLevels.MeterFloorDb, MicCheckLevels.BandLowDb)}*,"
-            + $"{Share(MicCheckLevels.BandLowDb, MicCheckLevels.BandHighDb)}*,{Share(MicCheckLevels.BandHighDb, 0)}*\"";
-        int target = window.IndexOf("Name=\"MicCheckTarget\"", StringComparison.Ordinal);
+        string columns = $"ColumnDefinitions=\"{Share(MicSetupLevels.MeterFloorDb, MicSetupLevels.BandLowDb)}*,"
+            + $"{Share(MicSetupLevels.BandLowDb, MicSetupLevels.BandHighDb)}*,{Share(MicSetupLevels.BandHighDb, 0)}*\"";
+        int target = window.IndexOf("Name=\"MicSetupTarget\"", StringComparison.Ordinal);
         Assert.True(target > 0);
         Assert.Equal(window.LastIndexOf("ColumnDefinitions=", target, StringComparison.Ordinal),
             window.LastIndexOf(columns, target, StringComparison.Ordinal));
-        Assert.Contains(string.Format(CultureInfo.InvariantCulture, "{0} and {1} dBFS", MicCheckLevels.BandLowDb, MicCheckLevels.BandHighDb),
-            Localizer.Text("MicCheckTargetTip"));
+        Assert.Contains(string.Format(CultureInfo.InvariantCulture, "{0} and {1} dBFS", MicSetupLevels.BandLowDb, MicSetupLevels.BandHighDb),
+            Localizer.Text("MicSetupTargetTip"));
         // Speech at the target leaves room for its peaks inside the band.
-        Assert.InRange(MicCheckLevels.TargetSpeechDb, MicCheckLevels.BandLowDb - 6, MicCheckLevels.BandLowDb);
+        Assert.InRange(MicSetupLevels.TargetSpeechDb, MicSetupLevels.BandLowDb - 6, MicSetupLevels.BandLowDb);
     }
 
 }
@@ -366,13 +366,13 @@ public sealed class MicCheckModelTests
 /// tests that write a gain that way, and clears the guard before and after.
 /// </summary>
 [Collection("xdg-config")]
-public sealed class MicCheckGainModelTests : IDisposable
+public sealed class MicSetupGainModelTests : IDisposable
 {
-    public MicCheckGainModelTests() => SliderSync.ReleaseTouchGuards();
+    public MicSetupGainModelTests() => SliderSync.ReleaseTouchGuards();
 
     public void Dispose() => SliderSync.ReleaseTouchGuards();
 
-    private static void Meter(MicCheckViewModel check, ManualTime time, double rmsDb, double peakDb)
+    private static void Meter(MicSetupViewModel check, ManualTime time, double rmsDb, double peakDb)
     {
         time.Advance(TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 15 + 1));
         check.ApplyInputLevel(new JsonArray((rmsDb + 60) / 60, (peakDb + 60) / 60, 0));
@@ -388,7 +388,7 @@ public sealed class MicCheckGainModelTests : IDisposable
         state["capabilities"]!["gainMaxDb"] = 80;
         state["state"] = new JsonObject { ["gainDb"] = 40, ["gainLocked"] = false };
         CaptureInputWindowTests.Apply(main, state);
-        MicCheckViewModel check = main.Inserts.MicCheck;
+        MicSetupViewModel check = main.Inserts.MicSetup;
         var time = new ManualTime();
         check.Time = time;
         Assert.NotNull(check.Unit);
@@ -397,15 +397,15 @@ public sealed class MicCheckGainModelTests : IDisposable
         check.StartGainMeasure();
         Assert.True(check.Measuring);
         Assert.False(check.CanSuggestGain);
-        Assert.Equal(Localizer.Format("MicCheckSuggestListening", 5.0), check.SuggestAdvice);
+        Assert.Equal(Localizer.Format("MicSetupSuggestListening", 5.0), check.SuggestAdvice);
         for (int i = 0; i < 74; i++) Meter(check, time, -30, -18);
         Assert.True(check.Measuring);
         Meter(check, time, -30, -18);
         Assert.False(check.Measuring);
         Assert.Equal(GainOutcome.Change, check.Suggestion!.Outcome);
         Assert.Equal(50, check.Suggestion.ToDb);
-        Assert.Equal(Localizer.Format("MicCheckSuggestChange", 40, 50), check.SuggestAdvice);
-        Assert.Equal(Localizer.Format("MicCheckSuggestMeasured", -30.0, -18.0), check.SuggestMeasured);
+        Assert.Equal(Localizer.Format("MicSetupSuggestChange", 40, 50), check.SuggestAdvice);
+        Assert.Equal(Localizer.Format("MicSetupSuggestMeasured", -30.0, -18.0), check.SuggestMeasured);
         // Measured, not written.
         Assert.Equal(40, main.GainDb);
         Assert.True(check.CanAcceptGain);
@@ -415,7 +415,7 @@ public sealed class MicCheckGainModelTests : IDisposable
         state["state"]!["gainLocked"] = true;
         CaptureInputWindowTests.Apply(main, state);
         Assert.False(check.CanAcceptGain);
-        Assert.Equal(Localizer.Text("MicCheckSuggestLocked"), check.SuggestBlocked);
+        Assert.Equal(Localizer.Text("MicSetupSuggestLocked"), check.SuggestBlocked);
         check.AcceptGain();
         Assert.Equal(40, main.GainDb);
         state["state"]!["gainLocked"] = false;
@@ -424,7 +424,7 @@ public sealed class MicCheckGainModelTests : IDisposable
         check.AcceptGain();
         Assert.Equal(50, main.GainDb);
         Assert.Null(check.Suggestion);
-        Assert.Equal(Localizer.Format("MicCheckSuggestSet", 50), check.SuggestAdvice);
+        Assert.Equal(Localizer.Format("MicSetupSuggestSet", 50), check.SuggestAdvice);
         Assert.True(check.CanDiscardGain);
         check.DiscardGain();
         Assert.Null(check.SuggestAdvice);
@@ -436,7 +436,7 @@ public sealed class MicCheckGainModelTests : IDisposable
         main.GainDb = 45;
         check.AcceptGain();
         Assert.Equal(45, main.GainDb);
-        Assert.Equal(Localizer.Text("MicCheckSuggestStale"), check.SuggestAdvice);
+        Assert.Equal(Localizer.Text("MicSetupSuggestStale"), check.SuggestAdvice);
 
         // Or while listening.
         check.StartGainMeasure();
@@ -444,19 +444,19 @@ public sealed class MicCheckGainModelTests : IDisposable
         main.GainDb = 47;
         for (int i = 0; i < 75; i++) Meter(check, time, -35, -25);
         Assert.Null(check.Suggestion);
-        Assert.Equal(Localizer.Text("MicCheckSuggestStale"), check.SuggestAdvice);
+        Assert.Equal(Localizer.Text("MicSetupSuggestStale"), check.SuggestAdvice);
 
         // With no reading at all, the window's clock ends it.
         check.StartGainMeasure();
         time.Advance(TimeSpan.FromSeconds(4));
         check.MeasureTick();
-        Assert.Equal(Localizer.Format("MicCheckSuggestListening", 1.0), check.SuggestAdvice);
+        Assert.Equal(Localizer.Format("MicSetupSuggestListening", 1.0), check.SuggestAdvice);
         time.Advance(TimeSpan.FromSeconds(1));
         check.MeasureTick();
         Assert.False(check.Measuring);
         Assert.Equal(GainOutcome.TooFewReadings, check.Suggestion!.Outcome);
         Assert.Null(check.SuggestMeasured);
-        Assert.Equal(Localizer.Text("MicCheckSuggestTooFew"), check.SuggestAdvice);
+        Assert.Equal(Localizer.Text("MicSetupSuggestTooFew"), check.SuggestAdvice);
 
         // A closed window drops the measurement, and a lost connection the suggestion.
         check.StartGainMeasure();
@@ -475,7 +475,7 @@ public sealed class MicCheckGainModelTests : IDisposable
         check.StartGainMeasure();
         for (int i = 0; i < 75; i++) Meter(check, time, -30, -18);
         Assert.Equal(GainOutcome.Elsewhere, check.Suggestion!.Outcome);
-        Assert.Equal(Localizer.Format("MicCheckSuggestElsewhere", 10.0), check.SuggestAdvice);
+        Assert.Equal(Localizer.Format("MicSetupSuggestElsewhere", 10.0), check.SuggestAdvice);
         Assert.False(check.CanAcceptGain);
         Assert.Null(check.SuggestBlocked);
     }

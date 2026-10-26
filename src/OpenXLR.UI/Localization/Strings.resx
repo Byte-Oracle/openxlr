@@ -33,7 +33,7 @@
     <value>Add capture input</value>
   </data>
   <data name="AddCaptureInputHint" xml:space="preserve">
-    <value>Choose a source and one mono port or a stereo pair. Mono inputs can use Sound Check. The new input starts muted in every mix and stays silent while its source is offline.</value>
+    <value>Choose a source and one mono port or a stereo pair. Mono inputs can use Mic setup. The new input starts muted in every mix and stays silent while its source is offline.</value>
   </data>
   <data name="AddChannel" xml:space="preserve">
     <value>Add channel</value>
@@ -2840,7 +2840,7 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
     <value>{0:0} dB</value>
   </data>
   <data name="CaptureBindingHint" xml:space="preserve">
-    <value>Choose a source and port for {0}. Its sends, volume, inserts and group stay in place. Monitor sends start muted and Sound Check ends after a change. Remove its inserts before changing between mono and stereo.</value>
+    <value>Choose a source and port for {0}. Its sends, volume, inserts and group stay in place. Monitor sends start muted and Mic setup ends after a change. Remove its inserts before changing between mono and stereo.</value>
   </data>
   <data name="CaptureMonoPort" xml:space="preserve">
     <value>Mono port {0}</value>
@@ -2968,313 +2968,313 @@ The Wave XLR Pro UCM profile remains a manual host setup. Install LV2 plugins fr
   <data name="DesktopKeysShortcutsUnavailable" xml:space="preserve">
     <value>This desktop does not offer global shortcuts through the portal. OpenDeck focus routing remains available.</value>
   </data>
-  <data name="MicCheck" xml:space="preserve">
-    <value>Mic check</value>
+  <data name="MicSetup" xml:space="preserve">
+    <value>Mic setup</value>
   </data>
-  <data name="MicCheckStepLevel" xml:space="preserve">
+  <data name="MicSetupStepLevel" xml:space="preserve">
     <value>Level</value>
   </data>
-  <data name="MicCheckStepListen" xml:space="preserve">
+  <data name="MicSetupStepListen" xml:space="preserve">
     <value>Listen</value>
   </data>
-  <data name="MicCheckIdle" xml:space="preserve">
+  <data name="MicSetupIdle" xml:space="preserve">
     <value>Live microphone. No take recorded</value>
   </data>
-  <data name="MicCheckReady" xml:space="preserve">
+  <data name="MicSetupReady" xml:space="preserve">
     <value>Live microphone. {0:0.0} seconds ready to loop</value>
   </data>
-  <data name="MicCheckLooping" xml:space="preserve">
+  <data name="MicSetupLooping" xml:space="preserve">
     <value>Looping {0:0.0} seconds</value>
   </data>
-  <data name="MicCheckLevelHint" xml:space="preserve">
+  <data name="MicSetupLevelHint" xml:space="preserve">
     <value>Speak as you will on air, at your usual distance from the microphone. Set the gain so your voice peaks inside the band and the clip light stays dark.</value>
   </data>
-  <data name="MicCheckBeforeEffects" xml:space="preserve">
+  <data name="MicSetupBeforeEffects" xml:space="preserve">
     <value>Microphone before effects</value>
   </data>
-  <data name="MicCheckPeak" xml:space="preserve">
+  <data name="MicSetupPeak" xml:space="preserve">
     <value>Peak {0:0} dBFS</value>
   </data>
-  <data name="MicCheckPeakSilent" xml:space="preserve">
+  <data name="MicSetupPeakSilent" xml:space="preserve">
     <value>No signal</value>
   </data>
-  <data name="MicCheckTargetTip" xml:space="preserve">
+  <data name="MicSetupTargetTip" xml:space="preserve">
     <value>Speech should peak in the band, between -18 and -6 dBFS.</value>
   </data>
-  <data name="MicCheckAverage" xml:space="preserve">
+  <data name="MicSetupAverage" xml:space="preserve">
     <value>Average level</value>
   </data>
-  <data name="MicCheckClip" xml:space="preserve">
+  <data name="MicSetupClip" xml:space="preserve">
     <value>Clip</value>
   </data>
-  <data name="MicCheckClipTip" xml:space="preserve">
+  <data name="MicSetupClipTip" xml:space="preserve">
     <value>Lights when the microphone reaches full scale, and stays lit until you press it.</value>
   </data>
-  <data name="MicCheckClipLit" xml:space="preserve">
+  <data name="MicSetupClipLit" xml:space="preserve">
     <value>Clip light, lit: the microphone reached full scale. Press to clear it.</value>
   </data>
-  <data name="MicCheckClipDark" xml:space="preserve">
+  <data name="MicSetupClipDark" xml:space="preserve">
     <value>Clip light, dark</value>
   </data>
-  <data name="MicCheckGain" xml:space="preserve">
+  <data name="MicSetupGain" xml:space="preserve">
     <value>Interface gain</value>
   </data>
-  <data name="MicCheckNoGain" xml:space="preserve">
+  <data name="MicSetupNoGain" xml:space="preserve">
     <value>OpenXLR has no gain control for this microphone. Set the gain on the microphone or on its own interface.</value>
   </data>
-  <data name="MicCheckSuggestGain" xml:space="preserve">
+  <data name="MicSetupSuggestGain" xml:space="preserve">
     <value>Suggest gain</value>
   </data>
-  <data name="MicCheckSuggestHint" xml:space="preserve">
+  <data name="MicSetupSuggestHint" xml:space="preserve">
     <value>Press Suggest gain and talk for five seconds as you will on air. OpenXLR measures your voice and suggests a gain that puts it in the band without clipping. Nothing changes on the interface until you accept.</value>
   </data>
-  <data name="MicCheckSuggestListening" xml:space="preserve">
+  <data name="MicSetupSuggestListening" xml:space="preserve">
     <value>Listening. Keep talking, {0:0} s left.</value>
   </data>
-  <data name="MicCheckSuggestMeasured" xml:space="preserve">
+  <data name="MicSetupSuggestMeasured" xml:space="preserve">
     <value>Your voice reached {0:0.0} dBFS in its loud stretches, with its highest peak at {1:0.0} dBFS.</value>
   </data>
-  <data name="MicCheckSuggestTooFew" xml:space="preserve">
+  <data name="MicSetupSuggestTooFew" xml:space="preserve">
     <value>The meter sent too few readings to judge. Keep this window open and measure again.</value>
   </data>
-  <data name="MicCheckSuggestNoVoice" xml:space="preserve">
+  <data name="MicSetupSuggestNoVoice" xml:space="preserve">
     <value>Heard almost nothing. Check that the microphone is connected and not muted, and that phantom power is on if it needs it, then measure again.</value>
   </data>
-  <data name="MicCheckSuggestKeep" xml:space="preserve">
+  <data name="MicSetupSuggestKeep" xml:space="preserve">
     <value>The gain of {0} dB already puts your voice in the band. Keep it.</value>
   </data>
-  <data name="MicCheckSuggestKeepElsewhere" xml:space="preserve">
+  <data name="MicSetupSuggestKeepElsewhere" xml:space="preserve">
     <value>Your voice is already in the band.</value>
   </data>
-  <data name="MicCheckSuggestChange" xml:space="preserve">
+  <data name="MicSetupSuggestChange" xml:space="preserve">
     <value>Suggested gain: {1} dB, now {0} dB.</value>
   </data>
-  <data name="MicCheckSuggestAtMaximum" xml:space="preserve">
+  <data name="MicSetupSuggestAtMaximum" xml:space="preserve">
     <value>Even at the interface's highest gain, {0} dB, your voice stays about {1:0} dB under the target. Move closer to the microphone, or use one with more output.</value>
   </data>
-  <data name="MicCheckSuggestAtMinimum" xml:space="preserve">
+  <data name="MicSetupSuggestAtMinimum" xml:space="preserve">
     <value>Even at 0 dB your voice is about {0:0} dB over the target. Move back from the microphone or speak more softly.</value>
   </data>
-  <data name="MicCheckSuggestClipped" xml:space="preserve">
+  <data name="MicSetupSuggestClipped" xml:space="preserve">
     <value>Your voice clipped, so it is louder than this measured. Lower the gain, then measure again.</value>
   </data>
-  <data name="MicCheckSuggestElsewhere" xml:space="preserve">
+  <data name="MicSetupSuggestElsewhere" xml:space="preserve">
     <value>OpenXLR does not set this microphone's gain. Change it by about {0:+0;-0} dB on the microphone or its interface, then measure again.</value>
   </data>
-  <data name="MicCheckSuggestLocked" xml:space="preserve">
+  <data name="MicSetupSuggestLocked" xml:space="preserve">
     <value>The gain lock is on. Release it to accept.</value>
   </data>
-  <data name="MicCheckSuggestUnreachable" xml:space="preserve">
+  <data name="MicSetupSuggestUnreachable" xml:space="preserve">
     <value>OpenXLR cannot change this interface's gain right now.</value>
   </data>
-  <data name="MicCheckSuggestStale" xml:space="preserve">
+  <data name="MicSetupSuggestStale" xml:space="preserve">
     <value>The gain changed after the measurement. Measure again.</value>
   </data>
-  <data name="MicCheckSuggestSet" xml:space="preserve">
+  <data name="MicSetupSuggestSet" xml:space="preserve">
     <value>Gain set to {0} dB. Measure again to check.</value>
   </data>
-  <data name="MicCheckAcceptGain" xml:space="preserve">
+  <data name="MicSetupAcceptGain" xml:space="preserve">
     <value>Accept</value>
   </data>
-  <data name="MicCheckDiscardGain" xml:space="preserve">
+  <data name="MicSetupDiscardGain" xml:space="preserve">
     <value>Discard</value>
   </data>
-  <data name="MicCheckListenHint" xml:space="preserve">
+  <data name="MicSetupListenHint" xml:space="preserve">
     <value>Record up to ten seconds, then loop the take and change the effects while you hear the same words. The take stays in memory and is never saved.</value>
   </data>
-  <data name="MicCheckLoopTake" xml:space="preserve">
+  <data name="MicSetupLoopTake" xml:space="preserve">
     <value>Loop take</value>
   </data>
-  <data name="MicCheckLiveMic" xml:space="preserve">
+  <data name="MicSetupLiveMic" xml:space="preserve">
     <value>Live mic</value>
   </data>
-  <data name="MicCheckWaveform" xml:space="preserve">
+  <data name="MicSetupWaveform" xml:space="preserve">
     <value>Take waveform</value>
   </data>
-  <data name="MicCheckNoTake" xml:space="preserve">
+  <data name="MicSetupNoTake" xml:space="preserve">
     <value>No take yet. Record one to see its waveform.</value>
   </data>
-  <data name="MicCheckCompare" xml:space="preserve">
+  <data name="MicSetupCompare" xml:space="preserve">
     <value>Hear</value>
   </data>
-  <data name="MicCheckProcessed" xml:space="preserve">
+  <data name="MicSetupProcessed" xml:space="preserve">
     <value>Processed</value>
   </data>
-  <data name="MicCheckRaw" xml:space="preserve">
+  <data name="MicSetupRaw" xml:space="preserve">
     <value>Raw</value>
   </data>
-  <data name="MicCheckCompareHint" xml:space="preserve">
+  <data name="MicSetupCompareHint" xml:space="preserve">
     <value>Raw plays the microphone without its EQ, software processing and plugins. The plugins keep running, so the switch is heard at once. Everything this channel feeds hears the switch, the virtual microphones included.</value>
   </data>
-  <data name="MicCheckHearMyself" xml:space="preserve">
+  <data name="MicSetupHearMyself" xml:space="preserve">
     <value>Hear myself in the monitor mix while this window is open</value>
   </data>
-  <data name="MicCheckHearMyselfLatency" xml:space="preserve">
+  <data name="MicSetupHearMyselfLatency" xml:space="preserve">
     <value>Through this computer you hear yourself about {0:0} ms late: the audio server's buffers plus the latency the plugins report.</value>
   </data>
-  <data name="MicCheckHearMyselfLatencyUnknown" xml:space="preserve">
+  <data name="MicSetupHearMyselfLatencyUnknown" xml:space="preserve">
     <value>Through this computer you hear yourself a little late: the audio server's buffers plus the latency the plugins report.</value>
   </data>
-  <data name="MicCheckProDirect" xml:space="preserve">
+  <data name="MicSetupProDirect" xml:space="preserve">
     <value>The Wave XLR Pro's zero-latency path to the headphones is off during the session, because it cannot carry effects.</value>
   </data>
-  <data name="MicCheckNotHeard" xml:space="preserve">
+  <data name="MicSetupNotHeard" xml:space="preserve">
     <value>This microphone does not reach your monitor outputs now. Turn on Hear myself, or unmute it in the monitor mix.</value>
   </data>
-  <data name="MicCheckClosingDiscards" xml:space="preserve">
+  <data name="MicSetupClosingDiscards" xml:space="preserve">
     <value>Closing this window ends the session and discards the take. Hear myself and Raw end with it; your effect settings stay as they are.</value>
   </data>
-  <data name="MicCheckStepPosition" xml:space="preserve">
+  <data name="MicSetupStepPosition" xml:space="preserve">
     <value>Position</value>
   </data>
-  <data name="MicCheckStepShape" xml:space="preserve">
+  <data name="MicSetupStepShape" xml:space="preserve">
     <value>Shape</value>
   </data>
-  <data name="MicCheckYourInterface" xml:space="preserve">
+  <data name="MicSetupYourInterface" xml:space="preserve">
     <value>your interface</value>
   </data>
-  <data name="MicCheckPositionCapsule" xml:space="preserve">
+  <data name="MicSetupPositionCapsule" xml:space="preserve">
     <value>This microphone is the built-in capsule of {0}.</value>
   </data>
-  <data name="MicCheckPositionXlr" xml:space="preserve">
+  <data name="MicSetupPositionXlr" xml:space="preserve">
     <value>This microphone is on input {1} of {0}.</value>
   </data>
-  <data name="MicCheckPositionNone" xml:space="preserve">
+  <data name="MicSetupPositionNone" xml:space="preserve">
     <value>OpenXLR does not control the device this microphone is on, so set its gain and power on that device.</value>
   </data>
-  <data name="MicCheckPlacement" xml:space="preserve">
+  <data name="MicSetupPlacement" xml:space="preserve">
     <value>Where it goes</value>
   </data>
-  <data name="MicCheckTipCapsuleFront" xml:space="preserve">
+  <data name="MicSetupTipCapsuleFront" xml:space="preserve">
     <value>Speak into the front of the microphone, not into its top.</value>
   </data>
-  <data name="MicCheckTipCapsuleRoom" xml:space="preserve">
+  <data name="MicSetupTipCapsuleRoom" xml:space="preserve">
     <value>The capsule is a condenser, which hears the room more than a dynamic microphone does. Keep it close to your mouth and away from keyboards and fans.</value>
   </data>
-  <data name="MicCheckTipXlrAddress" xml:space="preserve">
+  <data name="MicSetupTipXlrAddress" xml:space="preserve">
     <value>Some microphones take sound from their end, others from their side. The microphone's manual says which; speak into that part, not across it.</value>
   </data>
-  <data name="MicCheckTipXlrDistance" xml:space="preserve">
+  <data name="MicSetupTipXlrDistance" xml:space="preserve">
     <value>A dynamic microphone usually works close to the mouth. A condenser can sit a little farther back, with more of the room in the sound.</value>
   </data>
-  <data name="MicCheckTipOtherDevice" xml:space="preserve">
+  <data name="MicSetupTipOtherDevice" xml:space="preserve">
     <value>Speak into the part of the microphone its manual names, not across it.</value>
   </data>
-  <data name="MicCheckTipDistance" xml:space="preserve">
+  <data name="MicSetupTipDistance" xml:space="preserve">
     <value>Keep the same distance while you talk. Closer gives more low end and less room; farther gives more room and less low end.</value>
   </data>
-  <data name="MicCheckTipAngle" xml:space="preserve">
+  <data name="MicSetupTipAngle" xml:space="preserve">
     <value>Aim it at your mouth from slightly to one side, so the air of p and b sounds passes it instead of hitting it.</value>
   </data>
-  <data name="MicCheckTipNoise" xml:space="preserve">
+  <data name="MicSetupTipNoise" xml:space="preserve">
     <value>On a cardioid microphone, point its back toward fans, keyboards and other noise.</value>
   </data>
-  <data name="MicCheckPhantomPower" xml:space="preserve">
+  <data name="MicSetupPhantomPower" xml:space="preserve">
     <value>Phantom power</value>
   </data>
-  <data name="MicCheckPhantomHint" xml:space="preserve">
+  <data name="MicSetupPhantomHint" xml:space="preserve">
     <value>Condenser microphones need phantom power (48 V); dynamic microphones do not, and most are not affected by it. Check a ribbon microphone's manual before you turn it on. Turn your headphones down first, since switching it can thump.</value>
   </data>
-  <data name="MicCheckPhantomName" xml:space="preserve">
+  <data name="MicSetupPhantomName" xml:space="preserve">
     <value>Phantom power for this microphone</value>
   </data>
-  <data name="MicCheckPhantomElsewhere" xml:space="preserve">
+  <data name="MicSetupPhantomElsewhere" xml:space="preserve">
     <value>OpenXLR does not switch phantom power for this microphone. If it needs it, turn it on at the interface it is plugged into.</value>
   </data>
-  <data name="MicCheckShapeHint" xml:space="preserve">
+  <data name="MicSetupShapeHint" xml:space="preserve">
     <value>Loop a take on the Listen step, then shape it here. Every change below is heard at once, on the take or on the live microphone.</value>
   </data>
-  <data name="MicCheckPresets" xml:space="preserve">
+  <data name="MicSetupPresets" xml:space="preserve">
     <value>Starting presets</value>
   </data>
-  <data name="MicCheckPresetClear" xml:space="preserve">
+  <data name="MicSetupPresetClear" xml:space="preserve">
     <value>Clear</value>
   </data>
-  <data name="MicCheckPresetClearTip" xml:space="preserve">
+  <data name="MicSetupPresetClearTip" xml:space="preserve">
     <value>Low cut at 80 Hz, a little less boxiness around 300 Hz and a small lift for presence and air.</value>
   </data>
-  <data name="MicCheckPresetWarm" xml:space="preserve">
+  <data name="MicSetupPresetWarm" xml:space="preserve">
     <value>Warm</value>
   </data>
-  <data name="MicCheckPresetWarmTip" xml:space="preserve">
+  <data name="MicSetupPresetWarmTip" xml:space="preserve">
     <value>Low cut at 60 Hz, more body under 200 Hz and a softer top.</value>
   </data>
-  <data name="MicCheckPresetBroadcast" xml:space="preserve">
+  <data name="MicSetupPresetBroadcast" xml:space="preserve">
     <value>Broadcast</value>
   </data>
-  <data name="MicCheckPresetBroadcastTip" xml:space="preserve">
+  <data name="MicSetupPresetBroadcastTip" xml:space="preserve">
     <value>Low cut at 100 Hz, less mud around 400 Hz and a forward lift around 4 kHz.</value>
   </data>
-  <data name="MicCheckPresetHint" xml:space="preserve">
+  <data name="MicSetupPresetHint" xml:space="preserve">
     <value>A preset sets the four EQ bands and turns the EQ on. It is a starting point: adjust it on the curve below.</value>
   </data>
-  <data name="MicCheckPresetApplied" xml:space="preserve">
+  <data name="MicSetupPresetApplied" xml:space="preserve">
     <value>{0} is on the EQ. Undo preset puts back the EQ you had before it.</value>
   </data>
-  <data name="MicCheckPresetUndone" xml:space="preserve">
+  <data name="MicSetupPresetUndone" xml:space="preserve">
     <value>The EQ is back as it was before the preset.</value>
   </data>
-  <data name="MicCheckUndoPreset" xml:space="preserve">
+  <data name="MicSetupUndoPreset" xml:space="preserve">
     <value>Undo preset</value>
   </data>
-  <data name="MicCheckUndoPresetTip" xml:space="preserve">
+  <data name="MicSetupUndoPresetTip" xml:space="preserve">
     <value>Put back the EQ as it was before the last preset. Changes made to it since then go too.</value>
   </data>
-  <data name="MicCheckEq" xml:space="preserve">
+  <data name="MicSetupEq" xml:space="preserve">
     <value>EQ</value>
   </data>
-  <data name="MicCheckEqEditor" xml:space="preserve">
+  <data name="MicSetupEqEditor" xml:space="preserve">
     <value>All bands</value>
   </data>
-  <data name="MicCheckEqEditorTip" xml:space="preserve">
+  <data name="MicSetupEqEditorTip" xml:space="preserve">
     <value>Open the EQ editor, with a row of fields for each band</value>
   </data>
-  <data name="MicCheckNoEq" xml:space="preserve">
+  <data name="MicSetupNoEq" xml:space="preserve">
     <value>The daemon reports no EQ for this microphone.</value>
   </data>
-  <data name="MicCheckFilters" xml:space="preserve">
+  <data name="MicSetupFilters" xml:space="preserve">
     <value>Low cut and ClipGuard</value>
   </data>
-  <data name="MicCheckUnitLowCut" xml:space="preserve">
+  <data name="MicSetupUnitLowCut" xml:space="preserve">
     <value>The interface's low cut</value>
   </data>
-  <data name="MicCheckUnitClipGuard" xml:space="preserve">
+  <data name="MicSetupUnitClipGuard" xml:space="preserve">
     <value>The interface's ClipGuard</value>
   </data>
-  <data name="MicCheckUnitFiltersHint" xml:space="preserve">
+  <data name="MicSetupUnitFiltersHint" xml:space="preserve">
     <value>The interface's own low cut and ClipGuard act before the take, so a looped take does not change with them. Use Live mic to hear them.</value>
   </data>
-  <data name="MicCheckSoftwareLowCut" xml:space="preserve">
+  <data name="MicSetupSoftwareLowCut" xml:space="preserve">
     <value>Software low cut</value>
   </data>
-  <data name="MicCheckSoftwareClipGuard" xml:space="preserve">
+  <data name="MicSetupSoftwareClipGuard" xml:space="preserve">
     <value>Software ClipGuard</value>
   </data>
-  <data name="MicCheckSoftwareFiltersHint" xml:space="preserve">
+  <data name="MicSetupSoftwareFiltersHint" xml:space="preserve">
     <value>The software low cut and ClipGuard run on this computer after the EQ, so the loop goes through them.</value>
   </data>
-  <data name="MicCheckNoFilters" xml:space="preserve">
+  <data name="MicSetupNoFilters" xml:space="preserve">
     <value>This microphone has no low cut or ClipGuard of its own. The EQ's low cut band does that job.</value>
   </data>
-  <data name="MicCheckEffects" xml:space="preserve">
+  <data name="MicSetupEffects" xml:space="preserve">
     <value>Plugins</value>
   </data>
-  <data name="MicCheckAddEffect" xml:space="preserve">
+  <data name="MicSetupAddEffect" xml:space="preserve">
     <value>Add effect</value>
   </data>
-  <data name="MicCheckAddEffectTip" xml:space="preserve">
+  <data name="MicSetupAddEffectTip" xml:space="preserve">
     <value>Add a plugin at the end of this microphone's chain</value>
   </data>
-  <data name="MicCheckBypassName" xml:space="preserve">
+  <data name="MicSetupBypassName" xml:space="preserve">
     <value>Bypass {0}</value>
   </data>
-  <data name="MicCheckEditor" xml:space="preserve">
+  <data name="MicSetupEditor" xml:space="preserve">
     <value>Editor</value>
   </data>
-  <data name="MicCheckEditorName" xml:space="preserve">
+  <data name="MicSetupEditorName" xml:space="preserve">
     <value>Open the editor of {0}</value>
   </data>
-  <data name="MicCheckEffectsHint" xml:space="preserve">
+  <data name="MicSetupEffectsHint" xml:space="preserve">
     <value>Bypass a plugin to hear the chain without it. The chain window moves, renames and removes plugins.</value>
   </data>
 </root>

@@ -33,7 +33,7 @@
     <value>Aggiungi ingresso di acquisizione</value>
   </data>
   <data name="AddCaptureInputHint" xml:space="preserve">
-    <value>Scegli una sorgente e una porta mono o una coppia stereo. Gli ingressi mono possono usare Sound Check. Il nuovo ingresso parte silenziato in ogni mix e resta muto finché la sua sorgente non è collegata.</value>
+    <value>Scegli una sorgente e una porta mono o una coppia stereo. Gli ingressi mono possono usare la Configurazione microfono. Il nuovo ingresso parte silenziato in ogni mix e resta muto finché la sua sorgente non è collegata.</value>
   </data>
   <data name="AddChannel" xml:space="preserve">
     <value>Aggiungi canale</value>
@@ -2863,7 +2863,7 @@ Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Inst
     <value>{0:0} dB</value>
   </data>
   <data name="CaptureBindingHint" xml:space="preserve">
-    <value>Scegli una sorgente e una porta per {0}. Le sue mandate, il volume, gli insert e il gruppo restano al loro posto. Dopo una modifica le mandate monitor partono silenziate e Sound Check termina. Rimuovi i suoi insert prima di passare tra mono e stereo.</value>
+    <value>Scegli una sorgente e una porta per {0}. Le sue mandate, il volume, gli insert e il gruppo restano al loro posto. Dopo una modifica le mandate monitor partono silenziate e la Configurazione microfono termina. Rimuovi i suoi insert prima di passare tra mono e stereo.</value>
   </data>
   <data name="CaptureMonoPort" xml:space="preserve">
     <value>Porta mono {0}</value>
@@ -2981,5 +2981,8 @@ Il profilo UCM del Wave XLR Pro resta una configurazione manuale sull'host. Inst
   </data>
   <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
     <value>Questo desktop non può riaprire l'editor delle scorciatoie. Cambia le associazioni nelle impostazioni delle scorciatoie del desktop.</value>
+  </data>
+  <data name="MicSetup" xml:space="preserve">
+    <value>Configurazione microfono</value>
   </data>
 </root>

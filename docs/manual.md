@@ -63,7 +63,7 @@ attached the header reads **No interface.** followed by a link, **Choose a
 microphone for XLR 1**. Pick your microphone and its port there, then Save
 ([Use another microphone on XLR 1 or XLR 2](#input-bindings)). The strip is
 then named Mic 1 and carries that microphone into every mix, with its
-volume, meter, EQ, inserts, Mic check, software low cut and ClipGuard
+volume, meter, EQ, inserts, Mic setup, software low cut and ClipGuard
 (ClipGuard needs `swh-plugins`). XLR 2 stays hidden until you bind it in
 Options, AUDIO, **Input bindings**.
 More sources can join as capture channels ([Additional capture
@@ -329,7 +329,7 @@ new source starts at port 1, which is usually right for a USB microphone; a
 multichannel interface may put the microphone on another port. When
 PipeWire does not report the layout, the ports are plain numbers from 1 to
 64. OpenXLR takes one mono port and feeds both sides of the strip. The
-strip keeps its sends, its insert chain and Mic check, and XLR 1 keeps
+strip keeps its sends, its insert chain and Mic setup, and XLR 1 keeps
 its software low cut and ClipGuard. Set preamp gain and phantom power on the
 microphone or its own interface; OpenXLR does not invent USB controls for
 other brands. A Bluetooth headset is offered too, with one line of warning:
@@ -415,8 +415,8 @@ the other strips keep their mutes. Unmute it in the desired monitor mix
 deliberately when you want to hear it. If the source is unplugged or its
 selected port is missing, the strip stays silent and the chip says why. It
 reconnects to the same source when that source returns, without borrowing
-another microphone. Changing the binding ends a Mic check session on that
-strip and discards its take, and Mic check on a silent strip says why it
+another microphone. Changing the binding ends a Mic setup session on that
+strip and discards its take, and Mic setup on a silent strip says why it
 cannot record. If two sources have the selected name, OpenXLR disconnects the
 strip and reports the ambiguity. Rename or remove the duplicate so the name
 identifies one microphone before its route resumes. Two strips may take the
@@ -710,7 +710,7 @@ and lower at different points:
   unit from ducking on noise. The unit lowers the finished mix as it plays
   it on its outputs, after everything on this computer.
 - On this computer, the key is the key channel after its EQ, its insert
-  chain and Mic check's loop, before the channel's volume and sends. The
+  chain and Mic setup's loop, before the channel's volume and sends. The
   chosen channels dip inside each ducked mix, before that mix's own insert
   chain and latency delay.
 
@@ -732,7 +732,7 @@ monitoring** lowers nothing either until monitoring resumes. On the Pro the
 unit listens to XLR 1 before USB, so it ducks while XLR 1 is muted in every
 mix; choose **This computer** if muting the microphone should stop ducking.
 The unit reacts to XLR 1 only: talking into XLR 2 does not duck. On this
-computer, [Mic check](#mic-check)'s loop plays through the key channel, so a looped take ducks the music, which is a quick way to
+computer, [Mic setup](#mic-setup)'s loop plays through the key channel, so a looped take ducks the music, which is a quick way to
 try a sensitivity. On the Pro the unit hears the live microphone, so the
 loop does not duck.
 
@@ -1024,11 +1024,11 @@ are not aligned against other inputs. Compensation does not cover the device's o
 hardware's direct monitoring. The setting is saved with the mixer and stays
 as it is when a profile is loaded.
 
-<a name="mic-check"></a>
+<a name="mic-setup"></a>
 <a name="sound-check"></a>
-**Mic check.** In the chain window of XLR 1, XLR 2 or a capture input on
-one mono port, press **Mic check**. Stereo capture inputs have no Mic
-check. The window has four steps, **Position**, **Level**, **Listen** and
+**Mic setup.** In the chain window of XLR 1, XLR 2 or a capture input on
+one mono port, press **Mic setup**. Stereo capture inputs have no Mic
+setup. The window has four steps, **Position**, **Level**, **Listen** and
 **Shape**; press any of them at the top to go to it, in any order. It opens
 on Position the first time and on the step you left it on after that, until
 the UI quits.
@@ -1195,14 +1195,14 @@ and ends with **Stop and discard** or when the window closes:
   failure is written to the daemon's log. **Stop and discard** clears the
   window's message. The daemon's messages call the session Sound Check, the
   name the [API](api.md#sound-check) gives it.
-- Capture inputs have no low cut or ClipGuard of their own, and Mic check
+- Capture inputs have no low cut or ClipGuard of their own, and Mic setup
   does not add them. A capture input's EQ already runs on this computer,
   so its take is the raw microphone and the loop goes through the EQ as it
   is set.
 - With a capture input's microphone unplugged, starting a session is
   refused with the channel's name and the reason. When the source lacks the
   port the input takes, the refusal says the capture port is unavailable.
-- Mic check needs the native plugin host the packages include. A source
+- Mic setup needs the native plugin host the packages include. A source
   build without `-p:EnableNativeLv2Host=true` refuses it with that reason.
 
 <a name="microphone-eq"></a>
@@ -1210,7 +1210,7 @@ and ends with **Stop and discard** or when the window closes:
 each have a four-band EQ with the same band types, ranges and steps as Wave
 Link's, and the same curves. It comes first on the input, before the low
 cut, ClipGuard and your plugins, so ClipGuard also catches a boost, and
-Mic check's loop goes through it. A capture input has no low cut or
+Mic setup's loop goes through it. A capture input has no low cut or
 ClipGuard, so its EQ comes straight before its plugins.
 
 Open it with **EQ**. In INPUTS it sits on the microphone's input line,
@@ -1329,7 +1329,7 @@ the input's route, and the plugin host is not needed.
   unit's own signal, so every channel and program that takes that unit's
   audio hears it, a capture channel on its node included, as they hear its
   low cut.
-- A Mic check session moves the EQ to this computer while it runs, so
+- A Mic setup session moves the EQ to this computer while it runs, so
   the take is the raw microphone, the loop follows every edit and Raw
   leaves the EQ out; the unit takes it back when the session ends.
 - When the unit connects, OpenXLR writes its EQ over the one the unit
@@ -2982,7 +2982,7 @@ profile persistence.
 
 Capture chains also appear in the insert key and dial choices, named by
 their channel. Saved insert targets keep the channel id through a rename.
-Mic check is not offered on the Deck.
+Mic setup is not offered on the Deck.
 
 **Dial** (an encoder) changes a level: the monitor output volume, a
 gain, the Line In gain, a headphone volume, the aux level, the crossfade, a
@@ -3531,7 +3531,7 @@ Open **Edit layout**, then **Add capture input**. Enter a channel name,
 choose an available microphone, capture card or another Wave interface, and
 select one mono port or a stereo pair. The picker names ports when PipeWire
 reports their positions, such as FL and FR. A mono source starts on port 1;
-one port gives the input a mono chain and Mic check. A stereo pair gives it
+one port gives the input a mono chain and Mic setup. A stereo pair gives it
 a stereo chain.
 The new channel starts muted in every mix. Open only the sends you need.
 
@@ -3544,10 +3544,10 @@ insert chain it names, while its source binding stays with the layout. Applicati
 Click the source chip in classic INPUTS or the input rack, or the source line
 under its name in the matrix, to change its source or ports. The dialog keeps
 the channel's name, sends, volume, inserts and group. After a change its
-monitor sends start muted and a Mic check session ends. Unmute the monitor sends you
+monitor sends start muted and a Mic setup session ends. Unmute the monitor sends you
 want to hear. To switch between mono and stereo, remove the chain's inserts
 first, including bypassed inserts. A failed save leaves the old binding,
-mutes and Mic check take in place. Rebinding can close a plugin editor as
+mutes and Mic setup take in place. Rebinding can close a plugin editor as
 the input's chain restarts. An offline source stays selected and silent until
 it returns. Capture source editing is available in the UI and API; the
 terminal mixer and Stream Deck do not offer this picker.
@@ -3629,7 +3629,7 @@ plugins that fit the input's width. A capture input on one microphone port
 draws one meter bar and a stereo pair draws two; XLR 1 and XLR 2 keep their
 two. An older daemon that does not report a chain width shows no capture
 Inserts button. A capture microphone's chain window also offers
-[Mic check](#mic-check) and the [microphone EQ](#microphone-eq), which
+[Mic setup](#mic-setup) and the [microphone EQ](#microphone-eq), which
 runs in software only. The terminal mixer edits capture chains too, using
 the width the daemon reports.
 
@@ -3855,7 +3855,7 @@ stay muted.
 The microphone pause affects audio routed through OpenXLR, including its
 virtual microphones used by Discord or a recording program. It does not mute
 applications capturing a physical microphone directly, stereo capture channels
-or Aux In and Line In. It stops a Mic check session and discards its take; a new recording is
+or Aux In and Line In. It stops a Mic setup session and discards its take; a new recording is
 refused until microphones resume. A paused microphone that is the
 [ducking](#ducking) key stops lowering the other channels on this computer.
 Its strip meter keeps moving while you speak, because the meter reads the
@@ -4040,7 +4040,7 @@ input stays in the mixer and Inserts tabs. Inserts lists capture chains
 in layout order and filters plugins by `chainWidth`, even while the source
 is unplugged. Microphone meters read `microphone`; an older daemon without
 these fields keeps XLR-only mono meters and XLR and mix insert targets.
-Mic check remains a UI control.
+Mic setup remains a UI control.
 
 The Bindings card chooses what feeds XLR 1 and XLR 2, the choice the UI
 makes in [Use another microphone on XLR 1 or XLR 2](#input-bindings).

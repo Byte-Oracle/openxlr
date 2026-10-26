@@ -821,10 +821,10 @@ public sealed partial class SkinWindowTests
         Assert.True(fader.Value < restored, "the keyboard stopped working after the skin was taken off");
     }
 
-    /// <summary>A Mic check on its Listen step with a session, a take and every note showing, so the skin reaches them all.</summary>
-    private static MicCheckViewModel ListeningCheck(DaemonClient client)
+    /// <summary>A Mic setup on its Listen step with a session, a take and every note showing, so the skin reaches them all.</summary>
+    private static MicSetupViewModel ListeningSetup(DaemonClient client)
     {
-        var check = new MicCheckViewModel(client, "xlr1") { Step = MicCheckStep.Listen, ProDirect = true };
+        var check = new MicSetupViewModel(client, "xlr1") { Step = MicSetupStep.Listen, ProDirect = true };
         check.Apply(JsonNode.Parse("""{"channel":"xlr1","mode":"looping","seconds":1.5,"error":"A refusal","raw":true,"take":1,"monitorLatencyMs":42}"""));
         check.ApplyTake(JsonNode.Parse("""{"type":"soundCheckTake","channel":"xlr1","take":1,"seconds":1.5,"peaks":[0.1,0.5,0.9,0.3]}"""));
         check.ApplyPosition(new JsonArray(0.4));
@@ -832,22 +832,22 @@ public sealed partial class SkinWindowTests
     }
 
     /// <summary>
-    /// A Mic check on its Shape step with the unit's filters, XLR 1's software
+    /// A Mic setup on its Shape step with the unit's filters, XLR 1's software
     /// ones, an EQ, a preset status and the chain's plugins showing.
     /// </summary>
-    private static MicCheckViewModel ShapingCheck(MainViewModel vm, DaemonClient client, MicEqViewModel eq)
+    private static MicSetupViewModel ShapingSetup(MainViewModel vm, DaemonClient client, MicEqViewModel eq)
     {
-        var check = new MicCheckViewModel(client, "xlr1", vm.Inserts) { Unit = vm.UnitInput1, Software = vm, Eq = eq };
-        check.Place(MicCheckUnitKind.XlrJack, "Elgato Wave XLR Pro", 1);
-        check.Step = MicCheckStep.Shape;
+        var check = new MicSetupViewModel(client, "xlr1", vm.Inserts) { Unit = vm.UnitInput1, Software = vm, Eq = eq };
+        check.Place(MicSetupUnitKind.XlrJack, "Elgato Wave XLR Pro", 1);
+        check.Step = MicSetupStep.Shape;
         return check;
     }
 
-    /// <summary>A Mic check on its Position step for a microphone on an XLR jack, with phantom power to switch.</summary>
-    private static MicCheckViewModel PlacingCheck(MainViewModel vm, DaemonClient client)
+    /// <summary>A Mic setup on its Position step for a microphone on an XLR jack, with phantom power to switch.</summary>
+    private static MicSetupViewModel PlacingSetup(MainViewModel vm, DaemonClient client)
     {
-        var check = new MicCheckViewModel(client, "xlr1") { Unit = vm.UnitInput1 };
-        check.Place(MicCheckUnitKind.XlrJack, "Elgato Wave XLR Pro", 1);
+        var check = new MicSetupViewModel(client, "xlr1") { Unit = vm.UnitInput1 };
+        check.Place(MicSetupUnitKind.XlrJack, "Elgato Wave XLR Pro", 1);
         return check;
     }
 
@@ -884,10 +884,10 @@ public sealed partial class SkinWindowTests
             ("effect-workflow", new EffectWorkflowWindow { DataContext = vm.Inserts }),
             ("native-editors", new NativeEditorRulesWindow()),
             ("plugin-folders", new PluginFoldersWindow()),
-            ("mic-check", new MicCheckWindow { DataContext = vm.Inserts.MicCheck }),
-            ("mic-check-listen", new MicCheckWindow { DataContext = ListeningCheck(client) }),
-            ("mic-check-position", new MicCheckWindow { DataContext = PlacingCheck(vm, client) }),
-            ("mic-check-shape", new MicCheckWindow { DataContext = ShapingCheck(vm, client, eq) }),
+            ("mic-setup", new MicSetupWindow { DataContext = vm.Inserts.MicSetup }),
+            ("mic-setup-listen", new MicSetupWindow { DataContext = ListeningSetup(client) }),
+            ("mic-setup-position", new MicSetupWindow { DataContext = PlacingSetup(vm, client) }),
+            ("mic-setup-shape", new MicSetupWindow { DataContext = ShapingSetup(vm, client, eq) }),
             ("updates", new UpdatesWindow { DataContext = vm.Updates }),
             ("wave-interfaces", new WaveInterfacesWindow(vm)),
         ];

@@ -381,7 +381,7 @@ link `sound-check.o`; to them `soundcheck` is an unknown backend.
 ## Level
 
 `openxlr-lv2-host level NODE 1 RATE` measures a microphone before its
-chain, for Mic check. The daemon links it from the channel's capture port
+chain, for Mic setup. The daemon links it from the channel's capture port
 beside the channel's own route; its output carries silence and is left
 unlinked. Once per block the audio thread writes three meters: `peak`, the
 sample peak in dBFS, falling back 20 dB a second, `rms`, the RMS in dBFS

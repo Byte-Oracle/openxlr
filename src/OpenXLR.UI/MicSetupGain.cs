@@ -5,11 +5,11 @@ using System.Linq;
 namespace OpenXLR.UI;
 
 /// <summary>
-/// The levels Mic check's Level step works to, in dBFS. The band is the one
+/// The levels Mic setup's Level step works to, in dBFS. The band is the one
 /// the window draws under the meter (its columns are 42, 12 and 6 dB of the
 /// 60 dB scale), and Suggest gain aims inside it.
 /// </summary>
-public static class MicCheckLevels
+public static class MicSetupLevels
 {
     /// <summary>The bottom of the meter's scale: the daemon sends anything quieter as this.</summary>
     public const double MeterFloorDb = -60;
@@ -93,34 +93,34 @@ public sealed record GainSuggestion(GainOutcome Outcome, int Readings, double Sp
     /// </summary>
     public static GainSuggestion From(IReadOnlyList<LevelReading> readings, int? gainDb, int maxDb)
     {
-        if (readings.Count < MicCheckLevels.MinReadings)
-            return new(GainOutcome.TooFewReadings, readings.Count, MicCheckLevels.MeterFloorDb, MicCheckLevels.MeterFloorDb, false, 0, gainDb, gainDb);
+        if (readings.Count < MicSetupLevels.MinReadings)
+            return new(GainOutcome.TooFewReadings, readings.Count, MicSetupLevels.MeterFloorDb, MicSetupLevels.MeterFloorDb, false, 0, gainDb, gainDb);
         double[] rms = [.. readings.Select(r => r.RmsDb).Order()];
-        int rank = Math.Clamp((int)Math.Ceiling(MicCheckLevels.SpeechPercentile * rms.Length) - 1, 0, rms.Length - 1);
+        int rank = Math.Clamp((int)Math.Ceiling(MicSetupLevels.SpeechPercentile * rms.Length) - 1, 0, rms.Length - 1);
         double speech = rms[rank];
         double peak = readings.Max(r => r.PeakDb);
         // The clip flag holds for a second, so one already set when the
         // measurement starts may be older than it; only a flag that rises
         // during it counts, beside a peak reading at full scale.
-        bool clipped = peak >= MicCheckLevels.ClipDb
+        bool clipped = peak >= MicSetupLevels.ClipDb
             || readings.Zip(readings.Skip(1)).Any(pair => !pair.First.Clip && pair.Second.Clip);
-        if (speech <= MicCheckLevels.NoVoiceDb && !clipped)
+        if (speech <= MicSetupLevels.NoVoiceDb && !clipped)
             return new(GainOutcome.NoVoice, readings.Count, speech, peak, false, 0, gainDb, gainDb);
 
-        double change = Math.Min(MicCheckLevels.TargetSpeechDb - speech, MicCheckLevels.BandHighDb - peak);
+        double change = Math.Min(MicSetupLevels.TargetSpeechDb - speech, MicSetupLevels.BandHighDb - peak);
         if (gainDb is not int from)
-            return new(Math.Abs(change) < MicCheckLevels.ToleranceDb && !clipped ? GainOutcome.Keep : GainOutcome.Elsewhere,
+            return new(Math.Abs(change) < MicSetupLevels.ToleranceDb && !clipped ? GainOutcome.Keep : GainOutcome.Elsewhere,
                 readings.Count, speech, peak, clipped, change, null, null);
 
         // Whole dB, rounded down where rounding up would lift the highest
         // peak over the band's top.
         double wanted = from + change;
         int to = (int)Math.Round(wanted, MidpointRounding.AwayFromZero);
-        if (peak + (to - from) > MicCheckLevels.BandHighDb) to = (int)Math.Floor(wanted);
+        if (peak + (to - from) > MicSetupLevels.BandHighDb) to = (int)Math.Floor(wanted);
         to = Math.Clamp(to, 0, maxDb);
         GainOutcome outcome = wanted > maxDb + 0.5 ? GainOutcome.AtMaximum
             : wanted < -0.5 ? GainOutcome.AtMinimum
-            : Math.Abs(to - from) < MicCheckLevels.ToleranceDb && !clipped ? GainOutcome.Keep
+            : Math.Abs(to - from) < MicSetupLevels.ToleranceDb && !clipped ? GainOutcome.Keep
             : GainOutcome.Change;
         if (outcome == GainOutcome.Keep) to = from;
         return new(outcome, readings.Count, speech, peak, clipped, change, from, to);

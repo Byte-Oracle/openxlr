@@ -3,26 +3,26 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:OpenXLR.UI"
         xmlns:skin="using:OpenXLR.UI.Skinning"
-        x:Class="OpenXLR.UI.MicCheckWindow" x:DataType="vm:MicCheckViewModel"
-        Title="{loc:Text Key=MicCheck}" Width="640" Height="640" MinWidth="420" MinHeight="400"
+        x:Class="OpenXLR.UI.MicSetupWindow" x:DataType="vm:MicSetupViewModel"
+        Title="{loc:Text Key=MicSetup}" Width="640" Height="640" MinWidth="420" MinHeight="400"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource Ox.Window.Background}">
-  <!-- Mic check for one microphone, one step at a time: where the microphone
+  <!-- Mic setup for one microphone, one step at a time: where the microphone
        goes, the level before any processing, a take heard raw and processed,
        then the EQ, filters, plugins and presets that shape it. Every colour,
        size and radius is an Ox.* token or a control theme; the waveform and
        the embedded EQ graph draw with the EQ editor's colours. -->
   <DockPanel Margin="16">
-    <TextBlock DockPanel.Dock="Top" Text="{loc:Text Key=MicCheck}" Classes="title" Margin="0,0,0,8"/>
+    <TextBlock DockPanel.Dock="Top" Text="{loc:Text Key=MicSetup}" Classes="title" Margin="0,0,0,8"/>
 
     <!-- the steps, free to jump between: the lit one is shown -->
-    <ItemsControl DockPanel.Dock="Top" Name="MicCheckSteps" ItemsSource="{Binding Steps}" Margin="0,0,0,12">
+    <ItemsControl DockPanel.Dock="Top" Name="MicSetupSteps" ItemsSource="{Binding Steps}" Margin="0,0,0,12">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
           <WrapPanel ItemSpacing="6" LineSpacing="4"/>
         </ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
-        <DataTemplate x:DataType="vm:MicCheckStepItem">
+        <DataTemplate x:DataType="vm:MicSetupStepItem">
           <ToggleButton Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=OneWay}" Click="OnStep" Padding="14,5"/>
         </DataTemplate>
       </ItemsControl.ItemTemplate>
@@ -30,23 +30,23 @@
 
     <!-- what the session reports, the daemon's refusal, and closing -->
     <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,10,0,0">
-      <TextBlock Name="MicCheckError" Text="{Binding Error}" TextWrapping="Wrap" Classes="warn"
+      <TextBlock Name="MicSetupError" Text="{Binding Error}" TextWrapping="Wrap" Classes="warn"
                  IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-        <TextBlock Text="{loc:Text Key=MicCheckClosingDiscards}" Classes="hint" TextWrapping="Wrap" VerticalAlignment="Center"/>
-        <Button Grid.Column="1" Name="MicCheckClose" Content="{loc:Text Key=Close}" Padding="18,6" Click="OnClose" VerticalAlignment="Center"/>
+        <TextBlock Text="{loc:Text Key=MicSetupClosingDiscards}" Classes="hint" TextWrapping="Wrap" VerticalAlignment="Center"/>
+        <Button Grid.Column="1" Name="MicSetupClose" Content="{loc:Text Key=Close}" Padding="18,6" Click="OnClose" VerticalAlignment="Center"/>
       </Grid>
     </StackPanel>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <Panel Margin="0,0,16,0">
         <!-- Position: tips for the unit the microphone is on, and its phantom power -->
-        <StackPanel Name="MicCheckPosition" Spacing="12" IsVisible="{Binding ShowsPosition}">
-          <TextBlock Name="MicCheckPositionIntro" Text="{Binding PositionIntro}" Classes="body" TextWrapping="Wrap"/>
+        <StackPanel Name="MicSetupPosition" Spacing="12" IsVisible="{Binding ShowsPosition}">
+          <TextBlock Name="MicSetupPositionIntro" Text="{Binding PositionIntro}" Classes="body" TextWrapping="Wrap"/>
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
-              <TextBlock Text="{loc:Text Key=MicCheckPlacement}" Classes="h"/>
-              <ItemsControl Name="MicCheckTips" ItemsSource="{Binding PositionTips}">
+              <TextBlock Text="{loc:Text Key=MicSetupPlacement}" Classes="h"/>
+              <ItemsControl Name="MicSetupTips" ItemsSource="{Binding PositionTips}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
@@ -59,58 +59,58 @@
             </StackPanel>
           </Border>
           <!-- phantom power, where the microphone is not the unit's own capsule -->
-          <Border Classes="tile" Padding="12" Name="MicCheckPhantomTile" IsVisible="{Binding ShowsPhantom}">
+          <Border Classes="tile" Padding="12" Name="MicSetupPhantomTile" IsVisible="{Binding ShowsPhantom}">
             <StackPanel Spacing="8">
-              <TextBlock Text="{loc:Text Key=MicCheckPhantomPower}" Classes="h"/>
-              <TextBlock Text="{loc:Text Key=MicCheckPhantomHint}" Classes="hint" TextWrapping="Wrap"/>
-              <WrapPanel Name="MicCheckPhantom" ItemSpacing="8" LineSpacing="4" IsVisible="{Binding HasPhantom}">
-                <ToggleButton Name="MicCheckUnitPhantom" Content="{loc:Text Key=Phantom}"
+              <TextBlock Text="{loc:Text Key=MicSetupPhantomPower}" Classes="h"/>
+              <TextBlock Text="{loc:Text Key=MicSetupPhantomHint}" Classes="hint" TextWrapping="Wrap"/>
+              <WrapPanel Name="MicSetupPhantom" ItemSpacing="8" LineSpacing="4" IsVisible="{Binding HasPhantom}">
+                <ToggleButton Name="MicSetupUnitPhantom" Content="{loc:Text Key=Phantom}"
                               IsChecked="{Binding Unit.Phantom, Mode=TwoWay, FallbackValue=False}" IsVisible="{Binding Unit.CapPhantom, FallbackValue=False}"
-                              AutomationProperties.Name="{loc:Text Key=MicCheckPhantomName}" ToolTip.Tip="{loc:Text Key=MicCheckPhantomName}"/>
-                <ToggleButton Name="MicCheckExtraPhantom" Content="{loc:Text Key=Phantom}"
+                              AutomationProperties.Name="{loc:Text Key=MicSetupPhantomName}" ToolTip.Tip="{loc:Text Key=MicSetupPhantomName}"/>
+                <ToggleButton Name="MicSetupExtraPhantom" Content="{loc:Text Key=Phantom}"
                               IsChecked="{Binding ExtraUnit.Phantom, Mode=TwoWay, FallbackValue=False}" IsVisible="{Binding ExtraUnit.HasPhantom, FallbackValue=False}"
                               IsEnabled="{Binding ExtraUnit.CanControl, FallbackValue=False}"
-                              AutomationProperties.Name="{loc:Text Key=MicCheckPhantomName}" ToolTip.Tip="{loc:Text Key=MicCheckPhantomName}"/>
+                              AutomationProperties.Name="{loc:Text Key=MicSetupPhantomName}" ToolTip.Tip="{loc:Text Key=MicSetupPhantomName}"/>
                 <TextBlock Text="{loc:Text Key=PhantomPowerSettling}" Classes="hint" VerticalAlignment="Center"
                            IsVisible="{Binding Unit.PhantomSettling, FallbackValue=False}"/>
                 <TextBlock Text="{loc:Text Key=PhantomPowerSettling}" Classes="hint" VerticalAlignment="Center"
                            IsVisible="{Binding ExtraUnit.PhantomSettling, FallbackValue=False}"/>
               </WrapPanel>
-              <TextBlock Name="MicCheckPhantomElsewhere" Text="{loc:Text Key=MicCheckPhantomElsewhere}" Classes="hint" TextWrapping="Wrap"
+              <TextBlock Name="MicSetupPhantomElsewhere" Text="{loc:Text Key=MicSetupPhantomElsewhere}" Classes="hint" TextWrapping="Wrap"
                          IsVisible="{Binding PhantomElsewhere}"/>
             </StackPanel>
           </Border>
         </StackPanel>
 
         <!-- Level: the microphone before any processing, the target band and the clip light -->
-        <StackPanel Name="MicCheckLevel" Spacing="12" IsVisible="{Binding ShowsLevel}">
-          <TextBlock Text="{loc:Text Key=MicCheckLevelHint}" Classes="hint" TextWrapping="Wrap"/>
+        <StackPanel Name="MicSetupLevel" Spacing="12" IsVisible="{Binding ShowsLevel}">
+          <TextBlock Text="{loc:Text Key=MicSetupLevelHint}" Classes="hint" TextWrapping="Wrap"/>
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <TextBlock Text="{loc:Text Key=MicCheckBeforeEffects}" Classes="h" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1" Name="MicCheckPeakValue" Text="{Binding PeakText}" Classes="val" VerticalAlignment="Center"/>
+                <TextBlock Text="{loc:Text Key=MicSetupBeforeEffects}" Classes="h" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Name="MicSetupPeakValue" Text="{Binding PeakText}" Classes="val" VerticalAlignment="Center"/>
               </Grid>
               <!-- the meter, with the band speech should peak in drawn under it: -18 to -6 dBFS on a -60 to 0 scale -->
               <Grid RowDefinitions="Auto,Auto">
-                <skin:LevelMeter Name="MicCheckMeter" Level="{Binding InputPeak}" Height="22"
-                                 AutomationProperties.Name="{loc:Text Key=MicCheckBeforeEffects}"/>
+                <skin:LevelMeter Name="MicSetupMeter" Level="{Binding InputPeak}" Height="22"
+                                 AutomationProperties.Name="{loc:Text Key=MicSetupBeforeEffects}"/>
                 <Grid Grid.Row="1" ColumnDefinitions="7*,2*,1*" Margin="0,3,0,0">
-                  <Border Grid.Column="1" Name="MicCheckTarget" Height="6" Background="{DynamicResource Ox.Eq.CurveFill}"
+                  <Border Grid.Column="1" Name="MicSetupTarget" Height="6" Background="{DynamicResource Ox.Eq.CurveFill}"
                           BorderBrush="{DynamicResource Ox.Eq.Curve}" BorderThickness="1"
-                          CornerRadius="{DynamicResource Ox.Meter.CornerRadius}" ToolTip.Tip="{loc:Text Key=MicCheckTargetTip}"/>
+                          CornerRadius="{DynamicResource Ox.Meter.CornerRadius}" ToolTip.Tip="{loc:Text Key=MicSetupTargetTip}"/>
                 </Grid>
               </Grid>
-              <skin:LevelMeter Name="MicCheckRms" Level="{Binding InputLevel}" AutomationProperties.Name="{loc:Text Key=MicCheckAverage}"
-                               ToolTip.Tip="{loc:Text Key=MicCheckAverage}"/>
+              <skin:LevelMeter Name="MicSetupRms" Level="{Binding InputLevel}" AutomationProperties.Name="{loc:Text Key=MicSetupAverage}"
+                               ToolTip.Tip="{loc:Text Key=MicSetupAverage}"/>
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <TextBlock Text="{loc:Text Key=MicCheckTargetTip}" Classes="hint" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <TextBlock Text="{loc:Text Key=MicSetupTargetTip}" Classes="hint" TextWrapping="Wrap" VerticalAlignment="Center"/>
                 <!-- the clip light holds until it is pressed -->
-                <Button Grid.Column="1" Name="MicCheckClip" Click="OnClearClip" Padding="10,4"
-                        AutomationProperties.Name="{Binding ClipName}" ToolTip.Tip="{loc:Text Key=MicCheckClipTip}">
+                <Button Grid.Column="1" Name="MicSetupClip" Click="OnClearClip" Padding="10,4"
+                        AutomationProperties.Name="{Binding ClipName}" ToolTip.Tip="{loc:Text Key=MicSetupClipTip}">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <skin:StatusLed IsOn="{Binding Clipped}" Kind="Power"/>
-                    <TextBlock Text="{loc:Text Key=MicCheckClip}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{loc:Text Key=MicSetupClip}" VerticalAlignment="Center"/>
                   </StackPanel>
                 </Button>
               </Grid>
@@ -119,106 +119,106 @@
           <!-- the interface's gain, where the channel carries an input that has one -->
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
-              <TextBlock Text="{loc:Text Key=MicCheckGain}" Classes="h"/>
+              <TextBlock Text="{loc:Text Key=MicSetupGain}" Classes="h"/>
               <Grid ColumnDefinitions="*,64" ColumnSpacing="8" IsVisible="{Binding CarriesUnit}">
-                <Slider Name="MicCheckUnitGain" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Unit.GainMaxDb, FallbackValue=80}"
+                <Slider Name="MicSetupUnitGain" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding Unit.GainMaxDb, FallbackValue=80}"
                         Value="{Binding Unit.GainDb, Mode=TwoWay, FallbackValue=0}" IsEnabled="{Binding !Unit.GainLocked, FallbackValue=False}"
                         AutomationProperties.Name="{Binding Unit.GainName, FallbackValue=''}"/>
                 <TextBlock Grid.Column="1" Text="{Binding Unit.GainText, FallbackValue=''}" Classes="val" VerticalAlignment="Center"/>
               </Grid>
               <Grid ColumnDefinitions="*,64" ColumnSpacing="8" IsVisible="{Binding CarriesExtraUnit}">
-                <Slider Name="MicCheckExtraGain" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
+                <Slider Name="MicSetupExtraGain" vm:FaderInput.Step="1" Minimum="0" Maximum="{Binding ExtraUnit.GainMaxDb, FallbackValue=80}"
                         Value="{Binding ExtraUnit.GainDb, Mode=TwoWay, FallbackValue=0}" IsEnabled="{Binding ExtraUnit.CanAdjustGain, FallbackValue=False}"
                         AutomationProperties.Name="{Binding ExtraUnit.GainName, FallbackValue=''}"/>
                 <TextBlock Grid.Column="1" Text="{Binding ExtraUnit.GainText, FallbackValue=''}" Classes="val" VerticalAlignment="Center"/>
               </Grid>
-              <TextBlock Name="MicCheckNoGain" Text="{loc:Text Key=MicCheckNoGain}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding NoGain}"/>
+              <TextBlock Name="MicSetupNoGain" Text="{loc:Text Key=MicSetupNoGain}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding NoGain}"/>
             </StackPanel>
           </Border>
           <!-- Suggest gain: five seconds of speech measured, a gain proposed, nothing written until accepted -->
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
-              <TextBlock Text="{loc:Text Key=MicCheckSuggestGain}" Classes="h"/>
-              <TextBlock Text="{loc:Text Key=MicCheckSuggestHint}" Classes="hint" TextWrapping="Wrap"/>
+              <TextBlock Text="{loc:Text Key=MicSetupSuggestGain}" Classes="h"/>
+              <TextBlock Text="{loc:Text Key=MicSetupSuggestHint}" Classes="hint" TextWrapping="Wrap"/>
               <WrapPanel ItemSpacing="8" LineSpacing="8">
-                <Button Name="MicCheckSuggestGain" Content="{loc:Text Key=MicCheckSuggestGain}" IsEnabled="{Binding CanSuggestGain}" Click="OnSuggestGain"/>
-                <Button Name="MicCheckAcceptGain" Content="{loc:Text Key=MicCheckAcceptGain}" IsVisible="{Binding CanAcceptGain}" Click="OnAcceptGain"/>
-                <Button Name="MicCheckDiscardGain" Content="{loc:Text Key=MicCheckDiscardGain}" IsVisible="{Binding CanDiscardGain}" Click="OnDiscardGain"/>
+                <Button Name="MicSetupSuggestGain" Content="{loc:Text Key=MicSetupSuggestGain}" IsEnabled="{Binding CanSuggestGain}" Click="OnSuggestGain"/>
+                <Button Name="MicSetupAcceptGain" Content="{loc:Text Key=MicSetupAcceptGain}" IsVisible="{Binding CanAcceptGain}" Click="OnAcceptGain"/>
+                <Button Name="MicSetupDiscardGain" Content="{loc:Text Key=MicSetupDiscardGain}" IsVisible="{Binding CanDiscardGain}" Click="OnDiscardGain"/>
               </WrapPanel>
-              <TextBlock Name="MicCheckSuggestMeasured" Text="{Binding SuggestMeasured}" Classes="body" TextWrapping="Wrap"
+              <TextBlock Name="MicSetupSuggestMeasured" Text="{Binding SuggestMeasured}" Classes="body" TextWrapping="Wrap"
                          IsVisible="{Binding SuggestMeasured, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-              <TextBlock Name="MicCheckSuggestAdvice" Text="{Binding SuggestAdvice}" Classes="body" TextWrapping="Wrap"
+              <TextBlock Name="MicSetupSuggestAdvice" Text="{Binding SuggestAdvice}" Classes="body" TextWrapping="Wrap"
                          IsVisible="{Binding SuggestAdvice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-              <TextBlock Name="MicCheckSuggestBlocked" Text="{Binding SuggestBlocked}" Classes="warn" TextWrapping="Wrap"
+              <TextBlock Name="MicSetupSuggestBlocked" Text="{Binding SuggestBlocked}" Classes="warn" TextWrapping="Wrap"
                          IsVisible="{Binding SuggestBlocked, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
           </Border>
         </StackPanel>
 
         <!-- Listen: a take, its waveform, raw and processed, and hearing yourself -->
-        <StackPanel Name="MicCheckListen" Spacing="12" IsVisible="{Binding ShowsListen}">
-          <TextBlock Text="{loc:Text Key=MicCheckListenHint}" Classes="hint" TextWrapping="Wrap"/>
-          <TextBlock Name="MicCheckStatus" Text="{Binding Status}" TextWrapping="Wrap" Foreground="{DynamicResource Ox.Text.Primary}"/>
-          <WrapPanel Name="MicCheckActions" ItemSpacing="8" LineSpacing="8">
+        <StackPanel Name="MicSetupListen" Spacing="12" IsVisible="{Binding ShowsListen}">
+          <TextBlock Text="{loc:Text Key=MicSetupListenHint}" Classes="hint" TextWrapping="Wrap"/>
+          <TextBlock Name="MicSetupStatus" Text="{Binding Status}" TextWrapping="Wrap" Foreground="{DynamicResource Ox.Text.Primary}"/>
+          <WrapPanel Name="MicSetupActions" ItemSpacing="8" LineSpacing="8">
             <Button Content="{loc:Text Key=Record}" IsEnabled="{Binding CanRecord}" Click="OnRecord"/>
-            <Button Content="{loc:Text Key=MicCheckLoopTake}" IsEnabled="{Binding CanLoop}" Click="OnLoop"/>
-            <Button Content="{loc:Text Key=MicCheckLiveMic}" IsEnabled="{Binding CanLive}" Click="OnLive"/>
+            <Button Content="{loc:Text Key=MicSetupLoopTake}" IsEnabled="{Binding CanLoop}" Click="OnLoop"/>
+            <Button Content="{loc:Text Key=MicSetupLiveMic}" IsEnabled="{Binding CanLive}" Click="OnLive"/>
             <Button Content="{loc:Text Key=StopAndDiscard}" IsEnabled="{Binding CanStop}" Click="OnStop"/>
           </WrapPanel>
-          <vm:TakeWaveform Name="MicCheckWaveform" Height="96" Peaks="{Binding Peaks}" Position="{Binding Position}"
-                           CornerRadius="{DynamicResource Ox.Eq.CornerRadius}" AutomationProperties.Name="{loc:Text Key=MicCheckWaveform}"/>
-          <TextBlock Text="{loc:Text Key=MicCheckNoTake}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding !HasTake}"/>
+          <vm:TakeWaveform Name="MicSetupWaveform" Height="96" Peaks="{Binding Peaks}" Position="{Binding Position}"
+                           CornerRadius="{DynamicResource Ox.Eq.CornerRadius}" AutomationProperties.Name="{loc:Text Key=MicSetupWaveform}"/>
+          <TextBlock Text="{loc:Text Key=MicSetupNoTake}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding !HasTake}"/>
 
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
               <!-- two sides of one switch: the lit side is the daemon's, a press asks for its side -->
-              <WrapPanel Name="MicCheckCompare" ItemSpacing="6" LineSpacing="4" IsEnabled="{Binding CanSwitch}">
-                <TextBlock Text="{loc:Text Key=MicCheckCompare}" Classes="h" VerticalAlignment="Center"/>
-                <ToggleButton Name="MicCheckProcessed" Content="{loc:Text Key=MicCheckProcessed}" IsChecked="{Binding ListenProcessed, Mode=OneWay}"
+              <WrapPanel Name="MicSetupCompare" ItemSpacing="6" LineSpacing="4" IsEnabled="{Binding CanSwitch}">
+                <TextBlock Text="{loc:Text Key=MicSetupCompare}" Classes="h" VerticalAlignment="Center"/>
+                <ToggleButton Name="MicSetupProcessed" Content="{loc:Text Key=MicSetupProcessed}" IsChecked="{Binding ListenProcessed, Mode=OneWay}"
                               Click="OnProcessed"/>
-                <ToggleButton Name="MicCheckRaw" Content="{loc:Text Key=MicCheckRaw}" IsChecked="{Binding ListenRaw, Mode=OneWay}"
+                <ToggleButton Name="MicSetupRaw" Content="{loc:Text Key=MicSetupRaw}" IsChecked="{Binding ListenRaw, Mode=OneWay}"
                               Click="OnRaw"/>
               </WrapPanel>
-              <TextBlock Text="{loc:Text Key=MicCheckCompareHint}" Classes="hint" TextWrapping="Wrap"/>
+              <TextBlock Text="{loc:Text Key=MicSetupCompareHint}" Classes="hint" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
 
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
-              <CheckBox Name="MicCheckHearMyself" IsChecked="{Binding HearMyself, Mode=OneWay}" IsEnabled="{Binding CanSwitch}" Click="OnHearMyself">
-                <TextBlock Text="{loc:Text Key=MicCheckHearMyself}" TextWrapping="Wrap"/>
+              <CheckBox Name="MicSetupHearMyself" IsChecked="{Binding HearMyself, Mode=OneWay}" IsEnabled="{Binding CanSwitch}" Click="OnHearMyself">
+                <TextBlock Text="{loc:Text Key=MicSetupHearMyself}" TextWrapping="Wrap"/>
               </CheckBox>
-              <TextBlock Name="MicCheckLatency" Text="{Binding LatencyText}" Classes="hint" TextWrapping="Wrap"/>
-              <TextBlock Text="{loc:Text Key=MicCheckProDirect}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding ProDirect}"/>
-              <TextBlock Name="MicCheckNotHeard" Text="{loc:Text Key=MicCheckNotHeard}" Classes="warn" TextWrapping="Wrap" IsVisible="{Binding NotHeard}"/>
+              <TextBlock Name="MicSetupLatency" Text="{Binding LatencyText}" Classes="hint" TextWrapping="Wrap"/>
+              <TextBlock Text="{loc:Text Key=MicSetupProDirect}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding ProDirect}"/>
+              <TextBlock Name="MicSetupNotHeard" Text="{loc:Text Key=MicSetupNotHeard}" Classes="warn" TextWrapping="Wrap" IsVisible="{Binding NotHeard}"/>
             </StackPanel>
           </Border>
         </StackPanel>
 
         <!-- Shape: presets, the EQ curve, low cut and ClipGuard, and the plugins, all heard live -->
-        <StackPanel Name="MicCheckShape" Spacing="12" IsVisible="{Binding ShowsShape}">
-          <TextBlock Text="{loc:Text Key=MicCheckShapeHint}" Classes="hint" TextWrapping="Wrap"/>
+        <StackPanel Name="MicSetupShape" Spacing="12" IsVisible="{Binding ShowsShape}">
+          <TextBlock Text="{loc:Text Key=MicSetupShapeHint}" Classes="hint" TextWrapping="Wrap"/>
 
           <!-- starting presets: each one is one EQ change, and the last can be undone -->
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
-              <TextBlock Text="{loc:Text Key=MicCheckPresets}" Classes="h"/>
-              <ItemsControl Name="MicCheckPresetList" ItemsSource="{Binding Presets}" IsEnabled="{Binding CanApplyPreset}">
+              <TextBlock Text="{loc:Text Key=MicSetupPresets}" Classes="h"/>
+              <ItemsControl Name="MicSetupPresetList" ItemsSource="{Binding Presets}" IsEnabled="{Binding CanApplyPreset}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><WrapPanel ItemSpacing="6" LineSpacing="4"/></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:MicCheckPreset">
+                  <DataTemplate x:DataType="vm:MicSetupPreset">
                     <Button Content="{Binding Name}" Click="OnPreset" Padding="14,5" ToolTip.Tip="{Binding Hint}"
                             AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding Hint}"/>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <TextBlock Name="MicCheckPresetStatus" Text="{Binding PresetStatus}" Classes="hint" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                <Button Grid.Column="1" Name="MicCheckUndoPreset" Content="{loc:Text Key=MicCheckUndoPreset}" IsEnabled="{Binding CanUndoPreset}"
-                        Click="OnUndoPreset" VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=MicCheckUndoPresetTip}"
-                        AutomationProperties.Name="{loc:Text Key=MicCheckUndoPreset}" AutomationProperties.HelpText="{loc:Text Key=MicCheckUndoPresetTip}"/>
+                <TextBlock Name="MicSetupPresetStatus" Text="{Binding PresetStatus}" Classes="hint" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Name="MicSetupUndoPreset" Content="{loc:Text Key=MicSetupUndoPreset}" IsEnabled="{Binding CanUndoPreset}"
+                        Click="OnUndoPreset" VerticalAlignment="Center" ToolTip.Tip="{loc:Text Key=MicSetupUndoPresetTip}"
+                        AutomationProperties.Name="{loc:Text Key=MicSetupUndoPreset}" AutomationProperties.HelpText="{loc:Text Key=MicSetupUndoPresetTip}"/>
               </Grid>
             </StackPanel>
           </Border>
@@ -227,56 +227,56 @@
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBlock Text="{loc:Text Key=MicCheckEq}" Classes="h" VerticalAlignment="Center"/>
-                <WrapPanel Grid.Column="1" Name="MicCheckEqActions" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding HasEq}">
-                  <ToggleButton Name="MicCheckEqSwitch" Content="{loc:Text Key=EqSwitch}" IsChecked="{Binding Eq.Enabled, Mode=TwoWay, FallbackValue=False}"
+                <TextBlock Text="{loc:Text Key=MicSetupEq}" Classes="h" VerticalAlignment="Center"/>
+                <WrapPanel Grid.Column="1" Name="MicSetupEqActions" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding HasEq}">
+                  <ToggleButton Name="MicSetupEqSwitch" Content="{loc:Text Key=EqSwitch}" IsChecked="{Binding Eq.Enabled, Mode=TwoWay, FallbackValue=False}"
                                 AutomationProperties.Name="{Binding Eq.ButtonName, FallbackValue=''}" ToolTip.Tip="{loc:Text Key=EqSwitchTip}"/>
-                  <Button Name="MicCheckEqEditor" Content="{loc:Text Key=MicCheckEqEditor}" Click="OnEqEditor"
-                          AutomationProperties.Name="{loc:Text Key=MicCheckEqEditorTip}" ToolTip.Tip="{loc:Text Key=MicCheckEqEditorTip}"/>
+                  <Button Name="MicSetupEqEditor" Content="{loc:Text Key=MicSetupEqEditor}" Click="OnEqEditor"
+                          AutomationProperties.Name="{loc:Text Key=MicSetupEqEditorTip}" ToolTip.Tip="{loc:Text Key=MicSetupEqEditorTip}"/>
                 </WrapPanel>
               </Grid>
               <Panel IsVisible="{Binding HasEq}">
-                <vm:EqGraph Name="MicCheckEqGraph" DataContext="{Binding Eq}" Height="180"
+                <vm:EqGraph Name="MicSetupEqGraph" DataContext="{Binding Eq}" Height="180"
                             CurveThickness="{DynamicResource Ox.Eq.CurveThickness}" BandCurveThickness="{DynamicResource Ox.Eq.BandCurveThickness}"
                             HandleSize="{DynamicResource Ox.Eq.HandleSize}" LabelFontSize="{DynamicResource Ox.Eq.LabelFontSize}"
                             CornerRadius="{DynamicResource Ox.Eq.CornerRadius}" MinimumTarget="{DynamicResource Ox.Mixer.SmallControlMinSize}"
                             AutomationProperties.Name="{loc:Text Key=EqGraphName}"/>
               </Panel>
-              <TextBlock Name="MicCheckEqStatus" Text="{Binding Eq.Status, FallbackValue=''}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding HasEq}"/>
-              <TextBlock Name="MicCheckNoEq" Text="{loc:Text Key=MicCheckNoEq}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding NoEq}"/>
+              <TextBlock Name="MicSetupEqStatus" Text="{Binding Eq.Status, FallbackValue=''}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding HasEq}"/>
+              <TextBlock Name="MicSetupNoEq" Text="{loc:Text Key=MicSetupNoEq}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding NoEq}"/>
             </StackPanel>
           </Border>
 
           <!-- low cut and ClipGuard: the unit's, before the take, and XLR 1's software ones, after the EQ -->
           <Border Classes="tile" Padding="12">
             <StackPanel Spacing="8">
-              <TextBlock Text="{loc:Text Key=MicCheckFilters}" Classes="h"/>
-              <WrapPanel Name="MicCheckUnitFilters" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding HasUnitFilters}">
+              <TextBlock Text="{loc:Text Key=MicSetupFilters}" Classes="h"/>
+              <WrapPanel Name="MicSetupUnitFilters" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding HasUnitFilters}">
                 <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding Unit.LowCut, Mode=TwoWay, FallbackValue=False}"
-                              IsVisible="{Binding Unit.CapLowCut, FallbackValue=False}" AutomationProperties.Name="{loc:Text Key=MicCheckUnitLowCut}"
-                              ToolTip.Tip="{loc:Text Key=MicCheckUnitLowCut}"/>
+                              IsVisible="{Binding Unit.CapLowCut, FallbackValue=False}" AutomationProperties.Name="{loc:Text Key=MicSetupUnitLowCut}"
+                              ToolTip.Tip="{loc:Text Key=MicSetupUnitLowCut}"/>
                 <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding Unit.ClipGuard, Mode=TwoWay, FallbackValue=False}"
-                              IsVisible="{Binding Unit.CapClipGuard, FallbackValue=False}" AutomationProperties.Name="{loc:Text Key=MicCheckUnitClipGuard}"
-                              ToolTip.Tip="{loc:Text Key=MicCheckUnitClipGuard}"/>
+                              IsVisible="{Binding Unit.CapClipGuard, FallbackValue=False}" AutomationProperties.Name="{loc:Text Key=MicSetupUnitClipGuard}"
+                              ToolTip.Tip="{loc:Text Key=MicSetupUnitClipGuard}"/>
                 <ToggleButton Content="{loc:Text Key=LowCut}" IsChecked="{Binding ExtraUnit.LowCut, Mode=TwoWay, FallbackValue=False}"
                               IsVisible="{Binding ExtraUnit.HasLowCut, FallbackValue=False}" IsEnabled="{Binding ExtraUnit.CanControl, FallbackValue=False}"
-                              AutomationProperties.Name="{loc:Text Key=MicCheckUnitLowCut}" ToolTip.Tip="{loc:Text Key=MicCheckUnitLowCut}"/>
+                              AutomationProperties.Name="{loc:Text Key=MicSetupUnitLowCut}" ToolTip.Tip="{loc:Text Key=MicSetupUnitLowCut}"/>
                 <ToggleButton Content="{loc:Text Key=ClipGuard}" IsChecked="{Binding ExtraUnit.ClipGuard, Mode=TwoWay, FallbackValue=False}"
                               IsVisible="{Binding ExtraUnit.HasClipGuard, FallbackValue=False}" IsEnabled="{Binding ExtraUnit.CanControl, FallbackValue=False}"
-                              AutomationProperties.Name="{loc:Text Key=MicCheckUnitClipGuard}" ToolTip.Tip="{loc:Text Key=MicCheckUnitClipGuard}"/>
+                              AutomationProperties.Name="{loc:Text Key=MicSetupUnitClipGuard}" ToolTip.Tip="{loc:Text Key=MicSetupUnitClipGuard}"/>
               </WrapPanel>
-              <TextBlock Text="{loc:Text Key=MicCheckUnitFiltersHint}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding HasUnitFilters}"/>
-              <WrapPanel Name="MicCheckSoftwareFilters" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding HasSoftwareFilters}">
+              <TextBlock Text="{loc:Text Key=MicSetupUnitFiltersHint}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding HasUnitFilters}"/>
+              <WrapPanel Name="MicSetupSoftwareFilters" ItemSpacing="6" LineSpacing="4" IsVisible="{Binding HasSoftwareFilters}">
                 <ToggleButton Content="{Binding Software.SoftLowCutText, FallbackValue=''}" IsVisible="{Binding Software.ShowSoftLowCut, FallbackValue=False}"
                               IsChecked="{Binding Software.SoftLowCutOn, Mode=OneWay, FallbackValue=False}" Click="OnCycleSoftLowCut"
-                              AutomationProperties.Name="{loc:Text Key=MicCheckSoftwareLowCut}" ToolTip.Tip="{loc:Text Key=HostSideLowCutForThisDeviceIts}"/>
+                              AutomationProperties.Name="{loc:Text Key=MicSetupSoftwareLowCut}" ToolTip.Tip="{loc:Text Key=HostSideLowCutForThisDeviceIts}"/>
                 <ToggleButton Content="{loc:Text Key=ClipGuard}" IsVisible="{Binding Software.ShowSoftClipGuard, FallbackValue=False}"
                               IsChecked="{Binding Software.SoftClipGuard, Mode=TwoWay, FallbackValue=False}"
                               IsEnabled="{Binding Software.SoftClipGuardAvailable, FallbackValue=False}"
-                              AutomationProperties.Name="{loc:Text Key=MicCheckSoftwareClipGuard}" ToolTip.Tip="{Binding Software.SoftClipGuardTip, FallbackValue=''}"/>
+                              AutomationProperties.Name="{loc:Text Key=MicSetupSoftwareClipGuard}" ToolTip.Tip="{Binding Software.SoftClipGuardTip, FallbackValue=''}"/>
               </WrapPanel>
-              <TextBlock Text="{loc:Text Key=MicCheckSoftwareFiltersHint}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding HasSoftwareFilters}"/>
-              <TextBlock Name="MicCheckNoFilters" Text="{loc:Text Key=MicCheckNoFilters}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding NoFilters}"/>
+              <TextBlock Text="{loc:Text Key=MicSetupSoftwareFiltersHint}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding HasSoftwareFilters}"/>
+              <TextBlock Name="MicSetupNoFilters" Text="{loc:Text Key=MicSetupNoFilters}" Classes="hint" TextWrapping="Wrap" IsVisible="{Binding NoFilters}"/>
             </StackPanel>
           </Border>
 
@@ -284,13 +284,13 @@
           <Border Classes="tile" Padding="12" IsVisible="{Binding Chain, Converter={x:Static ObjectConverters.IsNotNull}}">
             <StackPanel Spacing="8" IsEnabled="{Binding Chain.CanEditEffects, FallbackValue=False}">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBlock Text="{loc:Text Key=MicCheckEffects}" Classes="h" VerticalAlignment="Center"/>
-                <Button Grid.Column="1" Name="MicCheckAddEffect" Content="{loc:Text Key=MicCheckAddEffect}" Click="OnAddEffect"
-                        AutomationProperties.Name="{loc:Text Key=MicCheckAddEffect}" ToolTip.Tip="{loc:Text Key=MicCheckAddEffectTip}"/>
+                <TextBlock Text="{loc:Text Key=MicSetupEffects}" Classes="h" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Name="MicSetupAddEffect" Content="{loc:Text Key=MicSetupAddEffect}" Click="OnAddEffect"
+                        AutomationProperties.Name="{loc:Text Key=MicSetupAddEffect}" ToolTip.Tip="{loc:Text Key=MicSetupAddEffectTip}"/>
               </Grid>
-              <TextBlock Name="MicCheckNoEffects" Text="{loc:Text Key=NoInsertsYet}" Classes="hint" TextWrapping="Wrap"
+              <TextBlock Name="MicSetupNoEffects" Text="{loc:Text Key=NoInsertsYet}" Classes="hint" TextWrapping="Wrap"
                          IsVisible="{Binding !Chain.HasItems, FallbackValue=False}"/>
-              <ItemsControl Name="MicCheckInserts" ItemsSource="{Binding Chain.Items, FallbackValue={x:Null}}">
+              <ItemsControl Name="MicSetupInserts" ItemsSource="{Binding Chain.Items, FallbackValue={x:Null}}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
@@ -302,18 +302,18 @@
                                         AutomationProperties.Name="{Binding StateText}"/>
                         <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="body" TextTrimming="CharacterEllipsis"
                                    VerticalAlignment="Center" ToolTip.Tip="{Binding Label}"/>
-                        <ToggleButton Grid.Column="2" Name="MicCheckBypass" Content="{loc:Text Key=Bypass}" IsChecked="{Binding Bypass, Mode=TwoWay}"
-                                      AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=MicCheckBypassName}}"/>
-                        <Button Grid.Column="3" Name="MicCheckInsertEditor" Content="{loc:Text Key=MicCheckEditor}" Click="OnInsertEditor"
+                        <ToggleButton Grid.Column="2" Name="MicSetupBypass" Content="{loc:Text Key=Bypass}" IsChecked="{Binding Bypass, Mode=TwoWay}"
+                                      AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=MicSetupBypassName}}"/>
+                        <Button Grid.Column="3" Name="MicSetupInsertEditor" Content="{loc:Text Key=MicSetupEditor}" Click="OnInsertEditor"
                                 ToolTip.Tip="{Binding ControlsHint}"
-                                AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=MicCheckEditorName}}"/>
+                                AutomationProperties.Name="{Binding Label, StringFormat={loc:Text Key=MicSetupEditorName}}"/>
                       </Grid>
                       <TextBlock Text="{Binding Error}" Classes="warn" TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
                     </StackPanel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="{loc:Text Key=MicCheckEffectsHint}" Classes="hint" TextWrapping="Wrap"/>
+              <TextBlock Text="{loc:Text Key=MicSetupEffectsHint}" Classes="hint" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
         </StackPanel>

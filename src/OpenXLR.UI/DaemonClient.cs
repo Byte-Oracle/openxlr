@@ -655,11 +655,11 @@ public sealed class DaemonClient : IAsyncDisposable, IEqCommands, IDuckingComman
     public Task<string?> SoundCheckAsync(string channel, string action)
         => EditLayoutAsync(new() { ["cmd"] = "soundCheck", ["channel"] = channel, ["action"] = action });
 
-    /// <summary>Mic check's switch: the raw signal past the chain, or the processed one, on the session's microphone.</summary>
+    /// <summary>Mic setup's switch: the raw signal past the chain, or the processed one, on the session's microphone.</summary>
     public Task<string?> SetSoundCheckRawAsync(string channel, bool raw)
         => EditLayoutAsync(new() { ["cmd"] = "setSoundCheckRaw", ["channel"] = channel, ["value"] = raw });
 
-    /// <summary>Mic check's Hear myself: the microphone in the monitor mixes for the session only.</summary>
+    /// <summary>Mic setup's Hear myself: the microphone in the monitor mixes for the session only.</summary>
     public Task<string?> SetSoundCheckHearMyselfAsync(string channel, bool on)
         => EditLayoutAsync(new() { ["cmd"] = "setSoundCheckHearMyself", ["channel"] = channel, ["value"] = on });
 

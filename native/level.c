@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The microphone's level before any processing, for Mic check.
+// The microphone's level before any processing, for Mic setup.
 //
 // It is linked beside the channel's own route, from the same capture port,
 // and passes nothing on: its output is silence. Only the audio thread writes

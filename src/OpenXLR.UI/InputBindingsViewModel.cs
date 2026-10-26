@@ -330,23 +330,23 @@ public sealed partial class MainViewModel
                     ? unit.InputOf(extra.Input) : null;
             channel.BindingLabel = BindingLabelOf(channel);
         }
-        // Mic check shows the controls of the input its channel carries: the
+        // Mic setup shows the controls of the input its channel carries: the
         // gain on Level, phantom power on Position, low cut, ClipGuard and the
         // EQ on Shape, and the unit's kind for the Position tips.
-        foreach (MicCheckViewModel check in MicChecks())
+        foreach (MicSetupViewModel setup in MicSetups())
         {
-            ChannelViewModel? carrier = Channels.FirstOrDefault(c => c.Id == check.Channel);
-            check.Unit = carrier?.ShownUnitInput is 1 or 2 ? UnitInputOf(carrier.ShownUnitInput) : null;
-            check.ExtraUnit = carrier?.ExtraUnitInput;
-            check.ProDirect = CapOutputRouting && carrier?.ShownUnitInput == 1;
-            check.Eq = carrier?.Eq;
-            check.Software = check.Channel == "xlr1" && carrier is not null ? this : null;
-            if (check.Unit is { } unit)
-                check.Place(UnitXlrJacks ? MicCheckUnitKind.XlrJack : MicCheckUnitKind.Capsule, DeviceName, unit.Input);
-            else if (check.ExtraUnit is { } extra)
-                check.Place(extra.Unit.XlrJacks ? MicCheckUnitKind.XlrJack : MicCheckUnitKind.Capsule, extra.Unit.Name, extra.Input);
-            else check.Place(MicCheckUnitKind.None, null, 1);
-            check.RaiseCarrier();
+            ChannelViewModel? carrier = Channels.FirstOrDefault(c => c.Id == setup.Channel);
+            setup.Unit = carrier?.ShownUnitInput is 1 or 2 ? UnitInputOf(carrier.ShownUnitInput) : null;
+            setup.ExtraUnit = carrier?.ExtraUnitInput;
+            setup.ProDirect = CapOutputRouting && carrier?.ShownUnitInput == 1;
+            setup.Eq = carrier?.Eq;
+            setup.Software = setup.Channel == "xlr1" && carrier is not null ? this : null;
+            if (setup.Unit is { } unit)
+                setup.Place(UnitXlrJacks ? MicSetupUnitKind.XlrJack : MicSetupUnitKind.Capsule, DeviceName, unit.Input);
+            else if (setup.ExtraUnit is { } extra)
+                setup.Place(extra.Unit.XlrJacks ? MicSetupUnitKind.XlrJack : MicSetupUnitKind.Capsule, extra.Unit.Name, extra.Input);
+            else setup.Place(MicSetupUnitKind.None, null, 1);
+            setup.RaiseCarrier();
         }
         Xlr1InputLabel = Localizer.Format("StripInputLabel", Xlr1Strip?.Name ?? "XLR 1");
         Xlr2InputLabel = Localizer.Format("StripInputLabel", Xlr2Strip?.Name ?? "XLR 2");

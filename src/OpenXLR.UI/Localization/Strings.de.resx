@@ -31,7 +31,7 @@
     <value>Aufnahmeeingang hinzufügen</value>
   </data>
   <data name="AddCaptureInputHint" xml:space="preserve">
-    <value>Wähle eine Quelle und einen Mono-Port oder ein Stereo-Paar. Mono-Eingänge können Sound Check nutzen. Der neue Eingang ist anfangs in jedem Mix stumm und bleibt stumm, solange seine Quelle offline ist.</value>
+    <value>Wähle eine Quelle und einen Mono-Port oder ein Stereo-Paar. Mono-Eingänge können das Mikrofon-Setup nutzen. Der neue Eingang ist anfangs in jedem Mix stumm und bleibt stumm, solange seine Quelle offline ist.</value>
   </data>
   <data name="AddChannel" xml:space="preserve">
     <value>Kanal hinzufügen</value>
@@ -2830,7 +2830,7 @@ Von OpenXLR gesteuertes Interface wählen</value>
     <value>{0:0} dB</value>
   </data>
   <data name="CaptureBindingHint" xml:space="preserve">
-    <value>Wähle eine Quelle und einen Port für {0}. Sends, Lautstärke, Inserts und Gruppe bleiben erhalten. Nach einer Änderung sind die Monitor-Sends stumm und Sound Check endet. Entferne die Inserts, bevor du zwischen Mono und Stereo wechselst.</value>
+    <value>Wähle eine Quelle und einen Port für {0}. Sends, Lautstärke, Inserts und Gruppe bleiben erhalten. Nach einer Änderung sind die Monitor-Sends stumm und das Mikrofon-Setup endet. Entferne die Inserts, bevor du zwischen Mono und Stereo wechselst.</value>
   </data>
   <data name="CaptureMonoPort" xml:space="preserve">
     <value>Mono-Port {0}</value>
@@ -2948,5 +2948,8 @@ Von OpenXLR gesteuertes Interface wählen</value>
   </data>
   <data name="DesktopKeysConfigureUnsupported" xml:space="preserve">
     <value>Dieser Desktop kann den Tastenkürzel-Editor nicht erneut öffnen. Ändere die Belegung in den Tastenkürzel-Einstellungen des Desktops.</value>
+  </data>
+  <data name="MicSetup" xml:space="preserve">
+    <value>Mikrofon-Setup</value>
   </data>
 </root>

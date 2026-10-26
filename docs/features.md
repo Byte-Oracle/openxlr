@@ -170,7 +170,7 @@ physical gain dial.
   from a script ([api.md](api.md#where-the-eq-runs)). The Flow window says
   where the EQ runs. A capture input's EQ always runs in software, at the
   head of the input before its inserts, with the same editor without the
-  switch and the badge; its Mic check take is the raw microphone, looped
+  switch and the badge; its Mic setup take is the raw microphone, looped
   through the EQ ([api.md](api.md#eq-on-capture-inputs)).
 - Gain lock: the daemon rejects every gain change while the lock is set,
   from any client, and stores the lock per device in `gainlock.json`.
@@ -391,7 +391,7 @@ capture source. The UI binds either strip from a chip on the strip, from
 Options and, with no interface attached, from a link in the header; the API
 binds either too. The chip names the source and lights while the strip is
 linked, and a line under it says why a strip is silent. The existing sends,
-volume, microphone EQ, software DSP, inserts, Mic check and meters
+volume, microphone EQ, software DSP, inserts, Mic setup and meters
 process that microphone. A
 missing source stays selected and silent until it returns. The dialog names
 each port by its channel position and warns about a Bluetooth headset's
@@ -445,7 +445,7 @@ return. A mono source is linked to both sides of the channel. See
 The source chip in classic INPUTS, the input rack and the matrix opens the
 binding dialog. Changing a capture input's source or ports keeps its id,
 sends, volume, insert chain and group, mutes its monitor sends and ends its
-Mic check session. Switching between mono and stereo needs an empty chain.
+Mic setup session. Switching between mono and stereo needs an empty chain.
 The API exposes the same edit as `setCaptureSource`. A different source
 replaces the remembered Elgato unit too, so the old unit cannot take over
 when the new source is missing.
@@ -485,7 +485,7 @@ filters by the input's width. Flow cards include the chain, and microphone
 capture inputs draw a one-bar meter. Older daemons without a chain width show
 no capture Inserts button. The terminal mixer edits capture chains too, at
 their published mono or stereo width, and shows mono capture microphones
-with one meter bar. Mic check and the microphone EQ, in software, also
+with one meter bar. Mic setup and the microphone EQ, in software, also
 run on mono capture inputs.
 
 ### Separate mixer window
@@ -566,7 +566,7 @@ for another machine.
 See [effect presets](effect-presets.md) and the
 [manual](manual.md#effect-presets).
 
-Mic check, on XLR 1, XLR 2 and mono capture inputs, is a window in four
+Mic setup, on XLR 1, XLR 2 and mono capture inputs, is a window in four
 steps, free to take in any order. **Position** gives placement tips for
 the kind of unit the microphone is on (a Wave:3's or Wave:1's capsule, an
 XLR jack, or a device OpenXLR does not drive) and the unit's phantom power
@@ -595,8 +595,8 @@ path off, since it cannot carry effects. The take stays in the native
 helper's memory and is discarded on stop; a session ends by itself on a
 source change, a lost audio path, capture channel deletion, a mixer rebuild
 or after ten minutes. It works without any insert, and one session runs at
-a time across all microphones. Stereo capture inputs have no Mic check. It
-needs the native plugin host. See [Mic check](manual.md#mic-check) and the
+a time across all microphones. Stereo capture inputs have no Mic setup. It
+needs the native plugin host. See [Mic setup](manual.md#mic-setup) and the
 [API](api.md#sound-check), where the session is called Sound Check.
 
 "Install file" and "Install folder" accept extracted Linux plugins or
@@ -775,7 +775,7 @@ toggle), with its name and value on the panel and the insert's bypass
 on the press. A key or dial follows its insert by id, and falls back to
 the same plugin in the same chain when a profile recall rebuilds the
 chain. Capture insert keys and dials keep their channel id through a rename.
-Mic check stays in the UI.
+Mic setup stays in the UI.
 
 Install: download `com.emaspa.openxlr.sdPlugin.zip` from the
 [latest release](https://github.com/emaspa/openxlr/releases/latest) and

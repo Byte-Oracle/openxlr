@@ -6,12 +6,12 @@ using Avalonia.Threading;
 namespace OpenXLR.UI;
 
 /// <summary>
-/// Mic check for one microphone. While it is open it keeps the daemon's
+/// Mic setup for one microphone. While it is open it keeps the daemon's
 /// meter before the chain running. Closing it stops the session; a close the
 /// user asked for waits for that stop, with the window disabled, so nothing
 /// can be queued behind it.
 /// </summary>
-public partial class MicCheckWindow : Window
+public partial class MicSetupWindow : Window
 {
     /// <summary>How often the meter's lease is renewed: well inside the daemon's fifteen seconds.</summary>
     internal static readonly TimeSpan MeterRenewal = TimeSpan.FromSeconds(5);
@@ -21,7 +21,7 @@ public partial class MicCheckWindow : Window
     private readonly DispatcherTimer _measure = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private bool _closing, _closed;
 
-    public MicCheckWindow()
+    public MicSetupWindow()
     {
         InitializeComponent();
         _meter.Tick += (_, _) => KeepMeter();
@@ -39,7 +39,7 @@ public partial class MicCheckWindow : Window
         };
         Closing += async (_, e) =>
         {
-            if (_closed || DataContext is not MicCheckViewModel vm) return;
+            if (_closed || DataContext is not MicSetupViewModel vm) return;
             if (e.CloseReason != WindowCloseReason.WindowClosing)
             {
                 _ = vm.StopOnCloseAsync();
@@ -56,13 +56,13 @@ public partial class MicCheckWindow : Window
         };
     }
 
-    private MicCheckViewModel? Check => DataContext as MicCheckViewModel;
+    private MicSetupViewModel? Check => DataContext as MicSetupViewModel;
 
     private void KeepMeter() { if (Check is { } vm) _ = vm.KeepMeterAsync(); }
 
     private void OnStep(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is MicCheckStepItem item) item.IsSelected = true;
+        if ((sender as Control)?.DataContext is MicSetupStepItem item) item.IsSelected = true;
     }
 
     private void OnClearClip(object? sender, RoutedEventArgs e) => Check?.ClearClip();
@@ -89,7 +89,7 @@ public partial class MicCheckWindow : Window
 
     private void OnPreset(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is MicCheckPreset preset) Check?.ApplyPreset(preset);
+        if ((sender as Control)?.DataContext is MicSetupPreset preset) Check?.ApplyPreset(preset);
     }
 
     private void OnUndoPreset(object? sender, RoutedEventArgs e) => Check?.UndoPreset();

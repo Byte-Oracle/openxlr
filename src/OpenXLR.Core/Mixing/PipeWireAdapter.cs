@@ -984,7 +984,7 @@ public sealed class PipeWireAdapter
         ["frames", "mode", "cursor", "takeFrames", "take", .. Enumerable.Range(0, TakePeakCount).Select(i => $"p{i}")], StringComparer.Ordinal);
 
     /// <summary>
-    /// The level meter Mic check reads ahead of a microphone's chain: the
+    /// The level meter Mic setup reads ahead of a microphone's chain: the
     /// native helper's mono "level" backend under a fixed node name, fed by
     /// the caller from the channel's own capture port, its output left
     /// unlinked. Refused at once without the helper.

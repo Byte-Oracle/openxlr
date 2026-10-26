@@ -8,7 +8,7 @@ using OpenXLR.UI.Skinning;
 namespace OpenXLR.UI;
 
 /// <summary>
-/// A Sound Check take as Mic check draws it: one bar per peak the daemon
+/// A Sound Check take as Mic setup draws it: one bar per peak the daemon
 /// sent, mirrored about the centre line on a linear scale, and a playhead
 /// while the take loops. It draws in code with the EQ graph's flat colours,
 /// so a skin that tints the graph tints this too.

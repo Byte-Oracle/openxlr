@@ -10,101 +10,101 @@ using OpenXLR.UI.Localization;
 
 namespace OpenXLR.Tests;
 
-internal static class MicCheckWindowTests
+internal static class MicSetupWindowTests
 {
     internal static async Task CheckCaptureChain(MainViewModel main, MixInsertsWindow chain, ConcurrentQueue<JsonNode> commands,
         ConcurrentQueue<JsonNode> meterWatches, ConcurrentQueue<JsonNode> eqCommands, ConcurrentQueue<JsonNode> bypassCommands)
     {
         InsertsViewModel inserts = main.CaptureInputs.Single(c => c.Id == "guest").Inserts!;
-        MicCheckViewModel model = inserts.MicCheck;
-        Click(chain, "MicCheck");
-        await Until(() => chain.OwnedWindows.OfType<MicCheckWindow>().Any(w => w.IsVisible));
-        MicCheckWindow window = chain.OwnedWindows.OfType<MicCheckWindow>().Single(w => w.IsVisible);
+        MicSetupViewModel model = inserts.MicSetup;
+        Click(chain, "MicSetup");
+        await Until(() => chain.OwnedWindows.OfType<MicSetupWindow>().Any(w => w.IsVisible));
+        MicSetupWindow window = chain.OwnedWindows.OfType<MicSetupWindow>().Single(w => w.IsVisible);
         WindowLayoutTests.Layout(window, 600, 560);
         Assert.Same(model, window.DataContext);
-        Assert.False(main.CaptureInputs.Single(c => c.Id == "camera").Inserts!.CanMicCheck);
+        Assert.False(main.CaptureInputs.Single(c => c.Id == "camera").Inserts!.CanMicSetup);
         try
         {
             // Position first: a USB microphone on no unit OpenXLR drives gets
             // the general tips and is told to switch phantom power elsewhere.
             Assert.True(model.ShowsPosition);
-            Assert.False(window.FindControl<Control>("MicCheckLevel")!.IsVisible);
-            Assert.Equal(MicCheckUnitKind.None, model.UnitKind);
-            Assert.Equal(Localizer.Text("MicCheckPositionNone"), window.FindControl<TextBlock>("MicCheckPositionIntro")!.Text);
+            Assert.False(window.FindControl<Control>("MicSetupLevel")!.IsVisible);
+            Assert.Equal(MicSetupUnitKind.None, model.UnitKind);
+            Assert.Equal(Localizer.Text("MicSetupPositionNone"), window.FindControl<TextBlock>("MicSetupPositionIntro")!.Text);
             Assert.Equal(4, model.PositionTips.Count);
-            Assert.True(window.FindControl<Control>("MicCheckPhantomTile")!.IsEffectivelyVisible);
-            Assert.False(window.FindControl<Control>("MicCheckPhantom")!.IsEffectivelyVisible);
-            Assert.True(window.FindControl<TextBlock>("MicCheckPhantomElsewhere")!.IsEffectivelyVisible);
+            Assert.True(window.FindControl<Control>("MicSetupPhantomTile")!.IsEffectivelyVisible);
+            Assert.False(window.FindControl<Control>("MicSetupPhantom")!.IsEffectivelyVisible);
+            Assert.True(window.FindControl<TextBlock>("MicSetupPhantomElsewhere")!.IsEffectivelyVisible);
 
             // Then Level: the window keeps the meter before the chain
             // running, and its reading and clip reach this microphone only.
-            Step(window, "MicCheckStepLevel");
+            Step(window, "MicSetupStepLevel");
             Assert.True(model.ShowsLevel);
             await Until(() => meterWatches.Any(c => c["channel"]?.GetValue<string>() == "guest") && model.Clipped);
             Assert.Equal(.8, model.InputPeak);
             Assert.Equal(.5, model.InputLevel);
-            Assert.Equal(0, main.Inserts.MicCheck.InputPeak);
-            Assert.Equal(Localizer.Format("MicCheckPeak", .8 * 60 - 60), window.FindControl<TextBlock>("MicCheckPeakValue")!.Text);
-            Assert.True(window.FindControl<TextBlock>("MicCheckNoGain")!.IsEffectivelyVisible);
-            window.FindControl<Button>("MicCheckClip")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(0, main.Inserts.MicSetup.InputPeak);
+            Assert.Equal(Localizer.Format("MicSetupPeak", .8 * 60 - 60), window.FindControl<TextBlock>("MicSetupPeakValue")!.Text);
+            Assert.True(window.FindControl<TextBlock>("MicSetupNoGain")!.IsEffectivelyVisible);
+            window.FindControl<Button>("MicSetupClip")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.False(model.Clipped);
             // Suggest gain on a microphone OpenXLR sets no gain for: it
             // listens, says the change on the device, and offers no Accept.
             var time = new ManualTime();
             model.Time = time;
-            Click(window, "MicCheckSuggestGain");
+            Click(window, "MicSetupSuggestGain");
             Assert.True(model.Measuring);
-            Assert.False(window.FindControl<Button>("MicCheckSuggestGain")!.IsEnabled);
-            await Until(() => window.FindControl<TextBlock>("MicCheckSuggestAdvice")!.IsEffectivelyVisible);
+            Assert.False(window.FindControl<Button>("MicSetupSuggestGain")!.IsEnabled);
+            await Until(() => window.FindControl<TextBlock>("MicSetupSuggestAdvice")!.IsEffectivelyVisible);
             for (int i = 0; i < 100 && model.Measuring; i++)
             {
                 time.Advance(TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 15 + 1));
                 model.ApplyInputLevel(new JsonArray(.5, .7, 0));
             }
             Assert.Equal(GainOutcome.Elsewhere, model.Suggestion!.Outcome);
-            await Until(() => window.FindControl<Button>("MicCheckSuggestGain")!.IsEnabled
-                && window.FindControl<TextBlock>("MicCheckSuggestMeasured")!.IsEffectivelyVisible);
-            Assert.False(window.FindControl<Button>("MicCheckAcceptGain")!.IsVisible);
-            Assert.True(window.FindControl<Button>("MicCheckDiscardGain")!.IsEffectivelyVisible);
-            Click(window, "MicCheckDiscardGain");
-            await Until(() => !window.FindControl<TextBlock>("MicCheckSuggestAdvice")!.IsVisible);
-            Assert.False(window.FindControl<Control>("MicCheckListen")!.IsVisible);
+            await Until(() => window.FindControl<Button>("MicSetupSuggestGain")!.IsEnabled
+                && window.FindControl<TextBlock>("MicSetupSuggestMeasured")!.IsEffectivelyVisible);
+            Assert.False(window.FindControl<Button>("MicSetupAcceptGain")!.IsVisible);
+            Assert.True(window.FindControl<Button>("MicSetupDiscardGain")!.IsEffectivelyVisible);
+            Click(window, "MicSetupDiscardGain");
+            await Until(() => !window.FindControl<TextBlock>("MicSetupSuggestAdvice")!.IsVisible);
+            Assert.False(window.FindControl<Control>("MicSetupListen")!.IsVisible);
 
             // Then Listen, from the step bar.
-            Step(window, "MicCheckStepListen");
+            Step(window, "MicSetupStepListen");
             Assert.True(model.ShowsListen);
-            Assert.False(window.FindControl<Control>("MicCheckLevel")!.IsVisible);
+            Assert.False(window.FindControl<Control>("MicSetupLevel")!.IsVisible);
             Click(window, "Record");
             await Until(() => model.Active && model.CanLoop);
-            Assert.False(main.Inserts.MicCheck.Active);
-            Assert.False(main.Inserts2.MicCheck.Active);
-            Assert.False(main.CaptureInputs.Single(c => c.Id == "offline").Inserts!.MicCheck.Active);
-            Assert.Equal(Localizer.Format("SoundCheckRecording", 1.5), window.FindControl<TextBlock>("MicCheckStatus")!.Text);
+            Assert.False(main.Inserts.MicSetup.Active);
+            Assert.False(main.Inserts2.MicSetup.Active);
+            Assert.False(main.CaptureInputs.Single(c => c.Id == "offline").Inserts!.MicSetup.Active);
+            Assert.Equal(Localizer.Format("SoundCheckRecording", 1.5), window.FindControl<TextBlock>("MicSetupStatus")!.Text);
             Assert.False(model.HasTake);
-            Click(window, "MicCheckLoopTake");
+            Click(window, "MicSetupLoopTake");
             // The state names a take this view has not seen, so it asks for it.
-            await Until(() => model.Status == Localizer.Format("MicCheckLooping", 1.5) && model.HasTake);
+            await Until(() => model.Status == Localizer.Format("MicSetupLooping", 1.5) && model.HasTake);
             Assert.Equal(200, model.Peaks!.Count);
-            Assert.Same(model.Peaks, window.FindControl<TakeWaveform>("MicCheckWaveform")!.Peaks);
-            Assert.Equal(Localizer.Format("MicCheckHearMyselfLatency", 42.7), window.FindControl<TextBlock>("MicCheckLatency")!.Text);
-            Assert.True(window.FindControl<TextBlock>("MicCheckNotHeard")!.IsEffectivelyVisible);
+            Assert.Same(model.Peaks, window.FindControl<TakeWaveform>("MicSetupWaveform")!.Peaks);
+            Assert.Equal(Localizer.Format("MicSetupHearMyselfLatency", 42.7), window.FindControl<TextBlock>("MicSetupLatency")!.Text);
+            Assert.True(window.FindControl<TextBlock>("MicSetupNotHeard")!.IsEffectivelyVisible);
 
             // Raw and processed: the lit side is the daemon's.
-            window.FindControl<ToggleButton>("MicCheckRaw")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            await Until(() => model.Raw && window.FindControl<ToggleButton>("MicCheckRaw")!.IsChecked == true
-                && window.FindControl<ToggleButton>("MicCheckProcessed")!.IsChecked == false);
-            window.FindControl<ToggleButton>("MicCheckProcessed")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            await Until(() => !model.Raw && window.FindControl<ToggleButton>("MicCheckProcessed")!.IsChecked == true);
+            window.FindControl<ToggleButton>("MicSetupRaw")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Until(() => model.Raw && window.FindControl<ToggleButton>("MicSetupRaw")!.IsChecked == true
+                && window.FindControl<ToggleButton>("MicSetupProcessed")!.IsChecked == false);
+            window.FindControl<ToggleButton>("MicSetupProcessed")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Until(() => !model.Raw && window.FindControl<ToggleButton>("MicSetupProcessed")!.IsChecked == true);
             // Hear myself, and the note that the microphone is not heard goes.
-            window.FindControl<CheckBox>("MicCheckHearMyself")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            window.FindControl<CheckBox>("MicSetupHearMyself")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             await Until(() => model.HearMyself && !model.NotHeard);
-            Assert.False(window.FindControl<TextBlock>("MicCheckNotHeard")!.IsEffectivelyVisible);
+            Assert.False(window.FindControl<TextBlock>("MicSetupNotHeard")!.IsEffectivelyVisible);
 
             await CheckShape(window, main, model, eqCommands, bypassCommands);
-            Step(window, "MicCheckStepListen");
+            Step(window, "MicSetupStepListen");
 
-            Click(window, "MicCheckLiveMic");
-            await Until(() => model.Status == Localizer.Format("MicCheckReady", 1.5) && model.CanLoop);
+            Click(window, "MicSetupLiveMic");
+            await Until(() => model.Status == Localizer.Format("MicSetupReady", 1.5) && model.CanLoop);
             Click(window, "StopAndDiscard");
             await Until(() => !model.Active && model.CanRecord && !model.HasTake);
             Click(window, "Record");
@@ -121,9 +121,9 @@ internal static class MicCheckWindowTests
             Assert.All(commands, c => Assert.Equal("guest", c["channel"]!.GetValue<string>()));
 
             // A reopened check starts on its last step with nothing running.
-            Click(chain, "MicCheck");
-            await Until(() => chain.OwnedWindows.OfType<MicCheckWindow>().Any(w => w.IsVisible));
-            window = chain.OwnedWindows.OfType<MicCheckWindow>().Single(w => w.IsVisible);
+            Click(chain, "MicSetup");
+            await Until(() => chain.OwnedWindows.OfType<MicSetupWindow>().Any(w => w.IsVisible));
+            window = chain.OwnedWindows.OfType<MicSetupWindow>().Single(w => w.IsVisible);
             WindowLayoutTests.Layout(window, 600, 560);
             Assert.Same(model, window.DataContext);
             Assert.True(model.CanRecord);
@@ -140,46 +140,46 @@ internal static class MicCheckWindowTests
     /// insert's controls under the check, and a capture input says it has no
     /// low cut or ClipGuard of its own.
     /// </summary>
-    private static async Task CheckShape(MicCheckWindow window, MainViewModel main, MicCheckViewModel model,
+    private static async Task CheckShape(MicSetupWindow window, MainViewModel main, MicSetupViewModel model,
         ConcurrentQueue<JsonNode> eqCommands, ConcurrentQueue<JsonNode> bypassCommands)
     {
         MicEqViewModel eq = main.CaptureInputs.Single(c => c.Id == "guest").Eq!;
-        Step(window, "MicCheckStepShape");
+        Step(window, "MicSetupStepShape");
         WindowLayoutTests.Layout(window, 600, 560);
         Assert.True(model.ShowsShape);
-        Assert.False(window.FindControl<Control>("MicCheckListen")!.IsVisible);
+        Assert.False(window.FindControl<Control>("MicSetupListen")!.IsVisible);
         Assert.Same(eq, model.Eq);
-        Assert.Same(eq, window.FindControl<EqGraph>("MicCheckEqGraph")!.DataContext);
-        Assert.Equal(4, window.FindControl<EqGraph>("MicCheckEqGraph")!.Handles.Count);
-        Assert.True(window.FindControl<TextBlock>("MicCheckNoFilters")!.IsEffectivelyVisible);
-        Assert.False(window.FindControl<Control>("MicCheckUnitFilters")!.IsEffectivelyVisible);
-        Assert.False(window.FindControl<Control>("MicCheckSoftwareFilters")!.IsEffectivelyVisible);
+        Assert.Same(eq, window.FindControl<EqGraph>("MicSetupEqGraph")!.DataContext);
+        Assert.Equal(4, window.FindControl<EqGraph>("MicSetupEqGraph")!.Handles.Count);
+        Assert.True(window.FindControl<TextBlock>("MicSetupNoFilters")!.IsEffectivelyVisible);
+        Assert.False(window.FindControl<Control>("MicSetupUnitFilters")!.IsEffectivelyVisible);
+        Assert.False(window.FindControl<Control>("MicSetupSoftwareFilters")!.IsEffectivelyVisible);
 
         eqCommands.Clear();
         MicEq before = eq.Current;
         Assert.False(model.CanUndoPreset);
-        Click(window, "MicCheckPresetWarm");
+        Click(window, "MicSetupPresetWarm");
         await Until(() => eqCommands.Count == 1);
         JsonNode applied = eqCommands.Single();
         Assert.Equal("setEq", applied["cmd"]!.GetValue<string>());
         Assert.Equal("guest", applied["channel"]!.GetValue<string>());
         Assert.True(applied["eq"]!["enabled"]!.GetValue<bool>());
-        Assert.Equal(MicCheckPresets.Warm.Eq.Bands.Select(b => b.Frequency),
+        Assert.Equal(MicSetupPresets.Warm.Eq.Bands.Select(b => b.Frequency),
             applied["eq"]!["bands"]!.AsArray().Select(b => b!["frequency"]!.GetValue<double>()));
-        Assert.Equal(MicCheckPresets.Warm.Eq, eq.Current);
-        Assert.Equal(Localizer.Format("MicCheckPresetApplied", MicCheckPresets.Warm.Name),
-            window.FindControl<TextBlock>("MicCheckPresetStatus")!.Text);
-        Assert.True(window.FindControl<Button>("MicCheckUndoPreset")!.IsEffectivelyEnabled);
-        window.FindControl<Button>("MicCheckUndoPreset")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal(MicSetupPresets.Warm.Eq, eq.Current);
+        Assert.Equal(Localizer.Format("MicSetupPresetApplied", MicSetupPresets.Warm.Name),
+            window.FindControl<TextBlock>("MicSetupPresetStatus")!.Text);
+        Assert.True(window.FindControl<Button>("MicSetupUndoPreset")!.IsEffectivelyEnabled);
+        window.FindControl<Button>("MicSetupUndoPreset")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await Until(() => eqCommands.Count == 2);
         Assert.Equal(before, eq.Current);
         Assert.Equal(before.Bands.Select(b => b.Type), eqCommands.Last()["eq"]!["bands"]!.AsArray().Select(b => b!["type"]!.GetValue<string>()));
         Assert.False(model.CanUndoPreset);
-        Assert.Equal(Localizer.Text("MicCheckPresetUndone"), window.FindControl<TextBlock>("MicCheckPresetStatus")!.Text);
+        Assert.Equal(Localizer.Text("MicSetupPresetUndone"), window.FindControl<TextBlock>("MicSetupPresetStatus")!.Text);
         eqCommands.Clear();
 
-        ToggleButton bypass = window.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "MicCheckBypass");
-        Assert.Equal(Localizer.Format("MicCheckBypassName", "Guest compressor with a long label"),
+        ToggleButton bypass = window.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "MicSetupBypass");
+        Assert.Equal(Localizer.Format("MicSetupBypassName", "Guest compressor with a long label"),
             Avalonia.Automation.AutomationProperties.GetName(bypass));
         bypass.IsChecked = true;
         await Until(() => bypassCommands.Any());
@@ -191,7 +191,7 @@ internal static class MicCheckWindowTests
         await Until(() => bypassCommands.Count == 2 && !model.Chain!.Items.Single().Bypass);
 
         // No plugin host runs the insert here, so the editor is the generated controls, owned by the check.
-        window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "MicCheckInsertEditor")
+        window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "MicSetupInsertEditor")
             .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await Until(() => window.OwnedWindows.OfType<InsertControlsWindow>().Any(w => w.IsVisible));
         InsertControlsWindow controls = window.OwnedWindows.OfType<InsertControlsWindow>().Single(w => w.IsVisible);
@@ -212,7 +212,7 @@ internal static class MicCheckWindowTests
     {
         DateTime deadline = DateTime.UtcNow.AddSeconds(5);
         while (!ready() && DateTime.UtcNow < deadline) await Task.Delay(15);
-        Assert.True(ready(), "The capture Mic check window did not settle.");
+        Assert.True(ready(), "The capture Mic setup window did not settle.");
     }
 
     // Use the existing layout test's real X11 application and dispatcher.
@@ -225,7 +225,7 @@ internal static class MicCheckWindowTests
             Dispatcher.UIThread.RunJobs();
             Thread.Sleep(5);
         }
-        Assert.True(check.IsCompleted, "Mic check close test hung.");
+        Assert.True(check.IsCompleted, "Mic setup close test hung.");
         check.GetAwaiter().GetResult();
     }
 
@@ -250,7 +250,7 @@ internal static class MicCheckWindowTests
         client.ConnectionChanged += up => { if (up) connected.TrySetResult(); };
         client.Start();
         await connected.Task.WaitAsync(TimeSpan.FromSeconds(3));
-        var window = new MicCheckWindow { DataContext = new MicCheckViewModel(client, "xlr1") };
+        var window = new MicSetupWindow { DataContext = new MicSetupViewModel(client, "xlr1") };
         var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         window.Closed += (_, _) => closed.TrySetResult();
         try
