@@ -86,9 +86,10 @@ set here never moves a section. Under a skin that draws the submixer as
 mix banks, the mix each bank shows is a UI preference in `ui.json`
 too. Picking one never changes the order kept here, and the banks list
 the channels in that order. Whether the submixer sits in the UI
-or in a window of its own is a UI preference in `ui.json` as well, and so is the
-record of which skins' pop-out defaults have applied; neither is part of
-this file or of a profile.
+or in a window of its own is a UI preference in `ui.json` as well, and so are
+the size it is drawn at in that window and the record of which skins'
+pop-out defaults have applied; none of them is part of this file or of a
+profile.
 
 The optional `inputBindings` field in `mixer.json` is machine wiring. It
 maps a hardware strip to the source it is bound to:

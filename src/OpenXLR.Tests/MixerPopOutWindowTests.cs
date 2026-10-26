@@ -49,7 +49,7 @@ internal static partial class MixerPopOutWindowTests
             Assert.False(popOut.IsVisible);
             Assert.Null(host.Content);
             Assert.Same(vm, popped.DataContext);
-            Assert.Same(panel, popped.FindControl<ScrollViewer>("MixerScroll")!.Content);
+            Assert.Same(panel, popped.Panel);
             Slider master = Master(popped, vm);
 
             main.Hide();
@@ -116,6 +116,8 @@ internal static partial class MixerPopOutWindowTests
             Assert.True(popOut.IsVisible);
             Layout(main, 1040, 900);
             Assert.Equal(0.42, Master(main, vm).Value);
+            CheckScale(main, vm);
+            Assert.Equal(0.42, Master(main, vm).Value);
 
             // Reopening moves the same controls; quitting closes the separate window too.
             popped = main.PopOutMixer();
@@ -156,7 +158,7 @@ internal static partial class MixerPopOutWindowTests
         {
             Layout(popped, 800, 600);
             Assert.Null(host.Content);
-            Assert.Same(panel, popped.FindControl<ScrollViewer>("MixerScroll")!.Content);
+            Assert.Same(panel, popped.Panel);
             Assert.Same(banks, panel.Banks);
             Assert.Equal(bankModels, banks.Banks);
             Assert.True(panel.BankItems.IsEffectivelyVisible);
@@ -207,7 +209,7 @@ internal static partial class MixerPopOutWindowTests
         {
             Layout(popped, 1200, 700);
             Assert.Null(host.Content);
-            Assert.Same(panel, popped.FindControl<ScrollViewer>("MixerScroll")!.Content);
+            Assert.Same(panel, popped.Panel);
             Assert.Same(matrix, panel.Matrix);
             Assert.Null(panel.Banks);
             Assert.Equal(rows, matrix.Rows);

@@ -8,8 +8,18 @@
     <StyleInclude Source="avares://OpenXLR.UI/MixerStyles.axaml"/>
   </Window.Styles>
   <DockPanel Margin="8">
-    <Button DockPanel.Dock="Top" Content="{loc:Text Key=DockMixer}" Click="OnDockMixer"
-            HorizontalAlignment="Left" Margin="0,0,0,8"/>
-    <ScrollViewer Name="MixerScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"/>
+    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,8">
+      <Button Content="{loc:Text Key=DockMixer}" Click="OnDockMixer" HorizontalAlignment="Left"/>
+      <!-- the panel's size in this window only; the main window keeps the skin's -->
+      <WrapPanel>
+        <TextBlock Text="{loc:Text Key=MixerScale}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+        <ComboBox Name="MixerScalePicker" AutomationProperties.Name="{loc:Text Key=MixerScale}"
+                  ToolTip.Tip="{loc:Text Key=MixerScaleHint}"/>
+      </WrapPanel>
+      <TextBlock Name="MixerScaleNote" Classes="note" TextWrapping="Wrap" IsVisible="False"/>
+    </StackPanel>
+    <ScrollViewer Name="MixerScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <LayoutTransformControl Name="PanelScale"/>
+    </ScrollViewer>
   </DockPanel>
 </Window>

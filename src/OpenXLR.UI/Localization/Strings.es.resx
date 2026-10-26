@@ -618,6 +618,21 @@
   <data name="DockMixer" xml:space="preserve">
     <value>Devolver mezclador a la ventana principal</value>
   </data>
+  <data name="MixerScale" xml:space="preserve">
+    <value>Tamaño del mezclador</value>
+  </data>
+  <data name="MixerScaleFit" xml:space="preserve">
+    <value>Ajustar a la ventana</value>
+  </data>
+  <data name="MixerScalePercent" xml:space="preserve">
+    <value>{0} %</value>
+  </data>
+  <data name="MixerScaleHint" xml:space="preserve">
+    <value>Dibuja el mezclador más grande en esta ventana. Ajustar a la ventana elige el tamaño más grande que muestra todos los controles sin desplazarse.</value>
+  </data>
+  <data name="MixerScaleNotSaved" xml:space="preserve">
+    <value>El tamaño del mezclador se aplica hasta que se cierre esta ventana, pero no se ha podido guardar: {0}</value>
+  </data>
   <data name="DoNotLeaveThisOnTheSwitchIs" xml:space="preserve">
     <value>No dejes esto activado. El interruptor no se guarda al reiniciar el demonio; una traza activada en el entorno de inicio del demonio sigue vigente. Un WINEDEBUG explícito conserva sus propios canales.</value>
   </data>
