@@ -44,6 +44,7 @@ internal static class SavedMixerValidation
             MonitorOutputs = Entries(settings.MonitorOutputs, "monitorOutputs", notes),
             MonitorOutputMutes = MonitorOutputMutes(settings, notes),
             MonitorFeeds = Mapping(settings.MonitorFeeds, "monitorFeeds", notes),
+            MonitorOutputLabels = Mapping(settings.MonitorOutputLabels, "monitorOutputLabels", notes),
             AppOverrides = Mapping(settings.AppOverrides, "appOverrides", notes),
             BrowserSiteChannels = BrowserSites(settings.BrowserSiteChannels, notes),
             KnownApps = Apps(settings.KnownApps, notes),

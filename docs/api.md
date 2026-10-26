@@ -131,7 +131,11 @@ written above it; false on every other model), `lowImpedance`,
 is the unit's instance id, see [additional interface state](#additional-interface-state))
 and `waveInterfaces`. The
 mixer state carries `mixes`, `channels`, `monitorOutput` (the first selected
-output), `monitorOutputs`, `monitorFeeds`, `outputVolume`,
+output), `monitorOutputs`, `monitorFeeds`, `monitorOutputLabels` (selected
+output name to the description it last had in `devices`, so a client can
+name an output that is away; an output not seen since it was selected has
+no entry, and an entry goes when its output is deselected; an older daemon
+does not send it), `outputVolume`,
 `monitorMuted` (the selected outputs are paused, independently of mix and
 channel mutes; saved in `mixer.json`, never recalled by a profile),
 `preserveBrowserOutputs` (leave Chromium-family playback at the output its

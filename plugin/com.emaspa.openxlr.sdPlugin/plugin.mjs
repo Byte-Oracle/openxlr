@@ -494,6 +494,9 @@ const monitorDialMixes = () => {
 // Output targets name a PipeWire sink; the empty name is the system default,
 // which is a known sink only while the daemon enforces one by name.
 const deviceOf = (name) => daemonState?.devices?.find((d) => d.name === name);
+// What a sink is called: its description, else the description the daemon
+// remembers for a selected output that is away, else null.
+const deviceLabel = (name) => deviceOf(name)?.description || mixer()?.monitorOutputLabels?.[name] || null;
 const outputDeviceName = (name) => {
   if (name) return name;
   const enforced = mixer()?.enforcedDefaultSink;
@@ -524,7 +527,7 @@ function toggleLabel(target, inst) {
   const output = outputKey(target);
   if (output) {
     const name = output.device === "@monitor" ? "Follow monitor" : output.device
-      ? daemonState?.devices?.find(d => d.name === output.device)?.description ?? output.device : "System default";
+      ? deviceLabel(output.device) ?? output.device : "System default";
     return `${({up:"Louder",down:"Quieter",mute:"Toggle mute",main:"System out"})[output.kind]}\n${name}`;
   }
   if (target.startsWith("insert|")) {
@@ -543,15 +546,13 @@ function toggleLabel(target, inst) {
   }
   if (target.startsWith("monitor:")) {
     const sink = target.slice(8);
-    const d = daemonState?.devices?.find((x) => x.name === sink);
-    const name = d?.description ?? sink.split(".").pop();
+    const name = deviceLabel(sink) ?? sink.split(".").pop();
     // The output follows the default monitor unless its feed was switched.
     return `${feedLabel(feedOf(sink))}\n${name}`;
   }
   if (target.startsWith("feed:")) {
     const sink = target.slice(5);
-    const d = daemonState?.devices?.find((x) => x.name === sink);
-    const name = d?.description ?? sink.split(".").pop();
+    const name = deviceLabel(sink) ?? sink.split(".").pop();
     return `${name}\n${feedLabel(feedOf(sink))}`;
   }
   if (target.startsWith("mixmute:")) return `${mixName(mixer(), target.slice(8))}\nMute`;
@@ -686,7 +687,7 @@ function dialValue(target, inst) {
     if (volume == null) return null;
     const v = dialNow(target, volume);
     const muted = outputMuted(name) === true;
-    const label = target.length > 7 ? deviceOf(name)?.description || name : "System default";
+    const label = target.length > 7 ? deviceLabel(name) || name : "System default";
     return { label, pct: pct(v), maxPct: 150, text: muted ? "MUTED" : `${pct(v)}%`, muted };
   }
   const s = dev(), x = mixer();

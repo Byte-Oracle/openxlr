@@ -45,6 +45,14 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
     // Output name -> mix ids feeding it. Absent = the first
     // monitor mix, so the dictionary only holds the exceptions (issue #21).
     private readonly Dictionary<string, string> _monitorFeeds = [];
+    // Selected output name -> the description it last had in the device
+    // list, so clients can still name an output that is away. Only selected
+    // outputs keep an entry.
+    private readonly Dictionary<string, string> _monitorOutputLabels = new(StringComparer.Ordinal);
+    // The device list the labels were last read against; a new list or a
+    // new selection reads them again.
+    private string? _labelledDeviceList;
+    private bool _monitorOutputLabelsDue;
     private readonly Dictionary<string, PortLink> _inputFeeds = [];
     private string? _inputDevice;   // the capture device the feeds come from
     private long _inputChainGeneration;
@@ -1570,6 +1578,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 // A release still pending for a deselected output is saved too.
                 MonitorOutputMutes = new Dictionary<string, bool>(_monitorOutputMutes),
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
+                MonitorOutputLabels = new Dictionary<string, string>(_monitorOutputLabels, StringComparer.Ordinal),
                 AppOverrides = new Dictionary<string, string>(Matcher.Overrides),
                 PreserveBrowserOutputs = _preserveBrowserOutputs,
                 BrowserSiteChannels = _browserSiteChannels.Where(p => HasApplicationChannel(p.Value))
@@ -1691,6 +1700,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 : s.MonitorOutput is not null ? [s.MonitorOutput] : [];
             _monitorFeeds.Clear();
             foreach ((string output, string mixId) in s.MonitorFeeds) _monitorFeeds[output] = mixId;
+            // Selecting the saved outputs below drops the labels of any other.
+            _monitorOutputLabels.Clear();
+            foreach ((string output, string label) in s.MonitorOutputLabels ?? [])
+                if (!string.IsNullOrWhiteSpace(label)) _monitorOutputLabels[output] = label;
             HashSet<string> selectedHardware = savedOutputs.Select(StripMarker).ToHashSet(StringComparer.Ordinal);
             var savedOwners = (s.MonitorOutputMutes ?? []).Where(pair => IsExactOutputName(pair.Key)
                 && !pair.Key.StartsWith("OpenXLR_", StringComparison.Ordinal)).ToArray();
@@ -2083,6 +2096,36 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         }
     }
     private string? _deviceList;
+
+    /// <summary>
+    /// Remember the description of every selected output the device list
+    /// shows, the Wave XLR Pro's own outputs included, so a client can name
+    /// an output that is away by what it was called. Reads the list again
+    /// only after the selection or the device list changed. True when a
+    /// label changed, which is a mixer setting to save.
+    /// </summary>
+    public bool SyncMonitorOutputLabels()
+    {
+        lock (_gate)
+        {
+            if (!_built || !_monitorOutputLabelsDue && ReferenceEquals(_deviceList, _labelledDeviceList)) return false;
+            _monitorOutputLabelsDue = false;
+            _labelledDeviceList = _deviceList;
+            if (_monitorOutputs.Count == 0) return false;
+            bool changed = false;
+            foreach (AudioNode node in _pw.ListDevices(_hardwareOutputRouting, _inputHints))
+            {
+                // A node without a description lists its name, which says nothing new.
+                if (node.Kind != AudioNodeKind.Sink || node.IsOwn || !_monitorOutputs.Contains(node.Name)
+                    || string.IsNullOrWhiteSpace(node.Description) || node.Description == node.Name
+                    || _monitorOutputLabels.GetValueOrDefault(node.Name) == node.Description) continue;
+                _monitorOutputLabels[node.Name] = node.Description;
+                changed = true;
+            }
+            return changed;
+        }
+    }
+
     // Output descriptions from the last device sync, so notes name an output the way the pickers do.
     private Dictionary<string, string> _outputNames = new(StringComparer.Ordinal);
 
@@ -2407,6 +2450,10 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         // stale choice never resurfaces when the output is ticked again.
         foreach (string stale in _monitorFeeds.Keys.Where(o => !_monitorOutputs.Contains(o)).ToList())
             _monitorFeeds.Remove(stale);
+        // A label is kept only while its output is selected.
+        foreach (string stale in _monitorOutputLabels.Keys.Where(o => !_monitorOutputs.Contains(o)).ToList())
+            _monitorOutputLabels.Remove(stale);
+        _monitorOutputLabelsDue = true;
         // Several physical jacks on the same return pair cannot carry distinct
         // feeds. Keep every published member consistent with the audible one.
         foreach (var group in _monitorOutputs.Where(output => output.Contains('#')).GroupBy(OutputRouteKey))
@@ -3154,6 +3201,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
                 MonitorMuteMicrophones = _monitorMuteMicrophones,
                 MicrophonePausePending = _microphonePausePending,
                 MonitorFeeds = new Dictionary<string, string>(_monitorFeeds),
+                MonitorOutputLabels = new Dictionary<string, string>(_monitorOutputLabels, StringComparer.Ordinal),
                 OutputVolume = _outputVolume,
                 LowCutHz = _lowCutHz,
                 SoftClipGuard = _softClipGuard,
@@ -3395,6 +3443,7 @@ public sealed partial class Mixer : IDisposable, ILayoutInfo
         _microphonePauseRepairs.Clear();
         _monitorOutputs.Clear();
         _monitorFeeds.Clear();
+        _monitorOutputLabels.Clear();
         _incompleteMonitorRoutes.Clear();
         if (_auxRoute is not null) { _pw.Unlink(_auxRoute); _auxRoute = null; }
         foreach (PortLink feed in _inputFeeds.Values) _pw.Unlink(feed);

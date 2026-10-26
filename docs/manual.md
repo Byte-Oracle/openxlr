@@ -319,7 +319,9 @@ from three places:
 The dialog lists the interface's own input first, **Interface jack (XLR 1)**,
 or **Built-in microphone** on a Wave:3 or Wave:1. Every capture source
 follows except OpenXLR's own nodes and those of the interfaces OpenXLR
-supports. Pick the source and its port, then Save. Ports are numbered from 1
+supports. An unplugged bound source stays in the list, marked
+"(not connected)" and named after its device, such as "Shure MV7".
+Pick the source and its port, then Save. Ports are numbered from 1
 and named by the channel PipeWire reports, such as "1 (MONO)" for a mono
 USB microphone, "2 (FR)" for the right side of a webcam or "3 (AUX2)" on a
 multichannel interface. The list stops at the source's channel count, and a
@@ -461,7 +463,10 @@ that was the default.
    missing, or that goes away and comes back, is linked again on the
    next sweep (about one second). While it is away it stays ticked in
    the list as "(not connected)" and stays selected, even across a
-   daemon restart. OpenXLR never moves the monitor to another output in
+   daemon restart. It keeps the name OpenXLR last saw for it, across
+   restarts of the UI and the daemon. An output OpenXLR never saw is named
+   after its device, such as "SteelSeries Arctis Nova Elite". OpenXLR
+   never moves the monitor to another output in
    its place. Only a recalled profile, loaded by hand or on connect,
    changes the selection, to the outputs that profile saved. Ticking
    another device adds it. A rejected selection returns to the daemon's

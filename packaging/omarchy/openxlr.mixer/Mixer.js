@@ -43,8 +43,12 @@ function themePalette(palettes, name) {
 function outputName(snapshot, output) {
     var devices = snapshot && Array.isArray(snapshot.devices) ? snapshot.devices : [];
     var device = devices.filter(function (entry) { return entry && entry.name === output; })[0];
-    return device && typeof device.description === "string" && device.description.trim()
-        ? device.description.trim() : output;
+    if (device && typeof device.description === "string" && device.description.trim())
+        return device.description.trim();
+    // A selected output that is away keeps the name the daemon last saw.
+    var labels = snapshot && snapshot.mixer && snapshot.mixer.monitorOutputLabels;
+    var label = labels && Object.prototype.hasOwnProperty.call(labels, output) ? labels[output] : null;
+    return typeof label === "string" && label.trim() ? label.trim() : output;
 }
 
 // The interface's gain, mute and phantom power belong to its input stage,
