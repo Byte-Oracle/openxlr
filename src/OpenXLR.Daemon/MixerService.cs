@@ -636,6 +636,12 @@ public sealed class MixerService : IHostedService, IDisposable
             changed |= _mixer.EnsureFilterRoutes();
             stop.ThrowIfCancellationRequested();
             changed |= _mixer.EnsureMonitorRoutes() | _mixer.SyncDeviceList();
+            // What a selected output is called, kept for when it is away.
+            if (_mixer.SyncMonitorOutputLabels())
+            {
+                ScheduleSave();
+                changed = true;
+            }
             // A capture input's gain that another program moved is
             // reported, never written back.
             stop.ThrowIfCancellationRequested();

@@ -83,6 +83,13 @@ public sealed record MixerSettings
     /// <summary>Output name to the monitor mix feeding it; absent = the stable default monitor mix.</summary>
     public Dictionary<string, string> MonitorFeeds { get; init; } = [];
 
+    /// <summary>
+    /// Selected output name to the description it last had in the device
+    /// list, so an output that is away can still be named. Only selected
+    /// outputs keep an entry. Machine state, never profile state.
+    /// </summary>
+    public Dictionary<string, string> MonitorOutputLabels { get; init; } = [];
+
     /// <summary>Application identity to channel id, from manual assignments.</summary>
     public Dictionary<string, string> AppOverrides { get; init; } = [];
 

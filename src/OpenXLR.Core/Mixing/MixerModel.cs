@@ -202,6 +202,13 @@ public sealed record MixerState
     /// </summary>
     public IReadOnlyDictionary<string, string> MonitorFeeds { get; init; } = new Dictionary<string, string>();
 
+    /// <summary>
+    /// The description each selected output last had in the device list, by
+    /// output name, so a client can name one that is away. An output never
+    /// seen since it was selected is absent.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> MonitorOutputLabels { get; init; } = new Dictionary<string, string>();
+
     /// <summary>Volume of the selected output device (0..1.5), or null.</summary>
     public double? OutputVolume { get; init; }
 

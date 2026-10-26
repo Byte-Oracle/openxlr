@@ -74,10 +74,33 @@ public sealed class SavedMixerValidationTests
         });
     }
 
+    [Fact]
+    public void RememberedOutputLabelsSurviveASaveAndStayOutOfProfiles()
+    {
+        InConfig(root =>
+        {
+            const string headset = "alsa_output.usb-SteelSeries_Arctis_Nova_Elite-00.analog-stereo";
+            string path = Path.Combine(root, "mixer.json");
+            var settings = new MixerSettings
+            {
+                MonitorOutputs = [headset],
+                MonitorOutputLabels = new() { [headset] = "Arctis Nova Elite" },
+            };
+            Assert.Null(settings.Save(path));
+            Assert.Contains("\"monitorOutputLabels\"", File.ReadAllText(path));
+            MixerSettings loaded = Assert.IsType<MixerSettings>(MixerSettings.Load(path, out string? warning));
+            Assert.Null(warning);
+            Assert.Equal("Arctis Nova Elite", Assert.Single(loaded.MonitorOutputLabels).Value);
+            Assert.DoesNotContain(typeof(MixerScene).GetProperties(), p => p.Name == nameof(MixerSettings.MonitorOutputLabels));
+        });
+    }
+
     [Theory]
     [InlineData("{\"inserts\":null}", "inserts")]
     [InlineData("{\"monitorOutputs\":null}", "monitorOutputs")]
     [InlineData("{\"monitorFeeds\":null}", "monitorFeeds")]
+    [InlineData("{\"monitorOutputLabels\":null}", "monitorOutputLabels")]
+    [InlineData("{\"monitorOutputLabels\":{\"output\":null}}", "monitorOutputLabels")]
     [InlineData("{\"appOverrides\":null}", "appOverrides")]
     [InlineData("{\"appOverrides\":{\"app\":null}}", "appOverrides")]
     [InlineData("{\"knownApps\":null}", "knownApps")]
@@ -94,6 +117,7 @@ public sealed class SavedMixerValidationTests
             Assert.Empty(loaded.Inserts);
             Assert.Empty(loaded.MonitorOutputs);
             Assert.Empty(loaded.MonitorFeeds);
+            Assert.Empty(loaded.MonitorOutputLabels);
             Assert.Empty(loaded.AppOverrides);
             Assert.Empty(loaded.KnownApps);
             Assert.Equal(json, File.ReadAllText(path));
@@ -311,6 +335,7 @@ public sealed class SavedMixerValidationTests
             Assert.Equal("alsa_output.pci-0000_00_1f.3.analog-stereo", loaded.MonitorOutput);
             Assert.Empty(loaded.MonitorOutputs);
             Assert.Empty(loaded.MonitorFeeds);
+            Assert.Empty(loaded.MonitorOutputLabels);
             Assert.Empty(loaded.Inserts);
             Assert.Empty(loaded.KnownApps);
             Assert.Null(loaded.UserChannels);
