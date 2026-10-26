@@ -890,10 +890,21 @@ INPUTS card.
 The analog **Line In** jack is a channel of its own, Line In, apart from
 Aux In: a console or a player on the jack plays on Line In and nothing of
 it reaches Aux In. Its gain, 0 to 40 dB, is on the Line In row of the
-INPUTS card, under USB Aux in. The unit takes up to 80 dB, but an owner
-found it hisses above about 20 dB, so OpenXLR stops at 40. A unit set higher
-elsewhere shows its own gain in the readout with the slider at the top of
-its range, and the first move brings it into range. Like Aux In it starts
+INPUTS card, under USB Aux in. The unit takes up to 80 dB and OpenXLR
+stops at 40. The unit's own ALSA control stops at 20 dB, and a line-level
+source rarely needs more. Above about 20 dB the noise floor rises, so turn
+the source's own volume up first and keep the range above 20 dB for quiet
+sources such as a phone's headphone output. A unit set higher elsewhere
+shows its own gain in the readout with the slider at the top of its range,
+and the first move brings it into range.
+
+**Level Lock**, at the end of the Line In row, keeps the desktop's mixer
+and other applications from changing the Line In gain. While it is on,
+the unit ignores gain changes made through its ALSA control, and the
+Line In gain in OpenXLR still works. It is separate from Aux In's Level
+Lock, and a profile saves it.
+
+Like Aux In, Line In starts
 muted in Monitor A, Monitor B and the Aux mix and open in Stream and Chat;
 unmute its Monitor A send to hear it. The jack has no hardware mute, so
 muting Line In mutes the channel's sends. The Pro can also play the Line
@@ -903,7 +914,7 @@ OpenXLR turns that path off, so the jacks hear Line In only through the
 monitor mix and its mute there silences it. Line In shows only on a Wave
 XLR Pro whose capture source has its 18-channel layout, which is the one
 it was measured on. A Reset to OpenXLR's baseline leaves the Line In gain
-as it is.
+and its Level Lock as they are.
 
 <a name="plugins"></a>
 ### 3.5 Add a plugin to the signal path
@@ -2086,7 +2097,7 @@ wherever the skin puts the header, so the way back is always there.
 A skin can also draw INPUTS as a rack, one strip per channel, and the
 SUBMIXER as mix banks ([Templates](skins.md#templates)). The rack holds
 the INPUTS panel's own controls: an XLR input's gain, switches and plugin
-chain, Aux In's level and lock, Line In's gain, and the name, meter and
+chain, Aux In's level and lock, Line In's gain and lock, and the name, meter and
 [volume](#channel-volume) of every other channel. What your interface does
 not have stays hidden, as in the panel.
 
@@ -2263,7 +2274,7 @@ you move the row's volume fader it shows the volume instead, as a
 percentage, and goes back to the gain one second after you let go. A
 capture channel that carries the interface's microphone has **Mic** too,
 and a strip bound to an additional interface has that interface's
-switches. Aux In has its level and **Lock**, Line In its gain, and both
+switches. Aux In has its level and **Lock**, Line In its gain and **Lock**, and both
 show the level or gain in the name column the same way
 ([readout](#gain-readout)). Each of them also has its [volume](#channel-volume),
 a second fader under the gain or the level, and the row grows to hold
@@ -2695,8 +2706,8 @@ its live state, so what a key displays is what the UI shows.
 
 **Toggle** (a key) switches one thing: a hardware control (mute,
 phantom, low cut, expander, voice tune, ClipGuard, compressor, low
-impedance, the Pro's output selectors, the aux level lock, the gain
-lock), [ducking](#ducking) on or off, the software low cut (cycling Off, 80, 120), the software
+impedance, the Pro's output selectors, the aux level lock, the Line In
+level lock, the gain lock), [ducking](#ducking) on or off, the software low cut (cycling Off, 80, 120), the software
 ClipGuard, the Aux mix to the USB Aux port, a mix or send mute,
 the monitor output (switching the monitor mixes to one specific device),
 an output's feed (cycling Monitor A, Monitor B, Monitor A+B and the remaining mixes, lit

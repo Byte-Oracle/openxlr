@@ -25,6 +25,8 @@ Wave XLR Pro:
   from the USB Aux input, and kept out of the headphone jacks' hardware mix
   so the jacks hear it only through Monitor A (both in beta, see
   [hardware-support.md](hardware-support.md))
+- Line In level lock, which keeps the desktop mixer and other
+  applications from changing the Line In gain
 - Both headphone outputs: independent volumes, low-impedance mode
 - Mic/PC direct-monitor crossfade (inside the device, no host latency)
 - Physical output routing: Headphones 1, Headphones 2, Line Out and USB
