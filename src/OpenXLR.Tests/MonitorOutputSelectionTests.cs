@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json.Nodes;
 using System.Threading.Channels;
 using OpenXLR.UI;
+using OpenXLR.UI.Localization;
 
 namespace OpenXLR.Tests;
 
@@ -194,6 +195,30 @@ public sealed class MonitorOutputSelectionTests
         Assert.False(f.Commands.TryRead(out _));
     }
 
+    [Fact]
+    public async Task AMissingOutputIsNamedBySessionLabelThenTheDaemonsMemoryThenItsNodeName()
+    {
+        const string headset = "alsa_output.usb-SteelSeries_Arctis_Nova_Elite-00.analog-stereo";
+        const string phone = "bluez_output.AA_BB_CC_DD_EE_FF.1";
+        await using var f = await Fixture.Start();
+        string Label(string name) => f.Model.MonitorOutputs.Single(o => o.Name == name).Label;
+        string Missing(string name) => Localizer.Format("MonitorOutputMissing", name);
+
+        // A UI started while both are away: the daemon names the one it saw,
+        // and a blank memory counts as none, so a Bluetooth node stays as it is.
+        f.Report(["a", headset, phone], ["a"], remembered: new JsonObject { [headset] = "Arctis Nova Elite", [phone] = " " });
+        Assert.Equal(Missing("Arctis Nova Elite"), Label(headset));
+        Assert.Equal(Missing(phone), Label(phone));
+        // Without the daemon's memory the node name is read.
+        f.Report(["a", headset], ["a"]);
+        Assert.Equal(Missing("SteelSeries Arctis Nova Elite"), Label(headset));
+
+        // Seen once in this session, its own label wins over the daemon's.
+        f.Report(["a"], ["a"], label: "Speakers");
+        f.Report(["a"], [], remembered: new JsonObject { ["a"] = "Older name" });
+        Assert.Equal(Missing("Speakers"), Label("a"));
+    }
+
     private static string[] Devices(JsonNode command) => [.. command["devices"]!.AsArray().Select(n => n!.GetValue<string>())];
 
     private static async Task Until(Func<bool> ready)
@@ -245,7 +270,7 @@ public sealed class MonitorOutputSelectionTests
         internal Task Reply(JsonNode command, string? error = null) => SocketTestServer.Send(socket,
             new { type = "commandResult", requestId = command["requestId"]!.GetValue<string>(), error }, CancellationToken.None);
 
-        internal void Report(string[] selected, string[] available, string? label = null)
+        internal void Report(string[] selected, string[] available, string? label = null, JsonObject? remembered = null)
         {
             var devices = new JsonArray([.. available.Select(name => (JsonNode)new JsonObject { ["kind"] = 0, ["name"] = name, ["description"] = name == "a" ? label : null })]);
             var mixer = new JsonObject
@@ -254,6 +279,7 @@ public sealed class MonitorOutputSelectionTests
                     new JsonObject { ["id"] = "monitor2", ["name"] = "Monitor B", ["kind"] = "monitor" }),
                 ["monitorOutputs"] = new JsonArray([.. selected.Select(name => (JsonNode)JsonValue.Create(name))]),
                 ["monitorFeeds"] = new JsonObject { ["missing"] = "monitor2" },
+                ["monitorOutputLabels"] = remembered,
             };
             typeof(MainViewModel).GetMethod("ApplyDevices", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .Invoke(Model, [devices, mixer]);

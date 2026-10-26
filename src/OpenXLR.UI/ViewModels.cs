@@ -1118,8 +1118,13 @@ public sealed partial class MainViewModel : ViewModelBase
         // keeps it selected and routes to it again when it returns; a list
         // without it would send a selection that drops it at the next tick.
         var wanted = sinks.Where(s => !s.IsOwn).Select(s => (s.Name, s.Label, Present: true)).ToList();
+        // Its name is the one seen this session, else the one the daemon
+        // remembers from before, else what its node name says.
+        var remembered = mixer?["monitorOutputLabels"] as JsonObject;
         foreach (string name in selection.Where(n => !sinks.Any(s => s.Name == n)))
-            wanted.Add((name, Localizer.Format("MonitorOutputMissing", _outputLabels.GetValueOrDefault(name) ?? name), false));
+            wanted.Add((name, Localizer.Format("MonitorOutputMissing", _outputLabels.GetValueOrDefault(name)
+                ?? (remembered?[name] is JsonValue label && label.TryGetValue(out string? text) && !string.IsNullOrWhiteSpace(text) ? text : null)
+                ?? NodeNames.Readable(name)), false));
 
         // Rebuild the multi-select list only when membership changed, so open
         // dropdowns and checkbox states survive routine pushes. A row is the

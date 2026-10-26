@@ -133,7 +133,7 @@ internal static class InputBindingDialog
             && main.Inputs.Where(i => !i.IsOwn && i.DrivenUnit == boundUnit).ToArray() is [var renamed])
             current = renamed.Name;
         if (current is not null && !choices.Any(c => c.Name == current))
-            choices.Add(new(current, Localizer.Format("InputBindingSourceMissing", current)));
+            choices.Add(new(current, Localizer.Format("InputBindingSourceMissing", NodeNames.Readable(current))));
 
         var source = new ComboBox { Name = "InputBindingSource", ItemsSource = choices,
             SelectedItem = choices.First(c => c.Name == current), HorizontalAlignment = HorizontalAlignment.Stretch,
