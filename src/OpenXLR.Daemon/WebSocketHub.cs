@@ -119,8 +119,6 @@ public sealed class WebSocketHub
     /// <summary>A correlation id longer than this is refused rather than echoed.</summary>
     internal const int MaxRequestId = 64;
 
-    /// <summary>A client has this long to present the token before it is dropped.</summary>
-
     /// <summary>Serve one client for the life of its socket.</summary>
     public async Task HandleAsync(WebSocket socket)
     {

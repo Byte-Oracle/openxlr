@@ -1,6 +1,8 @@
 using System.Buffers;
 using System.IO.Pipelines;
+using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Text.Json;
 using OpenXLR.Core;
 
 namespace OpenXLR.Daemon;
@@ -8,15 +10,23 @@ namespace OpenXLR.Daemon;
 /// <summary>Bounded JSON lines for clients whose toolkit cannot open a Unix WebSocket.</summary>
 internal static class ControlStdio
 {
-    internal static async Task<int> RunAsync(Stream input, Stream output, CancellationToken cancel = default)
+    internal static async Task<int> RunAsync(Stream input, Stream output, CancellationToken cancel = default,
+        Func<CancellationToken, Task<DaemonPresence>>? probe = null)
     {
         try
         {
             using var link = new ControlConnection();
-            using (var connect = CancellationTokenSource.CreateLinkedTokenSource(cancel))
+            try
             {
+                using var connect = CancellationTokenSource.CreateLinkedTokenSource(cancel);
                 connect.CancelAfter(TimeSpan.FromSeconds(5));
                 await link.ConnectAsync(connect.Token);
+            }
+            catch (Exception ex) when (ex is IOException or WebSocketException or OperationCanceledException or UnauthorizedAccessException
+                or TimeoutException or HttpRequestException && !cancel.IsCancellationRequested)
+            {
+                await RefuseAsync(output, ex, probe ?? (token => DaemonProbe.ProbeAsync(cancel: token)), cancel);
+                return 1;
             }
             await WriteAsync(output, "{\"type\":\"controlReady\"}"u8.ToArray(), cancel);
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancel);
@@ -46,6 +56,34 @@ internal static class ControlStdio
             Console.Error.WriteLine("Control connection: " + ex.Message);
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Say why no connection was made, once, as a JSON line the Deck plugin
+    /// and the Omarchy bar read in place of controlReady, and on stderr for a
+    /// person at a terminal. A daemon from before the update gets the command
+    /// that restarts it; the clients cannot restart it themselves.
+    /// </summary>
+    private static async Task RefuseAsync(Stream output, Exception failure,
+        Func<CancellationToken, Task<DaemonPresence>> probe, CancellationToken cancel)
+    {
+        DaemonPresence presence;
+        try { presence = await probe(cancel); }
+        catch (Exception ex) when (ex is IOException or SocketException or OperationCanceledException) { presence = DaemonPresence.Reachable; }
+        string message = presence == DaemonPresence.Reachable
+            ? "The OpenXLR daemon did not accept the connection: " + failure.Message
+            : DaemonProbe.Describe(presence);
+        Console.Error.WriteLine("Control connection: " + message);
+        try
+        {
+            await WriteAsync(output, JsonSerializer.SerializeToUtf8Bytes(new Dictionary<string, string>
+            {
+                ["type"] = "controlError",
+                ["reason"] = DaemonProbe.Reason(presence),
+                ["message"] = message,
+            }), cancel);
+        }
+        catch (Exception ex) when (ex is IOException or OperationCanceledException or ObjectDisposedException) { /* the client is gone */ }
     }
 
     private static async Task ObserveAsync(Task task)

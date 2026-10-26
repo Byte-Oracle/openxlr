@@ -67,6 +67,16 @@ public static class OpenXlrPaths
     public static string ControlSocketPath => Path.Combine(RuntimeDir, "control.sock");
 
     /// <summary>
+    /// The daemon's single-instance lock. Every release since the lock was
+    /// added keeps it at this path, so a client can tell that a daemon from
+    /// before the control socket is still running.
+    /// </summary>
+    public static string DaemonLockPath => Path.Combine(RuntimeDir, "daemon.lock");
+
+    /// <summary>The API token that releases before the control socket wrote; only removed now.</summary>
+    public static string LegacyTokenPath => Path.Combine(RuntimeDir, "token");
+
+    /// <summary>
     /// Create a directory under the configuration directory, private to the
     /// user, and tighten it if an earlier version created it world-readable.
     /// </summary>

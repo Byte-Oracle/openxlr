@@ -35,6 +35,9 @@ catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or S
     return 1;
 }
 using var controlLease = control;
+// The token file of a release before the control socket, wherever it was
+// written: the runtime directory, or the configuration directory without one.
+DaemonLock.RemoveLegacyToken();
 
 // Snapshot the system default sink and source before any hosted service
 // runs. Once DeviceManager connects the interface it parks the card in the

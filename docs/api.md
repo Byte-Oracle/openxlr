@@ -14,9 +14,20 @@ This trusts processes belonging to that user, not other local accounts.
 Foreign browser Origins are still refused.
 
 The first server message is state. There is no `auth` command or HTTP
-Authorization header. Upgrade the window, terminal mixer, Deck plugin and
+Authorization header. Upgrade the UI, terminal mixer, Deck plugin and
 Omarchy plugin together with the daemon; older clients that dial the TCP
 port cannot connect.
+
+A client that cannot reach the socket can tell why. A daemon from before
+the socket keeps running after an upgrade and serves only
+`127.0.0.1:37890`. It still holds `daemon.lock` in the same directory, an
+exclusive `flock`. The bundled clients test the lock with a shared,
+non-blocking `flock` that they release at once, and the daemon retries its
+own lock for 200 ms so a probe never turns a starting daemon away. A held
+lock with no socket is checked again after 250 ms, time enough for a
+starting daemon to bind its socket. If the lock is free they make a bare TCP connect to the old port and send nothing.
+Either sign means a daemon from before the update that must be restarted;
+neither means no daemon is running.
 
 A toolkit without Unix WebSocket support can run
 `openxlr-control`. This launcher is only a client: it starts no
@@ -26,6 +37,20 @@ per line in each direction. Commands are capped at 64 KiB and received
 messages at 8 MiB. EOF closes the sending half and drains replies for up
 to five seconds. A daemon disconnect exits immediately even while stdin
 remains open. Keep stdin open for long-running commands and subscriptions.
+When it cannot connect it writes one line in place of `controlReady` and
+exits with status 1:
+
+```json
+{"type":"controlError","reason":"olderDaemon","message":"An OpenXLR daemon from before the update is still running and cannot accept this client. Restart it: systemctl --user restart openxlr-daemon"}
+```
+
+`reason` is `olderDaemon`, `notRunning`, `otherUser` (the socket answered
+for another user) or `unavailable` (no reason found). `message` is one
+English sentence; under Flatpak it names `openxlr-flatpak` instead. The same
+sentence goes to stderr. The Deck plugin shows "restart" on its keys and
+dials for `olderDaemon`, and the Omarchy bar shows the sentence while it is
+offline.
+
 The Deck plugin and Omarchy use this adapter and reconnect after it exits.
 Deck also stops an adapter that does not signal readiness within 15 seconds,
 so a stalled process cannot prevent reconnection.
