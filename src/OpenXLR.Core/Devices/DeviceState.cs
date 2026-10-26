@@ -61,6 +61,8 @@ public sealed record DeviceState
     // of byte 12 sums USB return pair 2/3 (where the Monitor mix streams)
     // into the jacks; bit 1 of byte 13 is the mic's direct, zero-latency
     // path into them. Wave Link on Windows may leave either state behind.
+    // The return reads as on only at unity and with byte 12 bit 3, the Line
+    // In jack's own path into the jacks, clear, which is how OpenXLR sets it.
     public bool HpMixMonitorReturn { get; init; }
     public bool HpMixMicDirect { get; init; }
 

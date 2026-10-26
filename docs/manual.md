@@ -892,7 +892,11 @@ it reaches Aux In. Its gain, 0 to 80 dB, is on the Line In row of the
 INPUTS card, under USB Aux in. Like Aux In it starts muted in Monitor A,
 Monitor B and the Aux mix and open in Stream and Chat; unmute its Monitor
 A send to hear it. The jack has no hardware mute, so muting Line In mutes
-the channel's sends. Line In shows only on a Wave XLR Pro whose capture
+the channel's sends. The Pro can also play the Line In jack straight to
+its headphone jacks, a path a unit set up in Wave Link may have on. While
+a headphone jack or Line Out is a monitor output, OpenXLR turns that path
+off, so the jacks hear Line In only through the monitor mix and its mute
+there silences it. Line In shows only on a Wave XLR Pro whose capture
 source has its 18-channel layout, which is the one it was measured on. A
 Reset to OpenXLR's baseline leaves the Line In gain as it is.
 

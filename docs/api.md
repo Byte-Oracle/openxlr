@@ -122,7 +122,7 @@ firmware keeps and asserts at the headphone floor, released by a level
 written above it; false on every other model), `lowImpedance`,
 `crossfade`, `phantom`, `clipGuard`,
 `compressor`, their `2` variants for XLR 2, `outHp1`, `outHp2`, `outUsbAux`,
-`outLineOut`, `hpMixMonitorReturn`, `hpMixMicDirect`, `auxReturnEnabled`,
+`outLineOut`, `hpMixMonitorReturn` (the Wave XLR Pro's Monitor return in the mix its headphone jacks and Line Out play, true only at 0 dB with the Line In jack's own path out of that mix, which is how the daemon sets it while a jack is a monitor output), `hpMixMicDirect`, `auxReturnEnabled`,
 `auxLevelDb`, `auxLevelLock`, `lineInGainDb` (the Line In's gain in dB, 0 to `gainMaxDb`, on a model with `lineInput`; absent on every other model), plus the daemon-stamped `gainLocked`,
 `phantomSettling`, `phantomSettling2`, `phantomSettleSeconds` and
 `phantomSettleSeconds2`), `ducking` (present whenever the daemon runs, see [ducking](#ducking)),

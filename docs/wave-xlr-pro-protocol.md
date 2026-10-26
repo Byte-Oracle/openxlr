@@ -525,7 +525,7 @@ one capture pair:
 
 | Section | Selector | Capture | Notes |
 |---|---|---|---|
-| 0 | `1e` | AUX8, AUX9 | the jacks' mix today; byte 12 bit 5 is pair 1's membership, the "monitor return" |
+| 0 | `1e` | AUX8, AUX9 | the jacks' mix today; byte 12 bit 5 is pair 1's membership, the "monitor return", and bit 3 Line In's (section 13) |
 | 18 | `1f` | AUX10, AUX11 | on this unit XLR 1 and XLR 2 are members (byte 30 `13`) |
 | 36 | `20` | AUX12, AUX13 | the aux mix |
 | 54 | `21` | AUX14, AUX15 | |
@@ -619,8 +619,37 @@ whole block, with no 0x0003 commit, every other byte as read. Bytes 77 to
 79 are not written by this control. There is no hardware Line In mute;
 the channel's mute in OpenXLR is the software one.
 
+### Line In in the jacks' mix
+
+By the layout of section 12, block 0x0001 byte 12 bit 3 is Line In's
+membership in section 0, the mix the jacks play on selector `1e`, and byte
+3 its level there. The desk unit holds the bit clear. An owner's
+diagnostics archive (0.2.4) read:
+
+| Bytes | Owner's unit | Desk unit |
+|---|---|---|
+| block 0x0001, 0 to 13 | `c8 00 00 c2 00 00 c9 c9 c9 00 a6 c9 e8 0d` | `c8 00 00 00 00 00 00 00 00 00 00 00 25 0c` |
+| block 0x0001, 90 to 93 | `1e 23 20 23` | `23 23 20 23` |
+| block 0x0004, 76 to 79 | `14 0c 04 00` | `28 00 00 00` |
+
+Byte 12 `e8` has bit 3 set, and Headphones 1 plays section 0. That owner,
+with a console on the Line In, reported that raising Line In's Monitor A
+send doubled it and that the console stayed audible on the headphones
+with the send muted: the jack reached the jacks in hardware beside the
+Line In channel in the Monitor mix.
+
+When the daemon turns the Monitor return on (byte 12 bit 5, while a
+headphone jack or Line Out is a monitor output), it clears bit 3 in the
+same write, with the 0x0003 commit, and the return reads as on only while
+bit 3 is clear, so a unit that connects with the return set and Line In
+in the mix is written once. The change latches when the host playback
+stream restarts, as the return does, and the daemon bounces it. Bit 2
+(USB Aux, set on the desk unit as `25`) and bit 0 are left as read until
+they are checked by ear. Turning the return off leaves bit 3 as read.
+
 ### Open
 
 - Writing byte 76 from OpenXLR and hearing the gain change on the Line In
   channel.
+- Hearing the Line In path on the jacks come and go with byte 12 bit 3.
 - Bytes 77 to 79 beyond the USB Aux level and lock of section 6.

@@ -108,6 +108,11 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
     // fader level here, so a unit that dual-boots plays the Monitor mix that
     // far down until the cell is put back to unity.
     private const int HpMixMonitorReturnLevelOffset = 5;
+    // Line In's membership in the same mix: byte 12 bit 3, by the section
+    // layout (source 3). A unit set up elsewhere can hold it set, which plays
+    // the Line In jack straight to the jacks beside the Monitor mix that
+    // already carries the Line In channel (an owner's archive: byte 12 `e8`).
+    private const byte HpMixLineInMask = 0x08;
     private const int HpMixInputsOffset = 13;
     private const byte HpMixMicDirectMask = 0x02;
 
@@ -314,7 +319,7 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
             OutHp2 = b1[OutHp2Offset] != OutSourceOff,
             OutUsbAux = b1[OutUsbAuxOffset] != OutSourceOff,
             OutLineOut = b1[OutLineOutOffset] != OutSourceOff,
-            HpMixMonitorReturn = (b1[HpMixReturnsOffset] & HpMixMonitorReturnMask) != 0 &&
+            HpMixMonitorReturn = (b1[HpMixReturnsOffset] & (HpMixMonitorReturnMask | HpMixLineInMask)) == HpMixMonitorReturnMask &&
                                  b1[HpMixMonitorReturnLevelOffset] == 0x00,
             HpMixMicDirect = (b1[HpMixInputsOffset] & HpMixMicDirectMask) != 0,
             AuxReturnEnabled = b1[AuxMixMusicLevelOffset] == 0x00 &&
@@ -450,13 +455,16 @@ public sealed class WaveXlrProDevice : IAudioDevice, IDisposable
 
     // The headphone mix latches membership changes when the host playback
     // stream (re)starts, like the aux return; the caller bounces the sink.
-    // Turning the return on also opens its level cell, as the aux return does.
+    // Turning the return on also opens its level cell, as the aux return does,
+    // and takes the Line In jack out of the mix: the jacks then hear Line In
+    // only through the Monitor mix, as the aux mix does once OpenXLR drives
+    // its port. Turning it off leaves the Line In bit as it is.
     public void SetHpMixMonitorReturn(bool on)
     {
         byte[] b = Read(BlockCrossfade, CrossfadeLen);
         if (on)
         {
-            b[HpMixReturnsOffset] |= HpMixMonitorReturnMask;
+            b[HpMixReturnsOffset] = (byte)((b[HpMixReturnsOffset] | HpMixMonitorReturnMask) & ~HpMixLineInMask);
             b[HpMixMonitorReturnLevelOffset] = 0x00;          // 0 dB
         }
         else b[HpMixReturnsOffset] &= unchecked((byte)~HpMixMonitorReturnMask);
