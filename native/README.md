@@ -83,6 +83,8 @@ display or installed plugin. The normal host build still uses C++17.
 samples: live passthrough, recording, replay, a new recording replacing the
 old one, the ten-second bound in samples and in time, that only the audio
 thread reports the mode, the raw switch's crossfade onto the tap and back,
+the loop's crossfade where it starts over (a take whose end is far from its
+start loops with no step larger than its own),
 and the take's peaks over its recorded length, counted once per take. It
 drives the level backend the same way: peak and RMS of a steady signal, the
 peak falling back, silence reaching the floor and a block at full scale
@@ -348,6 +350,14 @@ thread is the only writer of the samples and of these meters. It sets
 thread does the same when a recording request has gone ten seconds without
 a cycle serving it, so a suspended input cannot start recording long after
 the request.
+
+Where the loop starts over, the last 50 ms of the take fade out linearly
+while its first 50 ms fade in under them, and the next pass carries on
+from 50 ms in, so the wrap has no step to click. The first pass starts at
+the true start of the take. A take shorter than 0.2 seconds fades over a
+quarter of its length, and one of fewer than four samples does not fade.
+The two gains sum to one, so a signal both ends share, such as a hum or
+an offset, keeps its level through the fade.
 
 Beside `capture_0` the backend has a second mono output, `tap_0`, which
 the daemon links straight to the channel past its chain. The `raw` control

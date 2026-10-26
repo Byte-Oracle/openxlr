@@ -1077,7 +1077,10 @@ and changes nothing in the channel's route.
   place of your microphone, through every insert and the channel's
   software processing as they are set, so you can change controls, bypass
   plugins or reorder the chain and hear the result on the same words. The
-  loop needs at least a tenth of a second recorded. **Live mic** goes back
+  last 50 ms of the take fade into its first 50 ms, so the loop does not
+  click where it starts over. The loop needs at least a tenth of a second
+  recorded; a take shorter than 0.2 seconds fades over a quarter of its
+  length. **Live mic** goes back
   to the microphone and keeps the take; **Record** replaces it. The
   interface's own gain and processing are already in the take, so changing
   those while it loops changes nothing.
@@ -1170,8 +1173,6 @@ and ends with **Stop and discard** or when the window closes:
   port the input takes, the refusal says the capture port is unavailable.
 - Mic check needs the native plugin host the packages include. A source
   build without `-p:EnableNativeLv2Host=true` refuses it with that reason.
-- A loop can click at the point where it starts over; record with a short
-  silence at each end.
 
 <a name="microphone-eq"></a>
 **Microphone EQ.** XLR 1, XLR 2 and every capture input on one mono port

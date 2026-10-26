@@ -576,7 +576,8 @@ the interface's gain beside it where the input has one. **Listen** records
 up to ten seconds and loops that dry take through the channel's software
 processing and insert chain in place of the live input, so the effects can
 be tuned while the same words repeat, with the take's waveform and a
-playhead. **Processed** and **Raw** flip between the microphone with and
+playhead; the end of the take crossfades into its start, so the loop does
+not click where it starts over. **Processed** and **Raw** flip between the microphone with and
 without its processing on the same take, in the loop helper with a 20 ms
 crossfade and no chain rebuilt, and **Hear myself** puts the processed
 microphone in the monitor mix for the session only, and the window says
