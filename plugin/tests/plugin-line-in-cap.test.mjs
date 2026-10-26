@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {controlFixture} from "./control-fixture.mjs";
 
 // The Line In dial stops at the highest gain the daemon writes (40 dB on the
 // Wave XLR Pro). A unit set higher elsewhere shows its own gain, and a turn
@@ -15,6 +16,7 @@ test("the Line In dial stops at the daemon's Line In cap", async () => {
     intervals.push(interval);
     return interval;
   };
+  const bridge = controlFixture();
   const sockets = [];
   class Socket {
     static OPEN = 1;
@@ -27,8 +29,8 @@ test("the Line In dial stops at the daemon's Line In cap", async () => {
   globalThis.WebSocket = Socket;
   try {
     await import("../com.emaspa.openxlr.sdPlugin/plugin.mjs");
-    const daemon = sockets.find(socket => socket.url.includes(":37890/"));
-    const host = sockets.find(socket => socket !== daemon);
+    const daemon = bridge.children[0];
+    const host = sockets[0];
     daemon.onopen();
     daemon.receive({type:"state", connected:true, profiles:[],
       capabilities:{gain:true, mute:true, auxInput:true, lineInput:true, xlrInputs:2, gainMaxDb:80, lineInGainMaxDb:40},
@@ -49,6 +51,7 @@ test("the Line In dial stops at the daemon's Line In cap", async () => {
     assert.deepEqual(daemon.messages.at(-1), {cmd:"set",control:"lineInGain",value:40});
     assert.equal(feedback("line-dial").value, "40 dB");
   } finally {
+    bridge.restore();
     for (const interval of intervals) clearInterval(interval);
     globalThis.setInterval = previousInterval;
     globalThis.WebSocket = previous;
