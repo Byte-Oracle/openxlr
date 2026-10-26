@@ -335,6 +335,11 @@ public sealed class WindowLayoutTests
                     }
                     foreach (string name in new[] { "MicCheckSteps", "MicCheckClose" })
                         AssertInside(micCheck.FindControl<Control>(name)!, micCheck);
+                    // Shape's preset undo, add effect and each plugin's bypass and editor keep to the window's width.
+                    if (step == MicCheckStep.Shape)
+                        foreach (Control control in micCheck.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible
+                                     && c.Name is "MicCheckUndoPreset" or "MicCheckAddEffect" or "MicCheckBypass" or "MicCheckInsertEditor"))
+                            AssertInside(control, micCheck);
                     Assert.True(micCheck.GetVisualDescendants().OfType<ScrollViewer>().Single().Bounds.Height > 50);
                     Capture(micCheck, $"mic-check-{step.ToString().ToLowerInvariant()}-minimum");
                 }

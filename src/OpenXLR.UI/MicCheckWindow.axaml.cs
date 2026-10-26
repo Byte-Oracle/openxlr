@@ -62,4 +62,39 @@ public partial class MicCheckWindow : Window
     private void OnRaw(object? sender, RoutedEventArgs e) { if (Check is { } vm) vm.ListenRaw = true; }
     private void OnHearMyself(object? sender, RoutedEventArgs e) { if (Check is { } vm) vm.HearMyself = !vm.HearMyself; }
     private void OnClose(object? sender, RoutedEventArgs e) => Close();
+
+    // --- Shape ---
+
+    private void OnPreset(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is MicCheckPreset preset) Check?.ApplyPreset(preset);
+    }
+
+    private void OnUndoPreset(object? sender, RoutedEventArgs e) => Check?.UndoPreset();
+
+    /// <summary>The full editor, with a row of fields per band, on the same EQ.</summary>
+    private void OnEqEditor(object? sender, RoutedEventArgs e)
+    {
+        if (Check?.Eq is { } eq) EqWindows.Show(this, eq);
+    }
+
+    private void OnCycleSoftLowCut(object? sender, RoutedEventArgs e) => Check?.Software?.CycleSoftLowCut();
+
+    private async void OnAddEffect(object? sender, RoutedEventArgs e)
+    {
+        if (Check?.Chain is not { CanEditEffects: true } chain) return;
+        PluginChoice? choice = await new PluginPickerWindow { DataContext = chain }.ShowDialog<PluginChoice?>(this);
+        if (choice is not null) chain.Add(choice);
+    }
+
+    /// <summary>
+    /// As the chain's cog does: a plugin running in its own process opens its
+    /// own editor, anything else the generated controls.
+    /// </summary>
+    private async void OnInsertEditor(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not InsertViewModel insert) return;
+        if (insert.NativeEditorAvailable) await insert.Owner.ShowNativeEditorAsync(insert);
+        else InsertWindows.OpenControls(this, insert);
+    }
 }

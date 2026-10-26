@@ -327,7 +327,8 @@ public sealed class EqGraph : Panel
             double x = Math.Round(EqCurve.X(hz, plot)) + 0.5;
             context.DrawLine(grid, new Point(x, plot.Top), new Point(x, plot.Bottom));
             var text = Text(EqCurve.Label(hz), typeface, label);
-            double left = Math.Clamp(x - text.Width / 2, 0, Bounds.Width - text.Width);
+            // A graph narrower than a label, as one in a step not laid out yet, keeps it at the left edge.
+            double left = Math.Clamp(x - text.Width / 2, 0, Math.Max(0, Bounds.Width - text.Width));
             context.DrawText(text, new Point(left, plot.Bottom + 3));
         }
 

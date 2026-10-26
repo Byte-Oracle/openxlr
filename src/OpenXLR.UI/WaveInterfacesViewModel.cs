@@ -58,6 +58,8 @@ public sealed class WaveInterfaceViewModel(DaemonClient client, MainViewModel ma
     public bool GainLocked { get; private set; }
     public bool CanAdjustGain => CanControl && !GainLocked;
     public bool HasSecondInput { get; private set; }
+    /// <summary>The inputs are XLR jacks; false on a Wave:3 or Wave:1, whose input is its built-in capsule.</summary>
+    public bool XlrJacks { get; private set; } = true;
     public bool PhantomSettling { get; private set; }
     public string? Error { get; private set; }
     public string? Warning { get; private set; }
@@ -203,6 +205,7 @@ public sealed class WaveInterfaceViewModel(DaemonClient client, MainViewModel ma
             HasLowCut = capabilities?["lowCut"]?.GetValue<bool>() ?? false;
             HasClipGuard = capabilities?["clipGuard"]?.GetValue<bool>() ?? false;
             HasSecondInput = (capabilities?["xlrInputs"]?.GetValue<int>() ?? 1) > 1;
+            XlrJacks = capabilities?["xlrJacks"]?.GetValue<bool>() ?? true;
             GainMaxDb = capabilities?["gainMaxDb"]?.GetValue<int>() ?? 80;
             JsonNode? state = value["state"];
             if (!SliderSync.RecentlyTouched($"wave:{Id}:gain")) Gain = state?["gainDb"]?.GetValue<int>() ?? 0;

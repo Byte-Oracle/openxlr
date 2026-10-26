@@ -13,7 +13,7 @@ namespace OpenXLR.Tests;
 internal static class MicCheckWindowTests
 {
     internal static async Task CheckCaptureChain(MainViewModel main, MixInsertsWindow chain, ConcurrentQueue<JsonNode> commands,
-        ConcurrentQueue<JsonNode> meterWatches)
+        ConcurrentQueue<JsonNode> meterWatches, ConcurrentQueue<JsonNode> eqCommands, ConcurrentQueue<JsonNode> bypassCommands)
     {
         InsertsViewModel inserts = main.CaptureInputs.Single(c => c.Id == "guest").Inserts!;
         MicCheckViewModel model = inserts.MicCheck;
@@ -25,8 +25,20 @@ internal static class MicCheckWindowTests
         Assert.False(main.CaptureInputs.Single(c => c.Id == "camera").Inserts!.CanMicCheck);
         try
         {
-            // Level first: the window keeps the meter before the chain
+            // Position first: a USB microphone on no unit OpenXLR drives gets
+            // the general tips and is told to switch phantom power elsewhere.
+            Assert.True(model.ShowsPosition);
+            Assert.False(window.FindControl<Control>("MicCheckLevel")!.IsVisible);
+            Assert.Equal(MicCheckUnitKind.None, model.UnitKind);
+            Assert.Equal(Localizer.Text("MicCheckPositionNone"), window.FindControl<TextBlock>("MicCheckPositionIntro")!.Text);
+            Assert.Equal(4, model.PositionTips.Count);
+            Assert.True(window.FindControl<Control>("MicCheckPhantomTile")!.IsEffectivelyVisible);
+            Assert.False(window.FindControl<Control>("MicCheckPhantom")!.IsEffectivelyVisible);
+            Assert.True(window.FindControl<TextBlock>("MicCheckPhantomElsewhere")!.IsEffectivelyVisible);
+
+            // Then Level: the window keeps the meter before the chain
             // running, and its reading and clip reach this microphone only.
+            Step(window, "MicCheckStepLevel");
             Assert.True(model.ShowsLevel);
             await Until(() => meterWatches.Any(c => c["channel"]?.GetValue<string>() == "guest") && model.Clipped);
             Assert.Equal(.8, model.InputPeak);
@@ -68,6 +80,9 @@ internal static class MicCheckWindowTests
             await Until(() => model.HearMyself && !model.NotHeard);
             Assert.False(window.FindControl<TextBlock>("MicCheckNotHeard")!.IsEffectivelyVisible);
 
+            await CheckShape(window, main, model, eqCommands, bypassCommands);
+            Step(window, "MicCheckStepListen");
+
             Click(window, "MicCheckLiveMic");
             await Until(() => model.Status == Localizer.Format("MicCheckReady", 1.5) && model.CanLoop);
             Click(window, "StopAndDiscard");
@@ -96,6 +111,73 @@ internal static class MicCheckWindowTests
             await Until(() => !window.IsVisible);
         }
         finally { window.Close(); }
+    }
+
+    /// <summary>
+    /// Shape while the take loops: the graph is the guest's own EQ, a preset
+    /// goes out as one setEq and its undo as another with the EQ from before,
+    /// a bypass reaches the guest's insert, the editor button opens that
+    /// insert's controls under the check, and a capture input says it has no
+    /// low cut or ClipGuard of its own.
+    /// </summary>
+    private static async Task CheckShape(MicCheckWindow window, MainViewModel main, MicCheckViewModel model,
+        ConcurrentQueue<JsonNode> eqCommands, ConcurrentQueue<JsonNode> bypassCommands)
+    {
+        MicEqViewModel eq = main.CaptureInputs.Single(c => c.Id == "guest").Eq!;
+        Step(window, "MicCheckStepShape");
+        WindowLayoutTests.Layout(window, 600, 560);
+        Assert.True(model.ShowsShape);
+        Assert.False(window.FindControl<Control>("MicCheckListen")!.IsVisible);
+        Assert.Same(eq, model.Eq);
+        Assert.Same(eq, window.FindControl<EqGraph>("MicCheckEqGraph")!.DataContext);
+        Assert.Equal(4, window.FindControl<EqGraph>("MicCheckEqGraph")!.Handles.Count);
+        Assert.True(window.FindControl<TextBlock>("MicCheckNoFilters")!.IsEffectivelyVisible);
+        Assert.False(window.FindControl<Control>("MicCheckUnitFilters")!.IsEffectivelyVisible);
+        Assert.False(window.FindControl<Control>("MicCheckSoftwareFilters")!.IsEffectivelyVisible);
+
+        eqCommands.Clear();
+        MicEq before = eq.Current;
+        Assert.False(model.CanUndoPreset);
+        Click(window, "MicCheckPresetWarm");
+        await Until(() => eqCommands.Count == 1);
+        JsonNode applied = eqCommands.Single();
+        Assert.Equal("setEq", applied["cmd"]!.GetValue<string>());
+        Assert.Equal("guest", applied["channel"]!.GetValue<string>());
+        Assert.True(applied["eq"]!["enabled"]!.GetValue<bool>());
+        Assert.Equal(MicCheckPresets.Warm.Eq.Bands.Select(b => b.Frequency),
+            applied["eq"]!["bands"]!.AsArray().Select(b => b!["frequency"]!.GetValue<double>()));
+        Assert.Equal(MicCheckPresets.Warm.Eq, eq.Current);
+        Assert.Equal(Localizer.Format("MicCheckPresetApplied", MicCheckPresets.Warm.Name),
+            window.FindControl<TextBlock>("MicCheckPresetStatus")!.Text);
+        Assert.True(window.FindControl<Button>("MicCheckUndoPreset")!.IsEffectivelyEnabled);
+        window.FindControl<Button>("MicCheckUndoPreset")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        await Until(() => eqCommands.Count == 2);
+        Assert.Equal(before, eq.Current);
+        Assert.Equal(before.Bands.Select(b => b.Type), eqCommands.Last()["eq"]!["bands"]!.AsArray().Select(b => b!["type"]!.GetValue<string>()));
+        Assert.False(model.CanUndoPreset);
+        Assert.Equal(Localizer.Text("MicCheckPresetUndone"), window.FindControl<TextBlock>("MicCheckPresetStatus")!.Text);
+        eqCommands.Clear();
+
+        ToggleButton bypass = window.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "MicCheckBypass");
+        Assert.Equal(Localizer.Format("MicCheckBypassName", "Guest compressor with a long label"),
+            Avalonia.Automation.AutomationProperties.GetName(bypass));
+        bypass.IsChecked = true;
+        await Until(() => bypassCommands.Any());
+        JsonNode sent = Assert.Single(bypassCommands);
+        Assert.Equal(("guest", "compressor", true),
+            (sent["channel"]!.GetValue<string>(), sent["insertId"]!.GetValue<string>(), sent["value"]!.GetValue<bool>()));
+        await Until(() => model.Chain!.Items.Single().Bypass);
+        bypass.IsChecked = false;
+        await Until(() => bypassCommands.Count == 2 && !model.Chain!.Items.Single().Bypass);
+
+        // No plugin host runs the insert here, so the editor is the generated controls, owned by the check.
+        window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "MicCheckInsertEditor")
+            .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        await Until(() => window.OwnedWindows.OfType<InsertControlsWindow>().Any(w => w.IsVisible));
+        InsertControlsWindow controls = window.OwnedWindows.OfType<InsertControlsWindow>().Single(w => w.IsVisible);
+        Assert.Same(model.Chain!.Items.Single(), controls.DataContext);
+        controls.Close();
+        await Until(() => !controls.IsVisible);
     }
 
     private static void Click(Window window, string key)

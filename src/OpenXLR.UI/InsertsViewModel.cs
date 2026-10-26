@@ -42,7 +42,7 @@ public sealed partial class InsertsViewModel : ViewModelBase
         _channel = channel;
         _channels = channels;
         _title = title ?? channel;
-        MicCheck = new MicCheckViewModel(client, channel);
+        MicCheck = new MicCheckViewModel(client, channel, this);
         _canMicCheck = channel is "xlr1" or "xlr2";
     }
 
