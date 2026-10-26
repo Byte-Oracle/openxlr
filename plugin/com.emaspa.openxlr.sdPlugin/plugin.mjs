@@ -10,6 +10,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { SkinPalette } from "./skin-palette.mjs";
 import { captureGainOf, channelUnitControl, channelUnitTarget, deviceTargetSupported, duckingEnabled, duckingToggle, unitDialLabel, unitKeyLabel, unitMeterKey } from "./unit-inputs.mjs";
+import { isEqTarget, eqTarget, eqStep, eqCommand, eqLabel, eqDial } from "./microphone-eq.mjs";
 
 // ---------- launch arguments ----------
 const arg = (name) => {
@@ -49,6 +50,7 @@ let daemon = null;
 const layoutInspectors = new Set();
 let lastLayout = "";
 function publishLayout() {
+  if (!layoutInspectors.size) return;
   const choices = layoutChoices(daemonState?.mixer, daemonState?.devices);
   const serialized = JSON.stringify(choices);
   if (serialized === lastLayout) return;
@@ -100,7 +102,7 @@ function connectDaemon() {
     if (daemon !== socket) return;
     let m;
     try { m = JSON.parse(e.data); } catch { return; }
-    if (m.type === "state") { daemonState = m; refreshAll(); publishLayout(); }
+    if (m.type === "state") { daemonState = m; pruneEqTurns(); refreshAll(); refreshMeters(); publishLayout(); }
     else if (m.type === "meters") { meterLevels = m.levels; refreshMeters(); }
     else if (m.type === "plugins") {
       catalog = new Map((m.plugins ?? []).map((p) => [p.plugin, p]));
@@ -113,8 +115,11 @@ function connectDaemon() {
     if (daemon !== socket) return;
     if (e && e.code === 1008) console.error("OpenXLR daemon refused the plugin:", e.reason);
     daemonUp = false; daemonState = null;
+    clearEqTurns();
+    meterLevels = {};
     keyCommands.disconnect();
     refreshAll();
+    refreshMeters();
     scheduleDaemonReconnect(generation);
   };
   socket.onerror = () => { /* onclose follows */ };
@@ -278,6 +283,7 @@ function cycleStack(context, inst) {
   inst.settings.activeIndex = ((inst.settings.activeIndex ?? 0) + 1) % ts.length;
   send({ event: "setSettings", context, payload: inst.settings });
   refresh(context);
+  refreshEqMeter(context);
 }
 
 host.onmessage = (e) => {
@@ -287,15 +293,18 @@ host.onmessage = (e) => {
   switch (m.event) {
     case "willAppear":
       keyCommands.clear(m.context);
+      clearEqTurns(m.context);
       instances.set(m.context, {
         action: m.action,
         settings: m.payload?.settings ?? {},
         controller: m.payload?.controller ?? "Keypad",
       });
       refresh(m.context);
+      refreshEqMeter(m.context);
       break;
     case "willDisappear":
       keyCommands.clear(m.context);
+      clearEqTurns(m.context);
       instances.delete(m.context);
       emptyTitle.delete(m.context);
       lastMeter.delete(m.context);
@@ -303,7 +312,13 @@ host.onmessage = (e) => {
       break;
     case "didReceiveSettings":
       keyCommands.clear(m.context);
-      if (inst) { inst.settings = m.payload?.settings ?? {}; refresh(m.context); }
+      if (inst) {
+        const previous = eqBinding(inst);
+        inst.settings = m.payload?.settings ?? {};
+        if (eqBinding(inst) !== previous) clearEqTurns(m.context);
+        refresh(m.context);
+        refreshEqMeter(m.context);
+      }
       break;
     case "keyDown":
       if (inst) onKeyDown(m.context, inst);
@@ -332,8 +347,11 @@ host.onmessage = (e) => {
     case "sendToPlugin":
       if (m.payload?.request === "layout") {
         layoutInspectors.add(m.context);
-        send({ event: "sendToPropertyInspector", context: m.context,
-               payload: layoutChoices(daemonState?.mixer, daemonState?.devices) });
+        // Record what this inspector now shows, so the next state that
+        // differs from it is published even if it matches an older one.
+        const choices = layoutChoices(daemonState?.mixer, daemonState?.devices);
+        lastLayout = JSON.stringify(choices);
+        send({ event: "sendToPropertyInspector", context: m.context, payload: choices });
       }
       else if (m.payload?.request === "outputs")
         send({ event: "sendToPropertyInspector", context: m.context,
@@ -393,6 +411,14 @@ const supported = (target) => deviceTargetSupported(daemonState?.capabilities, t
 // need the key's saved meta for id fallback, so they take the instance.
 function toggleValue(target, inst) {
   if (!target) return null;
+  if (isEqTarget(target)) {
+    const eq = eqTarget(mixer(), target);
+    if (!eq) return null;
+    if (eq.field === "type") return false;
+    if (eq.field !== "enabled") return null;
+    const value = dialNow(target, eq.value);
+    return !eq.band && !value && eq.eq.available === false ? null : value;
+  }
   const channel = channelUnitTarget(target);
   if (channel) return channel.control === "gain" ? null : channelUnitControl(daemonState, channel.channel, channel.control)?.value ?? null;
   const output = outputKey(target);
@@ -524,6 +550,10 @@ function outputVolume(name) {
 
 function toggleLabel(target, inst) {
   if (!target) return "OpenXLR";
+  if (isEqTarget(target)) {
+    const eq = eqTarget(mixer(), target);
+    return eqLabel(eq, eq?.field === "type" ? dialNow(target, eq.value) : eq?.value);
+  }
   const output = outputKey(target);
   if (output) {
     const name = output.device === "@monitor" ? "Follow monitor" : output.device
@@ -585,6 +615,41 @@ const DIAL_HOLD_MS = 800;   // how long the local value outranks the echo
 const dialTurns = new Map();   // value key -> {value, at}
 const dialSends = new Map();   // value key -> {send, timer, at}
 
+function forgetEqTurn(target) {
+  const entry = dialSends.get(target);
+  if (entry?.timer) clearTimeout(entry.timer);
+  dialSends.delete(target);
+  dialTurns.delete(target);
+}
+function clearEqTurns(context = null) {
+  for (const [target, entry] of dialSends)
+    if (isEqTarget(target) && (context === null || entry.eqContext === context)) forgetEqTurn(target);
+}
+function pruneEqTurns() {
+  for (const target of dialSends.keys())
+    if (isEqTarget(target) && !eqTarget(mixer(), target)) forgetEqTurn(target);
+}
+const eqBinding = inst => inst.action === "com.emaspa.openxlr.dial"
+  ? JSON.stringify(targetsOf(inst)) : inst.settings.target ?? "";
+
+// EQ switches and dial fields share the dial's bounded trailing edge. The
+// final turn cannot be replayed into a new session or a rebound action.
+function turnEq(context, inst, target, value) {
+  if (!daemonUp || !eqCommand(eqTarget(mixer(), target), value)) {
+    send({event: "showAlert", context}); return;
+  }
+  const generation = connectionGeneration, binding = eqBinding(inst);
+  dialTurn(target, value, () => {
+    if (generation !== connectionGeneration || !daemonUp || instances.get(context) !== inst || eqBinding(inst) !== binding) return;
+    const payload = eqCommand(eqTarget(mixer(), target), value);
+    if (!payload) { forgetEqTurn(target); return; }
+    if (!cmd(payload)) { forgetEqTurn(target); send({event: "showAlert", context}); }
+  });
+  const pending = dialSends.get(target);
+  if (pending) pending.eqContext = context;
+  refresh(context);
+}
+
 // The value a dial steps from and shows: the local one while the turn is warm,
 // the daemon's own once it has settled.
 function dialNow(key, remote) {
@@ -633,6 +698,10 @@ function captureGainDial(id) {
 // A dial target as {label, pct, maxPct, text, muted}, or null when unknown.
 function dialValue(target, inst) {
   if (!daemonState || !target) return null;
+  if (isEqTarget(target)) {
+    const eq = eqTarget(mixer(), target);
+    return eq ? eqDial(eq, dialNow(target, eq.value)) : null;
+  }
   if (target.startsWith("chgain:")) {
     const gain = channelUnitControl(daemonState, target.slice(7), "gain");
     if (!gain) return captureGainDial(target.slice(7));
@@ -753,6 +822,12 @@ function onKeyDown(context, inst) {
   const t = inst.settings.target;
   const cur = toggleValue(t, inst);
   if (cur === null) { send({ event: "showAlert", context }); return; }
+  if (isEqTarget(t)) {
+    const eq = eqTarget(mixer(), t);
+    const value = eq.field === "type" ? eqStep(eq, dialNow(t, eq.value), 1) : !cur;
+    turnEq(context, inst, t, value);
+    return;
+  }
   const channel = channelUnitTarget(t);
   if (channel) {
     const control = channelUnitControl(daemonState, channel.channel, channel.control);
@@ -800,6 +875,13 @@ function onKeyDown(context, inst) {
 function onDialRotate(context, inst, ticks) {
   const t = activeTarget(inst);
   if (!t || !daemonState) return;
+  if (isEqTarget(t)) {
+    const eq = eqTarget(mixer(), t);
+    const value = eq ? eqStep(eq, dialNow(t, eq.value), ticks) : null;
+    if (value === null) { if (ticks !== 0) send({event: "showAlert", context}); return; }
+    turnEq(context, inst, t, value);
+    return;
+  }
   if (DEVICE_DIALS.has(t) && !supported(t)) {
     send({ event: "showAlert", context });
     return;
@@ -901,6 +983,14 @@ function onDialRotate(context, inst, ticks) {
 function onDialPress(context, inst) {
   const t = activeTarget(inst);
   if (!t) return;
+  if (isEqTarget(t)) {
+    const eq = eqTarget(mixer(), t);
+    const target = eq?.band ? `eqband:${eq.channel.id}:${eq.band}` : t;
+    const toggle = eqTarget(mixer(), target);
+    if (!toggle || toggle.field !== "enabled") { send({event: "showAlert", context}); return; }
+    turnEq(context, inst, target, !dialNow(target, toggle.value));
+    return;
+  }
   if (DEVICE_DIALS.has(t) && !supported(t)) { send({ event: "showAlert", context }); return; }
   // A capture input's own gain has no mute OpenXLR writes on the source: a
   // press mutes the channel in every mix, as the Line In dial's does.
@@ -993,6 +1083,7 @@ const GLYPHS = {
 // (frame + LED + title only).
 function glyphFor(t) {
   if (!t) return null;
+  if (isEqTarget(t)) return "knob";
   if (t === "mute" || t === "mute2") return "mic";
   if (t === "outHp1" || t === "outHp2" || t === "lowImpedance") return "headphones";
   if (t === "outLineOut") return "jack";
@@ -1157,6 +1248,10 @@ function needleSvg(pct, maxPct = 100) {
 // The meter key feeding a dial target's level bar.
 function meterKeyFor(t) {
   if (!t) return null;
+  if (isEqTarget(t)) {
+    const eq = eqTarget(mixer(), t);
+    return eq ? `ch:${eq.channel.id}` : null;
+  }
   if (t.startsWith("send:") || t.startsWith("chvol:")) return `ch:${t.split(":")[1]}`;
   if (t.startsWith("mixvol:")) return `mix:${t.slice(7)}`;
   // A gain shows the channel it is heard on, wherever the layout put it.
@@ -1202,15 +1297,21 @@ function meterSvg(level) {
 // Meters tick at 15 Hz; only redraw a dial's bar when its value moved
 // visibly, so the strip is not re-rendered for noise.
 const lastMeter = new Map();   // context -> rounded width last drawn
-function refreshMeters() {
+function refreshEqMeter(context) {
+  const inst = instances.get(context);
+  if (inst && isEqTarget(activeTarget(inst))) refreshMeters(context);
+}
+function refreshMeters(contextOnly) {
   if (!meterLevels) return;
   for (const [context, inst] of instances) {
+    if (contextOnly !== undefined && context !== contextOnly) continue;
     if (inst.action !== "com.emaspa.openxlr.dial") continue;
     const target = activeTarget(inst);
     const key = meterKeyFor(target);
     // A gain whose input is not in the mixer has nothing to meter: its bar
     // empties rather than keeping the level of a channel it no longer feeds.
-    const silent = !key && (target === "gain" || target === "gain2" || target?.startsWith("chgain:"));
+    const silent = !key && (target === "gain" || target === "gain2" || target?.startsWith("chgain:"))
+      || isEqTarget(target) && (!key || !(key in meterLevels));
     if (!silent && (!key || !(key in meterLevels))) continue;
     const lr = silent ? [0, 0] : meterLevels[key];
     const level = Math.max(lr[0] ?? 0, lr[1] ?? 0);
@@ -1228,7 +1329,7 @@ function refreshMeters() {
 // pins the channel name and scrolls the mix name in the space that
 // remains; other long titles scroll whole.
 const TITLE_W = 154, TITLE_H = 24, CHAR_W = 8.1, GAP_PX = 20, STEP_PX = 7;
-const escXml = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const escXml = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const textW = (t) => Math.round(t.length * CHAR_W);
 
 function titleSvg(pinText, scroll, offsetPx) {

@@ -2775,6 +2775,29 @@ the source's range with `setCaptureGain`, meters the channel, and on press
 mutes or unmutes the channel in every mix, since OpenXLR does not write the
 source's mute.
 
+Each microphone with a complete EQ report has a **Microphone EQ** group,
+including mono capture microphones. Keys switch the whole EQ or one band
+on/off, or cycle one band's filter type. Dials adjust a band's frequency,
+gain, Q or type. Turning a frequency dial moves in 24 steps per octave,
+rounded to whole hertz; gain moves by the reported step, normally 0.25 dB,
+and Q moves one step on its logarithmic grid. A numeric dial keeps showing
+its value while its title says **EQ off** or **band off**. Gain reads
+**n/a** for a cut or notch, which keeps its stored gain but does not use it.
+Pressing an EQ dial switches that band, leaving the whole EQ switch alone.
+Use the EQ on/off key to enable the whole EQ. Dial stacks use the same
+tap/press cycling as other controls.
+
+The saved targets use channel ids: `eq:<channel>` for the EQ switch,
+`eqband:<channel>:<band>` for a band switch, and `eqtype:`, `eqfreq:`,
+`eqgain:` or `eqq:` followed by the same channel and band for type,
+frequency, gain or Q. Bands are numbered from 1. Renaming a microphone
+keeps its controls, icon and colour. A removed or unsupported target stays
+selected as unavailable in the inspector and sends nothing. Restoring the
+microphone restores the target. Changing an action's target or reconnecting
+discards its unsent EQ turns; cycling an unchanged stack keeps its last
+turn. EQ changes use the existing microphone EQ and its normal mixer and
+profile persistence.
+
 Capture chains also appear in the insert key and dial choices, named by
 their channel. Saved insert targets keep the channel id through a rename.
 Sound Check is not offered on the Deck.
@@ -2786,7 +2809,7 @@ mix master, a channel's send into one mix or into all mixes, a channel's
 included, a
 desktop output's volume
 (the system default or a named output, up to 150%), or one control of an
-insert. The touch strip shows a knob, a level meter, the value and a
+insert, or a microphone EQ band. The touch strip shows a knob, a level meter, the value and a
 mute overlay. The title sits beside the icon without overlapping it, and a
 title too long for its space scrolls. A dial without a usable target shows
 OpenXLR as its title, with "set up" or "offline" as the value, until it is
