@@ -4,7 +4,8 @@ import {existsSync, mkdtempSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {controlFixture} from "./control-fixture.mjs";
-import {ControlSocket} from "../com.emaspa.openxlr.sdPlugin/control-socket.mjs";
+import {createServer} from "node:net";
+import {ControlSocket, legacyPortAnswers} from "../com.emaspa.openxlr.sdPlugin/control-socket.mjs";
 
 test("a stalled adapter closes once and ignores a late ready line", t => {
   t.mock.timers.enable({apis: ["setTimeout"]});
@@ -194,4 +195,57 @@ test("close ends the adapter's input as well as signalling it", () => {
     assert.ok(child.killed);
     assert.equal(socket.error, null);
   } finally { fixture.restore(); }
+});
+
+// A plugin newer than the installation finds no launcher. When the daemon
+// still answers on the old loopback port, OpenXLR itself needs updating.
+for (const [answers, reason] of [[true, "olderOpenXLR"], [false, undefined]])
+  test(`no launcher with the old port ${answers ? "answering" : "silent"} reports ${reason ?? "offline"}`, async () => {
+    const fixture = controlFixture();
+    const probe = ControlSocket.legacyPortAnswers;
+    ControlSocket.legacyPortAnswers = async () => answers;
+    try {
+      const socket = new ControlSocket();
+      let closes = 0;
+      socket.onclose = () => closes++;
+      fixture.children[0].emit("error", {code: "ENOENT"});
+      fixture.children[1].emit("error", {code: "ENOENT"});
+      assert.equal(socket.readyState, 0);
+      await new Promise(setImmediate);
+      assert.equal(closes, 1);
+      assert.equal(socket.error?.reason, reason);
+      if (answers) assert.match(socket.error.message, /needs a newer OpenXLR/);
+    } finally { ControlSocket.legacyPortAnswers = probe; fixture.restore(); }
+  });
+
+test("a flatpak launcher that exits without a line is a missing launcher, an adapter error line is not", async () => {
+  const fixture = controlFixture();
+  const probe = ControlSocket.legacyPortAnswers;
+  let probes = 0;
+  ControlSocket.legacyPortAnswers = async () => { probes++; return true; };
+  try {
+    const silent = new ControlSocket();
+    fixture.children[0].emit("error", {code: "ENOENT"});
+    fixture.children[1].emit("close");
+    await new Promise(setImmediate);
+    assert.equal(silent.error?.reason, "olderOpenXLR");
+    const answered = new ControlSocket();
+    fixture.children[2].receive({type: "controlError", reason: "notRunning", message: "The OpenXLR daemon is not running."});
+    fixture.children[2].emit("close");
+    await new Promise(setImmediate);
+    assert.equal(answered.error.reason, "notRunning");
+    assert.equal(probes, 1);
+  } finally { ControlSocket.legacyPortAnswers = probe; fixture.restore(); }
+});
+
+test("the old port probe connects without sending and reports a closed port", async () => {
+  const received = [];
+  const server = createServer(connection => connection.on("data", data => received.push(data)));
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const {port} = server.address();
+  try {
+    assert.equal(await legacyPortAnswers(port), true);
+  } finally { await new Promise(resolve => server.close(resolve)); }
+  assert.equal(await legacyPortAnswers(port), false);
+  assert.deepEqual(received, []);
 });

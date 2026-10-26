@@ -2471,7 +2471,9 @@ Changing "Enable software mixer" in Options, AUDIO also restarts the daemon.
 
 OpenDeck and the Omarchy bar use the client-only `openxlr-control` launcher.
 Upgrade it together with the clients; older installs do not have this entry
-point. Source builds must [link it onto PATH](install-from-source.md#6-make-it-permanent).
+point. An OpenDeck plugin installed ahead of OpenXLR shows "update" on its
+keys and dials while the older OpenXLR runs: update OpenXLR to the plugin's
+release. Source builds must [link it onto PATH](install-from-source.md#6-make-it-permanent).
 It exits when the daemon disconnects, even with stdin open, so clients clear
 their state and reconnect. When it cannot connect it writes one
 `controlError` line saying why in place of its ready line, which is how

@@ -58,7 +58,8 @@ function publishLayout() {
 let daemonState = null;   // last full {"type":"state"} message
 let daemonUp = false;
 // A short word keys and dials show instead of "offline" when the adapter
-// said why it could not connect: a daemon from before the update.
+// said why it could not connect: a daemon from before the update, or an
+// OpenXLR installation older than this plugin.
 let daemonNotice = null;
 let daemonNoticeMessage = "";
 let meterLevels = null;   // last {"type":"meters"} levels, keyed ch:/mix:
@@ -107,7 +108,7 @@ function connectDaemon() {
     if (daemon !== socket) return;
     if (e && e.code === 1008) console.error("OpenXLR daemon refused the plugin:", e.reason);
     if (socket.error) {
-      daemonNotice = socket.error.reason === "olderDaemon" ? "restart" : null;
+      daemonNotice = {olderDaemon: "restart", olderOpenXLR: "update"}[socket.error.reason] ?? null;
       if (socket.error.message !== daemonNoticeMessage) {
         daemonNoticeMessage = socket.error.message;
         console.error("OpenXLR:", daemonNoticeMessage);

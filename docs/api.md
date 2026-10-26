@@ -51,6 +51,12 @@ sentence goes to stderr. The Deck plugin shows "restart" on its keys and
 dials for `olderDaemon`, and the Omarchy bar shows the sentence while it is
 offline.
 
+An installation from before the control socket has no `openxlr-control`.
+When the Deck plugin cannot start one, natively or through Flatpak, it makes a
+bare connection to the old loopback port 37890 and sends nothing. If a daemon
+answers there, OpenXLR is older than the plugin: keys and dials show "update"
+and the plugin logs that OpenXLR must be updated to the plugin's release.
+
 The Deck plugin and Omarchy use this adapter and reconnect after it exits.
 Deck also stops an adapter that does not signal readiness within 15 seconds,
 so a stalled process cannot prevent reconnection.

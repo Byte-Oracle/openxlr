@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {controlFixture} from "./control-fixture.mjs";
+import {ControlSocket} from "../com.emaspa.openxlr.sdPlugin/control-socket.mjs";
 
 // After an upgrade the daemon from the previous release keeps running and
 // serves no control socket. The adapter says so on its first line; keys and
@@ -32,6 +33,7 @@ test("a daemon from before the update shows restart on keys and dials until the 
   globalThis.WebSocket = Socket;
   const svg = (uri) => Buffer.from(uri.split(",")[1], "base64").toString();
   const control = controlFixture();
+  const probe = ControlSocket.legacyPortAnswers;
   try {
     await import("../com.emaspa.openxlr.sdPlugin/plugin.mjs");
     const host = sockets[0];
@@ -72,7 +74,19 @@ test("a daemon from before the update shows restart on keys and dials until the 
     t.mock.timers.tick(500);
     control.children[3].receive({type: "controlError", reason: "notRunning", message: "The OpenXLR daemon is not running."});
     assert.equal(face().value, "offline");
+
+    // A plugin newer than the installation finds no launcher while the old
+    // daemon answers on its port: keys and dials ask for an OpenXLR update.
+    ControlSocket.legacyPortAnswers = async () => true;
+    t.mock.timers.tick(1000);
+    control.children[4].emit("error", {code: "ENOENT"});
+    control.children[5].emit("error", {code: "ENOENT"});
+    await new Promise(setImmediate);
+    assert.equal(face().value, "update");
+    assert.ok(key().includes(">update</text>"));
+    assert.equal(logged.filter(line => line.includes("needs a newer OpenXLR")).length, 1);
   } finally {
+    ControlSocket.legacyPortAnswers = probe;
     control.restore();
     for (const interval of intervals) clearInterval(interval);
     globalThis.setInterval = previousInterval;
