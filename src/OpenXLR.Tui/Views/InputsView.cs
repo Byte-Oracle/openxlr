@@ -30,13 +30,20 @@ internal sealed class InputsView : View
     private string? _duckMix;
     private string? _driveAfter;
     private bool _driving;
+    private EqEditor? _eqEditor;
 
     public override string Title => "Inputs";
 
-    public override string Keys => "Up/Down control  Space toggle  Left/Right or -/+ change  [/] fine  Enter apply";
+    public override string Keys => _eqEditor?.Keys ?? "Up/Down control  Space toggle  Left/Right or -/+ change  [/] fine  Enter apply";
 
     public override void Draw(Screen screen, Rect area, App app)
     {
+        if (_eqEditor is { } editor)
+        {
+            if (editor.Draw(screen, area, app)) return;
+            _eqEditor = null;
+            app.Say("That microphone no longer has an editable EQ");
+        }
         if (_applying is { IsCompleted: true } done)
         {
             string? error = done.IsCompletedSuccessfully ? done.Result : "The daemon did not answer";
@@ -71,6 +78,11 @@ internal sealed class InputsView : View
 
     public override bool Handle(KeyPress key, App app)
     {
+        if (_eqEditor is { } editor)
+        {
+            if (key.Key == Key.Escape) { _eqEditor = null; return true; }
+            return editor.Handle(key, app);
+        }
         Snapshot? state = State(app);
         return state is not null && _list.Handle(key, Build(app, state));
     }
@@ -91,7 +103,7 @@ internal sealed class InputsView : View
 
         AdditionalInputs(rows, link, state);
         Bindings(rows, app, state);
-        Equalisers(rows, link, state);
+        Equalisers(rows, app, state);
 
         // The software low cut and ClipGuard run in the mixer, so they act on
         // any microphone on XLR 1; the gain lock guards the interface's gain.
@@ -263,10 +275,11 @@ internal sealed class InputsView : View
     /// <summary>
     /// Each microphone's EQ: what runs it, and where a unit that runs the EQ
     /// itself carries the microphone, the choice between the unit and this
-    /// computer, which setEqProcessing sends. The bands are edited in the window.
+    /// computer, which setEqProcessing sends. Each complete EQ opens its band editor.
     /// </summary>
-    private static void Equalisers(List<Row> rows, DaemonLink link, Snapshot state)
+    private void Equalisers(List<Row> rows, App app, Snapshot state)
     {
+        DaemonLink link = app.Link;
         List<ChannelEntry> microphones = [.. state.Mixer.Shown.Where(channel => channel.Eq is not null)];
         if (microphones.Count == 0) return;
         rows.Add(new HeadingRow("Microphone EQ"));
@@ -276,6 +289,9 @@ internal sealed class InputsView : View
             EqEntry eq = channel.Eq!;
             string id = channel.Id;
             rows.Add(new TextRow($"{channel.Name} EQ", eq.Status));
+            if (EqEditor.CanEdit(channel))
+                rows.Add(new ActionRow($"{channel.Name} bands", "edit EQ",
+                    () => _eqEditor = new EqEditor(id, link.SessionRevision)));
             if (!eq.Offered) continue;
             rows.Add(new ChoiceRow($"{channel.Name} EQ runs", places, eq.Processing == "software" ? 1 : 0,
                 index => link.Send("setEqProcessing", body =>

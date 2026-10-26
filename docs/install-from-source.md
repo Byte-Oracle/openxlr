@@ -187,6 +187,21 @@ systemd user unit for the daemon and an autostart entry for the UI.
 On a source build the unit points at the build output; on a packaged
 install it enables the package's unit instead.
 
+OpenDeck and the Omarchy bar also need the client-only `openxlr-control`
+launcher on their PATH. A build puts it beside the daemon. For a source
+installation, link that launcher into your user bin directory:
+
+```sh
+mkdir -p ~/.local/bin
+ln -s "$PWD/src/OpenXLR.Daemon/bin/Release/net10.0/openxlr-control" ~/.local/bin/openxlr-control
+```
+
+Ensure `~/.local/bin` is on the desktop session's PATH, then restart OpenDeck
+or the bar. Update an existing link if you move the checkout. The launcher
+resolves the link to this build and never selects a packaged daemon from PATH.
+Packages install the launcher themselves. Older installations do not have it;
+upgrade the daemon together with its clients.
+
 The manual way, using the reference unit in
 [packaging/openxlr-daemon.service](../packaging/openxlr-daemon.service):
 

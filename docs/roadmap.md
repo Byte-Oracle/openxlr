@@ -49,9 +49,8 @@ is measured over one that is described.
   system, light and dark modes, a compact and a large density, the Flow
   window and seven languages. The terminal mixer `openxlr-tui`, drawing the same skins. The
   OpenDeck plugin, with keys and dials drawn like the hardware. Desktop
-  keys through the portal; the key that routes the focused application
-  asks KWin, so it works on KDE Plasma only. The Omarchy bar plugin. A
-  versioned HTTP API beside the WebSocket, both on a session token.
+  keys through the portal and compositor-specific focused application
+  routing. The Omarchy bar plugin. A versioned HTTP API beside the WebSocket.
 - [x] Daemon. A systemd notify service with a watchdog; recovery when
   PipeWire, pipewire-pulse, a device or a plugin host misbehaves; an
   incremental registry view instead of polling; commands validated and
@@ -99,10 +98,9 @@ them for a while before more is built on top.
 
 ### The mixer and its clients
 
-- [ ] The microphone EQ in every client. The UI has the full editor; the
-  terminal mixer only chooses where each EQ runs, and the Stream Deck has
-  no EQ keys or dials. A band editor in the terminal mixer comes first,
-  then the OpenDeck plugin.
+- [ ] The microphone EQ in every client: a band editor in the terminal
+  mixer, followed by EQ keys and dials in the OpenDeck plugin. The
+  graphical UI already has the full editor.
 - [ ] Mic check, a guided microphone test in the UI in place of the Sound
   Check window, in three parts. First the window with Level and Listen:
   the meter before the chain, the take's waveform, Hear myself and an
@@ -141,7 +139,7 @@ them for a while before more is built on top.
 
 ### Daemon and integrations
 
-- [ ] The control API on a Unix socket with peer credentials instead of
+- [x] The control API on a Unix socket with peer credentials instead of
   a loopback port, so no token file is needed.
 - [ ] Routing the focused application on compositors other than KWin,
   each with a focus source of its own. Hyprland has one, run on a

@@ -211,7 +211,6 @@ public sealed class CaptureInputWindowTests
                 {
                     JsonNode cmd = await SocketTestServer.Receive(socket, stop);
                     string? name = cmd["cmd"]?.GetValue<string>();
-                    if (name == "auth") continue;
                     if (name == "listPlugins")
                     {
                         await Send(new { type = "plugins", plugins = new[]

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {controlFixture} from "./control-fixture.mjs";
 import { layoutChoices } from "../com.emaspa.openxlr.sdPlugin/layout-choices.mjs";
 import { captureGainOf, unitMeterKey } from "../com.emaspa.openxlr.sdPlugin/unit-inputs.mjs";
 
@@ -51,10 +52,11 @@ test("the gain dial turns a capture input's own gain within its range and a pres
   }
   globalThis.WebSocket = Socket;
   const svg = (uri) => Buffer.from(uri.split(",")[1], "base64").toString();
+  const control = controlFixture();
   try {
     await import("../com.emaspa.openxlr.sdPlugin/plugin.mjs");
-    const daemon = sockets.find(socket => socket.url.includes(":37890/"));
-    const host = sockets.find(socket => socket !== daemon);
+    const daemon = control.children[0];
+    const host = sockets[0];
     daemon.onopen();
     const state = {type: "state", connected: true, profiles: [],
       capabilities: {gain: true, mute: true, xlrInputs: 1, gainMaxDb: 80},
@@ -106,6 +108,7 @@ test("the gain dial turns a capture input's own gain within its range and a pres
     assert.equal(daemon.messages.length, sent);
     assert.equal(alerted("brio-dial"), 1);
   } finally {
+    control.restore();
     for (const interval of intervals) clearInterval(interval);
     globalThis.setInterval = previousInterval;
     globalThis.WebSocket = previous;

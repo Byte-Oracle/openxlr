@@ -98,8 +98,9 @@ If you own an untested device, open an issue with a diagnostics archive
   insert, output and profile, drawn with meters and status lamps.
 - **Daemon, UI and APIs**: the daemon owns the device and the graph and
   keeps running with the UI closed. It serves a WebSocket API and an HTTP
-  API on 127.0.0.1:37890. The UI has a Flow window of signal paths, a
-  tray icon and global shortcuts through the desktop portal.
+  API on a private Unix socket authenticated by Linux peer credentials.
+  The UI has a Flow window of signal paths, a tray icon and global
+  shortcuts through the desktop portal.
 - **Terminal mixer**: `openxlr-tui`, the whole mixer over ssh or in a
   tiling setup ([manual](docs/manual.md#terminal)).
 - **Omarchy bar**: meters, mutes and sends in Omarchy 4's bar

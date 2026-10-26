@@ -53,7 +53,13 @@ public partial class MainWindow : Window
         DataContext = _vm;
         _client.Start();          // connects, and keeps retrying if the daemon isn't up yet
         // Queued rather than awaited: Options calls the restart on the UI thread.
-        StartupIntegration.AttachedRestart = () => { _ = _client.RestartDaemonAsync(); return _vm.DaemonConnected; };
+        // A daemon from before the control socket answers only on its old port.
+        StartupIntegration.AttachedRestart = () =>
+        {
+            if (!_vm.DaemonConnected && _client.Presence == DaemonPresence.OlderDaemon) return LegacyDaemonRestart.Request();
+            _ = _client.RestartDaemonAsync();
+            return _vm.DaemonConnected;
+        };
         HeaderVersion.Text = $"v{AppVersion.Current}";
         UpdateControlSizing();
         Skinning.SkinService.Changed += UpdateControlSizing;

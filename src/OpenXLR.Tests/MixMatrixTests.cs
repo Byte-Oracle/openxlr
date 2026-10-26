@@ -624,8 +624,7 @@ public sealed class MixMatrixTests
             while (!stop.IsCancellationRequested)
             {
                 JsonNode command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]?.GetValue<string>() != "auth")
-                    commands.Enqueue($"{command["cmd"]}:{command["channel"]}:{command["mix"]}");
+                commands.Enqueue($"{command["cmd"]}:{command["channel"]}:{command["mix"]}");
                 if (command["requestId"] is { } requestId)
                     await SocketTestServer.Send(socket, new { type = "commandResult", requestId = requestId.GetValue<string>() }, stop);
             }

@@ -312,7 +312,7 @@ internal sealed class App
         int rightX = Math.Max(12, screen.Width - right.Length - 2);
         screen.Text(12, 0, device, theme.TextDetail, theme.Card, maxWidth: Math.Max(0, rightX - 14));
         screen.Text(rightX, 0, right, theme.TextSecondary, theme.Card);
-        string? warning = state?.Warning ?? state?.Mixer.LayoutWarning ?? state?.Device?.Note;
+        string? warning = Link.Notice ?? state?.Warning ?? state?.Mixer.LayoutWarning ?? state?.Device?.Note;
         if (warning is { Length: > 0 })
             screen.TextPad(1, 1, warning, screen.Width - 2, theme.TextWarning, theme.Window);
     }

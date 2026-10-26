@@ -74,6 +74,9 @@ public sealed partial class MainViewModel : ViewModelBase
             }
             else { Inserts.EnsurePluginsLoaded(); Inserts2.EnsurePluginsLoaded(); }
         });
+        _client.PresenceChanged += presence => Dispatcher.UIThread.Post(() =>
+            OlderDaemonRunning = presence == DaemonPresence.OlderDaemon);
+        OlderDaemonRunning = _client.Presence == DaemonPresence.OlderDaemon;
         _client.ErrorReceived += msg => Dispatcher.UIThread.Post(() => Status = msg);
         _client.NativeEditorRulesChanged += () => Dispatcher.UIThread.Post(() => InsertsViewModel.ReloadAll?.Invoke());
         var meters = new MeterUpdates(action => Dispatcher.UIThread.Post(action), ApplyMeters);
@@ -96,9 +99,20 @@ public sealed partial class MainViewModel : ViewModelBase
     private bool _daemonConnected;
     public bool DaemonConnected { get => _daemonConnected; private set { if (SetAndRaiseMismatch(ref _daemonConnected, value)) { Raise(nameof(StatusLine)); Raise(nameof(MixerPlaceholder)); Raise(nameof(CanEditLayout)); } } }
 
-    /// <summary>What the empty SUBMIXER tile says: the three reasons differ.</summary>
+    private bool _olderDaemonRunning;
+    /// <summary>
+    /// The control socket did not answer while a daemon is alive: one from
+    /// before the update, which only a restart replaces.
+    /// </summary>
+    public bool OlderDaemonRunning
+    {
+        get => _olderDaemonRunning;
+        private set { if (SetAndRaiseMismatch(ref _olderDaemonRunning, value)) { Raise(nameof(StatusLine)); Raise(nameof(MixerPlaceholder)); } }
+    }
+
+    /// <summary>What the empty SUBMIXER tile says: the reasons differ.</summary>
     public string MixerPlaceholder => !DaemonConnected
-        ? Localizer.Text("DaemonNotRunningSentence")
+        ? OlderDaemonRunning ? Localizer.Text("OlderDaemonRunningSentence") : Localizer.Text("DaemonNotRunningSentence")
         : MixerWaiting ? Localizer.Text("MixerWaitingForAudioServer")
         : Localizer.Text("SubmixerIsOffTurnItOnInOptions");
 
@@ -116,7 +130,7 @@ public sealed partial class MainViewModel : ViewModelBase
     private string _status = Localizer.Text("Connecting");
     public string Status { get => _status; private set { if (Set(ref _status, value)) Raise(nameof(StatusLine)); } }
 
-    public string StatusLine => !DaemonConnected ? Localizer.Text("DaemonNotRunning")
+    public string StatusLine => !DaemonConnected ? OlderDaemonRunning ? Localizer.Text("OlderDaemonRunning") : Localizer.Text("DaemonNotRunning")
         : DeviceConnected ? DeviceName
         : Localizer.Text("NoDevice");
 
@@ -826,7 +840,7 @@ public sealed partial class MainViewModel : ViewModelBase
     private bool SetAndRaiseMismatch(ref bool field, bool value)
     {
         bool changed = Set(ref field, value);
-        if (changed) Raise(nameof(DaemonVersionMismatch));
+        if (changed) { Raise(nameof(DaemonVersionMismatch)); Raise(nameof(DaemonVersionNote)); }
         return changed;
     }
 
@@ -839,14 +853,19 @@ public sealed partial class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// True when the daemon is not the same build as this window: a package
-    /// upgrade leaves the old daemon running, and the controls it offers are
-    /// those of the old version.
+    /// True when the banner offers a restart: the daemon is not the same build
+    /// as this UI, since a package upgrade leaves the old daemon running and
+    /// the controls it offers are those of the old version, or the daemon is
+    /// one from before the control socket and this UI cannot connect to it.
     /// </summary>
-    public bool DaemonVersionMismatch => DaemonConnected && (DaemonVersion ?? "") != AppVersion.Current;
+    public bool DaemonVersionMismatch => DaemonConnected
+        ? (DaemonVersion ?? "") != AppVersion.Current
+        : OlderDaemonRunning;
 
     public string DaemonVersionNote =>
-        DaemonVersion is null
+        !DaemonConnected && OlderDaemonRunning
+            ? Localizer.Format("OlderDaemonCannotConnectNote", AppVersion.Current)
+        : DaemonVersion is null
             ? Localizer.Format("DaemonOlderVersionNote", AppVersion.Current)
             : Localizer.Format("DaemonVersionNote", DaemonVersion, AppVersion.Current);
 

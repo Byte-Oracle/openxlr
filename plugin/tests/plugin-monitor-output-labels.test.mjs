@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {controlFixture} from "./control-fixture.mjs";
 
 // A monitor output key names its output by the device list's description.
 // While the output is away the device list no longer has it, and the key
@@ -15,6 +16,7 @@ test("an output key names an absent selected output by its remembered descriptio
     intervals.push(interval);
     return interval;
   };
+  const bridge = controlFixture();
   const sockets = [];
   class Socket {
     static OPEN = 1;
@@ -28,8 +30,8 @@ test("an output key names an absent selected output by its remembered descriptio
   const svg = (uri) => Buffer.from(uri.split(",")[1], "base64").toString();
   try {
     await import("../com.emaspa.openxlr.sdPlugin/plugin.mjs");
-    const daemon = sockets.find(socket => socket.url.includes(":37890/"));
-    const host = sockets.find(socket => socket !== daemon);
+    const daemon = bridge.children[0];
+    const host = sockets[0];
     daemon.onopen();
     const headset = "alsa_output.usb-SteelSeries_Arctis_Nova_Elite-00.analog-stereo";
     const state = {type:"state", connected:true, profiles:[], capabilities:{}, state:{},
@@ -61,6 +63,7 @@ test("an output key names an absent selected output by its remembered descriptio
     assert.ok(keyImage("monitor-key").includes("analog-stereo"));
   }
   finally {
+    bridge.restore();
     if (oldSkin === undefined) delete process.env.OPENXLR_SKIN;
     else process.env.OPENXLR_SKIN = oldSkin;
     intervals.forEach(clearInterval);

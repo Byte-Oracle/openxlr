@@ -16,7 +16,8 @@ import subprocess
 import sys
 import time
 import tempfile
-import urllib.request
+import http.client
+import socket
 
 APP = 'io.github.emaspa.openxlr'
 ROOT = Path(__file__).resolve().parent.parent
@@ -30,7 +31,7 @@ def wait(check, seconds=30):
             value = check()
             if value:
                 return value
-        except (OSError, urllib.error.URLError) as error:
+        except (OSError, http.client.HTTPException) as error:
             last = error
         time.sleep(0.05)
     raise AssertionError(f'Deadline exceeded: {last or check}')
@@ -151,20 +152,32 @@ def sandbox():
     modules = [run('pactl', 'load-module', 'module-null-sink', 'sink_name=acceptance_output', 'channels=2'),
                run('pactl', 'load-module', 'module-null-sink', 'sink_name=acceptance_mic_sink', 'channels=2'),
                run('pactl', 'load-module', 'module-remap-source', 'master=acceptance_mic_sink.monitor', 'source_name=acceptance_mic', 'channels=1', 'master_channel_map=front-left', 'channel_map=mono')]
-    token = Path(os.environ['XDG_RUNTIME_DIR'], 'openxlr', 'token')
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    control = Path(os.environ['XDG_RUNTIME_DIR'], 'openxlr', 'control.sock')
+
+    class UnixHttp(http.client.HTTPConnection):
+        def connect(self):
+            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.sock.settimeout(self.timeout)
+            self.sock.connect(str(control))
 
     def api(path='state', command=None):
-        headers = {'Authorization': 'Bearer ' + token.read_text().strip()}
+        headers = {}
         data = None
         if command is not None:
             path, data = 'commands', json.dumps(command).encode()
             headers['Content-Type'] = 'application/json'
-        with opener.open(urllib.request.Request('http://127.0.0.1:37890/api/v1/' + path, data=data, headers=headers), timeout=10) as response:
+        connection = UnixHttp('localhost', timeout=10)
+        try:
+            connection.request('POST' if data is not None else 'GET', '/api/v1/' + path, body=data, headers=headers)
+            response = connection.getresponse()
+            if response.status != 200:
+                raise AssertionError(f'Control API: {response.status}')
             result = json.load(response)
             if isinstance(result, dict) and result.get('ok') is False:
                 raise AssertionError(result)
             return result
+        finally:
+            connection.close()
 
     def command(name, **fields):
         return api(command={'cmd': name, **fields})
@@ -183,7 +196,7 @@ def sandbox():
     with open(runtime / 'application.log', 'w') as log:
         app = subprocess.Popen(['openxlr'], stdout=log, stderr=log)
         try:
-            wait(lambda: token.exists() and api().get('mixer'), 90)
+            wait(lambda: control.exists() and api().get('mixer'), 90)
             main = wait(lambda: next((w for w, title in window.titles().items() if w not in existing_windows and title == 'OpenXLR'), None))
             if desktop:
                 own_tray = wait(lambda: tray_items() - previous_tray)

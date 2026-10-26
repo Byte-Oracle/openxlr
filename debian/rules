@@ -37,14 +37,16 @@ override_dh_auto_install:
 	cp -r $(OUT)/daemon $(PKG)/usr/lib/openxlr/daemon
 	cp -r $(OUT)/ui $(PKG)/usr/lib/openxlr/ui
 	cp -r $(OUT)/tui $(PKG)/usr/lib/openxlr/tui
-	# dotnet publish marks assemblies executable; only the apphosts are.
+	# Assemblies are data; apphosts and the control launcher are executable.
 	find $(PKG)/usr/lib/openxlr -type f -exec chmod 644 {} +
 	chmod 755 $(PKG)/usr/lib/openxlr/daemon/OpenXLR.Daemon \
+		$(PKG)/usr/lib/openxlr/daemon/openxlr-control \
 		$(PKG)/usr/lib/openxlr/daemon/openxlr-lv2-host \
 		$(PKG)/usr/lib/openxlr/ui/OpenXLR.UI \
 		$(PKG)/usr/lib/openxlr/tui/openxlr-tui
 
 	install -dm755 $(PKG)/usr/bin
+	ln -s ../lib/openxlr/daemon/openxlr-control $(PKG)/usr/bin/openxlr-control
 	printf '#!/bin/sh\nexec /usr/lib/openxlr/daemon/OpenXLR.Daemon "$$@"\n' \
 		> $(PKG)/usr/bin/openxlr-daemon
 	printf '#!/bin/sh\nexec /usr/lib/openxlr/ui/OpenXLR.UI "$$@"\n' \

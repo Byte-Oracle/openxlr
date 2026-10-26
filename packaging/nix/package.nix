@@ -88,6 +88,7 @@ buildDotnetModule {
   # have to be linked after that.
   postFixup = ''
     ln -s $out/bin/OpenXLR.Daemon $out/bin/openxlr-daemon
+    makeWrapper $out/bin/OpenXLR.Daemon $out/bin/openxlr-control --add-flags "--control-stdio"
     ln -s $out/bin/OpenXLR.UI $out/bin/openxlr
     python3 packaging/install_receipt.py --root / --prefix "$out" --manager nix --version "$version" \
       ${lib.optionalString (sourceCommit != null) "--commit ${lib.escapeShellArg sourceCommit}"} \

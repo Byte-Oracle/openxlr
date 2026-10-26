@@ -159,7 +159,6 @@ public sealed class EffectWorkflowTests : IDisposable
             while (!stop.IsCancellationRequested)
             {
                 var command = await SocketTestServer.Receive(socket, stop);
-                if (command["cmd"]!.GetValue<string>() == "auth") continue;
                 Assert.Equal("setInserts", command["cmd"]!.GetValue<string>());
                 Assert.Equal(.5, command["inserts"]![0]!["params"]!["gain"]!.GetValue<double>());
                 received.TrySetResult();

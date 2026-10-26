@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { layoutChoices, mixShortName } from "../com.emaspa.openxlr.sdPlugin/layout-choices.mjs";
+import {eqMixer} from "./microphone-eq-fixture.mjs";
 
 // Minimal selector DOM: exercise selection and group replacement without a
 // running OpenDeck instance or changing real action settings.
@@ -17,6 +18,29 @@ class Element {
   set value(value) { this._value = value; }
   querySelectorAll() { return this.children.filter(child => child.dataset.layoutGroup); }
 }
+
+for (const target of ["eq:xlr1", "eqband:xlr1:2", "eqtype:xlr1:2", "eqfreq:xlr1:2", "eqgain:xlr1:2", "eqq:xlr1:2"])
+  test("a microphone EQ selection survives removal and a renamed return: " + target, () => {
+    const select = new Element("select"); select.id = "target";
+    const all = node => [node, ...node.children.flatMap(all)];
+    const document = {createElement: tag => new Element(tag), getElementById: id => all(select).find(node => node.id === id)};
+    const context = vm.createContext({document});
+    vm.runInContext(readFileSync(new URL("../com.emaspa.openxlr.sdPlugin/propertyInspector/layout-options.js", import.meta.url), "utf8"), context);
+    const state = eqMixer();
+    const group = () => target.startsWith("eq:") || target.startsWith("eqband:") || target.startsWith("eqtype:")
+      ? layoutChoices(state).toggleGroups : layoutChoices(state).levelGroups;
+    context.replaceLayoutOptions(group()); select.value = target;
+    const channel = state.channels[0];
+    state.channels = [];
+    context.replaceLayoutOptions(group());
+    assert.equal(select.value, target);
+    assert.equal(document.getElementById("unavailable-layout-target").disabled, true);
+    channel.name = "Renamed mic"; state.channels = [channel];
+    context.replaceLayoutOptions(group());
+    assert.equal(select.value, target);
+    assert.match(select.options.find(option => option.value === target).textContent, /^Renamed mic EQ/);
+    assert.equal(document.getElementById("unavailable-layout-target"), undefined);
+  });
 
 test("state refresh preserves a selected feed and only replaces layout groups", () => {
   const select = new Element("select");

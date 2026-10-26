@@ -1,8 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtWebSockets
-import Quickshell
 import Quickshell.Io
 import "Mixer.js" as Mixer
 
@@ -12,8 +10,8 @@ QtObject {
     property var snapshot: null
     property var levels: ({})
     property string error: ""
+    property string offline: ""
     property bool pending: false
-    property string token: ""
     property var session: null
 
     function send(command: var): void {
@@ -26,6 +24,7 @@ QtObject {
         snapshot = session.snapshot;
         levels = session.levels;
         error = session.error;
+        offline = session.offline;
         pending = session.pending !== "";
     }
 
@@ -37,29 +36,29 @@ QtObject {
         }
     }
 
-    property FileView tokenFile: FileView {
-        path: Mixer.tokenPath(Quickshell.env("XDG_RUNTIME_DIR"), Quickshell.env("XDG_CONFIG_HOME"), Quickshell.env("HOME"))
-        preload: false
-        printErrors: false
-        onLoaded: if (root.session)
-            root.session.token(root.tokenFile.text())
-        onLoadFailed: if (root.session)
-            root.session.token("")
-    }
-    property WebSocket socket: WebSocket {
-        url: "ws://127.0.0.1:37890/api/v1/events"
-        active: false
-        onStatusChanged: function (status) {
-            if (!root.session)
-                return;
-            if (status === WebSocket.Open) {
-                root.session.opened(root.token);
-                root.token = "";
-            } else if (status === WebSocket.Closed || status === WebSocket.Error) {
-                root.session.lost();
+    property Process bridge: null
+    property Component bridgeFactory: Component {
+        Process {
+            id: process
+            command: ["openxlr-control"]
+            stdinEnabled: true
+            stdout: SplitParser {
+                onRead: data => {
+                    if (root.bridge !== process || !root.session)
+                        return;
+                    let message;
+                    try { message = JSON.parse(data); } catch (_) { root.session.lost(); return; }
+                    if (message.type === "controlReady")
+                        root.session.opened();
+                    else if (message.type === "controlError")
+                        root.session.refused(message.message);
+                    else
+                        root.session.receive(data);
+                }
             }
+            onRunningChanged: if (!running && root.bridge === process && root.session)
+                root.session.lost()
         }
-        onTextMessageReceived: message => root.session.receive(message)
     }
     property Timer retry: Timer {
         onTriggered: root.session.start()
@@ -76,22 +75,21 @@ QtObject {
 
     Component.onCompleted: {
         session = new Mixer.Session({
-            readToken: function () {
-                root.tokenFile.reload();
-                // With preload off, text() starts the asynchronous read. Its
-                // cached return is ignored; only onLoaded supplies the token.
-                root.tokenFile.text();
-            },
-            connect: function (value) {
-                root.token = value;
-                root.socket.active = true;
+            connect: function () {
+                root.bridge = root.bridgeFactory.createObject(root);
+                root.bridge.running = true;
             },
             send: function (value) {
-                root.socket.sendTextMessage(JSON.stringify(value));
+                if (root.bridge)
+                    root.bridge.write(JSON.stringify(value) + "\n");
             },
             close: function () {
-                root.socket.active = false;
-                root.token = "";
+                const previous = root.bridge;
+                root.bridge = null;
+                if (previous) {
+                    previous.running = false;
+                    previous.destroy();
+                }
             },
             changed: function () {
                 root.sync();

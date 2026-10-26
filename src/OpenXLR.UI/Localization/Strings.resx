@@ -197,6 +197,15 @@
   <data name="BuyMeACoffee" xml:space="preserve">
     <value>Buy me a coffee</value>
   </data>
+  <data name="OlderDaemonCannotConnectNote" xml:space="preserve">
+    <value>A daemon from before the update is still running, and this UI (v{0}) cannot connect to it. Restart the daemon to connect.</value>
+  </data>
+  <data name="OlderDaemonRunning" xml:space="preserve">
+    <value>Older daemon running</value>
+  </data>
+  <data name="OlderDaemonRunningSentence" xml:space="preserve">
+    <value>A daemon from before the update is still running.</value>
+  </data>
   <data name="SupportMeOnKoFi" xml:space="preserve">
     <value>Support me on Ko-fi</value>
   </data>

@@ -368,6 +368,7 @@ internal sealed record UnitInputEntry
 internal sealed record EqEntry
 {
     public bool Enabled { get; init; }
+    public IReadOnlyList<EqBand>? Bands { get; init; }
 
     /// <summary><c>device</c> while the unit's own processor runs it, <c>software</c>, or null while nothing does.</summary>
     public string? Backend { get; init; }
